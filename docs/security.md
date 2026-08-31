@@ -132,6 +132,26 @@ the RFC 0060 adoption notes) — not something that broadens automatically.
   (`AUTH_REQUIRE_EMAIL_VERIFICATION=false`) for air-gapped/internal deployments.
   Accounts that existed before this shipped are grandfathered automatically —
   the requirement only applies to new registrations.
+- **Registration is enumeration-safe by default.** Attempting to sign up with
+  an email that already has an account does not reveal that fact: better-auth
+  hashes the submitted password anyway (to normalize timing) and returns the
+  same `{ token: null, user }` response shape a genuine new signup gets while
+  email verification is pending, rather than an "already exists" error — the
+  client behaves identically either way. This mechanism is tied to
+  `AUTH_REQUIRE_EMAIL_VERIFICATION` staying at its default `true`; disabling
+  it reopens a narrow enumeration signal on `/register` as an accepted
+  tradeoff of running without verification (see the doc comment on
+  `requireEmailVerification` in `apps/auth/src/env.ts` for the full mechanism
+  and why it isn't separately patchable).
+- **Password policy** defaults to better-auth's own minimum-length-only check
+  (8 characters). Operators can additionally require uppercase, lowercase,
+  digit, and/or symbol characters via `AUTH_PASSWORD_REQUIRE_UPPERCASE` /
+  `_LOWERCASE` / `_NUMBER` / `_SYMBOL`, and change the minimum length via
+  `AUTH_PASSWORD_MIN_LENGTH` — see
+  [self-hosting.md](self-hosting.md#environment-variables). Enforced
+  identically on sign-up, password reset, and password change, so the policy
+  can't be bypassed by resetting to a non-compliant password right after a
+  compliant signup.
 - **Console-managed SMTP settings (platform:owner only)**: an owner can view
   and change SMTP host/port/user/password/from-address from Console → Settings,
   with changes taking effect immediately (no restart). The password is
@@ -195,6 +215,11 @@ the RFC 0060 adoption notes) — not something that broadens automatically.
 - [ ] **Configure `SMTP_HOST`** if you keep `AUTH_REQUIRE_EMAIL_VERIFICATION` at
       its default (`true`) — without SMTP, new registrations fail closed rather
       than issuing an unverifiable account.
+- [ ] **Consider a stricter password policy** — the default is an 8-character
+      minimum with no complexity requirement. Set `AUTH_PASSWORD_REQUIRE_UPPERCASE`
+      / `_LOWERCASE` / `_NUMBER` / `_SYMBOL` and/or `AUTH_PASSWORD_MIN_LENGTH` if
+      your threat model calls for it. See
+      [self-hosting.md](self-hosting.md#environment-variables).
 - [ ] **Keep backups encrypted and off-host**, and test restores. See
       [Disk-level encryption § Backups](self-hosting.md#backups) for a
       concrete `age`/GPG recipe.

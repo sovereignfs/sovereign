@@ -25,6 +25,7 @@ export function RegisterForm({
   const [name, setName] = useState('');
   const [email, setEmail] = useState(invitedEmail ?? '');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   // Browser timezone captured silently at registration (a helpful default, never
@@ -48,6 +49,10 @@ export function RegisterForm({
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
     setLoading(true);
     setError(null);
     const result = await authClient.signUp.email({
@@ -135,6 +140,19 @@ export function RegisterForm({
             />
             <p className={styles.fieldHint}>At least 8 characters.</p>
           </div>
+          <label htmlFor="register-confirm-password" className={styles.field}>
+            <span className={styles.label}>Confirm password</span>
+            <Input
+              id="register-confirm-password"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={8}
+              disabled={loading}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+          </label>
           {error ? <p className={styles.error}>{error}</p> : null}
           <Button type="submit" disabled={loading} className={styles.submitLg}>
             {loading

@@ -30,8 +30,12 @@ The Platform Shell is the runtime that composes plugins into a coherent experien
   - `src/registry.ts` — reads `generated/registry.ts`, exports installed plugin list
   - `generated/registry.ts` — placeholder empty registry
   - `app/login/route.ts` — redirects unauthenticated users to the auth server's
-    login page (the login/registration UI lives in `apps/auth`, not the runtime;
-    SRS §3.3). The auth server redirects back after login.
+    login page (SRS §3.3). The auth server redirects back after login.
+    **Stale as of the login/register UI's move to the runtime**: the actual
+    login/registration UI now lives on the runtime itself
+    (`runtime/app/login/`, `runtime/app/register/`), not `apps/auth` — the
+    auth app's own copies were removed as redundant. See
+    `docs/epics/design-system.md`'s note on the branded pre-auth pages.
 - `runtime/next.config.ts` — must include:
   - `transpilePackages: ['@sovereignfs/sdk', '@sovereignfs/ui',
 '@sovereignfs/db', '@sovereignfs/manifest', '@sovereignfs/mailer']` —

@@ -85,6 +85,33 @@ describe('progressive verification config (RFC 0035, workstream 0017 leg 1)', ()
   });
 });
 
+describe('password policy config', () => {
+  it('minPasswordLength defaults to 8 (AUTH_PASSWORD_MIN_LENGTH unset)', async () => {
+    const { getAuthOptions } = await import('../auth');
+    expect(getAuthOptions().emailAndPassword?.minPasswordLength).toBe(8);
+  });
+
+  it('registers a top-level hooks.before enforcing password complexity', async () => {
+    const { getAuthOptions } = await import('../auth');
+    expect(typeof getAuthOptions().hooks?.before).toBe('function');
+  });
+});
+
+describe('email enumeration safety (registration)', () => {
+  // Regression guard for the config precondition that makes better-auth's
+  // own sign-up endpoint take its generic-duplicate-response branch (hash
+  // the password anyway, return a synthetic { token: null, user } instead of
+  // throwing USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL) — see the doc comment on
+  // requireEmailVerification in env.ts for the full mechanism. Both must
+  // hold: requireEmailVerification true (or autoSignIn false, which this
+  // repo never sets).
+  it('requireEmailVerification defaults to true and autoSignIn stays true', async () => {
+    const { getAuthOptions } = await import('../auth');
+    expect(getAuthOptions().emailAndPassword?.requireEmailVerification).toBe(true);
+    expect(getAuthOptions().emailAndPassword?.autoSignIn).toBe(true);
+  });
+});
+
 describe('registration timezone field (Task 1.20)', () => {
   it('registers the timezone additionalField as client-input', async () => {
     const { getAuthOptions } = await import('../auth');

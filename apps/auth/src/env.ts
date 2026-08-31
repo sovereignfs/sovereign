@@ -15,6 +15,23 @@ export interface AuthEnv {
    * When true (default), a new account must click an emailed verification
    * link before signing in. Opt-out, not opt-in — `!== 'false'` so an unset
    * var defaults to required.
+   *
+   * Also the mechanism that makes `/register` (`/sign-up/email`)
+   * enumeration-safe by construction: better-auth's own sign-up endpoint
+   * only takes its generic-duplicate-response branch (hash the submitted
+   * password anyway, return a synthetic `{ token: null, user }` instead of
+   * throwing `USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL`) when
+   * `requireEmailVerification` is true or `autoSignIn` is false — this repo
+   * pins `autoSignIn: true` (auth.ts), so that branch is reachable only via
+   * this flag. With the default `true`, a genuine new signup and a
+   * collision attempt both return the identical `{ token: null, user }`
+   * shape, and the client reacts identically to both. Setting this to
+   * `false` reopens a narrow enumeration signal on `/register` (a collision
+   * attempt throws instead) — an accepted tradeoff of running without email
+   * verification, not something patched separately: there's no way to make
+   * a collision response indistinguishable from a real signup's
+   * immediate-session redirect without either signing the attacker into the
+   * existing account or breaking auto-sign-in for genuine new users.
    */
   requireEmailVerification: boolean;
   /**

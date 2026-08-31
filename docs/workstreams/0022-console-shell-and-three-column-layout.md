@@ -283,7 +283,7 @@ a separate PR):_
 - `docs/plugins/console.md` and `docs/epics/plugin-console.md` updated to
   describe `shell: "default"` and the new layout, not the retired overlay
   behavior.
-- `docs/epics/platform-shell.md` task 2.5/2.20 review checklists assert
+- `docs/epics/platform-shell.md` task 2.5/2.19 review checklists assert
   Console's overlay behavior as present-tense fact — add a short forward
   pointer to this workstream rather than rewriting completed-task history.
 - `docs/rfcs/0001-overlay-shell-variant.md` names Console as one of the two

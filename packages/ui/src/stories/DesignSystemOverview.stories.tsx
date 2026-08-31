@@ -35,6 +35,7 @@ import { Header } from '../components/Header/Header';
 import { MobileAppsDrawer } from '../components/MobileAppsDrawer/MobileAppsDrawer';
 import { MobileFooter } from '../components/MobileFooter/MobileFooter';
 import { MobileHeader } from '../components/MobileHeader/MobileHeader';
+import { NavList } from '../components/NavList/NavList';
 import { NavTabs } from '../components/NavTabs/NavTabs';
 import { NotificationsPanel } from '../components/NotificationsPanel/NotificationsPanel';
 import { PageHeader } from '../components/PageHeader/PageHeader';
@@ -1859,7 +1860,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
         <section style={{ marginBottom: 'var(--sv-space-12)' }}>
           <SectionHeader
             title="Component gallery"
-            subtitle="All 76 components — click each story in the sidebar for the full API, variants, and controls."
+            subtitle="All 77 components — click each story in the sidebar for the full API, variants, and controls."
           />
 
           <div style={{ marginBottom: 'var(--sv-space-6)' }}>
@@ -2828,6 +2829,42 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                     { label: 'Security', href: '#' },
                     { label: 'Preferences', href: '#' },
                     { label: 'Data', href: '#' },
+                  ]}
+                />
+              </div>
+            </ComponentCard>
+
+            {/* NavList */}
+            <ComponentCard
+              name="NavList"
+              importLine="import { NavList } from '@sovereignfs/ui';"
+              usage="Vertical list of icon+label rows, optionally grouped under section headers. static: active row highlighted, no chevron — a persistent sidebar. drilldown: trailing chevron on every row, no active state — a native-Settings-app style index. Framework-agnostic like NavTabs; supply active/renderLink from the consumer."
+            >
+              <div style={{ width: '100%', maxWidth: 220 }}>
+                <NavList
+                  variant="static"
+                  aria-label="Example sections"
+                  groups={[
+                    {
+                      id: 'overview',
+                      items: [
+                        {
+                          id: 'overview',
+                          label: 'Overview',
+                          href: '#',
+                          icon: 'layout-dashboard',
+                          active: true,
+                        },
+                      ],
+                    },
+                    {
+                      id: 'people',
+                      label: 'People',
+                      items: [
+                        { id: 'users', label: 'Users', href: '#', icon: 'users' },
+                        { id: 'groups', label: 'Groups', href: '#', icon: 'layers' },
+                      ],
+                    },
                   ]}
                 />
               </div>

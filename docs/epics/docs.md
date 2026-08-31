@@ -7,6 +7,19 @@
 
 ✅ Complete
 
+> **Update (July 2026):** `apps/docs/` — the in-repo VitePress app described by
+> every task below — was later retired and deleted from this repository
+> (`chore: remove retired apps/docs VitePress app`). The public docs site is
+> now built and deployed from the separate `sovereignfs/sovereignfs` workbench
+> repo, which fetches an allowlisted subset of this repo's `docs/` at build
+> time via its own `docs/docs-sync.manifest.json` — this repository holds only
+> the source prose, no docs-site code or CI. See `docs/repositories.md` and
+> `docs/documentation-structure.md` for the current architecture. This epic's
+> goal (a public docs site + landing page exists) is still true; only _where_
+> it's built changed. Tasks below are kept for historical context — treat
+> every `apps/docs`, `.github/workflows/docs.yml`, and `docs-v*` reference as
+> no longer live in this repository.
+
 ## Overview
 
 Sovereign's documentation lives in `docs/` as Markdown and is currently only
@@ -194,7 +207,77 @@ documentation set, backed by automated parity checks for public platform contrac
 - The README links users, operators, plugin developers, and contributors to the appropriate guide.
 - Documentation-parity tests fail when a tracked public contract is added without documentation.
 
-## Related RFCs
+---
+
+#### ✅ 16.6 — Retire stale in-repo docs-server references
+
+**Goal:** `apps/docs` (the in-repo VitePress app, tasks 16.1/16.2/16.4 above)
+was retired and deleted from this repository months ago
+(`chore: remove retired apps/docs VitePress app`) — the public docs site is
+now built and deployed from the separate `sovereignfs/sovereignfs` workbench
+repo instead. RFC 0037 and RFC 0067 already carry an accurate "Update"
+callout noting this, and `docs/repositories.md` already correctly describes
+the current split. But several other files still described `apps/docs` and
+its `docs-v*`/`docs.yml` release mechanism as if still live in this
+repository, discovered while reviewing an unrelated `docs/package.json`
+version-bump rule that turned out to belong to the _other_ repo
+(`sovereignfs/sovereignfs`'s own `AGENTS.md`) and was easy to mistake for a
+stale rule in this one.
+
+**Deliverables:**
+
+- `CLAUDE.md` and `AGENTS.md`: removed `docs-vX.Y.Z` from the list of live
+  package-tag examples (no package in this repo uses it anymore); added a
+  one-line pointer to `docs/repositories.md` explaining why.
+- `CONTRIBUTING.md`'s "Deploying hosted sites" section: removed the
+  `sovereignfs.github.io` / `docs-v*` / `docs.yml` row (that workflow file no
+  longer exists — confirmed via `ls .github/workflows/`), leaving only the
+  still-live Storybook deploy row; added a short note pointing at
+  `docs/repositories.md` for where the docs site actually deploys from now.
+- `docs/epics/docs.md` (this file): added an "Update (July 2026)" callout
+  under the epic's own `## Status`, mirroring RFC 0037/0067's existing
+  pattern, so a reader lands on the current architecture before reading
+  5 tasks that describe a build pipeline no longer in this repo.
+- `docs/epics/README.md`: fixed epic 16's index row, which self-contradicted
+  this file (index said "⏳ In Progress", this file said "✅ Complete") and
+  described the site as VitePress-built here; corrected to "✅ Complete" with
+  an accurate one-line summary.
+- `docs/development-workflow.md`: updated epic 16's one-line description in
+  its epic-index table to note the VitePress build moved out.
+- `docs/docs-site-revamp-plan.md`: its `Status: Proposed` was stale — the
+  plan was actually carried out (RFC 0067, task 16.4, both already marked
+  `Implemented`/done); updated to `Implemented` with a pointer to RFC 0067 and
+  the same apps/docs-relocation note.
+
+**Not touched, confirmed already accurate:** `docs/repositories.md` (the
+canonical, already-correct map of which repo owns what — no VitePress/apps/
+docs claim needed fixing there); RFC 0037 and RFC 0067 (both already carry a
+correct "Update" callout); `docs/architecture-rules.md`'s
+`scripts/check-doc-links.ts`/`slugifyVitePressHeading()` reference (that
+script and helper still exist and are still live tooling — the content this
+repo's `docs/` produces is still rendered by VitePress, just built
+externally now); `docs/design-system.md`'s Storybook-deploy reference
+(unrelated pipeline, still active); `ROADMAP.md`'s historical shipping-order
+rows for tasks 16.1/16.2/16.4 (correctly document what shipped at the time —
+not rewritten per this repo's own convention that `ROADMAP.md` is a
+chronological record, not a living state description).
+
+**Dependencies:** None. Standalone documentation correction, not gated on or
+gating any other task.
+
+**SRS reference:** None — this is documentation remediation of drift that
+accumulated after `apps/docs`'s removal, not new design.
+
+**Review checklist:**
+
+- `grep -rn "docs-vX.Y.Z" CLAUDE.md AGENTS.md` shows only the new explanatory
+  note, not a live example alongside `ui-vX.Y.Z`/`sdk-vX.Y.Z`.
+- `grep -n "docs.yml" CONTRIBUTING.md` returns nothing (the dead workflow
+  reference is gone).
+- `docs/epics/README.md`'s epic 16 row and `docs/epics/docs.md`'s own
+  `## Status` no longer contradict each other.
+- `pnpm format:check` passes (Prettier governs `.md` formatting in this
+  repo).
 
 - [RFC 0037 — VitePress public docs site and project landing page](../rfcs/0037-vitepress-docs-site.md)
 - [RFC 0067 — Product-led docs site and instance directory](../rfcs/0067-product-led-docs-site.md)

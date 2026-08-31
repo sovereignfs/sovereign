@@ -40,33 +40,33 @@ Each layer has a single job:
 
 Work is organized into domain epics. Each task has a **stable epic task ID** (`<epic>.<seq>`) that can be cited in PRs, RFCs, and commits independently of roadmap version numbers.
 
-| ID  | Epic file                | Domain                                                    |
-| --- | ------------------------ | --------------------------------------------------------- |
-| 0   | `infrastructure.md`      | Monorepo, Docker, CI, testing pipeline, deployment        |
-| 1   | `users-auth.md`          | Auth server, sessions, MFA, roles, capabilities           |
-| 2   | `platform-shell.md`      | Runtime host, middleware, shell modes, SDK bridge         |
-| 3   | `plugins-runtime.md`     | Manifest, generate script, SDK contract, plugin lifecycle |
-| 4   | `notification-center.md` | In-app inbox, toasts, web push, pub/sub                   |
-| 5   | `activity-logs.md`       | Audit trail for user and admin actions                    |
-| 6   | `analytics.md`           | Self-hosted privacy-first usage analytics                 |
-| 7   | `monetization.md`        | Ed25519 entitlement tokens, billing, payments             |
-| 8   | `data-sovereignty.md`    | Backup/restore, portability, per-plugin DB, deletion      |
-| 9   | `design-system.md`       | Design system, white-labeling, instance identity, i18n    |
-| 10  | `accessibility.md`       | WCAG 2.1 AA, a11y lint, plugin a11y contract              |
-| 11  | `i18n.md`                | Internationalization infrastructure and translations      |
-| 12  | `example-plugins.md`     | Starter templates and capability-demo plugins             |
-| 13  | `plugin-console.md`      | Admin console plugin                                      |
-| 14  | `plugin-accounts.md`     | Account plugin                                            |
-| 15  | `plugin-launcher.md`     | Launcher plugin                                           |
-| 16  | `docs.md`                | VitePress docs site and project landing page              |
-| 17  | `desktop.md`             | Native desktop shell                                      |
-| 18  | `sovereign-harness.md`   | AI assistant and orchestration layer                      |
-| 19  | `sovereign-council.md`   | Multi-model deliberation workspace                        |
-| 20  | `mobile.md`              | Native mobile shell                                       |
-| 21  | `sovereign-wallet.md`    | Encrypted wallet platform plugin                          |
-| 22  | `core-assistant.md`      | Runtime assistant and local inference                     |
-| 23  | `p2p-chat.md`            | Companion P2P chat, identity, transport, and E2EE         |
-| 24  | `plugin-guide.md`        | First-run orientation and operator guidance plugin        |
+| ID  | Epic file                | Domain                                                                                              |
+| --- | ------------------------ | --------------------------------------------------------------------------------------------------- |
+| 0   | `infrastructure.md`      | Monorepo, Docker, CI, testing pipeline, deployment                                                  |
+| 1   | `users-auth.md`          | Auth server, sessions, MFA, roles, capabilities                                                     |
+| 2   | `platform-shell.md`      | Runtime host, middleware, shell modes, SDK bridge                                                   |
+| 3   | `plugins-runtime.md`     | Manifest, generate script, SDK contract, plugin lifecycle                                           |
+| 4   | `notification-center.md` | In-app inbox, toasts, web push, pub/sub                                                             |
+| 5   | `activity-logs.md`       | Audit trail for user and admin actions                                                              |
+| 6   | `analytics.md`           | Self-hosted privacy-first usage analytics                                                           |
+| 7   | `monetization.md`        | Ed25519 entitlement tokens, billing, payments                                                       |
+| 8   | `data-sovereignty.md`    | Backup/restore, portability, per-plugin DB, deletion                                                |
+| 9   | `design-system.md`       | Design system, white-labeling, instance identity, i18n                                              |
+| 10  | `accessibility.md`       | WCAG 2.1 AA, a11y lint, plugin a11y contract                                                        |
+| 11  | `i18n.md`                | Internationalization infrastructure and translations                                                |
+| 12  | `example-plugins.md`     | Starter templates and capability-demo plugins                                                       |
+| 13  | `plugin-console.md`      | Admin console plugin                                                                                |
+| 14  | `plugin-accounts.md`     | Account plugin                                                                                      |
+| 15  | `plugin-launcher.md`     | Launcher plugin                                                                                     |
+| 16  | `docs.md`                | Docs site content and project landing page (VitePress build now lives in `sovereignfs/sovereignfs`) |
+| 17  | `desktop.md`             | Native desktop shell                                                                                |
+| 18  | `sovereign-harness.md`   | AI assistant and orchestration layer                                                                |
+| 19  | `sovereign-council.md`   | Multi-model deliberation workspace                                                                  |
+| 20  | `mobile.md`              | Native mobile shell                                                                                 |
+| 21  | `sovereign-wallet.md`    | Encrypted wallet platform plugin                                                                    |
+| 22  | `core-assistant.md`      | Runtime assistant and local inference                                                               |
+| 23  | `p2p-chat.md`            | Companion P2P chat, identity, transport, and E2EE                                                   |
+| 24  | `plugin-guide.md`        | First-run orientation and operator guidance plugin                                                  |
 
 The epic index is `docs/epics/README.md` in the repository planning docs.
 

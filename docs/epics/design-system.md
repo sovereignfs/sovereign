@@ -1407,3 +1407,69 @@ either in a patch); `@sovereignfs/create-plugin` → **patch**.
 - `pnpm --filter @sovereignfs/ui typecheck`, `pnpm --filter @sovereignfs/ui test`, `pnpm lint`, and `pnpm design:tokens:check` all pass — the wildcard does not mark `tokens.css`/`tokens/*.css` in a way that breaks their `@import` chain (they're consumed via the package `exports` map, not the JS module graph, so this should be a no-op, but the check confirms that assumption still holds).
 - No `@next/bundle-analyzer` devDependency or `ANALYZE`-gated wiring remains in `runtime/next.config.ts` or `runtime/package.json` after the PR merges, unless the developer explicitly opts to keep it as a standing script — in which case this task's deliverables and `docs/self-hosting.md`/`package.json` `scripts` are updated to match before merging.
 - `packages/ui`'s `package.json` `version` bumped **patch** (build-metadata-only fix, no change to the published component/type API) per NFR-04's semver rule for the published `@sovereignfs/ui` package.
+
+---
+
+#### 📋 9.28 — `NavList` component (grouped icon+label nav, static + drilldown variants)
+
+**Goal:** Add a new `packages/ui` component, `NavList`, for the "vertical list
+of icon+label rows, optionally grouped under section headers" shape — needed
+first by Console's shell rework (workstream 0022 leg 1) for both its desktop
+sidebar (a `static` variant: active row highlighted, no chevron) and its
+mobile index (a `drilldown` variant: trailing chevron, tap navigates to a
+full-screen section, matching a native Settings-app pattern). No existing
+`packages/ui` component covers this — `CheckableListRow` is checkbox-driven,
+the wrong shape — and Account's own multi-section layout
+(`plugins/account/app/layout.tsx`) has the identical horizontal-tab-strip
+pattern Console is moving away from, making it a plausible second consumer
+later, though this task does not touch Account.
+
+**Deliverables:**
+
+- `packages/ui/src/components/NavList/NavList.tsx` (new) — presentational
+  only (no data fetching, no SDK import, matching every other `packages/ui`
+  component). Props: `groups: NavListGroup[]`, `variant: 'static' |
+'drilldown'`, `'aria-label': string`. `NavListGroup = { id: string; label?:
+string; items: NavListItem[] }` (omit `label` for an ungrouped leading
+  item/group). `NavListItem = { id: string; label: string; href: string;
+icon: IconName; badge?: ReactNode }` (`badge` reserved for a future
+  consumer; not used by Console leg 1).
+- `variant="static"`: renders each item as a `<Link>`; active-state is
+  computed internally via `usePathname()` + longest-prefix match against each
+  item's `href` (mirroring the logic in `plugins/console/app/_components/ConsoleNavLink.tsx`
+  and `plugins/account/app/_components/ActiveNavLink.tsx`, both plugin-local
+  today — only the row/group rendering moves into the DS here, not those
+  helpers verbatim). Active row gets a background highlight and
+  `aria-current="page"`; no chevron.
+- `variant="drilldown"`: renders each item as a `<Link>` with a trailing
+  `Icon name="chevron-right"`; no active-state concept.
+- Group header: small uppercase muted label above a group's rows; omitted
+  entirely (no empty header markup) when `group.label` is unset.
+- `packages/ui/src/stories/NavList.stories.tsx` (new) — both variants,
+  grouped and ungrouped, active and inactive states, per this repo's
+  Storybook hygiene rule. Add a `NavList` entry to `DesignSystemOverview.stories.tsx`'s
+  Component Gallery and bump its component-count string.
+- `packages/ui/src/index.ts` exports `NavList`, `NavListProps`,
+  `NavListGroup`, `NavListItem`.
+- `packages/ui/src/components/NavList/__tests__/NavList.test.tsx` (new) —
+  active-item matching for `static`, chevron/navigation rendering for
+  `drilldown`, grouped vs. ungrouped rendering, `aria-current` presence.
+
+**Dependencies:** None. Consumed by workstream 0022 leg 1 (task 13.17)
+immediately after landing, but has no dependency of its own.
+
+**SRS reference:** None — this is a new, additive design-system component
+consumed by a plugin-level shell change (workstream 0022), not a platform
+design decision. No RFC governs it (see that workstream's "Why no RFC").
+
+**Review checklist:**
+
+- `pnpm --filter @sovereignfs/ui typecheck`, `pnpm --filter @sovereignfs/ui test`,
+  `pnpm lint`, `pnpm format:check`, and `pnpm design:tokens:check` all pass.
+- `pnpm --filter @sovereignfs/ui build-storybook` succeeds with the new
+  `NavList` stories present.
+- Both variants render correctly at every documented state (grouped/
+  ungrouped, active/inactive, with/without a `badge`) in Storybook.
+- `packages/ui`'s `package.json` `version` bumped **minor** (new additive
+  component/exports, no breaking change) per NFR-04.
+- `docs/design-system.md`'s component reference gains a `NavList` entry.

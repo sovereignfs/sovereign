@@ -166,9 +166,12 @@ and the decision log behind these conventions: `docs/multi-agent.md`.
 
   **Version-bump commit subjects and release tags use the same identifier.**
   Root `package.json` releases use `vX.Y.Z`. Package releases use the package
-  slug plus version: `ui-vX.Y.Z`, `docs-vX.Y.Z`, `sdk-vX.Y.Z`,
-  `runtime-vX.Y.Z`, `auth-vX.Y.Z`, and the same `<slug>-vX.Y.Z` pattern for
-  other package tags.
+  slug plus version: `ui-vX.Y.Z`, `sdk-vX.Y.Z`, `runtime-vX.Y.Z`,
+  `auth-vX.Y.Z`, and the same `<slug>-vX.Y.Z` pattern for other package tags.
+  (`docs-vX.Y.Z` no longer applies here — `apps/docs`, the VitePress app that
+  tag pattern deployed, was retired; the public docs site is now built and
+  deployed from the separate `sovereignfs/sovereignfs` workbench repo. See
+  `docs/repositories.md`.)
 
 ## Naming conventions
 

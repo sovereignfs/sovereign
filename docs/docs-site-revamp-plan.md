@@ -1,6 +1,10 @@
 # Sovereign Docs Site Revamp Plan
 
-**Status:** Proposed
+**Status:** Implemented — carried out via [RFC 0067](rfcs/0067-product-led-docs-site.md)
+and epic task 16.4. Kept for historical context on the original plan; the
+VitePress build this plan and RFC 0067 describe was later retired from this
+repository and moved to the `sovereignfs/sovereignfs` workbench repo — see
+`docs/repositories.md`. Treat `apps/docs` references below as no longer live.
 
 **Date:** July 2026
 

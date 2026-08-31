@@ -363,19 +363,25 @@ published to npm unless a future workflow explicitly makes them publishable.
 
 ## Deploying hosted sites
 
-Two sites are deployed via tag push rather than on every merge to `main`, to
+One site is deployed via tag push rather than on every merge to `main`, to
 avoid burning CI minutes on incremental changes:
 
-| Site                                  | Tag pattern | Workflow                | Trigger command example                            |
-| ------------------------------------- | ----------- | ----------------------- | -------------------------------------------------- |
-| [sovereignfs.github.io][docs-site]    | `docs-v*`   | `docs.yml` (deploy job) | `git tag docs-v1.0 && git push origin docs-v1.0`   |
-| [sovereignfs.github.io/storybook][sb] | `sb-v*`     | `storybook-deploy.yml`  | `git tag sb-v0.11.0 && git push origin sb-v0.11.0` |
+| Site                                  | Tag pattern | Workflow               | Trigger command example                            |
+| ------------------------------------- | ----------- | ---------------------- | -------------------------------------------------- |
+| [sovereignfs.github.io/storybook][sb] | `sb-v*`     | `storybook-deploy.yml` | `git tag sb-v0.11.0 && git push origin sb-v0.11.0` |
 
-[docs-site]: https://sovereignfs.github.io/
 [sb]: https://sovereignfs.github.io/storybook/
 
-Both workflows also support **manual re-deploys** via **Actions → [workflow name] →
-Run workflow** without needing to push a tag.
+This workflow also supports a **manual re-deploy** via **Actions → storybook-deploy
+→ Run workflow** without needing to push a tag.
+
+> The public docs site (`sovereignfs.github.io`) is no longer built or deployed
+> from this repository — `apps/docs` (the VitePress app) was retired and
+> deleted (`chore: remove retired apps/docs VitePress app`). It's now built and
+> deployed from the `sovereignfs/sovereignfs` workbench repo, which fetches an
+> allowlisted subset of this repo's `docs/` at build time. This repo holds the
+> source prose only; see `docs/repositories.md` and
+> `docs/documentation-structure.md`.
 
 ---
 

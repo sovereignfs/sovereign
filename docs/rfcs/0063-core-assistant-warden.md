@@ -2,20 +2,19 @@
 rfc: 0063
 title: Warden — core assistant platform plugin and harness engine (formerly "Jarvis")
 status: >
-  Partially implemented (third revision — the second rewrite's phase
-  (bring-your-own model providers, single persisted conversation, incognito)
-  is Implemented: epic tasks 22.4-22.5 (workstream 0019) both done, plugin
-  re-enabled. This third revision specs the multi-session UI phase that RFC
-  0063's own second rewrite explicitly deferred as "a future,
-  not-yet-scheduled phase" — a collapsible sidebar with multiple named,
-  pinnable sessions; a consolidated Settings surface (General/Providers/
-  Models) replacing the standalone /warden/providers and /warden/models
-  routes; and a redesigned composer. Sequenced as epic tasks 22.8-22.11,
-  workstream 0021 — legs 1-3 (22.8 sessions data model/API, 22.9 settings
-  consolidation, 22.10 sidebar UI) are done; leg 4 (composer redesign)
-  remains, see that workstream for legs. Tool execution/task handoff/floating
-  button/voice remain a future, not-yet-scheduled phase, unchanged from the
-  second rewrite)
+  Implemented (third revision — the second rewrite's phase (bring-your-own
+  model providers, single persisted conversation, incognito) is Implemented:
+  epic tasks 22.4-22.5 (workstream 0019) both done, plugin re-enabled. This
+  third revision specs the multi-session UI phase that RFC 0063's own second
+  rewrite explicitly deferred as "a future, not-yet-scheduled phase" — a
+  collapsible sidebar with multiple named, pinnable sessions; a consolidated
+  Settings surface (General/Providers/Models) replacing the standalone
+  /warden/providers and /warden/models routes; and a redesigned composer.
+  Sequenced as epic tasks 22.8-22.11, workstream 0021 — all four legs (22.8
+  sessions data model/API, 22.9 settings consolidation, 22.10 sidebar UI,
+  22.11 composer redesign) are done, see that workstream for detail. Tool
+  execution/task handoff/floating button/voice remain a future,
+  not-yet-scheduled phase, unchanged from the second rewrite)
 date: >
   August 2026 (second rewrite; originally drafted July 2026, first rewrite
   August 2026; third revision August 2026)
@@ -32,7 +31,7 @@ scope: >
   design and its second rewrite's single-conversation UI
 incorporated_into_plan: >
   Yes — epic tasks 22.4-22.5 (workstream 0019, done) and 22.8-22.11
-  (workstream 0021, legs 1-3/22.8-22.10 done, leg 4 planned)
+  (workstream 0021, all four legs done)
 ---
 
 # RFC 0063 - Warden: core assistant platform plugin and harness engine
@@ -800,3 +799,4 @@ Semver impact:
 | 0.5     | August 2026 | **Second rewrite.** Revamped to bring-your-own OpenAI-API-compatible model providers per user, with the existing local `apps/harness` engine folded in as one optional entry rather than the required backend; persisted single-threaded conversation history (reversing the first rewrite's ephemeral-only decision) with an incognito toggle preserving that behavior as an opt-in; provider API keys stored via the existing `sdk.secrets` vault (RFC 0043), no new secret-storage mechanism; no code changes required to `apps/harness`, `packages/sdk`, or `packages/manifest`. Not yet implemented or scheduled.                                                                                                                                                                            |
 | 0.6     | August 2026 | Second rewrite shipped in full (epic tasks 22.4-22.5, workstream 0019), verified end to end against a self-hosted mock provider; plugin re-enabled                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | 0.7     | August 2026 | **Third revision.** Specs the multi-session UI phase explicitly deferred in 0.5/0.6 as future/undesigned: `warden_sessions` replaces the single `warden_conversation` (clean-slate migration, no backfill of existing rows), collapsible two-column sidebar with pinnable (max 5) named sessions ordered by last-active timestamp and LLM-generated titles, a consolidated `/warden/settings` (General/Providers/Models) replacing the standalone provider/model routes, and a Claude-style composer redesign (model picker as a popover, incognito relocated into the toolbar, web-search placeholder removed). Incognito's own semantics, request routing, and provider/model discovery are unchanged. Sequenced as epic tasks 22.8-22.11, workstream 0021. Planning only — not yet implemented |
+| 0.8     | August 2026 | Third revision shipped in full (epic tasks 22.8-22.11, workstream 0021, all four legs), verified end to end live against a real logged-in dev session at each leg. Three of this revision's own Open Questions were resolved at implementation time rather than left as designed: session titles use no model call at all (a synchronous truncation of the first message, not an LLM request); retention is a manual, on-demand action, never a scheduled job; export deep-links to the existing account-wide portability flow rather than a new Warden-only mechanism                                                                                                                                                                                                                            |

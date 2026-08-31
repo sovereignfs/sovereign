@@ -1,6 +1,6 @@
-# Workstream 0021 — Dialog dismissal correctness and composition
+# Workstream 0024 — Dialog dismissal correctness and composition
 
-**Status:** ⏳ In Progress — all five legs (`9.28`–`9.38`) implemented and
+**Status:** ⏳ In Progress — all five legs (`9.29`–`9.39`) implemented and
 verified (unit tests + live-browser checks where applicable), not yet
 committed/PR'd; see each leg's own detail for what changed and any
 deviations from plan\
@@ -36,24 +36,24 @@ Body + Footer) without changing behavior for consumers that don't opt in.
 
 **Required:**
 
-- [x] `9.28` — `Dialog`: remove duplicate Escape-dismissal
-- [x] `9.29` — `Drawer`: remove duplicate Escape-dismissal
-- [x] `9.30` — `ConfirmDialog`: stop double-firing `onClose`
-- [x] `9.31` — Overlay Escape precedence for nested modals
-- [x] `9.32` — `Dialog`: unify the close icon
-- [x] `9.33` — `Dialog` header/body/footer composition
+- [x] `9.29` — `Dialog`: remove duplicate Escape-dismissal
+- [x] `9.30` — `Drawer`: remove duplicate Escape-dismissal
+- [x] `9.31` — `ConfirmDialog`: stop double-firing `onClose`
+- [x] `9.32` — Overlay Escape precedence for nested modals
+- [x] `9.33` — `Dialog`: unify the close icon
+- [x] `9.34` — `Dialog` header/body/footer composition
 
 **Optional — lower priority, discovered incidentally during the same review,
 not independently prioritized (see Leg 4):**
 
-- [x] `9.34` — Retire or redefine `Dialog`'s dead `full` size (resolved differently than planned — see Leg 4 detail)
-- [x] `9.35` — Reconcile `Dialog`'s `xl`/`full` sizes with the manifest `overlaySize` schema
-- [x] `9.36` — De-duplicate `MOTION_DURATION_MS`
-- [x] `9.37` — Fallback accessible name in `@modal/layout.tsx`
+- [x] `9.35` — Retire or redefine `Dialog`'s dead `full` size (resolved differently than planned — see Leg 4 detail)
+- [x] `9.36` — Reconcile `Dialog`'s `xl`/`full` sizes with the manifest `overlaySize` schema
+- [x] `9.37` — De-duplicate `MOTION_DURATION_MS`
+- [x] `9.38` — Fallback accessible name in `@modal/layout.tsx`
 
 **Added mid-workstream, developer-requested breaking change (see Leg 5):**
 
-- [x] `9.38` — Revamp `Dialog`'s size scale: drop `xl`/`full`, add `auto`
+- [x] `9.39` — Revamp `Dialog`'s size scale: drop `xl`/`full`, add `auto`
 
 ## Decisions locked
 
@@ -64,30 +64,30 @@ not independently prioritized (see Leg 4):**
 | Header visibility                                  | Renders on **both** breakpoints when provided — not mobile-only as today                                                 | Leaving the new `header` prop mobile-only, matching today's `title` behavior — rejected; would make "Header + Body" a misleading variant name on desktop, where it would render identically to "Body only"                                                                                                                                                         |
 | Footer pinning technique                           | Non-scrolling flex sibling after `.content`, mirroring `OverlayHeader`'s existing technique                              | `position: sticky` — rejected; this codebase has a documented WebKit momentum-scroll staleness bug with sticky elements inside touch-scrollable content (see `docs/architecture-rules.md`), and the flex-sibling technique already used for the header sidesteps it entirely with no new risk                                                                      |
 | Existing `Dialog` consumer migration onto `footer` | Deferred as follow-up work, out of this workstream                                                                       | Migrating the ~20 existing `Dialog` consumers onto the new `footer` prop inside Leg 3 — rejected; would make an already-large leg unreviewable, and the capability should ship before any consumer is forced onto it                                                                                                                                               |
-| Escape-precedence fix scope                        | `Dialog`/`Drawer`/`Sheet` + `ConfirmDialog` only, via one shared registry in `overlay-shell.ts`                          | Also auditing `Popover` for the same bug class inside this workstream — rejected; flagged instead as an open design decision inside `9.31` to check for during implementation, so a live-verified 3-bug leg doesn't grow scope on a suspicion                                                                                                                      |
+| Escape-precedence fix scope                        | `Dialog`/`Drawer`/`Sheet` + `ConfirmDialog` only, via one shared registry in `overlay-shell.ts`                          | Also auditing `Popover` for the same bug class inside this workstream — rejected; flagged instead as an open design decision inside `9.32` to check for during implementation, so a live-verified 3-bug leg doesn't grow scope on a suspicion                                                                                                                      |
 | Close icon                                         | Desktop close button swaps `circle-x` → lucide `x`, matching what `OverlayHeader` already uses on mobile                 | Keeping `circle-x` — rejected; explicitly what the developer asked to change. Recorded here because it reverses a previously deliberate decision documented in `Dialog.tsx`'s own comment — captured so the reversal is intentional, not an accidental regression a future reviewer flags                                                                          |
-| Task ID assignment                                 | New epic task IDs `9.28`–`9.37` appended sequentially in `docs/epics/design-system.md`, past its prior highest (`9.27`)  | Reusing/renumbering an existing task — rejected; no existing task in epic 9 matches any of these findings, mirrors workstream 0020's stated convention                                                                                                                                                                                                             |
-| Leg 4 scope                                        | Included as an explicitly optional, lower-priority leg                                                                   | Leaving the four cleanup findings (`9.34`–`9.37`) undocumented — rejected; they were fully diagnosed during the same review with exact `file:line` references, so writing them down costs little and they may as well be available if the developer wants them; they are **not** required for this workstream's Definition of done to be considered met if skipped |
-| `Dialog` size scale (`9.38`)                       | `sm` \| `md` \| `lg` \| `auto` — `xl`/`full` removed outright, `auto` added (content-driven on both width and height)    | Keeping `full` as a documented alias, `9.34`'s own original resolution — superseded once the developer explicitly asked for the breaking revamp and explicitly accepted the plugin-migration cost ("we can address them separately before do a prod release") rather than optimizing for zero breakage the way `9.34` did on its own initiative                    |
+| Task ID assignment                                 | New epic task IDs `9.29`–`9.38` appended sequentially in `docs/epics/design-system.md`, past its prior highest (`9.27`)  | Reusing/renumbering an existing task — rejected; no existing task in epic 9 matches any of these findings, mirrors workstream 0020's stated convention                                                                                                                                                                                                             |
+| Leg 4 scope                                        | Included as an explicitly optional, lower-priority leg                                                                   | Leaving the four cleanup findings (`9.35`–`9.38`) undocumented — rejected; they were fully diagnosed during the same review with exact `file:line` references, so writing them down costs little and they may as well be available if the developer wants them; they are **not** required for this workstream's Definition of done to be considered met if skipped |
+| `Dialog` size scale (`9.39`)                       | `sm` \| `md` \| `lg` \| `auto` — `xl`/`full` removed outright, `auto` added (content-driven on both width and height)    | Keeping `full` as a documented alias, `9.35`'s own original resolution — superseded once the developer explicitly asked for the breaking revamp and explicitly accepted the plugin-migration cost ("we can address them separately before do a prod release") rather than optimizing for zero breakage the way `9.35` did on its own initiative                    |
 | `auto` size's caps                                 | `min-width: min(24rem, 100%)`, `max-width`/`max-height: min(48rem, 100%)` — matching where `sm` and the removed `xl` sat | An unbounded `width: fit-content` with no min/max — rejected; a very short message would read as an oddly narrow sliver with no floor, and very long/wide content would have no ceiling either                                                                                                                                                                     |
-| `sovereign-plugin-kanban.local` migration          | Not performed here — flagged in `docs/upgrade.md` as a follow-up for that plugin's own maintainers                       | Editing it directly — rejected for the same repo-boundary reason `9.34` already established (gitignored `.local` clone, confirmed via `git check-ignore`, outside this repo's ownership)                                                                                                                                                                           |
+| `sovereign-plugin-kanban.local` migration          | Not performed here — flagged in `docs/upgrade.md` as a follow-up for that plugin's own maintainers                       | Editing it directly — rejected for the same repo-boundary reason `9.35` already established (gitignored `.local` clone, confirmed via `git check-ignore`, outside this repo's ownership)                                                                                                                                                                           |
 
 ## Prerequisites
 
 None. Fully self-contained to `packages/ui` (Legs 1–4, 5) plus one `runtime`
-file (`9.37`, and `9.38`'s doc-comment update, both in `runtime/src/overlay.ts`
-for `9.38`). No dependency on any other workstream's output, and no
+file (`9.38`, and `9.39`'s doc-comment update, both in `runtime/src/overlay.ts`
+for `9.39`). No dependency on any other workstream's output, and no
 prerequisite owned outside this repo.
 
 ## Legs
 
 | Leg          | Name                           | Epic tasks                     | Epics | Gate? | Done when                                                                      |
 | ------------ | ------------------------------ | ------------------------------ | ----- | ----- | ------------------------------------------------------------------------------ |
-| 1            | Overlay dismissal correctness  | `9.28`, `9.29`, `9.30`, `9.31` | 9     | No    | All four marked ✅ in the epic doc, reviewed and merged                        |
-| 2            | Close icon unification         | `9.32`                         | 9     | No    | `9.32` marked ✅, reviewed and merged                                          |
-| 3            | Header/body/footer composition | `9.33`                         | 9     | No    | `9.33` marked ✅, reviewed and merged                                          |
-| 4 (optional) | Design-system cleanup backlog  | `9.34`, `9.35`, `9.36`, `9.37` | 9     | No    | All four marked ✅ or explicitly dropped by the developer, reviewed and merged |
-| 5            | `Dialog` size scale revamp     | `9.38`                         | 9     | No    | `9.38` marked ✅, reviewed and merged                                          |
+| 1            | Overlay dismissal correctness  | `9.29`, `9.30`, `9.31`, `9.32` | 9     | No    | All four marked ✅ in the epic doc, reviewed and merged                        |
+| 2            | Close icon unification         | `9.33`                         | 9     | No    | `9.33` marked ✅, reviewed and merged                                          |
+| 3            | Header/body/footer composition | `9.34`                         | 9     | No    | `9.34` marked ✅, reviewed and merged                                          |
+| 4 (optional) | Design-system cleanup backlog  | `9.35`, `9.36`, `9.37`, `9.38` | 9     | No    | All four marked ✅ or explicitly dropped by the developer, reviewed and merged |
+| 5            | `Dialog` size scale revamp     | `9.39`                         | 9     | No    | `9.39` marked ✅, reviewed and merged                                          |
 
 Sequencing reflects priority, not a hard dependency chain: Leg 1 first
 because it's the highest-impact finding (a confirmed live bug that can eject
@@ -97,7 +97,7 @@ overlapping diffs — there is no technical dependency between them. Leg 4 is
 independent of Legs 1–3 and may be skipped entirely without affecting them.
 **Leg 5 was added mid-workstream**, after Leg 4 shipped, when the developer
 reviewed the finished size scale and asked for a breaking revamp — it
-directly revises `9.34`/`9.35`'s own resolutions (see those tasks' epic-doc
+directly revises `9.35`/`9.36`'s own resolutions (see those tasks' epic-doc
 entries for the pointer notes) rather than sitting fully independent of
 Leg 4 the way Leg 4's own items sit independent of Legs 1–3.
 
@@ -120,13 +120,13 @@ once a second Escape was pressed after the confirm was dismissed — end to
 end, not just at the unit level. `packages/ui` bumped `0.74.0` → `0.74.1`
 (patch — internal bug fixes, no public API change). See each task's own
 epic-doc entry (`docs/epics/design-system.md`) for the exact verification
-detail, including one live-browser caveat found in `9.31` (unrelated to
+detail, including one live-browser caveat found in `9.32` (unrelated to
 this task's own fix — noted there, not a blocker).
 
-**Epic tasks:** `9.28`, `9.29`, `9.30`, `9.31` (in this order)
+**Epic tasks:** `9.29`, `9.30`, `9.31`, `9.32` (in this order)
 
 **Why this leg is first:** these are confirmed, live-verified bugs with the
-largest real-world blast radius of anything in this workstream — `9.31` in
+largest real-world blast radius of anything in this workstream — `9.32` in
 particular means pressing Escape to cancel a destructive confirmation inside
 Console or Account (e.g. "Delete user permanently?") can eject the admin
 from the entire admin surface instead of just canceling the confirmation.
@@ -135,20 +135,20 @@ with no dependency on any other leg.
 
 **Technical notes:**
 
-`9.28` and `9.29` are the same one-line fix applied to sibling files
+`9.29` and `9.30` are the same one-line fix applied to sibling files
 (`Dialog.tsx`, `Drawer.tsx`) — do them first and together; `Sheet.tsx` does
 **not** have this bug (no scrim, so no redundant handler to remove) and
 needs no change, which is itself useful confirmation of the fix's
 correctness (compare against `Sheet`'s existing, correct pattern before
 editing `Dialog`/`Drawer`).
 
-`9.30` is unrelated to nesting — reproduced standalone, with no `Dialog`
-involved at all. Can be done independently of `9.28`/`9.29`, but keep it in
+`9.31` is unrelated to nesting — reproduced standalone, with no `Dialog`
+involved at all. Can be done independently of `9.29`/`9.30`, but keep it in
 this leg since all three share the same "overlay dismissal correctness"
 review and test-writing pattern (write a failing regression test against
 the current code first, confirm it fails, then fix).
 
-`9.31` depends on `9.28`/`9.29` landing first in the same leg (same file,
+`9.32` depends on `9.29`/`9.30` landing first in the same leg (same file,
 same mechanism — the registry replaces what the redundant handler used to
 half-do). This is the least mechanically simple of the four — see Risks and
 Kill criteria below before starting it.
@@ -161,11 +161,11 @@ missed: the existing `Dialog.test.tsx` Escape test technically passes today
 despite the bug, because it dispatches the keydown in a way that doesn't
 exercise the real bubble path.
 
-**Do not proceed if:** `9.31`'s registry approach needs changes outside
+**Do not proceed if:** `9.32`'s registry approach needs changes outside
 `packages/ui/src/overlay-shell.ts` (e.g. `Popover` turns out to have the
-same bug and a fix requires touching it too) — stop and re-scope `9.31` as
-its own follow-up rather than expanding this leg. `9.28`–`9.30` ship
-independently of `9.31`'s resolution either way.
+same bug and a fix requires touching it too) — stop and re-scope `9.32` as
+its own follow-up rather than expanding this leg. `9.29`–`9.31` ship
+independently of `9.32`'s resolution either way.
 
 ### Leg 2 — Close icon unification
 
@@ -179,7 +179,7 @@ styles that Dialog's own `.close` (`display:none` on mobile) and
 same icon now, not just visually similar. `pnpm design:tokens:check` and
 `pnpm --filter @sovereignfs/ui build-storybook` both pass.
 
-**Epic tasks:** `9.32`
+**Epic tasks:** `9.33`
 
 **Why this leg runs here:** small, isolated, no interaction with Leg 1's
 fixes. Sequenced before Leg 3 only so Leg 3's header-row work doesn't also
@@ -215,7 +215,7 @@ screens deep and confirmed the header/footer never moved; confirmed the
 Header+Body story shows a real header row on desktop, which didn't exist
 before this task.
 
-**Epic tasks:** `9.33`
+**Epic tasks:** `9.34`
 
 **Why this leg runs here:** the largest, most design-involved change in this
 workstream — kept isolated from the correctness fixes (Leg 1) and the icon
@@ -223,7 +223,7 @@ change (Leg 2) so it can be reviewed purely on its own merits.
 
 **Technical notes:** the open design decision that most needs settling
 _before_ writing code, not during review, is the relationship between the
-existing `title` string prop and the new `header` node prop — see `9.33`'s
+existing `title` string prop and the new `header` node prop — see `9.34`'s
 own "Open design decisions." Getting this wrong (e.g. shipping both with
 silently overlapping behavior) is the most likely way this leg needs a
 second review round. `docs/architecture-rules.md`'s `PageContainer`/
@@ -247,7 +247,7 @@ bumped `0.91.10` → `0.91.11` (patch — a real, if edge-case, `aria-label`
 fix). Two notable deviations from the plan, both driven by things only
 discovered while implementing:
 
-- **`9.34` did not remove `full`, contrary to the task's own default
+- **`9.35` did not remove `full`, contrary to the task's own default
   recommendation.** Removing it turned out to be a real breaking type
   change — `CardDetailOverlay.tsx`'s `size={isMobile ? 'full' : 'xl'}` call
   site lives in `sovereign-plugin-kanban.local`, confirmed via
@@ -260,7 +260,7 @@ discovered while implementing:
   code — satisfies the review checklist's actual bar ("no remaining `full`
   size that behaves identically to `lg` **without explanation**") without
   the breaking change.
-- **`9.37`'s review checklist ("a new or existing test covers the
+- **`9.38`'s review checklist ("a new or existing test covers the
   plugin-not-found case") could not be met as written** — not for lack of
   trying, but because `@modal/layout.tsx` (and its committed siblings
   `default.tsx`/`error.tsx`) turned out to have no path to automated
@@ -279,7 +279,7 @@ discovered while implementing:
   errors attributed to the file, plus manual review of the (simple,
   well-typed) change.
 
-**Epic tasks:** `9.34`, `9.35`, `9.36`, `9.37`
+**Epic tasks:** `9.35`, `9.36`, `9.37`, `9.38`
 
 **Why this leg runs here:** these four findings were discovered incidentally
 while investigating Legs 1–3, not independently prioritized. None is a bug;
@@ -287,9 +287,9 @@ all are small, independent, low-risk cleanups. Confirm with the developer
 that they're still worth doing before starting — nothing else in this
 workstream depends on them.
 
-**Technical notes:** `9.35` should follow `9.34` (resolving `full`'s fate
+**Technical notes:** `9.36` should follow `9.35` (resolving `full`'s fate
 first avoids documenting a manifest/component split for a size this
-workstream may also remove). `9.36` and `9.37` are fully independent of
+workstream may also remove). `9.37` and `9.38` are fully independent of
 everything else in this leg and this workstream.
 
 **Do not proceed if:** the developer decides Leg 4 isn't worth doing — drop
@@ -302,15 +302,15 @@ dropping the leg does not leave the workstream incomplete.
 `packages/ui` bumped `0.75.1` → `0.76.0` (minor — breaking `DialogSize`
 change, per NFR-04's floor). `DialogSize` is now `sm | md | lg | auto`.
 Full detail — exact CSS caps, migration guidance, the known affected
-consumer — is in `9.38`'s own epic-doc entry and the new `@sovereignfs/ui`
+consumer — is in `9.39`'s own epic-doc entry and the new `@sovereignfs/ui`
 section of `docs/upgrade.md`; not duplicated here.
 
-**Epic tasks:** `9.38`
+**Epic tasks:** `9.39`
 
 **Why this leg runs here:** requested by the developer after reviewing the
 finished Leg 1–4 work and asking "how many sizes... seems not consistent" —
 a design decision only the developer could make (which names survive, what
-the new variant is called), not something to infer. Directly revises `9.34`'s
+the new variant is called), not something to infer. Directly revises `9.35`'s
 "keep `full`, don't break anyone" resolution now that the developer has
 explicitly authorized the opposite tradeoff.
 
@@ -318,7 +318,7 @@ explicitly authorized the opposite tradeoff.
 `Dialog.module.css`, `Dialog.stories.tsx`, `Dialog.test.tsx`) — sequenced
 last specifically so it revises the size scale once, after `header`/`footer`
 and the icon are already settled, rather than needing another pass once
-those land. Also touches `9.35`/`9.37`'s own doc changes (`runtime/src/overlay.ts`,
+those land. Also touches `9.36`/`9.38`'s own doc changes (`runtime/src/overlay.ts`,
 `docs/plugin-development.md`) to keep them accurate rather than stale.
 
 **Do not proceed if:** a second, unrelated consumer of `xl`/`full` turns up
@@ -329,13 +329,13 @@ proceeding rather than silently absorbing.
 
 ## Risks
 
-- `9.31` (overlay Escape precedence) is a real architectural gap, not a
+- `9.32` (overlay Escape precedence) is a real architectural gap, not a
   one-line fix like its three leg-mates — the shared registry needs to
   correctly generalize to arbitrary nesting depth, not just the two-level
   case that was live-tested (`Dialog` containing `ConfirmDialog`). If the
   registry approach turns out to be fragile or under-tested, don't ship it
   alongside the two simple fixes in the same leg — split it out.
-- `9.33` changes `Dialog`'s visual header presentation on desktop for the
+- `9.34` changes `Dialog`'s visual header presentation on desktop for the
   first time in the component's history (today, desktop never shows a
   header row at all). Verify live against every real overlay-shell plugin
   (Account, Console) before merging, not just in Storybook — those are the
@@ -347,13 +347,13 @@ proceeding rather than silently absorbing.
 
 ## Kill criteria
 
-- If `9.31`'s registry approach requires changes outside
+- If `9.32`'s registry approach requires changes outside
   `packages/ui/src/overlay-shell.ts` (e.g. `Popover` also needs it, or a
   third overlay type not yet identified turns out to have the same bug),
-  stop `9.31` and re-scope it as its own follow-up task rather than
-  expanding Leg 1. `9.28`, `9.29`, and `9.30` are already complete,
-  independently reviewable, and ship regardless of `9.31`'s outcome.
-- If `9.33`'s desktop header change turns out to visually break an existing
+  stop `9.32` and re-scope it as its own follow-up task rather than
+  expanding Leg 1. `9.29`, `9.30`, and `9.31` are already complete,
+  independently reviewable, and ship regardless of `9.32`'s outcome.
+- If `9.34`'s desktop header change turns out to visually break an existing
   overlay-shell plugin in a way that can't be resolved within this leg,
   revert to shipping the new `header`/`footer` props as fully opt-in with
   the header not rendering unless a consumer explicitly requests it — and

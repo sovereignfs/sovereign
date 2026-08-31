@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ConfirmDialog, FormField, Input } from '@sovereignfs/ui';
+import { ConfirmDialog, ConsentPrompt, FormField, Input } from '@sovereignfs/ui';
 import { PortabilityPanel } from '../_components/PortabilityPanel';
 import styles from '../account.module.css';
 
@@ -12,6 +12,16 @@ interface ConsentGrant {
   contract: string;
   version: number;
   grantedAt: number;
+}
+
+interface PendingDataGrantRequest {
+  consumerId: string;
+  consumerName: string;
+  providerId: string;
+  providerName: string;
+  contract: string;
+  version: number;
+  description: string | null;
 }
 
 interface VaultSecret {
@@ -40,6 +50,7 @@ interface ExternalConnection {
   status: 'connected' | 'needs_reauth' | 'paused' | 'disconnected' | 'error';
   updatedAt: number;
   lastUsedAt: number | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 const DEVICE_CAPABILITY_LABELS: Record<string, string> = {
@@ -47,18 +58,48 @@ const DEVICE_CAPABILITY_LABELS: Record<string, string> = {
   'haptics.impact': 'Use haptics',
 };
 
+/**
+ * A connection's `metadata` is free-form per plugin (no standardized schema)
+ * — Warden's BYO model-provider feature, for example, stores the actual
+ * external `baseUrl` there. The platform has no way to gate connection
+ * creation on informed consent the way it does for cross-plugin data grants
+ * (there's no manifest-declared description to show, and blocking creation
+ * would break Warden's real, already-explicit "paste your own endpoint and
+ * key" form). What it can do — and didn't, until now, despite the API
+ * already returning this field — is stop hiding whatever a plugin *did*
+ * disclose. Filtered to primitive values only, so this never dumps a large
+ * nested object into the row.
+ */
+function connectionMetadataSummary(
+  metadata: Record<string, unknown> | null | undefined,
+): string | null {
+  if (!metadata) return null;
+  const parts = Object.entries(metadata)
+    .filter(
+      (entry): entry is [string, string | number | boolean] =>
+        typeof entry[1] === 'string' ||
+        typeof entry[1] === 'number' ||
+        typeof entry[1] === 'boolean',
+    )
+    .map(([key, value]) => `${key}: ${String(value)}`);
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
 function deviceCapabilityLabel(capability: string): string {
   return DEVICE_CAPABILITY_LABELS[capability] ?? capability;
 }
 
 export default function DataPage() {
   const [grants, setGrants] = useState<ConsentGrant[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<PendingDataGrantRequest[]>([]);
   const [deviceGrants, setDeviceGrants] = useState<DeviceGrant[]>([]);
   const [secrets, setSecrets] = useState<VaultSecret[]>([]);
   const [connections, setConnections] = useState<ExternalConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [grantError, setGrantError] = useState<string | null>(null);
+  const [pendingRequestError, setPendingRequestError] = useState<string | null>(null);
+  const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
   const [deviceGrantError, setDeviceGrantError] = useState<string | null>(null);
   const [secretError, setSecretError] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -69,8 +110,12 @@ export default function DataPage() {
     try {
       const res = await fetch('/api/account/data-grants', { cache: 'no-store' });
       if (!res.ok) throw new Error(`Failed to load grants: ${res.status}`);
-      const data = (await res.json()) as { grants: ConsentGrant[] };
+      const data = (await res.json()) as {
+        grants: ConsentGrant[];
+        pending?: PendingDataGrantRequest[];
+      };
       setGrants(data.grants);
+      setPendingRequests(data.pending ?? []);
       const deviceRes = await fetch('/api/account/device-grants', { cache: 'no-store' });
       if (!deviceRes.ok) {
         throw new Error(`Failed to load device permissions: ${deviceRes.status}`);
@@ -99,6 +144,42 @@ export default function DataPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const pendingKey = (r: PendingDataGrantRequest) =>
+    `${r.consumerId}:${r.providerId}:${r.contract}:${r.version}`;
+
+  const allowRequest = async (request: PendingDataGrantRequest) => {
+    setPendingRequestError(null);
+    setPendingRequestId(pendingKey(request));
+    try {
+      const res = await fetch('/api/account/data-grants', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          consumerId: request.consumerId,
+          providerId: request.providerId,
+          contract: request.contract,
+          version: request.version,
+        }),
+      });
+      if (!res.ok) {
+        setPendingRequestError('Could not grant this request — please try again.');
+        return;
+      }
+      setPendingRequests((prev) => prev.filter((r) => pendingKey(r) !== pendingKey(request)));
+      await load();
+    } catch (e) {
+      setPendingRequestError(e instanceof Error ? e.message : 'Could not grant this request.');
+    } finally {
+      setPendingRequestId(null);
+    }
+  };
+
+  const denyRequest = (request: PendingDataGrantRequest) => {
+    // Not persisted — no grant is created, and the app can ask again later
+    // (e.g. after a manifest update). This only dismisses it for this visit.
+    setPendingRequests((prev) => prev.filter((r) => pendingKey(r) !== pendingKey(request)));
+  };
 
   const revoke = async (id: string) => {
     setGrantError(null);
@@ -164,6 +245,40 @@ export default function DataPage() {
 
   return (
     <div className={styles.sections}>
+      {pendingRequests.length > 0 && (
+        <section className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>Pending data-sharing requests</h2>
+            <p className={styles.sectionSubtitle}>
+              These apps have declared they want to read data from another app on this instance.
+              Nothing is shared until you allow it.
+            </p>
+          </div>
+
+          {pendingRequestError && (
+            <p className={styles.error} role="alert">
+              {pendingRequestError}
+            </p>
+          )}
+
+          <ul className={styles.sessionGroup}>
+            {pendingRequests.map((request) => (
+              <li key={pendingKey(request)}>
+                <ConsentPrompt
+                  consumerName={request.consumerName}
+                  providerName={request.providerName}
+                  contract={request.contract}
+                  description={request.description}
+                  pending={pendingRequestId === pendingKey(request)}
+                  onAllow={() => void allowRequest(request)}
+                  onDeny={() => denyRequest(request)}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>Data access consents</h2>
@@ -276,6 +391,11 @@ export default function DataPage() {
                     {conn.pluginId} · {conn.provider} · {conn.status} · Updated{' '}
                     {new Date(conn.updatedAt * 1000).toLocaleString()}
                   </span>
+                  {connectionMetadataSummary(conn.metadata) && (
+                    <span className={styles.sessionMeta}>
+                      {connectionMetadataSummary(conn.metadata)}
+                    </span>
+                  )}
                 </div>
                 <button
                   type="button"

@@ -1,0 +1,21 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-2);
+}
+
+.title {
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-primary);
+}
+
+.description {
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+}
+
+.actions {
+  display: flex;
+  gap: var(--sv-space-2);
+  margin-top: var(--sv-space-1);
+}

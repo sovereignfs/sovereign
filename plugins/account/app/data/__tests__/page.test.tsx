@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import DataPage from '../page';
 
 // jsdom doesn't implement <dialog>'s showModal()/close() — DataPage always
@@ -53,6 +53,17 @@ const CONNECTION = {
   status: 'connected' as const,
   updatedAt: 1700000000,
   lastUsedAt: null,
+  metadata: { baseUrl: 'https://example-provider.test/api/v1' },
+};
+
+const PENDING_REQUEST = {
+  consumerId: 'fs.sovereign.ledger',
+  consumerName: 'Ledger',
+  providerId: 'fs.sovereign.docs',
+  providerName: 'Docs',
+  contract: 'docs.read',
+  version: 1,
+  description: 'Document titles and folder structure, no file contents.',
 };
 
 function mockFetch(overrides?: {
@@ -60,15 +71,38 @@ function mockFetch(overrides?: {
   deleteDeviceGrant?: 'ok' | 'fail' | 'reject';
   deleteSecret?: 'ok' | 'fail' | 'reject';
   deleteConnection?: 'ok' | 'fail' | 'reject';
+  createGrant?: 'ok' | 'fail' | 'reject';
+  pending?: (typeof PENDING_REQUEST)[];
 }) {
+  // Stateful, not a static response: a successful POST removes the matching
+  // request from what the next GET returns, mirroring the real backend
+  // (grant created → no longer pending) — needed because `allowRequest`
+  // re-fetches after a successful POST, and a static mock would silently
+  // re-add the row the UI just optimistically removed.
+  let pending = overrides?.pending ?? [];
   return vi.fn((url: string, init?: RequestInit) => {
+    if (url === '/api/account/data-grants' && init?.method === 'POST') {
+      const mode = overrides?.createGrant ?? 'ok';
+      if (mode === 'reject') return Promise.reject(new Error('network down'));
+      if (mode === 'ok') {
+        const body = JSON.parse(init.body as string) as { consumerId: string; contract: string };
+        pending = pending.filter(
+          (r) => !(r.consumerId === body.consumerId && r.contract === body.contract),
+        );
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ id: 'grant-2' }), { status: mode === 'ok' ? 201 : 500 }),
+      );
+    }
     if (url.includes('/api/account/data-grants') && init?.method === 'DELETE') {
       const mode = overrides?.deleteGrant ?? 'ok';
       if (mode === 'reject') return Promise.reject(new Error('network down'));
       return Promise.resolve(new Response('{}', { status: mode === 'ok' ? 200 : 500 }));
     }
     if (url === '/api/account/data-grants') {
-      return Promise.resolve(new Response(JSON.stringify({ grants: [GRANT] }), { status: 200 }));
+      return Promise.resolve(
+        new Response(JSON.stringify({ grants: [GRANT], pending }), { status: 200 }),
+      );
     }
     if (url.includes('/api/account/device-grants') && init?.method === 'DELETE') {
       const mode = overrides?.deleteDeviceGrant ?? 'ok';
@@ -205,5 +239,73 @@ describe('DataPage — saved app credentials error feedback', () => {
     fireEvent.click(revokeButtons[revokeButtons.length - 1]);
 
     expect((await screen.findByRole('alert')).textContent).toContain('network down');
+  });
+});
+
+describe('DataPage — connected accounts metadata disclosure (GDPR-4)', () => {
+  it('surfaces a connection’s plugin-disclosed metadata (e.g. the external endpoint it talks to)', async () => {
+    vi.stubGlobal('fetch', mockFetch());
+    render(<DataPage />);
+
+    await screen.findByText('Google Calendar');
+    expect(screen.getByText('baseUrl: https://example-provider.test/api/v1')).toBeDefined();
+  });
+});
+
+describe('DataPage — pending data-sharing requests (GDPR-3)', () => {
+  it('renders nothing for the section when there are no pending requests', async () => {
+    vi.stubGlobal('fetch', mockFetch());
+    render(<DataPage />);
+
+    await screen.findByText('Read docs.read');
+    expect(screen.queryByText('Pending data-sharing requests')).toBeNull();
+  });
+
+  it('shows the provider-declared description, not caller-supplied copy, and removes the row on Allow', async () => {
+    vi.stubGlobal('fetch', mockFetch({ pending: [PENDING_REQUEST] }));
+    render(<DataPage />);
+
+    await screen.findByText('Pending data-sharing requests');
+    expect(screen.getByText(/Ledger/)).toBeDefined();
+    expect(screen.getByText(/Docs/)).toBeDefined();
+    expect(
+      screen.getByText('Document titles and folder structure, no file contents.'),
+    ).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Allow' }));
+
+    // The stateful mock's next GET (triggered by allowRequest's own reload)
+    // no longer returns this request, mirroring a real grant having been
+    // created — the section disappearing here is the regression this
+    // guards: a static-response mock would silently re-add the row after
+    // the reload, since the reload's GET would still return it as pending.
+    await waitFor(() => {
+      expect(screen.queryByText('Pending data-sharing requests')).toBeNull();
+    });
+  });
+
+  it('dismisses a request on Deny without creating a grant', async () => {
+    const fetchMock = mockFetch({ pending: [PENDING_REQUEST] });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<DataPage />);
+
+    await screen.findByText('Pending data-sharing requests');
+    fireEvent.click(screen.getByRole('button', { name: 'Not now' }));
+
+    expect(screen.queryByText('Pending data-sharing requests')).toBeNull();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
+  });
+
+  it('shows an inline error and keeps the request when granting fails', async () => {
+    vi.stubGlobal('fetch', mockFetch({ pending: [PENDING_REQUEST], createGrant: 'fail' }));
+    render(<DataPage />);
+
+    await screen.findByText('Pending data-sharing requests');
+    fireEvent.click(screen.getByRole('button', { name: 'Allow' }));
+
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'Could not grant this request — please try again.',
+    );
+    expect(screen.getByText('Pending data-sharing requests')).toBeDefined();
   });
 });

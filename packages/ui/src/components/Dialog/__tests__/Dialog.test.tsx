@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { ConfirmDialog } from '../../ConfirmDialog/ConfirmDialog';
 import { Dialog, useOverlaySecondRow } from '../Dialog';
 
 // Dialog's exit animation reads prefers-reduced-motion via matchMedia, which
@@ -48,16 +50,24 @@ describe('Dialog', () => {
     expect(dialog.getAttribute('aria-modal')).toBe('true');
   });
 
-  it('calls onClose on Escape', () => {
+  it('calls onClose exactly once on Escape with focus inside the panel', () => {
     const onClose = vi.fn();
     render(
-      <Dialog open onClose={onClose}>
-        Body
+      <Dialog open onClose={onClose} aria-label="Panel">
+        <button>Focus me</button>
       </Dialog>,
     );
-    // Keyboard handler is registered on document (not the dialog element) so
-    // screen readers and keyboard users can dismiss from anywhere in the page.
-    fireEvent.keyDown(document, { key: 'Escape' });
+    // Dispatched from the actually-focused element (matching real usage,
+    // where useOverlayFocusCapture moves focus into the panel on open) so the
+    // keydown bubbles through the scrim on its way to document — the exact
+    // path that used to trigger both the scrim's own (now-removed) Escape
+    // handler and useOverlayKeyboardTrap's document-level listener, double-
+    // firing onClose. Dispatching straight on `document` (the previous form
+    // of this test) skips that bubble path and would pass even if the bug
+    // were reintroduced.
+    const button = screen.getByRole('button', { name: 'Focus me' });
+    button.focus();
+    fireEvent.keyDown(button, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledOnce();
   });
 
@@ -142,5 +152,86 @@ describe('Dialog', () => {
     render(<Standalone />);
     expect(screen.getByText('Standalone content')).toBeTruthy();
     expect(screen.queryByText('Tab strip')).toBeNull();
+  });
+});
+
+describe('Dialog Escape precedence with a nested ConfirmDialog', () => {
+  beforeEach(() => {
+    installMatchMedia();
+    // jsdom does not implement HTMLDialogElement — see ConfirmDialog.test.tsx
+    // for the full rationale on the guard + deferred dispatch (both matter
+    // here too: without the guard, this file's own reuse of the mock across
+    // renders would double-dispatch; without deferring, ConfirmDialog's
+    // unregister-on-close wouldn't have run yet by the time this test reads
+    // the outer Dialog's response to a second Escape).
+    HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+      this.setAttribute('open', '');
+    };
+    HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
+      if (!this.hasAttribute('open')) return;
+      this.removeAttribute('open');
+      queueMicrotask(() => this.dispatchEvent(new Event('close')));
+    };
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    cleanup();
+  });
+
+  async function flush() {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+  }
+
+  it('defers Escape to a nested open ConfirmDialog instead of closing the outer Dialog', async () => {
+    const outerOnClose = vi.fn();
+
+    function NestedHarness() {
+      // Starts closed and opens via a later click — matching the real
+      // sequence (CardDetailOverlay: the outer Dialog is already mounted and
+      // registered before the user ever triggers the nested confirm).
+      // Mounting both already-open in the same initial render would instead
+      // have React fire the child's (ConfirmDialog's) registration effect
+      // before the parent's (Dialog's) in that one shared commit — the one
+      // case this stack-order approach doesn't handle, and not the shape of
+      // the bug this task fixes.
+      const [confirmOpen, setConfirmOpen] = useState(false);
+      return (
+        <Dialog open onClose={outerOnClose} aria-label="Card detail">
+          <button onClick={() => setConfirmOpen(true)}>Delete card…</button>
+          <ConfirmDialog
+            open={confirmOpen}
+            onClose={() => setConfirmOpen(false)}
+            onConfirm={() => {}}
+            title="Delete card?"
+            message="This can't be undone."
+          />
+        </Dialog>
+      );
+    }
+
+    render(<NestedHarness />);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete card…' }));
+    await flush();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy();
+
+    // The nested ConfirmDialog is topmost — the outer Dialog's document-level
+    // Escape listener must not act while it's open.
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await flush();
+    expect(outerOnClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy();
+
+    // Dismiss the nested confirm (unregisters it from the open-overlay
+    // stack) — the outer Dialog is now topmost again.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await flush();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+
+    // A second Escape now reaches the outer Dialog.
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await flush();
+    expect(outerOnClose).toHaveBeenCalledOnce();
   });
 });

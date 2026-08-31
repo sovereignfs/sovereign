@@ -132,14 +132,14 @@ export function Drawer({
   return (
     // role="presentation" removes the scrim from the AT (it is purely visual).
     // e.target check lets clicks inside the panel bubble without triggering dismiss.
+    // No onKeyDown here — useOverlayKeyboardTrap above already owns Escape via a
+    // document-level listener; a second handler here used to double-fire onClose
+    // per keypress (see Dialog.tsx's identical fix for the full explanation).
     <div
       className={[styles.scrim, isOpenPhase ? styles.scrimOpen : ''].filter(Boolean).join(' ')}
       role="presentation"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') onClose();
       }}
     >
       <div

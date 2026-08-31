@@ -63,16 +63,24 @@ describe('Drawer', () => {
     expect(panel.getAttribute('aria-modal')).toBe('true');
   });
 
-  it('calls onClose on Escape', () => {
+  it('calls onClose exactly once on Escape with focus inside the panel', () => {
     const onClose = vi.fn();
     render(
-      <Drawer open onClose={onClose}>
-        Body
+      <Drawer open onClose={onClose} aria-label="Panel">
+        <button>Focus me</button>
       </Drawer>,
     );
-    // Keyboard handler is registered on document (not the drawer element) so
-    // screen readers and keyboard users can dismiss from anywhere in the page.
-    fireEvent.keyDown(document, { key: 'Escape' });
+    // Dispatched from the actually-focused element (matching real usage,
+    // where useOverlayFocusCapture moves focus into the panel on open) so the
+    // keydown bubbles through the scrim on its way to document — the exact
+    // path that used to trigger both the scrim's own (now-removed) Escape
+    // handler and useOverlayKeyboardTrap's document-level listener, double-
+    // firing onClose. Dispatching straight on `document` (the previous form
+    // of this test) skips that bubble path and would pass even if the bug
+    // were reintroduced.
+    const button = screen.getByRole('button', { name: 'Focus me' });
+    button.focus();
+    fireEvent.keyDown(button, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledOnce();
   });
 

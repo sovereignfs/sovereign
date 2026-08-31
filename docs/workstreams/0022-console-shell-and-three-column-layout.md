@@ -1,6 +1,6 @@
 # Workstream 0022 — Console: default shell + ThreeColumnLayout
 
-**Status:** ⏳ In Progress — legs 1-2 shipped (PRs #580, #582); legs 3-5 not yet started\
+**Status:** ⏳ In Progress — legs 1-3 shipped (PRs #580, #582, #<!-- fill in on PR creation -->); legs 4-5 not yet started\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -110,7 +110,7 @@ workstream must land first.
 | --- | ------------------------------------------- | ----------- | ----- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | `NavList` + Console shell/nav/mobile rework | 9.28, 13.17 | 9, 13 | No    | Console is `shell: "default"`, desktop renders `ThreeColumnLayout` + `NavList` sidebar, mobile renders the drill-down index + per-section back link, Overview forks via `ResponsiveSurface`; all DoD items above except the 4 detail-column ones.                                                                                           |
 | 2   | Users → 3-column                            | 13.18       | 13    | No    | Selecting a user row shows a detail pane with role/capabilities/status actions; `CapabilitiesButton` dialog removed.                                                                                                                                                                                                                        |
-| 3   | Groups → 3-column                           | 13.19       | 13    | No    | Selecting a group shows a detail pane; `ManageGroupDialog` removed.                                                                                                                                                                                                                                                                         |
+| 3   | Groups → 3-column                           | 13.19       | 13    | No    | ✅ Selecting a group shows a detail pane; `ManageGroupDialog` removed (kept mobile-only).                                                                                                                                                                                                                                                   |
 | 4   | Plugins/Apps → 3-column                     | 13.20       | 13    | No    | Selecting a plugin row shows a detail pane; `PluginAccessDialog` removed.                                                                                                                                                                                                                                                                   |
 | 5   | External clients → 3-column                 | 13.21       | 13    | No    | Selecting an OAuth client shows a detail pane for rotation/revocation.                                                                                                                                                                                                                                                                      |
 | 6   | Retire stale docs-server references         | 16.6        | 16    | No    | `CLAUDE.md`/`AGENTS.md`/`CONTRIBUTING.md`/`docs/epics/docs.md`/`docs/epics/README.md`/`docs/development-workflow.md`/`docs/docs-site-revamp-plan.md` no longer describe the retired `apps/docs` VitePress app or its `docs-v*`/`docs.yml` mechanism as live in this repo. Independent of legs 1-5 — can land in any order relative to them. |
@@ -379,6 +379,22 @@ creation's UX shape isn't identical to invite's. Reuse the same
 already generic, not Users-specific.
 
 **Do not proceed if:** leg 2's PR hasn't merged yet.
+
+**Outcome:** `ManageGroupDialog`'s body split into `GroupDetailFields.tsx`
+(reused by a slimmed, mobile-only `ManageGroupDialog` and a new
+`GroupDetailPane.tsx`, the desktop 3rd column) — the same shape as leg 2's
+`UserCapabilitiesFields`/`UserDetailPane` split. `CreateGroupDialog` confirmed
+live to need no change, matching leg 2's `InviteDialog` precedent exactly.
+Leg 2's `.userDetail*` CSS classes generalized to `.detail*` now that a
+second consumer exists — reuse as-is for legs 4-5. Groups has no
+mobile/desktop render fork (one shared card grid); the desktop selection
+link/chevron and the mobile `Manage` trigger are each CSS-gated to their own
+side of the existing 768/769px breakpoint (`.cardChevron`/
+`.cardManageMobile`) rather than duplicating Users' separate-component
+approach — simpler given Groups' smaller surface, and still fully
+`?group=`-linkable. Verified live end to end: create, select, edit, empty
+members state, delete (pane and card both clear), the 900px collapse
+breakpoint, and the mobile dialog, all against the real dev server.
 
 ### Leg 4 — Plugins/Apps → 3-column
 

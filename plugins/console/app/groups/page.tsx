@@ -1,6 +1,10 @@
+import Link from 'next/link';
+import { Icon } from '@sovereignfs/ui';
 import { sdk } from '@sovereignfs/sdk';
 import { ManageGroupDialog } from './ManageGroupDialog';
 import { CreateGroupDialog } from './CreateGroupDialog';
+import { GroupDetailPane } from './GroupDetailPane';
+import { ConsoleDetailSlot } from '../_components/ConsoleDetailSlot';
 import styles from '../console.module.css';
 
 interface GroupRow {
@@ -30,9 +34,23 @@ async function getGroups(): Promise<GroupRow[]> {
   }
 }
 
-export default async function GroupsPage() {
+export default async function GroupsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ group?: string }>;
+}) {
+  const { group: selectedGroupId } = await searchParams;
   const [groups, session] = await Promise.all([getGroups(), sdk.auth.getSession()]);
   const canManageGroups = sdk.auth.hasCapability(session, 'user:manage');
+
+  // Selection (and thus the detail pane) only exists for someone who could
+  // previously open `ManageGroupDialog` at all — matches that dialog's own
+  // `canManageGroups` gate, no new information exposed to a non-manager.
+  const selectedGroup =
+    canManageGroups && selectedGroupId
+      ? (groups.find((g) => g.id === selectedGroupId) ?? null)
+      : null;
+  const closeHref = '?';
 
   return (
     <div>
@@ -60,14 +78,53 @@ export default async function GroupsPage() {
           // typically short (a handful of groups per instance).
           style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 320px))' }}
         >
-          {groups.map((group) => (
-            <li key={group.id} className={styles.card}>
-              <span className={styles.cardTitle}>{group.name}</span>
-              <span className={styles.cardDesc}>{group.description ?? `Slug: ${group.slug}`}</span>
-              {canManageGroups && <ManageGroupDialog group={group} />}
-            </li>
-          ))}
+          {groups.map((group) => {
+            const isSelected = group.id === selectedGroup?.id;
+            return (
+              <li
+                key={group.id}
+                className={[styles.card, isSelected ? styles.cardSelected : '']
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                {canManageGroups ? (
+                  <Link href={`?group=${group.id}`} className={styles.cardLink}>
+                    <span className={styles.cardTitle}>{group.name}</span>
+                    <span className={styles.cardDesc}>
+                      {group.description ?? `Slug: ${group.slug}`}
+                    </span>
+                  </Link>
+                ) : (
+                  <>
+                    <span className={styles.cardTitle}>{group.name}</span>
+                    <span className={styles.cardDesc}>
+                      {group.description ?? `Slug: ${group.slug}`}
+                    </span>
+                  </>
+                )}
+                {canManageGroups && (
+                  <>
+                    <Icon
+                      name="chevron-right"
+                      size="sm"
+                      aria-hidden
+                      className={[styles.textMuted, styles.cardChevron].join(' ')}
+                    />
+                    <span className={styles.cardManageMobile}>
+                      <ManageGroupDialog group={group} />
+                    </span>
+                  </>
+                )}
+              </li>
+            );
+          })}
         </ul>
+      )}
+
+      {selectedGroup && (
+        <ConsoleDetailSlot>
+          <GroupDetailPane group={selectedGroup} closeHref={closeHref} />
+        </ConsoleDetailSlot>
       )}
     </div>
   );

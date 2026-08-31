@@ -102,6 +102,54 @@
   color: var(--sv-color-text-muted);
 }
 
+/* ── Card selection (Groups desktop detail column, workstream 0022 leg 3) ──
+   Mirrors Users' `.userCellLink`/`.trSelected` for a card grid instead of a
+   table row. */
+
+.cardLink {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-2);
+  color: inherit;
+  text-decoration: none;
+}
+
+.cardLink:hover .cardTitle {
+  text-decoration: underline;
+}
+
+.cardSelected {
+  border-color: var(--sv-color-border-strong);
+  background-color: var(--sv-color-surface-sunken);
+}
+
+/* Desktop-only selection indicator — the detail column replaces `Manage`
+   there; mobile keeps the `Manage` dialog button instead (`.cardManageMobile`
+   below), since it has no detail column to select into. */
+.cardChevron {
+  display: none;
+  align-self: flex-start;
+  margin-top: auto;
+}
+
+/* `display: contents` so the wrapper itself doesn't participate in `.card`'s
+   flex layout — `ManageGroupDialog`'s own button keeps behaving as a direct
+   flex item of `.card` (its `alignSelf`/`marginTop: auto` inline style
+   assumes that), just hidden outright on desktop. */
+.cardManageMobile {
+  display: contents;
+}
+
+@media (min-width: 769px) {
+  .cardChevron {
+    display: inline-flex;
+  }
+
+  .cardManageMobile {
+    display: none;
+  }
+}
+
 /* ── Page header ────────────────────────────────────────────────────────── */
 
 .pageHeader {
@@ -483,30 +531,33 @@
   flex-wrap: wrap;
 }
 
-/* ── User detail pane (ThreeColumnLayout's 3rd column, workstream 0022 leg 2) ── */
+/* ── Detail pane (ThreeColumnLayout's 3rd column, workstream 0022 legs 2+) ──
+   Generalized from `.userDetail*` (leg 2, Users-only) once leg 3 (Groups)
+   became the second consumer of the identical shape — reused as-is by
+   every subsequent leg's own detail pane. */
 
-.userDetailPane {
+.detailPane {
   display: flex;
   flex-direction: column;
   gap: var(--sv-space-4);
   padding: var(--sv-space-6);
 }
 
-.userDetailHeader {
+.detailHeader {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--sv-space-3);
 }
 
-.userDetailHeading {
+.detailHeading {
   display: flex;
   flex-direction: column;
   gap: var(--sv-space-1);
   min-width: 0;
 }
 
-.userDetailName {
+.detailTitle {
   font-size: var(--sv-font-size-lg);
   font-weight: var(--sv-font-weight-semibold);
   color: var(--sv-color-text-primary);
@@ -515,7 +566,7 @@
   white-space: nowrap;
 }
 
-.userDetailEmail {
+.detailSubtitle {
   color: var(--sv-color-text-muted);
   font-size: var(--sv-font-size-sm);
   overflow: hidden;
@@ -523,13 +574,13 @@
   white-space: nowrap;
 }
 
-.userDetailBadges {
+.detailBadges {
   display: flex;
   flex-wrap: wrap;
   gap: var(--sv-space-2);
 }
 
-.userDetailSection {
+.detailSection {
   display: flex;
   flex-direction: column;
   gap: var(--sv-space-2);
@@ -537,7 +588,7 @@
   border-top: var(--sv-border-width-hairline) solid var(--sv-color-border);
 }
 
-.userDetailSectionTitle {
+.detailSectionTitle {
   margin: 0;
   font-size: var(--sv-font-size-xs);
   font-weight: var(--sv-font-weight-semibold);

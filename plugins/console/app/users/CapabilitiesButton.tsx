@@ -1,51 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { Button, Dialog } from '@sovereignfs/ui';
-import { GRANTABLE_CAPABILITIES, type GrantableCapability } from '@/src/capabilities';
+import { useState } from 'react';
+import { Dialog } from '@sovereignfs/ui';
 import styles from '../console.module.css';
-import {
-  grantCapabilityAction,
-  listUserCapabilitiesAction,
-  revokeCapabilityAction,
-} from './actions';
+import { UserCapabilitiesFields } from './UserCapabilitiesFields';
 
-const LABELS: Record<GrantableCapability, string> = {
-  'plugins:self-manage': 'Self-service app enable/disable',
-};
-
+/**
+ * Mobile-only entry point — `UserCard.tsx`'s card list has no detail column
+ * to render into, so it keeps a button+`Dialog` wrapper around the same
+ * `UserCapabilitiesFields` the desktop `UserDetailPane` renders inline.
+ */
 export function CapabilitiesButton({ userId, name }: { userId: string; name: string }) {
   const [open, setOpen] = useState(false);
-  const [grants, setGrants] = useState<GrantableCapability[] | null>(null);
-  const [pending, setPending] = useState<GrantableCapability | null>(null);
-
-  const refresh = useCallback(() => {
-    listUserCapabilitiesAction(userId)
-      .then(setGrants)
-      .catch(() => setGrants([]));
-  }, [userId]);
-
-  useEffect(() => {
-    if (open) refresh();
-    else setGrants(null);
-  }, [open, refresh]);
-
-  async function toggle(cap: GrantableCapability, granted: boolean) {
-    setPending(cap);
-    try {
-      const fd = new FormData();
-      fd.set('userId', userId);
-      fd.set('capability', cap);
-      if (granted) {
-        await revokeCapabilityAction(fd);
-      } else {
-        await grantCapabilityAction(fd);
-      }
-      refresh();
-    } finally {
-      setPending(null);
-    }
-  }
 
   return (
     <>
@@ -80,41 +46,7 @@ export function CapabilitiesButton({ userId, name }: { userId: string; name: str
           Grant this user one additional capability their role preset doesn&apos;t include. This
           does not change their role.
         </p>
-        {grants === null ? (
-          <p className={styles.textMuted}>Loading…</p>
-        ) : (
-          <ul
-            className={styles.cards}
-            style={{ gridTemplateColumns: '1fr', gap: 'var(--sv-space-2)' }}
-          >
-            {GRANTABLE_CAPABILITIES.map((cap) => {
-              const granted = grants.includes(cap);
-              return (
-                <li
-                  key={cap}
-                  className={styles.card}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: 'var(--sv-space-3)',
-                  }}
-                >
-                  <span>{LABELS[cap]}</span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={pending === cap}
-                    onClick={() => toggle(cap, granted)}
-                  >
-                    {granted ? 'Revoke' : 'Grant'}
-                  </Button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        {open && <UserCapabilitiesFields userId={userId} />}
       </Dialog>
     </>
   );

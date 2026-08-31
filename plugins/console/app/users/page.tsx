@@ -1,19 +1,11 @@
 import Link from 'next/link';
-import { Badge } from '@sovereignfs/ui';
+import { Badge, Icon } from '@sovereignfs/ui';
 import { sdk } from '@sovereignfs/sdk';
-import { toggleActiveAction } from './actions';
-import { CapabilitiesButton } from './CapabilitiesButton';
-import {
-  CancelInviteButton,
-  DeactivateButton,
-  DeleteButton,
-  ResetMfaButton,
-  RevokeVouchButton,
-  VouchButton,
-} from './UserActionButtons';
-import { RoleSelect } from './RoleSelect';
+import { CancelInviteButton } from './UserActionButtons';
 import { UserCard } from './UserCard';
+import { UserDetailPane } from './UserDetailPane';
 import { InviteDialog } from './invite/InviteDialog';
+import { ConsoleDetailSlot } from '../_components/ConsoleDetailSlot';
 import styles from '../console.module.css';
 
 const PAGE_SIZE = 5;
@@ -58,32 +50,24 @@ function StatusBadge({ status }: { status: MemberRow['status'] }) {
   );
 }
 
-function RoleCell({ member, canAssignRoles }: { member: MemberRow; canAssignRoles: boolean }) {
-  const isOwner = member.role === 'platform:owner';
-
-  if (isOwner) {
-    return <Badge variant="role">Owner</Badge>;
-  }
-
-  if (!canAssignRoles || !member.id) {
-    const label =
-      member.role === 'platform:admin'
+function RoleBadge({ role }: { role: string | null }) {
+  const label =
+    role === 'platform:owner'
+      ? 'Owner'
+      : role === 'platform:admin'
         ? 'Admin'
-        : member.role === 'platform:auditor'
+        : role === 'platform:auditor'
           ? 'Auditor'
           : 'User';
-    return <Badge variant="role">{label}</Badge>;
-  }
-
-  return <RoleSelect userId={member.id} role={member.role ?? 'platform:user'} />;
+  return <Badge variant="role">{label}</Badge>;
 }
 
 export default async function UsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; user?: string }>;
 }) {
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, user: selectedUserId } = await searchParams;
   const page = Math.max(1, Number(pageParam ?? '1'));
 
   const [allMembers, session] = await Promise.all([getMembers(), sdk.auth.getSession()]);
@@ -97,6 +81,15 @@ export default async function UsersPage({
 
   const canAssignRoles = sdk.auth.hasCapability(session, 'role:assign');
   const canManageUsers = sdk.auth.hasCapability(session, 'user:manage');
+
+  // Looked up across the full fetched list, not just the current page's
+  // slice — a selected user might not be on the page currently showing, but
+  // the detail pane should still resolve (linkable/refreshable selection,
+  // per workstream 0022 leg 2).
+  const selectedMember = selectedUserId
+    ? (allMembers.find((m) => m.id === selectedUserId) ?? null)
+    : null;
+  const closeHref = `?page=${safePage}`;
 
   return (
     <div>
@@ -117,29 +110,40 @@ export default async function UsersPage({
                 <th className={styles.th}>Role</th>
                 <th className={styles.th}>Status</th>
                 <th className={styles.th}>Joined</th>
-                <th className={styles.th}>Actions</th>
+                <th className={styles.th}></th>
               </tr>
             </thead>
             <tbody>
               {members.map((member) => {
-                const isOwner = member.role === 'platform:owner';
-                const actionsLocked = isOwner || !canManageUsers;
+                const isSelected = !!member.id && member.id === selectedMember?.id;
                 return (
-                  <tr key={member.id ?? `invite-${member.email}`} className={styles.tr}>
+                  <tr
+                    key={member.id ?? `invite-${member.email}`}
+                    className={[styles.tr, isSelected ? styles.trSelected : '']
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
                     <td className={styles.td}>
                       <div className={styles.userCell}>
-                        <span className={styles.userName}>{member.name ?? '—'}</span>
-                        <span className={styles.userEmail}>{member.email}</span>
-                        {member.id && (
-                          <span className={styles.userId} title="User ID">
-                            {member.id}
-                          </span>
+                        {member.id ? (
+                          <Link
+                            href={`?page=${safePage}&user=${member.id}`}
+                            className={styles.userCellLink}
+                          >
+                            <span className={styles.userName}>{member.name ?? '—'}</span>
+                            <span className={styles.userEmail}>{member.email}</span>
+                          </Link>
+                        ) : (
+                          <>
+                            <span className={styles.userName}>{member.name ?? '—'}</span>
+                            <span className={styles.userEmail}>{member.email}</span>
+                          </>
                         )}
                       </div>
                     </td>
 
                     <td className={styles.td}>
-                      <RoleCell member={member} canAssignRoles={canAssignRoles} />
+                      <RoleBadge role={member.role} />
                     </td>
 
                     <td className={styles.td}>
@@ -171,60 +175,12 @@ export default async function UsersPage({
                           <span className={styles.textMuted}>—</span>
                         )
                       ) : member.id ? (
-                        actionsLocked ? (
-                          <span className={styles.textMuted}>Protected</span>
-                        ) : (
-                          <div className={styles.rowActions}>
-                            {member.status === 'active' ? (
-                              <DeactivateButton
-                                userId={member.id}
-                                name={member.name ?? member.email}
-                              />
-                            ) : (
-                              <form action={toggleActiveAction}>
-                                <input type="hidden" name="userId" value={member.id} />
-                                <input type="hidden" name="active" value="true" />
-                                <button
-                                  type="submit"
-                                  className={styles.iconBtnReactivate}
-                                  title="Reactivate user"
-                                >
-                                  <svg
-                                    width="15"
-                                    height="15"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    aria-hidden="true"
-                                  >
-                                    <polyline points="20 6 9 17 4 12" />
-                                  </svg>
-                                </button>
-                              </form>
-                            )}
-
-                            <ResetMfaButton userId={member.id} name={member.name ?? member.email} />
-
-                            {member.verificationLevel === 3 ? (
-                              <RevokeVouchButton
-                                userId={member.id}
-                                name={member.name ?? member.email}
-                              />
-                            ) : (
-                              <VouchButton userId={member.id} name={member.name ?? member.email} />
-                            )}
-
-                            <CapabilitiesButton
-                              userId={member.id}
-                              name={member.name ?? member.email}
-                            />
-
-                            <DeleteButton userId={member.id} name={member.name ?? member.email} />
-                          </div>
-                        )
+                        <Icon
+                          name="chevron-right"
+                          size="sm"
+                          aria-hidden
+                          className={styles.textMuted}
+                        />
                       ) : (
                         <span className={styles.textMuted}>—</span>
                       )}
@@ -237,7 +193,9 @@ export default async function UsersPage({
         </div>
       </div>
 
-      {/* Mobile: card list (hidden on desktop via CSS) */}
+      {/* Mobile: card list (hidden on desktop via CSS) — unchanged by the
+          desktop detail-column redesign; no persistent sidebar/detail
+          columns exist on mobile (see layout.tsx). */}
       <div className={styles.userCardList}>
         {members.map((member) => (
           <UserCard
@@ -273,6 +231,17 @@ export default async function UsersPage({
           )}
         </div>
       </div>
+
+      {selectedMember && (
+        <ConsoleDetailSlot>
+          <UserDetailPane
+            member={selectedMember}
+            canAssignRoles={canAssignRoles}
+            canManageUsers={canManageUsers}
+            closeHref={closeHref}
+          />
+        </ConsoleDetailSlot>
+      )}
     </div>
   );
 }

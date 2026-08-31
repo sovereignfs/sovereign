@@ -27,6 +27,7 @@ export interface PluginRow {
   development: boolean;
   /** Manifest `offline` tier (research 0012) — undeclared means no offline support, the default. */
   offline?: 'offline-first' | 'device-only';
+  permissions: string[];
   compatibilityError: string | null;
   compatibilityWarnings: string[];
   status: PluginStatus;
@@ -281,7 +282,13 @@ function DesktopRow({ row, justActivated, onActivated, onDismissActivated }: Row
               </button>
             </form>
 
-            {!row.isChrome && <PluginAccessDialog pluginId={row.id} pluginName={row.name} />}
+            {!row.isChrome && (
+              <PluginAccessDialog
+                pluginId={row.id}
+                pluginName={row.name}
+                permissions={row.permissions}
+              />
+            )}
 
             {row.openableByViewer ? (
               <a href={row.routePrefix} className={styles.iconBtn} title="Open">
@@ -431,6 +438,7 @@ function MobileCard({ row, justActivated, onActivated, onDismissActivated }: Row
             <PluginAccessDialog
               pluginId={row.id}
               pluginName={row.name}
+              permissions={row.permissions}
               open={accessOpen}
               onOpenChange={setAccessOpen}
             />

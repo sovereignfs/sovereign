@@ -120,6 +120,9 @@ export const ICON_LIST = [
   'spray-can',
   'snowflake',
   'shopping-basket',
+  // Warden sidebar (RFC 0063 §10, epic task 22.10): collapse toggle + pin
+  'panel-left',
+  'pin',
 ] as const;
 
 export type IconName = (typeof ICON_LIST)[number];

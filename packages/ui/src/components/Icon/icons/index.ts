@@ -91,6 +91,8 @@ import { CupSodaIcon } from './cup-soda';
 import { SprayCanIcon } from './spray-can';
 import { SnowflakeIcon } from './snowflake';
 import { ShoppingBasketIcon } from './shopping-basket';
+import { PanelLeftIcon } from './panel-left';
+import { PinIcon } from './pin';
 
 export type IconName =
   | 'house'
@@ -183,7 +185,9 @@ export type IconName =
   | 'cup-soda'
   | 'spray-can'
   | 'snowflake'
-  | 'shopping-basket';
+  | 'shopping-basket'
+  | 'panel-left'
+  | 'pin';
 
 export type IconComponent = (props: SVGProps<SVGSVGElement>) => ReactElement;
 
@@ -279,6 +283,8 @@ export const ICONS: Record<IconName, IconComponent> = {
   'spray-can': SprayCanIcon,
   snowflake: SnowflakeIcon,
   'shopping-basket': ShoppingBasketIcon,
+  'panel-left': PanelLeftIcon,
+  pin: PinIcon,
 };
 
 export { HouseIcon } from './house';
@@ -372,3 +378,5 @@ export { CupSodaIcon } from './cup-soda';
 export { SprayCanIcon } from './spray-can';
 export { SnowflakeIcon } from './snowflake';
 export { ShoppingBasketIcon } from './shopping-basket';
+export { PanelLeftIcon } from './panel-left';
+export { PinIcon } from './pin';

@@ -1561,7 +1561,7 @@ design decision. No RFC governs it (see that workstream's "Why no RFC").
 - Manual check in Storybook: open a nested confirm inside a `Dialog`, press Escape — only the confirm dismisses; a second Escape closes the outer `Dialog`. ✅ Verified live in a real browser end-to-end: with the confirm open, Escape left the outer Dialog's onClose count at 0; after dismissing the confirm (Cancel) and pressing Escape again, the outer Dialog's onClose fired (count 1). One caveat found during this check, unrelated to this task's own fix: the confirm's own native `<dialog>` Escape-to-close didn't visibly fire from this session's browser-automation tooling's synthetic key dispatch (closing it via the Cancel button instead worked immediately) — plausibly an automation-harness quirk with how trusted/native default actions propagate through remote key dispatch, not a regression, since real `<dialog>` Escape handling is unrelated code this task never touched; worth a real (non-automated) manual pass before merging if anyone wants extra confidence.
 - `pnpm --filter @sovereignfs/ui typecheck`, `test`, `lint` pass. ✅
 
-#### 📋 9.32 — `Dialog`: unify the close icon
+#### ✅ 9.32 — `Dialog`: unify the close icon
 
 **Goal:** `Dialog`'s desktop close button uses the `circle-x` icon (`Dialog.tsx:166`, `size="md"`) while the mobile `OverlayHeader` close button — which `Dialog` itself renders for its own mobile mode — uses the plain lucide `x` icon (`OverlayHeader.tsx:67`, `size="sm"`). Same dismiss affordance, two different icons depending on breakpoint. Developer request: standardize on the lucide `x` icon everywhere. Note this reverses a specific, previously recorded decision — `Dialog.tsx:158-164`'s own comment: "`circle-x`, not a bare "×" glyph — developer-requested... platform-wide: every `Dialog` consumer gets this, not just the one it was requested against" — flagged here so the reversal is deliberate, not accidental.
 
@@ -1577,9 +1577,9 @@ design decision. No RFC governs it (see that workstream's "Why no RFC").
 
 **Review checklist:**
 
-- Storybook: every `Dialog` size story shows the new `x` icon at the correct position/size on desktop; mobile viewport still shows `OverlayHeader`'s existing `x`, now visually consistent with desktop.
-- `pnpm design:tokens:check` and `pnpm --filter @sovereignfs/ui typecheck` pass.
-- `pnpm --filter @sovereignfs/ui build-storybook` succeeds.
+- Storybook: every `Dialog` size story shows the new `x` icon at the correct position/size on desktop; mobile viewport still shows `OverlayHeader`'s existing `x`, now visually consistent with desktop. ✅ Verified live: the `Medium` story's desktop close button renders the plain `x`, well-centered in `.close`'s fixed box; resizing to a 375px mobile viewport confirmed via computed styles that Dialog's own `.close` is `display:none` there and `OverlayHeader`'s `.closeButton` (`display:flex`) is what actually renders — the two icons are now visually identical across both breakpoints, not coincidentally similar.
+- `pnpm --filter @sovereignfs/ui typecheck` and the Dialog test suite pass. ✅
+- `pnpm design:tokens:check` (129 tokens, no violations) and `pnpm --filter @sovereignfs/ui build-storybook` (completed successfully) both pass. ✅
 
 ---
 

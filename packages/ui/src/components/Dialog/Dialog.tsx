@@ -158,14 +158,15 @@ export function Dialog({
           titleClassName={titleClassName}
         />
         {/* Desktop: absolute close button (hidden on mobile via CSS).
-            `circle-x`, not a bare "×" glyph — developer-requested, a real
-            icon reads as a more deliberate close affordance than a plain
-            text character sized up via `font-size`. Platform-wide: every
-            `Dialog` consumer gets this, not just the one it was requested
-            against — `Dialog` has no per-instance override for its own
-            close button. */}
+            Plain `x`, matching the mobile OverlayHeader's own close icon
+            above it (OverlayHeader.tsx) — a single consistent close
+            affordance across breakpoints instead of desktop's own separate
+            `circle-x` glyph (the previous choice here). Platform-wide:
+            every `Dialog` consumer gets this, not just the one it was
+            requested against — `Dialog` has no per-instance override for
+            its own close button. */}
         <button type="button" className={styles.close} aria-label="Close" onClick={onClose}>
-          <Icon name="circle-x" size="md" aria-hidden={true} />
+          <Icon name="x" size="md" aria-hidden={true} />
         </button>
         {/* The panel is a fixed-size box; only this region scrolls, so the
             panel never resizes with its content and the close button stays

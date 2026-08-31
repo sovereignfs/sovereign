@@ -48,4 +48,22 @@ describe('OverlayHeader', () => {
     render(<OverlayHeader title="Account" onClose={() => {}} secondRow={<nav>Tab strip</nav>} />);
     expect(screen.getByText('Tab strip')).toBeTruthy();
   });
+
+  it('accepts arbitrary ReactNode content for title, not just a string', () => {
+    // Locks in the type widening (title?: string -> title?: ReactNode) that
+    // Dialog's `header` prop relies on (Dialog.tsx passes header through
+    // here as `title`) — a plain string title must keep working unchanged.
+    render(
+      <OverlayHeader
+        title={
+          <>
+            <strong>Card</strong> detail
+          </>
+        }
+        onClose={() => {}}
+      />,
+    );
+    expect(screen.getByText('Card').tagName).toBe('STRONG');
+    expect(screen.getByText('detail')).toBeTruthy();
+  });
 });

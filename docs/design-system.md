@@ -1402,7 +1402,7 @@ overlays fill the space between, never cover it.
 
 |                          | Desktop                                                     | Mobile                                                                                           | Use when                                                                              |
 | ------------------------ | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| `Dialog` (sm/md/lg/full) | Centered fixed-size modal                                   | Full-page modal page between shell header/footer, slide transition, `OverlayHeader` on top       | Modal: the user must act before continuing (overlay-shell plugins — Console, Account) |
+| `Dialog` (sm/md/lg/full) | Centered fixed-size modal, optional `header`/`footer` rows  | Full-page modal page between shell header/footer, slide transition, `OverlayHeader` on top       | Modal: the user must act before continuing (overlay-shell plugins — Console, Account) |
 | `ConfirmDialog`          | Small content-sized centered card                           | Same centered card (decision D4 — not a full-screen sheet)                                       | Destructive / confirm prompts                                                         |
 | `Drawer`                 | Bottom sheet (rare on desktop)                              | Partial-height bottom sheet (half screen or less), grab handle, swipe-down dismiss, `snapHeight` | Navigation or options revealed by tapping a trigger (Apps button, `Menu` on mobile)   |
 | `Sheet`                  | n/a — desktop shows the same content inline (columns/panes) | Full-page slide-in page replacement                                                              | Detail views inside a plugin (task detail, list edit)                                 |
@@ -1426,14 +1426,61 @@ import { OverlayHeader } from '@sovereignfs/ui';
 />;
 ```
 
-The shared fixed secondary header for `Dialog`'s mobile mode, `Sheet`, and
-`Drawer`: title + close, optional back button, trailing action, and an
-optional second row (e.g. a tab strip). Not itself `position: sticky` or
-`fixed` — it stays visually pinned because the consuming overlay renders it as
-a non-scrolling flex sibling before its own scrollable content region. `title`
-is optional (some consumers need the close button present with no title);
-content with a fully custom header (e.g. an editable title) should render its
+The shared fixed secondary header for `Dialog`'s mobile mode (and `Dialog`'s
+`header` prop, both breakpoints — see below), `Sheet`, and `Drawer`: title +
+close, optional back button, trailing action, and an optional second row
+(e.g. a tab strip). Not itself `position: sticky` or `fixed` — it stays
+visually pinned because the consuming overlay renders it as a non-scrolling
+flex sibling before its own scrollable content region. `title` accepts any
+`ReactNode` (not just a string) and is optional (some consumers need the
+close button present with no title); content needing a genuinely different
+row shape (not a simple title/back/action/close layout) should render its
 own header instead of using this component.
+
+### `Dialog` header/body/footer composition
+
+Three shapes via two optional props, `header`/`footer` (both `ReactNode`,
+alongside the existing `children` as the body):
+
+| Shape                  | Props passed          |
+| ---------------------- | --------------------- |
+| Body only (default)    | neither               |
+| Header + Body          | `header`              |
+| Header + Body + Footer | `header` and `footer` |
+
+```tsx
+import { Button, Dialog } from '@sovereignfs/ui';
+
+<Dialog
+  open={open}
+  onClose={onClose}
+  header="Edit card"
+  footer={
+    <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+      <Button variant="secondary" onClick={onClose}>
+        Cancel
+      </Button>
+      <Button onClick={onSave}>Save</Button>
+    </div>
+  }
+>
+  {/* scrollable body */}
+</Dialog>;
+```
+
+`header`, when provided, supersedes the plain `title` prop for visible
+content and renders on **both** desktop and mobile via the same
+`OverlayHeader` component — unlike `title` alone, which only ever appears in
+the mobile-only title bar (desktop has no header row by default). `title`
+remains the `aria-label` fallback either way, so pass it (or `aria-label`
+directly) even when using `header`. `footer` renders as a second pinned row
+after the scrollable body, on both breakpoints; omit it and any actions stay
+inside the body's own scroll region, matching the pre-existing behavior.
+Both new rows are non-scrolling flex siblings around `.content` — the same
+technique `OverlayHeader` itself already uses, not `position: sticky` — so
+`.content` remains the single scrollable region in every shape. `footer` is
+layout-agnostic (no built-in button alignment); arrange its content same as
+`children`.
 
 ### `useOverlaySecondRow` — the double-header problem
 
@@ -1703,7 +1750,7 @@ Stories live under two roots inside `packages/ui/src/`:
 | `CheckableListRow.stories.tsx`    | Default; checked; with icon and trailing; checked with icon and trailing; disabled; multiple rows in a list context                                             |
 | `CodeTextarea.stories.tsx`        | Default; `FormField` integration; error; disabled; long content; mobile viewport                                                                                |
 | `CurrencyInput.stories.tsx`       | Empty; prefilled cents value; disabled                                                                                                                          |
-| `Dialog.stories.tsx`              | sm/md/lg/full sizes; closed state; `play` function opens and asserts visibility                                                                                 |
+| `Dialog.stories.tsx`              | sm/md/lg/full sizes; closed state; `play` function opens and asserts visibility; Body only / Header + Body / Header + Body + Footer composition shapes          |
 | `Drawer.stories.tsx`              | Mobile viewport default; closed; `play` function opens and asserts panel visible                                                                                |
 | `EmptyState.stories.tsx`          | Heading only; with icon; with action                                                                                                                            |
 | `FormField.stories.tsx`           | Default; with hint; with error (role="alert"); render-prop `children` wires field props (`id`, `aria-describedby`, `aria-invalid`, `required`) onto the control |

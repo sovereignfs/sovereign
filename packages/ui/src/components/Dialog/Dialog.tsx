@@ -63,8 +63,8 @@ export function useOverlaySecondRow(node: ReactNode | null): boolean {
 // natural size varies a lot (a card detail modal with an optional
 // checklist/comments section) rather than reliably filling a fixed width.
 // `lg` is unchanged — the only size that's a true fixed 100%/100% box,
-// still what overlay-shell plugins (Account, Console) need so the panel
-// holds still while they switch internal views.
+// still what overlay-shell plugins (Account) need so the panel holds still
+// while they switch internal views.
 export type DialogSize = 'sm' | 'md' | 'lg' | 'auto';
 
 export interface DialogProps {

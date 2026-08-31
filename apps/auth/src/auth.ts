@@ -9,6 +9,7 @@ import { renderPasswordResetEmail, renderSubject } from '@sovereignfs/mailer';
 import { authGet, authRun, getAuthDatabase } from './db';
 import { getEmailBranding, getPasswordResetCopy } from './email-branding';
 import { getEnv } from './env';
+import { getPolicyAcceptanceHash } from './legal-content';
 import { getPasswordPolicy, validatePasswordComplexity } from './password-policy';
 import { isValidTimezone } from './timezone';
 import { resolveInvitePluginGrants } from './invite-plugin-grants';
@@ -171,6 +172,45 @@ function buildOptions(): BetterAuthOptions {
           required: false,
           input: true,
         },
+        // Terms-acceptance-as-contract-formation (GDPR-8, workstream 0021
+        // leg 6 — lawful basis decided as contract, Art. 6(1)(b), not
+        // consent). `agreedToTerms` is the only one of these three the
+        // client sends; the create hook below rejects registration outright
+        // if it isn't `true`, then computes and stamps the other two itself
+        // — a client can never claim acceptance of a version it wasn't
+        // actually shown, the same trust boundary `isValidTimezone` already
+        // enforces for a different field.
+        //
+        // `required: false` + `defaultValue: false`, not `required: true` —
+        // confirmed live that `required: true` with no default makes
+        // better-auth's auto-migration emit `ALTER TABLE ... ADD COLUMN ...
+        // NOT NULL` with no `DEFAULT`, which SQLite rejects outright on a
+        // non-empty table ("Cannot add a NOT NULL column with default value
+        // NULL") — every existing user row breaks the whole auth server at
+        // boot. The default only ever backfills pre-existing rows (correctly
+        // `false` — they registered before this field existed, so there's
+        // genuinely no acceptance on record); every *new* registration is
+        // still unconditionally enforced by the `create.before` throw below,
+        // which never lets a row insert with anything but a real `true`.
+        agreedToTerms: {
+          type: 'boolean',
+          required: false,
+          defaultValue: false,
+          input: true,
+        },
+        // sha256 of the root PRIVACY.md + TOS.md content at the moment of
+        // acceptance (see legal-content.ts) — not a hand-maintained version
+        // number, since RFC 0090 never defined one. Server-computed only.
+        policyAcceptedHash: {
+          type: 'string',
+          required: false,
+          input: false,
+        },
+        policyAcceptedAt: {
+          type: 'number',
+          required: false,
+          input: false,
+        },
         // Progressive verification (RFC 0035): 0 registered, 1 email_verified,
         // 2 mfa_enrolled, 3 admin_vouched. Not user-settable — only ever
         // written by the create hook (initial grant), the databaseHooks.user
@@ -203,6 +243,15 @@ function buildOptions(): BetterAuthOptions {
                   message: 'The timezone provided is not a valid IANA timezone.',
                 });
               }
+            }
+
+            // Terms acceptance is a condition of the contract (GDPR-8), not
+            // an optional checkbox — reject registration outright rather
+            // than silently proceeding without a record.
+            if (user.agreedToTerms !== true) {
+              throw new APIError('BAD_REQUEST', {
+                message: 'You must agree to the Privacy Policy and Terms of Service to register.',
+              });
             }
 
             const countRow = await authGet<{ c: number | string }>(
@@ -242,6 +291,10 @@ function buildOptions(): BetterAuthOptions {
                 ...user,
                 role: isFirst ? 'platform:owner' : 'platform:user',
                 verificationLevel: env.requireEmailVerification ? 0 : 1,
+                // Computed here, never trusted from the client — overrides
+                // whatever (if anything) the request body sent for these two.
+                policyAcceptedHash: getPolicyAcceptanceHash(),
+                policyAcceptedAt: Math.floor(Date.now() / 1000),
               },
             };
           },

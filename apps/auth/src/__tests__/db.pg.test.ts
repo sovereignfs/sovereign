@@ -72,12 +72,24 @@ describe.skipIf(!PG_URL)('auth server on Postgres', () => {
   it('makes the first registered user a platform owner (create hook)', async () => {
     const { getAuth } = await import('../auth');
     const auth = getAuth();
-    await auth.api.signUpEmail({
-      body: { email: 'admin@example.com', password: 'sup3rsecret!', name: 'Admin' },
-    });
-    await auth.api.signUpEmail({
-      body: { email: 'bob@example.com', password: 'sup3rsecret!', name: 'Bob' },
-    });
+    // signUpEmail's body type comes from ReturnType<typeof betterAuth>, which
+    // doesn't carry buildOptions()'s additionalFields at the type level — a
+    // named const (not an inline literal) sidesteps the resulting excess-
+    // property check while keeping the base fields fully type-checked.
+    const adminBody = {
+      email: 'admin@example.com',
+      password: 'sup3rsecret!',
+      name: 'Admin',
+      agreedToTerms: true,
+    };
+    await auth.api.signUpEmail({ body: adminBody });
+    const bobBody = {
+      email: 'bob@example.com',
+      password: 'sup3rsecret!',
+      name: 'Bob',
+      agreedToTerms: true,
+    };
+    await auth.api.signUpEmail({ body: bobBody });
 
     // The quoted "user" query (reserved word + camelCase column) must work, and
     // `active`/`createdAt` come back as boolean/Date on Postgres.

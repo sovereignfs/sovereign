@@ -26,6 +26,7 @@ export function RegisterForm({
   const [email, setEmail] = useState(invitedEmail ?? '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   // Browser timezone captured silently at registration (a helpful default, never
@@ -60,6 +61,7 @@ export function RegisterForm({
       email,
       password,
       timezone: timezone ?? 'UTC',
+      agreedToTerms,
     });
     setLoading(false);
     if (result.error) {
@@ -152,6 +154,25 @@ export function RegisterForm({
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
+          </label>
+          <label className={registerStyles.termsRow}>
+            <input
+              type="checkbox"
+              required
+              disabled={loading}
+              checked={agreedToTerms}
+              onChange={(e) => setAgreedToTerms(e.target.checked)}
+            />
+            <span>
+              I agree to the{' '}
+              <Link href="/privacy" className={registerStyles.termsLink}>
+                Privacy Policy
+              </Link>{' '}
+              and{' '}
+              <Link href="/tos" className={registerStyles.termsLink}>
+                Terms of Service
+              </Link>
+            </span>
           </label>
           {error ? <p className={styles.error}>{error}</p> : null}
           <Button type="submit" disabled={loading} className={styles.submitLg}>

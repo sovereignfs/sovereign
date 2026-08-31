@@ -9,6 +9,7 @@ import { renderPasswordResetEmail, renderSubject } from '@sovereignfs/mailer';
 import { authGet, authRun, getAuthDatabase } from './db';
 import { getEmailBranding, getPasswordResetCopy } from './email-branding';
 import { getEnv } from './env';
+import { getPasswordPolicy, validatePasswordComplexity } from './password-policy';
 import { isValidTimezone } from './timezone';
 import { resolveInvitePluginGrants } from './invite-plugin-grants';
 import { isMailerConfigured, sendAuthPlatformEmail } from './platform-email';
@@ -84,9 +85,13 @@ function buildOptions(): BetterAuthOptions {
           metadata: { flow: 'password_reset' },
         });
       },
-      // Minimum password length (better-auth default is 8, but being explicit
-      // here so it doesn't silently change with a library upgrade).
-      minPasswordLength: 8,
+      // Minimum password length. Configurable via AUTH_PASSWORD_MIN_LENGTH,
+      // defaulting to 8 (better-auth's own default, kept explicit so it
+      // doesn't silently change with a library upgrade). Complexity rules
+      // (uppercase/lowercase/number/symbol) have no equivalent option here —
+      // enforced separately by the hooks.before check below, via
+      // validatePasswordComplexity (./password-policy.ts).
+      minPasswordLength: getPasswordPolicy().minLength,
       // When true (default), blocks sign-in with EMAIL_NOT_VERIFIED until the
       // account is verified, and sign-up returns { token: null } instead of
       // creating a session. Requires emailVerification.sendVerificationEmail
@@ -291,6 +296,33 @@ function buildOptions(): BetterAuthOptions {
     // `ctx.context.session.user.id` is populated by the time this `after`
     // hook runs (same value the endpoint handlers themselves read).
     hooks: {
+      // Enforces the configurable password complexity policy
+      // (./password-policy.ts) on every path that sets a password — sign-up,
+      // reset, and change — so it can't be bypassed by setting a weak
+      // password via reset/change right after a compliant signup. Length is
+      // still better-auth's own minPasswordLength/maxPasswordLength check
+      // (configured above); this only covers the complexity rules, which
+      // have no equivalent config option. Field name differs by path:
+      // sign-up's body carries `password`, reset/change-password carry
+      // `newPassword`.
+      before: createAuthMiddleware(async (ctx) => {
+        const passwordField =
+          ctx.path === '/sign-up/email'
+            ? 'password'
+            : ctx.path === '/reset-password' || ctx.path === '/change-password'
+              ? 'newPassword'
+              : null;
+        if (!passwordField) return;
+        const password = (ctx.body as Record<string, unknown> | undefined)?.[passwordField];
+        if (typeof password !== 'string' || password.length === 0) return;
+        const violation = validatePasswordComplexity(password);
+        if (violation) {
+          throw new APIError('BAD_REQUEST', {
+            message: violation,
+            code: 'PASSWORD_POLICY_VIOLATION',
+          });
+        }
+      }),
       after: createAuthMiddleware(async (ctx) => {
         if (ctx.path !== '/passkey/verify-registration' && ctx.path !== '/passkey/delete-passkey') {
           return;

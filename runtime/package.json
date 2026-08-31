@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/runtime",
-  "version": "0.91.10",
+  "version": "0.92.0",
   "private": true,
   "type": "module",
   "scripts": {

@@ -6,16 +6,19 @@ import { pgTable, text, bigint } from 'drizzle-orm/pg-core';
  * either dialect, per `docs/plugin-database.md`). Plain `text`/`bigint` for
  * every column since this table's application code isn't dialect-aware.
  */
-export const wardenConversation = pgTable('warden_conversation', {
+export const wardenSessions = pgTable('warden_sessions', {
   id: text('id').primaryKey(),
   tenantId: text('tenant_id').notNull(),
   userId: text('user_id').notNull(),
+  title: text('title'),
+  pinnedAt: bigint('pinned_at', { mode: 'number' }),
+  lastActiveAt: bigint('last_active_at', { mode: 'number' }).notNull(),
   createdAt: bigint('created_at', { mode: 'number' }).notNull(),
 });
 
 export const wardenMessages = pgTable('warden_messages', {
   id: text('id').primaryKey(),
-  conversationId: text('conversation_id').notNull(),
+  sessionId: text('session_id').notNull(),
   role: text('role').notNull(),
   content: text('content').notNull(),
   providerId: text('provider_id'),

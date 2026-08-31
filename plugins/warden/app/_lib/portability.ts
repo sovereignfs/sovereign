@@ -1,8 +1,8 @@
 import { eq, inArray } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { sdk } from '@sovereignfs/sdk';
-import { wardenConversation, wardenMessages } from '../_db/schema';
-import { listMessages } from './conversations';
+import { wardenSessions, wardenMessages } from '../_db/schema';
+import { listMessages, listSessions } from './sessions';
 
 /**
  * User data portability (RFC 0007, epic task 22.5) for Warden's chat
@@ -22,42 +22,50 @@ import { listMessages } from './conversations';
  */
 export async function registerPortability(): Promise<void> {
   await sdk.portability.provideExport(async (ctx) => {
-    const messages = await listMessages(ctx.userId, ctx.tenantId);
+    // schemaVersion 2 (was 1): the export shape genuinely changed from one
+    // flat message list to sessions grouped with their own messages, per
+    // task 22.8's multi-session model — a hypothetical future import
+    // resolver would need to branch on this.
+    const sessions = await listSessions(ctx.userId, ctx.tenantId);
+    const withMessages = await Promise.all(
+      sessions.map(async (session) => ({
+        ...session,
+        messages: await listMessages(ctx.userId, ctx.tenantId, session.id),
+      })),
+    );
     return {
       pluginId: 'fs.sovereign.warden',
-      schemaVersion: 1,
-      data: { messages },
+      schemaVersion: 2,
+      data: { sessions: withMessages },
     };
   });
 
   await sdk.portability.provideDelete(async (ctx) => {
     // ctx.db is the plugin's own opaque Drizzle client (DeletionContext['db']: unknown),
-    // same shape as sdk.db.getClient() — same generic-args pattern as conversations.ts's `Db`.
+    // same shape as sdk.db.getClient() — same generic-args pattern as sessions.ts's `Db`.
     const database = ctx.db as BaseSQLiteDatabase<'async', unknown>;
-    const conversations = await database
-      .select({ id: wardenConversation.id })
-      .from(wardenConversation)
-      .where(eq(wardenConversation.userId, ctx.userId));
-    const conversationIds = conversations.map((c) => c.id);
+    const sessions = await database
+      .select({ id: wardenSessions.id })
+      .from(wardenSessions)
+      .where(eq(wardenSessions.userId, ctx.userId));
+    const sessionIds = sessions.map((s) => s.id);
 
     // Count via a separate select before the delete rather than a
     // delete-with-row-report clause — not every driver behind
     // `sdk.db.getClient()` (sqld/libsql vs. node-postgres) is guaranteed to
-    // support that identically. Fixed at 4 queries regardless of
-    // conversation count (was 2n + 2) via inArray, instead of a
-    // per-conversation select+delete loop. inArray([]) is safe here —
-    // drizzle-orm generates a constant `false` condition for an empty array,
-    // not invalid `IN ()` SQL, so the zero-conversation case needs no
-    // special-casing.
+    // support that identically. Fixed at 4 queries regardless of session
+    // count (task 22.7's fix, carried forward unchanged) via inArray,
+    // instead of a per-session select+delete loop. inArray([]) is safe
+    // here — drizzle-orm generates a constant `false` condition for an
+    // empty array, not invalid `IN ()` SQL, so the zero-session case needs
+    // no special-casing.
     const messages = await database
       .select({ id: wardenMessages.id })
       .from(wardenMessages)
-      .where(inArray(wardenMessages.conversationId, conversationIds));
-    await database
-      .delete(wardenMessages)
-      .where(inArray(wardenMessages.conversationId, conversationIds));
-    await database.delete(wardenConversation).where(eq(wardenConversation.userId, ctx.userId));
+      .where(inArray(wardenMessages.sessionId, sessionIds));
+    await database.delete(wardenMessages).where(inArray(wardenMessages.sessionId, sessionIds));
+    await database.delete(wardenSessions).where(eq(wardenSessions.userId, ctx.userId));
 
-    return { deleted: messages.length + conversations.length };
+    return { deleted: messages.length + sessions.length };
   });
 }

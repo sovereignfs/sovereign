@@ -15,7 +15,7 @@ import {
   Toggle,
 } from '@sovereignfs/ui';
 import type { DiscoveredModel } from '../_lib/model-discovery';
-import type { MessageView } from '../_lib/conversations';
+import type { MessageView } from '../_lib/sessions';
 import {
   classifyAttachmentType,
   describeDocumentPlaceholder,
@@ -64,11 +64,18 @@ function toChatTurn(message: MessageView): ChatTurn {
  * request-time effect at all.
  */
 export function ChatView({
+  initialSessionId,
   initialMessages,
   models,
   defaultModelKey,
   allModelsHidden = false,
 }: {
+  /** Server-resolved most-recently-active session, or `null` for a
+   *  brand-new user with none yet (RFC 0063 §10, epic task 22.8). No
+   *  sidebar exists yet to switch sessions explicitly (task 22.10) — this
+   *  is always either "continue the one session that exists" or "the very
+   *  first send creates one," never a user-driven choice in this revision. */
+  initialSessionId: string | null;
   initialMessages: MessageView[];
   models: DiscoveredModel[];
   defaultModelKey: string;
@@ -77,6 +84,10 @@ export function ChatView({
    *  reachable at all," which needs a different message. */
   allModelsHidden?: boolean;
 }) {
+  // Persisted-mode only — incognito never references a session (RFC 0063
+  // §6/§10). Updated from the response's `x-warden-session-id` header the
+  // first time a brand-new session is lazily created on send.
+  const [sessionId, setSessionId] = useState(initialSessionId);
   const [persistedTurns, setPersistedTurns] = useState<ChatTurn[]>(() =>
     initialMessages.map(toChatTurn),
   );
@@ -158,13 +169,14 @@ export function ChatView({
       if (sentAttachment) {
         const formData = new FormData();
         formData.append('modelKey', modelKey);
+        if (sessionId) formData.append('sessionId', sessionId);
         formData.append('content', content);
         formData.append('file', sentAttachment);
         response = await fetch('/warden/api/chat', { method: 'POST', body: formData });
       } else {
         const requestBody = incognito
           ? { modelKey, incognito: true, messages: nextTurns }
-          : { modelKey, content };
+          : { modelKey, sessionId, content };
         response = await fetch('/warden/api/chat', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
@@ -182,6 +194,11 @@ export function ChatView({
       setPendingText(null);
       failRequest(hadPriorConversation, body.message ?? 'Warden is unavailable right now.');
       return;
+    }
+
+    if (!incognito) {
+      const resolvedSessionId = response.headers.get('x-warden-session-id');
+      if (resolvedSessionId) setSessionId(resolvedSessionId);
     }
 
     const reader = response.body?.getReader();

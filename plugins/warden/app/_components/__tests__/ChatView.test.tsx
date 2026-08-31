@@ -34,7 +34,13 @@ const models = [
 
 function renderChatView(overrides: Partial<Parameters<typeof ChatView>[0]> = {}) {
   return render(
-    <ChatView initialMessages={[]} models={models} defaultModelKey="local" {...overrides} />,
+    <ChatView
+      initialSessionId={null}
+      initialMessages={[]}
+      models={models}
+      defaultModelKey="local"
+      {...overrides}
+    />,
   );
 }
 
@@ -69,11 +75,12 @@ describe('ChatView — persisted mode (default)', () => {
     expect(screen.getByText('earlier reply')).toBeDefined();
   });
 
-  it('sends {modelKey, content} — not the whole transcript — for a new message', async () => {
+  it('sends {modelKey, sessionId, content} — not the whole transcript — for a new message', async () => {
     const fetchMock = vi.fn().mockResolvedValue(sseResponse([{ type: 'done' }]));
     vi.stubGlobal('fetch', fetchMock);
 
     renderChatView({
+      initialSessionId: 'session-1',
       initialMessages: [
         {
           id: '1',
@@ -89,7 +96,35 @@ describe('ChatView — persisted mode (default)', () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
-    expect(body).toEqual({ modelKey: 'local', content: 'new message' });
+    expect(body).toEqual({ modelKey: 'local', sessionId: 'session-1', content: 'new message' });
+  });
+
+  it('sends sessionId: null for a brand-new session, then adopts the id the server returns', async () => {
+    // A fresh Response per call — a stream body can only be read once, and
+    // this test sends two messages.
+    const fetchMock = vi.fn().mockImplementation(() => {
+      const response = sseResponse([{ type: 'done' }]);
+      response.headers.set('x-warden-session-id', 'session-new');
+      return Promise.resolve(response);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderChatView();
+    sendMessage('first message');
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      modelKey: 'local',
+      sessionId: null,
+      content: 'first message',
+    });
+
+    sendMessage('second message');
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({
+      modelKey: 'local',
+      sessionId: 'session-new',
+      content: 'second message',
+    });
   });
 
   it('sends a message, streams the response, and appends both turns', async () => {

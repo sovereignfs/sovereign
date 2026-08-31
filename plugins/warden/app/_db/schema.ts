@@ -1,10 +1,14 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 
 /**
- * Warden's persisted chat (RFC 0063 §3, epic task 22.5). One conversation
- * row per user in this phase — modeled as a real entity (not a bare
- * messages table keyed by userId) so a future multi-thread UI is "add more
- * rows plus a picker," not a migration.
+ * Warden's persisted chat (RFC 0063 §3/§10, epic task 22.8). Multiple named,
+ * pinnable sessions per user — replaces the phase-1 `warden_conversation`
+ * table's "exactly one row per user" invariant with a real multi-row
+ * entity. This is a clean-slate replacement, not an in-place migration: per
+ * direct developer instruction, existing `warden_conversation` rows are not
+ * carried forward (see the migration itself and workstream 0021's Decisions
+ * locked) — negligible real usage exists this early to be worth backfilling
+ * synthetic `title`/`lastActiveAt` values for.
  *
  * Deliberately plain, unencrypted columns — RFC 0063's Alternatives already
  * settled that provider credentials go through `sdk.secrets`/`sdk.connections`,
@@ -12,16 +16,25 @@ import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
  * mechanism and isn't classified as sensitive here (same posture as any
  * other plugin's free-text user content, e.g. a notes app).
  */
-export const wardenConversation = sqliteTable('warden_conversation', {
+export const wardenSessions = sqliteTable('warden_sessions', {
   id: text('id').primaryKey(),
   tenantId: text('tenant_id').notNull(),
   userId: text('user_id').notNull(),
+  // Null until an LLM-generated title lands after the first exchange, or
+  // the user renames the session manually — see _lib/sessions.ts.
+  title: text('title'),
+  // Null = unpinned. Non-null = pinned, and sorts the pinned group (most
+  // recently pinned first) — see _lib/sessions.ts's pin-cap enforcement.
+  pinnedAt: integer('pinned_at'),
+  // Bumped only when a message is actually sent in this session — never on
+  // merely opening/viewing it. The sidebar's "recent" sort key.
+  lastActiveAt: integer('last_active_at').notNull(),
   createdAt: integer('created_at').notNull(),
 });
 
 export const wardenMessages = sqliteTable('warden_messages', {
   id: text('id').primaryKey(),
-  conversationId: text('conversation_id').notNull(),
+  sessionId: text('session_id').notNull(),
   role: text('role').notNull(), // 'user' | 'assistant'
   content: text('content').notNull(),
   // The sdk.connections id that answered this message, or null for the
@@ -56,6 +69,6 @@ export const wardenModelVisibilityOverrides = sqliteTable('warden_model_visibili
   createdAt: integer('created_at').notNull(),
 });
 
-export type WardenConversationRow = typeof wardenConversation.$inferSelect;
+export type WardenSessionRow = typeof wardenSessions.$inferSelect;
 export type WardenMessageRow = typeof wardenMessages.$inferSelect;
 export type WardenModelVisibilityOverrideRow = typeof wardenModelVisibilityOverrides.$inferSelect;

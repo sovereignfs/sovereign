@@ -1,6 +1,6 @@
 # Workstream 0021 — Warden: multi-session UI
 
-**Status:** 📋 Planned — not started\
+**Status:** ⏳ In progress — leg 1 of 4 done\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -25,7 +25,7 @@ workstream 0019.
 
 ## Definition of done
 
-- [ ] `22.8` — `warden_sessions` replaces `warden_conversation` (clean-slate
+- [x] `22.8` — `warden_sessions` replaces `warden_conversation` (clean-slate
       migration, no backfill); a user can create (lazily, on first send),
       list, pin (max 5)/unpin, rename, and delete sessions; the chat API
       routes by session id instead of assuming one conversation per user.
@@ -81,12 +81,12 @@ same PR as whichever leg first uses it (`22.10`).
 
 ## Legs
 
-| Leg | Name                        | Epic tasks | Epics | Gate? | Done when                                                                                                                                                     |
-| --- | --------------------------- | ---------- | ----- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Sessions data model and API | 22.8       | 22    | No    | `warden_sessions` replaces `warden_conversation`; create/list/pin/unpin/rename/delete all work; the chat API routes by session id                             |
-| 2   | Settings consolidation      | 22.9       | 22    | No    | `/warden/settings` (General/Providers/Models) is live with `ProvidersView`/`ModelsView` behavior unchanged; `/warden/providers`/`/warden/models` are removed  |
-| 3   | Sidebar UI                  | 22.10      | 22    | No    | Collapsible two-column layout ships; sidebar lists pinned + recent sessions, supports "+ New," rename/pin/delete, LLM titles, and a Settings entry point      |
-| 4   | Composer redesign           | 22.11      | 22    | No    | Claude-style composer ships with a model-picker popover (linking into Settings), incognito as a toolbar icon, and the old header links/web-search toggle gone |
+| Leg | Name                           | Epic tasks | Epics | Gate? | Done when                                                                                                                                                     |
+| --- | ------------------------------ | ---------- | ----- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Sessions data model and API ✅ | 22.8       | 22    | No    | `warden_sessions` replaces `warden_conversation`; create/list/pin/unpin/rename/delete all work; the chat API routes by session id                             |
+| 2   | Settings consolidation         | 22.9       | 22    | No    | `/warden/settings` (General/Providers/Models) is live with `ProvidersView`/`ModelsView` behavior unchanged; `/warden/providers`/`/warden/models` are removed  |
+| 3   | Sidebar UI                     | 22.10      | 22    | No    | Collapsible two-column layout ships; sidebar lists pinned + recent sessions, supports "+ New," rename/pin/delete, LLM titles, and a Settings entry point      |
+| 4   | Composer redesign              | 22.11      | 22    | No    | Claude-style composer ships with a model-picker popover (linking into Settings), incognito as a toolbar icon, and the old header links/web-search toggle gone |
 
 No leg is marked a gate — there's no upstream unknown here that could
 redirect a later leg's scope, unlike workstream 0014's engine benchmark.
@@ -95,7 +95,7 @@ standard leg contract.
 
 ## Leg detail
 
-### Leg 1 — Sessions data model and API
+### Leg 1 — Sessions data model and API ✅
 
 **Epic tasks:** 22.8
 
@@ -134,6 +134,34 @@ exist.
 different session's request context (a sessionId mix-up cross-contaminating
 history) — that's a data-integrity regression, not a minor bug, given each
 session is supposed to be an independent thread.
+
+**Leg outcome:** shipped as planned, with two decisions made at
+implementation time that RFC 0063 had deliberately left open. First, title
+generation uses no model call at all — `deriveTitle()` derives a title
+synchronously from the session's first user message (trimmed,
+whitespace-collapsed, truncated to 60 chars) rather than spending a real LLM
+request on something the user can always rename; this closes RFC 0063's
+"which model generates the title" open question in favor of the cheaper,
+zero-failure-mode option. Second, `drizzle-kit generate` could not run
+non-interactively for a schema change this size (table rename + new
+columns + a sibling-table column rename triggers its "renamed or created
+new?" TTY prompt) — migration 0002 was hand-authored for both dialects to
+exactly match drizzle-kit's own output format (a straight drop/create pair,
+per the clean-slate decision), then verified two ways: `drizzle-kit check`
+confirms the hand-written snapshot/journal metadata is internally
+consistent, and a follow-up `drizzle-kit generate` against the updated
+`schema.ts`/`schema.postgres.ts` reports "No schema changes, nothing to
+migrate" — proving the hand-authored snapshot exactly matches what
+drizzle-kit itself would have produced. Every session-scoped function in
+`_lib/sessions.ts` is ownership-checked via a private `getOwnSession()` that
+re-verifies `userId` after the read (not just via a query filter), closing
+this leg's own "do not proceed if" condition — verified by a dedicated
+cross-user-isolation test exercising every mutation against a foreign
+session id. `app/page.tsx`/`ChatView.tsx` were adapted to keep the existing
+single-thread UX working unchanged end to end (auto-selecting the most
+recently active session) since the sidebar that lets a user actually
+switch sessions doesn't ship until leg 3. Full detail in the epic file's
+task 22.8 completion note.
 
 ### Leg 2 — Settings consolidation
 
@@ -250,6 +278,7 @@ needs rework first.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                           |
-| ------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | August 2026 | Initial draft, sequencing RFC 0063's third revision (multi-session UI, settings consolidation, composer redesign) into four legs |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                     |
+| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0.1     | August 2026 | Initial draft, sequencing RFC 0063's third revision (multi-session UI, settings consolidation, composer redesign) into four legs                                                                                                                                                           |
+| 0.2     | August 2026 | Leg 1 (task 22.8) done — `warden_sessions` shipped replacing `warden_conversation` (clean-slate migration, hand-authored since `drizzle-kit generate` needed an unavailable interactive prompt), full CRUD, chat API routed by session id, no-model-call title derivation. Leg 2 unblocked |

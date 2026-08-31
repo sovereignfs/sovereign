@@ -11,9 +11,11 @@ status: >
   pinnable sessions; a consolidated Settings surface (General/Providers/
   Models) replacing the standalone /warden/providers and /warden/models
   routes; and a redesigned composer. Sequenced as epic tasks 22.8-22.11,
-  workstream 0021 — not yet started, planning only, see that workstream for
-  legs. Tool execution/task handoff/floating button/voice remain a future,
-  not-yet-scheduled phase, unchanged from the second rewrite)
+  workstream 0021 — leg 1 (22.8, the sessions data model and API) is done;
+  legs 2-4 (settings consolidation, sidebar UI, composer redesign) remain,
+  see that workstream for legs. Tool execution/task handoff/floating
+  button/voice remain a future, not-yet-scheduled phase, unchanged from the
+  second rewrite)
 date: >
   August 2026 (second rewrite; originally drafted July 2026, first rewrite
   August 2026; third revision August 2026)
@@ -30,7 +32,7 @@ scope: >
   design and its second rewrite's single-conversation UI
 incorporated_into_plan: >
   Yes — epic tasks 22.4-22.5 (workstream 0019, done) and 22.8-22.11
-  (workstream 0021, planned)
+  (workstream 0021, leg 1/22.8 done, legs 2-4 planned)
 ---
 
 # RFC 0063 - Warden: core assistant platform plugin and harness engine

@@ -10,8 +10,12 @@
 > rewrite: bring-your-own OpenAI-API-compatible model providers per user,
 > with the local engine folded in as one optional, auto-detected entry
 > instead of the required backend, plus persisted chat and an incognito
-> toggle. This epic file reflects the second rewrite; read RFC 0063 itself
-> for the full reasoning behind the change.
+> toggle. Tasks 22.6-22.7 are unrelated remediation (workstream 0020, not
+> part of either rewrite). Tasks 22.8-22.11 implement RFC 0063's **third**
+> revision (workstream 0021): multiple named, pinnable sessions replacing
+> the single persisted conversation, a consolidated Settings surface, and a
+> composer redesign — the multi-threaded UI the second rewrite explicitly
+> deferred. Read RFC 0063 itself for the full reasoning behind each change.
 
 ## Status
 
@@ -33,12 +37,13 @@ automatically, with no special status beyond "free, no key needed." Neither
 `apps/harness` nor `packages/sdk` needs any code change for this; see RFC
 0063 §Current state.
 
-**This epic is phase 1 only: the foundation.** No tool execution, no task
-handoff, no floating quick-access button, no voice, no multi-threaded
-conversation UI — all of those are real future phases, listed in RFC 0063's
-Adoption path but deliberately not scheduled as epic tasks here. The
-instruction behind this scope was explicit both times: ship a working chat
-surface first, extend capability later.
+**Tasks 22.1-22.7 are phase 1: the foundation.** No tool execution, no task
+handoff, no floating quick-access button, no voice — all of those are real
+future phases, listed in RFC 0063's Adoption path but deliberately not
+scheduled as epic tasks here. The instruction behind this scope was explicit
+every time: ship a working chat surface first, extend capability later.
+Multi-threaded conversation UI was the one item in that list to graduate
+out of "future, unscheduled" — it's tasks 22.8-22.11 below.
 
 Warden gets no privileged runtime access beyond an ordinary plugin in this
 phase — there's nothing to call privileges on yet, since there's no tool
@@ -512,6 +517,276 @@ change based on the above.
 
 ---
 
+#### ✅ 22.8 — Warden sessions data model and API
+
+**Goal:** Replace the single persisted conversation per user
+(`warden_conversation`/`warden_messages`) with `warden_sessions` — multiple
+named, pinnable sessions per user — and route the chat API by session id
+instead of assuming one conversation exists. This is the foundation leg
+(workstream 0021 leg 1): nothing in legs 22.9-22.11 has anything to display
+or link to until sessions themselves exist.
+
+**Deliverables:**
+
+- New `warden_sessions` table (`sdk.db`, tenant + user scoped) replacing
+  `warden_conversation`: `id`, `tenantId`, `userId`, `title` (nullable),
+  `pinnedAt` (nullable — non-null means pinned, sorts the pinned group),
+  `lastActiveAt` (not null — bumped only when a message is sent in that
+  session, never on merely opening it), `createdAt`. `warden_messages`'s
+  `conversationId` column renamed to `sessionId`, referencing the new table.
+- **Clean-slate migration** — per direct developer instruction (RFC 0063
+  §3, workstream 0021 Decisions locked): drop and recreate the affected
+  tables under their new names/shapes rather than backfilling a synthetic
+  title/`lastActiveAt` for existing rows. Confirm this instruction still
+  holds immediately before merging (workstream 0021's own Risks section
+  flags this as a one-way door).
+- `_lib/conversations.ts` rewritten (or renamed, e.g. `sessions.ts`) around
+  explicit multi-session operations: `createSession` (lazy — called only on
+  a session's first message, never on "+ New" being clicked, matching
+  `getOrCreateConversation()`'s existing lazy-creation principle),
+  `listSessions`, `renameSession`, `pinSession`/`unpinSession`,
+  `deleteSession`, `appendMessage(sessionId, ...)` (bumps `lastActiveAt`),
+  `listMessages(sessionId)`, `getRecentMessagesForContext(sessionId, maxTurns)`.
+- Pin cap of 5 enforced **server-side**, not just in a future UI — attempt
+  to pin a 6th session returns a clear rejection, not a silent no-op or an
+  auto-eviction of the oldest pin (workstream 0021 Decisions locked: silent
+  auto-evict was considered and rejected).
+- Title generation: after a session's first exchange, fire a short
+  summarization request against the session's own selected model (or a
+  fixed lightweight default — pick one, since RFC 0063 leaves this an open
+  question, and record the choice made in this task's own completion note).
+- `app/api/chat/route.ts`'s persisted-mode request shape gains a required
+  `sessionId`; incognito's request shape is unaffected (it never referenced
+  a conversation/session id).
+- `_lib/portability.ts`'s `provideExport`/`provideDelete` updated for the
+  renamed tables and the now-many-sessions-per-user shape: export returns
+  every session (grouped by session id/title), not one flat message list;
+  delete still uses the fixed-query-count pattern task 22.7 established
+  (`inArray`, not a per-session loop).
+- The existing single-thread `ChatView`/`app/page.tsx` keep working
+  end-to-end against the new schema — auto-selecting or creating a default
+  session behind the scenes — since the sidebar UI that lets a user actually
+  see/switch sessions doesn't ship until task 22.10. The app must not be
+  left in a broken or regressed state between this leg and that one.
+
+**Dependencies:** None new — this supersedes `warden_conversation`/
+`warden_messages`, which tasks 22.4/22.5 already shipped.
+
+**SRS reference:** [RFC 0063](../rfcs/0063-core-assistant-warden.md) §3, §10
+(third revision).
+
+**Review checklist:**
+
+- A session's messages are never readable from a different session's
+  request context — a sessionId mix-up cross-contaminating history is a
+  data-integrity regression, not a minor bug (workstream 0021's own "do not
+  proceed if" condition for this leg).
+- Pin cap of 5 is enforced server-side; a 6th pin attempt is rejected with a
+  clear message, verified by a test, not just documented.
+- `getOrCreateConversation()`'s "always the one existing row" behavior has
+  no remaining callers — sessions are created lazily, only on first send.
+- `pnpm exec vitest run plugins/warden` passes, including new coverage for
+  create/list/pin/unpin/rename/delete and the renamed portability shape.
+- `pnpm --filter runtime typecheck`, `pnpm lint`, and `pnpm format:check`
+  all pass.
+- `plugins/warden/manifest.json`'s `version` is bumped (plugins version only
+  their manifest, never `package.json`).
+
+**Result:** shipped as planned, with two decisions made at implementation
+time that RFC 0063 had deliberately left open:
+
+- **Title generation uses no model call.** Rather than spend a real LLM
+  request (extra latency, cost, a second failure mode, and picking which
+  provider answers it) on a title the user can always rename anyway,
+  `_lib/sessions.ts`'s `deriveTitle()` derives it synchronously from the
+  session's first user message (trimmed, whitespace-collapsed, truncated to
+  60 characters with an ellipsis) — set once, on the first user message,
+  and never overwritten afterward. Recorded here as the resolution to RFC
+  0063's "which model generates the title" open question.
+- **`drizzle-kit generate` could not run for this migration** — schema
+  changes this size (a table rename plus new columns, plus a column rename
+  on the sibling table) require an interactive TTY prompt ("renamed or
+  created new?") that isn't available in this environment. Migration
+  0002 (`warden_sessions`, both dialects) was hand-authored to exactly match
+  drizzle-kit's own output format — a straight `DROP TABLE`/`CREATE TABLE`
+  pair per the clean-slate decision, not a `RENAME` — then verified two
+  ways: `drizzle-kit check` confirms the hand-written journal/snapshot
+  metadata is internally consistent, and a follow-up `drizzle-kit generate`
+  reports "No schema changes, nothing to migrate" against the updated
+  `schema.ts`/`schema.postgres.ts`, proving the hand-authored snapshot
+  exactly matches the TypeScript schema it's meant to represent.
+
+Every session-scoped `_lib/sessions.ts` function is ownership-checked via a
+private `getOwnSession()` that re-verifies `userId` after the read, not just
+via a query filter — a guessed or leaked session id belonging to a different
+user returns "not found," never another user's data. `app/page.tsx` and
+`ChatView.tsx` were adapted to keep working end-to-end with no visible
+change (auto-selecting the most recently active session, or `null` for a
+brand-new user) — the sidebar that lets a user actually see or switch
+between sessions doesn't ship until task 22.10. The chat API's persisted
+request shape gained an optional `sessionId`; a lazily-created session's id
+comes back via a new `x-warden-session-id` response header, since a
+streaming body has no other place to carry it. Portability's export
+`schemaVersion` bumped `1` → `2` since the shape genuinely changed (one flat
+message list → sessions grouped with their own messages); `provideDelete`
+keeps task 22.7's fixed-4-query pattern, just against the renamed tables.
+Full existing `plugins/warden` suite (225 tests, including 21 new for
+`sessions.ts`, updated coverage for the chat route's session resolution,
+and the renamed portability shape) plus the full repository suite (3729
+tests) all green; `pnpm --filter runtime typecheck`, `pnpm lint`, and
+`pnpm format:check` all clean.
+
+---
+
+#### 📋 22.9 — Warden settings consolidation
+
+**Goal:** Replace the standalone `/warden/providers` and `/warden/models`
+routes with a single `/warden/settings` surface (General/Providers/Models
+tabs), reachable from the sidebar's Settings entry once task 22.10 ships it.
+Sequenced before the sidebar (not after) since task 22.10's Settings entry
+point needs a real route to link to, and this task doesn't depend on
+session data at all.
+
+**Deliverables:**
+
+- New `/warden/settings` route with General/Providers/Models tabs (RFC 0063
+  §11).
+- **Providers tab:** the existing `ProvidersView` content (add/edit/remove,
+  live health status) relocated with behavior unchanged — no redesign of
+  its own content in this task.
+- **Models tab:** the existing `ModelsView` content (per-model visibility
+  curation, "Recheck models") relocated with behavior unchanged.
+- **General tab:** default model for new sessions, a manual (not scheduled)
+  retention action, and an export action. Retention is deliberately scoped
+  to an on-demand action in this task, not a recurring background job —
+  automatic scheduled retention would need a new `sdk.schedules` capability
+  Warden doesn't declare today (RFC 0063 Open questions), and is left to a
+  future task. Which export mechanism to use (a deep link to the existing
+  account-wide portability export vs. a new Warden-only JSON download
+  invoking `provideExport`'s callback directly from plugin UI) is also an
+  open question in RFC 0063 — resolve it here and record the choice made in
+  this task's own completion note.
+- `/warden/providers` and `/warden/models` removed outright — **no
+  redirect** (workstream 0021 Decisions locked: not worth two permanent
+  forwarding-only routes given how little real usage exists this early).
+  Grep for any remaining internal links to the old paths (chat header,
+  docs) before removing; don't assume a later task cleans them up.
+
+**Dependencies:** None — this only relocates existing provider/model
+management; it doesn't need task 22.8's session data.
+
+**SRS reference:** [RFC 0063](../rfcs/0063-core-assistant-warden.md) §11
+(third revision).
+
+**Review checklist:**
+
+- `ProvidersView`/`ModelsView` behavior (add/edit/remove, visibility
+  toggles, "Recheck") is unchanged after relocation — verified live, not
+  just by reading the diff.
+- No remaining reference to `/warden/providers` or `/warden/models`
+  anywhere in the composed app (chat header links, docs) — a 404 left
+  behind by this task is a review-blocking regression, not a follow-up.
+- `pnpm exec vitest run plugins/warden`, `pnpm --filter runtime typecheck`,
+  `pnpm lint`, and `pnpm format:check` all pass.
+- `plugins/warden/manifest.json`'s `version` is bumped.
+
+---
+
+#### 📋 22.10 — Warden sidebar UI
+
+**Goal:** Ship the collapsible two-column layout and the sidebar itself —
+pinned/recent session groups, "+ New," per-row rename/pin/delete, and the
+Settings entry point — turning task 22.8's data model into something a user
+can actually see and act on.
+
+**Deliverables:**
+
+- Two-column layout via `@sovereignfs/ui`'s `ThreeColumnLayout` (sidebar +
+  main only; no third child passed — the reserved right column isn't built
+  or shown this phase, RFC 0063 §10).
+- Collapse toggle icon in the main column's top-left corner — deliberately
+  not inside the sidebar itself, so collapsing it doesn't hide the way to
+  bring it back. Collapse state persists via `localStorage`, default
+  expanded.
+- Sidebar groups: pinned (≤5, sorted by `pinnedAt` descending) above recent
+  (≤10, sorted by `lastActiveAt` descending); "+ New" above both; a
+  "Settings" item pinned to the bottom, outside the scrollable list, linking
+  to task 22.9's `/warden/settings`.
+- Per-row overflow menu: rename, pin/unpin, delete. No "recently deleted"
+  recovery path, matching incognito's own no-recovery posture.
+- One or two new curated icons added to `@sovereignfs/ui`'s `Icon` set
+  (sidebar toggle, pin) — per that package's own Storybook-hygiene
+  convention, add the matching story/gallery entries in the same PR.
+
+**Dependencies:** Task 22.8 (session data to list) and task 22.9 (the
+Settings route the sidebar's own entry point links to).
+
+**SRS reference:** [RFC 0063](../rfcs/0063-core-assistant-warden.md) §10
+(third revision).
+
+**Review checklist:**
+
+- The sidebar's session list and the composer's active session never
+  disagree about which session is "open" — a stale highlight, or sending a
+  message to a session other than the one visually selected, is a
+  correctness bug (workstream 0021's own "do not proceed if" condition).
+- Pinning a 6th session surfaces task 22.8's server-side rejection clearly
+  in the UI, not a silent failure.
+- New curated icon(s) have matching Storybook entries; `pnpm --filter
+@sovereignfs/ui typecheck` passes.
+- `pnpm exec vitest run plugins/warden`, `pnpm --filter runtime typecheck`,
+  `pnpm lint`, and `pnpm format:check` all pass.
+- Verified live in a browser: create a session, send a message, switch to
+  another session, pin/rename/delete — not just unit tests.
+- `plugins/warden/manifest.json`'s `version` is bumped.
+
+---
+
+#### 📋 22.11 — Warden composer redesign
+
+**Goal:** Restyle the composer around a Claude-style card and reorganize
+its controls — model picker as a popover, incognito relocated into the
+toolbar, the old header links and disabled web-search toggle removed —
+closing out workstream 0021.
+
+**Deliverables:**
+
+- Claude-style card container; input centered for a session with no
+  messages yet, docks to the bottom the instant the first message posts —
+  keyed off the existing `turns.length === 0` condition `ChatView.tsx`
+  already has (RFC 0063 §12), not new position-tracking logic.
+- Model picker becomes a `Popover`, grouped by provider (mirroring
+  `ModelsView`'s existing grouping), with a footer linking to Settings →
+  Providers and Settings → Models (task 22.9).
+- Incognito moves from the chat header's `Toggle` + label into the composer
+  toolbar as an icon toggle. Semantics unchanged (RFC 0063 §6) — still a
+  fresh, separate, never-persisted scratch context orthogonal to whichever
+  session is selected underneath.
+- Removed outright, not hidden: the chat header's "Manage providers"/
+  "Manage models" links (superseded by the popover footer and the sidebar's
+  Settings entry) and the disabled "Web search — Soon" placeholder toggle.
+
+**Dependencies:** Task 22.10 (the two-column shell this composer sits
+inside).
+
+**SRS reference:** [RFC 0063](../rfcs/0063-core-assistant-warden.md) §12
+(third revision).
+
+**Review checklist:**
+
+- The model-picker popover's footer links into Settings and back again
+  without losing track of which session was open — verified live as a
+  round trip, not just that each page renders.
+- The disabled web-search toggle and the old header links are gone from the
+  DOM entirely, not just visually hidden.
+- Incognito's behavior (fresh scratch context, no persistence, discarded on
+  toggle-off or navigation) is unchanged after relocation — verified live.
+- `pnpm exec vitest run plugins/warden`, `pnpm --filter runtime typecheck`,
+  `pnpm lint`, and `pnpm format:check` all pass.
+- `plugins/warden/manifest.json`'s `version` is bumped.
+
+---
+
 ## Future phases (not yet scheduled)
 
 Real, intended work — listed per RFC 0063's Adoption path, deliberately not
@@ -524,9 +799,9 @@ given epic task IDs until a future scheduling pass:
   needs a new shell-chrome extension point that doesn't exist today; a
   small design question of its own.
 - **Voice input/output.**
-- **Multi-threaded conversations** (a thread list/switcher) — task 22.5
-  ships one persisted thread per user; the data model doesn't block adding
-  more, but the UI to manage them is undesigned.
+- **The reserved third sidebar column's actual functionality** (RFC 0063
+  §10) — task 22.10 keeps the space reserved in the layout; what goes in it
+  is undesigned.
 - **Per-user preferences** beyond plugin-level visibility.
 - **The RFC 0040 (Sovereign Harness) revisit** — whether Harness becomes
   this foundation extended with memory/orchestration/tool-routing, or a

@@ -7,6 +7,14 @@ const listProviders = vi.fn();
 const getProviderApiKey = vi.fn();
 const appendMessage = vi.fn();
 const getRecentMessagesForContext = vi.fn();
+const createSession = vi.fn();
+
+class SessionNotFoundError extends Error {
+  constructor() {
+    super('Session not found.');
+    this.name = 'SessionNotFoundError';
+  }
+}
 
 vi.mock('@sovereignfs/sdk', async () => {
   const actual = await vi.importActual<typeof import('@sovereignfs/sdk')>('@sovereignfs/sdk');
@@ -29,9 +37,11 @@ vi.mock('../../../_lib/providers', () => ({
   getProviderApiKey: (...args: unknown[]) => getProviderApiKey(...args),
 }));
 
-vi.mock('../../../_lib/conversations', () => ({
+vi.mock('../../../_lib/sessions', () => ({
   appendMessage: (...args: unknown[]) => appendMessage(...args),
   getRecentMessagesForContext: (...args: unknown[]) => getRecentMessagesForContext(...args),
+  createSession: (...args: unknown[]) => createSession(...args),
+  SessionNotFoundError,
 }));
 
 const processAttachment = vi.fn();
@@ -100,6 +110,13 @@ beforeEach(() => {
   requireSession.mockResolvedValue({ user: { id: 'user-1', tenantId: 'tenant-1' } });
   getRecentMessagesForContext.mockResolvedValue([]);
   appendMessage.mockResolvedValue(undefined);
+  createSession.mockResolvedValue({
+    id: 'session-new',
+    title: null,
+    pinnedAt: null,
+    lastActiveAt: 0,
+    createdAt: 0,
+  });
 });
 
 describe('POST /warden/api/chat — auth and validation', () => {
@@ -156,6 +173,67 @@ describe('POST /warden/api/chat — auth and validation', () => {
   });
 });
 
+describe('POST /warden/api/chat — session resolution', () => {
+  it('creates a new session lazily when no sessionId is given, and returns it via a response header', async () => {
+    requestHarnessChat.mockResolvedValue(streamResult([{ type: 'done' }]));
+
+    const res = await POST(chatRequest({ modelKey: 'local', content: 'hi' }));
+    await drain(res);
+
+    expect(createSession).toHaveBeenCalledWith('user-1', 'tenant-1');
+    expect(res.headers.get('x-warden-session-id')).toBe('session-new');
+    expect(getRecentMessagesForContext).toHaveBeenCalledWith(
+      'user-1',
+      'tenant-1',
+      'session-new',
+      expect.any(Number),
+    );
+  });
+
+  it('uses a given sessionId as-is, without creating a new one', async () => {
+    requestHarnessChat.mockResolvedValue(streamResult([{ type: 'done' }]));
+
+    const res = await POST(
+      chatRequest({ modelKey: 'local', sessionId: 'session-existing', content: 'hi' }),
+    );
+    await drain(res);
+
+    expect(createSession).not.toHaveBeenCalled();
+    expect(getRecentMessagesForContext).toHaveBeenCalledWith(
+      'user-1',
+      'tenant-1',
+      'session-existing',
+      expect.any(Number),
+    );
+    expect(res.headers.get('x-warden-session-id')).toBe('session-existing');
+  });
+
+  it('returns 400 for a sessionId that does not belong to the caller', async () => {
+    getRecentMessagesForContext.mockRejectedValue(new SessionNotFoundError());
+
+    const res = await POST(
+      chatRequest({ modelKey: 'local', sessionId: 'someone-elses-session', content: 'hi' }),
+    );
+
+    expect(res.status).toBe(400);
+    expect(requestHarnessChat).not.toHaveBeenCalled();
+  });
+
+  it('never resolves or creates a session in incognito mode', async () => {
+    requestHarnessChat.mockResolvedValue(streamResult([{ type: 'done' }]));
+
+    await POST(
+      chatRequest({
+        modelKey: 'local',
+        incognito: true,
+        messages: [{ role: 'user', content: 'hi' }],
+      }),
+    );
+
+    expect(createSession).not.toHaveBeenCalled();
+  });
+});
+
 describe('POST /warden/api/chat — local routing', () => {
   it('sends recent context plus the new message to requestHarnessChat', async () => {
     getRecentMessagesForContext.mockResolvedValue([
@@ -186,13 +264,13 @@ describe('POST /warden/api/chat — local routing', () => {
     await drain(res);
     await waitForBackgroundPersist();
 
-    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', {
+    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-new', {
       role: 'user',
       content: 'hello',
       providerId: null,
       model: 'local',
     });
-    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', {
+    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-new', {
       role: 'assistant',
       content: 'Hi there',
       providerId: null,
@@ -233,7 +311,7 @@ describe('POST /warden/api/chat — external provider routing', () => {
     await drain(res);
     await waitForBackgroundPersist();
 
-    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', {
+    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-new', {
       role: 'assistant',
       content: 'answer',
       providerId: 'conn-1',
@@ -375,7 +453,7 @@ describe('POST /warden/api/chat — file attachments', () => {
         },
       ],
     });
-    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', {
+    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-new', {
       role: 'user',
       content: 'what is this\n\n[Image attached: photo.png]',
       providerId: 'conn-1',
@@ -409,7 +487,7 @@ describe('POST /warden/api/chat — file attachments', () => {
     expect(requestProviderChat).toHaveBeenCalledWith(
       expect.objectContaining({ messages: [{ role: 'user', content: expectedContent }] }),
     );
-    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', {
+    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-new', {
       role: 'user',
       content: expectedContent,
       providerId: 'conn-1',

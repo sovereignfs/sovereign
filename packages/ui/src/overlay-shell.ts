@@ -13,6 +13,15 @@ import { lockBodyScroll, unlockBodyScroll } from './scroll-lock';
 export const OVERLAY_FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+// Matches --sv-motion-duration-base (Dialog/Drawer/Sheet's own .module.css
+// files) — kept as a plain JS constant rather than read from the CSS custom
+// property so the unmount timer and the CSS transition duration can't
+// silently drift apart at build time; change both together if this value
+// ever changes. Single shared export (not one copy per component) so a
+// future edit to one component's own local copy can't silently desync from
+// the other two — previously hand-copied identically into all three files.
+export const OVERLAY_MOTION_DURATION_MS = 250;
+
 // A LIFO stack of currently-open overlay ids, used only to decide which
 // overlay's Escape handler should act when more than one is open at once —
 // e.g. a ConfirmDialog opened from inside a Dialog. Module-level, not React

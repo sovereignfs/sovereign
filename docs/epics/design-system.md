@@ -1473,3 +1473,206 @@ design decision. No RFC governs it (see that workstream's "Why no RFC").
 - `packages/ui`'s `package.json` `version` bumped **minor** (new additive
   component/exports, no breaking change) per NFR-04.
 - `docs/design-system.md`'s component reference gains a `NavList` entry.
+#### ✅ 9.28 — `Dialog`: remove duplicate Escape-dismissal
+
+**Goal:** `Dialog`'s own scrim `<div>` carries an `onKeyDown` handler that calls `onClose()` on Escape (`Dialog.tsx:132-134`), duplicating `useOverlayKeyboardTrap`'s document-level Escape listener (`overlay-shell.ts:59-94`) that `Dialog` already installs one line above it (`Dialog.tsx:118`). Because focus is captured into the panel on open (`useOverlayFocusCapture`), a real Escape keypress bubbles from the focused element through the scrim (firing the redundant handler) and continues natively to `document` (firing the trap's handler) — `onClose()` runs **twice** per keypress. Confirmed empirically: a realistic Escape dispatched from a focused element inside the panel produced 2 `onClose` calls, versus the existing `Dialog.test.tsx` "calls onClose on Escape" test's `fireEvent.keyDown(document, ...)`, which dispatches directly on `document` and misses the bug entirely (it bypasses the exact bubble path that trips the duplicate call). This matters beyond a stray call: `runtime/app/(platform)/(plugins)/@modal/layout.tsx:44` wires `onClose={() => router.back()}` for every `shell: overlay` plugin (Account, Console, third-party overlay plugins), and `docs/architecture-rules.md` documents dismissal as unwinding "exactly one history entry" — the whole `<Link replace>` intra-overlay-navigation convention depends on that. A double `router.back()` pops an extra, unintended history entry; if the overlay was reached with only one prior in-app history entry, it can leave the app entirely.
+
+**Deliverables:**
+
+- Remove the `onKeyDown` prop (the Escape branch) from `Dialog`'s scrim `<div>` (`Dialog.tsx`) — keep only the existing `onClick` scrim-dismiss handler. `useOverlayKeyboardTrap` already owns Escape; its own doc comment says as much ("Attached at document level so no keyboard listener is needed on the overlay's own element").
+- Fix `Dialog.test.tsx`'s "calls onClose on Escape" test to dispatch the keydown from a focused element inside the panel (matching real usage) instead of directly on `document` — the current test would keep passing even if this bug were reintroduced.
+- Add a regression test asserting exactly one `onClose` call for one Escape keypress with focus inside the panel.
+
+**Dependencies:** None.
+
+**SRS reference:** None — bug fix, found during a design-system review of the overlay components; no RFC or incident doc covers it.
+
+**Review checklist:**
+
+- `pnpm --filter @sovereignfs/ui test` passes, including the new/updated Escape regression test; confirm it fails against the pre-fix code before accepting it as a real guard.
+- Manual check in Storybook: open a `Dialog`, focus a control inside it, press Escape once — `onClose` fires exactly once. ✅ (verified live in a real browser, not just jsdom)
+- `pnpm --filter @sovereignfs/ui typecheck` and `pnpm lint` pass.
+
+---
+
+#### ✅ 9.29 — `Drawer`: remove duplicate Escape-dismissal
+
+**Goal:** `Drawer.tsx` has the identical bug and root cause as 9.28 — its own scrim `onKeyDown` Escape handler (`Drawer.tsx:141-143`) duplicates `useOverlayKeyboardTrap`'s document-level listener (`Drawer.tsx:85`) it already installs. Same double-`onClose` consequence for any `Drawer` consumer, including `MobileAppsDrawer` (which wraps `Drawer` and backs the platform shell's own mobile Apps drawer).
+
+**Deliverables:**
+
+- Same fix as 9.28, applied to `Drawer.tsx`'s scrim `<div>`.
+- Matching regression test in `Drawer.test.tsx`.
+
+**Dependencies:** None — independent of 9.28, safe in either order; sequenced in the same leg as the identical fix pattern.
+
+**SRS reference:** None — bug fix, same review as 9.28.
+
+**Review checklist:**
+
+- `pnpm --filter @sovereignfs/ui test` passes, including the new/updated regression test; confirm it fails against the pre-fix code first.
+- Manual check in Storybook: open a `Drawer`, focus a control inside it, press Escape once — `onClose` fires exactly once. ✅ (verified live in a real browser, not just jsdom)
+- `pnpm --filter @sovereignfs/ui typecheck` and `pnpm lint` pass.
+
+---
+
+#### ✅ 9.30 — `ConfirmDialog`: stop double-firing `onClose`
+
+**Goal:** `ConfirmDialog`'s Cancel button (`ConfirmDialog.tsx:96-98`) calls the `onClose` prop directly via `onClick={onClose}`. The documented, expected consumer reaction is to flip its own `open` state to `false`; on re-render, `ConfirmDialog`'s own `useEffect` (`if (open) el.showModal(); else el.close();`, `ConfirmDialog.tsx:62-67`) sees `open` go `false` and calls `el.close()`, firing the native `'close'` event — which the component's own second effect (`el.addEventListener('close', () => onClose())`, `ConfirmDialog.tsx:73-79`) reacts to by calling `onClose()` a **second** time. The same chain fires on backdrop click (`ConfirmDialog.tsx:87-89`, same direct-call pattern). Confirmed live in a real browser: a single Cancel click on a standalone `ConfirmDialog` (no nesting involved) produced 2 `onClose` calls. Checked all ~25 `<ConfirmDialog>` call sites in the repo (kanban, Console, Account, Warden, Plainwrite, Shopper, Tasks, Sheets) — every one wires `onClose` to a plain idempotent `setState(false)`/`setState(null)`, so this is currently silently harmless in production, but it violates the component's own documented single-call contract and is a footgun for any future non-idempotent consumer (an analytics call, a toast, chained navigation).
+
+**Deliverables:**
+
+- Make the native `'close'` event the single source of truth for calling `onClose`: change the Cancel and backdrop-click handlers to call `dialogRef.current?.close()` (letting the native `'close'` event fire and the existing listener call `onClose()` once) instead of calling `onClose` directly.
+- Add a regression test asserting exactly one `onClose` call per Cancel click and per backdrop click, on a standalone `ConfirmDialog`.
+
+**Dependencies:** None.
+
+**SRS reference:** None — bug fix, same review as 9.28/9.29.
+
+**Review checklist:**
+
+- New regression test passes; confirm it fails against the pre-fix code (temporarily revert locally) before accepting it as a real guard, per this repo's own verification convention.
+- Confirm `onConfirm` (a separate prop, unaffected by this bug) still fires exactly once and still does not itself close the dialog — existing documented contract, unchanged.
+- `pnpm --filter @sovereignfs/ui typecheck`, `test`, `lint` pass.
+
+---
+
+#### ✅ 9.31 — Overlay Escape precedence for nested modals
+
+**Goal:** even after 9.28–9.30, a `ConfirmDialog` nested inside a `Dialog` (e.g. `CardDetailOverlay`'s delete-confirm, and nearly every Console/Account confirm — deactivate/delete/reset-MFA/vouch/revoke-vouch/cancel-invite, all nested inside the shared `@modal/layout.tsx` `Dialog`) has no way to claim Escape before its ancestor `Dialog` does. Confirmed live in a Storybook repro mirroring `CardDetailOverlay`'s exact nesting: focus inside the nested `ConfirmDialog`, press Escape (real trusted keyboard input, not a synthetic event) → the **outer** `Dialog` closed (outer close count: 1) and the inner `ConfirmDialog` never got to run its own dismissal at all (inner close count: 0) — its native `<dialog>` node was torn out of the DOM when the outer `Dialog`'s document-level Escape trap fired synchronously and unmounted the subtree, racing ahead of the browser's own (spec-deferred) native `<dialog>` Escape/cancel handling. Practical effect: a user trying to cancel "Delete this card?" with Escape instead closes the entire card/user detail overlay; inside Console/Account (whose outer `Dialog`'s `onClose` is `router.back()`), it exits the whole admin surface.
+
+**Deliverables:**
+
+- A shared, lightweight "topmost overlay" registry in `packages/ui/src/overlay-shell.ts` (`registerOpenOverlay`/`unregisterOpenOverlay`/`isTopmostOpenOverlay`, a module-level LIFO array of ids — no external state library needed) — `useOverlayKeyboardTrap` registers/unregisters via a dedicated effect keyed on `open` (deliberately not `mounted`, and deliberately its own effect separate from the one holding the actual keydown listener — see the function's own doc comment for why), and its document-level Escape handler only calls `onClose` when its own id is currently the topmost registered one.
+- `ConfirmDialog` participates in the same registry (register on `open`, unregister on close/unmount) purely for precedence purposes — it does **not** otherwise adopt `useOverlayFocusCapture`/`useOverlayScrollLock`/`useOverlayKeyboardTrap`; its own doc comment's reasoning for staying on the native `<dialog>` element is unchanged.
+- Regression test (`Dialog.test.tsx`): a `Dialog` containing an open `ConfirmDialog` — Escape with focus inside the confirm closes only the confirm (outer `onClose` not called); a second Escape then closes the outer `Dialog`. Confirmed to fail against the pre-fix code.
+
+**Implementation note — a real limitation found while writing the regression test:** the registry's "last registered = topmost" rule assumes the nested overlay opens via a genuinely _later_ commit than its ancestor, which holds for every real call site (`CardDetailOverlay`: the outer `Dialog` is already mounted before the user ever clicks "Delete card…" to open the nested confirm) but not for a contrived case where both start already-open in the very same initial render — React fires a child's mount effects before its parent's within one commit, so in that specific simultaneous-mount shape the parent would register _after_, and incorrectly outrank, the child. The first version of this task's regression test hit exactly this ordering and had to be rewritten to open the confirm via a later click (matching real usage) rather than mounting both open at once. Documented here rather than silently working around it: this is a known, narrow gap (simultaneous initial-mount of nested overlays), not a general failure of the approach, and not worth solving given no real call site does this.
+
+**Open design decisions — resolved:** `Popover` (which also stacks above `Dialog` per the existing `.close` z-index comment in `Dialog.module.css:176-186`) was **not** audited for the same bug class in this task — no evidence surfaced during this leg that it needs the same registration, and the task's own kill criteria (workstream 0021) said to stop and re-scope rather than expand scope on a suspicion. Left as a genuinely open question for whoever next touches `Popover`'s stacking behavior.
+
+**Dependencies:** Built on 9.28/9.29 (same file, same mechanism).
+
+**SRS reference:** None — bug fix, same review as 9.28–9.30.
+
+**Review checklist:**
+
+- New regression test passes, and is confirmed to fail against the pre-fix code. ✅
+- Manual check in Storybook: open a nested confirm inside a `Dialog`, press Escape — only the confirm dismisses; a second Escape closes the outer `Dialog`. ✅ Verified live in a real browser end-to-end: with the confirm open, Escape left the outer Dialog's onClose count at 0; after dismissing the confirm (Cancel) and pressing Escape again, the outer Dialog's onClose fired (count 1). One caveat found during this check, unrelated to this task's own fix: the confirm's own native `<dialog>` Escape-to-close didn't visibly fire from this session's browser-automation tooling's synthetic key dispatch (closing it via the Cancel button instead worked immediately) — plausibly an automation-harness quirk with how trusted/native default actions propagate through remote key dispatch, not a regression, since real `<dialog>` Escape handling is unrelated code this task never touched; worth a real (non-automated) manual pass before merging if anyone wants extra confidence.
+- `pnpm --filter @sovereignfs/ui typecheck`, `test`, `lint` pass. ✅
+
+#### 📋 9.32 — `Dialog`: unify the close icon
+
+**Goal:** `Dialog`'s desktop close button uses the `circle-x` icon (`Dialog.tsx:166`, `size="md"`) while the mobile `OverlayHeader` close button — which `Dialog` itself renders for its own mobile mode — uses the plain lucide `x` icon (`OverlayHeader.tsx:67`, `size="sm"`). Same dismiss affordance, two different icons depending on breakpoint. Developer request: standardize on the lucide `x` icon everywhere. Note this reverses a specific, previously recorded decision — `Dialog.tsx:158-164`'s own comment: "`circle-x`, not a bare "×" glyph — developer-requested... platform-wide: every `Dialog` consumer gets this, not just the one it was requested against" — flagged here so the reversal is deliberate, not accidental.
+
+**Deliverables:**
+
+- `Dialog.tsx:166`: swap `<Icon name="circle-x" size="md" ... />` for `<Icon name="x" size="md" ... />` — keep `size="md"` (desktop's close button is a larger tap target than mobile's inline header row; only the glyph changes, not the touch target).
+- Update `Dialog.tsx:158-164`'s comment to reflect the new decision instead of describing one that's no longer true.
+- Visual check: `.close`'s fixed `width`/`height` (`Dialog.module.css:191-192`, `var(--sv-space-8)`) still centers the new glyph correctly — `circle-x` and plain `x` may have different intrinsic proportions at the same icon size.
+
+**Dependencies:** None.
+
+**SRS reference:** None — developer-requested visual change.
+
+**Review checklist:**
+
+- Storybook: every `Dialog` size story shows the new `x` icon at the correct position/size on desktop; mobile viewport still shows `OverlayHeader`'s existing `x`, now visually consistent with desktop.
+- `pnpm design:tokens:check` and `pnpm --filter @sovereignfs/ui typecheck` pass.
+- `pnpm --filter @sovereignfs/ui build-storybook` succeeds.
+
+---
+
+#### 📋 9.33 — `Dialog` header/body/footer composition
+
+**Goal:** `Dialog` today has no dedicated footer slot — every consumer needing action buttons (Save/Cancel, etc.) renders them as the last item inside `children`, sharing the single scrollable `.content` region (`Dialog.module.css:92-118`); on a tall form those buttons scroll out of view with the rest of the content. `Dialog`'s `title` prop today only renders visually inside `OverlayHeader` on **mobile** (`Dialog.tsx:150-157`) — desktop never shows a header row for it at all, only the floating close button — so a consumer wanting a visible title on desktop currently has to render its own heading inside `children`. Add three explicit, consumer-selectable shapes, matching this repo's existing prop-driven component design (not a new compound-component API): **Body only** (no header/footer — today's default, unchanged), **Header + Body** (a visible, sticky header row on _both_ breakpoints — not mobile-only as today), and **Header + Body + Footer** (header and footer both pinned, only the body between them scrolls).
+
+**Deliverables:**
+
+- New optional `header`/`footer` props on `DialogProps` (`ReactNode`, both optional) alongside the existing `children` (body). Omitting both = today's behavior (Body only).
+- Resolve the relationship between the existing `title` string prop and the new `header` node prop before implementing both — don't ship two props with overlapping responsibility (see Open design decisions).
+- `footer`, when provided, renders as a flex sibling **after** `.content`, pinned the same way `OverlayHeader` is already pinned before it — a non-scrolling flex sibling, not `position: sticky` (mirrors `OverlayHeader.tsx`'s own doc comment on why it avoids `position: sticky`/`fixed`, and this repo's documented iOS Safari sticky-staleness risk inside touch-scrollable content). `.content` remains the sole scroll container in every variant.
+- `Dialog.module.css`: new `.footer` rule (padding/border-top/background, the visual counterpart to the existing header treatment), applied on both breakpoints — not gated to the mobile media query the way `.mobileHeader` currently is.
+- Storybook: new stories for "Body only", "Header + Body", and "Header + Body + Footer" (Storybook hygiene rule — every DS component API change needs matching story coverage), plus a `DesignSystemOverview.stories.tsx` import-snippet update if the public props changed.
+- `docs/design-system.md`/`DialogProps` doc comments updated to describe the three shapes.
+
+**Open design decisions (resolve during implementation):** exact relationship between the existing `title` prop and the new `header` prop — whether `header` supersedes `title` outright or `title` becomes shorthand for a simple text header; whether existing Dialog consumers should be migrated onto the new `footer` prop in this same leg or left as a documented follow-up (recommended: leave as follow-up — migrating the ~20 existing `Dialog` consumers is its own reviewable unit, not part of adding the capability). This task scopes the variant work to `Dialog` only — `Drawer`/`Sheet` have the same missing-footer gap but are explicitly out of scope here; note it for a future task rather than expanding this one.
+
+**Dependencies:** Sequenced after 9.32 (icon) so this leg's header-row rework doesn't also touch the close-icon prop mid-change — not a hard technical dependency, just avoids overlapping diffs.
+
+**SRS reference:** None — developer-requested composition improvement, additive to the existing `packages/ui` public API.
+
+**Review checklist:**
+
+- `pnpm --filter @sovereignfs/ui typecheck`, `test`, `lint` pass.
+- New Storybook stories for all three shapes exist; `pnpm --filter @sovereignfs/ui build-storybook` succeeds.
+- Manual check at both a desktop and a ≤768px viewport: in the Header+Body+Footer story, header and footer stay visibly pinned while only the body content between them scrolls (story includes enough body content to actually scroll).
+- `pnpm design:tokens:check` passes.
+- `packages/ui`'s `package.json` version bumped **minor** (additive public props, per NFR-04), with a `docs/upgrade.md` note if `title`'s rendering behavior visibly changes for existing consumers (e.g. now also rendering on desktop).
+
+---
+
+#### 📋 9.34 — Retire or redefine `Dialog`'s dead `full` size
+
+**Goal:** `.lg` and `.full` are CSS-identical on desktop (`Dialog.module.css:166-170`, both `width:100%; height:100%`), and every size collapses to the same full-screen mobile treatment regardless of value (`Dialog.module.css:223-250`). The sole call site in the repo, `CardDetailOverlay.tsx:75`'s `size={isMobile ? 'full' : 'xl'}`, has no effect — mobile already renders full-screen no matter what `size` says, per `Dialog`'s own doc comment ("Mobile always renders as a full-screen sheet"). No Storybook story demonstrates `full` either. Low priority — dead-code cleanup, not a bug.
+
+**Deliverables:**
+
+- Either (a) remove `'full'` from `DialogSize` and simplify `CardDetailOverlay.tsx:75` to a plain `size="xl"` (mobile ignores it regardless), or (b) give `full` real distinct behavior (true edge-to-edge, ignoring the scrim's `--sv-space-8` margin) if a genuine edge-to-edge use case exists. Decide during implementation; default to (a) unless a real use case for true edge-to-edge surfaces.
+- If (a): update `Dialog.test.tsx`'s `full` size assertion accordingly.
+
+**Dependencies:** None.
+
+**SRS reference:** None — cleanup finding from the same design-system review.
+
+**Review checklist:** `pnpm --filter @sovereignfs/ui typecheck`, `test`, `lint` pass; no remaining `full` size that behaves identically to `lg` without explanation.
+
+---
+
+#### 📋 9.35 — Reconcile `Dialog`'s `xl`/`full` sizes with the manifest `overlaySize` schema
+
+**Goal:** `DialogSize` is `sm | md | xl | lg | full`, but `packages/manifest/src/schema.ts:133`'s `shellConfig.overlaySize` enum only allows `sm | md | lg` — `xl` (and `full`, see 9.34) exist on the component but are unreachable from any plugin manifest declaration; only runtime code calling `<Dialog>` directly (bypassing the manifest-driven `@modal` chrome) can use them. Not necessarily wrong, but undocumented as intentional.
+
+**Deliverables:**
+
+- Either document the split explicitly (a one-line note in `docs/plugin-development.md`'s manifest reference and/or `runtime/src/overlay.ts`'s doc comment: manifest-declarable sizes are deliberately narrower than the component's full size set), or extend the manifest enum to include `xl` for parity if a real plugin use case exists. Decide during implementation; default to documenting the existing split.
+
+**Dependencies:** Should follow 9.34 — resolving `full`'s fate first avoids documenting a manifest/component split for a size this workstream may also remove.
+
+**SRS reference:** None — cleanup finding from the same design-system review.
+
+**Review checklist:** `pnpm --filter @sovereignfs/manifest typecheck`/`test` pass if the schema changes; otherwise the doc update is reviewed for accuracy against the actual schema.
+
+---
+
+#### 📋 9.36 — De-duplicate `MOTION_DURATION_MS`
+
+**Goal:** `MOTION_DURATION_MS = 250` is hand-copied verbatim into `Dialog.tsx:18`, `Drawer.tsx:16`, and `Sheet.tsx:45`, each with a comment explaining it must be kept in sync with a CSS custom property by hand. The reasoning against deriving it from CSS is sound (documented in each file), but nothing prevents a future edit to one file silently desyncing the JS unmount timer from its CSS transition in whichever file is missed.
+
+**Deliverables:**
+
+- Export a single `OVERLAY_MOTION_DURATION_MS` constant from `packages/ui/src/overlay-shell.ts`, alongside the other shared overlay primitives, and import it into `Dialog.tsx`, `Drawer.tsx`, `Sheet.tsx`, replacing each file's own local copy. Keep the existing comment explaining why it's a plain JS constant rather than read from the CSS variable — just stop tripling it.
+
+**Dependencies:** None.
+
+**SRS reference:** None — cleanup finding from the same design-system review.
+
+**Review checklist:** `pnpm --filter @sovereignfs/ui typecheck`, `test`, `lint` pass; no remaining duplicate `MOTION_DURATION_MS = 250` literal across the three files.
+
+---
+
+#### 📋 9.37 — Fallback accessible name in `@modal/layout.tsx`
+
+**Goal:** `runtime/app/(platform)/(plugins)/@modal/layout.tsx:41-44` passes `title={title}` (`title = plugin?.name`) to `Dialog` and no `aria-label`. If `plugin` isn't found (e.g. a routePrefix mismatch on a multi-segment interception segment), the `Dialog` renders with neither `title` nor `aria-label` — a modal panel with no accessible name at all. Edge case, not reachable in normal operation today.
+
+**Deliverables:**
+
+- `@modal/layout.tsx`: fall back to a generic `aria-label` (e.g. `"Dialog"`) when `plugin` is not found, so the panel always has an accessible name.
+
+**Dependencies:** None.
+
+**SRS reference:** None — cleanup finding from the same design-system review.
+
+**Review checklist:** a new or existing `@modal/layout.tsx` test covers the plugin-not-found case, asserting a non-empty accessible name.
+
+---

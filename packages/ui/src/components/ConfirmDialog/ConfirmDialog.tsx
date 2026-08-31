@@ -1,6 +1,7 @@
 'use client';
 
 import { type ReactNode, useEffect, useRef } from 'react';
+import { registerOpenOverlay, unregisterOpenOverlay } from '../../overlay-shell';
 import { Button } from '../Button/Button';
 import styles from './ConfirmDialog.module.css';
 
@@ -59,6 +60,19 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
+  // Registers into the same open-overlay stack Dialog/Drawer/Sheet use
+  // (overlay-shell.ts) purely so a Dialog this ConfirmDialog was opened
+  // from inside of knows it is no longer the topmost overlay, and defers
+  // Escape to this one instead of closing itself. ConfirmDialog does not
+  // otherwise adopt useOverlayFocusCapture/useOverlayScrollLock/
+  // useOverlayKeyboardTrap — see this component's own doc comment for why
+  // it stays on the native <dialog> element for everything else.
+  useEffect(() => {
+    if (!open) return;
+    const id = registerOpenOverlay();
+    return () => unregisterOpenOverlay(id);
+  }, [open]);
+
   useEffect(() => {
     const el = dialogRef.current;
     if (!el) return;
@@ -70,6 +84,13 @@ export function ConfirmDialog({
   // listener needed for that) and whenever .close() runs — including the
   // effect above reacting to `open` going false. Listening for it here is
   // what makes Esc call the caller's onClose without a manual keydown handler.
+  // It is also the SINGLE call site for onClose: Cancel and backdrop-click
+  // below call dialogRef.current?.close() rather than onClose directly, so
+  // every dismissal path funnels through this one 'close' listener. Calling
+  // onClose directly from those handlers used to double-fire it — the
+  // consumer's onClose sets `open` to false as documented, which re-runs the
+  // effect above, which calls el.close() again, firing this same 'close'
+  // listener a second time for what the user experienced as one click.
   useEffect(() => {
     const el = dialogRef.current;
     if (!el) return;
@@ -85,7 +106,7 @@ export function ConfirmDialog({
       className={styles.dialog}
       aria-label={title}
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget) dialogRef.current?.close();
       }}
     >
       <div className={styles.body}>
@@ -93,7 +114,12 @@ export function ConfirmDialog({
         <div className={styles.message}>{message}</div>
         {error && <p className={styles.error}>{error}</p>}
         <div className={styles.actions}>
-          <Button type="button" variant="secondary" onClick={onClose} disabled={pending}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => dialogRef.current?.close()}
+            disabled={pending}
+          >
             {cancelLabel}
           </Button>
           {destructive ? (

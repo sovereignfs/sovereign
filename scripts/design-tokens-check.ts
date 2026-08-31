@@ -46,6 +46,13 @@ const TOKEN_ALLOWLIST: ReadonlySet<string> = new Set([
   // Set by CardTileGrid's inline style from its minTileWidth prop — a
   // caller-configurable number, never a CSS literal.
   '--sv-card-tile-min-width',
+  // Set by useSwipeStack.ts on wrapRef during a drag (0–1 per direction) so
+  // SwipeStack's stamp overlays can react without a re-render per
+  // pointermove — a JS-computed live drag progress, never a CSS literal.
+  '--sv-stack-progress-up',
+  '--sv-stack-progress-down',
+  '--sv-stack-progress-left',
+  '--sv-stack-progress-right',
 ]);
 
 // file:line entries permitted to hardcode a colour literal in the scanned dirs

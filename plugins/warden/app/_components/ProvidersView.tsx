@@ -3,6 +3,7 @@
 import { useCallback, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, EmptyState } from '@sovereignfs/ui';
+import { refreshModelDiscoveryAction } from '../actions';
 import type { ProviderView } from '../_lib/providers';
 import type { ModelDiscoveryResult } from '../_lib/model-discovery';
 import { AddProviderForm } from './AddProviderForm';
@@ -15,6 +16,10 @@ import styles from './providers.module.css';
  * this component holds no duplicate copy of them; every mutation below
  * calls `router.refresh()` to re-render the page with fresh server data,
  * the same pattern Console's `SmtpSettingsForm` already uses.
+ *
+ * "Recheck providers" additionally drops the server's short-lived discovery
+ * cache first (`refreshModelDiscoveryAction`) — a plain `router.refresh()`
+ * would otherwise just replay the cached result instead of re-verifying.
  */
 export function ProvidersView({
   providers,
@@ -27,7 +32,10 @@ export function ProvidersView({
   const [isRefreshing, startTransition] = useTransition();
 
   const refresh = useCallback(() => {
-    startTransition(() => router.refresh());
+    startTransition(async () => {
+      await refreshModelDiscoveryAction();
+      router.refresh();
+    });
   }, [router]);
 
   const discoveryById = new Map(discovery.providers.map((entry) => [entry.id, entry]));

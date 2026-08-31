@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const requireSession = vi.fn();
+vi.mock('@sovereignfs/sdk', () => ({
+  sdk: { auth: { requireSession: () => requireSession() } },
+}));
+
 const checkHarnessHealth = vi.fn();
 vi.mock('../harness-client', () => ({
   checkHarnessHealth: (...args: unknown[]) => checkHarnessHealth(...args),
@@ -27,7 +32,8 @@ vi.mock('../pinned-fetch', () => ({
   pinnedFetch: (...args: unknown[]) => pinnedFetch(...args),
 }));
 
-const { discoverModels } = await import('../model-discovery');
+const { discoverModels, invalidateDiscoveryCacheForUser, resetDiscoveryCacheForTests } =
+  await import('../model-discovery');
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -47,6 +53,8 @@ const provider = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetDiscoveryCacheForTests();
+  requireSession.mockResolvedValue({ user: { id: 'user-1', tenantId: 'tenant-1' } });
   assertSafeProviderBaseUrl.mockImplementation(async (url: string) => ({
     url: new URL(url),
     pinnedAddress: '203.0.113.10',
@@ -180,5 +188,59 @@ describe('discoverModels', () => {
     const result = await discoverModels();
     expect(result.providers[0]).toMatchObject({ ok: true, modelCount: 0 });
     expect(result.models).toEqual([]);
+  });
+});
+
+describe('discoverModels caching', () => {
+  it('serves a cached result on a second call, without re-fetching from the provider', async () => {
+    checkHarnessHealth.mockResolvedValue({ kind: 'unreachable' });
+    listProviders.mockResolvedValue([provider]);
+    pinnedFetch.mockResolvedValue(jsonResponse({ data: [{ id: 'gpt-4o' }] }));
+
+    const first = await discoverModels();
+    const second = await discoverModels();
+
+    expect(second).toEqual(first);
+    expect(checkHarnessHealth).toHaveBeenCalledTimes(1);
+    expect(pinnedFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs a fresh live pass after invalidateDiscoveryCacheForUser', async () => {
+    checkHarnessHealth.mockResolvedValue({ kind: 'unreachable' });
+    listProviders.mockResolvedValue([provider]);
+    pinnedFetch.mockResolvedValue(jsonResponse({ data: [{ id: 'gpt-4o' }] }));
+
+    await discoverModels();
+    invalidateDiscoveryCacheForUser('user-1');
+    await discoverModels();
+
+    expect(checkHarnessHealth).toHaveBeenCalledTimes(2);
+    expect(pinnedFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps separate users on separate cache entries', async () => {
+    checkHarnessHealth.mockResolvedValue({ kind: 'unreachable' });
+    listProviders.mockResolvedValue([provider]);
+    pinnedFetch.mockResolvedValue(jsonResponse({ data: [{ id: 'gpt-4o' }] }));
+
+    await discoverModels();
+    requireSession.mockResolvedValue({ user: { id: 'user-2', tenantId: 'tenant-1' } });
+    await discoverModels();
+
+    expect(checkHarnessHealth).toHaveBeenCalledTimes(2);
+    expect(pinnedFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('invalidating a different user does not evict this user’s cached entry', async () => {
+    checkHarnessHealth.mockResolvedValue({ kind: 'unreachable' });
+    listProviders.mockResolvedValue([provider]);
+    pinnedFetch.mockResolvedValue(jsonResponse({ data: [{ id: 'gpt-4o' }] }));
+
+    await discoverModels();
+    invalidateDiscoveryCacheForUser('user-2');
+    await discoverModels();
+
+    expect(checkHarnessHealth).toHaveBeenCalledTimes(1);
+    expect(pinnedFetch).toHaveBeenCalledTimes(1);
   });
 });

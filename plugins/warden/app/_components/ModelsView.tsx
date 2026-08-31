@@ -4,6 +4,7 @@ import { useCallback, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, EmptyState, Icon, StatusBadge } from '@sovereignfs/ui';
 import type { StatusBadgeStatus } from '@sovereignfs/ui';
+import { refreshModelDiscoveryAction } from '../actions';
 import type { DiscoveredModel, ModelDiscoveryResult } from '../_lib/model-discovery';
 import { isModelVisible } from '../_lib/model-visibility-policy';
 import { ModelToggleRow } from './ModelToggleRow';
@@ -73,6 +74,10 @@ function matchesQuery(group: ModelGroup, model: ModelEntry, query: string): bool
  * toggle. The search box is a client-only filter over the already-loaded
  * list — a single provider's catalog can run into the hundreds
  * (OpenRouter returns 400+), so filtering here means never re-fetching.
+ *
+ * "Recheck models" drops the server's short-lived discovery cache
+ * (`refreshModelDiscoveryAction`) before refreshing — otherwise
+ * `router.refresh()` alone would just replay the cached result.
  */
 export function ModelsView({
   discovery,
@@ -87,7 +92,10 @@ export function ModelsView({
   const overrides = new Set(visibilityOverrides);
 
   const refresh = useCallback(() => {
-    startTransition(() => router.refresh());
+    startTransition(async () => {
+      await refreshModelDiscoveryAction();
+      router.refresh();
+    });
   }, [router]);
 
   const groups = buildGroups(discovery);

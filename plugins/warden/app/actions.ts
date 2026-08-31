@@ -1,6 +1,7 @@
 'use server';
 
 import { NotAuthenticatedError, sdk } from '@sovereignfs/sdk';
+import { invalidateDiscoveryCacheForUser } from './_lib/model-discovery';
 import { createProvider, deleteProvider, updateProvider } from './_lib/providers';
 import { setModelVisibility } from './_lib/model-visibility';
 import { UnsafeProviderUrlError } from './_lib/url-safety';
@@ -15,7 +16,12 @@ import { UnsafeProviderUrlError } from './_lib/url-safety';
  * purpose — the providers page is a Server Component that calls `_lib`
  * directly, and every mutation below triggers a `router.refresh()` from the
  * client to get fresh server-rendered data, so a client-callable read action
- * would be unused surface, not a convenience.
+ * would be unused surface, not a convenience. The one exception is
+ * `refreshModelDiscoveryAction` below: `discoverModels()` now caches its
+ * result for a short TTL (`model-discovery.ts`), so a plain
+ * `router.refresh()` from a "Recheck" button would just replay the cached
+ * result instead of actually re-checking — that action's only job is
+ * dropping the cache first so the refresh that follows runs live.
  */
 export type ActionResult = { ok: true; message: string } | { ok: false; error: string };
 
@@ -29,7 +35,7 @@ export type ActionResult = { ok: true; message: string } | { ok: false; error: s
  * enough for actions that act on data beyond the caller's own.
  */
 async function requireSession() {
-  await sdk.auth.requireSession();
+  return sdk.auth.requireSession();
 }
 
 /**
@@ -60,7 +66,7 @@ export async function createProviderAction(
   formData: FormData,
 ): Promise<ActionResult> {
   try {
-    await requireSession();
+    const session = await requireSession();
     const label = stringField(formData, 'label');
     const baseUrl = stringField(formData, 'baseUrl');
     const apiKey = stringField(formData, 'apiKey');
@@ -68,6 +74,7 @@ export async function createProviderAction(
     if (!baseUrl) return { ok: false, error: 'A base URL is required.' };
     if (!apiKey) return { ok: false, error: 'An API key is required.' };
     await createProvider({ label, baseUrl, apiKey });
+    invalidateDiscoveryCacheForUser(session.user.id);
     return { ok: true, message: `${label} was added.` };
   } catch (error) {
     return {
@@ -96,13 +103,14 @@ export async function updateProviderAction(
   formData: FormData,
 ): Promise<ActionResult> {
   try {
-    await requireSession();
+    const session = await requireSession();
     const label = stringField(formData, 'label');
     const baseUrl = stringField(formData, 'baseUrl');
     const apiKey = stringField(formData, 'apiKey');
     if (!label) return { ok: false, error: 'Give this provider a name.' };
     if (!baseUrl) return { ok: false, error: 'A base URL is required.' };
     const provider = await updateProvider(id, { label, baseUrl, apiKey: apiKey || undefined });
+    invalidateDiscoveryCacheForUser(session.user.id);
     return { ok: true, message: `${provider.label} was updated.` };
   } catch (error) {
     return {
@@ -119,8 +127,9 @@ export async function deleteProviderAction(
   _formData: FormData,
 ): Promise<ActionResult> {
   try {
-    await requireSession();
+    const session = await requireSession();
     await deleteProvider(id);
+    invalidateDiscoveryCacheForUser(session.user.id);
     return { ok: true, message: 'The provider was removed.' };
   } catch (error) {
     return {
@@ -148,6 +157,25 @@ export async function setModelVisibilityAction(
     return {
       ok: false,
       error: messageFor(error, 'Could not update this model.', 'setModelVisibilityAction'),
+    };
+  }
+}
+
+/**
+ * Drops this user's cached `discoverModels()` result so the "Recheck
+ * providers"/"Recheck models" buttons (`ProvidersView`/`ModelsView`) actually
+ * re-verify every provider live instead of replaying the short-lived cache.
+ * Called immediately before those buttons' own `router.refresh()`.
+ */
+export async function refreshModelDiscoveryAction(): Promise<ActionResult> {
+  try {
+    const session = await requireSession();
+    invalidateDiscoveryCacheForUser(session.user.id);
+    return { ok: true, message: 'Rechecking…' };
+  } catch (error) {
+    return {
+      ok: false,
+      error: messageFor(error, 'Could not recheck providers.', 'refreshModelDiscoveryAction'),
     };
   }
 }

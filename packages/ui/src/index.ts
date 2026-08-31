@@ -1,5 +1,7 @@
 export { LegalLinks } from './components/LegalLinks/LegalLinks';
 export type { LegalLinksProps } from './components/LegalLinks/LegalLinks';
+export { ConsentPrompt } from './components/ConsentPrompt/ConsentPrompt';
+export type { ConsentPromptProps } from './components/ConsentPrompt/ConsentPrompt';
 export { Markdown } from './components/Markdown/Markdown';
 export type { MarkdownProps } from './components/Markdown/Markdown';
 export { Badge } from './components/Badge/Badge';

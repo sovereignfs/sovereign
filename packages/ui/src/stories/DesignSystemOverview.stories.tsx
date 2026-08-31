@@ -72,6 +72,7 @@ import {
 import { Alert } from '../components/Alert/Alert';
 import { Breadcrumb } from '../components/Breadcrumb/Breadcrumb';
 import { LegalLinks } from '../components/LegalLinks/LegalLinks';
+import { ConsentPrompt } from '../components/ConsentPrompt/ConsentPrompt';
 import { Markdown } from '../components/Markdown/Markdown';
 import { Pagination } from '../components/Pagination/Pagination';
 import { Kbd } from '../components/Kbd/Kbd';
@@ -3001,6 +3002,22 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               usage="Privacy Policy / Terms of Service link row for standalone auth pages (login, register, forgot/reset password). Pass renderLink to keep navigation client-side if ever mounted inside an SPA-like shell."
             >
               <LegalLinks />
+            </ComponentCard>
+
+            {/* ConsentPrompt */}
+            <ComponentCard
+              name="ConsentPrompt"
+              importLine="import { ConsentPrompt } from '@sovereignfs/ui';"
+              usage="Consent screen shown before one plugin is allowed to read another plugin's data (RFC 0002 data grants) or connect to an external service on the user's behalf. description should come from the provider's own manifest declaration, never caller-supplied copy."
+            >
+              <ConsentPrompt
+                consumerName="Ledger"
+                providerName="Finance Tracker"
+                contract="expenses"
+                description="Monthly expense totals by category, no transaction-level detail."
+                onAllow={() => {}}
+                onDeny={() => {}}
+              />
             </ComponentCard>
 
             {/* Markdown */}

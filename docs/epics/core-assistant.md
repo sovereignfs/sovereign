@@ -744,7 +744,7 @@ all green.
 
 ---
 
-#### 📋 22.10 — Warden sidebar UI
+#### ✅ 22.10 — Warden sidebar UI
 
 **Goal:** Ship the collapsible two-column layout and the sidebar itself —
 pinned/recent session groups, "+ New," per-row rename/pin/delete, and the
@@ -791,6 +791,67 @@ Settings route the sidebar's own entry point links to).
 - Verified live in a browser: create a session, send a message, switch to
   another session, pin/rename/delete — not just unit tests.
 - `plugins/warden/manifest.json`'s `version` is bumped.
+
+**Result:** shipped as planned. `WardenLayoutShell` (new) wraps
+`@sovereignfs/ui`'s `ThreeColumnLayout` when expanded, and bypasses it
+entirely when collapsed rather than passing `sidebarWidth={0}` —
+`ThreeColumnLayout`'s `.sidebar` slot always carries a `border-right`, which
+a zero-width flex item still renders as a visible 1px hairline down the
+left edge of the screen, not a real "collapsed" look. Collapse state reads
+`localStorage` only inside `useEffect` (defaulting to expanded for the
+first render), per this repo's own hydration-mismatch rule for client
+components reading browser globals. `WardenSidebar` (new) is purely
+presentational — `app/page.tsx` does the pinned/recent split and sort
+(`pinnedAt` descending / `lastActiveAt` descending, capped at
+`SIDEBAR_RECENT_LIMIT = 10`), so the component never re-derives which
+group a session belongs in. The active session is resolved entirely from
+`?session=` (falling back to the most recent session for no/foreign
+values), and `ChatView.tsx`'s existing `x-warden-session-id` handling now
+also calls `router.replace('/warden?session=' + id)` once a brand-new
+session's id comes back — the one behavior change needed so the sidebar's
+list and the composer's open session can never disagree about which
+session is "open" (this leg's own "do not proceed if" condition). Two new
+curated icons (`panel-left`, `pin`) added via `scripts/icon-list.ts` +
+`pnpm generate:icons` (93 total, up from a stale-but-unrelated "52 bundled
+icons" count in `DesignSystemOverview.stories.tsx`, fixed as a drive-by);
+`Icon.stories.tsx`'s `AllIcons` story derives from `ICONS` directly, so no
+manual per-icon story edit was needed.
+
+Verified live end to end against a real logged-in session on a second
+seeded dev account (`user@sovereign.local`, `pnpm sv seed` per direct
+developer authorization for this dev database) — not just unit tests: the
+first-tried account (`owner@sovereign.local`) turned out to carry a
+pre-existing, unrelated data-corruption gap from an earlier session (a
+`plugin_secrets` row encrypted under a `SOVEREIGN_VAULT_KEY` no longer
+configured, throwing `Unsupported state or unable to authenticate data`
+straight out of `decryptSecretValue` on every Warden page load) — not
+something to fix as part of this leg, so verification moved to the clean
+second account instead. That account also needed
+`SOVEREIGN_VAULT_KEY` (leg 22.9's own Result note already flagged this
+env gap; this leg set a real key in the local `.env` to unblock live
+provider/model testing, since the platform-level fix was already known
+and out of scope here) and a real provider — added OpenRouter's actual
+`https://openrouter.ai/api/v1` with a deliberately-fake key, whose
+`/v1/models` endpoint is public and returned a real 424-model catalog
+(only the chat-completion call itself needs a valid key), enough to
+exercise session creation without ever needing a truly reachable model
+backend. Confirmed: the two-column layout and empty state render
+correctly; a session is created server-side on the very first send
+attempt regardless of whether the model call itself succeeds (`createSession`
+runs before the provider dispatch in `api/chat/route.ts`), and reappears
+in the sidebar on reload even after a failed send; rename commits on blur
+(iOS-safe path) with the input starting empty rather than pre-filled with
+the "New chat" _display_ fallback; pin/unpin move a row between the
+Pinned/Recent groups live; delete opens a name-specific confirm dialog and
+navigates to `/warden` when the deleted session was the active one;
+pinning a 6th session is rejected with a clear toast
+("You can pin up to 5 sessions — unpin one first") while the sidebar
+itself stays correctly unchanged, not silently corrupted. All test/provider
+data created for this verification was deleted again before finishing.
+Full existing `plugins/warden` suite (278 tests, including 22 new for
+`WardenSidebar`/`WardenLayoutShell`) plus `pnpm --filter runtime
+typecheck`, `pnpm --filter @sovereignfs/ui typecheck`, `pnpm lint`, and
+`pnpm format:check` all pass.
 
 ---
 

@@ -153,6 +153,78 @@ describe('Dialog', () => {
     expect(screen.getByText('Standalone content')).toBeTruthy();
     expect(screen.queryByText('Tab strip')).toBeNull();
   });
+
+  describe('Body only (default — no header/footer props)', () => {
+    it('renders exactly one close button and no footer', () => {
+      render(
+        <Dialog open onClose={() => {}} title="Settings" aria-label="Settings">
+          Body
+        </Dialog>,
+      );
+      // Both the mobile-only OverlayHeader's close button and the
+      // desktop-only floating one are always in the DOM (CSS toggles which
+      // is visible per breakpoint, not React) — unchanged from before this
+      // task, since this is the `header`-omitted branch.
+      expect(screen.getAllByRole('button', { name: 'Close' })).toHaveLength(2);
+      expect(screen.getByText('Settings')).toBeTruthy();
+    });
+  });
+
+  describe('Header + Body (header prop)', () => {
+    it('renders header content via a single OverlayHeader, on both breakpoints, instead of the mobile-only title bar', () => {
+      render(
+        <Dialog open onClose={() => {}} header={<span>Card detail</span>} aria-label="Card detail">
+          Body
+        </Dialog>,
+      );
+      expect(screen.getByText('Card detail')).toBeTruthy();
+      // Only one close button now — the header branch skips the separate
+      // desktop .close button entirely (see Dialog.tsx's own comment).
+      expect(screen.getAllByRole('button', { name: 'Close' })).toHaveLength(1);
+    });
+
+    it('supersedes title for visible content but keeps title as the aria-label fallback', () => {
+      render(
+        <Dialog open onClose={() => {}} title="Fallback name" header={<span>Visible header</span>}>
+          Body
+        </Dialog>,
+      );
+      expect(screen.getByText('Visible header')).toBeTruthy();
+      expect(screen.queryByText('Fallback name')).toBeNull();
+      expect(screen.getByRole('dialog', { name: 'Fallback name' })).toBeTruthy();
+    });
+  });
+
+  describe('Header + Body + Footer (header and footer props)', () => {
+    it('renders footer content as a non-scrolling sibling of the body', () => {
+      render(
+        <Dialog
+          open
+          onClose={() => {}}
+          header={<span>Card detail</span>}
+          footer={<button type="button">Save</button>}
+          aria-label="Card detail"
+        >
+          <p>Body content</p>
+        </Dialog>,
+      );
+      const footerButton = screen.getByRole('button', { name: 'Save' });
+      const bodyText = screen.getByText('Body content');
+      expect(footerButton).toBeTruthy();
+      // Footer is a sibling of .content (the scroll region), not nested
+      // inside it — it must never scroll away with the body.
+      expect(bodyText.closest('[class*="content"]')?.contains(footerButton)).toBe(false);
+    });
+
+    it('omits the footer row entirely when footer is not provided', () => {
+      render(
+        <Dialog open onClose={() => {}} header={<span>Card detail</span>} aria-label="Card detail">
+          Body
+        </Dialog>,
+      );
+      expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    });
+  });
 });
 
 describe('Dialog Escape precedence with a nested ConfirmDialog', () => {

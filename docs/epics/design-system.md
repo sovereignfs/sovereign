@@ -1583,7 +1583,7 @@ design decision. No RFC governs it (see that workstream's "Why no RFC").
 
 ---
 
-#### 📋 9.33 — `Dialog` header/body/footer composition
+#### ✅ 9.33 — `Dialog` header/body/footer composition
 
 **Goal:** `Dialog` today has no dedicated footer slot — every consumer needing action buttons (Save/Cancel, etc.) renders them as the last item inside `children`, sharing the single scrollable `.content` region (`Dialog.module.css:92-118`); on a tall form those buttons scroll out of view with the rest of the content. `Dialog`'s `title` prop today only renders visually inside `OverlayHeader` on **mobile** (`Dialog.tsx:150-157`) — desktop never shows a header row for it at all, only the floating close button — so a consumer wanting a visible title on desktop currently has to render its own heading inside `children`. Add three explicit, consumer-selectable shapes, matching this repo's existing prop-driven component design (not a new compound-component API): **Body only** (no header/footer — today's default, unchanged), **Header + Body** (a visible, sticky header row on _both_ breakpoints — not mobile-only as today), and **Header + Body + Footer** (header and footer both pinned, only the body between them scrolls).
 
@@ -1596,7 +1596,21 @@ design decision. No RFC governs it (see that workstream's "Why no RFC").
 - Storybook: new stories for "Body only", "Header + Body", and "Header + Body + Footer" (Storybook hygiene rule — every DS component API change needs matching story coverage), plus a `DesignSystemOverview.stories.tsx` import-snippet update if the public props changed.
 - `docs/design-system.md`/`DialogProps` doc comments updated to describe the three shapes.
 
-**Open design decisions (resolve during implementation):** exact relationship between the existing `title` prop and the new `header` prop — whether `header` supersedes `title` outright or `title` becomes shorthand for a simple text header; whether existing Dialog consumers should be migrated onto the new `footer` prop in this same leg or left as a documented follow-up (recommended: leave as follow-up — migrating the ~20 existing `Dialog` consumers is its own reviewable unit, not part of adding the capability). This task scopes the variant work to `Dialog` only — `Drawer`/`Sheet` have the same missing-footer gap but are explicitly out of scope here; note it for a future task rather than expanding this one.
+**Open design decisions — resolved:** `header` supersedes `title` outright for
+visible content when both are passed — `title` remains the `aria-label`
+fallback either way, so it's never truly dead even when superseded. Achieved
+by widening `OverlayHeader`'s own `title` prop from `string` to `ReactNode`
+(`OverlayHeader.tsx`) — a backward-compatible type widening (every existing
+string-passing caller, including `Drawer`/`Sheet`, still typechecks
+unchanged) — and reusing `OverlayHeader` itself for the new unified header
+(rendered with no Dialog-level display-toggling `className`, since
+`OverlayHeader.module.css` has no internal breakpoint gating of its own —
+confirmed by reading it before relying on this — so simply not hiding it on
+desktop is sufficient to show it on both breakpoints). This avoided writing
+a second, parallel header implementation. Existing `Dialog` consumer
+migration onto `footer` was left as a follow-up, as recommended — none of
+the ~20 existing consumers were touched. `Drawer`/`Sheet` were not
+touched either, confirming the scope boundary held.
 
 **Dependencies:** Sequenced after 9.32 (icon) so this leg's header-row rework doesn't also touch the close-icon prop mid-change — not a hard technical dependency, just avoids overlapping diffs.
 
@@ -1604,11 +1618,11 @@ design decision. No RFC governs it (see that workstream's "Why no RFC").
 
 **Review checklist:**
 
-- `pnpm --filter @sovereignfs/ui typecheck`, `test`, `lint` pass.
-- New Storybook stories for all three shapes exist; `pnpm --filter @sovereignfs/ui build-storybook` succeeds.
-- Manual check at both a desktop and a ≤768px viewport: in the Header+Body+Footer story, header and footer stay visibly pinned while only the body content between them scrolls (story includes enough body content to actually scroll).
-- `pnpm design:tokens:check` passes.
-- `packages/ui`'s `package.json` version bumped **minor** (additive public props, per NFR-04), with a `docs/upgrade.md` note if `title`'s rendering behavior visibly changes for existing consumers (e.g. now also rendering on desktop).
+- `pnpm --filter @sovereignfs/ui typecheck`, the full `packages/ui` test suite (535 tests), and `pnpm lint` on `packages/ui/src` all pass. ✅ 6 new tests added: 5 in `Dialog.test.tsx` covering all three shapes (Body only's unchanged 2-close-button baseline, Header+Body's single close button and `title`-as-fallback-only behavior, Header+Body+Footer's footer-as-sibling-not-nested-in-`.content` check and footer-omitted case) plus 1 in `OverlayHeader.test.tsx` locking in the `title: ReactNode` widening.
+- New Storybook stories for all three shapes (`BodyOnly`, `HeaderAndBody`, `HeaderBodyFooter`) exist; `pnpm --filter @sovereignfs/ui build-storybook` succeeds. ✅
+- Manual check at both a desktop and a ≤768px viewport: in the Header+Body+Footer story, header and footer stay visibly pinned while only the body content between them scrolls. ✅ Verified live in a real browser: scrolled the body well into "Field 6–9 of 12" at both viewport sizes — the "Edit card" header and Cancel/Save footer never moved. Also verified the Header+Body story shows "Card detail" as a real header row on desktop, where no header row existed before this task.
+- `pnpm design:tokens:check` passes (129 tokens, no violations). ✅
+- `packages/ui`'s `package.json` version bumped **minor** (`0.74.2` → `0.75.0`, additive public props, per NFR-04). No `docs/upgrade.md` note needed — `title`'s rendering behavior is unchanged for every existing consumer, since none of them pass the new `header` prop; the visible-content change only applies to a consumer that newly opts in.
 
 ---
 

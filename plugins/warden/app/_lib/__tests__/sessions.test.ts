@@ -9,9 +9,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  * simple descriptor objects this fake understands, rather than real SQL
  * fragments.
  */
-interface Predicate {
-  columnName: string;
-  value: unknown;
+type Predicate = { columnName: string; value: unknown } | { columnName: string; values: unknown[] };
+
+function matches(row: Record<string, unknown>, predicate: Predicate): boolean {
+  return 'values' in predicate
+    ? predicate.values.includes(row[predicate.columnName])
+    : row[predicate.columnName] === predicate.value;
 }
 interface Order {
   columnName: string;
@@ -55,6 +58,10 @@ vi.mock('drizzle-orm', async (importOriginal) => {
       columnName: toCamelCase(column.name),
       value,
     }),
+    inArray: (column: { name: string }, values: unknown[]): Predicate => ({
+      columnName: toCamelCase(column.name),
+      values,
+    }),
     asc: (column: { name: string }): Order => ({
       columnName: toCamelCase(column.name),
       direction: 'asc',
@@ -73,7 +80,7 @@ function rowsFor(tableName: string): Array<Record<string, unknown>> {
 function applyUpdate(tableName: string, predicate: Predicate, patch: Record<string, unknown>) {
   const rows = rowsFor(tableName);
   for (const row of rows) {
-    if (row[predicate.columnName] === predicate.value) Object.assign(row, patch);
+    if (matches(row, predicate)) Object.assign(row, patch);
   }
 }
 
@@ -84,9 +91,7 @@ const fakeDb = {
         const tableName = getTableName(table);
         return {
           where(predicate: Predicate) {
-            const filtered = rowsFor(tableName).filter(
-              (r) => r[predicate.columnName] === predicate.value,
-            );
+            const filtered = rowsFor(tableName).filter((r) => matches(r, predicate));
             return {
               limit: async (n: number) => filtered.slice(0, n),
               orderBy: (order: Order) => {
@@ -130,9 +135,9 @@ const fakeDb = {
     return {
       where: async (predicate: Predicate) => {
         if (tableName === 'warden_messages') {
-          messages = messages.filter((m) => m[predicate.columnName] !== predicate.value);
+          messages = messages.filter((m) => !matches(m, predicate));
         } else {
-          sessions = sessions.filter((s) => s[predicate.columnName] !== predicate.value);
+          sessions = sessions.filter((s) => !matches(s, predicate));
         }
       },
     };
@@ -146,6 +151,7 @@ vi.mock('@sovereignfs/sdk', () => ({
 const {
   appendMessage,
   createSession,
+  deleteInactiveSessions,
   deleteSession,
   getMostRecentSession,
   getRecentMessagesForContext,
@@ -466,5 +472,66 @@ describe('deleteSession', () => {
 
   it('is a silent no-op for an already-gone session id', async () => {
     await expect(deleteSession('user-1', 'tenant-1', 'never-existed')).resolves.toBeUndefined();
+  });
+});
+
+describe('deleteInactiveSessions', () => {
+  const DAY_MS = 24 * 60 * 60 * 1000;
+
+  /** Directly backdates a session's `lastActiveAt` in the fake store —
+   *  the mocked `Date.now()` counter increments by 1ms per call, far too
+   *  small to simulate real day-scale gaps through normal API calls. */
+  function ageSession(sessionId: string, daysAgo: number) {
+    const row = sessions.find((s) => s.id === sessionId);
+    if (row) row.lastActiveAt = Date.now() - daysAgo * DAY_MS;
+  }
+
+  it('deletes only sessions older than the threshold, along with their messages', async () => {
+    const stale = await createSession('user-1', 'tenant-1');
+    const fresh = await createSession('user-1', 'tenant-1');
+    await appendMessage('user-1', 'tenant-1', stale.id, {
+      role: 'user',
+      content: 'old',
+      providerId: null,
+      model: 'local',
+    });
+    ageSession(stale.id, 40);
+    ageSession(fresh.id, 5);
+
+    const deleted = await deleteInactiveSessions('user-1', 'tenant-1', 30);
+
+    expect(deleted).toBe(1);
+    expect(sessions.map((s) => s.id)).toEqual([fresh.id]);
+    expect(messages).toEqual([]);
+  });
+
+  it('never deletes a pinned session, no matter how inactive', async () => {
+    const stalePinned = await createSession('user-1', 'tenant-1');
+    await pinSession('user-1', 'tenant-1', stalePinned.id);
+    ageSession(stalePinned.id, 400);
+
+    const deleted = await deleteInactiveSessions('user-1', 'tenant-1', 30);
+
+    expect(deleted).toBe(0);
+    expect(sessions.map((s) => s.id)).toEqual([stalePinned.id]);
+  });
+
+  it('never touches another user’s sessions', async () => {
+    const mine = await createSession('user-1', 'tenant-1');
+    const theirs = await createSession('user-2', 'tenant-1');
+    ageSession(mine.id, 40);
+    ageSession(theirs.id, 40);
+
+    const deleted = await deleteInactiveSessions('user-1', 'tenant-1', 30);
+
+    expect(deleted).toBe(1);
+    expect(sessions.map((s) => s.id)).toEqual([theirs.id]);
+  });
+
+  it('returns 0 and issues no delete when nothing is stale', async () => {
+    const fresh = await createSession('user-1', 'tenant-1');
+    ageSession(fresh.id, 1);
+    expect(await deleteInactiveSessions('user-1', 'tenant-1', 30)).toBe(0);
+    expect(sessions).toHaveLength(1);
   });
 });

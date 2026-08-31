@@ -33,3 +33,11 @@ export const wardenModelVisibilityOverrides = pgTable('warden_model_visibility_o
   modelKey: text('model_key').notNull(),
   createdAt: bigint('created_at', { mode: 'number' }).notNull(),
 });
+
+export const wardenUserSettings = pgTable('warden_user_settings', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  defaultModelKey: text('default_model_key'),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+});

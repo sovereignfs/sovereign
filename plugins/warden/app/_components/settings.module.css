@@ -1,0 +1,42 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-6);
+}
+
+.tabPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-6);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-weight: 600;
+  color: var(--sv-color-text-primary);
+}
+
+.helpText {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-secondary);
+}
+
+.retentionRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+  flex-wrap: wrap;
+}
+
+.feedbackText {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-secondary);
+}

@@ -1,6 +1,6 @@
 # Workstream 0021 — Warden: multi-session UI
 
-**Status:** ⏳ In progress — leg 1 of 4 done\
+**Status:** ⏳ In progress — legs 1-2 of 4 done\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -29,7 +29,7 @@ workstream 0019.
       migration, no backfill); a user can create (lazily, on first send),
       list, pin (max 5)/unpin, rename, and delete sessions; the chat API
       routes by session id instead of assuming one conversation per user.
-- [ ] `22.9` — `/warden/settings` (General/Providers/Models tabs) replaces
+- [x] `22.9` — `/warden/settings` (General/Providers/Models tabs) replaces
       the standalone `/warden/providers` and `/warden/models` routes, which
       are removed outright (no redirect).
 - [ ] `22.10` — a collapsible two-column layout ships: left sidebar with
@@ -84,7 +84,7 @@ same PR as whichever leg first uses it (`22.10`).
 | Leg | Name                           | Epic tasks | Epics | Gate? | Done when                                                                                                                                                     |
 | --- | ------------------------------ | ---------- | ----- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | Sessions data model and API ✅ | 22.8       | 22    | No    | `warden_sessions` replaces `warden_conversation`; create/list/pin/unpin/rename/delete all work; the chat API routes by session id                             |
-| 2   | Settings consolidation         | 22.9       | 22    | No    | `/warden/settings` (General/Providers/Models) is live with `ProvidersView`/`ModelsView` behavior unchanged; `/warden/providers`/`/warden/models` are removed  |
+| 2   | Settings consolidation ✅      | 22.9       | 22    | No    | `/warden/settings` (General/Providers/Models) is live with `ProvidersView`/`ModelsView` behavior unchanged; `/warden/providers`/`/warden/models` are removed  |
 | 3   | Sidebar UI                     | 22.10      | 22    | No    | Collapsible two-column layout ships; sidebar lists pinned + recent sessions, supports "+ New," rename/pin/delete, LLM titles, and a Settings entry point      |
 | 4   | Composer redesign              | 22.11      | 22    | No    | Claude-style composer ships with a model-picker popover (linking into Settings), incognito as a toolbar icon, and the old header links/web-search toggle gone |
 
@@ -163,7 +163,7 @@ recently active session) since the sidebar that lets a user actually
 switch sessions doesn't ship until leg 3. Full detail in the epic file's
 task 22.8 completion note.
 
-### Leg 2 — Settings consolidation
+### Leg 2 — Settings consolidation ✅
 
 **Epic tasks:** 22.9
 
@@ -189,6 +189,35 @@ leg 3's sidebar needs a real settings route to link to before it ships.
 also updated in this same leg (an internal link left pointing at a 404) —
 grep for the literal route strings, don't assume the composer redesign
 (leg 4) will clean it up later.
+
+**Leg outcome:** shipped as planned. All three RFC 0063 open questions this
+leg owned were resolved: default model via a new `warden_user_settings`
+table (get-or-create, one row per user); retention as a manual "delete
+sessions inactive for over N days" action excluding pinned sessions,
+explicitly not a scheduled job (confirmed `manifest.json` declares no
+`sdk.schedules` capability); export as a deep link to the existing
+account-wide `/account/data` flow, not a new mechanism. Tabs use
+`@sovereignfs/ui`'s `Tabs` (confirmed the only tab component with any real
+consumer in this repo) with the active tab synced to `?tab=` via
+`router.replace`, deliberately not just local state, so leg 4's composer
+model-picker popover can deep-link straight to a tab. `ProvidersView`/
+`ModelsView` needed zero content changes, only their page-level wrapper
+moved. A `grep` for the literal old route strings (not assumed complete
+from memory) found and fixed two link sites this leg's own technical notes
+hadn't named: `ChatView.tsx`'s three links and `SetupPrompt.tsx`'s one —
+`pnpm generate`'s `assertNoOrphanedRouteDirectories()` check confirmed no
+stale composed route directory survived the old pages' removal. Verified
+live end to end against a real logged-in session (a seeded dev test
+account, `pnpm sv seed` with `SOVEREIGN_SEED_ALLOW_PROD=true` per direct
+developer authorization for this dev database, since self-registration is
+disabled on this instance) — tab switching, URL sync, and the retention
+action's real server round-trip (`POST /warden/settings 200`, "No inactive
+sessions to delete" for a fresh account) were all confirmed live, not just
+via unit tests. The Providers tab's add-provider flow surfaced a
+pre-existing, unrelated `SOVEREIGN_VAULT_KEY`-unset environment gap
+(`sdk.secrets`' own requirement, thrown from unchanged `providers.ts` code)
+— not a regression from this leg. Full detail in the epic file's task 22.9
+completion note.
 
 ### Leg 3 — Sidebar UI
 
@@ -278,7 +307,8 @@ needs rework first.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                                                                                                                                                     |
-| ------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0.1     | August 2026 | Initial draft, sequencing RFC 0063's third revision (multi-session UI, settings consolidation, composer redesign) into four legs                                                                                                                                                           |
-| 0.2     | August 2026 | Leg 1 (task 22.8) done — `warden_sessions` shipped replacing `warden_conversation` (clean-slate migration, hand-authored since `drizzle-kit generate` needed an unavailable interactive prompt), full CRUD, chat API routed by session id, no-model-call title derivation. Leg 2 unblocked |
+| Version | Date        | Change                                                                                                                                                                                                                                                                                                                                    |
+| ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026 | Initial draft, sequencing RFC 0063's third revision (multi-session UI, settings consolidation, composer redesign) into four legs                                                                                                                                                                                                          |
+| 0.2     | August 2026 | Leg 1 (task 22.8) done — `warden_sessions` shipped replacing `warden_conversation` (clean-slate migration, hand-authored since `drizzle-kit generate` needed an unavailable interactive prompt), full CRUD, chat API routed by session id, no-model-call title derivation. Leg 2 unblocked                                                |
+| 0.3     | August 2026 | Leg 2 (task 22.9) done — `/warden/settings` (General/Providers/Models tabs, `?tab=`-synced) replaces `/warden/providers`/`/warden/models`; default model (`warden_user_settings`), manual retention excluding pinned sessions, and export-via-account-deep-link all resolved. Verified live against a seeded dev account. Leg 3 unblocked |

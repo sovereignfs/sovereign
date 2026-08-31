@@ -300,10 +300,10 @@ export function ChatView({
           Incognito
         </span>
         <div className={styles.manageLinks}>
-          <Link href="/warden/providers" className={styles.manageLink}>
+          <Link href="/warden/settings?tab=providers" className={styles.manageLink}>
             Manage providers
           </Link>
-          <Link href="/warden/models" className={styles.manageLink}>
+          <Link href="/warden/settings?tab=models" className={styles.manageLink}>
             Manage models
           </Link>
         </div>
@@ -329,7 +329,7 @@ export function ChatView({
                 }
                 action={
                   allModelsHidden && !incognito ? (
-                    <Link href="/warden/models">Manage models</Link>
+                    <Link href="/warden/settings?tab=models">Manage models</Link>
                   ) : undefined
                 }
               />

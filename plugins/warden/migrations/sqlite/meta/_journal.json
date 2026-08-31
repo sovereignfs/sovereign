@@ -22,6 +22,13 @@
       "when": 1788196262974,
       "tag": "0002_warden_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1788199474184,
+      "tag": "0003_real_black_bird",
+      "breakpoints": true
     }
   ]
 }

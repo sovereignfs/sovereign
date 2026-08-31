@@ -4,6 +4,8 @@ import { NotAuthenticatedError, sdk } from '@sovereignfs/sdk';
 import { invalidateDiscoveryCacheForUser } from './_lib/model-discovery';
 import { createProvider, deleteProvider, updateProvider } from './_lib/providers';
 import { setModelVisibility } from './_lib/model-visibility';
+import { deleteInactiveSessions } from './_lib/sessions';
+import { setDefaultModelKey } from './_lib/user-settings';
 import { UnsafeProviderUrlError } from './_lib/url-safety';
 
 /**
@@ -176,6 +178,56 @@ export async function refreshModelDiscoveryAction(): Promise<ActionResult> {
     return {
       ok: false,
       error: messageFor(error, 'Could not recheck providers.', 'refreshModelDiscoveryAction'),
+    };
+  }
+}
+
+/**
+ * Sets (or clears, via `modelKey: null`) the default model for a brand-new
+ * session (Settings → General, RFC 0063 §11). Called directly from a
+ * `<Select>`'s `onChange` — no form input to preserve on failure.
+ */
+export async function setDefaultModelAction(modelKey: string | null): Promise<ActionResult> {
+  try {
+    const session = await sdk.auth.requireSession();
+    await setDefaultModelKey(session.user.id, session.user.tenantId, modelKey);
+    return { ok: true, message: 'Default model updated.' };
+  } catch (error) {
+    return {
+      ok: false,
+      error: messageFor(error, 'Could not update the default model.', 'setDefaultModelAction'),
+    };
+  }
+}
+
+/**
+ * Manual retention (Settings → General, RFC 0063 §11) — deletes every
+ * unpinned session inactive for more than `olderThanDays`. Not a scheduled
+ * job; see `sessions.ts`'s `deleteInactiveSessions` for why.
+ */
+export async function deleteInactiveSessionsAction(olderThanDays: number): Promise<ActionResult> {
+  try {
+    const session = await sdk.auth.requireSession();
+    const deleted = await deleteInactiveSessions(
+      session.user.id,
+      session.user.tenantId,
+      olderThanDays,
+    );
+    return {
+      ok: true,
+      message:
+        deleted === 0
+          ? 'No inactive sessions to delete.'
+          : `Deleted ${deleted} inactive session${deleted === 1 ? '' : 's'}.`,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: messageFor(
+        error,
+        'Could not delete inactive sessions.',
+        'deleteInactiveSessionsAction',
+      ),
     };
   }
 }

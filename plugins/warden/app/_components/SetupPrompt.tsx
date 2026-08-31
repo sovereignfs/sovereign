@@ -17,7 +17,7 @@ export function SetupPrompt() {
         heading="Set up Warden"
         description="Add a model provider to start chatting — any OpenAI-compatible endpoint, or your own self-hosted server."
         action={
-          <Link href="/warden/providers">
+          <Link href="/warden/settings?tab=providers">
             <Button>Add a provider</Button>
           </Link>
         }

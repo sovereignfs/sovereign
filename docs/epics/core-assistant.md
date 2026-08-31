@@ -638,7 +638,7 @@ tests) all green; `pnpm --filter runtime typecheck`, `pnpm lint`, and
 
 ---
 
-#### 📋 22.9 — Warden settings consolidation
+#### ✅ 22.9 — Warden settings consolidation
 
 **Goal:** Replace the standalone `/warden/providers` and `/warden/models`
 routes with a single `/warden/settings` surface (General/Providers/Models
@@ -689,6 +689,58 @@ management; it doesn't need task 22.8's session data.
 - `pnpm exec vitest run plugins/warden`, `pnpm --filter runtime typecheck`,
   `pnpm lint`, and `pnpm format:check` all pass.
 - `plugins/warden/manifest.json`'s `version` is bumped.
+
+**Result:** shipped as planned, with the two open questions RFC 0063 left
+resolved:
+
+- **Default model** — a new `warden_user_settings` table (one row per user,
+  `defaultModelKey` nullable, get-or-create like the old single-conversation
+  table used to be). `app/page.tsx` prefers it over the first-visible-model
+  fallback whenever it's still a currently-visible model.
+- **Retention** — resolved as a manual, on-demand "delete sessions inactive
+  for over N days" action (`QuantityStepper` + button), never a scheduled
+  job (confirmed `manifest.json` declares no `jobs`/`schedules` capability).
+  Pinned sessions are excluded unconditionally, regardless of age — verified
+  by a dedicated test. Fixed at 2 delete queries via `inArray`, matching
+  task 22.7's pattern, not a per-session loop.
+- **Export** — resolved as a deep link to the existing account-wide export
+  (`/account/data`'s `PortabilityPanel`), not a new Warden-only download
+  mechanism — confirmed via `grep` that no other export path exists yet to
+  build on top of.
+
+Tabs use `@sovereignfs/ui`'s `Tabs` (the only tab component with a real
+consumer anywhere in this repo — `NavTabs` has none), with the active tab
+synced to `?tab=` via `router.replace` rather than local-only state, so a
+future composer's model-picker popover (task 22.11) can deep-link straight
+to `/warden/settings?tab=providers`/`?tab=models`. `ProvidersView`/
+`ModelsView` themselves needed zero changes — only their page-level
+wrapper (breadcrumb/header) was relocated into the new tabbed page.
+`ChatView.tsx`'s three links and `SetupPrompt.tsx`'s one link (found via
+`grep`, not assumed complete from memory) were repointed to
+`/warden/settings?tab=...`; the old `/warden/providers`/`/warden/models`
+directories were deleted outright, with `pnpm generate`'s
+`assertNoOrphanedRouteDirectories()` check confirming no stale composed
+route directory was left behind.
+
+Verified live end to end against a real logged-in session (a seeded dev
+test account, `pnpm sv seed` with `SOVEREIGN_SEED_ALLOW_PROD=true` per
+direct developer authorization for this dev database) — not just unit
+tests: `/warden/settings` renders all three tabs correctly, clicking
+Providers/Models updates the URL (`?tab=providers`/`?tab=models`) and
+renders the expected relocated content, the General tab's retention action
+round-trips through a real server action call (confirmed via server logs:
+`POST /warden/settings 200`) and correctly reports "No inactive sessions to
+delete" for a fresh account, and `/warden`'s first-run `SetupPrompt` "Add a
+provider" link resolves to `/warden/settings?tab=providers`. The Providers
+tab's own add-provider flow surfaced a pre-existing, unrelated environment
+gap (`SOVEREIGN_VAULT_KEY` unset in this dev environment) — confirmed via
+server logs to be `sdk.secrets`' own vault requirement, thrown from
+unchanged code (`_lib/providers.ts`'s `createProvider`), not a regression
+from this task; the generic error path (`messageFor()`'s fallback) handled
+it correctly regardless. Full existing `plugins/warden` suite (245 tests,
+including new coverage for `user-settings.ts` and `deleteInactiveSessions`)
+plus `pnpm --filter runtime typecheck`, `pnpm lint`, and `pnpm format:check`
+all green.
 
 ---
 

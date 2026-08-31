@@ -2,7 +2,7 @@
 
 import { type FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Button, Input } from '@sovereignfs/ui';
+import { Button, Input, LegalLinks } from '@sovereignfs/ui';
 import { authClient } from '@/src/auth-client';
 import { completeSignIn } from '@/src/complete-sign-in';
 import { ViewportHeightSync } from '../login/ViewportHeightSync';
@@ -170,6 +170,13 @@ export function RegisterForm({
             Sign in
           </Link>
         </p>
+        <LegalLinks
+          renderLink={(href, label) => (
+            <Link href={href} className={styles.link}>
+              {label}
+            </Link>
+          )}
+        />
       </div>
     </main>
   );

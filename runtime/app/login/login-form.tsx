@@ -3,7 +3,7 @@
 import { type FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Button, Icon, Input, useIsOffline } from '@sovereignfs/ui';
+import { Button, Icon, Input, LegalLinks, useIsOffline } from '@sovereignfs/ui';
 import { authClient, typedAuthClient } from '@/src/auth-client';
 import { completeSignIn } from '@/src/complete-sign-in';
 import { ViewportHeightSync } from './ViewportHeightSync';
@@ -168,6 +168,13 @@ export function LoginForm({
             Create account
           </Link>
         </p>
+        <LegalLinks
+          renderLink={(href, label) => (
+            <Link href={href} className={styles.link}>
+              {label}
+            </Link>
+          )}
+        />
       </div>
     </main>
   );

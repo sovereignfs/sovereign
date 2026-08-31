@@ -895,7 +895,7 @@ compiles (composed plugin directories are excluded from `runtime`'s own
 
 ---
 
-#### 📋 13.20 — Console Plugins/Apps page: selection-driven detail column
+#### ✅ 13.20 — Console Plugins/Apps page: selection-driven detail column
 
 **Goal:** Add a 3rd `ThreeColumnLayout` column to `/console/plugins`:
 selecting a plugin row shows a detail pane, replacing `PluginAccessDialog`.
@@ -912,6 +912,37 @@ minimum, `PluginAccessDialog.tsx`'s dialog is gone, changing a filter while a
 plugin is selected doesn't silently clear the selection unless the plugin
 drops out of the filtered set, and
 `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` pass.
+
+**Outcome:** `PluginAccessDialog`'s body (permissions list, policy select,
+selected users/groups grant lists) was extracted into `PluginAccessFields.tsx`,
+reused by both a slimmed `PluginAccessDialog` (kept mobile-only, unchanged
+kebab-menu integration) and a new `PluginDetailPane.tsx` (desktop 3rd
+column) — the same split legs 2/3 established. Scoped narrower than legs 2/3
+on purpose: Activate/Toggle enable-disable/Open/Remove stay row-level
+actions rather than moving into the pane too, since those (especially
+"Open") are frequent, low-risk actions an admin should reach without opening
+a detail pane every time, and this leg's own technical note names only
+`PluginAccessDialog`'s content as moving — a deliberately narrower scope
+than the fuller action consolidation legs 2/3 did, given this leg was
+already flagged as the most complex of the four. A row is selectable
+(`isSelectable()`) under exactly the same condition `PluginAccessDialog`
+used to render (`!row.isChrome && status is enabled/disabled`) — chrome
+plugins and inactive/incompatible rows show no selection Link or chevron.
+Selection lives in `?plugin=<id>`, resolved server-side in `page.tsx`
+against the full (unfiltered) row list — `PluginsTable`'s own client-only
+filter/search/examples-toggle state (never URL-synced) is a separate React
+component instance that isn't remounted by the parent's re-render, so
+neither state resets the other. Verified live end to end against the dev
+server, exactly the coexistence risk this leg's own technical note flagged:
+selected a row (Warden), typed a search query that filtered it out of the
+visible table, and confirmed the detail pane stayed fully intact and
+functional (including live-editing its access policy) the entire time;
+clearing the filter brought the row back with its `.trSelected` highlight
+still applied. Also verified the access-policy select switching to
+"Selected users" correctly reveals the picker/grant-list sections inline in
+the pane, the Close link clears `?plugin=`, and the mobile kebab menu's
+"Access" entry still opens `PluginAccessDialog` unaffected.
+`plugins/console/manifest.json` bumped `0.8.0` → `0.9.0`.
 
 ---
 

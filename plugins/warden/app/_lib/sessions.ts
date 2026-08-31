@@ -1,4 +1,4 @@
-import { asc, desc, eq } from 'drizzle-orm';
+import { asc, desc, eq, inArray } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { sdk } from '@sovereignfs/sdk';
 import { wardenSessions, wardenMessages } from '../_db/schema';
@@ -324,6 +324,37 @@ export async function appendMessage(
   await database.update(wardenSessions).set(updates).where(eq(wardenSessions.id, sessionId));
 
   return toMessageView(row);
+}
+
+/**
+ * Manual retention (RFC 0063 §11, epic task 22.9) — deletes every one of
+ * this user's *unpinned* sessions whose `lastActiveAt` is older than
+ * `olderThanDays`, along with their messages. Pinned sessions are never
+ * touched, deliberately — a user pinned it on purpose, so a bulk cleanup
+ * action shouldn't silently take it away. An on-demand action, not a
+ * scheduled job (Warden declares no `sdk.schedules` capability today).
+ * Fixed at 2 delete queries via `inArray`, matching task 22.7's pattern,
+ * not a per-session loop. Returns the number of sessions deleted.
+ */
+export async function deleteInactiveSessions(
+  userId: string,
+  _tenantId: string,
+  olderThanDays: number,
+): Promise<number> {
+  const database = await db();
+  const cutoff = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
+  const allSessions = await database
+    .select()
+    .from(wardenSessions)
+    .where(eq(wardenSessions.userId, userId));
+  const staleIds = allSessions
+    .filter((s) => s.pinnedAt === null && s.lastActiveAt < cutoff)
+    .map((s) => s.id);
+  if (staleIds.length === 0) return 0;
+
+  await database.delete(wardenMessages).where(inArray(wardenMessages.sessionId, staleIds));
+  await database.delete(wardenSessions).where(inArray(wardenSessions.id, staleIds));
+  return staleIds.length;
 }
 
 /** Deletes every message in a session — kept for parity with the original

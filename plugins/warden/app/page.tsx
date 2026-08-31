@@ -4,6 +4,7 @@ import { SetupPrompt } from './_components/SetupPrompt';
 import { getMostRecentSession, listMessages } from './_lib/sessions';
 import { discoverModels } from './_lib/model-discovery';
 import { isModelVisible, listVisibilityOverrides } from './_lib/model-visibility';
+import { getDefaultModelKey } from './_lib/user-settings';
 import styles from './warden.module.css';
 
 /**
@@ -40,9 +41,10 @@ export default async function WardenPage() {
     );
   }
 
-  const [mostRecentSession, visibilityOverrides] = await Promise.all([
+  const [mostRecentSession, visibilityOverrides, defaultModelKey] = await Promise.all([
     getMostRecentSession(session.user.id, session.user.tenantId),
     listVisibilityOverrides(session.user.id, session.user.tenantId),
+    getDefaultModelKey(session.user.id, session.user.tenantId),
   ]);
   const initialMessages = mostRecentSession
     ? await listMessages(session.user.id, session.user.tenantId, mostRecentSession.id)
@@ -51,6 +53,13 @@ export default async function WardenPage() {
     isModelVisible(model.key, visibilityOverrides),
   );
   const allModelsHidden = discovery.models.length > 0 && visibleModels.length === 0;
+  // The user's explicit Settings → General default (task 22.9), if it's
+  // still a visible model — otherwise fall back to the first visible one,
+  // same as before this setting existed.
+  const resolvedDefaultModelKey =
+    defaultModelKey && visibleModels.some((model) => model.key === defaultModelKey)
+      ? defaultModelKey
+      : (visibleModels[0]?.key ?? '');
 
   return (
     <div className={styles.page} data-plugin-fullbleed>
@@ -58,7 +67,7 @@ export default async function WardenPage() {
         initialSessionId={mostRecentSession?.id ?? null}
         initialMessages={initialMessages}
         models={visibleModels}
-        defaultModelKey={visibleModels[0]?.key ?? ''}
+        defaultModelKey={resolvedDefaultModelKey}
         allModelsHidden={allModelsHidden}
       />
     </div>

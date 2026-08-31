@@ -69,6 +69,22 @@ export const wardenModelVisibilityOverrides = sqliteTable('warden_model_visibili
   createdAt: integer('created_at').notNull(),
 });
 
+/**
+ * Per-user Warden preferences (RFC 0063 §11, epic task 22.9) — currently
+ * just the default model for a brand-new session. One row per user,
+ * get-or-create like the old single-conversation table used to be;
+ * `defaultModelKey` is nullable — no row (or a null value) means "no
+ * explicit default, fall back to the first visible model."
+ */
+export const wardenUserSettings = sqliteTable('warden_user_settings', {
+  id: text('id').primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  defaultModelKey: text('default_model_key'),
+  createdAt: integer('created_at').notNull(),
+});
+
 export type WardenSessionRow = typeof wardenSessions.$inferSelect;
 export type WardenMessageRow = typeof wardenMessages.$inferSelect;
 export type WardenModelVisibilityOverrideRow = typeof wardenModelVisibilityOverrides.$inferSelect;
+export type WardenUserSettingsRow = typeof wardenUserSettings.$inferSelect;

@@ -11,8 +11,8 @@ status: >
   pinnable sessions; a consolidated Settings surface (General/Providers/
   Models) replacing the standalone /warden/providers and /warden/models
   routes; and a redesigned composer. Sequenced as epic tasks 22.8-22.11,
-  workstream 0021 — leg 1 (22.8, the sessions data model and API) is done;
-  legs 2-4 (settings consolidation, sidebar UI, composer redesign) remain,
+  workstream 0021 — legs 1-2 (22.8 sessions data model/API, 22.9 settings
+  consolidation) are done; legs 3-4 (sidebar UI, composer redesign) remain,
   see that workstream for legs. Tool execution/task handoff/floating
   button/voice remain a future, not-yet-scheduled phase, unchanged from the
   second rewrite)
@@ -32,7 +32,7 @@ scope: >
   design and its second rewrite's single-conversation UI
 incorporated_into_plan: >
   Yes — epic tasks 22.4-22.5 (workstream 0019, done) and 22.8-22.11
-  (workstream 0021, leg 1/22.8 done, legs 2-4 planned)
+  (workstream 0021, legs 1-2/22.8-22.9 done, legs 3-4 planned)
 ---
 
 # RFC 0063 - Warden: core assistant platform plugin and harness engine
@@ -703,21 +703,19 @@ contracts in later — it's deferred by choice, not by architecture.
   unreachable from the sidebar) vs. a "load more"/search affordance — left
   to implementation; §10 currently specs the hard-cutoff version as the v1
   behavior.
-- **Which model generates a session's title.** The session's own
-  currently-selected provider/model (consistent, but could be an expensive
-  vendor call for a trivial title) vs. a fixed lightweight default
-  independent of the user's provider choice (cheaper/faster, but a second
-  code path and possibly a second, unconfigured provider dependency).
-  Undecided — see §10.
-- **Retention mechanism.** §11 scopes General's retention control to a
-  manual, on-demand action for v1. Whether Warden ever needs automatic
+- ~~**Which model generates a session's title.**~~ **Resolved (task
+  22.8).** No model call at all — `deriveTitle()` derives a title
+  synchronously from the session's first user message (trimmed,
+  whitespace-collapsed, truncated to 60 chars). Avoids the cost/latency of
+  a vendor call, and a title the user can always rename didn't justify one.
+- ~~**Retention mechanism.**~~ **Resolved for v1 (task 22.9).** A manual,
+  on-demand "delete sessions inactive for over N days" action, excluding
+  pinned sessions unconditionally. Whether Warden ever needs _automatic_
   scheduled retention (which would require declaring a new `sdk.schedules`
-  capability) is a real future question, not designed here.
-- **Export mechanism.** §11 leaves open whether Settings → General's export
-  action deep-links to the existing account-wide portability export (no new
-  mechanism) or adds a new Warden-only JSON download by invoking
-  `provideExport`'s callback directly from plugin UI (a new, not-currently-
-  supported invocation path for that hook).
+  capability) remains a real future question, not designed here.
+- ~~**Export mechanism.**~~ **Resolved (task 22.9).** Settings → General's
+  export action deep-links to the existing account-wide portability export
+  (`/account/data`) — no new Warden-only download mechanism.
 - **Mobile shell timing.** This revision is scoped to desktop/web only
   (§10); componentization should keep the door open for a dedicated mobile
   shell later (matching how `.local` plugins like docs/sheets/tally split a

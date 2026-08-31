@@ -28,12 +28,24 @@ vi.mock('../_lib/model-visibility', () => ({
   setModelVisibility: (...args: unknown[]) => setModelVisibility(...args),
 }));
 
+const deleteInactiveSessions = vi.fn();
+vi.mock('../_lib/sessions', () => ({
+  deleteInactiveSessions: (...args: unknown[]) => deleteInactiveSessions(...args),
+}));
+
+const setDefaultModelKey = vi.fn();
+vi.mock('../_lib/user-settings', () => ({
+  setDefaultModelKey: (...args: unknown[]) => setDefaultModelKey(...args),
+}));
+
 class UnsafeProviderUrlError extends Error {}
 vi.mock('../_lib/url-safety', () => ({ UnsafeProviderUrlError }));
 
 const {
   createProviderAction,
+  deleteInactiveSessionsAction,
   deleteProviderAction,
+  setDefaultModelAction,
   setModelVisibilityAction,
   updateProviderAction,
 } = await import('../actions');
@@ -211,5 +223,72 @@ describe('setModelVisibilityAction', () => {
     setModelVisibility.mockRejectedValue(new Error('db down'));
     const result = await setModelVisibilityAction('local', false);
     expect(result).toEqual({ ok: false, error: 'Could not update this model.' });
+  });
+});
+
+describe('setDefaultModelAction', () => {
+  it('sets the default model, scoped to the calling user', async () => {
+    const result = await setDefaultModelAction('conn-1:gpt-4o');
+    expect(setDefaultModelKey).toHaveBeenCalledWith('user-1', 'tenant-1', 'conn-1:gpt-4o');
+    expect(result).toEqual({ ok: true, message: 'Default model updated.' });
+  });
+
+  it('clears the default when passed null', async () => {
+    const result = await setDefaultModelAction(null);
+    expect(setDefaultModelKey).toHaveBeenCalledWith('user-1', 'tenant-1', null);
+    expect(result).toEqual({ ok: true, message: 'Default model updated.' });
+  });
+
+  it('rejects when not signed in, without touching the setting', async () => {
+    requireSession.mockRejectedValue(new NotAuthenticatedError());
+    const result = await setDefaultModelAction('local');
+    expect(result).toEqual({
+      ok: false,
+      error: 'You must be signed in to manage Warden providers.',
+    });
+    expect(setDefaultModelKey).not.toHaveBeenCalled();
+  });
+
+  it('falls back to a generic message for an unrecognized failure', async () => {
+    setDefaultModelKey.mockRejectedValue(new Error('db down'));
+    const result = await setDefaultModelAction('local');
+    expect(result).toEqual({ ok: false, error: 'Could not update the default model.' });
+  });
+});
+
+describe('deleteInactiveSessionsAction', () => {
+  it('reports how many sessions were deleted', async () => {
+    deleteInactiveSessions.mockResolvedValue(3);
+    const result = await deleteInactiveSessionsAction(30);
+    expect(deleteInactiveSessions).toHaveBeenCalledWith('user-1', 'tenant-1', 30);
+    expect(result).toEqual({ ok: true, message: 'Deleted 3 inactive sessions.' });
+  });
+
+  it('uses singular phrasing for exactly one deleted session', async () => {
+    deleteInactiveSessions.mockResolvedValue(1);
+    const result = await deleteInactiveSessionsAction(30);
+    expect(result).toEqual({ ok: true, message: 'Deleted 1 inactive session.' });
+  });
+
+  it('reports zero deletions distinctly', async () => {
+    deleteInactiveSessions.mockResolvedValue(0);
+    const result = await deleteInactiveSessionsAction(30);
+    expect(result).toEqual({ ok: true, message: 'No inactive sessions to delete.' });
+  });
+
+  it('rejects when not signed in, without deleting anything', async () => {
+    requireSession.mockRejectedValue(new NotAuthenticatedError());
+    const result = await deleteInactiveSessionsAction(30);
+    expect(result).toEqual({
+      ok: false,
+      error: 'You must be signed in to manage Warden providers.',
+    });
+    expect(deleteInactiveSessions).not.toHaveBeenCalled();
+  });
+
+  it('falls back to a generic message for an unrecognized failure', async () => {
+    deleteInactiveSessions.mockRejectedValue(new Error('db down'));
+    const result = await deleteInactiveSessionsAction(30);
+    expect(result).toEqual({ ok: false, error: 'Could not delete inactive sessions.' });
   });
 });

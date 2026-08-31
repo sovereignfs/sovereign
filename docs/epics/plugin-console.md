@@ -814,23 +814,43 @@ pnpm typecheck && pnpm test` pass, `pnpm generate` no longer emits a
 
 ---
 
-#### 📋 13.18 — Console Users page: selection-driven detail column
+#### ✅ 13.18 — Console Users page: selection-driven detail column
 
 **Goal:** Add a 3rd `ThreeColumnLayout` column to `/console/users`: selecting
 a row shows a detail pane with role assignment, capabilities, and status
 actions, replacing `CapabilitiesButton`'s dialog and the per-row action
 buttons. Full technical detail in
 [workstream 0022](../workstreams/0022-console-shell-and-three-column-layout.md)
-leg 2.
+leg 2 (see that leg's Outcome note for exactly what shipped).
 
 **Dependencies:** Task 13.17.
 
 **SRS reference:** None — see workstream 0022's "Why no RFC."
 
-**Review checklist:** See workstream 0022 leg 2's technical notes; at minimum,
-`CapabilitiesButton.tsx`'s dialog is gone, selection state is linkable via a
-URL param that coexists with the page's existing `?page=` pagination, and
-`pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` pass.
+**Review checklist:**
+
+- `CapabilitiesButton.tsx`'s dialog is gone from the desktop table — its
+  content moved into `UserCapabilitiesFields.tsx`, rendered inline in
+  `UserDetailPane.tsx`; `CapabilitiesButton` itself survives only as
+  `UserCard.tsx`'s mobile button+`Dialog` wrapper around that same content.
+- Selecting a row navigates to `?page=<n>&user=<id>`; closing the detail
+  pane (`<Link replace>`) drops `user` while preserving `page`. Verified live
+  in the browser: selecting a user (desktop, ≥900px viewport) shows the
+  detail pane with role, capabilities, and status actions; the owner account
+  shows a protected/no-actions state; closing clears the pane back to a
+  full-width table; a hard reload of a `?user=<id>` URL renders the detail
+  pane directly (linkable/refreshable).
+- Below 900px (but still above the 768px mobile breakpoint —
+  `DETAIL_COLLAPSE_BREAKPOINT_PX` in `layout.tsx`), the detail column
+  collapses to sidebar + table only, verified live via viewport resize.
+- Mobile (<768px) card list and its `CapabilitiesButton` dialog are
+  unaffected — verified live.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` pass; a
+  full `pnpm --filter runtime build` compiled every `/console/*` route
+  cleanly (the check that actually exercises the real, composed plugin
+  files — `runtime/tsconfig.json` excludes them from its own `tsc --noEmit`
+  scope).
+- `plugins/console/manifest.json` bumped `0.6.0` → `0.7.0`.
 
 ---
 
@@ -839,7 +859,7 @@ URL param that coexists with the page's existing `?page=` pagination, and
 **Goal:** Add a 3rd `ThreeColumnLayout` column to `/console/groups`:
 selecting a group shows a detail pane, replacing `ManageGroupDialog`.
 `CreateGroupDialog` (create-new) is evaluated independently — see workstream
-0021 leg 3's technical notes for how leg 2 resolved the equivalent
+0022 leg 3's technical notes for how leg 2 resolved the equivalent
 `InviteDialog` question before assuming the same answer applies unchanged.
 
 **Dependencies:** Task 13.18.

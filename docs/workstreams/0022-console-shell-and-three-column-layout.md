@@ -1,6 +1,6 @@
 # Workstream 0022 — Console: default shell + ThreeColumnLayout
 
-**Status:** 📋 Planned\
+**Status:** ⏳ In Progress — legs 1-2 shipped (PRs #580, #<!-- fill in on PR creation -->); legs 3-5 not yet started\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -93,7 +93,7 @@ variant="static"` as the sidebar column; the old horizontal `.nav` tab
 | Detail-column scope                                                                                     | Users, Groups, Plugins/Apps, External clients — one leg each                                                              | Convert all four in one leg — rejected: each conversion changes that page's interaction model (dialog → persistent pane) and is independently risky; one leg per page keeps each PR reviewable and revertable on its own. Do none at all (2-column only) — rejected per direct developer request ("let's utilize third column also").                                                                                                                                                                                                        |
 | Mobile pattern                                                                                          | Drill-down index (grouped rows, tap → push, back link in each section)                                                    | A mobile fork that shows the sidebar as an always-visible top strip (just the current horizontal tab strip, vertically laid out) — rejected per the developer's explicit reference (a native Settings-app grouped list with drill-down navigation, not a persistent list alongside content). Reusing `SwipableMobileCarousel` (Tasks' pattern) — rejected: that fits a small, fixed set of peer views a user swipes between; Console has 11 sections, and "swipe past 10 siblings to reach Broadcast" is worse than a scrollable index list. |
 | Overview's role                                                                                         | Stays as a dashboard on desktop, becomes the drill-down index on mobile (same route, `ResponsiveSurface` fork)            | Remove Overview now that the sidebar is the nav — rejected per direct developer preference; keeping it also gives mobile a real index page instead of only being reachable when the sidebar happens to render, and leaves room for real at-a-glance stats later.                                                                                                                                                                                                                                                                             |
-| `InviteDialog`/`CreateGroupDialog` (create-new flows)                                                   | Left as dialogs, decided per-leg                                                                                          | Force every dialog in a converted page into the detail column — rejected: "create new" and "view/edit selected" are different interactions (nothing is selected yet when creating), and forcing both through one pane would either need a fake "draft" selection state or two different pane shapes. Each leg decides this for its own page rather than the workstream mandating one answer for all four.                                                                                                                                    |
+| `InviteDialog`/`CreateGroupDialog` (create-new flows)                                                   | Left as dialogs, decided per-leg — **leg 2 confirmed this for `InviteDialog`: stays a plain dialog, untouched**           | Force every dialog in a converted page into the detail column — rejected: "create new" and "view/edit selected" are different interactions (nothing is selected yet when creating), and forcing both through one pane would either need a fake "draft" selection state or two different pane shapes. Each leg decides this for its own page rather than the workstream mandating one answer for all four.                                                                                                                                    |
 | Scope: fold in the stale docs-server reference cleanup (leg 6)                                          | Yes, as its own independent leg in this workstream                                                                        | Open a separate workstream/task for it — rejected per direct developer request ("clean the CLAUDE.md... as a part of the workstream"); it is unrelated to Console/`ThreeColumnLayout` in substance, but small, low-risk, and already scoped during this same planning conversation, so a dedicated leg (no dependency on or from legs 1-5) was judged not worth a separate document.                                                                                                                                                         |
 | RFC 0085 / epic task 9.22 (`NavRail`) conflict, discovered mid-leg-1 while rebasing PR #580 onto `main` | Keep this workstream's design for Console; RFC 0085 marked Superseded (Console only), task 9.22 marked Rejected as scoped | Adopt RFC 0085's design instead (keep Console on `shell: "overlay"`, resized to `md`, with a `NavRail` inside the dialog, mobile unchanged) — considered and rejected by the developer, since this workstream's leg 1 was already coded and its mobile drill-down redesign covers ground RFC 0085 explicitly deferred. RFC 0085's `NavRail`-in-overlay idea is not rejected outright — only its Console-bundled scope is; Account (untouched by this workstream) could still adopt it later as its own, separately-scoped task.              |
 
@@ -339,6 +339,28 @@ never squeeze all three into too little space.
 
 **Do not proceed if:** leg 1's PR hasn't merged yet (standard cross-leg rule).
 
+**Outcome:** Implemented via a small reusable mechanism rather than a
+Users-specific one, since legs 3-5 need the identical shape: a
+`ConsoleDetailPaneContext`/`useConsoleDetailPane` pair in
+`_lib/detail-pane.tsx` mirrors `@sovereignfs/ui`'s `Dialog`/
+`useOverlaySecondRow` pattern exactly (a descendant page registers content,
+`ConsoleLayout` owns the actual `ThreeColumnLayout` 3rd-column slot and
+renders whatever's currently registered) — `ConsoleDetailSlot` wraps the hook
+so a Server Component page can call it without its own `'use client'`
+directive. `CapabilitiesButton.tsx`'s dialog content was split into a shared
+`UserCapabilitiesFields` (the actual grant/revoke list) and a thin
+button+`Dialog` wrapper kept **only** for `UserCard.tsx`'s mobile card list,
+which has no detail column to render into — `UserDetailPane` (desktop)
+renders `UserCapabilitiesFields` directly, no dialog. The table's role
+column became read-only (`RoleBadge`) on desktop; actual role assignment
+moved exclusively into the detail pane. `InviteDialog` stays an untouched
+plain dialog, confirming the Decisions-locked expectation. Selection lives
+in `?user=<id>` (looked up against the full fetched member list, not just
+the current page's slice, so it resolves regardless of which `?page=` is
+showing); close uses `<Link replace>`, select uses a plain `<Link>` —
+matching `sovereign-tasks`' own `?task=<id>` select/close asymmetry
+documented in `docs/plugin-development.md`.
+
 ### Leg 3 — Groups → 3-column
 
 **Epic tasks:** 13.19
@@ -348,10 +370,13 @@ not a paginated table) — a good second rep of the pattern before the two
 more complex remaining pages.
 
 **Technical notes:** `ManageGroupDialog`'s edit logic moves into the detail
-pane; `CreateGroupDialog` (create-new) is evaluated on its own — likely stays
-a dialog for the same "nothing is selected yet when creating" reason noted in
-Decisions locked, but confirm against how leg 2 resolved `InviteDialog` before
-assuming the same answer applies unchanged.
+pane; `CreateGroupDialog` (create-new) is evaluated on its own — leg 2
+resolved the equivalent `InviteDialog` question by leaving it untouched as a
+plain dialog (see leg 2's Outcome note above); `CreateGroupDialog` likely
+follows the same reasoning but confirm rather than assume, since group
+creation's UX shape isn't identical to invite's. Reuse the same
+`ConsoleDetailSlot`/`useConsoleDetailPane` mechanism leg 2 built — it's
+already generic, not Users-specific.
 
 **Do not proceed if:** leg 2's PR hasn't merged yet.
 

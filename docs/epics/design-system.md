@@ -1473,7 +1473,8 @@ design decision. No RFC governs it (see that workstream's "Why no RFC").
 - `packages/ui`'s `package.json` `version` bumped **minor** (new additive
   component/exports, no breaking change) per NFR-04.
 - `docs/design-system.md`'s component reference gains a `NavList` entry.
-#### ✅ 9.28 — `Dialog`: remove duplicate Escape-dismissal
+
+#### ✅ 9.29 — `Dialog`: remove duplicate Escape-dismissal
 
 **Goal:** `Dialog`'s own scrim `<div>` carries an `onKeyDown` handler that calls `onClose()` on Escape (`Dialog.tsx:132-134`), duplicating `useOverlayKeyboardTrap`'s document-level Escape listener (`overlay-shell.ts:59-94`) that `Dialog` already installs one line above it (`Dialog.tsx:118`). Because focus is captured into the panel on open (`useOverlayFocusCapture`), a real Escape keypress bubbles from the focused element through the scrim (firing the redundant handler) and continues natively to `document` (firing the trap's handler) — `onClose()` runs **twice** per keypress. Confirmed empirically: a realistic Escape dispatched from a focused element inside the panel produced 2 `onClose` calls, versus the existing `Dialog.test.tsx` "calls onClose on Escape" test's `fireEvent.keyDown(document, ...)`, which dispatches directly on `document` and misses the bug entirely (it bypasses the exact bubble path that trips the duplicate call). This matters beyond a stray call: `runtime/app/(platform)/(plugins)/@modal/layout.tsx:44` wires `onClose={() => router.back()}` for every `shell: overlay` plugin (Account, Console, third-party overlay plugins), and `docs/architecture-rules.md` documents dismissal as unwinding "exactly one history entry" — the whole `<Link replace>` intra-overlay-navigation convention depends on that. A double `router.back()` pops an extra, unintended history entry; if the overlay was reached with only one prior in-app history entry, it can leave the app entirely.
 
@@ -1495,18 +1496,18 @@ design decision. No RFC governs it (see that workstream's "Why no RFC").
 
 ---
 
-#### ✅ 9.29 — `Drawer`: remove duplicate Escape-dismissal
+#### ✅ 9.30 — `Drawer`: remove duplicate Escape-dismissal
 
-**Goal:** `Drawer.tsx` has the identical bug and root cause as 9.28 — its own scrim `onKeyDown` Escape handler (`Drawer.tsx:141-143`) duplicates `useOverlayKeyboardTrap`'s document-level listener (`Drawer.tsx:85`) it already installs. Same double-`onClose` consequence for any `Drawer` consumer, including `MobileAppsDrawer` (which wraps `Drawer` and backs the platform shell's own mobile Apps drawer).
+**Goal:** `Drawer.tsx` has the identical bug and root cause as 9.29 — its own scrim `onKeyDown` Escape handler (`Drawer.tsx:141-143`) duplicates `useOverlayKeyboardTrap`'s document-level listener (`Drawer.tsx:85`) it already installs. Same double-`onClose` consequence for any `Drawer` consumer, including `MobileAppsDrawer` (which wraps `Drawer` and backs the platform shell's own mobile Apps drawer).
 
 **Deliverables:**
 
-- Same fix as 9.28, applied to `Drawer.tsx`'s scrim `<div>`.
+- Same fix as 9.29, applied to `Drawer.tsx`'s scrim `<div>`.
 - Matching regression test in `Drawer.test.tsx`.
 
-**Dependencies:** None — independent of 9.28, safe in either order; sequenced in the same leg as the identical fix pattern.
+**Dependencies:** None — independent of 9.29, safe in either order; sequenced in the same leg as the identical fix pattern.
 
-**SRS reference:** None — bug fix, same review as 9.28.
+**SRS reference:** None — bug fix, same review as 9.29.
 
 **Review checklist:**
 
@@ -1516,7 +1517,7 @@ design decision. No RFC governs it (see that workstream's "Why no RFC").
 
 ---
 
-#### ✅ 9.30 — `ConfirmDialog`: stop double-firing `onClose`
+#### ✅ 9.31 — `ConfirmDialog`: stop double-firing `onClose`
 
 **Goal:** `ConfirmDialog`'s Cancel button (`ConfirmDialog.tsx:96-98`) calls the `onClose` prop directly via `onClick={onClose}`. The documented, expected consumer reaction is to flip its own `open` state to `false`; on re-render, `ConfirmDialog`'s own `useEffect` (`if (open) el.showModal(); else el.close();`, `ConfirmDialog.tsx:62-67`) sees `open` go `false` and calls `el.close()`, firing the native `'close'` event — which the component's own second effect (`el.addEventListener('close', () => onClose())`, `ConfirmDialog.tsx:73-79`) reacts to by calling `onClose()` a **second** time. The same chain fires on backdrop click (`ConfirmDialog.tsx:87-89`, same direct-call pattern). Confirmed live in a real browser: a single Cancel click on a standalone `ConfirmDialog` (no nesting involved) produced 2 `onClose` calls. Checked all ~25 `<ConfirmDialog>` call sites in the repo (kanban, Console, Account, Warden, Plainwrite, Shopper, Tasks, Sheets) — every one wires `onClose` to a plain idempotent `setState(false)`/`setState(null)`, so this is currently silently harmless in production, but it violates the component's own documented single-call contract and is a footgun for any future non-idempotent consumer (an analytics call, a toast, chained navigation).
 
@@ -1527,7 +1528,7 @@ design decision. No RFC governs it (see that workstream's "Why no RFC").
 
 **Dependencies:** None.
 
-**SRS reference:** None — bug fix, same review as 9.28/9.29.
+**SRS reference:** None — bug fix, same review as 9.29/9.30.
 
 **Review checklist:**
 
@@ -1537,9 +1538,9 @@ design decision. No RFC governs it (see that workstream's "Why no RFC").
 
 ---
 
-#### ✅ 9.31 — Overlay Escape precedence for nested modals
+#### ✅ 9.32 — Overlay Escape precedence for nested modals
 
-**Goal:** even after 9.28–9.30, a `ConfirmDialog` nested inside a `Dialog` (e.g. `CardDetailOverlay`'s delete-confirm, and nearly every Console/Account confirm — deactivate/delete/reset-MFA/vouch/revoke-vouch/cancel-invite, all nested inside the shared `@modal/layout.tsx` `Dialog`) has no way to claim Escape before its ancestor `Dialog` does. Confirmed live in a Storybook repro mirroring `CardDetailOverlay`'s exact nesting: focus inside the nested `ConfirmDialog`, press Escape (real trusted keyboard input, not a synthetic event) → the **outer** `Dialog` closed (outer close count: 1) and the inner `ConfirmDialog` never got to run its own dismissal at all (inner close count: 0) — its native `<dialog>` node was torn out of the DOM when the outer `Dialog`'s document-level Escape trap fired synchronously and unmounted the subtree, racing ahead of the browser's own (spec-deferred) native `<dialog>` Escape/cancel handling. Practical effect: a user trying to cancel "Delete this card?" with Escape instead closes the entire card/user detail overlay; inside Console/Account (whose outer `Dialog`'s `onClose` is `router.back()`), it exits the whole admin surface.
+**Goal:** even after 9.29–9.31, a `ConfirmDialog` nested inside a `Dialog` (e.g. `CardDetailOverlay`'s delete-confirm, and nearly every Console/Account confirm — deactivate/delete/reset-MFA/vouch/revoke-vouch/cancel-invite, all nested inside the shared `@modal/layout.tsx` `Dialog`) has no way to claim Escape before its ancestor `Dialog` does. Confirmed live in a Storybook repro mirroring `CardDetailOverlay`'s exact nesting: focus inside the nested `ConfirmDialog`, press Escape (real trusted keyboard input, not a synthetic event) → the **outer** `Dialog` closed (outer close count: 1) and the inner `ConfirmDialog` never got to run its own dismissal at all (inner close count: 0) — its native `<dialog>` node was torn out of the DOM when the outer `Dialog`'s document-level Escape trap fired synchronously and unmounted the subtree, racing ahead of the browser's own (spec-deferred) native `<dialog>` Escape/cancel handling. Practical effect: a user trying to cancel "Delete this card?" with Escape instead closes the entire card/user detail overlay; inside Console/Account (whose outer `Dialog`'s `onClose` is `router.back()`), it exits the whole admin surface.
 
 **Deliverables:**
 
@@ -1551,9 +1552,9 @@ design decision. No RFC governs it (see that workstream's "Why no RFC").
 
 **Open design decisions — resolved:** `Popover` (which also stacks above `Dialog` per the existing `.close` z-index comment in `Dialog.module.css:176-186`) was **not** audited for the same bug class in this task — no evidence surfaced during this leg that it needs the same registration, and the task's own kill criteria (workstream 0021) said to stop and re-scope rather than expand scope on a suspicion. Left as a genuinely open question for whoever next touches `Popover`'s stacking behavior.
 
-**Dependencies:** Built on 9.28/9.29 (same file, same mechanism).
+**Dependencies:** Built on 9.29/9.30 (same file, same mechanism).
 
-**SRS reference:** None — bug fix, same review as 9.28–9.30.
+**SRS reference:** None — bug fix, same review as 9.29–9.31.
 
 **Review checklist:**
 
@@ -1563,7 +1564,7 @@ design decision. No RFC governs it (see that workstream's "Why no RFC").
 
 ---
 
-#### ✅ 9.32 — `Dialog`: unify the close icon
+#### ✅ 9.33 — `Dialog`: unify the close icon
 
 **Goal:** `Dialog`'s desktop close button uses the `circle-x` icon (`Dialog.tsx:166`, `size="md"`) while the mobile `OverlayHeader` close button — which `Dialog` itself renders for its own mobile mode — uses the plain lucide `x` icon (`OverlayHeader.tsx:67`, `size="sm"`). Same dismiss affordance, two different icons depending on breakpoint. Developer request: standardize on the lucide `x` icon everywhere. Note this reverses a specific, previously recorded decision — `Dialog.tsx:158-164`'s own comment: "`circle-x`, not a bare "×" glyph — developer-requested... platform-wide: every `Dialog` consumer gets this, not just the one it was requested against" — flagged here so the reversal is deliberate, not accidental.
 
@@ -1585,7 +1586,7 @@ design decision. No RFC governs it (see that workstream's "Why no RFC").
 
 ---
 
-#### ✅ 9.33 — `Dialog` header/body/footer composition
+#### ✅ 9.34 — `Dialog` header/body/footer composition
 
 **Goal:** `Dialog` today has no dedicated footer slot — every consumer needing action buttons (Save/Cancel, etc.) renders them as the last item inside `children`, sharing the single scrollable `.content` region (`Dialog.module.css:92-118`); on a tall form those buttons scroll out of view with the rest of the content. `Dialog`'s `title` prop today only renders visually inside `OverlayHeader` on **mobile** (`Dialog.tsx:150-157`) — desktop never shows a header row for it at all, only the floating close button — so a consumer wanting a visible title on desktop currently has to render its own heading inside `children`. Add three explicit, consumer-selectable shapes, matching this repo's existing prop-driven component design (not a new compound-component API): **Body only** (no header/footer — today's default, unchanged), **Header + Body** (a visible, sticky header row on _both_ breakpoints — not mobile-only as today), and **Header + Body + Footer** (header and footer both pinned, only the body between them scrolls).
 
@@ -1614,7 +1615,7 @@ migration onto `footer` was left as a follow-up, as recommended — none of
 the ~20 existing consumers were touched. `Drawer`/`Sheet` were not
 touched either, confirming the scope boundary held.
 
-**Dependencies:** Sequenced after 9.32 (icon) so this leg's header-row rework doesn't also touch the close-icon prop mid-change — not a hard technical dependency, just avoids overlapping diffs.
+**Dependencies:** Sequenced after 9.33 (icon) so this leg's header-row rework doesn't also touch the close-icon prop mid-change — not a hard technical dependency, just avoids overlapping diffs.
 
 **SRS reference:** None — developer-requested composition improvement, additive to the existing `packages/ui` public API.
 
@@ -1628,11 +1629,11 @@ touched either, confirming the scope boundary held.
 
 ---
 
-#### ✅ 9.34 — Retire or redefine `Dialog`'s dead `full` size
+#### ✅ 9.35 — Retire or redefine `Dialog`'s dead `full` size
 
-> **Superseded by `9.38`.** This task's own resolution (keep `full`,
+> **Superseded by `9.39`.** This task's own resolution (keep `full`,
 > document it as a deliberate alias) held only until the developer
-> explicitly asked for a breaking revamp of the whole size scale — `9.38`
+> explicitly asked for a breaking revamp of the whole size scale — `9.39`
 > removes `full` (and `xl`) outright. The history below is kept accurate as
 > a record of what was decided _at the time_ and why; it no longer
 > describes the current `DialogSize`.
@@ -1644,7 +1645,7 @@ touched either, confirming the scope boundary held.
 - Either (a) remove `'full'` from `DialogSize` and simplify `CardDetailOverlay.tsx:75` to a plain `size="xl"` (mobile ignores it regardless), or (b) give `full` real distinct behavior (true edge-to-edge, ignoring the scrim's `--sv-space-8` margin) if a genuine edge-to-edge use case exists. Decide during implementation; default to (a) unless a real use case for true edge-to-edge surfaces.
 - If (a): update `Dialog.test.tsx`'s `full` size assertion accordingly.
 
-**Resolved differently from the default (a) — a third option found during implementation:** removing `'full'` from `DialogSize` turned out to be a real breaking type change, not risk-free cleanup — `CardDetailOverlay.tsx:75`'s call site lives in `sovereign-plugin-kanban.local`, a gitignored `.local` plugin clone (confirmed via `git check-ignore`; `git ls-files` returns nothing for it) explicitly outside this repo's ownership, the same category workstream 0020's own Decisions locked table excluded from direct edits ("written up separately for those plugins' own maintainers... not tracked by this repo's epics/ROADMAP.md"). This repo's own `pnpm typecheck` wouldn't catch the break (composed plugin directories are excluded from `runtime/tsconfig.json`'s scope), but the plugin's own separate build would silently start failing against a future `@sovereignfs/ui` bump — for a change whose only benefit was removing an already-inert value, not fixing a bug. Given 9.34 is itself explicitly low-priority ("not a bug, dead-code cleanup"), a breaking change felt disproportionate to the payoff. Landed on neither (a) nor (b): kept `full` in `DialogSize` (no type change, no version bump needed, no consumer anywhere is affected) and instead **documented** why it's a deliberate alias of `lg`, not an oversight — in both `Dialog.tsx`'s `DialogSize` doc comment and `Dialog.module.css`'s `.lg, .full` rule — which is exactly what the review checklist's own bar asks for ("no remaining `full` size that behaves identically to `lg` **without explanation**" — satisfied by adding the explanation, not only by removing the value). `CardDetailOverlay.tsx`'s own redundant ternary is untouched, left for that plugin's own maintainers per the same precedent.
+**Resolved differently from the default (a) — a third option found during implementation:** removing `'full'` from `DialogSize` turned out to be a real breaking type change, not risk-free cleanup — `CardDetailOverlay.tsx:75`'s call site lives in `sovereign-plugin-kanban.local`, a gitignored `.local` plugin clone (confirmed via `git check-ignore`; `git ls-files` returns nothing for it) explicitly outside this repo's ownership, the same category workstream 0020's own Decisions locked table excluded from direct edits ("written up separately for those plugins' own maintainers... not tracked by this repo's epics/ROADMAP.md"). This repo's own `pnpm typecheck` wouldn't catch the break (composed plugin directories are excluded from `runtime/tsconfig.json`'s scope), but the plugin's own separate build would silently start failing against a future `@sovereignfs/ui` bump — for a change whose only benefit was removing an already-inert value, not fixing a bug. Given 9.35 is itself explicitly low-priority ("not a bug, dead-code cleanup"), a breaking change felt disproportionate to the payoff. Landed on neither (a) nor (b): kept `full` in `DialogSize` (no type change, no version bump needed, no consumer anywhere is affected) and instead **documented** why it's a deliberate alias of `lg`, not an oversight — in both `Dialog.tsx`'s `DialogSize` doc comment and `Dialog.module.css`'s `.lg, .full` rule — which is exactly what the review checklist's own bar asks for ("no remaining `full` size that behaves identically to `lg` **without explanation**" — satisfied by adding the explanation, not only by removing the value). `CardDetailOverlay.tsx`'s own redundant ternary is untouched, left for that plugin's own maintainers per the same precedent.
 
 **Dependencies:** None.
 
@@ -1654,16 +1655,16 @@ touched either, confirming the scope boundary held.
 
 ---
 
-#### ✅ 9.35 — Reconcile `Dialog`'s `xl`/`full` sizes with the manifest `overlaySize` schema
+#### ✅ 9.36 — Reconcile `Dialog`'s `xl`/`full` sizes with the manifest `overlaySize` schema
 
-> **Partially superseded by `9.38`.** `xl`/`full` no longer exist — `9.38`
+> **Partially superseded by `9.39`.** `xl`/`full` no longer exist — `9.39`
 > replaced them with `auto`, which is now the one non-manifest-declarable
 > `DialogSize` value; the doc notes this task added (`runtime/src/overlay.ts`,
-> `docs/plugin-development.md`) were updated in place by `9.38` to say
+> `docs/plugin-development.md`) were updated in place by `9.39` to say
 > `auto` instead of `xl`/`full`, rather than duplicated. The history below
 > describes the split as it stood at the time.
 
-**Goal:** `DialogSize` is `sm | md | xl | lg | full`, but `packages/manifest/src/schema.ts:133`'s `shellConfig.overlaySize` enum only allows `sm | md | lg` — `xl` (and `full`, see 9.34) exist on the component but are unreachable from any plugin manifest declaration; only runtime code calling `<Dialog>` directly (bypassing the manifest-driven `@modal` chrome) can use them. Not necessarily wrong, but undocumented as intentional.
+**Goal:** `DialogSize` is `sm | md | xl | lg | full`, but `packages/manifest/src/schema.ts:133`'s `shellConfig.overlaySize` enum only allows `sm | md | lg` — `xl` (and `full`, see 9.35) exist on the component but are unreachable from any plugin manifest declaration; only runtime code calling `<Dialog>` directly (bypassing the manifest-driven `@modal` chrome) can use them. Not necessarily wrong, but undocumented as intentional.
 
 **Deliverables:**
 
@@ -1671,7 +1672,7 @@ touched either, confirming the scope boundary held.
 
 **Resolved:** documented the split, in both places the deliverable named — `runtime/src/overlay.ts`'s `overlaySizeForSegment` doc comment now states the manifest enum is deliberately narrower than `DialogSize`, and `docs/plugin-development.md`'s `shell: overlay` section (the `overlaySize` bullet) now notes `xl`/`full` aren't manifest-declarable. No manifest schema change — no real plugin use case for manifest-declared `xl` surfaced during this review, matching the default. The existing `overlaySize` row in the manifest field reference table (`docs/plugin-development.md`) needed no edit — it already correctly lists only `sm | md | lg`, matching the actual schema; the two new notes explain _why_ that's narrower than `Dialog`'s own set, without duplicating the enum listing a third time.
 
-**Dependencies:** Followed 9.34 — 9.34 resolved to keep `full` (not remove it), so this task's own doc note correctly says "`xl`/`full`", not just "`xl`".
+**Dependencies:** Followed 9.35 — 9.35 resolved to keep `full` (not remove it), so this task's own doc note correctly says "`xl`/`full`", not just "`xl`".
 
 **SRS reference:** None — cleanup finding from the same design-system review.
 
@@ -1679,7 +1680,7 @@ touched either, confirming the scope boundary held.
 
 ---
 
-#### ✅ 9.36 — De-duplicate `MOTION_DURATION_MS`
+#### ✅ 9.37 — De-duplicate `MOTION_DURATION_MS`
 
 **Goal:** `MOTION_DURATION_MS = 250` is hand-copied verbatim into `Dialog.tsx:18`, `Drawer.tsx:16`, and `Sheet.tsx:45`, each with a comment explaining it must be kept in sync with a CSS custom property by hand. The reasoning against deriving it from CSS is sound (documented in each file), but nothing prevents a future edit to one file silently desyncing the JS unmount timer from its CSS transition in whichever file is missed.
 
@@ -1695,7 +1696,7 @@ touched either, confirming the scope boundary held.
 
 ---
 
-#### ✅ 9.37 — Fallback accessible name in `@modal/layout.tsx`
+#### ✅ 9.38 — Fallback accessible name in `@modal/layout.tsx`
 
 **Goal:** `runtime/app/(platform)/(plugins)/@modal/layout.tsx:41-44` passes `title={title}` (`title = plugin?.name`) to `Dialog` and no `aria-label`. If `plugin` isn't found (e.g. a routePrefix mismatch on a multi-segment interception segment), the `Dialog` renders with neither `title` nor `aria-label` — a modal panel with no accessible name at all. Edge case, not reachable in normal operation today.
 
@@ -1713,22 +1714,22 @@ touched either, confirming the scope boundary held.
 
 ---
 
-#### ✅ 9.38 — Revamp `Dialog`'s size scale: drop `xl`/`full`, add `auto`
+#### ✅ 9.39 — Revamp `Dialog`'s size scale: drop `xl`/`full`, add `auto`
 
-**Goal:** developer feedback on the finished `9.28`–`9.37` work: the five-value `DialogSize` scale (`sm | md | xl | lg | full`) reads as inconsistent — it's really only two distinct behaviors (fixed-width-content-height for `sm`/`md`/`xl`, fixed-100%-box for `lg`/`full`) wearing five names, and `9.34` had already independently flagged `full` as a dead alias. Developer's explicit preference: `sm`, `md`, `lg`, plus a new variant that's content-driven on **both** width and height (not just height, as `sm`/`md` already are) — explicitly accepting this as a breaking change to `@sovereignfs/ui`, to be reconciled with any affected plugin separately before a production release, rather than preserved for backward compatibility the way `9.34` chose to.
+**Goal:** developer feedback on the finished `9.29`–`9.38` work: the five-value `DialogSize` scale (`sm | md | xl | lg | full`) reads as inconsistent — it's really only two distinct behaviors (fixed-width-content-height for `sm`/`md`/`xl`, fixed-100%-box for `lg`/`full`) wearing five names, and `9.35` had already independently flagged `full` as a dead alias. Developer's explicit preference: `sm`, `md`, `lg`, plus a new variant that's content-driven on **both** width and height (not just height, as `sm`/`md` already are) — explicitly accepting this as a breaking change to `@sovereignfs/ui`, to be reconciled with any affected plugin separately before a production release, rather than preserved for backward compatibility the way `9.35` chose to.
 
 **Deliverables:**
 
-- `DialogSize` (`Dialog.tsx`) → `'sm' | 'md' | 'lg' | 'auto'`. `xl` and `full` removed outright (no alias, no deprecation period — superseding `9.34`'s "keep `full`" resolution now that the developer has explicitly authorized the breaking change).
+- `DialogSize` (`Dialog.tsx`) → `'sm' | 'md' | 'lg' | 'auto'`. `xl` and `full` removed outright (no alias, no deprecation period — superseding `9.35`'s "keep `full`" resolution now that the developer has explicitly authorized the breaking change).
 - `auto` (`Dialog.module.css`): `width: fit-content` (shrink-wraps to content, like a flex item centered in `.scrim` naturally would with no explicit width) with `min-width: min(24rem, 100%)` (floor, so sparse content doesn't read as an oddly narrow sliver — matches `sm`'s old fixed width) and `max-width: min(48rem, 100%)` / `max-height: min(48rem, 100%)` (ceiling on both axes — matches where the removed `xl` topped out). Mobile media query updated to include `.auto` (and drop `.xl`/`.full`) in the full-screen-sheet override, including resetting `min-width: 0` there (new — the fixed sizes never needed a mobile `min-width` reset since none of them declared one).
 - `Dialog.stories.tsx`: `ExtraLarge` story removed, new `AutoSize` story added (deliberately narrower content than `md`'s 36rem, to make the shrink-below-fixed-width behavior visible, not just theoretical) — `DialogDemo`'s local size type union updated to match.
 - `Dialog.test.tsx`: `"applies the size class"` switched from `size="full"` to `size="lg"`; `"supports the xl size"` replaced with `"supports the auto size"`.
-- Docs updated to match: `runtime/src/overlay.ts`'s `overlaySizeForSegment` doc comment and `docs/plugin-development.md`'s `overlaySize` bullet (both from `9.35`) now say `auto` instead of `xl`/`full`; `docs/design-system.md`'s two Dialog-size mentions (`Overlay surfaces` table, Storybook coverage table) updated from `sm/md/lg/full` to `sm/md/lg/auto`. `docs/upgrade.md` gets a new `@sovereignfs/ui` entry (migration: `full` → `lg`, `xl` → `auto` or `lg` depending on whether the content genuinely varies in size).
-- `9.34`/`9.35`'s own epic entries get a short pointer note to this task, without rewriting their historical narrative (an accurate record of what was decided at the time and why — including the real breaking-change tradeoff `9.34` weighed — stays more useful than silently overwriting it).
+- Docs updated to match: `runtime/src/overlay.ts`'s `overlaySizeForSegment` doc comment and `docs/plugin-development.md`'s `overlaySize` bullet (both from `9.36`) now say `auto` instead of `xl`/`full`; `docs/design-system.md`'s two Dialog-size mentions (`Overlay surfaces` table, Storybook coverage table) updated from `sm/md/lg/full` to `sm/md/lg/auto`. `docs/upgrade.md` gets a new `@sovereignfs/ui` entry (migration: `full` → `lg`, `xl` → `auto` or `lg` depending on whether the content genuinely varies in size).
+- `9.35`/`9.36`'s own epic entries get a short pointer note to this task, without rewriting their historical narrative (an accurate record of what was decided at the time and why — including the real breaking-change tradeoff `9.35` weighed — stays more useful than silently overwriting it).
 
-**Known affected consumer, confirmed already in `9.34`'s own investigation, not re-migrated here:** `CardDetailOverlay.tsx`'s `size={isMobile ? 'full' : 'xl'}` — the only `xl`/`full` call site in the whole codebase — lives in `sovereign-plugin-kanban.local`, a gitignored `.local` plugin outside this repo's ownership. Per the developer's own framing ("it will break some plugins maybe, but we can address them separately"), this is an accepted, explicitly-scoped-out follow-up, not an oversight — written up as its own bullet in the `docs/upgrade.md` entry so it's discoverable by whoever next touches that plugin.
+**Known affected consumer, confirmed already in `9.35`'s own investigation, not re-migrated here:** `CardDetailOverlay.tsx`'s `size={isMobile ? 'full' : 'xl'}` — the only `xl`/`full` call site in the whole codebase — lives in `sovereign-plugin-kanban.local`, a gitignored `.local` plugin outside this repo's ownership. Per the developer's own framing ("it will break some plugins maybe, but we can address them separately"), this is an accepted, explicitly-scoped-out follow-up, not an oversight — written up as its own bullet in the `docs/upgrade.md` entry so it's discoverable by whoever next touches that plugin.
 
-**Dependencies:** Builds on `9.32`–`9.37` (same files). Directly revises `9.34`/`9.35`'s resolutions.
+**Dependencies:** Builds on `9.33`–`9.38` (same files). Directly revises `9.35`/`9.36`'s resolutions.
 
 **SRS reference:** None — developer-requested breaking revamp, not new design.
 

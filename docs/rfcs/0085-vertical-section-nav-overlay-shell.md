@@ -1,6 +1,6 @@
 # RFC 0085 — Vertical section navigation for overlay-shell plugins (`NavRail`)
 
-**Status:** Draft\
+**Status:** Superseded (Console only) — see update below\
 **Date:** August 2026\
 **Author:** Claude Code + kasunben\
 **Scope:** `packages/ui` (new component, `Dialog` sizing, Storybook),
@@ -10,8 +10,28 @@
 (original overlay shell design).\
 **Incorporated into plan:** No — documentation-first, pending scheduling.
 Tentatively epic task 9.22 in the [Design System](../epics/design-system.md)
-epic, touching [Plugin — Console](../epics/plugin-console.md) (13) and
+epic (now rejected as originally scoped — see below), touching
+[Plugin — Console](../epics/plugin-console.md) (13) and
 [Plugin — Accounts](../epics/plugin-accounts.md) (14) as consumers.
+
+> **Update:** Written independently of, and in parallel with,
+> [workstream 0022](../workstreams/0022-console-shell-and-three-column-layout.md),
+> which resolves the same underlying problem (Console's hand-rolled
+> horizontal tab strip) for Console with a different, incompatible design:
+> `shell: "overlay"` → `shell: "default"` (a real full page, not a resized
+> dialog) plus `ThreeColumnLayout` and a new `NavList` component, including
+> a mobile drill-down redesign this RFC had explicitly deferred as
+> "future work, not a follow-up task yet." The two designs surfaced as a
+> genuine merge conflict (workstream 0022 had already shipped code before
+> this RFC's existence was discovered); the developer chose to keep
+> workstream 0022's direction for Console. **This RFC's Console-specific
+> proposal is superseded and will not be built as written** — epic task 9.22
+> is marked Rejected accordingly. The `NavRail`-in-overlay pattern itself,
+> and its application to Account (untouched by workstream 0022), are **not**
+> rejected — they remain a live option, just no longer scoped as a single
+> combined task with Console. A future task revisiting `NavRail` for Account
+> alone would need to re-derive its own scope from this RFC rather than
+> reuse rejected task 9.22.
 
 ---
 

@@ -1,3 +1,4 @@
+import { sdk } from '@sovereignfs/sdk';
 import { checkHarnessHealth } from './harness-client';
 import { pinnedFetch } from './pinned-fetch';
 import {
@@ -13,6 +14,33 @@ import {
 } from './url-safety';
 
 const MODEL_FETCH_TIMEOUT_MS = 8000;
+
+/**
+ * `discoverModels()` used to run a live health/auth check against every
+ * configured provider (a real network round trip, potentially downloading
+ * and parsing a several-hundred-model catalog) on *every* render of the
+ * chat, models, and providers pages — including plain navigation between
+ * them, with no caching at all. A provider that's slow or unreachable added
+ * up to `MODEL_FETCH_TIMEOUT_MS` to every single page load. This per-process,
+ * per-user cache bounds that to one live pass per `DISCOVERY_CACHE_TTL_MS`;
+ * `invalidateDiscoveryCacheForUser` gives mutation sites and the explicit
+ * "Recheck" actions (`actions.ts`) a way to force a fresh pass sooner.
+ */
+const DISCOVERY_CACHE_TTL_MS = 30_000;
+const discoveryCache = new Map<string, { result: ModelDiscoveryResult; expiresAt: number }>();
+
+/** Drops this user's cached discovery result, if any — the next
+ *  `discoverModels()` call for them runs a live pass instead of serving a
+ *  cached one. Safe to call even if nothing is cached. */
+export function invalidateDiscoveryCacheForUser(userId: string): void {
+  discoveryCache.delete(userId);
+}
+
+/** @internal test-only reset — clears every cached user's entry so test
+ *  cases don't leak results into one another via the shared module cache. */
+export function resetDiscoveryCacheForTests(): void {
+  discoveryCache.clear();
+}
 
 export interface DiscoveredModel {
   /** Stable selection key: `'local'`, or `${providerId}:${modelId}`. */
@@ -101,9 +129,11 @@ async function fetchProviderModels(baseUrl: string, apiKey: string): Promise<Pro
  * Runs a live health/auth check on every call and records the result back
  * onto the connection (`markProviderHealthy`/`markProviderError`), so the
  * provider management UI's per-provider status reflects the most recent
- * real attempt, not a stale save-time assumption.
+ * real attempt, not a stale save-time assumption. Callers should go through
+ * `discoverModels()` below, which fronts this with a short-lived cache —
+ * calling this directly re-runs the full live pass unconditionally.
  */
-export async function discoverModels(): Promise<ModelDiscoveryResult> {
+async function runDiscovery(): Promise<ModelDiscoveryResult> {
   const [localHealth, providers] = await Promise.all([checkHarnessHealth(), listProviders()]);
 
   const models: DiscoveredModel[] = [];
@@ -165,4 +195,23 @@ export async function discoverModels(): Promise<ModelDiscoveryResult> {
     providers: providerStatuses,
     models,
   };
+}
+
+/**
+ * Cached entry point every page/action should call instead of
+ * `runDiscovery()` directly. Serves a per-user result up to
+ * `DISCOVERY_CACHE_TTL_MS` old rather than re-running a live pass against
+ * every provider on every page render — see this file's top-of-file comment
+ * for why that matters. `invalidateDiscoveryCacheForUser` (called from
+ * `actions.ts` on provider mutations and the explicit "Recheck" actions)
+ * forces the next call here to run live again.
+ */
+export async function discoverModels(): Promise<ModelDiscoveryResult> {
+  const session = await sdk.auth.requireSession();
+  const cached = discoveryCache.get(session.user.id);
+  if (cached && cached.expiresAt > Date.now()) return cached.result;
+
+  const result = await runDiscovery();
+  discoveryCache.set(session.user.id, { result, expiresAt: Date.now() + DISCOVERY_CACHE_TTL_MS });
+  return result;
 }

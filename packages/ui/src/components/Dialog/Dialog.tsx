@@ -54,16 +54,18 @@ export function useOverlaySecondRow(node: ReactNode | null): boolean {
   return setSecondRow !== undefined;
 }
 
-// `full` is CSS-identical to `lg` (both a true fixed 100%/100% box, see
-// Dialog.module.css's `.lg, .full` rule) — a deliberate alias, not dead code
-// left behind by oversight. Removing it outright would be a breaking type
-// change for zero runtime benefit: the sole call site in this repo,
-// CardDetailOverlay.tsx's `size={isMobile ? 'full' : 'xl'}`, lives in a
-// gitignored `.local` plugin clone outside this repo's ownership, whose own
-// separate build would start failing against a future bump with no local
-// way to catch it first. Kept for that consumer; every new consumer should
-// prefer `lg` directly.
-export type DialogSize = 'sm' | 'md' | 'xl' | 'lg' | 'full';
+// BREAKING (packages/ui minor bump + docs/upgrade.md migration note): `xl`
+// and `full` were removed here — `full` was a dead alias of `lg` (identical
+// CSS), and `xl` was a fixed-width variant with no distinct behavior `auto`
+// doesn't now cover better. `auto` is new: unlike `sm`/`md` (fixed width,
+// content-driven height only), it sizes to content on BOTH width and
+// height, capped rather than fixed on either axis — for content whose
+// natural size varies a lot (a card detail modal with an optional
+// checklist/comments section) rather than reliably filling a fixed width.
+// `lg` is unchanged — the only size that's a true fixed 100%/100% box,
+// still what overlay-shell plugins (Account, Console) need so the panel
+// holds still while they switch internal views.
+export type DialogSize = 'sm' | 'md' | 'lg' | 'auto';
 
 export interface DialogProps {
   /** Whether the dialog is shown. When false, nothing renders. */

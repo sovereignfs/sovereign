@@ -9,7 +9,7 @@ function DialogDemo({
   size = 'lg',
   label = 'Example dialog',
 }: {
-  size?: 'sm' | 'md' | 'xl' | 'lg' | 'full';
+  size?: 'sm' | 'md' | 'lg' | 'auto';
   label?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -48,7 +48,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Modal surface (scrim + panel). Router-agnostic — caller provides `onClose`. Supports Esc, scrim-click, focus trap and focus restoration. Sizes: `sm` / `md` / `xl` / `lg` / `full`. Mobile always renders as a full-screen sheet. Three composition shapes via the optional `header`/`footer` props: Body only (both omitted, the default), Header + Body, Header + Body + Footer — see the stories below the size examples.',
+          'Modal surface (scrim + panel). Router-agnostic — caller provides `onClose`. Supports Esc, scrim-click, focus trap and focus restoration. Sizes: `sm` / `md` / `lg` / `auto`. `sm`/`md` are fixed-width, content-driven height; `auto` is content-driven on both width and height; `lg` is a true fixed 100%/100% box. Mobile always renders as a full-screen sheet. Three composition shapes via the optional `header`/`footer` props: Body only (both omitted, the default), Header + Body, Header + Body + Footer — see the stories below the size examples.',
       },
     },
   },
@@ -69,14 +69,51 @@ export const Medium: Story = {
   render: (_args) => <DialogDemo size="md" label="Medium dialog" />,
 };
 
-export const ExtraLarge: Story = {
-  args: { open: false, onClose: () => {}, children: null },
-  render: (_args) => <DialogDemo size="xl" label="Extra-large dialog" />,
-};
-
 export const Large: Story = {
   args: { open: false, onClose: () => {}, children: null },
   render: (_args) => <DialogDemo size="lg" label="Large dialog" />,
+};
+
+/**
+ * `auto` sizes to content on both width and height, unlike `sm`/`md` (fixed
+ * width, content-driven height only) — capped, not fixed, on either axis.
+ * This demo's own content is deliberately narrower than `md`'s 36rem, so the
+ * panel visibly shrinks below it — a fixed-width size can't do that.
+ */
+export const AutoSize: Story = {
+  args: { open: false, onClose: () => {}, children: null },
+  render: (_args) => {
+    function Demo() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <Button onClick={() => setOpen(true)}>Open auto-sized dialog</Button>
+          <Dialog open={open} onClose={() => setOpen(false)} size="auto" aria-label="Delete item?">
+            <div style={{ padding: 24, fontFamily: 'system-ui', maxWidth: '18rem' }}>
+              <h2
+                style={{
+                  fontSize: 18,
+                  fontWeight: 600,
+                  color: 'var(--sv-color-text-primary)',
+                  marginBottom: 12,
+                }}
+              >
+                Delete item?
+              </h2>
+              <p style={{ color: 'var(--sv-color-text-muted)', marginBottom: 24 }}>
+                This panel is narrower than `md`'s fixed 36rem — `auto` shrank to fit this short
+                message instead of padding out a fixed width.
+              </p>
+              <Button variant="secondary" onClick={() => setOpen(false)}>
+                Close
+              </Button>
+            </div>
+          </Dialog>
+        </>
+      );
+    }
+    return <Demo />;
+  },
 };
 
 export const Closed: Story = {

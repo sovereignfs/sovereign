@@ -879,6 +879,33 @@ See [`docs/plugin-database.md`](plugin-database.md) for the full reference.
 
 ## Published package migrations
 
+### `@sovereignfs/ui` — `Dialog`'s `size` prop drops `xl`/`full`, adds `auto` (breaking)
+
+**`DialogSize` is now `'sm' | 'md' | 'lg' | 'auto'`** — `xl` and `full` are
+removed outright, no deprecation period. `full` was a dead alias of `lg`
+(identical CSS on every breakpoint); `xl` was a fixed-48rem-width variant
+with content-driven height only. Consolidating the size scale down to three
+consistent behaviors (`sm`/`md`: fixed width, content-driven height, capped;
+`lg`: true fixed 100%/100% box; `auto`: content-driven on **both** width and
+height, capped rather than fixed on either axis) closes a real inconsistency
+— five names doing the work of two behaviors.
+
+**Migration:** replace `size="full"` with `size="lg"` (they always rendered
+identically). Replace `size="xl"` with `size="auto"` if the dialog's content
+genuinely varies in size (the case `xl` was originally added for — a card
+detail modal with an optional checklist/comments section), or with `size="lg"`
+if it should behave like a fixed full-panel overlay instead.
+
+**A `sovereign-plugin-kanban.local`-quality of plugin will need this
+migration** — `CardDetailOverlay.tsx`'s `size={isMobile ? 'full' : 'xl'}`
+call site is the only one found in this codebase's own review (mobile
+ignores `size` entirely regardless, so only the desktop `'xl'` branch is
+live). That specific plugin is outside this repo's ownership (a gitignored
+`.local` clone) and was not migrated as part of this change — any plugin
+using `xl`/`full` needs its own follow-up before adopting this
+`@sovereignfs/ui` version. `packages/ui` bumped **minor** per NFR-04's floor
+for a breaking change to a published package.
+
 ### `@sovereignfs/manifest` 0.26.0 → 1.0.0 (breaking — RFC 0078)
 
 **The `offline` manifest field is now a plain boolean, replacing the

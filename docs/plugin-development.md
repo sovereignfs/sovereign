@@ -1349,8 +1349,8 @@ You write ordinary pages; the platform handles the rest:
   dismissal); your pages never implement a modal shell.
 - The dialog size is set by `shellConfig.overlaySize` (`sm` | `md` | `lg`,
   default `lg`) — deliberately narrower than the `Dialog` component's own
-  full size set (`sm` | `md` | `xl` | `lg` | `full`); `xl`/`full` are not
-  declarable from a plugin manifest.
+  full size set (`sm` | `md` | `lg` | `auto`); `auto` (content-driven on
+  both width and height) is not declarable from a plugin manifest.
 
 **Intra-overlay navigation must use `replace`.** The dialog is dismissed with
 `router.back()`, which unwinds exactly one history entry. If your in-dialog tab

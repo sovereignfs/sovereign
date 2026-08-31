@@ -24,3 +24,10 @@ export type {
 } from './useCarouselRouteSync';
 export { useReorderSensors, shouldHandleDndEvent } from './useReorderSensors';
 export type { UseReorderSensorsOptions } from './useReorderSensors';
+export { useSwipeStack, SWIPE_STACK_TRANSITION_MS } from './useSwipeStack';
+export type {
+  SwipeDirection,
+  UseSwipeStackOptions,
+  UseSwipeStackHandlers,
+  UseSwipeStackResult,
+} from './useSwipeStack';

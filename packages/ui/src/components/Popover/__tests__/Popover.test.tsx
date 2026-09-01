@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { StrictMode } from 'react';
+import { StrictMode, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, fireEvent } from '@testing-library/react';
 import { Popover } from '../Popover';
@@ -75,6 +75,53 @@ describe('Popover', () => {
     );
     fireEvent.mouseDown(document.body);
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  describe('Escape precedence with a nested Popover', () => {
+    it('defers Escape to a nested open Popover instead of closing the outer one', () => {
+      const outerOnClose = vi.fn();
+
+      function NestedHarness() {
+        // Starts closed and opens via a later click, matching the real
+        // sequence (e.g. a date-picker Popover opened from a field inside a
+        // Combobox's own popover content) — mounting both already-open in
+        // the same initial render would instead have React fire the child's
+        // registration effect before the parent's in that one shared commit,
+        // the one case this stack-order approach doesn't handle (see the
+        // equivalent Dialog+ConfirmDialog regression test's own note).
+        const [innerOpen, setInnerOpen] = useState(false);
+        return (
+          <Popover open={true} onClose={outerOnClose} aria-label="Outer" trigger={trigger}>
+            <button type="button" onClick={() => setInnerOpen(true)}>
+              Open inner
+            </button>
+            <Popover
+              open={innerOpen}
+              onClose={() => setInnerOpen(false)}
+              aria-label="Inner"
+              trigger={<span />}
+            >
+              Inner content
+            </Popover>
+          </Popover>
+        );
+      }
+
+      render(<NestedHarness />);
+      fireEvent.click(screen.getByRole('button', { name: 'Open inner' }));
+      expect(screen.getByRole('dialog', { name: 'Inner' })).toBeTruthy();
+
+      // The nested Popover is topmost — the outer Popover's own Escape
+      // listener must not act while it's open.
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(outerOnClose).not.toHaveBeenCalled();
+      expect(screen.queryByRole('dialog', { name: 'Inner' })).toBeNull();
+
+      // With the inner one dismissed, the outer Popover is topmost again —
+      // a second Escape now reaches it.
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(outerOnClose).toHaveBeenCalledOnce();
+    });
   });
 
   it('does not call onClose when clicking inside the panel', () => {

@@ -106,6 +106,7 @@ export function ProviderRow({
                 name="label"
                 type="text"
                 value={label}
+                disabled={updatePending}
                 onChange={(event: ChangeEvent<HTMLInputElement>) => setLabel(event.target.value)}
               />
             )}
@@ -117,6 +118,7 @@ export function ProviderRow({
                 name="baseUrl"
                 type="text"
                 value={baseUrl}
+                disabled={updatePending}
                 onChange={(event: ChangeEvent<HTMLInputElement>) => setBaseUrl(event.target.value)}
               />
             )}
@@ -134,6 +136,7 @@ export function ProviderRow({
                 autoComplete="new-password"
                 placeholder="Configured — leave blank to keep"
                 value={apiKey}
+                disabled={updatePending}
                 onChange={(event: ChangeEvent<HTMLInputElement>) => setApiKey(event.target.value)}
               />
             )}

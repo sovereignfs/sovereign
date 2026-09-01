@@ -175,9 +175,24 @@ async function seedSqlite(namespace: string = AUTH_STORE_NAME): Promise<void> {
     if (existing) {
       try {
         await run(`UPDATE "user" SET "isTestUser" = 1 WHERE id = ?`, existing.id);
+        // Backfill for a DB seeded before this script set verificationLevel
+        // on insert (see the comment on the INSERT below) — only raises it,
+        // never downgrades a since-vouched account back down. Must check
+        // IS NULL explicitly: a column left NULL by a migration that added
+        // it with no SQL-level DEFAULT (rather than the schema default of 0,
+        // which only better-auth's own ORM layer applies) makes
+        // `"verificationLevel" < 1` evaluate to NULL, not true — a bare `< 1`
+        // guard silently skips exactly the rows most likely to need this
+        // backfill. Verified live: a real pre-fix-seeded dev DB had 3 of 4
+        // seeded rows sitting at NULL, not 0.
+        await run(
+          `UPDATE "user" SET "verificationLevel" = 1
+           WHERE id = ? AND ("verificationLevel" IS NULL OR "verificationLevel" < 1)`,
+          existing.id,
+        );
       } catch {
         consola.warn(
-          `  isTestUser backfill skipped for ${u.email} — start the auth server once first`,
+          `  isTestUser/verificationLevel backfill skipped for ${u.email} — start the auth server once first`,
         );
       }
       consola.info(`  already exists: ${u.email}`);
@@ -185,9 +200,18 @@ async function seedSqlite(namespace: string = AUTH_STORE_NAME): Promise<void> {
     }
     const userId = randomUUID();
     const hashed = await hashPassword(u.password);
+    // verificationLevel: 1 (not the schema's default of 0) — matches exactly
+    // what apps/auth's real create hook computes for a fresh signup when
+    // email verification isn't required (the common local-dev default: see
+    // `env.requireEmailVerification ? 0 : 1` in apps/auth/src/auth.ts).
+    // Without this, `emailVerified: 1` + `verificationLevel: 0` is a
+    // combination the real signup flow can never produce — every
+    // capability gated at level 1 (currently just `user:manage`, RFC 0035)
+    // silently vanishes for every seeded account, including platform:owner,
+    // even though its role preset grants it.
     await run(
-      `INSERT INTO "user" (id, name, email, "emailVerified", image, "createdAt", "updatedAt", role, active, "isTestUser")
-       VALUES (?, ?, ?, 1, NULL, ?, ?, ?, 1, 1)`,
+      `INSERT INTO "user" (id, name, email, "emailVerified", image, "createdAt", "updatedAt", role, active, "isTestUser", "verificationLevel")
+       VALUES (?, ?, ?, 1, NULL, ?, ?, ?, 1, 1, 1)`,
       userId,
       u.name,
       u.email,
@@ -245,9 +269,21 @@ async function seedPostgres(connString: string): Promise<void> {
       if ((rowCount ?? 0) > 0) {
         try {
           await pool.query(`UPDATE "user" SET "isTestUser" = true WHERE email = $1`, [u.email]);
+          // Backfill for a DB seeded before this script set verificationLevel
+          // on insert (see the comment on the INSERT below) — only raises
+          // it, never downgrades a since-vouched account back down. Must
+          // check IS NULL explicitly — see the matching comment in
+          // seedSqlite() for why a bare `< 1` guard misses NULL rows, which
+          // is exactly what a live pre-fix-seeded dev DB had for 3 of 4
+          // seeded accounts.
+          await pool.query(
+            `UPDATE "user" SET "verificationLevel" = 1
+             WHERE email = $1 AND ("verificationLevel" IS NULL OR "verificationLevel" < 1)`,
+            [u.email],
+          );
         } catch {
           consola.warn(
-            `  isTestUser backfill skipped for ${u.email} — start the auth server once first`,
+            `  isTestUser/verificationLevel backfill skipped for ${u.email} — start the auth server once first`,
           );
         }
         consola.info(`  already exists: ${u.email}`);
@@ -255,9 +291,19 @@ async function seedPostgres(connString: string): Promise<void> {
       }
       const userId = randomUUID();
       const hashed = await hashPassword(u.password);
+      // verificationLevel: 1 (not the schema's default of 0) — matches
+      // exactly what apps/auth's real create hook computes for a fresh
+      // signup when email verification isn't required (the common
+      // local-dev default: see `env.requireEmailVerification ? 0 : 1` in
+      // apps/auth/src/auth.ts). Without this, `emailVerified: true` +
+      // `verificationLevel: 0` is a combination the real signup flow can
+      // never produce — every capability gated at level 1 (currently just
+      // `user:manage`, RFC 0035) silently vanishes for every seeded
+      // account, including platform:owner, even though its role preset
+      // grants it.
       await pool.query(
-        `INSERT INTO "user" (id, name, email, "emailVerified", image, "createdAt", "updatedAt", role, active, "isTestUser")
-         VALUES ($1, $2, $3, true, NULL, $4, $5, $6, true, true)`,
+        `INSERT INTO "user" (id, name, email, "emailVerified", image, "createdAt", "updatedAt", role, active, "isTestUser", "verificationLevel")
+         VALUES ($1, $2, $3, true, NULL, $4, $5, $6, true, true, 1)`,
         [userId, u.name, u.email, now, now, u.role],
       );
       await pool.query(

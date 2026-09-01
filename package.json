@@ -22,6 +22,7 @@
     "design:tokens:check": "tsx scripts/design-tokens-check.ts",
     "docs:check-links": "tsx scripts/check-doc-links.ts",
     "verify:push": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm design:tokens:check && pnpm test",
+    "hooks:pre-push": "tsx scripts/pre-push-check.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:unit": "vitest run --reporter=verbose",
@@ -46,7 +47,7 @@
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged && pnpm validate:plugin-boundary",
-    "pre-push": "pnpm verify:push"
+    "pre-push": "pnpm hooks:pre-push"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

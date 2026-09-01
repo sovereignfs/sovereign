@@ -21,6 +21,8 @@ const replace = vi.fn();
 const refresh = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push, replace, refresh }),
+  usePathname: () => '/warden',
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 // Menu forks Popover/Drawer via useIsMobile (matchMedia) and Popover uses
@@ -124,7 +126,10 @@ describe('WardenSidebar — groups', () => {
 
   it('falls back to "New chat" for a session with no title yet', () => {
     renderSidebar({ recentSessions: [session({ id: 'r-1', title: null })] });
-    expect(screen.getByText('New chat')).toBeDefined();
+    // Two "New chat" links now exist: the primary-nav action (href /warden)
+    // and this session's own untitled fallback (href /warden?session=r-1).
+    const links = screen.getAllByRole('link', { name: 'New chat' });
+    expect(links.some((link) => link.getAttribute('href') === '/warden?session=r-1')).toBe(true);
   });
 
   it('highlights the active session distinctly from the others', () => {
@@ -137,12 +142,12 @@ describe('WardenSidebar — groups', () => {
     expect(activeRow?.className).not.toBe(inactiveRow?.className);
   });
 
-  it('links each row to its own session id, and "+ New" to a plain /warden', () => {
+  it('links each row to its own session id, and "New chat" to a plain /warden', () => {
     renderSidebar({ recentSessions: [session({ id: 'r-1', title: 'One' })] });
     expect(screen.getByRole('link', { name: 'One' }).getAttribute('href')).toBe(
       '/warden?session=r-1',
     );
-    expect(screen.getByRole('link', { name: /New/ }).getAttribute('href')).toBe('/warden');
+    expect(screen.getByRole('link', { name: 'New chat' }).getAttribute('href')).toBe('/warden');
   });
 
   it('links Settings to /warden/settings', () => {
@@ -150,6 +155,30 @@ describe('WardenSidebar — groups', () => {
     expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe(
       '/warden/settings',
     );
+  });
+
+  it('places Providers and Models links under New chat, in the primary nav', () => {
+    renderSidebar();
+    expect(screen.getByRole('link', { name: 'Providers' }).getAttribute('href')).toBe(
+      '/warden/settings?tab=providers',
+    );
+    expect(screen.getByRole('link', { name: 'Models' }).getAttribute('href')).toBe(
+      '/warden/settings?tab=models',
+    );
+  });
+});
+
+describe('WardenSidebar — collapse control', () => {
+  it('renders no collapse button when onToggleCollapse is omitted', () => {
+    renderSidebar();
+    expect(screen.queryByRole('button', { name: 'Hide sessions sidebar' })).toBeNull();
+  });
+
+  it('renders a collapse button that calls onToggleCollapse when provided', () => {
+    const onToggleCollapse = vi.fn();
+    renderSidebar({ onToggleCollapse });
+    fireEvent.click(screen.getByRole('button', { name: 'Hide sessions sidebar' }));
+    expect(onToggleCollapse).toHaveBeenCalled();
   });
 });
 

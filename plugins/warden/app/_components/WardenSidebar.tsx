@@ -2,16 +2,17 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Button,
   ConfirmDialog,
   Icon,
   Menu,
+  NavList,
   useCommitOnEnterOrBlur,
   useToast,
 } from '@sovereignfs/ui';
-import type { MenuEntry } from '@sovereignfs/ui';
+import type { MenuEntry, NavListGroup } from '@sovereignfs/ui';
 import {
   deleteSessionAction,
   pinSessionAction,
@@ -34,17 +35,27 @@ import styles from './warden-sidebar.module.css';
  * from the same URL-driven server data (`?session=`), so they can never
  * disagree about which session is "open" (the leg's own "do not proceed
  * if" condition).
+ *
+ * `onToggleCollapse` is optional and supplied by `WardenLayoutShell` via
+ * `cloneElement` (it owns the collapse state, this component doesn't) — when
+ * present, a collapse button renders at the top of the sidebar itself, since
+ * the button should live inside the sidebar while it's visible and move back
+ * to the main column only once collapsing hides the sidebar entirely.
  */
 export function WardenSidebar({
   pinnedSessions,
   recentSessions,
   activeSessionId,
+  onToggleCollapse,
 }: {
   pinnedSessions: SessionView[];
   recentSessions: SessionView[];
   activeSessionId: string | null;
+  onToggleCollapse?: () => void;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const toast = useToast();
   const [, startTransition] = useTransition();
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
@@ -186,14 +197,63 @@ export function WardenSidebar({
     (s) => s.id === confirmDeleteId,
   );
 
+  const activeSettingsTab =
+    pathname === '/warden/settings' ? (searchParams.get('tab') ?? 'general') : null;
+
+  const primaryNavGroups: NavListGroup[] = [
+    {
+      id: 'primary',
+      items: [
+        { id: 'new', label: 'New chat', href: '/warden', icon: 'plus' },
+        {
+          id: 'providers',
+          label: 'Providers',
+          href: '/warden/settings?tab=providers',
+          icon: 'link',
+          active: activeSettingsTab === 'providers',
+        },
+        {
+          id: 'models',
+          label: 'Models',
+          href: '/warden/settings?tab=models',
+          icon: 'layers',
+          active: activeSettingsTab === 'models',
+        },
+      ],
+    },
+  ];
+
   return (
     <nav className={styles.sidebar} aria-label="Chat sessions">
-      <div className={styles.newSessionRow}>
-        <Link href="/warden">
-          <Button type="button" variant="secondary" size="sm">
-            <Icon name="plus" size="sm" aria-hidden /> New
+      {onToggleCollapse && (
+        <div className={styles.collapseRow}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-label="Hide sessions sidebar"
+            onClick={onToggleCollapse}
+          >
+            <Icon name="panel-left" size="sm" aria-hidden />
           </Button>
-        </Link>
+        </div>
+      )}
+
+      <div className={styles.primaryNav}>
+        <NavList
+          groups={primaryNavGroups}
+          variant="static"
+          aria-label="Warden navigation"
+          renderLink={(item, linkProps) => (
+            <Link
+              href={linkProps.href}
+              className={linkProps.className}
+              aria-current={linkProps['aria-current']}
+            >
+              {linkProps.children}
+            </Link>
+          )}
+        />
       </div>
 
       <div className={styles.scrollArea}>

@@ -417,7 +417,11 @@ export function ChatView({
           }
           action={
             allModelsHidden && !incognito ? (
-              <Link href="/warden/settings?tab=models">Manage models</Link>
+              <Link href="/warden/settings?tab=models">
+                <Button variant="secondary" size="sm">
+                  Manage models
+                </Button>
+              </Link>
             ) : undefined
           }
         />

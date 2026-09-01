@@ -5,9 +5,15 @@
   min-height: 0;
 }
 
-.newSessionRow {
+.collapseRow {
   flex-shrink: 0;
-  padding: var(--sv-space-3);
+  padding: var(--sv-space-2) var(--sv-space-2) 0;
+}
+
+.primaryNav {
+  flex-shrink: 0;
+  padding: var(--sv-space-2) var(--sv-space-2) var(--sv-space-3);
+  border-bottom: var(--sv-border-width-hairline) solid var(--sv-color-border);
 }
 
 .scrollArea {

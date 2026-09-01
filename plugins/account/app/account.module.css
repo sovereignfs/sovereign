@@ -1,10 +1,19 @@
+/* Single-column (mobileHeader above content) on mobile; a two-column grid
+   (rail beside content) on desktop — see the @media blocks below. Using
+   grid-template-areas rather than two parallel trees keeps {children} (the
+   .content area) mounted exactly once regardless of breakpoint, instead of
+   duplicating it into a mobile copy and a desktop copy. */
 .account {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    'mobileHeader'
+    'content';
   gap: var(--sv-space-6);
 }
 
-.header {
+.mobileHeader {
+  grid-area: mobileHeader;
   display: flex;
   flex-direction: column;
   gap: var(--sv-space-4);
@@ -24,8 +33,52 @@
   border-bottom: 1px solid var(--sv-color-border);
 }
 
+/* Desktop-only vertical rail (NavList) — hidden by default, shown at
+   width >= 769px below. Not shown at all on mobile, where .mobileHeader's
+   horizontal strip is used instead (task 14.5, re-derived from RFC 0085). */
+.rail {
+  display: none;
+}
+
+.railTitle {
+  margin: 0 0 var(--sv-space-4);
+  padding: 0 var(--sv-space-3);
+  font-size: var(--sv-font-size-2xl);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+}
+
+.content {
+  grid-area: content;
+  min-width: 0;
+}
+
+@media (min-width: 769px) {
+  .account {
+    grid-template-columns: 240px 1fr;
+    grid-template-areas: 'rail content';
+    gap: var(--sv-space-8);
+    align-items: start;
+  }
+
+  .mobileHeader {
+    display: none;
+  }
+
+  .rail {
+    grid-area: rail;
+    display: flex;
+    flex-direction: column;
+    /* Keeps the rail visible while a tall section (e.g. Security) scrolls —
+       Dialog's own .content is the scrolling ancestor this sticks against,
+       same mechanism as .mobileHeader's mobile sticky strip below. */
+    position: sticky;
+    top: 0;
+  }
+}
+
 @media (max-width: 768px) {
-  /* Collapse the account flex gap on mobile; the space below the tab strip is
+  /* Collapse the account grid gap on mobile; the space below the tab strip is
      then governed solely by the header's margin-bottom (below). The default
      gap: space-6 (24px) plus that margin gave far too much room between the
      strip and the content. */
@@ -37,7 +90,7 @@
      Only reached on the standalone (hard-navigation) route — the soft-navigated
      overlay case hides this whole header instead (see .headerHiddenOnMobile)
      because the Dialog's own OverlayHeader shows the title and tab strip there. */
-  .header {
+  .mobileHeader {
     position: sticky;
     top: 0;
     z-index: 10;

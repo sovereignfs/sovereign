@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { Button, Card, FormField, Input, useToast } from '@sovereignfs/ui';
 import type { ActionResult } from '../actions';
@@ -24,6 +24,21 @@ function Feedback({ result }: { result: ActionResult | null }) {
  * would silently wipe an already-valid "Name" the user just typed the
  * moment the *next* field failed validation. Controlled state survives that
  * reset because React reasserts it on the next render regardless.
+ *
+ * The success effect below guards on `handledStateRef` rather than firing
+ * whenever `state?.ok` is true: `useActionState`'s `state` is otherwise the
+ * *only* thing that should gate re-running this effect, but `onAdded` is a
+ * caller-supplied callback, and an effect must list every value it closes
+ * over as a dependency — including one a caller passes as a fresh inline
+ * closure each render. `SetupPrompt`'s own `onAdded` calls `router.push()`,
+ * which (even navigating to the *current* route) re-renders the segment;
+ * that new render hands this effect a new `onAdded` reference, which alone
+ * re-triggers it — replaying the success toast and calling `onAdded()`
+ * again, which pushes again, which re-renders again, looping for several
+ * seconds until the server data catches up and unmounts this form (found
+ * live: four stacked "provider was added" toasts from a single submission).
+ * Comparing against the exact `state` object already handled makes this
+ * effect idempotent regardless of whether a caller's callback is memoized.
  */
 export function AddProviderForm({ onAdded }: { onAdded: () => void }) {
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
@@ -34,9 +49,11 @@ export function AddProviderForm({ onAdded }: { onAdded: () => void }) {
   const [baseUrl, setBaseUrl] = useState('');
   const [apiKey, setApiKey] = useState('');
   const toast = useToast();
+  const handledStateRef = useRef<ActionResult | null>(null);
 
   useEffect(() => {
-    if (state?.ok) {
+    if (state?.ok && state !== handledStateRef.current) {
+      handledStateRef.current = state;
       toast.show({ title: state.message, category: 'success' });
       setLabel('');
       setBaseUrl('');

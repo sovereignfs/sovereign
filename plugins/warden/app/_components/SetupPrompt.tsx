@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, EmptyState } from '@sovereignfs/ui';
 import { AddProviderForm } from './AddProviderForm';
@@ -20,16 +20,23 @@ import styles from '../warden.module.css';
  * `onAdded` sends them straight into the chat screen (`/warden`) — they came
  * here to chat, not to manage providers, and the ordinary chat view now has
  * something to show once at least one model is reachable.
+ *
+ * `onAdded` is memoized (`useCallback`, matching `ProvidersView`'s own
+ * `refresh`) rather than passed as an inline closure — `AddProviderForm`'s
+ * success effect lists its `onAdded` prop as a dependency, so a fresh
+ * function identity on every render would retrigger that effect on its own,
+ * independent of whether the underlying action state actually changed.
  */
 export function SetupPrompt() {
   const [showForm, setShowForm] = useState(false);
   const router = useRouter();
+  const handleAdded = useCallback(() => router.push('/warden'), [router]);
 
   if (showForm) {
     return (
       <div className={styles.emptyState}>
         <div className={styles.setupForm}>
-          <AddProviderForm onAdded={() => router.push('/warden')} />
+          <AddProviderForm onAdded={handleAdded} />
         </div>
       </div>
     );

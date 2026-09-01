@@ -108,14 +108,22 @@ your-override.yml up`), and never assume a fresh `docker compose up` is safe
 to run twice on a shared host.
 
 **Code quality hooks:** The pre-commit hook runs Prettier and ESLint on staged
-files automatically. The pre-push hook runs `pnpm verify:push`, which checks
-formatting, lint, typecheck, and the Vitest suite before pushing. Run
-`pnpm format`, `pnpm lint`, `pnpm typecheck`, or `pnpm test` at any time to
-check your working tree manually.
+files automatically. The pre-push hook (`scripts/pre-push-check.ts`) always
+runs `pnpm verify:push`, which checks formatting, lint, typecheck, and the
+Vitest suite before pushing. Run `pnpm format`, `pnpm lint`, `pnpm typecheck`,
+or `pnpm test` at any time to check your working tree manually.
 
-`pnpm test:e2e` remains manual. Run it before pushing when a change touches
-browser-facing flows, auth, middleware, platform plugins, or the Playwright
-harness.
+`pnpm test:e2e` otherwise remains manual — run it before pushing when a change
+touches browser-facing flows, auth, middleware, platform plugins, or the
+Playwright harness. The one exception: pushing a root platform version tag
+(`vX.Y.Z` / `vX.Y.Z-*`) also runs the e2e suite as part of the pre-push hook,
+mirroring `.github/workflows/e2e.yml`'s own trigger (`publish-images.yml`'s
+pre-publish gate on that same tag pattern) — `ci.yml` never runs e2e on a
+regular branch push/PR, so without this, a same-day change can pass every
+other local/CI check and still fail e2e for the first time only once the tag
+is already pushed. Package release tags (`sdk-vX.Y.Z`, `ui-vX.Y.Z`,
+`create-plugin-vX.Y.Z`) don't trigger it — `publish.yml` doesn't gate those on
+e2e either.
 
 For a small docs-only or work-in-progress push where you intentionally want to
 skip the pre-push hook, use Git's standard bypass flag:

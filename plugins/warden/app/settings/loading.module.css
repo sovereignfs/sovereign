@@ -1,0 +1,6 @@
+.centered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sv-space-12) 0;
+}

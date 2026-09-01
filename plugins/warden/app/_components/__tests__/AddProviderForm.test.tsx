@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ToastProvider } from '@sovereignfs/ui';
+import type { ActionResult } from '../../actions';
 import { AddProviderForm } from '../AddProviderForm';
 
 const createProviderAction = vi.fn();
@@ -75,5 +76,39 @@ describe('AddProviderForm', () => {
     expect(onAddedSecond).not.toHaveBeenCalled();
     expect(onAddedFirst).toHaveBeenCalledTimes(1);
     expect(screen.getAllByText('OpenRouter was added.')).toHaveLength(1);
+  });
+
+  /**
+   * Regression test for a real report: the fields stayed editable for the
+   * whole round trip to the server, reading as if the submission hadn't
+   * registered at all — only the submit button reflected `pending`.
+   */
+  it('disables the input fields while the submission is pending', async () => {
+    let resolveAction!: (value: ActionResult) => void;
+    createProviderAction.mockImplementation(
+      () =>
+        new Promise<ActionResult>((resolve) => {
+          resolveAction = resolve;
+        }),
+    );
+    render(
+      <ToastProvider>
+        <AddProviderForm onAdded={vi.fn()} />
+      </ToastProvider>,
+    );
+
+    fillAndSubmit();
+
+    await waitFor(() =>
+      expect((screen.getByLabelText('Name') as HTMLInputElement).disabled).toBe(true),
+    );
+    expect((screen.getByLabelText('Base URL') as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByLabelText('API key') as HTMLInputElement).disabled).toBe(true);
+
+    resolveAction({ ok: true, message: 'OpenRouter was added.' });
+
+    await waitFor(() =>
+      expect((screen.getByLabelText('Name') as HTMLInputElement).disabled).toBe(false),
+    );
   });
 });

@@ -48,7 +48,7 @@ describe('SetupPrompt', () => {
     expect(push).not.toHaveBeenCalled();
   });
 
-  it('redirects to /warden/settings?tab=providers once a provider is added', async () => {
+  it('redirects to /warden once a provider is added', async () => {
     createProviderAction.mockResolvedValue({ ok: true, message: 'OpenRouter was added.' });
     renderPrompt();
     fireEvent.click(screen.getByRole('button', { name: 'Add a provider' }));
@@ -60,6 +60,6 @@ describe('SetupPrompt', () => {
     fireEvent.change(screen.getByLabelText('API key'), { target: { value: 'sk-test' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add provider' }));
 
-    await waitFor(() => expect(push).toHaveBeenCalledWith('/warden/settings?tab=providers'));
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/warden'));
   });
 });

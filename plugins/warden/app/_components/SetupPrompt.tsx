@@ -17,8 +17,9 @@ import styles from '../warden.module.css';
  * in place, rather than immediately navigating to Settings — a user who
  * hasn't configured anything yet shouldn't be sent away from this screen
  * before they've had a chance to. Once the provider is actually created,
- * `onAdded` sends them on to `/warden/settings?tab=providers`, where they can
- * see it listed, recheck it, or add another.
+ * `onAdded` sends them straight into the chat screen (`/warden`) — they came
+ * here to chat, not to manage providers, and the ordinary chat view now has
+ * something to show once at least one model is reachable.
  */
 export function SetupPrompt() {
   const [showForm, setShowForm] = useState(false);
@@ -28,7 +29,7 @@ export function SetupPrompt() {
     return (
       <div className={styles.emptyState}>
         <div className={styles.setupForm}>
-          <AddProviderForm onAdded={() => router.push('/warden/settings?tab=providers')} />
+          <AddProviderForm onAdded={() => router.push('/warden')} />
         </div>
       </div>
     );

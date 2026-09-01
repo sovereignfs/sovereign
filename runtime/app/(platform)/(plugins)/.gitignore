@@ -7,6 +7,10 @@
 #   - layout.tsx           hosts the @modal overlay slot (RFC 0001)
 #   - @modal/default.tsx   empty-slot fallback
 #   - @modal/layout.tsx    Dialog chrome for intercepted overlay plugins
+#   - @modal/__tests__/    tests for the hand-written files above — this repo
+#                          has no other path to automated coverage for them
+#                          (see vitest.config.ts's and runtime/tsconfig.json's
+#                          own matching narrow exceptions)
 # The generated overlay interception copies (@modal/(.)<routePrefix>) stay
 # ignored.
 /*
@@ -17,3 +21,4 @@
 !/@modal/default.tsx
 !/@modal/error.tsx
 !/@modal/layout.tsx
+!/@modal/__tests__

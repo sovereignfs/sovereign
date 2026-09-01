@@ -28,9 +28,22 @@ function topLevelEntryFiles(appDir: string): string[] {
     .sort();
 }
 
+// tsconfig.json is JSONC (TypeScript's own parser allows `//` comments in
+// it, and this repo uses that — see runtime/tsconfig.json's own `files`
+// entry for why) — plain JSON.parse chokes on them. Strips `//` line
+// comments only, not `/* */` block comments: a naive block-comment regex
+// false-matches this repo's own ordinary tsconfig content — "@/*" (a paths
+// entry) and "**/*.ts" (an include glob) both contain a literal `/*` or
+// `*/` substring with no comment intent at all, confirmed corrupting real
+// tsconfig.json content directly before dropping that half of the strip.
+// No tsconfig.json here uses block comments, so this loses nothing today.
+function stripJsonComments(json: string): string {
+  return json.replace(/\/\/.*$/gm, '');
+}
+
 function includeList(appDir: string): string[] {
   const raw = readFileSync(join(repoRoot, appDir, 'tsconfig.json'), 'utf8');
-  return (JSON.parse(raw) as { include?: string[] }).include ?? [];
+  return (JSON.parse(stripJsonComments(raw)) as { include?: string[] }).include ?? [];
 }
 
 describe.each([['runtime'], ['apps/auth'], ['apps/relay']])(

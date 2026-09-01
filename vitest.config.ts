@@ -2,6 +2,25 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  // Forces oxc's own JSX transform (Vite's default transformer as of this
+  // version) regardless of which tsconfig.json Vite resolves as "nearest"
+  // for a given file — found needing this while adding the first-ever .tsx
+  // test under runtime/: that directory's own tsconfig.json sets "jsx":
+  // "preserve" (correct for Next.js's own SWC build pipeline, which this
+  // test runner has nothing to do with), so oxc left JSX syntax untouched
+  // and Vite's plain-JS import-analysis pass then failed on it ("Failed to
+  // parse source... invalid JS syntax", pointing at raw JSX — the same
+  // esbuild-authored error message even though esbuild wasn't actually the
+  // transformer in play; setting `esbuild.jsx` here instead has no effect
+  // and is silently ignored whenever both are configured, confirmed
+  // directly against this toolchain before landing on the `oxc` option).
+  // packages/ui's tests never hit this only because packages/ui/tsconfig.json
+  // happens to set "jsx": "react-jsx" — an accident of which package a test
+  // lives in, not a deliberate setting for this test runner. 'automatic'
+  // matches that same react-jsx behavior (the modern JSX transform, no
+  // `import React` needed) for every package uniformly, independent of its
+  // own tsconfig.
+  oxc: { jsx: 'automatic' },
   resolve: {
     alias: {
       // Matches runtime/tsconfig.json's own `"@/*": ["./*"]` mapping. The
@@ -46,6 +65,18 @@ export default defineConfig({
       // runtime/app/(platform)/(plugins)/ are intentionally excluded by
       // anchoring to runtime/src/.
       'runtime/src/**/__tests__/**/*.test.{ts,tsx}',
+      // The narrow exception to the runtime/src/-only rule above: @modal's
+      // own hand-written chrome files (layout.tsx et al. — see that
+      // directory's .gitignore for the full list) sit inside the otherwise
+      // fully-generated runtime/app/(platform)/(plugins)/ tree with no other
+      // path to automated coverage. Anchored to the literal @modal/__tests__
+      // segment so it can never match a generated overlay interception copy
+      // (@modal/(.)<routePrefix>/...), which has no __tests__ dir of its own.
+      // The (platform)/(plugins) parens must be escaped — vitest's glob
+      // engine (tinyglobby) otherwise parses bare `(...)` as extglob group
+      // syntax and silently matches nothing, confirmed directly against the
+      // library before settling on this pattern.
+      'runtime/app/\\(platform\\)/\\(plugins\\)/@modal/__tests__/**/*.test.{ts,tsx}',
       // Plugin source trees. Only the source tree under plugins/ is matched —
       // the composed copies live under runtime/app/(platform)/(plugins)/ and
       // are not covered by any include pattern, so they are never double-run.

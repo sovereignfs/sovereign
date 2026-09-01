@@ -17,5 +17,23 @@
     "generated/**/*.ts",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules", ".next", "app/(platform)/(plugins)/**", "app/(minimal)/**"]
+  "exclude": ["node_modules", ".next", "app/(platform)/(plugins)/**", "app/(minimal)/**"],
+  // `files` entries are never subject to `exclude` (unlike `include` globs) —
+  // this is what lets these hand-written exceptions inside the otherwise
+  // fully-generated app/(platform)/(plugins)/ tree stay typechecked despite
+  // that directory's own broad exclude above. Mirrors that directory's own
+  // .gitignore, which enumerates the identical set by name for the same
+  // reason (everything else there is a generated/composed plugin copy that
+  // must NOT be independently typechecked here — see docs/architecture-rules.md's
+  // note on generated handler imports resolving against the wrong location).
+  // A new hand-written file added to that tree needs a matching entry here
+  // (and in .gitignore, and in vitest.config.ts's include list if it's a
+  // test) — there is no glob-negation equivalent in tsconfig's `exclude`.
+  "files": [
+    "app/(platform)/(plugins)/layout.tsx",
+    "app/(platform)/(plugins)/@modal/layout.tsx",
+    "app/(platform)/(plugins)/@modal/default.tsx",
+    "app/(platform)/(plugins)/@modal/error.tsx",
+    "app/(platform)/(plugins)/@modal/__tests__/layout.test.tsx"
+  ]
 }

@@ -128,6 +128,11 @@
   color: var(--sv-color-error-text);
 }
 
+.setupForm {
+  width: 100%;
+  max-width: 32rem;
+}
+
 .errorCard {
   display: flex;
   flex-direction: column;

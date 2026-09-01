@@ -4,7 +4,7 @@
   "name": "Warden",
   "development": true,
   "disabled": false,
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "A personal AI chat assistant, powered by a model provider you choose.",
   "type": "sovereign",
   "repository": "https://github.com/sovereignfs/sovereign/tree/main/plugins/warden",

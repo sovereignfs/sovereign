@@ -93,6 +93,7 @@ import { SnowflakeIcon } from './snowflake';
 import { ShoppingBasketIcon } from './shopping-basket';
 import { PanelLeftIcon } from './panel-left';
 import { PinIcon } from './pin';
+import { CreditCardIcon } from './credit-card';
 
 export type IconName =
   | 'house'
@@ -187,7 +188,8 @@ export type IconName =
   | 'snowflake'
   | 'shopping-basket'
   | 'panel-left'
-  | 'pin';
+  | 'pin'
+  | 'credit-card';
 
 export type IconComponent = (props: SVGProps<SVGSVGElement>) => ReactElement;
 
@@ -285,6 +287,7 @@ export const ICONS: Record<IconName, IconComponent> = {
   'shopping-basket': ShoppingBasketIcon,
   'panel-left': PanelLeftIcon,
   pin: PinIcon,
+  'credit-card': CreditCardIcon,
 };
 
 export { HouseIcon } from './house';
@@ -380,3 +383,4 @@ export { SnowflakeIcon } from './snowflake';
 export { ShoppingBasketIcon } from './shopping-basket';
 export { PanelLeftIcon } from './panel-left';
 export { PinIcon } from './pin';
+export { CreditCardIcon } from './credit-card';

@@ -123,6 +123,10 @@ export const ICON_LIST = [
   // Warden sidebar (RFC 0063 §10, epic task 22.10): collapse toggle + pin
   'panel-left',
   'pin',
+  // Account plugin vertical nav rail (epic task 14.5): Billing section icon —
+  // Profile/Security/Preferences/Notifications/Data/Activity already covered
+  // by 'user'/'shield'/'sliders-horizontal'/'bell'/'lock'/'activity' above.
+  'credit-card',
 ] as const;
 
 export type IconName = (typeof ICON_LIST)[number];

@@ -8,11 +8,11 @@
 `docs/plugin-development.md`. Related to [RFC 0076](0076-ds-sizing-alignment-and-new-primitives.md)
 (new-primitives precedent) and [RFC 0001](0001-overlay-shell-variant.md)
 (original overlay shell design).\
-**Incorporated into plan:** No — documentation-first, pending scheduling.
-Tentatively epic task 9.22 in the [Design System](../epics/design-system.md)
-epic (now rejected as originally scoped — see below), touching
-[Plugin — Console](../epics/plugin-console.md) (13) and
-[Plugin — Accounts](../epics/plugin-accounts.md) (14) as consumers.
+**Incorporated into plan:** Partially — Console's half (originally epic task
+9.22 in the [Design System](../epics/design-system.md) epic) was rejected as
+scoped; see below. Account's half is scoped as
+[epic task 14.5](../epics/plugin-accounts.md) in the
+[Plugin — Accounts](../epics/plugin-accounts.md) epic.
 
 > **Update:** Written independently of, and in parallel with,
 > [workstream 0022](../workstreams/0022-console-shell-and-three-column-layout.md),
@@ -32,6 +32,18 @@ epic (now rejected as originally scoped — see below), touching
 > combined task with Console. A future task revisiting `NavRail` for Account
 > alone would need to re-derive its own scope from this RFC rather than
 > reuse rejected task 9.22.
+
+> **Update 2:** Account's half re-scoped as
+> [epic task 14.5](../epics/plugin-accounts.md). Two changes from this RFC's
+> original design, decided during that re-scoping: Account stays
+> `shell: "overlay"` (resized `"lg" → "md"`, per this RFC's original intent)
+> rather than following Console's `shell: "default"` conversion — Console's
+> composition depends on a full-page height-unlock hook (`data-plugin-
+fullbleed`) that doesn't reach inside a `Dialog`. And no new `NavRail`
+> component is built — `@sovereignfs/ui`'s existing `NavList` (shipped for
+> Console in workstream 0022 leg 1) has no such height dependency and drops
+> into the resized dialog directly, so this RFC's originally-proposed
+> component work is no longer needed for Account either.
 
 ---
 

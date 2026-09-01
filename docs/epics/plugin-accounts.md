@@ -161,6 +161,82 @@ Subsequent tasks added Account sections as part of other epics:
 
 ---
 
+#### 📋 14.5 — Vertical section nav for Account (re-scoped from RFC 0085)
+
+**Goal:** Replace Account's hand-rolled horizontal `.tabs`/`.tab` strip
+(`plugins/account/app/layout.tsx`, `account.module.css`) with
+`@sovereignfs/ui`'s existing `NavList` component (`variant="static"`, a
+single ungrouped group of the 7 existing sections), inside a resized
+`overlaySize: "md"` dialog (currently `"lg"`) — reusing RFC 0085's design
+intent for Account without building the originally-proposed `NavRail`
+component, since `NavList` already fits: unlike Console's workstream 0022
+conversion, it has no dependency on `ThreeColumnLayout`'s `data-plugin-
+fullbleed` height-unlock hook, which only exists in the hard-navigation
+`(platform)` shell tree and not inside `Dialog`. Re-derived from RFC 0085 per
+that RFC's own note that Account's half survives independently of Console's
+rejected task 9.22 (`docs/epics/design-system.md`) — see the RFC's "Update"
+block for the full history of why Console and Account diverged.
+
+**Deliverables:**
+
+- Redefine `Dialog`'s `.md` size (`packages/ui/src/components/Dialog/
+Dialog.module.css`) from the current, unused `36rem × 42rem` portrait box
+  to a landscape box sized against Account's own widest section content
+  (Security, with TOTP/Passkeys/Sessions) — refine visually during
+  implementation, not fixed here (RFC 0085's original `60rem × 40rem`
+  proposal was sized against Console's users table, which is now moot).
+  Minor `@sovereignfs/ui` bump + a `docs/upgrade.md` migration note, per
+  NFR-04.
+- `plugins/account/manifest.json`: `shellConfig.overlaySize` `"lg" → "md"`.
+- Replace `.tabs`/`.tab` in `plugins/account/app/layout.tsx` +
+  `account.module.css` with `NavList variant="static"`, one ungrouped group
+  of the 7 existing sections (Profile/Security/Preferences/Notifications/
+  Billing/Data/Activity), `renderLink` wired to `next/link` — mirroring
+  `plugins/console/app/layout.tsx`'s existing usage.
+- Confirm suitable icons exist in `packages/ui`'s curated `Icon` set
+  (`packages/ui/src/components/Icon/icons`) for all 7 sections — `NavList`
+  requires a per-item `icon`, unlike RFC 0085's original `NavRail` sketch,
+  which had it optional. Add any missing icons via the established
+  convention (`scripts/icon-list.ts` + `pnpm generate:icons`), matching how
+  workstream 0022 leg 3 added `panel-left`/`pin`.
+- Desktop title: keep `<h1>Account</h1>` as a compact header above the
+  `NavList` column, not duplicated in the content pane — resolves RFC 0085's
+  "Desktop title placement" open question for Account.
+- Standalone hard-navigation route (`/account` visited directly, no `Dialog`
+  ancestor — a real, currently-reachable case since `useOverlaySecondRow`
+  no-ops outside a Dialog): render the same vertical-nav layout, constrained
+  to a similar max-width box as the dialog case, rather than a separate
+  fork — resolves RFC 0085's "Standalone hard-navigation route treatment"
+  open question for Account.
+- Mobile: **no change.** Keep today's horizontal scrollable strip via
+  `useOverlaySecondRow`; the full mobile drill-down redesign stays
+  explicitly deferred, matching RFC 0085's original scoping.
+- Grouping: not needed — `NavList`'s `groups` prop already accepts a single
+  ungrouped group (omit `label`), which fits Account's flat 7-section list
+  without waiting on future grouped-rail API work.
+
+**Dependencies:** None on other in-flight tasks. Independent of workstream
+0022 (Console's own, separate, already-shipped conversion) — Account was
+untouched by that workstream.
+
+**SRS reference:** [RFC 0085](../rfcs/0085-vertical-section-nav-overlay-shell.md)
+
+**Review checklist:**
+
+- `pnpm --filter @sovereignfs/ui typecheck` passes; update
+  `Dialog.stories.tsx` if it needs a `size="md"` example reflecting the new
+  dimensions (Storybook hygiene rule, `CLAUDE.md`).
+- Verify live: all 7 Account sections are reachable via the rail, both
+  inside the Dialog overlay and via a direct `/account/<section>` hard
+  navigation, and the active section highlights correctly in both.
+- Verify mobile is visually unchanged — the horizontal strip still renders
+  via `useOverlaySecondRow` inside the Dialog's `OverlayHeader`.
+- `docs/upgrade.md` has a migration note for the `Dialog` `.md` size change.
+- `pnpm lint`, `pnpm format:check`, and `pnpm typecheck` pass.
+- No new hardcoded color literals — `pnpm design:tokens:check` passes.
+
+---
+
 ## Related Docs
 
 - [docs/plugins/account.md](../plugins/) (plugin spec)

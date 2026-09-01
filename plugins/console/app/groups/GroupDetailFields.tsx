@@ -67,7 +67,11 @@ function MemberPicker({ groupId, onChanged }: { groupId: string; onChanged: () =
   }, [state, onChanged]);
 
   return (
-    <form ref={formRef} action={formAction} className={styles.inviteForm}>
+    <form
+      ref={formRef}
+      action={formAction}
+      className={[styles.inviteForm, styles.inviteFormCompact].join(' ')}
+    >
       <input type="hidden" name="groupId" value={groupId} />
       <input type="hidden" name="userId" value={selected?.id ?? ''} />
       <FormField label="Add a person" id="group-member-search" hint="Search by name or email">
@@ -84,13 +88,12 @@ function MemberPicker({ groupId, onChanged }: { groupId: string; onChanged: () =
               autoComplete="off"
             />
             {results.length > 0 && !selected ? (
-              <ul className={styles.cards} style={{ gridTemplateColumns: '1fr', marginTop: 4 }}>
+              <ul className={styles.compactList} style={{ marginTop: 4 }}>
                 {results.map((user) => (
-                  <li key={user.id}>
+                  <li key={user.id} className={styles.compactRow}>
                     <button
                       type="button"
-                      className={styles.card}
-                      style={{ padding: 'var(--sv-space-2) var(--sv-space-3)', cursor: 'pointer' }}
+                      className={styles.compactRowButton}
                       onClick={() => {
                         setSelected(user);
                         setResults([]);
@@ -128,21 +131,12 @@ function MemberList({
   }
 
   return (
-    <ul className={styles.cards} style={{ gridTemplateColumns: '1fr', gap: 'var(--sv-space-2)' }}>
+    <ul className={styles.compactList}>
       {members.map((member) => (
-        <li
-          key={member.userId}
-          className={styles.card}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: 'var(--sv-space-3)',
-          }}
-        >
-          <span>
-            {member.name ?? member.email}
-            {member.name && <span className={styles.textMuted}> ({member.email})</span>}
+        <li key={member.userId} className={styles.compactRow}>
+          <span className={styles.compactRowLabel}>
+            <span className={styles.compactRowTitle}>{member.name ?? member.email}</span>
+            {member.name && <span className={styles.compactRowSubtitle}>{member.email}</span>}
           </span>
           <form
             action={async (formData) => {
@@ -152,9 +146,9 @@ function MemberList({
           >
             <input type="hidden" name="groupId" value={groupId} />
             <input type="hidden" name="userId" value={member.userId} />
-            <button type="submit" className={styles.iconBtnDanger} title="Remove">
+            <Button type="submit" variant="destructive" size="sm">
               Remove
-            </button>
+            </Button>
           </form>
         </li>
       ))}
@@ -185,10 +179,13 @@ export function GroupDetailFields({ group }: { group: GroupSummary }) {
   }, [refreshMembers]);
 
   return (
-    <div className={styles.settingsSections}>
-      <section className={styles.settingsSection}>
-        <h3 className={styles.sectionTitle}>Details</h3>
-        <form action={updateGroupAction} className={styles.inviteForm}>
+    <div className={styles.detailFieldsStack}>
+      <section className={styles.detailSection}>
+        <h3 className={styles.detailSectionTitle}>Details</h3>
+        <form
+          action={updateGroupAction}
+          className={[styles.inviteForm, styles.inviteFormCompact].join(' ')}
+        >
           <input type="hidden" name="id" value={group.id} />
           <FormField label="Name" id={`group-name-${group.id}`}>
             {(field) => <Input {...field} name="name" defaultValue={group.name} />}
@@ -204,8 +201,8 @@ export function GroupDetailFields({ group }: { group: GroupSummary }) {
         </form>
       </section>
 
-      <section className={styles.settingsSection}>
-        <h3 className={styles.sectionTitle}>Members</h3>
+      <section className={styles.detailSection}>
+        <h3 className={styles.detailSectionTitle}>Members</h3>
         {members === null ? (
           <p className={styles.textMuted}>Loading…</p>
         ) : (
@@ -214,14 +211,15 @@ export function GroupDetailFields({ group }: { group: GroupSummary }) {
         <MemberPicker groupId={group.id} onChanged={refreshMembers} />
       </section>
 
-      <section className={styles.settingsSection}>
-        <h3 className={styles.sectionTitle}>Danger zone</h3>
+      <section className={styles.detailSection}>
+        <h3 className={styles.detailSectionTitle}>Danger zone</h3>
         {!confirmingDelete ? (
           <Button
             type="button"
             variant="destructive"
             size="sm"
             onClick={() => setConfirmingDelete(true)}
+            style={{ alignSelf: 'flex-start' }}
           >
             Delete group
           </Button>

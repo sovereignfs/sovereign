@@ -61,7 +61,10 @@ async function getPlugins(): Promise<RawPluginRow[]> {
  * `resolveAccessPolicy` in `@/src/plugin-access-server`), so Console must not
  * show it as "Inactive".
  */
-async function buildPluginRows(
+/** Exported for `../page.tsx` (Overview), which needs the same status
+ *  breakdown for its app counts — one source of truth for the classification
+ *  rules documented above. */
+export async function buildPluginRows(
   examplesEnabled: boolean,
 ): Promise<Omit<PluginRow, 'openableByViewer'>[]> {
   const [rawPlugins, catalog] = await Promise.all([getPlugins(), getPluginCatalogAction()]);

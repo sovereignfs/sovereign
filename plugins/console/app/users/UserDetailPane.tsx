@@ -12,6 +12,7 @@ import {
   VouchButton,
 } from './UserActionButtons';
 import { toggleActiveAction } from './actions';
+import { CopyIdButton } from '../_components/CopyIdButton';
 import styles from '../console.module.css';
 
 interface MemberRow {
@@ -24,6 +25,18 @@ interface MemberRow {
   verificationLevel: 0 | 1 | 2 | 3;
   createdAt: string;
   expiresAt: string | null;
+  lastLoginAt: string | null;
+}
+
+function formatLastLogin(lastLoginAt: string | null): string {
+  if (!lastLoginAt) return 'Never';
+  return new Date(lastLoginAt).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 }
 
 /**
@@ -52,7 +65,7 @@ export function UserDetailPane({
     <div className={styles.detailPane}>
       <div className={styles.detailHeader}>
         <div className={styles.detailHeading}>
-          <span className={styles.detailTitle}>{member.name ?? '—'}</span>
+          <span className={styles.detailTitleLabel}>{member.name ?? '—'}</span>
           <span className={styles.detailSubtitle}>{member.email}</span>
         </div>
         <Link
@@ -67,36 +80,51 @@ export function UserDetailPane({
       </div>
 
       {userId && (
-        <span className={styles.userId} title="User ID">
-          {userId}
+        <span className={styles.userIdRow}>
+          <span className={styles.userId} title={userId}>
+            {userId}
+          </span>
+          <CopyIdButton value={userId} label="Copy user ID" />
         </span>
       )}
 
+      <span className={styles.detailMeta}>Last login: {formatLastLogin(member.lastLoginAt)}</span>
+
       <div className={styles.detailBadges}>
-        <Badge variant="status" status={member.status}>
+        <Badge variant="status" size="sm" status={member.status}>
           {member.status === 'active'
             ? 'Active'
             : member.status === 'deactivated'
               ? 'Deactivated'
               : 'Invited'}
         </Badge>
-        {member.isTestUser && <Badge variant="mono">Test</Badge>}
+        {member.isTestUser && (
+          <Badge variant="mono" size="sm">
+            Test
+          </Badge>
+        )}
       </div>
 
       <div className={styles.detailSection}>
         <h3 className={styles.detailSectionTitle}>Role</h3>
         {isOwner ? (
-          <Badge variant="role">Owner</Badge>
+          <span className={styles.detailRoleBadge}>
+            <Badge variant="role" size="sm">
+              Owner
+            </Badge>
+          </span>
         ) : canAssignRoles && userId ? (
           <RoleSelect userId={userId} role={member.role ?? 'platform:user'} />
         ) : (
-          <Badge variant="role">
-            {member.role === 'platform:admin'
-              ? 'Admin'
-              : member.role === 'platform:auditor'
-                ? 'Auditor'
-                : 'User'}
-          </Badge>
+          <span className={styles.detailRoleBadge}>
+            <Badge variant="role" size="sm">
+              {member.role === 'platform:admin'
+                ? 'Admin'
+                : member.role === 'platform:auditor'
+                  ? 'Auditor'
+                  : 'User'}
+            </Badge>
+          </span>
         )}
       </div>
 
@@ -116,8 +144,8 @@ export function UserDetailPane({
             </div>
 
             {!actionsLocked && (
-              <div className={styles.userDetailSection}>
-                <h3 className={styles.userDetailSectionTitle}>Actions</h3>
+              <div className={styles.detailSection}>
+                <h3 className={styles.detailSectionTitle}>Actions</h3>
                 <div className={styles.rowActions}>
                   {member.status === 'active' ? (
                     <DeactivateButton userId={userId} name={member.name ?? member.email} />

@@ -104,17 +104,17 @@ variables are available globally to every plugin.
 
 ### Primitive tokens (`src/tokens/primitives.css`)
 
-| Group         | Tokens                                                                                                                                |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Palette       | `--sv-white`, `--sv-black`, `--sv-grey-50` … `--sv-grey-950`                                                                          |
-| Status/info   | `--sv-red-*`, `--sv-amber-*`, `--sv-green-*`, `--sv-blue-*` — see semantic layer for use                                              |
-| Spacing (4px) | `--sv-space-1` (4px) … `--sv-space-16` (64px) — steps 1,2,3,4,5,6,8,10,12,16                                                          |
-| Font family   | `--sv-font-family` (Hanken Grotesk → system-ui), `--sv-font-family-mono` (JetBrains Mono → ui-monospace)                              |
-| Font size     | `--sv-font-size-label` (11px), `-xs` (12px), `-caption` (13px), `-sm` (14px), `-md` (16px), `-lg` (18px), `-xl` (20px), `-2xl` (24px) |
-| Font weight   | `--sv-font-weight-regular` (400), `-medium` (500), `-semibold` (600), `-bold` (700)                                                   |
-| Radius        | `--sv-radius-sm` (6px), `-md` (8px), `-lg` (11px), `-xl` (12px), `-2xl` (14px), `-3xl` (20px), `-full`                                |
-| Border width  | `--sv-border-width-hairline` (1px) — RFC 0094, referenced instead of a literal border width                                           |
-| Icon size     | `--sv-icon-size-xs` (12px), `-sm` (16px), `-md` (20px), `-lg` (24px)                                                                  |
+| Group         | Tokens                                                                                                                                               |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Palette       | `--sv-white`, `--sv-black`, `--sv-grey-50` … `--sv-grey-950`                                                                                         |
+| Status/info   | `--sv-red-*`, `--sv-amber-*`, `--sv-green-*`, `--sv-blue-*` — see semantic layer for use                                                             |
+| Spacing (4px) | `--sv-space-1` (4px) … `--sv-space-16` (64px) — steps 1,2,3,4,5,6,8,10,12,16                                                                         |
+| Font family   | `--sv-font-family` (Hanken Grotesk → system-ui), `--sv-font-family-mono` (JetBrains Mono → ui-monospace)                                             |
+| Font size     | `--sv-font-size-2xs` (10px), `-label` (11px), `-xs` (12px), `-caption` (13px), `-sm` (14px), `-md` (16px), `-lg` (18px), `-xl` (20px), `-2xl` (24px) |
+| Font weight   | `--sv-font-weight-regular` (400), `-medium` (500), `-semibold` (600), `-bold` (700)                                                                  |
+| Radius        | `--sv-radius-sm` (6px), `-md` (8px), `-lg` (11px), `-xl` (12px), `-2xl` (14px), `-3xl` (20px), `-full`                                               |
+| Border width  | `--sv-border-width-hairline` (1px) — RFC 0094, referenced instead of a literal border width                                                          |
+| Icon size     | `--sv-icon-size-xs` (12px), `-sm` (16px), `-md` (20px), `-lg` (24px)                                                                                 |
 
 **Font families:** `--sv-font-family` names Hanken Grotesk as the preferred body font
 with a full system-font fallback stack; `--sv-font-family-mono` names JetBrains Mono.

@@ -2517,8 +2517,8 @@ small — large inputs belong in `sdk.storage`, referenced by id.
 **Dev-mode caveat:** job handlers are composed into the runtime at generate
 time and imported at server startup — editing a handler requires a
 dev-server restart, same as `schedules`. Operators can disable the job
-worker with `SOVEREIGN_JOB_WORKER_DISABLED=1`. Console → System health
-shows queued/scheduled/running counts and recent failures.
+worker with `SOVEREIGN_JOB_WORKER_DISABLED=1`. Console → Overview's system
+health section shows queued/scheduled/running counts and recent failures.
 
 ### `events` — realtime channels (RFC 0045)
 

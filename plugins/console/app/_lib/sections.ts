@@ -15,9 +15,10 @@ export interface ConsoleSectionGroup {
 }
 
 /**
- * The 11 Console sections, grouped for both the desktop sidebar
+ * The 10 Console sections, grouped for both the desktop sidebar
  * (`NavList variant="static"`) and the mobile drill-down index
- * (`NavList variant="drilldown"`) — one source of truth for both.
+ * (`NavList variant="drilldown"`) — one source of truth for both. Health was
+ * folded into Overview (`page.tsx`) rather than kept as its own section.
  */
 export const CONSOLE_SECTIONS: ConsoleSectionGroup[] = [
   {
@@ -57,10 +58,7 @@ export const CONSOLE_SECTIONS: ConsoleSectionGroup[] = [
   {
     id: 'monitoring',
     label: 'Monitoring',
-    items: [
-      { id: 'health', label: 'Health', href: '/console/health', icon: 'activity' },
-      { id: 'activity', label: 'Activity', href: '/console/activity', icon: 'history' },
-    ],
+    items: [{ id: 'activity', label: 'Activity', href: '/console/activity', icon: 'history' }],
   },
   {
     id: 'communication',

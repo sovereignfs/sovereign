@@ -8,12 +8,17 @@
   height: 100%;
 }
 
+/* Top padding matches `.main`/`.detailPane`'s (--sv-space-6, not this
+   sidebar's own --sv-space-3/-5 elsewhere) specifically so the "Console"
+   title lines up with the middle column's page title and the 3rd column's
+   detail-pane title — confirmed via computed geometry that the previous
+   --sv-space-5 top padding put it 4px higher than both. */
 .sidebar {
   display: flex;
   flex-direction: column;
   gap: var(--sv-space-4);
   height: 100%;
-  padding: var(--sv-space-5) var(--sv-space-3);
+  padding: var(--sv-space-6) var(--sv-space-3) var(--sv-space-5);
   box-sizing: border-box;
 }
 
@@ -25,12 +30,25 @@
   color: var(--sv-color-text-primary);
 }
 
+/* Mobile equivalent of `.title` — same treatment minus the sidebar's own
+   horizontal padding, since `PageContainer` already supplies the page
+   gutter here. Shown only on the bare `/console` route in place of the
+   `.backLink` every other mobile Console page gets (there's nowhere to go
+   "back" to from the root) — without it, the mobile index had no heading
+   at all, just the platform's own unrelated "Sovereign" top bar. */
+.mobileTitle {
+  margin: 0;
+  font-size: var(--sv-font-size-lg);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+}
+
 /* ThreeColumnLayout's own .main only supplies background + scroll; the
    plugin owns its own content gutter, matching PageContainer's md desktop
    value (--sv-space-8) since this replaces PageContainer on the desktop
    fullbleed tree. */
 .main {
-  padding: var(--sv-space-8);
+  padding: var(--sv-space-6) var(--sv-space-8);
   box-sizing: border-box;
 }
 
@@ -75,6 +93,7 @@
 }
 
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--sv-space-2);
@@ -89,6 +108,15 @@
 
 .card:hover {
   border-color: var(--sv-color-border-strong);
+}
+
+/* Whole-card hover feedback for a selectable card (`.cardLink` present) —
+   gated to real pointers so a tap doesn't leave a touch device showing a
+   "hovered" card after the finger lifts. Matches Users' `.tr:hover .td`. */
+@media (hover: hover) {
+  .card:has(.cardLink):hover {
+    background-color: var(--sv-color-surface-sunken);
+  }
 }
 
 .cardTitle {
@@ -114,8 +142,31 @@
   text-decoration: none;
 }
 
-.cardLink:hover .cardTitle {
-  text-decoration: underline;
+/* First line of `.cardLink`'s content (the title, or — for a card with more
+   than a title+desc, like External clients — its own first line) plus the
+   trailing chevron, side by side. `justify-content: space-between` inside
+   `.card`'s own padding means the chevron's right inset matches the title's
+   left inset automatically, with no separate padding value to keep in sync. */
+.cardTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sv-space-2);
+}
+
+/* "Stretched link" (matches Users' `.userCellLink::after`) — extends the
+   click target from just the title/desc text to the entire card. Desktop
+   only: mobile has no detail column to select into, and stretching the link
+   there would silently swallow taps meant for `.cardManageMobile`'s own
+   button, which sits UNDER this overlay in DOM/paint order at that
+   breakpoint (see that class's own comment for why it can't take a
+   compositing layer to escape it). */
+@media (min-width: 769px) {
+  .cardLink::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
 }
 
 .cardSelected {
@@ -134,11 +185,18 @@
    specific instead of relying on that order. Found live: worked by accident
    on Groups/Plugins, silently failed (chevron visible on mobile too) on
    External clients (workstream 0022 leg 5), same markup pattern all three
-   times. */
+   times.
+   A normal flex item within `.cardTitleRow` now (previously absolutely
+   positioned against `.card`, first flush with its top — landing above the
+   title's own text instead of level with it — then vertically centered
+   against the whole card instead of the title specifically). Both earlier
+   attempts needed a manual offset to line up with text that a real flex row
+   gets for free. `pointer-events: none` so it never steals a click from the
+   stretched-link overlay sitting beneath it in paint order. */
 svg.cardChevron {
   display: none;
-  align-self: flex-start;
-  margin-top: auto;
+  flex-shrink: 0;
+  pointer-events: none;
 }
 
 /* `display: contents` so the wrapper itself doesn't participate in `.card`'s
@@ -167,6 +225,17 @@ svg.cardChevron {
   justify-content: space-between;
   gap: var(--sv-space-4);
   margin-bottom: var(--sv-space-4);
+}
+
+/* Modifier, not a `.pageHeader` edit — that class is shared by every Console
+   page's header row, most of which have no `.lede` immediately following and
+   still want the default gap. Groups' small-caps `.overviewSectionTitle`
+   (12px, uppercase) reads disconnected from its lede at that same 16px gap —
+   a caption-sized label wants to sit close to what it's captioning. Declared
+   after `.pageHeader` so its `margin-bottom` wins at equal specificity when
+   both classes are applied together. */
+.pageHeaderTight {
+  margin-bottom: var(--sv-space-2);
 }
 
 .pageTitle {
@@ -228,6 +297,19 @@ svg.cardChevron {
   white-space: nowrap;
 }
 
+/* Positioned so `.userCellLink`'s `::after` (the "stretched link" covering
+   the whole row — see its own comment) has a containing block to size
+   against; a bare `<td>` never gets one on its own. */
+.tr {
+  position: relative;
+}
+
+@media (hover: hover) {
+  .tr:hover .td {
+    background-color: var(--sv-color-surface-sunken);
+  }
+}
+
 .tr:not(:last-child) .td {
   border-bottom: 1px solid var(--sv-color-border);
 }
@@ -252,8 +334,16 @@ svg.cardChevron {
   text-decoration: none;
 }
 
-.userCellLink:hover .userName {
-  text-decoration: underline;
+/* "Stretched link" pattern — extends the click target from just the name/
+   email text to the entire row, without duplicating the link or attaching a
+   click handler to a Server Component. Safe here specifically because the
+   only other interactive element a row can contain (`CancelInviteButton`)
+   only renders for invited members, who have no `id` and therefore never
+   render this link/overlay in the first place — no z-index fight needed. */
+.userCellLink::after {
+  content: '';
+  position: absolute;
+  inset: 0;
 }
 
 /* Row highlight for the currently selected user (desktop detail column) */
@@ -270,6 +360,13 @@ svg.cardChevron {
   font-size: var(--sv-font-size-xs);
 }
 
+.userIdRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-1);
+  min-width: 0;
+}
+
 .userId {
   font-family: monospace;
   font-size: var(--sv-font-size-xs);
@@ -278,7 +375,30 @@ svg.cardChevron {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 260px;
+  min-width: 0;
+}
+
+/* Small, borderless variant of `.iconBtnBase` — that one's 30px bordered
+   square reads as a primary action; a "copy this id" affordance sitting
+   right next to 11px monospace text needs to stay visually quiet. */
+.copyIdBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--sv-color-text-subtle);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .copyIdBtn:hover {
+    color: var(--sv-color-text-primary);
+  }
 }
 
 /* ── Badges ─────────────────────────────────────────────────────────────── */
@@ -552,6 +672,21 @@ svg.cardChevron {
   padding: var(--sv-space-6);
 }
 
+/* `GroupDetailFields`' own root — same gap as `.detailPane` itself, since
+   when rendered inline there its sections are visually just more of the
+   same stack (Role/Capabilities/Actions above, Details/Members/Danger zone
+   below). Also the sole gap provider when this same component renders
+   inside `ManageGroupDialog`'s mobile dialog instead, which has no
+   equivalent outer stack to fall back on. Deliberately not `.settingsSections`
+   (used by the actual Settings/Identity pages) — that class's `--sv-space-8`
+   gap and `max-width: 560px` are sized for a full-width settings page, not a
+   narrow sidebar/dialog. */
+.detailFieldsStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+}
+
 .detailHeader {
   display: flex;
   align-items: flex-start;
@@ -575,12 +710,37 @@ svg.cardChevron {
   white-space: nowrap;
 }
 
+/* Users-only variant of `.detailTitle` — the same small-caps label treatment
+   as Overview's "AT A GLANCE"/"SYSTEM HEALTH" section titles (per user
+   request), rather than `.detailTitle`'s larger heading style every other
+   detail pane (Groups/Plugins/External clients) still uses. Kept as its own
+   class instead of composing with `.overviewSectionTitle` — that class has
+   no truncation properties, and combining two classes that both set
+   `font-size`/`color` would leave the winner decided by declaration order in
+   the compiled stylesheet rather than something obvious at the call site. */
+.detailTitleLabel {
+  margin: 0;
+  font-size: var(--sv-font-size-xs);
+  font-weight: var(--sv-font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sv-color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .detailSubtitle {
   color: var(--sv-color-text-muted);
   font-size: var(--sv-font-size-sm);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.detailMeta {
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-xs);
 }
 
 .detailBadges {
@@ -595,6 +755,16 @@ svg.cardChevron {
   gap: var(--sv-space-2);
   padding-top: var(--sv-space-4);
   border-top: var(--sv-border-width-hairline) solid var(--sv-color-border);
+}
+
+/* `.detailSection`'s flex column stretches every direct child to its own
+   full width by default (`align-items: stretch`) — fine for `RoleSelect`'s
+   real `<select>`, which wants that, but it also silently stretched a bare
+   read-only `<Badge>` into an oversized rectangle wherever no select is
+   rendered (the platform owner's row, and any viewer without `role:assign`).
+   `align-self` opts a lone badge back out. */
+.detailRoleBadge {
+  align-self: flex-start;
 }
 
 .detailSectionTitle {
@@ -632,6 +802,19 @@ svg.cardChevron {
    align-items is flex-start. */
 .inviteForm > .errorText {
   width: 100%;
+}
+
+/* Tighter variant for `.inviteForm` inside a narrow detail-pane sidebar
+   (`GroupDetailFields`) — the default 20px inter-field gap and 16px top
+   margin are sized for a full dialog (`CreateGroupDialog`/`InviteDialog`),
+   where they're kept as-is. `.detailSection` already supplies its own 8px
+   gap between the section title and this form, so the form's own top margin
+   would stack on top of that rather than replace it — reset to 0. Declared
+   after `.inviteForm` so its values win at equal specificity when both
+   classes are applied together. */
+.inviteFormCompact {
+  gap: var(--sv-space-3);
+  margin-top: 0;
 }
 
 .fieldGroup {
@@ -828,13 +1011,118 @@ svg.cardChevron {
   color: var(--sv-color-text-muted);
 }
 
+/* Generic bordered-card list — a dedicated list treatment instead of
+   repurposing `.cards`/`.card` (a grid meant for the Overview health cards)
+   via a pile of per-instance inline style overrides (`gridTemplateColumns`,
+   `flexDirection`, `alignItems`, `padding`, all set at the call site rather
+   than here). `box-shadow` matches `.card`/`.healthCard`/`.statCard` —
+   without it, `--sv-color-surface-raised` is the exact same white as the
+   page behind it, so the row read as a bare outline with nothing
+   distinguishing it from the page. Used by `UserCapabilitiesFields`'s
+   grant/revoke list, `GroupDetailFields`'s member list, and its member
+   search-results dropdown — any "list of label + action" row. */
+.compactList {
+  display: flex;
+  flex-direction: column;
+  border: var(--sv-border-width-hairline) solid var(--sv-color-border);
+  border-radius: var(--sv-radius-lg);
+  background-color: var(--sv-color-surface-raised);
+  box-shadow: var(--sv-shadow-card);
+  overflow: hidden;
+}
+
+.compactRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sv-space-3);
+  padding: var(--sv-space-2) var(--sv-space-3);
+}
+
+.compactRow:not(:last-child) {
+  border-bottom: var(--sv-border-width-hairline) solid var(--sv-color-border);
+}
+
+/* `GroupDetailFields`' member list — name/email as a stacked title+subtitle,
+   matching Users' own `.userName`/`.userEmail` table-row treatment, instead
+   of "Name (email@example.com)" run together as one line. */
+.compactRowLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.compactRowTitle {
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compactRowSubtitle {
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* `GroupDetailFields`' member-search results — a `.compactRow` whose entire
+   row is one button rather than a label + separate action. Resets the
+   native button chrome so it reads as a plain row, not a nested button
+   inside a button-shaped box. */
+.compactRowButton {
+  all: unset;
+  display: block;
+  width: 100%;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-primary);
+  cursor: pointer;
+}
+
+.capabilityLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-1);
+  min-width: 0;
+}
+
+.capabilityLabelTitle {
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-text-primary);
+}
+
+/* Explanatory copy lives in the native `title` tooltip, not inline — a
+   multi-line description turned this single-row list into an awkward,
+   unbalanced block (tall wrapped text on the left, a short button floating
+   off to the side on the right). */
+.capabilityInfoIcon {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--sv-color-text-subtle);
+  cursor: help;
+}
+
 .providerConfigGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: var(--sv-space-4);
 }
 
+/* `position: relative` — the containing block `.cardLink::after`'s stretched
+   overlay resolves against (see that rule's own comment). Without it, that
+   absolutely-positioned pseudo-element escapes to whatever positioned
+   ancestor happens to be further up the tree instead of staying within this
+   card — an invisible, oversized click-catcher covering far more than one
+   card, found while extending the Groups card fix here (this card uses its
+   own `.providerConfigCard`, not `.card`, so it didn't inherit that class's
+   own `position: relative`). */
 .providerConfigCard {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--sv-space-4);
@@ -1010,10 +1298,155 @@ svg.cardChevron {
   box-shadow: var(--sv-shadow-card);
 }
 
+/* inline-flex + align-items: center so a trailing status Badge (a smaller,
+   line-height:1 element) centers against this text's line box instead of
+   sitting on its default inline baseline, which visibly undershoots next to
+   a larger font-size like this one. */
 .healthValue {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sv-space-2);
   font-size: var(--sv-font-size-lg);
   font-weight: var(--sv-font-weight-medium);
   color: var(--sv-color-text-primary);
+}
+
+/* ── Overview dashboard ───────────────────────────────────────────────────
+   Health folded into Overview: stat counts, attention callouts, and a
+   recent-activity feed sit above the same `.healthCard` grid Health used to
+   own on its own page. */
+
+.overviewSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+  margin-top: var(--sv-space-8);
+}
+
+.overviewSection:first-child {
+  margin-top: 0;
+}
+
+.overviewSectionTitle {
+  margin: 0;
+  font-size: var(--sv-font-size-xs);
+  font-weight: var(--sv-font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sv-color-text-muted);
+}
+
+.attentionList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attentionItem {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+  padding: var(--sv-space-3) var(--sv-space-4);
+  border: 1px solid var(--sv-color-warning-border);
+  border-radius: var(--sv-radius-md);
+  background-color: var(--sv-color-warning-surface);
+  color: var(--sv-color-warning-text);
+  text-decoration: none;
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+}
+
+@media (hover: hover) {
+  .attentionItem:hover {
+    border-color: var(--sv-color-border-strong);
+  }
+}
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--sv-space-4);
+}
+
+.statCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-1);
+  padding: var(--sv-space-5);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-lg);
+  background-color: var(--sv-color-surface-raised);
+  box-shadow: var(--sv-shadow-card);
+  text-decoration: none;
+}
+
+@media (hover: hover) {
+  .statCard:hover {
+    border-color: var(--sv-color-border-strong);
+  }
+}
+
+.statValue {
+  font-size: var(--sv-font-size-2xl);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+}
+
+.statLabel {
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+}
+
+.statMeta {
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-subtle);
+}
+
+.activityWhen {
+  flex-shrink: 0;
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+}
+
+/* ── Mobile Overview summary (above the drill-down index) ────────────────── */
+
+.mobileOverviewStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+}
+
+.mobileStatRow {
+  display: flex;
+  gap: var(--sv-space-3);
+  overflow-x: auto;
+}
+
+.mobileStatChip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+  min-width: 84px;
+  padding: var(--sv-space-3);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  background-color: var(--sv-color-surface-raised);
+  text-decoration: none;
+}
+
+.mobileStatValue {
+  font-size: var(--sv-font-size-lg);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+}
+
+.mobileStatLabel {
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
 }
 
 .typeBadges {

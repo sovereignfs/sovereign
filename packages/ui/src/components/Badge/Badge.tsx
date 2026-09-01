@@ -2,14 +2,17 @@ import type { ReactNode } from 'react';
 import styles from './Badge.module.css';
 
 export type BadgeVariant = 'role' | 'status' | 'mono';
-export type BadgeSize = 'sm' | 'md' | 'lg';
+export type BadgeSize = 'xs' | 'sm' | 'md' | 'lg';
 export type BadgeStatus =
   'active' | 'enabled' | 'deactivated' | 'failed' | 'invited' | 'pending' | 'neutral';
 
 export interface BadgeProps {
   variant?: BadgeVariant;
-  /** 'sm' | 'md' (default) | 'lg'. 'md' is the badge's original — and until
-   * now, only — size, so the default renders unchanged. */
+  /** 'xs' | 'sm' | 'md' (default) | 'lg'. 'md' is the badge's original — and
+   * until now, only — size, so the default renders unchanged. 'xs' is the
+   * smallest tier (`--sv-font-size-2xs`, 10px) — for a badge sitting inline
+   * next to larger text (e.g. a status chip beside a card's headline value)
+   * where even 'sm' still reads oversized next to it. */
   size?: BadgeSize;
   /** Only relevant when variant="status" — determines the dot colour. */
   status?: BadgeStatus;
@@ -48,7 +51,7 @@ const STATUS_CHIP_CLASS: Record<BadgeStatus, string> = {
  * - `status` tinted chip with leading colour dot — for Active / Deactivated / etc.
  * - `mono`   monospace font, neutral surface — for platform / community / v0.1.0
  *
- * Three sizes (`sm`/`md`/`lg`, default `md`). ALL CAPS by default
+ * Four sizes (`xs`/`sm`/`md`/`lg`, default `md`). ALL CAPS by default
  * (`uppercase`) — set `uppercase={false}` for a title-case badge instead.
  */
 export function Badge({

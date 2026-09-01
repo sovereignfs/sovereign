@@ -66,7 +66,15 @@
    composed partials fighting over the same properties. `.role.md`,
    `.status.md`, and `.mono.md` reproduce the badge's original (and, until
    now, only) sizing exactly, so the default (no `size` prop) renders
-   pixel-identical to before this scale existed. */
+   pixel-identical to before this scale existed. `xs` was added later, for a
+   badge sitting inline next to larger text where `sm` (already the smallest
+   type-scale token, `--sv-font-size-label`) still read oversized — it needed
+   a new, smaller primitive (`--sv-font-size-2xs`) rather than reusing one. */
+.role.xs {
+  padding: 1px 3px;
+  font-size: var(--sv-font-size-2xs);
+}
+
 .role.sm {
   padding: 1px var(--sv-space-1);
   font-size: var(--sv-font-size-label);
@@ -80,6 +88,11 @@
 .role.lg {
   padding: 3px var(--sv-space-3);
   font-size: var(--sv-font-size-sm);
+}
+
+.mono.xs {
+  padding: 1px 3px;
+  font-size: var(--sv-font-size-2xs);
 }
 
 .mono.sm {
@@ -100,6 +113,11 @@
 /* status keeps a tighter left edge than right at every size — the dot +
    gap already read as space before the text, so a full padding-inline-start
    would double it up. */
+.status.xs {
+  padding: 1px 3px 1px 2px;
+  font-size: var(--sv-font-size-2xs);
+}
+
 .status.sm {
   padding: 1px var(--sv-space-1) 1px 3px;
   font-size: var(--sv-font-size-label);
@@ -120,6 +138,11 @@
   display: inline-block;
   border-radius: var(--sv-radius-full);
   flex-shrink: 0;
+}
+
+.xs .dot {
+  width: 4px;
+  height: 4px;
 }
 
 .sm .dot {

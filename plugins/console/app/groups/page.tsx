@@ -54,8 +54,8 @@ export default async function GroupsPage({
 
   return (
     <div>
-      <div className={styles.pageHeader}>
-        <h2 className={styles.pageTitle}>Groups</h2>
+      <div className={[styles.pageHeader, styles.pageHeaderTight].join(' ')}>
+        <h2 className={styles.overviewSectionTitle}>Groups</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sv-space-3)' }}>
           <span className={styles.memberCount}>{groups.length} groups</span>
           {canManageGroups && <CreateGroupDialog />}
@@ -89,7 +89,15 @@ export default async function GroupsPage({
               >
                 {canManageGroups ? (
                   <Link href={`?group=${group.id}`} className={styles.cardLink}>
-                    <span className={styles.cardTitle}>{group.name}</span>
+                    <span className={styles.cardTitleRow}>
+                      <span className={styles.cardTitle}>{group.name}</span>
+                      <Icon
+                        name="chevron-right"
+                        size="sm"
+                        aria-hidden
+                        className={[styles.textMuted, styles.cardChevron].join(' ')}
+                      />
+                    </span>
                     <span className={styles.cardDesc}>
                       {group.description ?? `Slug: ${group.slug}`}
                     </span>
@@ -103,17 +111,9 @@ export default async function GroupsPage({
                   </>
                 )}
                 {canManageGroups && (
-                  <>
-                    <Icon
-                      name="chevron-right"
-                      size="sm"
-                      aria-hidden
-                      className={[styles.textMuted, styles.cardChevron].join(' ')}
-                    />
-                    <span className={styles.cardManageMobile}>
-                      <ManageGroupDialog group={group} />
-                    </span>
-                  </>
+                  <span className={styles.cardManageMobile}>
+                    <ManageGroupDialog group={group} />
+                  </span>
                 )}
               </li>
             );
@@ -123,7 +123,17 @@ export default async function GroupsPage({
 
       {selectedGroup && (
         <ConsoleDetailSlot>
-          <GroupDetailPane group={selectedGroup} closeHref={closeHref} />
+          {/* `key` forces a full remount on every selection change — this
+              pane is registered into `ConsoleLayout`'s detail-column slot via
+              context (see `ConsoleDetailSlot`), not rendered at a normal tree
+              position, so without a key React treats a different group's
+              element as an *update* to the same instance rather than a new
+              one. `GroupDetailFields`' Name/Description inputs are
+              uncontrolled (`defaultValue`) and its danger-zone confirmation
+              is local `useState` — both only ever read their initial value
+              once, so switching groups left them frozen on whichever group
+              was selected first. */}
+          <GroupDetailPane key={selectedGroup.id} group={selectedGroup} closeHref={closeHref} />
         </ConsoleDetailSlot>
       )}
     </div>

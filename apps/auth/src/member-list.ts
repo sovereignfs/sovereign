@@ -14,6 +14,13 @@ export interface AuthUserRow {
   // leg's migration yet — treated as 0 (registered, the column's own default).
   verificationLevel?: number | string | null;
   createdAt: string; // normalised to an ISO 8601 string by the caller (Date on pg)
+  // ISO 8601 string, or null if the user has never had a session (e.g.
+  // created by seed/admin but never actually signed in). Derived by the
+  // caller from `MAX(session.createdAt)` grouped by userId — a session is
+  // only ever created on a successful sign-in, so its `createdAt` (not
+  // `updatedAt`, which also moves on plain session-refresh activity) is the
+  // accurate "last login" instant.
+  lastLoginAt: string | null;
 }
 
 export interface PendingInviteRow {
@@ -32,6 +39,7 @@ export interface MemberRow {
   verificationLevel: 0 | 1 | 2 | 3;
   createdAt: string;
   expiresAt: string | null;
+  lastLoginAt: string | null;
 }
 
 /** Clamp a raw DB value (number, bigint-as-string on pg, or absent) to 0-3. */
@@ -71,6 +79,7 @@ export function buildMemberList(users: AuthUserRow[], invites: PendingInviteRow[
     verificationLevel: normalizeVerificationLevel(u.verificationLevel),
     createdAt: u.createdAt,
     expiresAt: null,
+    lastLoginAt: u.lastLoginAt,
   }));
 
   const inviteRows: MemberRow[] = Array.from(inviteByEmail.values()).map((inv) => ({
@@ -83,6 +92,7 @@ export function buildMemberList(users: AuthUserRow[], invites: PendingInviteRow[
     verificationLevel: 0,
     createdAt: new Date(inv.created_at * 1000).toISOString(),
     expiresAt: inv.expires_at ? new Date(inv.expires_at * 1000).toISOString() : null,
+    lastLoginAt: null,
   }));
 
   return [...userRows, ...inviteRows];

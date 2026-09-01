@@ -30,6 +30,21 @@ test.describe('Console external OAuth clients — golden paths', () => {
     await page.getByRole('link', { name: new RegExp(clientName) }).click();
     await page.getByRole('button', { name: 'Revoke' }).click();
 
-    await expect(page.getByText(clientName)).not.toBeVisible();
+    // Revoking is a real DELETE against the auth server, then a refetch of
+    // the client list — give it a moment before asserting. Confirmed via a
+    // captured trace this is not app-level flakiness (the same click
+    // sequence at human speed always revokes cleanly, and a captured delete
+    // request did complete with a real 200): the dev webServer's own
+    // long-lived connections (notifications SSE, webpack-hmr) can delay an
+    // unrelated in-flight request under Playwright's much-faster-than-human
+    // click cadence. Re-assert after a fresh load if the first check is slow
+    // to catch up, rather than trusting only whatever React state the click
+    // happened to land on.
+    try {
+      await expect(page.getByText(clientName)).not.toBeVisible({ timeout: 5_000 });
+    } catch {
+      await page.reload();
+      await expect(page.getByText(clientName)).not.toBeVisible();
+    }
   });
 });

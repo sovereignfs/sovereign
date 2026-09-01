@@ -69,8 +69,10 @@ describe('Badge', () => {
     expect(screen.getByText('Admin').closest('span')?.className).toContain('md');
   });
 
-  it('applies sm and lg size classes', () => {
-    const { rerender } = render(<Badge size="sm">Admin</Badge>);
+  it('applies xs, sm, and lg size classes', () => {
+    const { rerender } = render(<Badge size="xs">Admin</Badge>);
+    expect(screen.getByText('Admin').closest('span')?.className).toContain('xs');
+    rerender(<Badge size="sm">Admin</Badge>);
     expect(screen.getByText('Admin').closest('span')?.className).toContain('sm');
     rerender(<Badge size="lg">Admin</Badge>);
     expect(screen.getByText('Admin').closest('span')?.className).toContain('lg');

@@ -423,6 +423,11 @@ const TYPE_SCALE: Array<{ token: string; label: string; note: string }> = [
   { token: '--sv-font-size-caption', label: 'caption — 13px', note: 'Secondary / supporting copy' },
   { token: '--sv-font-size-xs', label: 'xs — 12px', note: 'Mono identifiers, badges' },
   { token: '--sv-font-size-label', label: 'label — 11px', note: 'All-caps section labels' },
+  {
+    token: '--sv-font-size-2xs',
+    label: '2xs — 10px',
+    note: 'Badge size="xs" — smallest badge tier',
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -1898,7 +1903,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             <ComponentCard
               name="Badge"
               importLine="import { Badge } from '@sovereignfs/ui';"
-              usage="Compact label for roles (role), lifecycle states (status), and type/version tags (mono). sm/md/lg sizes; ALL CAPS by default, or uppercase={false} for title case. RSC-safe."
+              usage="Compact label for roles (role), lifecycle states (status), and type/version tags (mono). xs/sm/md/lg sizes; ALL CAPS by default, or uppercase={false} for title case. RSC-safe."
             >
               <Badge variant="role">Admin</Badge>
               <Badge variant="status" status="active">
@@ -1910,6 +1915,9 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               <Badge variant="mono">v1.2.0</Badge>
               <Badge variant="role" size="lg" uppercase={false}>
                 Owner
+              </Badge>
+              <Badge variant="status" status="active" size="xs">
+                Connected
               </Badge>
             </ComponentCard>
 

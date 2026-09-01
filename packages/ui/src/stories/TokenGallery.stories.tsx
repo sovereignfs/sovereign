@@ -104,6 +104,7 @@ const ICON_SIZE_TOKENS = [
 ];
 
 const FONT_SIZE_TOKENS = [
+  '--sv-font-size-2xs',
   '--sv-font-size-label',
   '--sv-font-size-xs',
   '--sv-font-size-caption',

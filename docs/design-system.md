@@ -1198,6 +1198,94 @@ This isn't a hypothetical: a real hand-rolled carousel in this codebase does
 both of the above, and is measurably laggier than a sibling implementation
 that keeps its overlay in the routed pane instead. Keep the split.
 
+### Swipe stack (card triage)
+
+A different mobile pattern from the carousel above: dispose of one card at a
+time (Done/Defer/Skip) by dragging it left/right/up/down, dating-app-style,
+rather than browsing a fixed set of sibling routes. The motivating case is a
+"Today's Agenda" view, but the component itself has no domain vocabulary —
+it reports which direction a card left in and lets the caller decide what
+that means.
+
+```tsx
+import { SwipeStack, SwipeStackCard, useSwipeStack } from '@sovereignfs/ui';
+```
+
+**`useSwipeStack({ directions, threshold?, onCommit, disabled? })`**
+Hand-rolled free drag extending `useSwipeReveal`'s pattern (raw Pointer
+Events, a deadzone, transform written straight to a ref, resolved only on
+release) from one axis with two outcomes to four directions with a tilt.
+Threshold-only on purpose, matching `useSwipeReveal` — no velocity tracking,
+so a fast short flick under `threshold` (default 96px) still springs back.
+Returns `{ cardRef, wrapRef, handlers, touchAction, triggerCommit }`:
+`cardRef` goes on the element that translates/rotates; `wrapRef` goes on the
+ancestor of both the card and any stamp overlays, since the hook writes live
+drag progress there as `--sv-stack-progress-{left,right,up,down}` custom
+properties (0–1) for stamps to react to without a re-render per pointermove;
+`touchAction` is the CSS value to apply to the card, derived from which
+directions are live (see below); `triggerCommit(direction)` plays the same
+fling animation and fires the same `onCommit` a real drag past threshold
+would, for a non-gesture trigger.
+
+A direction absent from `directions` is a **wall, not just an unreachable
+outcome** — the card will not visually move that way at all (dragging
+toward it is clamped to zero on that axis). This is also what
+`touchAction` is derived from: an axis with nothing configured on it stays
+native (`pan-x`/`pan-y`), so a page can still scroll through a stack that
+only uses the other axis; `touchAction` is `none` only once both axes are
+actually needed.
+
+**`SwipeStack`** + **`SwipeStackCard`**
+The compound component wrapping `useSwipeStack`, mirroring
+`SwipableMobileCarousel`'s children-based composition (`SwipeStackCard`
+plays `SwipableMobileCarouselSlide`'s role: `cardId` is its stable identity,
+read via `child.props` the same way `slideKey` is, since a component can't
+see its own React `key`). Unlike the carousel, only the top two cards
+(current + a peeking preview) are ever mounted — there is no scroll-snap
+track requiring every sibling to exist in the DOM, so there is no
+mount-window concept to configure.
+
+```tsx
+<SwipeStack
+  aria-label="Today's agenda"
+  directions={{
+    up: { label: 'Done', icon: 'check' },
+    down: { label: 'Defer', icon: 'history' },
+    right: { label: 'Skip', icon: 'chevron-right' },
+    // left intentionally omitted — not mandatory
+  }}
+  onSwipe={(direction, cardId) => {
+    if (direction === 'up') markDone(cardId);
+    else if (direction === 'down') defer(cardId);
+    else skip(cardId);
+  }}
+>
+  {tasks.map((task) => (
+    <SwipeStackCard key={task.id} cardId={task.id}>
+      <TaskAgendaCard task={task} />
+    </SwipeStackCard>
+  ))}
+</SwipeStack>
+```
+
+Every configured direction behaves the same way once triggered: the card
+leaves for good, there is no reversible "go back" state. `SwipeStack` tracks
+its own dismissed-card set internally, so a swiped card never reappears even
+if the caller is slow to remove it from `children` (e.g. an optimistic
+update that hasn't landed yet) — the same "no opinion on where card data
+lives" boundary `SwipableMobileCarousel` draws for slide data; the caller is
+responsible for eventually no longer including a dismissed `cardId`, but
+`SwipeStack`'s own display never depends on how fast that happens.
+
+A non-gesture fallback — a button per configured direction, using that
+direction's `label`/`icon` — is **not optional and not a separate code
+path**: it renders automatically from the same `directions` config and
+calls `triggerCommit` under the hood, so it is wired to the identical commit
+logic and exit animation a real drag produces. A `SwipeStack` with zero
+gesture support (all directions triggered only via the buttons) is not a
+degraded state — it's the same component working as designed for a caller
+who wants that.
+
 ### Motion
 
 Primitive tokens for overlay enter/exit transitions, theme-stable like the

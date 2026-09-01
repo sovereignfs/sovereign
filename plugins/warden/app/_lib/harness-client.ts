@@ -9,6 +9,15 @@
 const HARNESS_URL =
   process.env.SOVEREIGN_HARNESS_URL ?? `http://localhost:${process.env.HARNESS_PORT ?? '3003'}`;
 
+// A health check should be near-instant when the service is actually up —
+// far shorter than `model-discovery.ts`'s 8s model-list timeout. Without
+// this, an `apps/harness` that's enabled but stalled or dropping packets
+// (rather than cleanly refusing the connection) hangs `checkHarnessHealth()`
+// indefinitely, since `fetch()` has no default timeout of its own — blocking
+// every `discoverModels()` call, and therefore the whole Warden page, behind
+// it (found live investigating slow Warden page loads).
+const HARNESS_HEALTH_TIMEOUT_MS = 3000;
+
 /** OpenAI-compatible multimodal content part — only ever appears in the
  *  current turn's outgoing message (an attached image), never in history
  *  loaded from `warden_messages` (always plain strings there) or sent to
@@ -87,7 +96,9 @@ export type HarnessHealth =
 export async function checkHarnessHealth(): Promise<HarnessHealth> {
   let response: Response;
   try {
-    response = await fetch(`${HARNESS_URL}/api/health`);
+    response = await fetch(`${HARNESS_URL}/api/health`, {
+      signal: AbortSignal.timeout(HARNESS_HEALTH_TIMEOUT_MS),
+    });
   } catch {
     return { kind: 'unreachable' };
   }

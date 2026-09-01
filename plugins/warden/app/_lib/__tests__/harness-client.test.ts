@@ -65,6 +65,25 @@ describe('checkHarnessHealth', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0][0]).toContain('/api/health');
   });
+
+  it('bounds the request with an abort signal, so a stalled apps/harness cannot hang the page forever', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ status: 'ok', modelStatus: 'ready' }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { checkHarnessHealth } = await import('../harness-client');
+    await checkHarnessHealth();
+    expect(fetchMock.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('reports unreachable when the request times out, without throwing', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockRejectedValue(new DOMException('The operation timed out.', 'TimeoutError')),
+    );
+    const { checkHarnessHealth } = await import('../harness-client');
+    expect(await checkHarnessHealth()).toEqual({ kind: 'unreachable' });
+  });
 });
 
 describe('requestHarnessChat', () => {

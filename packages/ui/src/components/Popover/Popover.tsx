@@ -9,6 +9,11 @@ import {
   type ReactElement,
   type ReactNode,
 } from 'react';
+import {
+  isTopmostOpenOverlay,
+  registerOpenOverlay,
+  unregisterOpenOverlay,
+} from '../../overlay-shell';
 import styles from './Popover.module.css';
 
 export interface PopoverProps {
@@ -102,6 +107,26 @@ export function Popover({
   // existing vertical flip only ever solves the above/below axis, never
   // this one.
   const [horizontalOffset, setHorizontalOffset] = useState<number | null>(null);
+  const overlayIdRef = useRef<string | null>(null);
+
+  // Registers into the same open-overlay stack Dialog/Drawer/Sheet/
+  // ConfirmDialog use (overlay-shell.ts) purely so a Dialog this Popover was
+  // opened from inside of (e.g. a DatePicker/Combobox field in a modal form —
+  // Popover is what Menu/Combobox/DatePicker/ContextMenu/HoverCard/UserMenu
+  // are all built on) knows it is no longer the topmost overlay, and defers
+  // Escape to this one instead of closing itself too. A separate effect keyed
+  // only on `open`, matching useOverlayKeyboardTrap's own pattern — identity
+  // churn on `onClose` shouldn't re-register and bump this popover back to
+  // the top of the stack.
+  useEffect(() => {
+    if (!open) return;
+    const id = registerOpenOverlay();
+    overlayIdRef.current = id;
+    return () => {
+      unregisterOpenOverlay(id);
+      overlayIdRef.current = null;
+    };
+  }, [open]);
 
   // width="trigger": measure the trigger's own rendered width and keep the
   // panel matching it, including live resizes (e.g. rotating the device, or
@@ -210,11 +235,17 @@ export function Popover({
     return () => document.removeEventListener('mousedown', handleMouseDown);
   }, [open, onClose]);
 
-  // Escape key dismissal
+  // Escape key dismissal — deferred to a nested overlay (if any) via the same
+  // topmost-overlay check useOverlayKeyboardTrap uses, so e.g. opening a
+  // ConfirmDialog from inside this panel's content doesn't also close the
+  // popover out from under it on the same Escape press.
   useEffect(() => {
     if (!open) return;
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape') return;
+      const id = overlayIdRef.current;
+      if (id !== null && !isTopmostOpenOverlay(id)) return;
+      onClose();
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);

@@ -17,20 +17,31 @@ import styles from '../warden.module.css';
  * in place, rather than immediately navigating to Settings — a user who
  * hasn't configured anything yet shouldn't be sent away from this screen
  * before they've had a chance to. Once the provider is actually created,
- * `onAdded` sends them straight into the chat screen (`/warden`) — they came
- * here to chat, not to manage providers, and the ordinary chat view now has
+ * `onAdded` reveals the ordinary chat view in place — they came here to
+ * chat, not to manage providers, and the ordinary chat view now has
  * something to show once at least one model is reachable.
  *
- * `onAdded` is memoized (`useCallback`, matching `ProvidersView`'s own
- * `refresh`) rather than passed as an inline closure — `AddProviderForm`'s
- * success effect lists its `onAdded` prop as a dependency, so a fresh
- * function identity on every render would retrigger that effect on its own,
- * independent of whether the underlying action state actually changed.
+ * `onAdded` calls `router.refresh()`, not `router.push('/warden')` — this
+ * component only ever renders *at* `/warden` (`page.tsx`'s `!hasAnyModel`
+ * branch), so there is no URL to navigate to; the thing that actually needs
+ * to change is server data. `push()` to the page's own current URL doesn't
+ * reliably force that: Next's client Router Cache can still serve the
+ * already-rendered (stale, `!hasAnyModel`) payload for that exact URL
+ * instead of re-running the Server Component, which is what left a real
+ * submission needing two manual reloads before the chat view appeared.
+ * `refresh()` is the explicit "re-fetch this route's server data" call —
+ * the same one `ProvidersView`'s own `refresh` uses after every mutation.
+ *
+ * `onAdded` is memoized (`useCallback`) rather than passed as an inline
+ * closure — `AddProviderForm`'s success effect lists its `onAdded` prop as
+ * a dependency, so a fresh function identity on every render would
+ * retrigger that effect on its own, independent of whether the underlying
+ * action state actually changed.
  */
 export function SetupPrompt() {
   const [showForm, setShowForm] = useState(false);
   const router = useRouter();
-  const handleAdded = useCallback(() => router.push('/warden'), [router]);
+  const handleAdded = useCallback(() => router.refresh(), [router]);
 
   if (showForm) {
     return (

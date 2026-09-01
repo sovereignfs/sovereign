@@ -30,15 +30,17 @@ function Feedback({ result }: { result: ActionResult | null }) {
  * *only* thing that should gate re-running this effect, but `onAdded` is a
  * caller-supplied callback, and an effect must list every value it closes
  * over as a dependency — including one a caller passes as a fresh inline
- * closure each render. `SetupPrompt`'s own `onAdded` calls `router.push()`,
- * which (even navigating to the *current* route) re-renders the segment;
- * that new render hands this effect a new `onAdded` reference, which alone
- * re-triggers it — replaying the success toast and calling `onAdded()`
- * again, which pushes again, which re-renders again, looping for several
- * seconds until the server data catches up and unmounts this form (found
- * live: four stacked "provider was added" toasts from a single submission).
- * Comparing against the exact `state` object already handled makes this
- * effect idempotent regardless of whether a caller's callback is memoized.
+ * closure each render. A prior version of `SetupPrompt` passed
+ * `onAdded={() => router.push('/warden')}`, and even navigating to the
+ * *current* route still re-rendered the segment; that new render handed
+ * this effect a new `onAdded` reference, which alone re-triggered it —
+ * replaying the success toast and calling `onAdded()` again, looping for
+ * several seconds until the server data caught up and unmounted this form
+ * (found live: four stacked "provider was added" toasts from a single
+ * submission). Comparing against the exact `state` object already handled
+ * makes this effect idempotent regardless of whether a caller's callback is
+ * memoized — `SetupPrompt` now also memoizes its own, but this guard
+ * protects any future caller that doesn't.
  */
 export function AddProviderForm({ onAdded }: { onAdded: () => void }) {
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
@@ -74,6 +76,7 @@ export function AddProviderForm({ onAdded }: { onAdded: () => void }) {
               type="text"
               placeholder="OpenRouter"
               value={label}
+              disabled={pending}
               onChange={(event: ChangeEvent<HTMLInputElement>) => setLabel(event.target.value)}
             />
           )}
@@ -90,6 +93,7 @@ export function AddProviderForm({ onAdded }: { onAdded: () => void }) {
               type="text"
               placeholder="https://openrouter.ai/api/v1"
               value={baseUrl}
+              disabled={pending}
               onChange={(event: ChangeEvent<HTMLInputElement>) => setBaseUrl(event.target.value)}
             />
           )}
@@ -102,6 +106,7 @@ export function AddProviderForm({ onAdded }: { onAdded: () => void }) {
               type="password"
               autoComplete="new-password"
               value={apiKey}
+              disabled={pending}
               onChange={(event: ChangeEvent<HTMLInputElement>) => setApiKey(event.target.value)}
             />
           )}

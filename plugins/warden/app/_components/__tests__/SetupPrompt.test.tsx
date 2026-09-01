@@ -9,9 +9,9 @@ vi.mock('../../actions', () => ({
   createProviderAction: (...args: unknown[]) => createProviderAction(...args),
 }));
 
-const push = vi.fn();
+const refresh = vi.fn();
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push }),
+  useRouter: () => ({ refresh }),
 }));
 
 function renderPrompt() {
@@ -45,10 +45,19 @@ describe('SetupPrompt', () => {
     expect(screen.getByLabelText('Name')).toBeDefined();
     expect(screen.getByLabelText('Base URL')).toBeDefined();
     expect(screen.queryByText('Set up Warden')).toBeNull();
-    expect(push).not.toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
   });
 
-  it('redirects to /warden once a provider is added', async () => {
+  /**
+   * Regression test for a real bug found live: this used to call
+   * `router.push('/warden')` — a no-op navigation, since this component only
+   * ever renders *at* `/warden`. Next's client Router Cache could then keep
+   * serving the already-rendered (stale) payload for that URL instead of
+   * re-running the Server Component, so the chat view never appeared without
+   * a manual reload. `router.refresh()` is the call that actually forces the
+   * current route to re-fetch server data.
+   */
+  it('calls router.refresh() (not push) once a provider is added', async () => {
     createProviderAction.mockResolvedValue({ ok: true, message: 'OpenRouter was added.' });
     renderPrompt();
     fireEvent.click(screen.getByRole('button', { name: 'Add a provider' }));
@@ -60,6 +69,6 @@ describe('SetupPrompt', () => {
     fireEvent.change(screen.getByLabelText('API key'), { target: { value: 'sk-test' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add provider' }));
 
-    await waitFor(() => expect(push).toHaveBeenCalledWith('/warden'));
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
   });
 });

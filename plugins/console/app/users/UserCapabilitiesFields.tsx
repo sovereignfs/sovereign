@@ -14,6 +14,11 @@ const LABELS: Record<GrantableCapability, string> = {
   'plugins:self-manage': 'Self-service app enable/disable',
 };
 
+const DESCRIPTIONS: Record<GrantableCapability, string> = {
+  'plugins:self-manage':
+    "Lets this user turn specific apps you've shared with them on or off for themselves, without granting any other admin access.",
+};
+
 /**
  * The actual capability grant/revoke list — extracted from the former
  * `CapabilitiesButton` so it can render inline in the desktop detail pane
@@ -57,21 +62,15 @@ export function UserCapabilitiesFields({ userId }: { userId: string }) {
   }
 
   return (
-    <ul className={styles.cards} style={{ gridTemplateColumns: '1fr', gap: 'var(--sv-space-2)' }}>
+    <ul className={styles.compactList}>
       {GRANTABLE_CAPABILITIES.map((cap) => {
         const granted = grants.includes(cap);
         return (
-          <li
-            key={cap}
-            className={styles.card}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: 'var(--sv-space-3)',
-            }}
-          >
-            <span>{LABELS[cap]}</span>
+          <li key={cap} className={styles.compactRow}>
+            <span className={styles.capabilityLabel}>
+              <span className={styles.capabilityLabelTitle}>{LABELS[cap]}</span>
+              <span className={styles.capabilityInfoIcon} title={DESCRIPTIONS[cap]}></span>
+            </span>
             <Button
               type="button"
               size="sm"

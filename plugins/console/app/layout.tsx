@@ -97,7 +97,9 @@ export default function ConsoleLayout({ children }: { children: ReactNode }) {
       }
       mobile={
         <PageContainer maxWidth="full" className={styles.mobileFrame}>
-          {!isOverview && (
+          {isOverview ? (
+            <h1 className={styles.mobileTitle}>Console</h1>
+          ) : (
             <Link href="/console" className={styles.backLink}>
               <Icon name="chevron-left" size="sm" aria-hidden />
               Console

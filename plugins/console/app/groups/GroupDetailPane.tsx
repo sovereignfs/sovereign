@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Icon } from '@sovereignfs/ui';
 import { GroupDetailFields } from './GroupDetailFields';
+import { CopyIdButton } from '../_components/CopyIdButton';
 import styles from '../console.module.css';
 
 interface GroupSummary {
@@ -24,7 +25,7 @@ export function GroupDetailPane({ group, closeHref }: { group: GroupSummary; clo
     <div className={styles.detailPane}>
       <div className={styles.detailHeader}>
         <div className={styles.detailHeading}>
-          <span className={styles.detailTitle}>{group.name}</span>
+          <span className={styles.detailTitleLabel}>{group.name}</span>
           <span className={styles.detailSubtitle}>
             {group.description ?? `Slug: ${group.slug}`}
           </span>
@@ -40,8 +41,11 @@ export function GroupDetailPane({ group, closeHref }: { group: GroupSummary; clo
         </Link>
       </div>
 
-      <span className={styles.userId} title="Group ID">
-        {group.id}
+      <span className={styles.userIdRow}>
+        <span className={styles.userId} title={group.id}>
+          {group.id}
+        </span>
+        <CopyIdButton value={group.id} label="Copy group ID" />
       </span>
 
       <GroupDetailFields group={group} />

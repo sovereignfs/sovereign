@@ -14,7 +14,7 @@ test.describe('Console — auditor golden paths', () => {
   });
 
   test('auditor can view system health', async ({ auditorPage: page }) => {
-    await page.goto('/console/health');
+    await page.goto('/console');
     await expect(page.getByRole('heading', { name: 'System health' })).toBeVisible();
   });
 

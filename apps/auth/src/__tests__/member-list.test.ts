@@ -10,6 +10,7 @@ function user(overrides: Partial<AuthUserRow> = {}): AuthUserRow {
     active: 1,
     isTestUser: 0,
     createdAt: '2026-06-01T00:00:00.000Z',
+    lastLoginAt: null,
     ...overrides,
   };
 }
@@ -140,5 +141,21 @@ describe('buildMemberList', () => {
   it('sets verificationLevel to 0 on invite rows', () => {
     const rows = buildMemberList([], [invite()]);
     expect(rows[0]?.verificationLevel).toBe(0);
+  });
+
+  it('passes through lastLoginAt for users, and null for users who never signed in', () => {
+    const rows = buildMemberList(
+      [
+        user({ id: 'u1', email: 'a@x.com', lastLoginAt: '2026-08-30T12:00:00.000Z' }),
+        user({ id: 'u2', email: 'b@x.com', lastLoginAt: null }),
+      ],
+      [],
+    );
+    expect(rows.map((r) => r.lastLoginAt)).toEqual(['2026-08-30T12:00:00.000Z', null]);
+  });
+
+  it('sets lastLoginAt to null on invite rows', () => {
+    const rows = buildMemberList([], [invite()]);
+    expect(rows[0]?.lastLoginAt).toBeNull();
   });
 });

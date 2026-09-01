@@ -26,7 +26,21 @@ export async function GET(request: Request): Promise<Response> {
   }>(
     'SELECT id, email, name, role, active, "isTestUser", "verificationLevel", "createdAt" FROM "user" ORDER BY "createdAt" ASC',
   );
-  const users: AuthUserRow[] = userRows.map((u) => ({ ...u, createdAt: toIso(u.createdAt) }));
+  // A session row is only ever created on a successful sign-in — its own
+  // `createdAt` (not `updatedAt`, which also moves on plain session-refresh
+  // activity) is the accurate "last login" instant. GROUP BY + MAX is
+  // portable across SQLite and Postgres; users with no session row at all
+  // (created by seed/admin, never signed in) simply have no entry in the map.
+  const lastLoginRows = await authAll<{ userId: string; lastLoginAt: string | Date }>(
+    'SELECT "userId", MAX("createdAt") AS "lastLoginAt" FROM session GROUP BY "userId"',
+  );
+  const lastLoginByUserId = new Map(lastLoginRows.map((r) => [r.userId, toIso(r.lastLoginAt)]));
+
+  const users: AuthUserRow[] = userRows.map((u) => ({
+    ...u,
+    createdAt: toIso(u.createdAt),
+    lastLoginAt: lastLoginByUserId.get(u.id) ?? null,
+  }));
 
   const now = Math.floor(Date.now() / 1000);
 

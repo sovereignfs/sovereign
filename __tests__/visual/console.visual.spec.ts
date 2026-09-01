@@ -11,8 +11,8 @@ test('console — settings', async ({ adminPage: page }) => {
   await expect(page).toHaveScreenshot('console-settings.png', { fullPage: true });
 });
 
-test('console — system health', async ({ adminPage: page }) => {
-  await page.goto('/console/health');
-  await page.getByRole('heading').first().waitFor();
-  await expect(page).toHaveScreenshot('console-health.png', { fullPage: true });
+test('console — overview', async ({ adminPage: page }) => {
+  await page.goto('/console');
+  await page.getByRole('heading', { name: 'System health' }).waitFor();
+  await expect(page).toHaveScreenshot('console-overview.png', { fullPage: true });
 });

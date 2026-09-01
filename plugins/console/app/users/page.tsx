@@ -8,7 +8,7 @@ import { InviteDialog } from './invite/InviteDialog';
 import { ConsoleDetailSlot } from '../_components/ConsoleDetailSlot';
 import styles from '../console.module.css';
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 20;
 
 interface MemberRow {
   id: string | null;
@@ -20,6 +20,7 @@ interface MemberRow {
   verificationLevel: 0 | 1 | 2 | 3;
   createdAt: string;
   expiresAt: string | null;
+  lastLoginAt: string | null;
 }
 
 async function getMembers(): Promise<MemberRow[]> {
@@ -44,7 +45,7 @@ async function getMembers(): Promise<MemberRow[]> {
 
 function StatusBadge({ status }: { status: MemberRow['status'] }) {
   return (
-    <Badge variant="status" status={status}>
+    <Badge variant="status" size="sm" status={status}>
       {status === 'active' ? 'Active' : status === 'deactivated' ? 'Deactivated' : 'Invited'}
     </Badge>
   );
@@ -59,7 +60,11 @@ function RoleBadge({ role }: { role: string | null }) {
         : role === 'platform:auditor'
           ? 'Auditor'
           : 'User';
-  return <Badge variant="role">{label}</Badge>;
+  return (
+    <Badge variant="role" size="sm">
+      {label}
+    </Badge>
+  );
 }
 
 export default async function UsersPage({
@@ -94,7 +99,7 @@ export default async function UsersPage({
   return (
     <div>
       <div className={styles.pageHeader}>
-        <h2 className={styles.pageTitle}>Users</h2>
+        <h2 className={styles.overviewSectionTitle}>Users</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sv-space-3)' }}>
           <span className={styles.memberCount}>{total} members</span>
           {canManageUsers && <InviteDialog />}
@@ -149,7 +154,11 @@ export default async function UsersPage({
                     <td className={styles.td}>
                       <span className={styles.badgeGroup}>
                         <StatusBadge status={member.status} />
-                        {member.isTestUser && <Badge variant="mono">Test</Badge>}
+                        {member.isTestUser && (
+                          <Badge variant="mono" size="sm">
+                            Test
+                          </Badge>
+                        )}
                       </span>
                     </td>
 
@@ -234,7 +243,16 @@ export default async function UsersPage({
 
       {selectedMember && (
         <ConsoleDetailSlot>
+          {/* `key` forces a full remount on every selection change — same
+              root cause as Groups' detail pane (see that call site's own
+              comment): this pane is registered into `ConsoleLayout`'s detail
+              slot via context, not a normal tree position, so without a key
+              React updates the existing instance instead of mounting a new
+              one. `RoleSelect`'s `useState(role)` only reads its initial
+              value once, so switching users without a key left the role
+              dropdown frozen on whichever user was selected first. */}
           <UserDetailPane
+            key={selectedMember.id}
             member={selectedMember}
             canAssignRoles={canAssignRoles}
             canManageUsers={canManageUsers}

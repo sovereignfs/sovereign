@@ -26,8 +26,27 @@ export function CreateGroupDialog() {
         + New group
       </Button>
 
-      <Dialog open={open} onClose={() => setOpen(false)} size="sm" title="New group">
-        <form ref={formRef} action={formAction} className={styles.inviteForm}>
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        size="sm"
+        title="New group"
+        footer={
+          // form="create-group-form": the button lives in the footer's own
+          // flex-sibling slot, outside the <form> element it submits — the
+          // HTML `form` attribute is what still wires it to that form's
+          // submit despite the DOM distance.
+          <Button type="submit" form="create-group-form" disabled={pending}>
+            {pending ? 'Creating…' : 'Create group'}
+          </Button>
+        }
+      >
+        <form
+          ref={formRef}
+          id="create-group-form"
+          action={formAction}
+          className={styles.inviteForm}
+        >
           {state && !state.success && <p className={styles.errorText}>{state.error}</p>}
 
           <FormField label="Name" id="group-name" required>
@@ -44,10 +63,6 @@ export function CreateGroupDialog() {
               />
             )}
           </FormField>
-
-          <Button type="submit" disabled={pending}>
-            {pending ? 'Creating…' : 'Create group'}
-          </Button>
         </form>
       </Dialog>
     </>

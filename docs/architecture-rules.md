@@ -105,28 +105,36 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   use `<Link replace>`; this is documented as a convention for third-party
   overlay plugins in `docs/plugin-development.md`. Never reintroduce push-based
   intra-overlay navigation. **Dialog size is plugin-declared** via the optional
-  manifest `shellConfig.overlaySize` (`sm` | `md` | `lg` | `auto`, default
-  `lg`); the `@modal/layout.tsx` resolves it from the selected interception
-  segment (`overlaySizeForSegment` in `runtime/src/overlay.ts`). `lg` is a
-  **fixed-size box** (width AND height set, content scrolls inside) — no
-  overlay-shell plugin currently renders into it (Console did, until
-  workstream 0022 moved it to `shell: "default"`; the
+  manifest `shellConfig.overlaySize` (`sm` | `md` | `lg` | `auto` | `fixed`,
+  default `lg`); the `@modal/layout.tsx` resolves it from the selected
+  interception segment (`overlaySizeForSegment` in `runtime/src/overlay.ts`).
+  `lg` is a **fixed-size box** (width AND height set, content scrolls
+  inside) — no overlay-shell plugin currently renders into it (Console did,
+  until workstream 0022 moved it to `shell: "default"`; the
   `PluginAccessDialog`/`CapabilitiesButton` examples below are ordinary
   in-page `Dialog` usages inside Console, unaffected by that shell change).
-  `auto` sizes to content on **both** width and height, each capped at
-  `min(48rem, 100%)` — the size Account (epic task 14.5) renders into: a
-  `lg` box read as too large for a settings surface (full-viewport, mostly
-  empty for shorter sections like Notifications), but Account also can't use
-  a genuinely fixed box the way `lg` provides, since no single size fits
-  every section's content well. A plugin adopting `auto` should still give
-  its own root element an explicit `width` at (or under) the `auto` cap and
-  a light `min-height` floor — Account uses `width: min(48rem, 100%)` and
-  `min-height: 24rem` in `account.module.css` — otherwise `fit-content`
-  measures whatever the current section happens to render, and the panel's
-  width/height visibly jump around between an arbitrarily narrow short
-  section and a wide, tall long one. This bounds but does not eliminate
-  resize-between-sections: unlike `lg`'s true fixed box, a section taller
-  than `min-height` still grows the panel up to the shared `auto` cap.
+  `fixed` is also a **true fixed-size box** (width AND height both set,
+  content never resizes it) but capped at `64rem × 44rem` rather than
+  filling the viewport — the size Account (epic task 14.5) actually renders
+  into: a `lg` box read as too large for a settings surface (full-viewport,
+  mostly empty for shorter sections like Notifications), but a
+  content-driven size (`auto`, tried first) had its own real problem —
+  Account's `/account` route client-side redirects to `/account/profile`
+  through a near-empty intermediate render, and `auto`'s `fit-content`
+  visibly shrank the panel to fit that empty page, then grew once the real
+  content landed. `fixed`'s constant footprint has neither failure mode, at
+  the cost of some benign empty space below a short section's content
+  (bounded to 44rem, not the full viewport `lg` left empty). `auto` remains
+  available for a plugin whose own footprint genuinely varies a lot with no
+  redirect-shaped gap in its route tree (matching its original design
+  intent — a card detail modal with an optional checklist/comments
+  section) — it sizes to content on **both** width and height, each capped
+  at `min(48rem, 100%)`, and a plugin adopting it should still give its own
+  root element an explicit `width` at (or under) that cap and a light
+  `min-height` floor, since otherwise `fit-content` measures whatever
+  content currently renders and the panel's width/height visibly jump
+  around between sub-routes; even done well this only bounds, not
+  eliminates, resize-between-routes the way `fixed`'s true fixed box does.
   `sm`/`md` are fixed-width but content-driven height, capped at a per-size
   max-height (28rem/42rem) beyond which content scrolls internally rather
   than the panel growing further — changed from also-fixed-height because a

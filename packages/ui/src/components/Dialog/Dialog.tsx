@@ -57,15 +57,24 @@ export function useOverlaySecondRow(node: ReactNode | null): boolean {
 // BREAKING (packages/ui minor bump + docs/upgrade.md migration note): `xl`
 // and `full` were removed here — `full` was a dead alias of `lg` (identical
 // CSS), and `xl` was a fixed-width variant with no distinct behavior `auto`
-// doesn't now cover better. `auto` is new: unlike `sm`/`md` (fixed width,
-// content-driven height only), it sizes to content on BOTH width and
+// doesn't now cover better. `auto` sizes to content on BOTH width and
 // height, capped rather than fixed on either axis — for content whose
 // natural size varies a lot (a card detail modal with an optional
 // checklist/comments section) rather than reliably filling a fixed width.
-// `lg` is unchanged — the only size that's a true fixed 100%/100% box,
-// still what overlay-shell plugins (Account) need so the panel holds still
-// while they switch internal views.
-export type DialogSize = 'sm' | 'md' | 'lg' | 'auto';
+// `lg` is a true fixed 100%/100% box — the panel holds still regardless of
+// content, at the cost of always filling the viewport.
+//
+// `fixed` (added for epic task 14.5, Account's vertical nav): a true fixed
+// box like `lg` — width AND height set, content never resizes it — but
+// capped rather than filling the viewport. Named distinctly from the
+// component's own always-applied `.panel` CSS class (Dialog.module.css),
+// not from `lg`'s own fixed-ness. For a plugin that needs a stable
+// footprint (e.g. one whose route tree includes a client-side redirect
+// through a near-empty intermediate page — `auto`/`sm`/`md`'s
+// content-driven sizing would visibly shrink to fit that empty page, then
+// grow once the real content lands) without reading as heavy as `lg`'s
+// full-screen box for what is a compact settings surface.
+export type DialogSize = 'sm' | 'md' | 'lg' | 'auto' | 'fixed';
 
 export interface DialogProps {
   /** Whether the dialog is shown. When false, nothing renders. */

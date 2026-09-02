@@ -62,6 +62,30 @@ export const StaticActiveItem: Story = {
   },
 };
 
+/**
+ * `density="compact"` — shrinks row height/padding for a short, always-
+ * visible `static` list (e.g. Warden's sidebar "New chat"/"Providers"/
+ * "Models" rows above its longer session list), where the default's full
+ * touch-target height reads as needlessly spaced out. Only meaningful with
+ * `variant="static"`; every other story on this page stays at the default
+ * density, unaffected.
+ */
+export const CompactDensity: Story = {
+  args: {
+    density: 'compact',
+    groups: [
+      {
+        id: 'primary',
+        items: [
+          { id: 'new', label: 'New chat', href: '#new', icon: 'plus' },
+          { id: 'providers', label: 'Providers', href: '#providers', icon: 'link' },
+          { id: 'models', label: 'Models', href: '#models', icon: 'layers' },
+        ],
+      },
+    ],
+  },
+};
+
 /** Mobile index shape — every row gets a trailing chevron, no active state; tapping navigates to a full-screen section. */
 export const Drilldown: Story = {
   args: { variant: 'drilldown' },

@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { NavList, type NavListGroup } from '../NavList';
+import styles from '../NavList.module.css';
 
 afterEach(cleanup);
 
@@ -71,6 +72,22 @@ describe('NavList', () => {
       const itemCount = groups.flatMap((g) => g.items).length;
       // One icon svg + one chevron svg per item.
       expect(container.querySelectorAll('svg').length).toBe(itemCount * 2);
+    });
+  });
+
+  describe('density', () => {
+    it('defaults to no compact class', () => {
+      const { container } = render(
+        <NavList groups={groups} variant="static" aria-label="Sections" />,
+      );
+      expect(container.querySelector('nav')?.className).not.toContain(styles.compact);
+    });
+
+    it('applies the compact class when density="compact"', () => {
+      const { container } = render(
+        <NavList groups={groups} variant="static" density="compact" aria-label="Sections" />,
+      );
+      expect(container.querySelector('nav')?.className).toContain(styles.compact);
     });
   });
 

@@ -43,6 +43,20 @@ export interface NavListProps {
    * native Settings-app style index.
    */
   variant: 'static' | 'drilldown';
+  /**
+   * `"default"`: each row is a full `--sv-touch-target-min` tall tap target
+   * — the right choice for `variant="drilldown"`'s mobile index, and for any
+   * `static` sidebar list long enough that scanability matters more than
+   * density. `"compact"` shrinks row height/padding for a short, always-
+   * visible `static` list (e.g. 2-4 items above a longer scrollable list of
+   * something else) where the default's touch-target height reads as
+   * needlessly spaced out. Only meaningful for `variant="static"` —
+   * `drilldown` rows stay full-height regardless, since that variant is
+   * mobile-only and touch-target size there isn't optional. Defaults to
+   * `"default"` so every existing consumer (e.g. Console's own sidebar) is
+   * visually unchanged.
+   */
+  density?: 'default' | 'compact';
   'aria-label': string;
   className?: string;
   /**
@@ -66,13 +80,16 @@ export interface NavListProps {
 export function NavList({
   groups,
   variant,
+  density = 'default',
   'aria-label': ariaLabel,
   className,
   renderLink,
 }: NavListProps) {
   return (
     <nav
-      className={[styles.nav, styles[variant], className].filter(Boolean).join(' ')}
+      className={[styles.nav, styles[variant], density === 'compact' && styles.compact, className]
+        .filter(Boolean)
+        .join(' ')}
       aria-label={ariaLabel}
     >
       {groups.map((group) => (

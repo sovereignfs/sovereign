@@ -9,7 +9,7 @@ function DialogDemo({
   size = 'lg',
   label = 'Example dialog',
 }: {
-  size?: 'sm' | 'md' | 'lg' | 'auto';
+  size?: 'sm' | 'md' | 'lg' | 'auto' | 'fixed';
   label?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -48,7 +48,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Modal surface (scrim + panel). Router-agnostic — caller provides `onClose`. Supports Esc, scrim-click, focus trap and focus restoration. Sizes: `sm` / `md` / `lg` / `auto`. `sm`/`md` are fixed-width, content-driven height; `auto` is content-driven on both width and height; `lg` is a true fixed 100%/100% box. Mobile always renders as a full-screen sheet. Three composition shapes via the optional `header`/`footer` props: Body only (both omitted, the default), Header + Body, Header + Body + Footer — see the stories below the size examples.',
+          'Modal surface (scrim + panel). Router-agnostic — caller provides `onClose`. Supports Esc, scrim-click, focus trap and focus restoration. Sizes: `sm` / `md` / `lg` / `auto` / `fixed`. `sm`/`md` are fixed-width, content-driven height; `auto` is content-driven on both width and height; `lg` is a true fixed 100%/100% box; `fixed` is also a true fixed box (width and height both set, content never resizes it) but capped at 64rem×44rem rather than filling the viewport. Mobile always renders as a full-screen sheet. Three composition shapes via the optional `header`/`footer` props: Body only (both omitted, the default), Header + Body, Header + Body + Footer — see the stories below the size examples.',
       },
     },
   },
@@ -72,6 +72,20 @@ export const Medium: Story = {
 export const Large: Story = {
   args: { open: false, onClose: () => {}, children: null },
   render: (_args) => <DialogDemo size="lg" label="Large dialog" />,
+};
+
+/**
+ * `fixed` is a true fixed box like `lg` (width AND height both set — content
+ * never resizes it) but capped at 64rem×44rem rather than filling the
+ * viewport. Added for epic task 14.5 (Account's vertical nav): a plugin
+ * whose route tree includes a client-side redirect through a near-empty
+ * intermediate page needs a size that won't visibly shrink to fit that empty
+ * page and then grow once real content lands — every other size is
+ * content-driven on at least one axis and would do exactly that.
+ */
+export const Fixed: Story = {
+  args: { open: false, onClose: () => {}, children: null },
+  render: (_args) => <DialogDemo size="fixed" label="Fixed dialog" />,
 };
 
 /**

@@ -2,14 +2,14 @@
   "schemaVersion": 1,
   "id": "fs.sovereign.account",
   "name": "Account",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Personal profile, preferences, and credential management.",
   "type": "platform",
   "runtime": "native",
   "routePrefix": "/account",
   "shell": "overlay",
   "shellConfig": {
-    "overlaySize": "auto"
+    "overlaySize": "fixed"
   },
   "icon": "icon.svg",
   "permissions": ["auth:session", "db:readWrite"],

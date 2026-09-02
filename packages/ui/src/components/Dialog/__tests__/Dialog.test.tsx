@@ -113,6 +113,15 @@ describe('Dialog', () => {
     expect(screen.getByRole('dialog').className).toContain('auto');
   });
 
+  it('supports the fixed size (epic task 14.5)', () => {
+    render(
+      <Dialog open onClose={() => {}} size="fixed" aria-label="Fixed-size">
+        Body
+      </Dialog>,
+    );
+    expect(screen.getByRole('dialog').className).toContain('fixed');
+  });
+
   it('renders a descendant-supplied secondRow via useOverlaySecondRow', () => {
     function TabStrip() {
       useOverlaySecondRow(<nav>Tab strip</nav>);

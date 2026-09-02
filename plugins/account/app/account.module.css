@@ -59,18 +59,15 @@
     grid-template-areas: 'rail content';
     gap: var(--sv-space-8);
     align-items: start;
-    /* Account's Dialog is overlaySize: "auto" (content-driven width AND
-       height, each capped at min(48rem, 100%) — see Dialog.module.css)
-       rather than a fixed box, so this grid's own footprint IS the
-       dialog's footprint. An explicit width pins it to auto's own cap
-       instead of an arbitrary fit-content measurement (fixes the
-       full-viewport-wide, mostly-empty panel overlaySize: "lg" produced).
-       min-height is a light floor, not a fix for auto's content-driven
-       height — short sections (e.g. Notifications) still render a
-       shorter panel than long ones (e.g. Security); this only keeps the
-       shortest sections from looking like a tiny, oddly-shaped stub. */
-    width: min(48rem, 100%);
-    min-height: 24rem;
+    /* Account's Dialog is overlaySize: "fixed" (a true 64rem×44rem box —
+       see Dialog.module.css — content never resizes it, unlike "auto"'s
+       content-driven sizing this replaced: that shrank to fit the
+       near-empty intermediate page in the /account → /account/profile
+       redirect, then visibly grew once real content landed). No explicit
+       width/height needed here as a result — the panel itself dictates the
+       box; this grid just fills its available width and takes its own
+       natural height, same as any other content inside a fixed-size
+       Dialog. */
   }
 
   .mobileHeader {

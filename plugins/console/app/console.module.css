@@ -1046,12 +1046,17 @@ svg.cardChevron {
 /* Wraps an `Avatar` + `.compactRowLabel` as a single `.compactRow` flex item
    — `.compactRow` itself is `justify-content: space-between` between exactly
    two children (identity, action), so the avatar can't be a 3rd sibling
-   without changing that distribution. */
+   without changing that distribution. Extra `padding-left` on top of
+   `.compactRow`'s own (equal, `--sv-space-3`) padding — a round `Avatar`
+   sitting flush against that edge reads as tighter than the "Remove" button
+   on the opposite side, which has its own internal padding before its text
+   starts, even though the two sides measure equal in the box model. */
 .compactRowIdentity {
   display: flex;
   align-items: center;
   gap: var(--sv-space-2);
   min-width: 0;
+  padding-left: var(--sv-space-2);
 }
 
 /* `GroupDetailFields`' member list — name/email as a stacked title+subtitle,

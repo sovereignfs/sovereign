@@ -163,8 +163,9 @@ Subsequent tasks added Account sections as part of other epics:
 
 #### ✅ 14.5 — Vertical section nav for Account (re-scoped from RFC 0085)
 
-**Status (September 2026): shipped, in three rounds — each correcting the
-previous round's own sizing call.** Round 1 kept both `shell: "overlay"` and
+**Status (September 2026): shipped, in four rounds — the first three each
+correcting the previous round's own sizing call, the fourth fixing a
+distinct content-rendering bug.** Round 1 kept both `shell: "overlay"` and
 `overlaySize: "lg"` unchanged, deliberately deviating from this task's
 original `"lg" → "md"` resize: `Dialog.tsx`'s own code comment on
 `DialogSize` said `lg`'s fixed 100%/100% box exists specifically so "the
@@ -245,6 +246,37 @@ migration note needed, unlike `auto`'s own original breaking introduction);
 `packages/manifest` bumped `5.11.0` → `5.12.0`. Every other deliverable
 below shipped as scoped in round 1.
 
+**Round 4** fixed a distinct, newly-reported bug — not a sizing issue this
+time, but a real content-rendering gap: opening Account via the sidebar
+avatar menu's "Account" item showed the rail fully rendered while the
+content pane stayed completely blank for a beat, reported directly from a
+live screenshot ("the empty space when loading until the content loaded").
+Root cause: `AccountMenu.tsx`'s "Account" menu item used a client-side
+`next/link` `<Link href="/account">`, and `/account`'s own `page.tsx`
+`redirect()`s to `/account/profile` — for a hard navigation this resolves
+server-side before any client paint, but for `<Link>`'s client-side soft
+navigation into the intercepted `@modal` route, the redirect is processed as
+a second async client-router fetch: the ancestor `layout.tsx` (the rail)
+mounts immediately, while `{children}` stays empty until that fetch
+resolves. The three `.local`/minimal-shell equivalents
+(`DocsAccountMenu.tsx`/`KanbanAccountMenu.tsx`/`TravellogAccountMenu.tsx`)
+use plain `<a href="/account">` — always a hard navigation — confirmed
+unaffected and left unchanged. Fixed two ways: `AccountMenu.tsx`'s link now
+points directly at `/account/profile`, skipping the redirect for the
+primary entry point entirely — verified live to fully eliminate the gap,
+with even the first mid-transition screenshot now showing correct content.
+As defense-in-depth for any other path that could still hit an
+async-loading gap (a bookmarked bare `/account` URL, or a future section
+needing its own data fetch on first paint), added
+`plugins/account/app/loading.tsx` + `loading.module.css`: Next.js's
+`loading.tsx` convention wraps only `{children}`, not the sibling
+`layout.tsx`, in an automatic `<Suspense>` boundary, so the rail keeps
+rendering immediately and only the content pane shows a centered
+`@sovereignfs/ui` `Spinner` until ready. Verified live: hard navigation to
+a bare `/account` URL still redirects server-side with no visible gap, as
+before. `runtime` bumped `0.92.1` → `0.92.2`; `plugins/account/manifest.json`
+bumped `0.4.2` → `0.4.3`.
+
 **Goal:** Replace Account's hand-rolled horizontal `.tabs`/`.tab` strip
 (`plugins/account/app/layout.tsx`, `account.module.css`) with
 `@sovereignfs/ui`'s existing `NavList` component (`variant="static"`, a
@@ -308,6 +340,13 @@ block for the full history of why Console and Account diverged.
 - Grouping: not needed — `NavList`'s `groups` prop already accepts a single
   ungrouped group (omit `label`), which fits Account's flat 7-section list
   without waiting on future grouped-rail API work.
+- Round 4: `runtime/app/(platform)/_components/AccountMenu.tsx`'s "Account"
+  item links to `/account/profile` directly instead of `/account`, avoiding
+  a client-side-navigation redirect gap; added
+  `plugins/account/app/loading.tsx` + `loading.module.css` as a
+  `<Suspense>`-boundary fallback (a centered `Spinner`) for any remaining or
+  future async-loading gap in the `/account/*` route segment — see Status
+  note above for the full diagnosis.
 
 **Dependencies:** None on other in-flight tasks. Independent of workstream
 0022 (Console's own, separate, already-shipped conversion) — Account was
@@ -347,10 +386,18 @@ build` both pass — the latter specifically because composed plugin
   reconfirmed unaffected; `pnpm --filter @sovereignfs/ui typecheck` and the
   `Dialog` test suite (18 tests, including a new one for `size="fixed"`)
   both green.
+- Round 4 verified live: opening Account via the sidebar avatar menu no
+  longer shows a blank content pane while the rail is visible — confirmed
+  via screenshot both mid-transition and settled; hard navigation to bare
+  `/account` reconfirmed to still redirect server-side with no visible gap.
+  Full repo `pnpm exec vitest run`, `pnpm --filter runtime typecheck`,
+  `pnpm --filter runtime build`, `pnpm lint`, `pnpm format:check`, and
+  `pnpm exec tsx scripts/design-tokens-check.ts` all green.
 - `plugins/account/manifest.json` bumped `0.3.7` → `0.4.0` → `0.4.1` →
-  `0.4.2`; `packages/manifest` bumped `5.10.0` → `5.11.0` → `5.12.0`;
-  `@sovereignfs/ui` bumped `0.80.0` → `0.81.0` in round 3 only (see
-  Deliverables notes on `credit-card`, `auto`, and `fixed`).
+  `0.4.2` → `0.4.3`; `packages/manifest` bumped `5.10.0` → `5.11.0` →
+  `5.12.0`; `@sovereignfs/ui` bumped `0.80.0` → `0.81.0` in round 3 only;
+  `runtime` bumped `0.92.1` → `0.92.2` in round 4 only (see Deliverables
+  notes on `credit-card`, `auto`, `fixed`, and the round-4 redirect-gap fix).
 
 ---
 

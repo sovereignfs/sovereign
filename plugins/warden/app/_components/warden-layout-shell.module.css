@@ -15,10 +15,23 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
+/*
+ * Absolutely positioned rather than an in-flow flex sibling of `.content` —
+ * an in-flow toggle bar shrinks `.content`'s box only in the collapsed
+ * state (the expanded state's toggle lives inside the sidebar column, never
+ * stacked above `.content`), which shifted ChatView's vertically-centered
+ * empty state/composer down by half the bar's height whenever the sidebar
+ * was hidden. Floating it keeps `.content` the same full-height box in both
+ * states, matching the expanded state's own layout exactly.
+ */
 .toggleBar {
-  flex-shrink: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
   padding: var(--sv-space-2) var(--sv-space-2) 0;
 }
 

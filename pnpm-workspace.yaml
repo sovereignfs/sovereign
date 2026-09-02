@@ -79,8 +79,21 @@ catalog:
 # the tree to the patched line rather than adding an ignoreGhsas exception,
 # since a real fix is available and low-risk (nanoid patch releases are
 # tiny, ID-generation-only).
+# fast-uri: GHSA-5jgf-p345-68v8 / GHSA-f65p-4m7j-42xc / GHSA-fph4-wmhf-6fwf /
+# GHSA-jqff-g426-hqxp (host confusion / SSRF via malformed URI/IDN/IPv6
+# normalization) — pulled in via ajv, itself pulled in from two unrelated
+# directions (packages/mailer > react-email > conf > ajv, and
+# runtime > @ducanh2912/next-pwa > webpack > schema-utils > ajv), neither of
+# which pins ajv's own fast-uri dependency directly. Capped below 4.0.0
+# deliberately: ajv@8.20.0 itself declares "fast-uri": "^3.0.1", so letting
+# an unqualified ">=3.1.6" resolve to the latest 4.x (as pnpm did on the
+# first pass) would hand ajv a major version outside its own declared
+# compatible range — this pins to the patched *3.x* line instead, which is
+# both sufficient for every GHSA above (all four are fixed as of 3.1.6) and
+# actually low-risk the way the nanoid override's own reasoning claims.
 overrides:
   nanoid: '>=3.3.18'
+  fast-uri: '>=3.1.6 <4.0.0'
 
 # Transitive deps allowed to run install scripts (pnpm blocks them by default).
 # esbuild (via tsx) needs its postinstall to link the platform binary.

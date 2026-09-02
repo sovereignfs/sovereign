@@ -75,8 +75,21 @@ export interface PluginCatalogEntry {
   active: boolean;
 }
 
+/**
+ * Read-only — unlike every other export in this file, this backs both the
+ * Plugins management page *and* Overview's app-count stats
+ * (`buildPluginRows`, `../page.tsx`), which every Console role including
+ * `platform:auditor` must be able to load. Gating it behind
+ * `requirePluginManage()` (as a copy-paste of this file's real mutation
+ * actions once did) crashed Overview outright for auditors, since
+ * `buildPluginRows` is awaited alongside the rest of Overview's data in one
+ * `Promise.all` — a session check is the correct minimum here, matching the
+ * other plain read helpers in `../page.tsx` (`getUsers`/`getGroups`/
+ * `getEntitlements`), not the manage-capability guard the actual
+ * activate/toggle mutations below still enforce independently.
+ */
 export async function getPluginCatalogAction(): Promise<PluginCatalogEntry[]> {
-  await requirePluginManage();
+  await sdk.auth.requireSession();
   const res = await adminFetch('/api/admin/plugins/catalog');
   if (!res.ok) return [];
   const body = (await res.json()) as { catalog: PluginCatalogEntry[] };

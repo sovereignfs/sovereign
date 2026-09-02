@@ -1788,15 +1788,15 @@ with).
 
 ---
 
-#### 📋 8.37 — Age-based backup encryption: passphrase-mode migration + recipient-mode primitives (RFC 0064, workstream 0023 leg 1)
+#### ✅ 8.37 — Age-based backup encryption: passphrase-mode migration + recipient-mode primitives (RFC 0064, workstream 0023 leg 1)
 
 **Goal:** Move task 8.16's passphrase-mode backup encryption helper onto the `age` format instead of raw Node `crypto`, and add a new recipient-mode encryption primitive — so both workstream 0004's existing passphrase flows and this workstream's new recipient-based flows share one encryption implementation instead of two.
 
 **Deliverables:**
 
-- Add `age-encryption.js` as a dependency — pure JS/WASM, runs identically server-side (Node) and client-side (browser), so no second library is needed for task 8.40's browser decrypt.
-- Migrate task 8.16's existing encryption helper (`encrypt`/`decrypt` by passphrase) to use `age`'s own passphrase (scrypt) mode internally, keeping its exact call signature — every existing caller and test in tasks 8.16–8.18 must pass unmodified.
-- Add `encryptToRecipients(bytes, recipients: string[]) → ciphertext`. No corresponding server-side decrypt-with-identity function ships anywhere in this task — decrypting recipient-mode ciphertext happens only in the operator's own `sv restore` process (task 8.42) or client-side in the browser (task 8.40), never in the running platform process.
+- Added the `age-encryption` npm package (0.3.1, by the `age` format's own author) to `runtime/package.json` as a direct dependency. **Correction to this task's own original spec:** it is pure JS (built on `@noble/ciphers`/`@noble/curves`/`@noble/hashes`), not WASM — there is no `.wasm` asset in the published package. This is good news for task 8.40's browser decrypt: no `'wasm-unsafe-eval'` CSP addition is needed after all, contrary to what workstream 0023's own doc currently assumes; that doc needs a follow-up correction when 8.40 is picked up.
+- Migrated `runtime/src/backup-encryption.ts`'s `encrypt`/`decrypt` (passphrase mode) to use `age`'s `Encrypter`/`Decrypter` classes with `setPassphrase`/`addPassphrase` internally, keeping the same external contract (`Buffer` plaintext in, base64url `string` ciphertext out, and back). **Correction to this task's own original spec:** "every existing test must pass unmodified" undersold what changed — `age-encryption`'s API is promise-based, so `encrypt`/`decrypt` themselves became `async`, and the standalone `deriveKey` export was removed entirely (an implementation detail of the old raw-scrypt approach; `age` derives its own key internally via its `ScryptIdentity`/`ScryptRecipient` and exposes no equivalent primitive, and `deriveKey` had zero callers outside its own two dedicated tests). What's actually preserved is the **behavioral contract** the rest of this workstream depends on: same round-trip semantics, same clean-failure-on-wrong-passphrase/tampered-data semantics — verified by rewriting every test as `async`/`await` against the real library rather than assumed. Confirmed via `grep` before touching anything that `backup-encryption.ts` had zero callers anywhere in `runtime/`/`bin/` outside its own test file — tasks 8.17/8.18 haven't wired it into `backup-run.ts`/`backup-download.ts` yet (matches 8.16's own progress note), so this migration has zero blast radius on shipped behavior.
+- Added `encryptToRecipients(plaintext: Buffer, recipients: string[]): Promise<string>`, using `Encrypter.addRecipient` per recipient (age supports multiple recipients per file natively). No corresponding server-side decrypt-with-identity function exists anywhere in `runtime/` — decrypting recipient-mode ciphertext happens only in the operator's own `sv restore` process (task 8.42) or client-side in the browser (task 8.40), never in the running platform process.
 
 **Dependencies:** Task 8.16 (the encryption helper this task migrates).
 
@@ -1804,9 +1804,10 @@ with).
 
 **Review checklist:**
 
-- Every existing test for task 8.16's encryption helper passes unmodified after the internal swap to `age`.
-- `encryptToRecipients` round-trips against a real `age` identity file decrypted with the standalone `age` CLI (not just this codebase's own tooling) — proving the output is genuinely standard, portable age ciphertext.
-- No code path anywhere in `runtime/` calls an age decrypt function with a private identity.
+- ✅ Every behavior the original test suite asserted (round-trip, empty-archive round-trip, clean failure on wrong passphrase, clean failure on tampered ciphertext, clean failure on truncated ciphertext, distinct ciphertext per call) still holds, re-verified against the real `age-encryption` library — 10/10 tests passing (`runtime/src/__tests__/backup-encryption.test.ts`), plus new coverage for `encryptToRecipients` (single recipient, multiple recipients where any one matching identity decrypts, non-matching identity fails, distinct ciphertext per call).
+- ✅ **Both** `encryptToRecipients` and the migrated passphrase-mode `encrypt` round-trip against the real, standalone `age` v1.3.1 CLI (Homebrew, not this codebase's own tooling) — not just this library's own internal self-consistency. Recipient mode: encrypted here with a real `age-keygen`-generated identity's recipient, decrypted with `age --decrypt --identity identity.txt` against the real CLI. Passphrase mode: encrypted here, decrypted with `age --decrypt` against the real CLI (required faking a TTY via `script -q /dev/null` for the interactive passphrase prompt in this sandboxed shell — a test-environment workaround, not a code concern). Both produced the exact original plaintext.
+- ✅ No code path anywhere in `runtime/` calls an age decrypt function with a private identity — `decrypt()` only ever calls `Decrypter.addPassphrase`; `encryptToRecipients()` only ever calls `Encrypter.addRecipient`. (Test code exercises `Decrypter.addIdentity` directly to prove round-trip correctness — that's test-only verification of the third-party library, not a runtime code path.)
+- ✅ `pnpm typecheck`, `pnpm lint`, `pnpm format:check` all clean on the touched files; full `runtime` package test suite (864 tests) passes.
 
 ---
 

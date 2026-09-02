@@ -11,14 +11,21 @@
  * driven on BOTH width and height, each independently capped rather than
  * either being fixed — for content whose natural footprint varies enough
  * (a card detail modal with an optional checklist/comments section) that a
- * single fixed width doesn't fit it well either short or long. `lg` remains
- * a true fixed box (100%/100% of the scrim's available area): that size is
- * what overlay-shell plugins (Account, Console) render into, where the
- * panel must hold still while the plugin switches between its own internal
- * views. The close button stays pinned top-right regardless. The scrim's
- * padding is the fixed margin `lg` leaves around the viewport; `sm`/`md`/
- * `auto` are centered and cap to that available space on short screens too.
- * On mobile every size becomes a full-screen sheet.
+ * single fixed width doesn't fit it well either short or long. `lg` is a
+ * true fixed box (100%/100% of the scrim's available area) — no current
+ * overlay-shell plugin renders into it (Console did until workstream 0022
+ * moved it to `shell: "default"`; Account never resized off `overlaySize:
+ * "lg"`'s original default until epic task 14.5, see `fixed` below).
+ * `fixed` (named after its own behavior, not after this file's always-
+ * applied `.panel` wrapper class below) is also a true fixed box, width
+ * AND height both set — same "content never resizes it" guarantee as `lg`
+ * — but capped rather than filling the viewport, for a plugin whose
+ * settings-panel-shaped content doesn't warrant `lg`'s full-screen footprint
+ * (Account's own case, epic task 14.5 round 3). The close button stays
+ * pinned top-right regardless. The scrim's padding is the fixed margin
+ * `lg`/`fixed` leave around the viewport; `sm`/`md`/`auto` are centered and
+ * cap to that available space on short screens too. On mobile every size
+ * becomes a full-screen sheet.
  *
  * `--sv-dialog-inset-left` lets a host inset the scrim past a fixed left nav
  * rail (e.g. the platform sidebar) so the overlay's left margin is measured
@@ -176,6 +183,23 @@
   height: 100%;
 }
 
+/* `fixed`: also a true fixed box (width AND height both set, like `lg`) but
+ * capped rather than filling the viewport — see the file-level comment.
+ * Named distinctly from the dialog's own always-applied `.panel` wrapper
+ * class above (every size gets `styles.panel` + `styles[size]` together —
+ * see Dialog.tsx) to avoid colliding with it. `max-width`/`max-height` are
+ * still needed despite `width`/`height` being fixed rem values, exactly
+ * like `sm`/`md`'s own `max-width: 100%` — a short or narrow viewport (a
+ * resized desktop window, not yet at the mobile breakpoint) must still be
+ * able to shrink this below its rem values instead of overflowing the
+ * scrim. */
+.fixed {
+  width: 64rem;
+  max-width: 100%;
+  height: 44rem;
+  max-height: 100%;
+}
+
 .close {
   position: absolute;
   top: var(--sv-space-3);
@@ -260,7 +284,8 @@
   .sm,
   .md,
   .lg,
-  .auto {
+  .auto,
+  .fixed {
     width: 100%;
     height: 100%;
     min-width: 0;

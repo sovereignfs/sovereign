@@ -1029,6 +1029,7 @@ svg.cardChevron {
   background-color: var(--sv-color-surface-raised);
   box-shadow: var(--sv-shadow-card);
   overflow: hidden;
+  padding: 0;
 }
 
 .compactRow {

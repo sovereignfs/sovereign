@@ -243,6 +243,7 @@ export function WardenSidebar({
         <NavList
           groups={primaryNavGroups}
           variant="static"
+          density="compact"
           aria-label="Warden navigation"
           renderLink={(item, linkProps) => (
             <Link

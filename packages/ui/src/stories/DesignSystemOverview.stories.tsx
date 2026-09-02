@@ -2846,7 +2846,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             <ComponentCard
               name="NavList"
               importLine="import { NavList } from '@sovereignfs/ui';"
-              usage="Vertical list of icon+label rows, optionally grouped under section headers. static: active row highlighted, no chevron — a persistent sidebar. drilldown: trailing chevron on every row, no active state — a native-Settings-app style index. Framework-agnostic like NavTabs; supply active/renderLink from the consumer."
+              usage='Vertical list of icon+label rows, optionally grouped under section headers. static: active row highlighted, no chevron — a persistent sidebar. drilldown: trailing chevron on every row, no active state — a native-Settings-app style index. density="compact" (static only) shrinks row height for a short, always-visible list. Framework-agnostic like NavTabs; supply active/renderLink from the consumer.'
             >
               <div style={{ width: '100%', maxWidth: 220 }}>
                 <NavList

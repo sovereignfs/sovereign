@@ -163,22 +163,47 @@ Subsequent tasks added Account sections as part of other epics:
 
 #### ✅ 14.5 — Vertical section nav for Account (re-scoped from RFC 0085)
 
-**Status (September 2026): shipped, with one deliberate deviation from this
-task's own original scoping.** The `overlaySize: "lg" → "md"` resize was
-**not** done — `Dialog.tsx`'s own code comment on `DialogSize` says `lg`'s
-fixed 100%/100% box exists specifically so "the panel holds still while
-[Account] switch[es] internal views," while `md` is content-driven height
-(capped, not fixed), which would make the dialog visibly grow/shrink every
-time a user switches between a short section (Profile) and a tall one
-(Security). Found live during implementation, not anticipated at scoping
-time. Given a direct instruction to not regress existing behavior, Account
-kept both `shell: "overlay"` and `overlaySize: "lg"` unchanged — only the
-nav orientation changed. No `packages/ui` `Dialog.module.css` edit, no
-`@sovereignfs/ui` version bump, no `docs/upgrade.md` migration note were
-needed as a result — the rail instead uses `position: sticky` (relative to
-`Dialog`'s own scrolling `.content` region) to stay visible while a long
-section scrolls, verified live against Security's full scroll depth. Every
-other deliverable below shipped as scoped.
+**Status (September 2026): shipped, in two rounds — the second correcting the
+first's own sizing call.** Round 1 kept both `shell: "overlay"` and
+`overlaySize: "lg"` unchanged, deliberately deviating from this task's
+original `"lg" → "md"` resize: `Dialog.tsx`'s own code comment on
+`DialogSize` said `lg`'s fixed 100%/100% box exists specifically so "the
+panel holds still while [Account] switch[es] internal views," while `md` is
+content-driven height (capped, not fixed), which would have made the dialog
+visibly grow/shrink between a short section (Profile) and a tall one
+(Security). That trade-off held functionally but produced a real, separately
+reported UX problem: a full-viewport dialog for what is a compact settings
+form reads as oversized, with distracting empty space around the rail+content
+pair on any screen wider than the content actually needs — the developer
+flagged this directly from a live screenshot. Their first proposed fix
+(fully custom, manifest-driven per-plugin dialog dimensions) was assessed and
+set aside as more public-contract surface than the problem needed — `Dialog`
+size is deliberately a small curated enum, not free-form per-plugin values.
+**Round 2** instead extended that enum: `@sovereignfs/ui`'s existing `auto`
+`DialogSize` (content-driven on both width and height, each capped at
+`min(48rem, 100%)`) already covered exactly this shape and already existed
+for runtime-direct `<Dialog>` callers (e.g. Kanban's `CardDetailOverlay`) —
+`runtime/src/overlay.ts`'s own doc comment even named this as the intended
+extension point ("extend the manifest enum if a real plugin use case for
+manifest-declared `auto` ever surfaces"). `packages/manifest/src/schema.ts`'s
+`overlaySize` enum gained `"auto"`, and Account's own manifest switched to it
+— no new `packages/ui` component or `Dialog.module.css` change needed, since
+`auto` already existed. To make `auto`'s content-driven sizing suitable for a
+7-section rail+content layout, `account.module.css`'s desktop grid gained an
+explicit `width: min(48rem, 100%)` (pins to `auto`'s own cap instead of an
+arbitrary `fit-content` measurement) and a light `min-height: 24rem` floor
+(keeps the shortest sections, e.g. Notifications, from rendering as a tiny,
+oddly-shaped stub). This bounds but does not fully eliminate
+resize-between-sections the way `lg`'s true fixed box did — a section taller
+than the floor still grows the panel up to the shared cap — accepted as the
+right trade-off for solving the reported problem. Verified live end to end:
+the dialog now renders as a compact, centered, scrim-bounded box for short
+sections (Profile) and grows for long ones (Security) up to the cap, with
+the sticky rail and full scroll depth both confirmed still correct at the
+smaller size. `packages/manifest` bumped `5.10.0` → `5.11.0` (a real schema
+capability addition, private/internal package per this file's own semver
+convention); no `@sovereignfs/ui` version bump (nothing in that package
+changed). Every other deliverable below shipped as scoped in round 1.
 
 **Goal:** Replace Account's hand-rolled horizontal `.tabs`/`.tab` strip
 (`plugins/account/app/layout.tsx`, `account.module.css`) with
@@ -196,7 +221,10 @@ block for the full history of why Console and Account diverged.
 **Deliverables:**
 
 - ~~Redefine `Dialog`'s `.md` size... `shellConfig.overlaySize` `"lg" →
-"md"`~~ — not done, see Status note above. `overlaySize` stays `"lg"`.
+"md"`~~ — not done. Round 2 instead added `"auto"` to the manifest's
+  `overlaySize` enum (`packages/manifest/src/schema.ts`) and set
+  `plugins/account/manifest.json`'s `shellConfig.overlaySize` to `"auto"` —
+  see Status note above for the full reasoning.
 - Replaced `.tabs`/`.tab` in `plugins/account/app/layout.tsx` +
   `account.module.css` with `NavList variant="static"`, one ungrouped group
   of the 7 existing sections (Profile/Security/Preferences/Notifications/
@@ -260,11 +288,17 @@ build` both pass — the latter specifically because composed plugin
   directories are excluded from `runtime`'s own `tsc --noEmit` scope
   (`docs/architecture-rules.md`), so only a real build compiles Account's
   actual route files.
-- Full repo `pnpm exec vitest run` (3475 passed), `pnpm lint`,
+- Full repo `pnpm exec vitest run` (3476 passed), `pnpm lint`,
   `pnpm format:check`, and `pnpm exec tsx scripts/design-tokens-check.ts`
-  all green.
-- `plugins/account/manifest.json` bumped `0.3.7` → `0.4.0`; no
-  `@sovereignfs/ui` bump needed (see Deliverables note on `credit-card`).
+  all green, across both rounds.
+- Round 2 verified live: the dialog renders as a compact, scrim-bounded box
+  (not full-viewport) for short sections, grows for long ones up to the
+  shared `auto` cap; sticky rail and full scroll depth (Security) both
+  reconfirmed correct at the new size; mobile (375px) reconfirmed unaffected.
+- `plugins/account/manifest.json` bumped `0.3.7` → `0.4.0` → `0.4.1`;
+  `packages/manifest` bumped `5.10.0` → `5.11.0`; no `@sovereignfs/ui` bump
+  needed in either round (see Deliverables notes on `credit-card` and
+  `auto`).
 
 ---
 

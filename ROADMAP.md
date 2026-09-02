@@ -373,7 +373,7 @@ doc — but not yet assigned a roadmap slot. Promoted to a phase table once prio
 | 0.104.0 | Warden settings consolidation (RFC 0063 third revision) — workstream 0021 leg 2                                               | ✅     | [22.9](docs/epics/core-assistant.md#-229--warden-settings-consolidation)                                                                                     |
 | 0.105.0 | Warden sidebar UI (RFC 0063 third revision) — workstream 0021 leg 3                                                           | ✅     | [22.10](docs/epics/core-assistant.md#-2210--warden-sidebar-ui)                                                                                               |
 | 0.108.0 | Warden composer redesign (RFC 0063 third revision) — workstream 0021 leg 4                                                    | ✅     | [22.11](docs/epics/core-assistant.md#-2211--warden-composer-redesign)                                                                                        |
-| 0.115.0 | Vertical section nav for Account, re-scoped from RFC 0085                                                                     | ✅     | [14.5](docs/epics/plugin-accounts.md#-145--vertical-section-nav-for-account-re-scoped-from-rfc-0085)                                                         |
+| 0.116.0 | Vertical section nav for Account, re-scoped from RFC 0085                                                                     | ✅     | [14.5](docs/epics/plugin-accounts.md#-145--vertical-section-nav-for-account-re-scoped-from-rfc-0085)                                                         |
 
 ---
 

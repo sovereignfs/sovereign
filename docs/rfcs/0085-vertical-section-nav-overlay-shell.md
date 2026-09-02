@@ -36,14 +36,23 @@ scoped; see below. Account's half is scoped as
 > **Update 2:** Account's half re-scoped as
 > [epic task 14.5](../epics/plugin-accounts.md). Two changes from this RFC's
 > original design, decided during that re-scoping: Account stays
-> `shell: "overlay"` (resized `"lg" → "md"`, per this RFC's original intent)
-> rather than following Console's `shell: "default"` conversion — Console's
-> composition depends on a full-page height-unlock hook (`data-plugin-
-fullbleed`) that doesn't reach inside a `Dialog`. And no new `NavRail`
-> component is built — `@sovereignfs/ui`'s existing `NavList` (shipped for
-> Console in workstream 0022 leg 1) has no such height dependency and drops
-> into the resized dialog directly, so this RFC's originally-proposed
-> component work is no longer needed for Account either.
+> `shell: "overlay"` rather than following Console's `shell: "default"`
+> conversion — Console's composition depends on a full-page height-unlock
+> hook (`data-plugin-fullbleed`) that doesn't reach inside a `Dialog`. And no
+> new `NavRail` component is built — `@sovereignfs/ui`'s existing `NavList`
+> (shipped for Console in workstream 0022 leg 1) has no such height
+> dependency and drops into Account's `Dialog` directly, so this RFC's
+> originally-proposed component work is no longer needed for Account either.
+> The originally-planned `"lg" → "md"` resize itself did **not** ship as
+> scoped, in two further rounds during implementation: task 14.5 first kept
+> `overlaySize: "lg"` unchanged (`md`'s content-driven height would have made
+> the dialog resize between short and long sections, which `lg`'s fixed box
+> was specifically chosen to avoid), then, once `lg` itself read as oversized
+> for a settings surface, switched to `@sovereignfs/ui`'s existing `auto`
+> size instead of `md` — content-driven on both axes rather than `md`'s
+> width-fixed/height-driven shape, already used by runtime-direct `<Dialog>`
+> callers, extended to the manifest `overlaySize` enum for the first time.
+> See task 14.5's own Status note for the full account.
 
 ---
 

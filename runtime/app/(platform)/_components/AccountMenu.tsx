@@ -204,7 +204,7 @@ export function AccountMenu({
             </>
           ) : null}
           <Link
-            href="/account"
+            href="/account/profile"
             role="menuitem"
             className={styles.item}
             onClick={() => setOpen(false)}

@@ -608,7 +608,7 @@ For `sovereign` and `community` plugins, `"repository"` is required. The install
 
 - `"default"` — full shell chrome visible. Applied when the field is omitted.
 - `"minimal"` — all shell chrome hidden. Content area fills the full viewport. Useful for immersive plugins, dashboards, or full-bleed layouts.
-- `"overlay"` — the plugin renders as a dismissable dialog **over** the current page rather than navigating away from it (a quick, interruption-style layer for settings-like or quick-capture plugins; Console and Account are the motivating cases). URLs are real and unchanged; a hard/direct load renders the plugin as a full page (the `default`-shell fallback). Implemented via App Router parallel + intercepting routes — the plugin's `app/` tree composes twice (an interception copy for soft navigation, a full-page fallback for hard loads). The runtime owns the dialog chrome; plugins write ordinary pages and flip one manifest field. The dialog size is plugin-declared via `shellConfig.overlaySize` (`sm`/`md`/`lg`, default `lg`) and is a fixed box that does not resize with its content. Dismissal is a single `router.back()`, so a plugin's intra-overlay navigation (tabs/sections) must use `replace` to keep the overlay on one history entry. See RFC 0001.
+- `"overlay"` — the plugin renders as a dismissable dialog **over** the current page rather than navigating away from it (a quick, interruption-style layer for settings-like or quick-capture plugins; Account is the motivating case — Console rendered this way too until workstream 0022 moved it to `shell: "default"`). URLs are real and unchanged; a hard/direct load renders the plugin as a full page (the `default`-shell fallback). Implemented via App Router parallel + intercepting routes — the plugin's `app/` tree composes twice (an interception copy for soft navigation, a full-page fallback for hard loads). The runtime owns the dialog chrome; plugins write ordinary pages and flip one manifest field. The dialog size is plugin-declared via `shellConfig.overlaySize` (`sm`/`md`/`lg`/`auto`, default `lg`): `sm`/`md`/`lg` are fixed-width boxes (`lg` fixed-height too — the only size that never resizes with content); `auto` sizes to content on both width and height, each capped, for a panel that shouldn't fill the viewport but also isn't a good fit for a box fixed around one specific sub-route's content (Account's own case). Dismissal is a single `router.back()`, so a plugin's intra-overlay navigation (tabs/sections) must use `replace` to keep the overlay on one history entry. See RFC 0001.
 
 The runtime reads the active plugin's `shell` value from the registry on each navigation and applies the appropriate layout. The shell mode is per-plugin — navigating between plugins transitions the layout accordingly.
 
@@ -1129,10 +1129,13 @@ interface SovereignManifest {
   shell?: 'default' | 'minimal' | 'overlay';
 
   // Per-shell tuning. Only valid when shell is "overlay" (validation rejects it otherwise).
-  // overlaySize sets the dialog size: "lg" (default) fills the viewport minus a fixed margin;
-  // "md"/"sm" are progressively smaller fixed, centred boxes. Sizes are fixed (never content-driven).
+  // overlaySize sets the dialog size: "lg" (default) fills the viewport minus a fixed
+  // margin and never resizes with content; "md"/"sm" are progressively smaller fixed-width,
+  // content-driven-height boxes (each capped); "auto" sizes to content on both width and
+  // height (each capped) — for a panel that shouldn't fill the viewport but also isn't a
+  // good fit for a box fixed around one specific sub-route's content.
   shellConfig?: {
-    overlaySize?: 'sm' | 'md' | 'lg';
+    overlaySize?: 'sm' | 'md' | 'lg' | 'auto';
   };
 
   // Path to an SVG icon file within the plugin directory (e.g. "icon.svg").

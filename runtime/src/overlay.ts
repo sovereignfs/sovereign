@@ -19,15 +19,14 @@ export function routeSegmentFromInterception(segment: string): string {
  * resolved from the `@modal` slot's selected layout segment. Defaults to `lg`
  * for the slot's empty/default state or any plugin that omits the field.
  *
- * The manifest's `overlaySize` enum (`packages/manifest/src/schema.ts`) only
- * accepts `sm | md | lg` — deliberately narrower than `@sovereignfs/ui`'s
- * full `DialogSize` (`sm | md | lg | auto`). `auto` (content-driven on both
- * width and height, for a dialog whose natural footprint varies a lot)
- * exists for runtime code that renders `<Dialog>` directly (e.g.
- * `CardDetailOverlay`) but is not reachable from any plugin manifest
- * declaration. This is an intentional gap, not an oversight — extend the
- * manifest enum if a real plugin use case for manifest-declared `auto`
- * ever surfaces.
+ * The manifest's `overlaySize` enum (`packages/manifest/src/schema.ts`)
+ * mirrors `@sovereignfs/ui`'s full `DialogSize` (`sm | md | lg | auto`).
+ * `auto` (content-driven on both width and height, each capped) was
+ * originally reachable only from runtime code that renders `<Dialog>`
+ * directly (e.g. `CardDetailOverlay`) — Account (epic task 14.5) is the
+ * first plugin manifest to declare it, once a real use case surfaced: a
+ * settings-panel plugin that shouldn't fill the viewport (`lg`) but also
+ * can't use a fixed-height box sized for one specific section's content.
  */
 export function overlaySizeForSegment(
   segment: string | null,

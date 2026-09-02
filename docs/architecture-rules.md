@@ -105,16 +105,28 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   use `<Link replace>`; this is documented as a convention for third-party
   overlay plugins in `docs/plugin-development.md`. Never reintroduce push-based
   intra-overlay navigation. **Dialog size is plugin-declared** via the optional
-  manifest `shellConfig.overlaySize` (`sm` | `md` | `lg`, default `lg`); the
-  `@modal/layout.tsx` resolves it from the selected interception segment
-  (`overlaySizeForSegment` in `runtime/src/overlay.ts`). Only `lg`/`full` are
-  a **fixed-size box** (width AND height set, content scrolls inside) — the
-  size overlay-shell plugins (Account) render into, so the dialog never
-  resizes as the plugin switches between its own internal tabs/views. Console
-  rendered into this same `lg` box until workstream 0022 moved it to
-  `shell: "default"` — the `PluginAccessDialog`/`CapabilitiesButton` examples
-  below are ordinary in-page `Dialog` usages inside Console, unaffected by
-  that shell change.
+  manifest `shellConfig.overlaySize` (`sm` | `md` | `lg` | `auto`, default
+  `lg`); the `@modal/layout.tsx` resolves it from the selected interception
+  segment (`overlaySizeForSegment` in `runtime/src/overlay.ts`). `lg` is a
+  **fixed-size box** (width AND height set, content scrolls inside) — no
+  overlay-shell plugin currently renders into it (Console did, until
+  workstream 0022 moved it to `shell: "default"`; the
+  `PluginAccessDialog`/`CapabilitiesButton` examples below are ordinary
+  in-page `Dialog` usages inside Console, unaffected by that shell change).
+  `auto` sizes to content on **both** width and height, each capped at
+  `min(48rem, 100%)` — the size Account (epic task 14.5) renders into: a
+  `lg` box read as too large for a settings surface (full-viewport, mostly
+  empty for shorter sections like Notifications), but Account also can't use
+  a genuinely fixed box the way `lg` provides, since no single size fits
+  every section's content well. A plugin adopting `auto` should still give
+  its own root element an explicit `width` at (or under) the `auto` cap and
+  a light `min-height` floor — Account uses `width: min(48rem, 100%)` and
+  `min-height: 24rem` in `account.module.css` — otherwise `fit-content`
+  measures whatever the current section happens to render, and the panel's
+  width/height visibly jump around between an arbitrarily narrow short
+  section and a wide, tall long one. This bounds but does not eliminate
+  resize-between-sections: unlike `lg`'s true fixed box, a section taller
+  than `min-height` still grows the panel up to the shared `auto` cap.
   `sm`/`md` are fixed-width but content-driven height, capped at a per-size
   max-height (28rem/42rem) beyond which content scrolls internally rather
   than the panel growing further — changed from also-fixed-height because a

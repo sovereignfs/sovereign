@@ -733,6 +733,15 @@ describe('validateManifest', () => {
     expect(res.valid).toBe(true);
   });
 
+  it('accepts shellConfig.overlaySize: "auto" (epic task 14.5)', () => {
+    const res = validateManifest({
+      ...base,
+      shell: 'overlay',
+      shellConfig: { overlaySize: 'auto' },
+    });
+    expect(res.valid).toBe(true);
+  });
+
   it('rejects shellConfig.overlaySize without shell: "overlay"', () => {
     const res = validateManifest({ ...base, shellConfig: { overlaySize: 'md' } });
     expect(res.valid).toBe(false);

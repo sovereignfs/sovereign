@@ -129,8 +129,11 @@ const manifestObjectSchema = z
     shell: z.enum(['default', 'minimal', 'overlay']).optional(),
     shellConfig: z
       .object({
-        /** Dialog size for `shell: overlay` plugins (default `lg`). */
-        overlaySize: z.enum(['sm', 'md', 'lg']).optional(),
+        /** Dialog size for `shell: overlay` plugins (default `lg`). `auto`
+         *  sizes to content on both width and height (each capped), for a
+         *  panel that shouldn't fill the viewport but also shouldn't be a
+         *  fixed box — see `@sovereignfs/ui`'s `DialogSize`. */
+        overlaySize: z.enum(['sm', 'md', 'lg', 'auto']).optional(),
         /** Show the mobile header for `shell: default` plugins (default `true`). */
         mobileHeader: z.boolean().optional(),
         /** Show the mobile footer for `shell: default` plugins (default `true`). */

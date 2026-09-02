@@ -636,6 +636,34 @@ export async function listUserGroups(pdb: PlatformDb): Promise<UserGroupRow[]> {
 }
 
 /**
+ * Same as `listUserGroups`, plus each group's member count — a single
+ * `LEFT JOIN`/`GROUP BY` query, not one membership count query per group.
+ * Separate function (rather than widening `listUserGroups` itself) since
+ * `listUserGroupsForUser` and other callers don't need the count and
+ * shouldn't pay the join for it.
+ */
+export async function listUserGroupsWithMemberCount(
+  pdb: PlatformDb,
+): Promise<(UserGroupRow & { memberCount: number })[]> {
+  const rows = await dbAll<UserGroupRow & { memberCount: number | string }>(
+    pdb,
+    sql`SELECT g.id, g.name, g.slug, g.description, g.created_by_user_id AS "createdByUserId",
+               g.created_at AS "createdAt", g.updated_at AS "updatedAt",
+               COUNT(m.user_id) AS "memberCount"
+        FROM user_groups g
+        LEFT JOIN user_group_members m ON m.group_id = g.id
+        GROUP BY g.id, g.name, g.slug, g.description, g.created_by_user_id, g.created_at, g.updated_at
+        ORDER BY g.name ASC`,
+  );
+  return rows.map((r) => ({
+    ...r,
+    createdAt: coerceNum(r.createdAt),
+    updatedAt: coerceNum(r.updatedAt),
+    memberCount: coerceNum(r.memberCount),
+  }));
+}
+
+/**
  * Whether a group is currently referenced by anything that should block a
  * silent delete — today, a `plugin_access_groups` grant (RFC 0065).
  */

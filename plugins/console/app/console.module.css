@@ -1043,6 +1043,17 @@ svg.cardChevron {
   border-bottom: var(--sv-border-width-hairline) solid var(--sv-color-border);
 }
 
+/* Wraps an `Avatar` + `.compactRowLabel` as a single `.compactRow` flex item
+   — `.compactRow` itself is `justify-content: space-between` between exactly
+   two children (identity, action), so the avatar can't be a 3rd sibling
+   without changing that distribution. */
+.compactRowIdentity {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  min-width: 0;
+}
+
 /* `GroupDetailFields`' member list — name/email as a stacked title+subtitle,
    matching Users' own `.userName`/`.userEmail` table-row treatment, instead
    of "Name (email@example.com)" run together as one line. */

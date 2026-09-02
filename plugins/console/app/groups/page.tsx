@@ -13,6 +13,11 @@ interface GroupRow {
   slug: string;
   description: string | null;
   createdAt: number;
+  memberCount: number;
+}
+
+function memberCountLabel(count: number): string {
+  return `${count} ${count === 1 ? 'member' : 'members'}`;
 }
 
 async function getGroups(): Promise<GroupRow[]> {
@@ -101,12 +106,18 @@ export default async function GroupsPage({
                     <span className={styles.cardDesc}>
                       {group.description ?? `Slug: ${group.slug}`}
                     </span>
+                    <span className={styles.memberCount}>
+                      {memberCountLabel(group.memberCount)}
+                    </span>
                   </Link>
                 ) : (
                   <>
                     <span className={styles.cardTitle}>{group.name}</span>
                     <span className={styles.cardDesc}>
                       {group.description ?? `Slug: ${group.slug}`}
+                    </span>
+                    <span className={styles.memberCount}>
+                      {memberCountLabel(group.memberCount)}
                     </span>
                   </>
                 )}
@@ -122,18 +133,16 @@ export default async function GroupsPage({
       )}
 
       {selectedGroup && (
-        <ConsoleDetailSlot>
-          {/* `key` forces a full remount on every selection change — this
-              pane is registered into `ConsoleLayout`'s detail-column slot via
-              context (see `ConsoleDetailSlot`), not rendered at a normal tree
-              position, so without a key React treats a different group's
-              element as an *update* to the same instance rather than a new
-              one. `GroupDetailFields`' Name/Description inputs are
-              uncontrolled (`defaultValue`) and its danger-zone confirmation
-              is local `useState` — both only ever read their initial value
-              once, so switching groups left them frozen on whichever group
-              was selected first. */}
-          <GroupDetailPane key={selectedGroup.id} group={selectedGroup} closeHref={closeHref} />
+        // `detailKey` forces a full remount on every selection change —
+        // `GroupDetailFields`' Name/Description inputs are uncontrolled
+        // (`defaultValue`) and its danger-zone confirmation is local
+        // `useState`, both of which only ever read their initial value once.
+        // This can't be a `key` prop on `GroupDetailPane` itself — see
+        // `useConsoleDetailPane`'s doc comment for why that silently doesn't
+        // work here (a real, found-live bug: it looked like it should force
+        // a remount and didn't).
+        <ConsoleDetailSlot detailKey={selectedGroup.id}>
+          <GroupDetailPane group={selectedGroup} closeHref={closeHref} />
         </ConsoleDetailSlot>
       )}
     </div>

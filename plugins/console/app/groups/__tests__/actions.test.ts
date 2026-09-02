@@ -206,12 +206,25 @@ describe('groups/actions.ts — happy paths', () => {
         },
       }),
     );
-    resolveUsers.mockResolvedValue([{ id: 'user-2', name: 'Bob', email: 'bob@example.test' }]);
+    resolveUsers.mockResolvedValue([
+      {
+        id: 'user-2',
+        name: 'Bob',
+        email: 'bob@example.test',
+        image: 'https://example.test/bob.png',
+      },
+    ]);
 
     const result = await listResolvedGroupMembers('group-1');
 
     expect(result).toEqual([
-      { userId: 'user-2', addedAt: 1000, name: 'Bob', email: 'bob@example.test' },
+      {
+        userId: 'user-2',
+        addedAt: 1000,
+        name: 'Bob',
+        email: 'bob@example.test',
+        image: 'https://example.test/bob.png',
+      },
     ]);
     vi.unstubAllGlobals();
   });

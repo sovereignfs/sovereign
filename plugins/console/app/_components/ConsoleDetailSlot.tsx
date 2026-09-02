@@ -9,8 +9,18 @@ import { useConsoleDetailPane } from '../_lib/detail-pane';
  * `ThreeColumnLayout`, not here. Lets a Server Component page (e.g.
  * `users/page.tsx`) hand off a client detail pane without the page itself
  * needing a `'use client'` directive.
+ *
+ * `detailKey` (typically the selected row's id) is required — see
+ * `useConsoleDetailPane`'s doc comment for why a `key` prop on `children`
+ * itself can't do this job.
  */
-export function ConsoleDetailSlot({ children }: { children: ReactNode }) {
-  useConsoleDetailPane(children);
+export function ConsoleDetailSlot({
+  detailKey,
+  children,
+}: {
+  detailKey: string;
+  children: ReactNode;
+}) {
+  useConsoleDetailPane(children, detailKey);
   return null;
 }

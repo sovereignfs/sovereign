@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
-import { createUserGroup, listUserGroups } from '@sovereignfs/db';
+import { createUserGroup, listUserGroupsWithMemberCount } from '@sovereignfs/db';
 import { checkAdminKey } from '@/src/admin-guard';
 import { logActivity } from '@/src/activity';
 import { getPlatformDb } from '@/src/db';
@@ -32,7 +32,7 @@ export async function GET(request: Request): Promise<Response> {
   const denied = checkAdminKey(request);
   if (denied) return denied;
 
-  const groups = await listUserGroups(await getPlatformDb());
+  const groups = await listUserGroupsWithMemberCount(await getPlatformDb());
   return NextResponse.json(groups);
 }
 

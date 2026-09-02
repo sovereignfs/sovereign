@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useCallback, useEffect, useRef, useState } from 'react';
-import { Button, FormField, Input } from '@sovereignfs/ui';
+import { Avatar, Button, FormField, Input } from '@sovereignfs/ui';
 import type { DirectoryUser } from '@sovereignfs/sdk';
 import {
   addGroupMemberAction,
@@ -134,9 +134,12 @@ function MemberList({
     <ul className={styles.compactList}>
       {members.map((member) => (
         <li key={member.userId} className={styles.compactRow}>
-          <span className={styles.compactRowLabel}>
-            <span className={styles.compactRowTitle}>{member.name ?? member.email}</span>
-            {member.name && <span className={styles.compactRowSubtitle}>{member.email}</span>}
+          <span className={styles.compactRowIdentity}>
+            <Avatar name={member.name ?? member.email} src={member.image ?? undefined} size="sm" />
+            <span className={styles.compactRowLabel}>
+              <span className={styles.compactRowTitle}>{member.name ?? member.email}</span>
+              {member.name && <span className={styles.compactRowSubtitle}>{member.email}</span>}
+            </span>
           </span>
           <form
             action={async (formData) => {

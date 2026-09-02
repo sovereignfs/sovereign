@@ -99,6 +99,7 @@ export interface ResolvedGroupMember {
   userId: string;
   name: string | null;
   email: string;
+  image: string | null;
   addedAt: number;
 }
 
@@ -119,6 +120,7 @@ export async function listResolvedGroupMembers(groupId: string): Promise<Resolve
     addedAt: m.addedAt,
     name: byId.get(m.userId)?.name ?? null,
     email: byId.get(m.userId)?.email ?? m.userId,
+    image: byId.get(m.userId)?.image ?? null,
   }));
 }
 

@@ -242,17 +242,15 @@ export default async function UsersPage({
       </div>
 
       {selectedMember && (
-        <ConsoleDetailSlot>
-          {/* `key` forces a full remount on every selection change — same
-              root cause as Groups' detail pane (see that call site's own
-              comment): this pane is registered into `ConsoleLayout`'s detail
-              slot via context, not a normal tree position, so without a key
-              React updates the existing instance instead of mounting a new
-              one. `RoleSelect`'s `useState(role)` only reads its initial
-              value once, so switching users without a key left the role
-              dropdown frozen on whichever user was selected first. */}
+        // `detailKey` forces a full remount on every selection change —
+        // `RoleSelect`'s `useState(role)` only reads its initial value once,
+        // so switching users left the role dropdown frozen on whichever user
+        // was selected first. This can't be a `key` prop on `UserDetailPane`
+        // itself — see `useConsoleDetailPane`'s doc comment for why that
+        // silently doesn't work here (a real, found-live bug: it looked
+        // like it should force a remount and didn't).
+        <ConsoleDetailSlot detailKey={selectedMember.id}>
           <UserDetailPane
-            key={selectedMember.id}
             member={selectedMember}
             canAssignRoles={canAssignRoles}
             canManageUsers={canManageUsers}

@@ -129,7 +129,11 @@ export default async function PluginsPage({
         selectedPluginId={selectedRow?.id ?? null}
       />
       {selectedRow && (
-        <ConsoleDetailSlot>
+        // detailKey — see `useConsoleDetailPane`'s doc comment: a `key` prop
+        // on `PluginDetailPane` itself would silently not force a remount
+        // here, since this content crosses the Server→Client boundary via
+        // `ConsoleDetailSlot`.
+        <ConsoleDetailSlot detailKey={selectedRow.id}>
           <PluginDetailPane row={selectedRow} closeHref={closeHref} />
         </ConsoleDetailSlot>
       )}

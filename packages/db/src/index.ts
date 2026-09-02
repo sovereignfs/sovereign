@@ -58,6 +58,7 @@ export {
   listUserGroupMembers,
   listUserGroups,
   listUserGroupsForUser,
+  listUserGroupsWithMemberCount,
   listUserNotifications,
   logDataAccess,
   pruneDeliveryLogs,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -49,7 +49,7 @@ export default function ConsoleLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const activeId = activeConsoleSectionId(pathname);
   const isOverview = pathname === '/console';
-  const [detailPane, setDetailPane] = useState<ReactNode | null>(null);
+  const [detailPane, setDetailPane] = useState<{ node: ReactNode; detailKey: string } | null>(null);
   const isNarrowDesktop = useIsMobile(DETAIL_COLLAPSE_BREAKPOINT_PX);
 
   const sidebarGroups = CONSOLE_SECTIONS.map((group) => ({
@@ -91,7 +91,15 @@ export default function ConsoleLayout({ children }: { children: ReactNode }) {
                 </ConsoleDetailPaneProvider>
               </OfflineGate>
             </div>
-            {!isNarrowDesktop && detailPane}
+            {!isNarrowDesktop && detailPane && (
+              // `key` here — not on the detail pane element itself — is what
+              // actually forces a remount on selection change. See
+              // `useConsoleDetailPane`'s doc comment for why: this Fragment
+              // is created client-side, right at the position React diffs,
+              // so its key is genuinely visible to reconciliation, unlike a
+              // key set on content that crossed the Server→Client boundary.
+              <Fragment key={detailPane.detailKey}>{detailPane.node}</Fragment>
+            )}
           </ThreeColumnLayout>
         </div>
       }

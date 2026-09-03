@@ -26,16 +26,27 @@
   color: var(--sv-color-text-primary);
 }
 
-.tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0;
-  border-bottom: 1px solid var(--sv-color-border);
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sv-space-1);
+  align-self: flex-start;
+  color: var(--sv-color-text-muted);
+  text-decoration: none;
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+}
+
+@media (hover: hover) {
+  .backLink:hover {
+    color: var(--sv-color-text-primary);
+  }
 }
 
 /* Desktop-only vertical rail (NavList) — hidden by default, shown at
-   width >= 769px below. Not shown at all on mobile, where .mobileHeader's
-   horizontal strip is used instead (task 14.5, re-derived from RFC 0085). */
+   width >= 769px below. Not shown at all on mobile, where .mobileHeader
+   instead shows a title (bare index route) or a back-link (any section) —
+   task 14.6, mobile drill-down nav. */
 .rail {
   display: none;
 }
@@ -87,18 +98,19 @@
 }
 
 @media (max-width: 768px) {
-  /* Collapse the account grid gap on mobile; the space below the tab strip is
-     then governed solely by the header's margin-bottom (below). The default
-     gap: space-6 (24px) plus that margin gave far too much room between the
-     strip and the content. */
+  /* Collapse the account grid gap on mobile; the space below the mobile
+     header is then governed solely by the header's margin-bottom (below).
+     The default gap: space-6 (24px) plus that margin gave far too much room
+     between the header and the content. */
   .account {
     gap: 0;
   }
 
-  /* Stick the tab strip so the active section is always visible while scrolling.
-     Only reached on the standalone (hard-navigation) route — the soft-navigated
+  /* Stick the title/back-link so it's always visible while scrolling. Only
+     reached on the standalone (hard-navigation) route — the soft-navigated
      overlay case hides this whole header instead (see .headerHiddenOnMobile)
-     because the Dialog's own OverlayHeader shows the title and tab strip there. */
+     because the Dialog's own OverlayHeader shows the title/back-link there
+     (task 14.6). */
   .mobileHeader {
     position: sticky;
     top: 0;
@@ -107,8 +119,8 @@
     padding: 0;
     /* Slight bottom shadow to separate from scrolling content */
     box-shadow: 0 1px 0 var(--sv-color-border);
-    /* Breathing room between the strip's bottom border and the first content
-       section — otherwise the section heading sits cramped against the line. */
+    /* Breathing room between the header and the first content section —
+       otherwise the section heading sits cramped against it. */
     margin-bottom: var(--sv-space-4);
     /* WebKit momentum-scroll re-tiling quirk: a position: sticky element with
        no compositing layer of its own can go stale/blank for a stretch of
@@ -121,53 +133,12 @@
     transform: translateZ(0);
   }
 
-  .tabs {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-    /* Fade the right edge to hint at more tabs */
-    mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%);
-    overscroll-behavior-x: none;
-  }
-
-  .tabs::-webkit-scrollbar {
-    display: none;
-  }
-
   /* Set by AccountLayout only when useOverlaySecondRow found an enclosing
-     Dialog — the tab strip is rendered there instead (Dialog's mobile
-     OverlayHeader), so this inline copy (title + tabs) would otherwise
-     duplicate it. */
+     Dialog — the title/back-link is rendered there instead (Dialog's mobile
+     OverlayHeader), so this inline copy would otherwise duplicate it. */
   .headerHiddenOnMobile {
     display: none;
   }
-}
-
-.tab {
-  padding: var(--sv-space-2) var(--sv-space-3);
-  /* Vertically centre the label: the bottom edge carries a 2px underline
-     (transparent here, --sv-color-text-primary when active), so its visual
-     weight is padding-bottom (10px) + 2px = 12px. Match that on top so the
-     text isn't parked 4px above centre. */
-  padding-top: var(--sv-space-3);
-  padding-bottom: calc(var(--sv-space-2) + 2px);
-  border-bottom: 2px solid transparent;
-  font-size: var(--sv-font-size-sm);
-  font-weight: var(--sv-font-weight-medium);
-  color: var(--sv-color-text-muted);
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.tab:hover {
-  color: var(--sv-color-text-primary);
-}
-
-.tabActive {
-  color: var(--sv-color-text-primary);
-  font-weight: var(--sv-font-weight-semibold);
-  border-bottom-color: var(--sv-color-text-primary);
 }
 
 /* ── Sections ───────────────────────────────────────────────────────────── */

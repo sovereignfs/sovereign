@@ -401,6 +401,139 @@ build` both pass — the latter specifically because composed plugin
 
 ---
 
+#### ✅ 14.6 — Mobile drill-down nav for Account (picks up RFC 0085's deferred mobile scope)
+
+**Status (September 2026): shipped.** Task 14.5 gave Account's desktop a
+vertical rail nav but explicitly left mobile unchanged (still the horizontal
+scrollable tab strip) — RFC 0085 deliberately deferred the mobile piece:
+_"Ship the full mobile drill-down (Claude Mobile-style list) now. Rejected
+for this RFC's scope — it's new mobile UX... Noted as explicit future work so
+it isn't lost."_ This task is that follow-up, matching the drill-down pattern
+Console already shipped for its own mobile nav (task 13.17, workstream 0022):
+a full-screen index of tappable section rows (chevron, no persistent nav)
+instead of a horizontal strip; selecting a row navigates into that section,
+which then shows a `‹ Account` back-link instead of any persistent nav.
+
+**A real correctness risk was found and resolved during planning, worth
+recording since it's non-obvious.** The naive approach — fork the bare
+`/account` route's `redirect()` by viewport, redirecting on desktop and
+rendering an index on mobile — is unsafe. `ResponsiveSurface`'s
+`useIsMobile()` defaults to `false` (desktop) on first paint and only
+corrects itself in a `useEffect`; because React fires child effects before
+parent effects within the same commit, a redirect-triggering effect placed
+in the `web` branch would fire on _every_ load — including real mobile
+devices — before `useIsMobile`'s own corrective effect ever runs. The mobile
+index would never mount; every load would silently bounce to `/account/
+profile` regardless of viewport. This is the same bug class as task 14.5's
+own rounds 3–4 (redirect/paint races inside this same Dialog architecture).
+Avoided entirely by never forking a _navigation_ decision by viewport, only
+forking _content_ — mirroring exactly how Console's own bare `/console`
+route works: it never redirects, in either viewport; the fork only changes
+what renders. `plugins/account/app/page.tsx`'s `redirect('/account/profile')`
+is removed outright; the route now unconditionally renders a
+`ResponsiveSurface` between a mobile `NavList variant="drilldown"` index and
+a desktop `EmptyState` ("Select a section from the sidebar") — neither
+branch has a navigation side effect, so the SSR-default-false race is
+harmless (same accepted flash-of-wrong-content-briefly tradeoff Console's
+own `OverviewClient` already ships with).
+
+**Deliverables:**
+
+- New `plugins/account/app/_lib/sections.ts` (`ACCOUNT_SECTIONS` flat array +
+  `activeAccountSectionId(pathname)`, mirroring `plugins/console/app/_lib/
+sections.ts`'s shape) — extracted from `layout.tsx`'s previously-inline
+  `SECTIONS` const, now the single source of truth for both the desktop rail
+  and the new mobile index. New `_lib/__tests__/sections.test.ts` mirroring
+  Console's own test.
+- `plugins/account/app/page.tsx`: `redirect('/account/profile')` replaced
+  with the `ResponsiveSurface` index described above. The mobile drilldown's
+  `NavList` links use `replace`, not push — a new navigation hop (index →
+  section) inside a Dialog dismissed via `router.back()`; push would mean a
+  single back only returns to the index instead of exiting the dialog.
+- `plugins/account/app/layout.tsx`: the horizontal tab strip and
+  `ActiveNavLink` usage are removed. The mobile header now shows
+  `<h1>Account</h1>` on the bare index route, or a `‹ Account` back-link
+  (also `replace`, same reasoning) on any section route — computed via
+  `pathname === '/account'` (already available via `usePathname()`).
+  `useOverlaySecondRow` is now called with `null` on the index route rather
+  than the header content: Dialog's own `OverlayHeader` (from `@modal/
+layout.tsx`, `title={plugin.name}` = `"Account"`) already renders
+  "Account" as its row-1 mobile title on every page inside the dialog —
+  handing the same heading up as a second row on the index would duplicate
+  it. The desktop rail is otherwise unchanged, now importing
+  `ACCOUNT_SECTIONS`/`activeAccountSectionId` from the new `_lib/sections.ts`.
+- `plugins/account/app/account.module.css`: `.tabs`/`.tab`/`.tabActive`
+  (base rules + the mobile scroll-strip rules — `overflow-x`, `mask-image`,
+  `::-webkit-scrollbar`) removed. New `.backLink` rule, copied from
+  `plugins/console/app/console.module.css`'s own — duplicated locally rather
+  than extracted into `packages/ui`, matching Console's own precedent (no
+  shared component exists there either; a ~10-line pattern with exactly one
+  other consumer doesn't clear this repo's DS-first bar for promotion yet).
+- `plugins/account/app/_components/ActiveNavLink.tsx` deleted — confirmed via
+  repo-wide grep its only consumer was the now-removed tab strip.
+- **Investigated but found not applicable to this repo**: the three
+  minimal-shell account menus (`runtime/app/(minimal)/{docs,kanban,
+travellog}/_components/*AccountMenu.tsx`) still link to bare `/account`
+  rather than `/account/profile` — with the auto-redirect gone, this would
+  regress those entry points (desktop lands on the new `EmptyState` instead
+  of Profile). However, `git check-ignore` confirmed all three are
+  gitignored, generated copies of the corresponding gitignored `.local` dev
+  plugins (`plugins/sovereign-plugin-{docs,kanban,travellog}.local`), not
+  real committed source — a byte-identical diff against each `.local`
+  source confirmed it. There is nothing to fix in this repository; the
+  platform's one real, committed entry point
+  (`runtime/app/(platform)/_components/AccountMenu.tsx`) already links to
+  `/account/profile` (task 14.5's round 4). **Follow-up note for whenever
+  any of docs/kanban/travellog is formally onboarded as a committed
+  plugin**: its own `AccountMenu` equivalent should link to `/account/
+profile`, not bare `/account`, matching this fix.
+
+**Dependencies:** Task 14.5 (desktop rail, already shipped). Independent of
+Console's own task 13.17 (already shipped) beyond mirroring its pattern.
+
+**SRS reference:** [RFC 0085](../rfcs/0085-vertical-section-nav-overlay-shell.md)
+— "Full mobile drill-down list" open question / Alternatives entry.
+
+**Review checklist:**
+
+- New `_lib/__tests__/sections.test.ts` (5 tests) plus the full existing
+  `plugins/account` suite (66 tests) all green.
+- `pnpm --filter runtime typecheck` and `pnpm --filter runtime build` both
+  pass — the latter specifically because composed plugin directories are
+  excluded from `runtime`'s own `tsc --noEmit` scope, so only a real build
+  compiles Account's actual route files (`/account` grew from a 350 B
+  redirect stub to real rendered content, confirming the new index body
+  compiled).
+- Verified live (mobile 375px, Dialog-overlay case): opening Account from
+  the sidebar avatar menu lands on `/account/profile` unchanged; navigating
+  back to bare `/account` shows the drilldown list with no duplicate
+  "Account" heading; tapping a row lands on that section with the back-link
+  showing; **a single browser-back from a drilldown-entered section exits
+  the dialog entirely** (the critical regression check, now covering the
+  new index→section hop as well as the existing rail).
+- Verified live (mobile, standalone hard-nav case): hard-navigating directly
+  to bare `/account` shows `<h1>Account</h1>` plus the drilldown list (no
+  Dialog, so no duplicate-heading concern); hard-navigating directly to a
+  section (e.g. `/account/security`) shows the inline `‹ Account` back-link
+  with the correct `href="/account"` (same `Link replace` component already
+  exercised end-to-end in the Dialog case above).
+- Verified live (desktop): bare `/account` (hard nav) shows the rail beside
+  the new `EmptyState` ("Select a section" / "Choose a section from the
+  sidebar."); clicking a rail item (a `<Link>`, always client-side per
+  Next.js's own interception semantics, even from a hard-loaded page)
+  correctly opens the Dialog with that section active and highlighted in
+  the rail — rail navigation, active highlighting, and sticky scroll all
+  reconfirmed unchanged from task 14.5. No console errors observed across
+  the full mobile + desktop pass.
+- `pnpm lint`, `pnpm format:check`, `pnpm exec tsx scripts/design-tokens-check.ts`
+  all green.
+- `plugins/account/manifest.json` bumped `0.4.3` → `0.4.4`. No
+  `packages/manifest` or `@sovereignfs/ui` bump — `NavList`,
+  `ResponsiveSurface`, `EmptyState`, and `useOverlaySecondRow` are all
+  reused unmodified.
+
+---
+
 ## Related Docs
 
 - [docs/plugins/account.md](../plugins/) (plugin spec)

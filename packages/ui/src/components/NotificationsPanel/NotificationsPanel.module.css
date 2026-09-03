@@ -239,3 +239,20 @@
     background: var(--sv-color-surface-sunken);
   }
 }
+
+.viewAll {
+  display: block;
+  text-align: center;
+  padding: var(--sv-space-2) var(--sv-space-3);
+  border-top: var(--sv-border-width-hairline) solid var(--sv-color-border);
+  font-size: var(--sv-font-size-caption);
+  color: var(--sv-color-text-muted);
+  text-decoration: none;
+}
+
+@media (hover: hover) {
+  .viewAll:hover {
+    color: var(--sv-color-text-primary);
+    background: var(--sv-color-surface-sunken);
+  }
+}

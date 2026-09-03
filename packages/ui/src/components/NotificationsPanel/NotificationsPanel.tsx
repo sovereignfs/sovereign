@@ -33,6 +33,11 @@ export interface NotificationsPanelProps {
    *  "Notifications". */
   'aria-label'?: string;
   align?: 'left' | 'right';
+  /** Optional footer link (e.g. to the consumer's own full notification
+   *  list/detail view — RFC 0048) — mirrors the real `NotificationBell`'s
+   *  "View all" link. Omit to render no footer, matching this component's
+   *  behavior before this prop existed. */
+  viewAllHref?: string;
 }
 
 function NotificationRow({ item }: { item: NotificationsPanelItem }) {
@@ -100,6 +105,7 @@ export function NotificationsPanel({
   emptyMessage = 'No notifications.',
   'aria-label': ariaLabel = 'Notifications',
   align = 'right',
+  viewAllHref,
 }: NotificationsPanelProps) {
   const [open, setOpen] = useState(false);
 
@@ -171,6 +177,11 @@ export function NotificationsPanel({
           items.map((item) => <NotificationRow key={item.id} item={item} />)
         )}
       </ul>
+      {viewAllHref && (
+        <a href={viewAllHref} className={styles.viewAll} onClick={() => setOpen(false)}>
+          View all
+        </a>
+      )}
     </Popover>
   );
 }

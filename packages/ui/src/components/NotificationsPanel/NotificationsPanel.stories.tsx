@@ -53,3 +53,9 @@ export const Empty: Story = {
     unreadCount: 0,
   },
 };
+
+export const WithViewAll: Story = {
+  args: {
+    viewAllHref: '/inbox',
+  },
+};

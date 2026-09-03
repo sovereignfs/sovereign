@@ -19,9 +19,10 @@ vi.mock('../../actions', () => ({
 const push = vi.fn();
 const replace = vi.fn();
 const refresh = vi.fn();
+const usePathnameMock = vi.fn(() => '/warden');
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push, replace, refresh }),
-  usePathname: () => '/warden',
+  usePathname: () => usePathnameMock(),
   useSearchParams: () => new URLSearchParams(),
 }));
 
@@ -126,8 +127,9 @@ describe('WardenSidebar — groups', () => {
 
   it('falls back to "New chat" for a session with no title yet', () => {
     renderSidebar({ recentSessions: [session({ id: 'r-1', title: null })] });
-    // Two "New chat" links now exist: the primary-nav action (href /warden)
-    // and this session's own untitled fallback (href /warden?session=r-1).
+    // Two "New chat" links now exist: the primary-nav action (href
+    // /warden/new) and this session's own untitled fallback (href
+    // /warden?session=r-1).
     const links = screen.getAllByRole('link', { name: 'New chat' });
     expect(links.some((link) => link.getAttribute('href') === '/warden?session=r-1')).toBe(true);
   });
@@ -142,12 +144,28 @@ describe('WardenSidebar — groups', () => {
     expect(activeRow?.className).not.toBe(inactiveRow?.className);
   });
 
-  it('links each row to its own session id, and "New chat" to a plain /warden', () => {
+  it('links each row to its own session id, and the primary-nav "New chat" to /warden/new', () => {
     renderSidebar({ recentSessions: [session({ id: 'r-1', title: 'One' })] });
     expect(screen.getByRole('link', { name: 'One' }).getAttribute('href')).toBe(
       '/warden?session=r-1',
     );
-    expect(screen.getByRole('link', { name: 'New chat' }).getAttribute('href')).toBe('/warden');
+    // Two "New chat" links exist once a session fixture has no title of its
+    // own (see the fallback-label test below) — this fixture's session is
+    // titled, so only the primary-nav action matches here.
+    expect(screen.getByRole('link', { name: 'New chat' }).getAttribute('href')).toBe('/warden/new');
+  });
+
+  it('marks the primary-nav "New chat" link active when on /warden/new', () => {
+    usePathnameMock.mockReturnValueOnce('/warden/new');
+    renderSidebar();
+    expect(screen.getByRole('link', { name: 'New chat' }).getAttribute('aria-current')).toBe(
+      'page',
+    );
+  });
+
+  it('does not mark "New chat" active on plain /warden', () => {
+    renderSidebar();
+    expect(screen.getByRole('link', { name: 'New chat' }).getAttribute('aria-current')).toBeNull();
   });
 
   it('links Settings to /warden/settings', () => {
@@ -263,15 +281,18 @@ describe('WardenSidebar — pin/unpin', () => {
     ).toBeDefined();
   });
 
-  it('renders a pin icon only for pinned rows', () => {
+  it('renders no per-row pin icon — the Pinned/Recent grouping alone conveys pinned status', () => {
     renderSidebar({
       pinnedSessions: [session({ id: 'p-1', title: 'Pinned chat', pinnedAt: 5 })],
       recentSessions: [session({ id: 'r-1', title: 'Unpinned chat' })],
     });
     const pinnedRow = screen.getByRole('link', { name: 'Pinned chat' }).closest('div');
     const unpinnedRow = screen.getByRole('link', { name: 'Unpinned chat' }).closest('div');
-    // Each row has 2 svgs when pinned (pin icon + menu-trigger icon), 1 when not.
-    expect(pinnedRow?.querySelectorAll('svg').length).toBe(2);
+    // Each row's only icon is its "⋯" options-menu trigger — no leading pin
+    // icon on either, pinned or not. Both rows' labels start at the same x
+    // position as a result, without needing a hidden-but-space-reserving
+    // icon to keep them aligned.
+    expect(pinnedRow?.querySelectorAll('svg').length).toBe(1);
     expect(unpinnedRow?.querySelectorAll('svg').length).toBe(1);
   });
 });

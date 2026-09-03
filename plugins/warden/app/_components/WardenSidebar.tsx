@@ -151,9 +151,6 @@ export function WardenSidebar({
 
     return (
       <div key={session.id} className={isActive ? `${styles.row} ${styles.rowActive}` : styles.row}>
-        {session.pinnedAt !== null && (
-          <Icon name="pin" size="xs" aria-hidden className={styles.rowPinIcon} />
-        )}
         {isRenaming ? (
           <input
             ref={renameInputRef}
@@ -187,6 +184,7 @@ export function WardenSidebar({
             onClose={() => setMenuOpenId(null)}
             items={menuItemsFor(session)}
             aria-label={`Session options for "${label}"`}
+            width={180}
           />
         )}
       </div>
@@ -204,7 +202,13 @@ export function WardenSidebar({
     {
       id: 'primary',
       items: [
-        { id: 'new', label: 'New chat', href: '/warden', icon: 'plus' },
+        {
+          id: 'new',
+          label: 'New chat',
+          href: '/warden/new',
+          icon: 'plus',
+          active: pathname === '/warden/new',
+        },
         {
           id: 'providers',
           label: 'Providers',

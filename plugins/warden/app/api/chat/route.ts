@@ -4,6 +4,7 @@ import { composeDocumentContent, processAttachment } from '../../_lib/attachment
 import {
   appendMessage,
   createSession,
+  deleteSession,
   getRecentMessagesForContext,
   SessionNotFoundError,
 } from '../../_lib/sessions';
@@ -201,6 +202,13 @@ async function dispatchAndRespond(
     userId: string;
     tenantId: string;
     sessionId: string;
+    /** Whether `sessionId` was just lazily created for *this* request
+     *  (no `sessionId` in the original request body) rather than supplied
+     *  by the client. Only a freshly-created session is safe to clean up
+     *  below on a failed dispatch — an existing, client-supplied session
+     *  may already hold prior history worth keeping even if this one send
+     *  failed. */
+    sessionWasCreated: boolean;
     providerId: string | null;
     model: string;
     contentForPersistence: string;
@@ -253,6 +261,19 @@ async function dispatchAndRespond(
     }
 
     return response;
+  }
+
+  // The model call failed — a lazily-created session (line ~360) was
+  // committed *before* this point, since its id had to exist for
+  // `getRecentMessagesForContext`'s ownership check. Without this cleanup
+  // it's left behind forever: empty, untitled (`deriveTitle()` only runs on
+  // a successful `appendMessage`), and indistinguishable in the sidebar
+  // from a session about to get its first message. A client-supplied
+  // session is never touched here — only one this exact request created.
+  if (persist?.sessionWasCreated) {
+    await deleteSession(persist.userId, persist.tenantId, persist.sessionId).catch((error) => {
+      console.error('[warden] failed to clean up an orphaned session after a failed send:', error);
+    });
   }
 
   switch (result.kind) {
@@ -347,7 +368,10 @@ export async function POST(request: Request): Promise<Response> {
   // itself (it throws `SessionNotFoundError` for a foreign/unknown id, never
   // silently substituting a different session); omitting it creates a new
   // one lazily — not on "+ New" being clicked, only on an actual first send
-  // (RFC 0063 §3/§10).
+  // (RFC 0063 §3/§10). `sessionWasCreated` lets `dispatchAndRespond` clean
+  // this row back up if the model call below fails, so a failed send never
+  // leaves an empty, untitled session behind in the sidebar.
+  const sessionWasCreated = !parsed.sessionId;
   const sessionId =
     parsed.sessionId ?? (await createSession(session.user.id, session.user.tenantId)).id;
 
@@ -374,6 +398,7 @@ export async function POST(request: Request): Promise<Response> {
     userId: session.user.id,
     tenantId: session.user.tenantId,
     sessionId,
+    sessionWasCreated,
     providerId: selection.kind === 'provider' ? selection.providerId : null,
     model: selection.kind === 'provider' ? selection.model : 'local',
     contentForPersistence,

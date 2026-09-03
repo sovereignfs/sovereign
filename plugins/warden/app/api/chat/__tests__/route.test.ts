@@ -8,6 +8,7 @@ const getProviderApiKey = vi.fn();
 const appendMessage = vi.fn();
 const getRecentMessagesForContext = vi.fn();
 const createSession = vi.fn();
+const deleteSession = vi.fn();
 
 class SessionNotFoundError extends Error {
   constructor() {
@@ -41,6 +42,7 @@ vi.mock('../../../_lib/sessions', () => ({
   appendMessage: (...args: unknown[]) => appendMessage(...args),
   getRecentMessagesForContext: (...args: unknown[]) => getRecentMessagesForContext(...args),
   createSession: (...args: unknown[]) => createSession(...args),
+  deleteSession: (...args: unknown[]) => deleteSession(...args),
   SessionNotFoundError,
 }));
 
@@ -110,6 +112,7 @@ beforeEach(() => {
   requireSession.mockResolvedValue({ user: { id: 'user-1', tenantId: 'tenant-1' } });
   getRecentMessagesForContext.mockResolvedValue([]);
   appendMessage.mockResolvedValue(undefined);
+  deleteSession.mockResolvedValue(undefined);
   createSession.mockResolvedValue({
     id: 'session-new',
     title: null,
@@ -401,6 +404,55 @@ describe('POST /warden/api/chat — error mapping', () => {
     requestHarnessChat.mockResolvedValue({ kind: 'error', message: 'boom' });
     const res = await POST(chatRequest({ modelKey: 'local', content: 'hi' }));
     expect(res.status).toBe(502);
+  });
+});
+
+describe('POST /warden/api/chat — orphaned session cleanup on a failed send', () => {
+  it('deletes a lazily-created session when the model call fails, so it never shows up empty in the sidebar', async () => {
+    requestHarnessChat.mockResolvedValue({ kind: 'error', message: 'boom' });
+
+    const res = await POST(chatRequest({ modelKey: 'local', content: 'hi' }));
+
+    expect(res.status).toBe(502);
+    expect(createSession).toHaveBeenCalledWith('user-1', 'tenant-1');
+    expect(deleteSession).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-new');
+  });
+
+  it('never deletes a client-supplied session on the same failure — it may already hold prior history', async () => {
+    requestHarnessChat.mockResolvedValue({ kind: 'error', message: 'boom' });
+
+    const res = await POST(
+      chatRequest({ modelKey: 'local', sessionId: 'session-existing', content: 'hi' }),
+    );
+
+    expect(res.status).toBe(502);
+    expect(deleteSession).not.toHaveBeenCalled();
+  });
+
+  it('does not delete anything on a successful send', async () => {
+    requestHarnessChat.mockResolvedValue(streamResult([{ type: 'done' }]));
+
+    const res = await POST(chatRequest({ modelKey: 'local', content: 'hi' }));
+    await drain(res);
+
+    expect(deleteSession).not.toHaveBeenCalled();
+  });
+
+  it('a cleanup failure is logged, not thrown — the original error response still reaches the client', async () => {
+    requestHarnessChat.mockResolvedValue({ kind: 'error', message: 'boom' });
+    deleteSession.mockRejectedValue(new Error('db down'));
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const res = await POST(chatRequest({ modelKey: 'local', content: 'hi' }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(res.status).toBe(502);
+    expect((await res.json()).message).toBe('boom');
+    expect(consoleError).toHaveBeenCalledWith(
+      '[warden] failed to clean up an orphaned session after a failed send:',
+      expect.any(Error),
+    );
+    consoleError.mockRestore();
   });
 });
 

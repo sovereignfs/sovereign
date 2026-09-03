@@ -84,14 +84,14 @@ export async function installedPluginsRoster(): Promise<InstalledPluginRosterEnt
   }));
 }
 
-/** Gather the platform-owned slice of a user's data for export. */
-export async function gatherPlatformExport(
-  userId: string,
-  cookie: string,
-): Promise<PlatformExportData> {
-  let name: string | null = null;
-  let email: string | null = null;
-  let image: string | null = null;
+interface BasicProfile {
+  name: string | null;
+  email: string | null;
+  image: string | null;
+}
+
+/** Cookie-based profile read — only works inside a real request (has a session cookie to forward). */
+async function profileFromSessionCookie(cookie: string): Promise<BasicProfile> {
   try {
     // Fresh read (bypass the signed cookie cache) so the export reflects the
     // authoritative profile, not a stale session snapshot.
@@ -103,14 +103,70 @@ export async function gatherPlatformExport(
         user?: { name?: string | null; email?: string | null; image?: string | null };
       } | null;
       if (data?.user) {
-        name = data.user.name ?? null;
-        email = data.user.email ?? null;
-        image = data.user.image ?? null;
+        return {
+          name: data.user.name ?? null,
+          email: data.user.email ?? null,
+          image: data.user.image ?? null,
+        };
       }
     }
   } catch {
     // best-effort; fall through with nulls
   }
+  return { name: null, email: null, image: null };
+}
+
+/**
+ * Admin-key-authenticated profile read — for a background context (a backup
+ * worker tick) that has no session cookie to forward at all, unlike the
+ * synchronous export route. Mirrors `sdk.directory.resolveUsers()`'s own
+ * server-to-server call shape (`runtime/src/sdk-host.ts`'s `fetchDirectoryUsers`),
+ * duplicated rather than imported since that path is wrapped in
+ * plugin-facing rate limiting this internal platform call doesn't need.
+ */
+async function profileFromDirectory(userId: string): Promise<BasicProfile> {
+  try {
+    const res = await fetch(`${AUTH_URL}/api/admin/directory`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${process.env.SOVEREIGN_ADMIN_KEY ?? ''}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ mode: 'resolve', ids: [userId] }),
+    });
+    if (res.ok) {
+      const rows = (await res.json().catch(() => [])) as unknown[];
+      const row = rows[0] as
+        { name?: string | null; email?: string | null; image?: string | null } | undefined;
+      if (row) {
+        return {
+          name: typeof row.name === 'string' ? row.name : null,
+          email: typeof row.email === 'string' ? row.email : null,
+          image: typeof row.image === 'string' ? row.image : null,
+        };
+      }
+    }
+  } catch {
+    // best-effort; fall through with nulls
+  }
+  return { name: null, email: null, image: null };
+}
+
+/**
+ * Gather the platform-owned slice of a user's data for export.
+ *
+ * `cookie` is `null` for a background context (the async backup worker,
+ * epic task 8.18) — there is no request, so no session cookie exists to
+ * forward. Falls back to an admin-key-authenticated directory lookup for
+ * the profile fields instead of the cookie-based session read the
+ * synchronous export route uses.
+ */
+export async function gatherPlatformExport(
+  userId: string,
+  cookie: string | null,
+): Promise<PlatformExportData> {
+  const { name, email, image } =
+    cookie === null ? await profileFromDirectory(userId) : await profileFromSessionCookie(cookie);
 
   const pdb = await getPlatformDb();
   const prefs = await getAccountPrefs(pdb, userId);

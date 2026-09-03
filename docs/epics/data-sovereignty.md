@@ -674,7 +674,7 @@ RFC 0064 (partial — Git push only, not retention/scoped restore).
 
 ---
 
-#### 📋 8.18 — Account: async selective data backup UI (regular users) (RFC 0084)
+#### ✅ 8.18 — Account: async selective data backup UI (regular users) (RFC 0084)
 
 **Goal:** Let any user trigger an asynchronous, selective backup of their own
 data, resolving RFC 0007's long-open "sync vs async export" and "selective
@@ -711,6 +711,85 @@ hooks), 8.13 (export completeness hardening).
   both unchanged and still pass their existing tests.
 - The archive requires the passphrase to decrypt; a wrong passphrase fails
   cleanly.
+
+**Shipped:** Picked up as an unplanned prerequisite for workstream 0023 leg 3
+(per-user git push, epic 8.39), which extends this task's async backup job
+with a push step — leg 3 cannot start without a real enqueue path existing
+first, and this task was still 📋 when that gap was hit.
+
+`ExportOptions` (`packages/sdk/src/portability.ts`) gained
+`excludePluginIds?: string[]`; `assembleExport()`
+(`runtime/src/portability/assemble.ts`) filters excluded plugins before
+invoking their exporter and records them in the bundle manifest with a new
+`NotExportedEntry.reason` value, `'user-excluded'`, alongside the existing
+`'no-export-hook'`/`'disabled'` — never silently included, never silently
+missing without a reason, per this task's own review checklist. New
+`runtime/src/portability/platform.ts` `gatherPlatformExport(userId, cookie)`
+splits the existing cookie-based session read (`profileFromSessionCookie`,
+used by the synchronous export route, unchanged) from a new
+`profileFromDirectory()` fallback — admin-key-authenticated
+`POST /api/admin/directory` — for the case this task actually needed: a
+background worker tick has no session cookie at all. New
+`runtime/src/backup-passphrase-store.ts` bridges the passphrase from the
+enqueue request (which has it) to the later worker tick that runs the job
+(which only has the `backup_jobs` row) — single-use, 10-minute TTL, never
+persisted or logged, matching RFC 0084's "always applied, never persisted"
+passphrase invariant. New `runUserBackup()` (`runtime/src/backup-run.ts`)
+wires all of this together — assembles the export, encrypts with task
+8.37's `age`-based `encrypt()`, writes the archive — and `backup-worker.ts`
+dispatches on `job.scope` to it or the existing instance-scope path. Two new
+API routes, `POST /api/account/backup-jobs` (enqueue) and
+`GET /api/account/backup-jobs/[id]` (poll — 404s for another user's job or
+an instance-scope job, never just denies, so existence itself isn't leaked)
+round out the surface `PortabilityPanel.tsx`'s new "Full backup" section
+polls against.
+
+**A real, load-bearing concurrency bug was found and fixed during live
+verification, not by unit tests** (which mock the module boundary and can't
+catch this class of bug): the first live end-to-end attempt failed every
+time with `"No passphrase available for this job"`, even though the
+passphrase had genuinely just been stored. Root-caused with temporary
+instance-id diagnostic logging rather than guessed at: `next dev` compiles
+the instrumentation-loaded worker (started once at boot) and the
+on-demand-compiled `/api/account/backup-jobs` route handler into **separate
+webpack module registries**, so `backup-passphrase-store.ts`'s plain
+module-scope `const entries = new Map()` was not actually the same `Map` in
+both places — confirmed live: two different `[DIAG]`-tagged instance ids
+logged in the one running process. Fixed by anchoring the store's state on
+`globalThis` (the same idiom Next.js's own docs prescribe for a dev-mode
+Prisma client singleton) — a no-op in a real production build, where
+everything resolves to the same compiled module, but a real fix for dev and
+for any topology where these two code paths could otherwise diverge.
+
+Verified live end-to-end against a real dev server with
+`SOVEREIGN_BACKUP_WORKER_ENABLED=1`, not just unit tests: triggered a full
+backup with a real passphrase from the actual "Full backup" UI, watched it
+queue then complete via the real 60-second worker tick, downloaded the
+resulting `.zip.age` archive via its signed URL, and decrypted it with
+`backup-encryption.ts`'s real `decrypt()` using the exact passphrase — a
+valid ZIP (`PK\x03\x04` magic) containing a correct `manifest.json` (right
+user, right installed-plugin roster) and `platform/account.json`. Confirmed
+decryption **fails cleanly** with a wrong passphrase, closing the review
+checklist's last item. Confirmed via direct code inspection (not just
+reasoning) that the async path carries no `MAX_EXPORT_BYTES` ceiling at
+all — that constant exists only in the synchronous `GET /api/account/export`
+route (`runtime/app/api/account/export/route.ts`), never in
+`runUserBackup()` — so the async path is genuinely uncapped by construction,
+not merely untested at large sizes. `backupArchivePathForJob()`
+(`runtime/src/backup-download.ts`) was also fixed to be scope-aware —
+`.zip.age` for user-scope, `.tar.gz` for instance-scope — after a review
+pass caught it always producing the instance-scope extension, which would
+have shipped a real, confusing UX bug (a user trying to `tar -xzf` an
+age-encrypted ZIP). Test archives and `backup_jobs` rows created during live
+verification were cleaned up afterward.
+
+Full repository suite green (309 files, 3007 tests, 0 failed, up from 2907
+before this task); `pnpm --filter runtime typecheck`, `pnpm lint`,
+`pnpm format:check`, and `pnpm exec tsx scripts/design-tokens-check.ts` all
+clean. `@sovereignfs/sdk` bumped `1.49.0` → `1.50.0` (minor — additive public
+field on `ExportOptions`, a host-implementer-facing contract per NFR-04);
+`runtime` bumped `0.93.0` → `0.94.0`; `plugins/account/manifest.json` bumped
+`0.4.3` → `0.4.4`.
 
 ---
 

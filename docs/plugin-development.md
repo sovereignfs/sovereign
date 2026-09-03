@@ -3004,7 +3004,11 @@ resolver)` registers a resolver; `sdk.data.query(ref, params)` reads from
   return a `PluginExportSection { pluginId, pluginVersion?, schemaVersion, data,
 blobs?, secretMetadata?, warnings? }`. `pluginVersion` is optional; the runtime
   always overwrites it with your plugin's installed manifest version, so you
-  can't misreport it. `secretMetadata` lists metadata for secrets your plugin
+  can't misreport it. `ExportOptions` also carries an internal
+  `excludePluginIds`, used only by the platform's own account-initiated
+  export flow to decide which plugins' resolvers to call at all — a plugin
+  whose id is excluded is never invoked, so your resolver never sees or needs
+  to check it. `secretMetadata` lists metadata for secrets your plugin
   owns (`{ label, provider, exists }`) — **never** include plaintext secret
   values anywhere in the export. `warnings` surfaces non-fatal notices (e.g. a
   file that was skipped) in the bundle manifest. If your resolver throws, the

@@ -195,6 +195,51 @@ describe('assembleExport', () => {
     expect(Object.keys(files)).not.toContain('platform/avatar.png');
   });
 
+  it('excludes a plugin the user selected out, recording it distinctly (epic task 8.18)', async () => {
+    let called = false;
+    registerExporter('test.plugin', async () => {
+      called = true;
+      return { pluginId: 'test.plugin', schemaVersion: 1, data: { ok: true } };
+    });
+    const zip = await assembleExport({
+      userId: 'u1',
+      tenantId: 'default',
+      platform: PLATFORM,
+      platformVersion: '0.6.0',
+      sourceInstance: null,
+      exportPlugins: { 'test.plugin': '1.0.0' },
+      installedPlugins: [],
+      options: { includeFiles: true, excludePluginIds: ['test.plugin'] },
+    });
+    expect(called).toBe(false);
+    const files = readZip(zip);
+    expect(Object.keys(files)).not.toContain('plugins/test.plugin/data.json');
+    const manifest = u8ToJson<{ notExported: { pluginId: string; reason: string }[] }>(
+      getEntry(files, 'manifest.json'),
+    );
+    expect(manifest.notExported).toEqual([{ pluginId: 'test.plugin', reason: 'user-excluded' }]);
+  });
+
+  it('does not conflate a user exclusion with a plugin that has no export hook', async () => {
+    const zip = await assembleExport({
+      userId: 'u1',
+      tenantId: 'default',
+      platform: PLATFORM,
+      platformVersion: '0.6.0',
+      sourceInstance: null,
+      exportPlugins: { 'no-hook.plugin': '1.0.0' },
+      installedPlugins: [],
+      options: { includeFiles: true, excludePluginIds: [] },
+    });
+    const files = readZip(zip);
+    const manifest = u8ToJson<{ notExported: { pluginId: string; reason: string }[] }>(
+      getEntry(files, 'manifest.json'),
+    );
+    expect(manifest.notExported).toEqual([
+      { pluginId: 'no-hook.plugin', reason: 'no-export-hook' },
+    ]);
+  });
+
   it('carries secretMetadata and warnings from a resolver into the manifest', async () => {
     registerExporter('test.plugin', async () => ({
       pluginId: 'test.plugin',

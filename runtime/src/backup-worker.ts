@@ -9,9 +9,16 @@ import {
 } from '@sovereignfs/db';
 import { resolveBackupArchivePath } from './backup-download';
 import { notifyBackupCompletion } from './backup-notification';
-import { runInstanceBackup } from './backup-run';
+import { runInstanceBackup, runUserBackup } from './backup-run';
 import { getPlatformDb } from './db';
 import { logger } from './logger';
+
+/** Dispatches to the instance-scope (subprocess) or user-scope (in-process) runner by `job.scope`. */
+export function runBackupJob(
+  job: BackupJobRow,
+): Promise<{ archivePath: string; sizeBytes: number }> {
+  return job.scope === 'user' ? runUserBackup(job) : runInstanceBackup(job);
+}
 
 /**
  * Minimal in-process backup job worker — the platform primitive for async
@@ -33,13 +40,16 @@ import { logger } from './logger';
  *
  * **Off by default** (`SOVEREIGN_BACKUP_WORKER_ENABLED`, opt-in — same
  * pattern as `SOVEREIGN_DEV_MODE_ENABLED`), unlike the scheduler/job worker
- * it mirrors: there is no enqueue path yet (epic tasks 8.17/8.18 haven't
- * shipped, so nothing can ever create a `backup_jobs` row), and instance-scope
- * jobs cannot succeed in the documented production Docker deployment yet
- * (`backup-run.ts`'s doc comment). Ticking every 60s in that state — a DB
- * round trip that will only ever find zero rows — is pure overhead on every
- * existing self-hosted instance for a feature no one can reach. Flip it on
- * only once 8.17/8.18 provide a real enqueue path.
+ * it mirrors. Epic task 8.18 (Account: async selective data backup UI) now
+ * provides a real user-scope enqueue path (`POST /api/account/backup-jobs`),
+ * so a self-hoster who enables this flag gets working user-scope backups.
+ * Instance-scope (epic task 8.17, Console UI) still has no enqueue path at
+ * all, and even once it does, instance-scope jobs cannot succeed in the
+ * documented production Docker deployment yet (`backup-run.ts`'s doc
+ * comment) — both scopes share this one flag, so enabling it opts into
+ * "user-scope works, instance-scope jobs will fail cleanly with an
+ * actionable error" until 8.17 and the Docker gap are both resolved. Kept
+ * off by default until that's no longer a caveat worth documenting.
  */
 
 export interface BackupWorkerDeps {
@@ -163,7 +173,7 @@ function productionDeps(): BackupWorkerDeps {
     listExpiredBackupJobs: async (now) => dbListExpiredBackupJobs(await getPlatformDb(), now),
     reclaimStuckBackupJobs: async (errorMessage) =>
       dbReclaimStuckBackupJobs(await getPlatformDb(), errorMessage),
-    runBackup: runInstanceBackup,
+    runBackup: runBackupJob,
   };
 }
 

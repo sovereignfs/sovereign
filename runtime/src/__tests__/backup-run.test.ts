@@ -4,15 +4,39 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const spawnSyncMock = vi.hoisted(() => vi.fn());
 const existsSyncMock = vi.hoisted(() => vi.fn());
 const statSyncMock = vi.hoisted(() => vi.fn());
+const mkdirSyncMock = vi.hoisted(() => vi.fn());
+const writeFileSyncMock = vi.hoisted(() => vi.fn());
+const takeBackupPassphraseMock = vi.hoisted(() => vi.fn());
+const encryptMock = vi.hoisted(() => vi.fn());
+const assembleExportMock = vi.hoisted(() => vi.fn());
+const gatherPlatformExportMock = vi.hoisted(() => vi.fn());
+const eligibleExportPluginsMock = vi.hoisted(() => vi.fn());
+const installedPluginsRosterMock = vi.hoisted(() => vi.fn());
 
 vi.mock('node:child_process', () => ({ spawnSync: spawnSyncMock }));
-vi.mock('node:fs', () => ({ existsSync: existsSyncMock, statSync: statSyncMock }));
+vi.mock('node:fs', () => ({
+  existsSync: existsSyncMock,
+  statSync: statSyncMock,
+  mkdirSync: mkdirSyncMock,
+  writeFileSync: writeFileSyncMock,
+}));
 vi.mock('@sovereignfs/db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@sovereignfs/db')>();
   return { ...actual, findWorkspaceRoot: () => '/workspace' };
 });
+vi.mock('../backup-passphrase-store', () => ({
+  takeBackupPassphrase: takeBackupPassphraseMock,
+}));
+vi.mock('../backup-encryption', () => ({ encrypt: encryptMock }));
+vi.mock('../platform-version', () => ({ getPlatformVersion: () => '0.99.0' }));
+vi.mock('../portability/assemble', () => ({ assembleExport: assembleExportMock }));
+vi.mock('../portability/platform', () => ({
+  gatherPlatformExport: gatherPlatformExportMock,
+  eligibleExportPlugins: eligibleExportPluginsMock,
+  installedPluginsRoster: installedPluginsRosterMock,
+}));
 
-const { runInstanceBackup } = await import('../backup-run');
+const { runInstanceBackup, runUserBackup } = await import('../backup-run');
 
 function job(overrides: Partial<BackupJobRow> = {}): BackupJobRow {
   return {
@@ -38,11 +62,6 @@ afterEach(() => {
 });
 
 describe('runInstanceBackup', () => {
-  it('rejects a user-scope job — not implemented yet (epic task 8.18)', async () => {
-    await expect(runInstanceBackup(job({ scope: 'user' }))).rejects.toThrow(/8\.18/);
-    expect(spawnSyncMock).not.toHaveBeenCalled();
-  });
-
   it('rejects optionsJson.excludePlugins — sv backup has no --exclude-plugin flag yet', async () => {
     const j = job({ optionsJson: JSON.stringify({ excludePlugins: ['com.example.notes'] }) });
     await expect(runInstanceBackup(j)).rejects.toThrow(/exclude-plugin/);
@@ -112,5 +131,75 @@ describe('runInstanceBackup', () => {
     existsSyncMock.mockReturnValue(false);
 
     await expect(runInstanceBackup(job())).rejects.toThrow(/no archive was found/);
+  });
+});
+
+describe('runUserBackup', () => {
+  function userJob(overrides: Partial<BackupJobRow> = {}): BackupJobRow {
+    return job({
+      scope: 'user',
+      requestedByUserId: 'user-1',
+      archivePath: '/workspace/backups/sovereign-backup-job-1.zip.age',
+      ...overrides,
+    });
+  }
+
+  it('fails if the job has no requestedByUserId — cannot run', async () => {
+    await expect(runUserBackup(userJob({ requestedByUserId: null }))).rejects.toThrow(
+      /requestedByUserId/,
+    );
+    expect(takeBackupPassphraseMock).not.toHaveBeenCalled();
+  });
+
+  it('fails cleanly when no passphrase is available (server restarted before claim)', async () => {
+    takeBackupPassphraseMock.mockReturnValue(undefined);
+    await expect(runUserBackup(userJob())).rejects.toThrow(/No passphrase available/);
+    expect(assembleExportMock).not.toHaveBeenCalled();
+  });
+
+  it('assembles, encrypts, and writes the archive using the stored passphrase', async () => {
+    takeBackupPassphraseMock.mockReturnValue('correct horse battery staple');
+    gatherPlatformExportMock.mockResolvedValue({ name: 'Ada' });
+    eligibleExportPluginsMock.mockResolvedValue({ 'test.plugin': '1.0.0' });
+    installedPluginsRosterMock.mockResolvedValue([]);
+    assembleExportMock.mockResolvedValue(new Uint8Array([1, 2, 3]));
+    encryptMock.mockResolvedValue(Buffer.from('ciphertext').toString('base64url'));
+
+    const j = userJob({
+      optionsJson: JSON.stringify({ includeFiles: false, excludePluginIds: ['x.plugin'] }),
+    });
+    const result = await runUserBackup(j);
+
+    // The passphrase reaches only the encryption call, never assembleExport.
+    expect(gatherPlatformExportMock).toHaveBeenCalledWith('user-1', null);
+    expect(assembleExportMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-1',
+        options: { includeFiles: false, excludePluginIds: ['x.plugin'] },
+      }),
+    );
+    expect(encryptMock).toHaveBeenCalledWith(
+      Buffer.from([1, 2, 3]),
+      'correct horse battery staple',
+    );
+    expect(mkdirSyncMock).toHaveBeenCalled();
+    expect(writeFileSyncMock).toHaveBeenCalledWith(j.archivePath, expect.any(Buffer));
+    expect(result.archivePath).toBe(j.archivePath);
+    expect(result.sizeBytes).toBe(Buffer.from('ciphertext').length);
+  });
+
+  it('defaults includeFiles to true when optionsJson omits it', async () => {
+    takeBackupPassphraseMock.mockReturnValue('a passphrase');
+    gatherPlatformExportMock.mockResolvedValue({});
+    eligibleExportPluginsMock.mockResolvedValue({});
+    installedPluginsRosterMock.mockResolvedValue([]);
+    assembleExportMock.mockResolvedValue(new Uint8Array());
+    encryptMock.mockResolvedValue('');
+
+    await runUserBackup(userJob({ optionsJson: null }));
+
+    expect(assembleExportMock).toHaveBeenCalledWith(
+      expect.objectContaining({ options: { includeFiles: true, excludePluginIds: undefined } }),
+    );
   });
 });

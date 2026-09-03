@@ -154,8 +154,15 @@ export async function assembleExport(args: AssembleArgs): Promise<Uint8Array> {
     files[`platform/avatar.${args.platform.avatar.ext}`] = args.platform.avatar.bytes;
   }
 
+  const excludedPluginIds = new Set(options.excludePluginIds ?? []);
+
   // Plugin sections: each eligible, opted-in plugin contributes its own slice.
   for (const [pluginId, pluginVersion] of Object.entries(args.exportPlugins)) {
+    if (excludedPluginIds.has(pluginId)) {
+      notExported.push({ pluginId, reason: 'user-excluded' });
+      continue;
+    }
+
     const exporter = getExporter(pluginId);
     if (!exporter) {
       notExported.push({ pluginId, reason: 'no-export-hook' });

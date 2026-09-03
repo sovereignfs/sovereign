@@ -1,23 +1,46 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, statSync } from 'node:fs';
-import { findWorkspaceRoot, type BackupJobRow } from '@sovereignfs/db';
+import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { DEFAULT_TENANT_ID, findWorkspaceRoot, type BackupJobRow } from '@sovereignfs/db';
+import { encrypt } from './backup-encryption';
+import { takeBackupPassphrase } from './backup-passphrase-store';
 import { logger } from './logger';
+import { getPlatformVersion } from './platform-version';
+import { assembleExport } from './portability/assemble';
+import {
+  eligibleExportPlugins,
+  gatherPlatformExport,
+  installedPluginsRoster,
+} from './portability/platform';
 
 const SUBPROCESS_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes — generous ceiling for a large instance archive
 const MAX_CAPTURED_OUTPUT_CHARS = 4000; // keep a verbose subprocess from blowing up the stored error message
 
-interface BackupJobOptions {
+interface InstanceBackupJobOptions {
   excludePlugins?: string[];
 }
 
-function parseOptions(optionsJson: string | null): BackupJobOptions {
-  if (!optionsJson) return {};
+interface UserBackupJobOptions {
+  includeFiles?: boolean;
+  excludePluginIds?: string[];
+}
+
+function parseOptions<T>(optionsJson: string | null): T {
+  if (!optionsJson) return {} as T;
   try {
     const parsed: unknown = JSON.parse(optionsJson);
-    return typeof parsed === 'object' && parsed !== null ? (parsed as BackupJobOptions) : {};
+    return typeof parsed === 'object' && parsed !== null ? (parsed as T) : ({} as T);
   } catch {
-    return {};
+    return {} as T;
   }
+}
+
+/** Matches `runtime/app/api/account/export/route.ts`'s own computed-key read
+ *  (avoids Next inlining NEXT_PUBLIC_* at build time for a value that must
+ *  track the runtime env). */
+function sourceInstance(): string | null {
+  const key = 'NEXT_PUBLIC_RUNTIME_URL';
+  return process.env[key] ?? null;
 }
 
 function truncate(text: string): string {
@@ -51,26 +74,20 @@ function truncate(text: string): string {
  * worker.
  *
  * Encryption (RFC 0084: "always applied — no opt-out") is intentionally not
- * wired in here yet: the requester's passphrase is never persisted, and no
- * mechanism yet exists to carry it from wherever a job is enqueued through to
+ * wired in here yet for the instance-scope path specifically: the
+ * requester's passphrase is never persisted, and no mechanism yet exists to
+ * carry it from wherever an instance-scope job is enqueued through to
  * whichever later tick actually claims and runs it. That's unresolved design
- * work, not a coding gap — solving it belongs to whichever task builds the
- * first real enqueue path (epic tasks 8.17/8.18), which decide passphrase
- * collection in the first place.
- *
- * User-scope jobs (`assembleExport()`, in-process) are not wired at all yet —
- * no UI exists to enqueue one (epic task 8.18).
+ * work, not a coding gap — solving it belongs to epic task 8.17 (Console
+ * instance backup UI), which decides passphrase collection for that scope.
+ * User-scope jobs are encrypted — see `runUserBackup` below, which solves
+ * the identical carry-the-passphrase problem for its own scope via
+ * `backup-passphrase-store.ts`.
  */
 export async function runInstanceBackup(
   job: BackupJobRow,
 ): Promise<{ archivePath: string; sizeBytes: number }> {
-  if (job.scope === 'user') {
-    throw new Error(
-      'User-scope backup jobs are not implemented yet (epic task 8.18) — no enqueue path exists.',
-    );
-  }
-
-  const options = parseOptions(job.optionsJson);
+  const options = parseOptions<InstanceBackupJobOptions>(job.optionsJson);
   if (options.excludePlugins && options.excludePlugins.length > 0) {
     throw new Error(
       '`sv backup --exclude-plugin` does not exist yet (epic task 8.17) — cannot honor ' +
@@ -111,4 +128,63 @@ export async function runInstanceBackup(
     archivePath: job.archivePath,
   });
   return { archivePath: job.archivePath, sizeBytes: statSync(job.archivePath).size };
+}
+
+/**
+ * Default production `runBackup` for a user-scope job (epic task 8.18).
+ * Runs entirely in-process — no subprocess, so unlike `runInstanceBackup`
+ * this is unaffected by the production Docker `sv`-CLI-spawn gap.
+ *
+ * Encryption is mandatory (RFC 0084: "always applied — no opt-out"). The
+ * requester's passphrase was handed to `backup-passphrase-store.ts` at
+ * enqueue time (`POST /api/account/backup-jobs`) and is taken — single-use —
+ * here, never persisted to the `backup_jobs` row or logged. If the entry is
+ * gone (process restarted between enqueue and claim, or the job somehow sat
+ * queued past the store's TTL), this fails the job cleanly rather than ever
+ * falling back to no encryption.
+ */
+export async function runUserBackup(
+  job: BackupJobRow,
+): Promise<{ archivePath: string; sizeBytes: number }> {
+  if (!job.requestedByUserId) {
+    throw new Error('User-scope backup job has no requestedByUserId — cannot run.');
+  }
+  const userId = job.requestedByUserId;
+
+  const passphrase = takeBackupPassphrase(job.id);
+  if (!passphrase) {
+    throw new Error(
+      'No passphrase available for this job (the server may have restarted before it was ' +
+        'claimed) — please trigger a new backup.',
+    );
+  }
+
+  const options = parseOptions<UserBackupJobOptions>(job.optionsJson);
+  const [platform, exportPlugins, installedPlugins] = await Promise.all([
+    gatherPlatformExport(userId, null),
+    eligibleExportPlugins(),
+    installedPluginsRoster(),
+  ]);
+
+  const zip = await assembleExport({
+    userId,
+    tenantId: DEFAULT_TENANT_ID,
+    platform,
+    platformVersion: getPlatformVersion(),
+    sourceInstance: sourceInstance(),
+    exportPlugins,
+    installedPlugins,
+    options: {
+      includeFiles: options.includeFiles ?? true,
+      excludePluginIds: options.excludePluginIds,
+    },
+  });
+
+  const ciphertext = await encrypt(Buffer.from(zip), passphrase);
+  const bytes = Buffer.from(ciphertext, 'base64url');
+  mkdirSync(dirname(job.archivePath), { recursive: true });
+  writeFileSync(job.archivePath, bytes);
+
+  logger.info('backup-run: user backup complete', { jobId: job.id, archivePath: job.archivePath });
+  return { archivePath: job.archivePath, sizeBytes: bytes.length };
 }

@@ -91,7 +91,7 @@
    doc comment for why .drilldown rows never shrink. */
 .compact.static .row {
   min-height: 0;
-  padding: var(--sv-space-1) var(--sv-space-3);
+  padding: var(--sv-space-2) var(--sv-space-3);
 }
 
 /* ── drilldown (mobile index) — grouped card, native-Settings-app rows ──── */

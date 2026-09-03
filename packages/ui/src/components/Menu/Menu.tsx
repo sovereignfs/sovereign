@@ -59,6 +59,15 @@ export interface MenuProps {
   /** Forwarded to `Popover` on desktop. Has no effect on mobile, where the
    *  menu is always a full-width `Drawer`. */
   align?: 'left' | 'right';
+  /** Forwarded to `Popover` on desktop (same default: 288). Has no effect
+   *  on mobile. Narrow this when the trigger lives inside a column
+   *  narrower than the default width — e.g. a per-row "⋯" menu in a
+   *  sidebar list — so the panel fits within that column's own bounds
+   *  instead of overflowing past its edge, where a scrollable ancestor's
+   *  `overflow-y: auto` (which the CSS Overflow spec computes the paired
+   *  `overflow-x` to `auto` as well, not `visible`, once either axis is
+   *  set) would clip it. */
+  width?: number | 'trigger';
 }
 
 /**
@@ -153,7 +162,15 @@ export function MenuEntries({
   );
 }
 
-export function Menu({ trigger, open, onClose, items, 'aria-label': ariaLabel, align }: MenuProps) {
+export function Menu({
+  trigger,
+  open,
+  onClose,
+  items,
+  'aria-label': ariaLabel,
+  align,
+  width,
+}: MenuProps) {
   const isMobile = useIsMobile();
 
   const list = (
@@ -178,7 +195,14 @@ export function Menu({ trigger, open, onClose, items, 'aria-label': ariaLabel, a
   }
 
   return (
-    <Popover trigger={trigger} open={open} onClose={onClose} aria-label={ariaLabel} align={align}>
+    <Popover
+      trigger={trigger}
+      open={open}
+      onClose={onClose}
+      aria-label={ariaLabel}
+      align={align}
+      width={width}
+    >
       {list}
     </Popover>
   );

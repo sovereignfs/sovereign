@@ -53,6 +53,11 @@ export function useSnapCarousel({
   const scrollRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastIndexRef = useRef<number | null>(null);
+  // Cleanup for scrollToIndex's scroll-snap-suspension workaround (see that
+  // function's own comment) — lets an overlapping call cancel a still-
+  // pending restore from an earlier one instead of two racing to re-enable
+  // snap at the wrong time.
+  const restoreSnapRef = useRef<(() => void) | null>(null);
   // Real-time (synchronous, not debounced) read of "which slide is the
   // container's scroll position nearest right now." A fast flick can carry
   // native scroll-snap momentum straight past an intermediate slide to one
@@ -214,7 +219,65 @@ export function useSnapCarousel({
     // mount scroll / reorder-jump fix both need the target slide mounted
     // immediately regardless.
     setLiveIndex(index);
-    el.scrollTo({ left: index * el.clientWidth, behavior });
+
+    // Cancel any still-pending restore from an earlier smooth scroll before
+    // starting this one, so they don't race to re-enable snap at the wrong
+    // time (e.g. a dot-jump fired while a previous jump's restore timer is
+    // still pending).
+    if (restoreSnapRef.current) {
+      restoreSnapRef.current();
+      restoreSnapRef.current = null;
+    }
+
+    const target = index * el.clientWidth;
+
+    if (behavior === 'smooth') {
+      // A programmatic `scrollTo({ behavior: 'smooth' })` on this element
+      // can silently do nothing at all — not a jank/timing issue, the
+      // container just never moves, with no error and no scroll events.
+      // Reproduced live via the design system's own footer/dot-jump
+      // navigation in sovereign-tasks (routes external activeIndex changes
+      // through this exact path): the identical call with
+      // `behavior: 'instant'` moved the container immediately, `'smooth'`
+      // did nothing — reproduced both with `scroll-snap-type: mandatory` in
+      // place *and*, isolating further, on a plain scroll-snap-free element
+      // in the same environment, so `scroll-snap-type` alone doesn't fully
+      // explain it. Two independent mitigations, since the exact trigger
+      // isn't nailed down: (1) suspend snap for the duration of the
+      // animated scroll on the chance it *is* a snap/animation conflict in
+      // some engines; (2) below, a correctness-net instant scrollTo if the
+      // container still isn't at the target once the animation should have
+      // finished — cheap and idempotent when the smooth scroll *did* work
+      // (already at the target, the check is a no-op), and the difference
+      // between a graceful animation and an abrupt correction if it didn't,
+      // rather than a carousel that silently desyncs forever with nothing
+      // to ever correct it.
+      // Narrowed, stable binding for the closures below — TS can't carry
+      // the `if (!el) return` narrowing of the outer `el` into a nested
+      // function declaration.
+      const scrollEl = el;
+      const prevSnapType = scrollEl.style.scrollSnapType;
+      scrollEl.style.scrollSnapType = 'none';
+      let settled = false;
+      // Matches typical browser smooth-scroll duration; also the fallback
+      // for engines with no `scrollend` (pre-17.4 iOS Safari/WKWebView).
+      const timeoutId = setTimeout(finish, 500);
+      function finish() {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        scrollEl.removeEventListener('scrollend', finish);
+        scrollEl.style.scrollSnapType = prevSnapType;
+        restoreSnapRef.current = null;
+        if (Math.abs(scrollEl.scrollLeft - target) > 1) {
+          scrollEl.scrollTo({ left: target, behavior: 'instant' });
+        }
+      }
+      scrollEl.addEventListener('scrollend', finish, { once: true });
+      restoreSnapRef.current = finish;
+    }
+
+    el.scrollTo({ left: target, behavior });
   }, []);
 
   return { scrollRef, scrollToIndex, liveIndex };

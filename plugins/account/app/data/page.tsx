@@ -239,6 +239,19 @@ export default function DataPage() {
         return;
       }
       setConnections((prev) => prev.filter((conn) => conn.id !== id));
+      // Disconnecting a connection with a secretRef atomically deletes the
+      // linked secret server-side (disconnectPluginConnection) — refresh the
+      // separate secrets list so it doesn't keep showing the deleted entry
+      // until the next full page load.
+      try {
+        const secretsRes = await fetch('/api/account/secrets', { cache: 'no-store' });
+        if (secretsRes.ok) {
+          const secretsData = (await secretsRes.json()) as { secrets: VaultSecret[] };
+          setSecrets(secretsData.secrets);
+        }
+      } catch {
+        // Best-effort — the secrets section will self-correct on next full load.
+      }
     } catch (e) {
       setConnectionError(e instanceof Error ? e.message : 'Could not disconnect this account.');
     }

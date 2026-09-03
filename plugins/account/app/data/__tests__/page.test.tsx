@@ -80,6 +80,12 @@ function mockFetch(overrides?: {
   // re-fetches after a successful POST, and a static mock would silently
   // re-add the row the UI just optimistically removed.
   let pending = overrides?.pending ?? [];
+  // Also stateful: disconnecting CONNECTION mirrors disconnectPluginConnection's
+  // real atomic side effect of deleting its linked secret server-side — a
+  // successful connection DELETE removes SECRET from what the next secrets
+  // GET returns, so a static mock can't silently mask a UI that never
+  // re-fetches secrets after a disconnect.
+  let secrets = [SECRET];
   return vi.fn((url: string, init?: RequestInit) => {
     if (url === '/api/account/data-grants' && init?.method === 'POST') {
       const mode = overrides?.createGrant ?? 'ok';
@@ -120,11 +126,14 @@ function mockFetch(overrides?: {
       return Promise.resolve(new Response('{}', { status: mode === 'ok' ? 200 : 500 }));
     }
     if (url === '/api/account/secrets') {
-      return Promise.resolve(new Response(JSON.stringify({ secrets: [SECRET] }), { status: 200 }));
+      return Promise.resolve(new Response(JSON.stringify({ secrets }), { status: 200 }));
     }
     if (url.includes('/api/account/connections') && init?.method === 'DELETE') {
       const mode = overrides?.deleteConnection ?? 'ok';
       if (mode === 'reject') return Promise.reject(new Error('network down'));
+      if (mode === 'ok') {
+        secrets = secrets.filter((s) => s.id !== SECRET.id);
+      }
       return Promise.resolve(new Response('{}', { status: mode === 'ok' ? 200 : 500 }));
     }
     if (url === '/api/account/connections') {
@@ -215,6 +224,23 @@ describe('DataPage — connected accounts error feedback', () => {
     fireEvent.click(disconnectButton);
 
     expect((await screen.findByRole('alert')).textContent).toContain('network down');
+  });
+
+  it('refreshes the saved app credentials list after a successful disconnect, since disconnectPluginConnection atomically deletes the linked secret server-side', async () => {
+    vi.stubGlobal('fetch', mockFetch());
+    render(<DataPage />);
+
+    await screen.findByText('Google Calendar');
+    expect(screen.getByText('API key')).toBeDefined();
+
+    const disconnectButton = screen.getByRole('button', { name: 'Disconnect' });
+    fireEvent.click(disconnectButton);
+
+    // The connection row is removed optimistically (no wait needed)...
+    await waitFor(() => expect(screen.queryByText('Google Calendar')).toBeNull());
+    // ...and the now-stale secret disappears too, once the follow-up
+    // secrets refetch resolves — this is the regression this test guards.
+    await waitFor(() => expect(screen.queryByText('API key')).toBeNull());
   });
 });
 

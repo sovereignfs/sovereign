@@ -486,13 +486,21 @@ export type DeviceConsentGrant = typeof deviceConsentGrants.$inferSelect;
 export type NewDeviceConsentGrant = typeof deviceConsentGrants.$inferInsert;
 
 /**
- * Per-user notification inbox (RFC 0015). Tenant-scoped; mutable lifecycle
- * (read / dismissed by the recipient). Distinct from `activity_log` which is
- * append-only audit trail.
+ * Per-user notification inbox (RFC 0015; detail/message fields RFC 0048).
+ * Tenant-scoped; mutable lifecycle (read / dismissed by the recipient).
+ * Distinct from `activity_log` which is append-only audit trail.
+ *
+ * `url`/`body` are kept unmodified for backward compatibility — new code
+ * writes/reads through `action_url`/`summary` instead (see
+ * `sendNotification()`/`NOTIF_SELECT` in `platform-db.ts` for the dual-write/
+ * coalesced-read compat mapping RFC 0048 requires).
  *
  * Indexes (bootstrap DDL):
  *   (tenant_id, recipient_user_id, created_at DESC) — user inbox feed
  *   (tenant_id, recipient_user_id, read_at)         — unread count
+ *   (tenant_id, source, dedupe_key)                 — dedupe lookup (non-unique;
+ *     see RFC 0048 §8 — a DB-level unique constraint needs a decided conflict
+ *     policy this leg doesn't pin down, so this is lookup-only for now)
  */
 export const notifications = sqliteTable(
   'notifications',
@@ -517,6 +525,22 @@ export const notifications = sqliteTable(
     /** Unix seconds when the recipient dismissed it; null = not dismissed. */
     dismissedAt: integer('dismissed_at'),
     createdAt: integer('created_at').notNull(),
+    /** Short preview for bell/toast/push. Falls back to a truncated `body` when null. */
+    summary: text('summary'),
+    /** `'plain'` | `'markdown'` — markdown is accepted/stored but rendered as plain text in v1 (no sanitizer exists yet). */
+    bodyFormat: text('body_format').notNull().default('plain'),
+    /** Replaces `url` over time; dual-written for compatibility. */
+    actionUrl: text('action_url'),
+    /** Small JSON object with source context. Not rendered in v1 UI. */
+    metadata: text('metadata'),
+    /** Unix seconds after which the notification is hidden from list queries. */
+    expiresAt: integer('expires_at'),
+    /** Source-scoped key for coalescing repeated alerts and cross-linking (e.g. `message:<id>`). */
+    dedupeKey: text('dedupe_key'),
+    /** `'low'` | `'normal'` | `'high'` | `'security'`. `'security'` is never mutable. */
+    priority: text('priority').notNull().default('normal'),
+    /** Optional JSON summary of delivery attempts (push/email). */
+    deliveryState: text('delivery_state'),
   },
   (table) => [
     // SQLite's index() builder has no .desc() column modifier (unlike
@@ -525,6 +549,7 @@ export const notifications = sqliteTable(
     // created_at DESC in listUserNotifications.
     index('notifications_user_feed').on(table.tenantId, table.recipientUserId, table.createdAt),
     index('notifications_unread').on(table.tenantId, table.recipientUserId, table.readAt),
+    index('notifications_dedupe').on(table.tenantId, table.source, table.dedupeKey),
   ],
 );
 
@@ -535,12 +560,85 @@ export const notifications = sqliteTable(
 export const notificationPrefs = sqliteTable('notification_prefs', {
   userId: text('user_id').primaryKey(),
   tenantId: text('tenant_id').notNull(),
-  /** JSON array of category strings the user has muted, e.g. `["announcement"]`. */
+  /** JSON array of category strings the user has muted, e.g. `["announcement"]`. `'security'` is stripped on write — never mutable. */
   mutedCategories: text('muted_categories').notNull().default('[]'),
   /** Client poll interval in seconds (15 / 30 / 60). Ignored in SSE mode. */
   pollIntervalSecs: integer('poll_interval_secs').notNull().default(30),
   updatedAt: integer('updated_at').notNull(),
 });
+
+/**
+ * Durable message content (RFC 0048). Shared across all recipients — see
+ * `messageRecipients` for per-recipient read/archive/delete state. Sent by a
+ * plugin (`messages:send` permission), an admin (Console compose), or the
+ * platform itself. `sender_type: 'user'` is reserved by the schema but not
+ * reachable via any SDK/UI surface in v1 (no user-to-user messaging yet).
+ *
+ * No FK to `message_recipients` — this codebase enforces referential
+ * integrity in application code (`deleteUserData`'s orphan-pruning step),
+ * matching this file's existing convention.
+ */
+export const messages = sqliteTable(
+  'messages',
+  {
+    id: text('id').primaryKey(),
+    tenantId: text('tenant_id').notNull(),
+    /** `'user'` | `'plugin'` | `'platform'` | `'admin'`. `'user'` is reserved, not exposed in v1. */
+    senderType: text('sender_type').notNull(),
+    /** Plugin id, admin user id, or null for platform-generated messages. */
+    senderId: text('sender_id'),
+    /** Display label for the sender, e.g. a plugin's manifest name. Null lets the UI resolve it itself. */
+    senderDisplay: text('sender_display'),
+    subject: text('subject').notNull(),
+    body: text('body').notNull(),
+    /** `'plain'` | `'markdown'` — rendered as plain text in v1 (no sanitizer exists yet). */
+    bodyFormat: text('body_format').notNull().default('plain'),
+    /** Sending plugin id, when `sender_type = 'plugin'`. Exported as inert metadata, never dereferenced. */
+    sourcePluginId: text('source_plugin_id'),
+    sourceRefType: text('source_ref_type'),
+    sourceRefId: text('source_ref_id'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => [index('messages_tenant_feed').on(table.tenantId, table.createdAt)],
+);
+
+export type Message = typeof messages.$inferSelect;
+export type NewMessage = typeof messages.$inferInsert;
+
+/**
+ * Per-recipient message state (RFC 0048). Composite PK — one row per
+ * (message, recipient) pair, matching this file's existing composite-PK
+ * convention (see `deviceConsentGrants` above). `deletedAt` is a soft delete
+ * scoped to the recipient's own copy; `deleteUserData` is the only path that
+ * hard-deletes a recipient row and can therefore orphan-prune the parent
+ * `messages` row once its last recipient is gone.
+ */
+export const messageRecipients = sqliteTable(
+  'message_recipients',
+  {
+    messageId: text('message_id').notNull(),
+    tenantId: text('tenant_id').notNull(),
+    recipientUserId: text('recipient_user_id').notNull(),
+    deliveredAt: integer('delivered_at'),
+    readAt: integer('read_at'),
+    archivedAt: integer('archived_at'),
+    deletedAt: integer('deleted_at'),
+  },
+  (table) => [
+    primaryKey({ columns: [table.messageId, table.recipientUserId] }),
+    index('message_recipients_inbox').on(
+      table.tenantId,
+      table.recipientUserId,
+      table.deletedAt,
+      table.archivedAt,
+    ),
+    index('message_recipients_unread').on(table.tenantId, table.recipientUserId, table.readAt),
+  ],
+);
+
+export type MessageRecipient = typeof messageRecipients.$inferSelect;
+export type NewMessageRecipient = typeof messageRecipients.$inferInsert;
 
 /**
  * Browser Web Push subscriptions (RFC 0016). One row per device per user.

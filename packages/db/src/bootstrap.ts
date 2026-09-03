@@ -310,7 +310,7 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
        ON plugin_provider_configs (tenant_id, plugin_id, provider, deleted_at)`,
     `CREATE INDEX IF NOT EXISTS plugin_provider_configs_plugin_idx
        ON plugin_provider_configs (tenant_id, plugin_id, deleted_at)`,
-    // RFC 0015 — Notification Center
+    // RFC 0015 — Notification Center; detail/message fields RFC 0048
     `CREATE TABLE IF NOT EXISTS notifications (
       id TEXT PRIMARY KEY,
       tenant_id TEXT NOT NULL,
@@ -324,12 +324,22 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
       icon TEXT,
       read_at ${ts},
       dismissed_at ${ts},
-      created_at ${ts} NOT NULL
+      created_at ${ts} NOT NULL,
+      summary TEXT,
+      body_format TEXT NOT NULL DEFAULT 'plain',
+      action_url TEXT,
+      metadata TEXT,
+      expires_at ${ts},
+      dedupe_key TEXT,
+      priority TEXT NOT NULL DEFAULT 'normal',
+      delivery_state TEXT
     )`,
     `CREATE INDEX IF NOT EXISTS notifications_user_feed
        ON notifications (tenant_id, recipient_user_id, created_at DESC)`,
     `CREATE INDEX IF NOT EXISTS notifications_unread
        ON notifications (tenant_id, recipient_user_id, read_at)`,
+    `CREATE INDEX IF NOT EXISTS notifications_dedupe
+       ON notifications (tenant_id, source, dedupe_key)`,
     `CREATE TABLE IF NOT EXISTS notification_prefs (
       user_id TEXT PRIMARY KEY,
       tenant_id TEXT NOT NULL,
@@ -337,6 +347,38 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
       poll_interval_secs INTEGER NOT NULL DEFAULT 30,
       updated_at ${ts} NOT NULL
     )`,
+    // RFC 0048 — Messages and notification detail
+    `CREATE TABLE IF NOT EXISTS messages (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      sender_type TEXT NOT NULL,
+      sender_id TEXT,
+      sender_display TEXT,
+      subject TEXT NOT NULL,
+      body TEXT NOT NULL,
+      body_format TEXT NOT NULL DEFAULT 'plain',
+      source_plugin_id TEXT,
+      source_ref_type TEXT,
+      source_ref_id TEXT,
+      created_at ${ts} NOT NULL,
+      updated_at ${ts} NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS messages_tenant_feed
+       ON messages (tenant_id, created_at DESC)`,
+    `CREATE TABLE IF NOT EXISTS message_recipients (
+      message_id TEXT NOT NULL,
+      tenant_id TEXT NOT NULL,
+      recipient_user_id TEXT NOT NULL,
+      delivered_at ${ts},
+      read_at ${ts},
+      archived_at ${ts},
+      deleted_at ${ts},
+      PRIMARY KEY (message_id, recipient_user_id)
+    )`,
+    `CREATE INDEX IF NOT EXISTS message_recipients_inbox
+       ON message_recipients (tenant_id, recipient_user_id, deleted_at, archived_at)`,
+    `CREATE INDEX IF NOT EXISTS message_recipients_unread
+       ON message_recipients (tenant_id, recipient_user_id, read_at)`,
     `CREATE TABLE IF NOT EXISTS push_subscriptions (
       id TEXT PRIMARY KEY,
       tenant_id TEXT NOT NULL,

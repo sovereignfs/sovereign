@@ -14,6 +14,7 @@ import { events } from './events';
 import { handoffs } from './handoffs';
 import { jobs } from './jobs';
 import * as mailer from './mailer';
+import { messages } from './messages';
 import { notifications } from './notifications';
 import * as platform from './platform';
 import { plugins } from './plugins';
@@ -46,7 +47,8 @@ import { webhooks } from './webhooks';
  * `email` (user-scoped `sendToUser` email surface, RFC 0062), `webhooks`
  * (public plugin webhook helpers — `verifyHmac`/`checkReplay`, RFC 0050),
  * `handoffs` (signed, short-lived cross-plugin flow handoffs —
- * authenticated or public/anonymous, RFC 0053), `jobs` (background jobs and
+ * authenticated or public/anonymous, RFC 0053), `messages` (durable Message
+ * Inbox, send-only — RFC 0048), `jobs` (background jobs and
  * schedules, RFC 0046), `events` (ephemeral realtime channels, RFC 0045 —
  * `publish()` only; subscribing is a runtime route, not an SDK call, see
  * `docs/plugin-development.md`), `tools` (platform-mediated plugin tool
@@ -59,10 +61,10 @@ import { webhooks } from './webhooks';
  * bridge, RFC 0083), `authz` (plugin-scoped roles and resource-scoped
  * grants — authorization below the platform role layer, never injected into
  * the session capability header, RFC 0054).
- * `data`, `activity`, `portability`, `env`, `notifications`, `directory`,
- * `secrets`, `crypto`, `storage`, `connections`, `e2ee`, `plugins`, `email`,
- * `webhooks`, `handoffs`, `jobs`, `events`, `tools`, `authz`, and `device`
- * are implemented; `billing` throws `NotImplementedError` until its backing
+ * `data`, `activity`, `portability`, `env`, `notifications`, `messages`,
+ * `directory`, `secrets`, `crypto`, `storage`, `connections`, `e2ee`,
+ * `plugins`, `email`, `webhooks`, `handoffs`, `jobs`, `events`, `tools`,
+ * `authz`, and `device` are implemented; `billing` throws `NotImplementedError` until its backing
  * mechanism ships. Their shape may change before they stabilise.
  */
 export const sdk = {
@@ -77,6 +79,7 @@ export const sdk = {
   storage,
   directory,
   notifications,
+  messages,
   webhooks,
   handoffs,
   jobs,
@@ -179,6 +182,8 @@ export type {
   NotificationItem,
   NotificationListOptions,
   NotificationListResult,
+  SendMessageInput,
+  SendMessageResult,
   SendNotificationInput,
   SendToUserEmailInput,
   VerifyWebhookHmacInput,

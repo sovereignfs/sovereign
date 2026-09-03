@@ -9,6 +9,8 @@ interface NotificationItem {
   title: string;
   body?: string | null;
   url?: string | null;
+  /** RFC 0048 — coalesced with `url` server-side; falls back to `url` client-side too, belt and suspenders. */
+  actionUrl?: string | null;
   category: string;
   readAt?: number | null;
   createdAt: number;
@@ -490,9 +492,23 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
                   <CategoryIcon category={item.category} />
                 </div>
                 <div className={styles.itemBody}>
-                  {item.url ? (
+                  {item.body ? (
+                    // A full body exists — open the notification detail page
+                    // (RFC 0048 §1's bell-behavior rule) rather than jumping
+                    // straight to actionUrl.
                     <a
-                      href={item.url}
+                      href={`/inbox/${item.id}`}
+                      className={styles.itemTitle}
+                      onClick={() => {
+                        void markReadShared(item.id);
+                        setOpen(false);
+                      }}
+                    >
+                      {item.title}
+                    </a>
+                  ) : (item.actionUrl ?? item.url) ? (
+                    <a
+                      href={item.actionUrl ?? item.url ?? undefined}
                       className={styles.itemTitle}
                       onClick={() => {
                         void markReadShared(item.id);
@@ -540,6 +556,9 @@ export function NotificationBell({ placement = 'header' }: { placement?: 'sideba
               </li>
             ))}
           </ul>
+          <a href="/inbox" className={styles.viewAll} onClick={() => setOpen(false)}>
+            View all
+          </a>
         </div>
       )}
     </div>

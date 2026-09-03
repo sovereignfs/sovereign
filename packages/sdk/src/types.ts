@@ -153,7 +153,7 @@ export interface ActivityLogEntry {
 export type DrizzleClient = unknown;
 
 /**
- * Input to `sdk.notifications.send()` (RFC 0015).
+ * Input to `sdk.notifications.send()` (RFC 0015; detail fields RFC 0048).
  * The runtime auto-populates `source`, `sourceType`, and `tenantId` from
  * request context — plugins never set those.
  */
@@ -162,16 +162,29 @@ export interface SendNotificationInput {
   recipientUserId: string;
   /** Short notification headline. */
   title: string;
-  /** Optional longer body text. */
+  /** Optional longer body text — shown in the notification detail view. */
   body?: string;
-  /** In-app route to navigate to when the notification is clicked. */
+  /** Short preview for bell/toast/push. Falls back to a truncated `body` when omitted. */
+  summary?: string;
+  /** `'plain'` (default) or `'markdown'` — markdown is stored but rendered as plain text in v1. */
+  bodyFormat?: 'plain' | 'markdown';
+  /**
+   * In-app route to navigate to when the notification is clicked.
+   * @deprecated pass `actionUrl` instead — `url` is kept for backward compatibility.
+   */
   url?: string;
+  /** In-app route the user is taken to when they click the notification. Replaces `url`. */
+  actionUrl?: string;
   /**
    * Category tag — drives mute preferences.
    * Built-in categories: `'info'` (default), `'announcement'`, `'security'`.
    * Custom plugin categories are allowed; `'security'` cannot be muted.
    */
   category?: string;
+  /** `'low'` | `'normal'` (default) | `'high'` | `'security'`. `'security'` is never mutable. */
+  priority?: 'low' | 'normal' | 'high' | 'security';
+  /** Source-scoped key for coalescing repeated alerts, e.g. `export:${exportId}`. */
+  dedupeKey?: string;
   /**
    * Optional URL to an image shown in the OS push notification (the Push
    * API's `icon` option — not an `@sovereignfs/ui` `<Icon>` name; nothing
@@ -186,7 +199,8 @@ export interface SendNotificationInput {
  * One notification in the current user's own Notification Center inbox
  * (`sdk.notifications.list()`) — the read counterpart to `SendNotificationInput`.
  * Mirrors `@sovereignfs/db`'s `NotificationRow` minus `tenantId` (never
- * leaked to plugins elsewhere in the SDK layer).
+ * leaked to plugins elsewhere in the SDK layer). `summary`/`actionUrl` are
+ * already coalesced against `body`/`url` (RFC 0048 §8's compat mapping).
  */
 export interface NotificationItem {
   id: string;
@@ -204,6 +218,16 @@ export interface NotificationItem {
   /** Unix seconds the current user dismissed it; `null` = not dismissed. */
   dismissedAt: number | null;
   createdAt: number;
+  /**
+   * RFC 0048 detail fields — optional so a consumer constructing a partial
+   * `NotificationItem` from a smaller payload (e.g. an SSE push event, which
+   * doesn't carry these) doesn't have to fabricate values. Always present
+   * on rows returned by `sdk.notifications.list()`.
+   */
+  summary?: string | null;
+  bodyFormat?: string;
+  actionUrl?: string | null;
+  priority?: string;
 }
 
 /** Options for `sdk.notifications.list()`. */
@@ -218,6 +242,33 @@ export interface NotificationListOptions {
 export interface NotificationListResult {
   items: NotificationItem[];
   unreadCount: number;
+}
+
+/**
+ * Input to `sdk.messages.send()` (RFC 0048). Send-only — plugins have no
+ * read surface for messages (RFC 0048 principle 5). The runtime stamps
+ * sender identity from trusted request context; plugins never set it.
+ */
+export interface SendMessageInput {
+  /** User IDs of the intended recipients. Capped at 50 per call. */
+  recipientUserIds: string[];
+  subject: string;
+  body: string;
+  /** `'plain'` (default) or `'markdown'` — markdown is stored but rendered as plain text in v1. */
+  bodyFormat?: 'plain' | 'markdown';
+  /** Whether this message also creates a notification alert. Defaults to `true`. */
+  notify?: boolean;
+  /** Inert source context (e.g. `{ type: 'report', id: reportId }`) — exported as metadata, never dereferenced. */
+  sourceRef?: { type: string; id: string };
+}
+
+/** Result of `sdk.messages.send()`. */
+export interface SendMessageResult {
+  messageId: string;
+  /** Recipient user IDs the message was actually sent to. */
+  sentTo: string[];
+  /** Recipient user IDs skipped because they aren't active users in the current tenant. */
+  skipped: { userId: string; reason: 'RECIPIENT_NOT_FOUND' }[];
 }
 
 /**

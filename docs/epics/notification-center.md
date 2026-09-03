@@ -114,7 +114,13 @@ existing SSE route shape this task rewires)
 
 ---
 
-#### 📋 4.4 — Messages and notification detail (RFC 0048)
+#### ✅ 4.4 — Messages and notification detail (RFC 0048)
+
+> Shipped as workstream 0018 leg 1: the list/detail UI ships as a new
+> platform plugin, `fs.sovereign.inbox` (`/inbox`), rather than nested under
+> Account as originally sketched in RFC 0048 — see that RFC's §5 and
+> `docs/plugins/inbox.md` for the full shape. Notification preferences
+> stayed at `/account/notifications`, untouched.
 
 **Goal:** Add a durable platform Message Inbox and full notification detail views while keeping notifications as lightweight delivery signals.
 

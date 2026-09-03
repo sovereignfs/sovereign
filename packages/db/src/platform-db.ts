@@ -2810,7 +2810,7 @@ export async function seedAccountPrefsTimezone(
 // Notifications (RFC 0015)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** A notification row as returned to callers. */
+/** A notification row as returned to callers — `actionUrl`/`summary` are already coalesced (RFC 0048 compat mapping). */
 export interface NotificationRow {
   id: string;
   tenantId: string;
@@ -2825,6 +2825,49 @@ export interface NotificationRow {
   readAt: number | null;
   dismissedAt: number | null;
   createdAt: number;
+  /** Coalesced: `summary ?? truncate(body)`. */
+  summary: string | null;
+  bodyFormat: string;
+  /** Coalesced: `actionUrl ?? url`. */
+  actionUrl: string | null;
+  metadata: string | null;
+  expiresAt: number | null;
+  dedupeKey: string | null;
+  priority: string;
+  deliveryState: string | null;
+}
+
+/** The raw DB row before `summary`/`actionUrl` compat coalescing is applied. */
+interface RawNotificationRow extends Omit<NotificationRow, 'summary' | 'actionUrl'> {
+  summary: string | null;
+  actionUrl: string | null;
+}
+
+function hydrateNotificationRow(raw: RawNotificationRow): NotificationRow {
+  return {
+    ...raw,
+    actionUrl: raw.actionUrl ?? raw.url,
+    summary: raw.summary ?? truncateNotificationSummary(raw.body),
+    // node-postgres returns bigint (read_at/dismissed_at/created_at/expires_at)
+    // columns as strings by default (no global type parser is registered in
+    // this codebase) — coerce explicitly, matching this file's established
+    // pattern (see e.g. line ~1634's push-device-token hydration).
+    readAt: coerceNumOrNull(raw.readAt),
+    dismissedAt: coerceNumOrNull(raw.dismissedAt),
+    createdAt: coerceNum(raw.createdAt),
+    expiresAt: coerceNumOrNull(raw.expiresAt),
+  };
+}
+
+const NOTIFICATION_SUMMARY_MAX_LENGTH = 140;
+
+/** Truncates a notification body into a bell/toast-safe preview when no explicit `summary` was given. */
+export function truncateNotificationSummary(body: string | null | undefined): string | null {
+  if (!body) return null;
+  const trimmed = body.trim();
+  if (!trimmed) return null;
+  if (trimmed.length <= NOTIFICATION_SUMMARY_MAX_LENGTH) return trimmed;
+  return `${trimmed.slice(0, NOTIFICATION_SUMMARY_MAX_LENGTH - 1)}…`;
 }
 
 export interface SendNotificationInput {
@@ -2834,40 +2877,65 @@ export interface SendNotificationInput {
   sourceType: 'plugin' | 'platform' | 'admin';
   title: string;
   body?: string;
+  /** @deprecated pass `actionUrl` instead — kept for existing callers, dual-written to both columns. */
   url?: string;
   category?: string;
   icon?: string;
+  summary?: string;
+  bodyFormat?: string;
+  actionUrl?: string;
+  metadata?: string;
+  expiresAt?: number;
+  dedupeKey?: string;
+  priority?: string;
+  deliveryState?: string;
 }
 
-/** Insert a new notification row. */
+/**
+ * Insert a new notification row. `actionUrl`/`url` are dual-written to both
+ * columns (whichever the caller provides, or neither) so old readers of
+ * `.url` and new readers of `.actionUrl` both see the right value — see RFC
+ * 0048 §8's compatibility rule. Does not itself apply mute policy or fan out
+ * to the broker/push — that's `deliverNotification()`'s job
+ * (`runtime/src/notification-delivery.ts`); this function is a pure insert.
+ */
 export async function sendNotification(
   pdb: PlatformDb,
   input: SendNotificationInput,
 ): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
+  const actionUrl = input.actionUrl ?? input.url ?? null;
+  const summary = input.summary ?? truncateNotificationSummary(input.body ?? null);
   await dbRun(
     pdb,
     sql`INSERT INTO notifications
           (id, tenant_id, recipient_user_id, source, source_type,
-           title, body, url, category, icon, created_at)
+           title, body, url, category, icon, created_at,
+           summary, body_format, action_url, metadata, expires_at, dedupe_key, priority, delivery_state)
         VALUES
           (${input.id}, ${DEFAULT_TENANT_ID}, ${input.recipientUserId},
            ${input.source}, ${input.sourceType},
-           ${input.title}, ${input.body ?? null}, ${input.url ?? null},
-           ${input.category ?? 'info'}, ${input.icon ?? null}, ${now})`,
+           ${input.title}, ${input.body ?? null}, ${actionUrl},
+           ${input.category ?? 'info'}, ${input.icon ?? null}, ${now},
+           ${summary}, ${input.bodyFormat ?? 'plain'}, ${actionUrl}, ${input.metadata ?? null},
+           ${input.expiresAt ?? null}, ${input.dedupeKey ?? null}, ${input.priority ?? 'normal'},
+           ${input.deliveryState ?? null})`,
   );
 }
 
 const NOTIF_SELECT = sql.raw(`
   SELECT id, tenant_id AS "tenantId", recipient_user_id AS "recipientUserId",
          source, source_type AS "sourceType", title, body, url, category, icon,
-         read_at AS "readAt", dismissed_at AS "dismissedAt", created_at AS "createdAt"
+         read_at AS "readAt", dismissed_at AS "dismissedAt", created_at AS "createdAt",
+         summary, body_format AS "bodyFormat", action_url AS "actionUrl", metadata,
+         expires_at AS "expiresAt", dedupe_key AS "dedupeKey", priority,
+         delivery_state AS "deliveryState"
   FROM notifications
 `);
 
 /**
- * List notifications for a user (newest first). Excludes dismissed rows by
- * default. Limit is capped at 100.
+ * List notifications for a user (newest first). Excludes dismissed and
+ * expired rows by default. Limit is capped at 100.
  */
 export async function listUserNotifications(
   pdb: PlatformDb,
@@ -2876,20 +2944,62 @@ export async function listUserNotifications(
 ): Promise<NotificationRow[]> {
   const limit = Math.min(options.limit ?? 50, 100);
   const includeDismissed = options.includeDismissed ?? false;
-  return dbAll<NotificationRow>(
+  const now = Math.floor(Date.now() / 1000);
+  const raw = await dbAll<RawNotificationRow>(
     pdb,
     sql`${NOTIF_SELECT}
         WHERE tenant_id = ${DEFAULT_TENANT_ID}
           AND recipient_user_id = ${userId}
+          AND (expires_at IS NULL OR expires_at > ${now})
           ${includeDismissed ? sql.raw('') : sql`AND dismissed_at IS NULL`}
         ORDER BY created_at DESC
         LIMIT ${limit}`,
+  );
+  return raw.map(hydrateNotificationRow);
+}
+
+/** Fetch a single notification's full detail, scoped to its owning recipient. `undefined` if not found/not owned. */
+export async function getUserNotification(
+  pdb: PlatformDb,
+  id: string,
+  userId: string,
+): Promise<NotificationRow | undefined> {
+  const raw = await dbGet<RawNotificationRow>(
+    pdb,
+    sql`${NOTIF_SELECT}
+        WHERE id = ${id}
+          AND tenant_id = ${DEFAULT_TENANT_ID}
+          AND recipient_user_id = ${userId}`,
+  );
+  return raw ? hydrateNotificationRow(raw) : undefined;
+}
+
+/**
+ * Marks every unread notification with the given `dedupeKey` as read for a
+ * user. Backs RFC 0048 §3 — reading a message marks its linked notification
+ * (created with `dedupeKey: `message:${messageId}``) read without touching
+ * the message itself.
+ */
+export async function markNotificationsReadByDedupeKey(
+  pdb: PlatformDb,
+  dedupeKey: string,
+  userId: string,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`UPDATE notifications
+        SET read_at = ${now}
+        WHERE tenant_id = ${DEFAULT_TENANT_ID}
+          AND recipient_user_id = ${userId}
+          AND dedupe_key = ${dedupeKey}
+          AND read_at IS NULL`,
   );
 }
 
 /** Count unread (non-dismissed) notifications for a user. */
 export async function countUnreadNotifications(pdb: PlatformDb, userId: string): Promise<number> {
-  const row = await dbGet<{ n: number }>(
+  const row = await dbGet<{ n: number | string }>(
     pdb,
     sql`SELECT COUNT(*) AS n FROM notifications
         WHERE tenant_id = ${DEFAULT_TENANT_ID}
@@ -2897,7 +3007,7 @@ export async function countUnreadNotifications(pdb: PlatformDb, userId: string):
           AND read_at IS NULL
           AND dismissed_at IS NULL`,
   );
-  return row?.n ?? 0;
+  return coerceNum(row?.n ?? 0);
 }
 
 /** Mark a single notification as read. No-op if already read or not owned by user. */
@@ -3001,7 +3111,11 @@ export async function getNotificationPrefs(
   };
 }
 
-/** Upsert a user's notification preferences. */
+/**
+ * Upsert a user's notification preferences. `'security'` is stripped from
+ * `mutedCategories` unconditionally — the security category can never be
+ * muted (RFC 0048 §6), previously enforced only in UI copy, not code.
+ */
 export async function setNotificationPrefs(
   pdb: PlatformDb,
   userId: string,
@@ -3009,7 +3123,9 @@ export async function setNotificationPrefs(
 ): Promise<NotificationPrefsValue> {
   const current = await getNotificationPrefs(pdb, userId);
   const next: NotificationPrefsValue = {
-    mutedCategories: prefs.mutedCategories ?? current.mutedCategories,
+    mutedCategories: (prefs.mutedCategories ?? current.mutedCategories).filter(
+      (category) => category !== 'security',
+    ),
     pollIntervalSecs: prefs.pollIntervalSecs ?? current.pollIntervalSecs,
   };
   const now = Math.floor(Date.now() / 1000);
@@ -3023,6 +3139,273 @@ export async function setNotificationPrefs(
                       updated_at = excluded.updated_at`,
   );
   return next;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Messages (RFC 0048)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface SendMessageInput {
+  id: string;
+  recipientUserIds: string[];
+  senderType: 'user' | 'plugin' | 'platform' | 'admin';
+  senderId?: string;
+  senderDisplay?: string;
+  subject: string;
+  body: string;
+  bodyFormat?: string;
+  sourcePluginId?: string;
+  sourceRefType?: string;
+  sourceRefId?: string;
+}
+
+/**
+ * Insert one `messages` row plus one `message_recipients` row per recipient.
+ * Caller (`runtime/src/messages.ts`) is responsible for batch-size capping
+ * and recipient validation — this is a pure insert, no policy.
+ */
+export async function sendMessage(pdb: PlatformDb, input: SendMessageInput): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`INSERT INTO messages
+          (id, tenant_id, sender_type, sender_id, sender_display, subject, body,
+           body_format, source_plugin_id, source_ref_type, source_ref_id, created_at, updated_at)
+        VALUES
+          (${input.id}, ${DEFAULT_TENANT_ID}, ${input.senderType}, ${input.senderId ?? null},
+           ${input.senderDisplay ?? null}, ${input.subject}, ${input.body},
+           ${input.bodyFormat ?? 'plain'}, ${input.sourcePluginId ?? null},
+           ${input.sourceRefType ?? null}, ${input.sourceRefId ?? null}, ${now}, ${now})`,
+  );
+  for (const recipientUserId of input.recipientUserIds) {
+    await dbRun(
+      pdb,
+      sql`INSERT INTO message_recipients (message_id, tenant_id, recipient_user_id, delivered_at)
+          VALUES (${input.id}, ${DEFAULT_TENANT_ID}, ${recipientUserId}, ${now})`,
+    );
+  }
+}
+
+/** A message row projected for list views — `bodyPreview` only, not the full body. */
+export interface MessageListItem {
+  id: string;
+  tenantId: string;
+  senderType: string;
+  senderId: string | null;
+  senderDisplay: string | null;
+  subject: string;
+  bodyPreview: string | null;
+  createdAt: number;
+  readAt: number | null;
+  archivedAt: number | null;
+}
+
+/**
+ * List a user's messages (newest first), scoped to their own
+ * `message_recipients` state. Always excludes the recipient's own
+ * soft-deleted rows regardless of `filter`.
+ */
+export async function listUserMessages(
+  pdb: PlatformDb,
+  userId: string,
+  options: { filter?: 'inbox' | 'archived' | 'unread'; limit?: number; offset?: number } = {},
+): Promise<{ items: MessageListItem[]; total: number }> {
+  const filter = options.filter ?? 'inbox';
+  const limit = Math.min(options.limit ?? 20, 100);
+  const offset = Math.max(options.offset ?? 0, 0);
+  const filterClause =
+    filter === 'archived'
+      ? sql`AND mr.archived_at IS NOT NULL`
+      : filter === 'unread'
+        ? sql`AND mr.archived_at IS NULL AND mr.read_at IS NULL`
+        : sql`AND mr.archived_at IS NULL`;
+
+  const rows = await dbAll<{
+    id: string;
+    tenantId: string;
+    senderType: string;
+    senderId: string | null;
+    senderDisplay: string | null;
+    subject: string;
+    body: string;
+    createdAt: number;
+    readAt: number | null;
+    archivedAt: number | null;
+  }>(
+    pdb,
+    sql`SELECT m.id, m.tenant_id AS "tenantId", m.sender_type AS "senderType",
+               m.sender_id AS "senderId", m.sender_display AS "senderDisplay",
+               m.subject, m.body, m.created_at AS "createdAt",
+               mr.read_at AS "readAt", mr.archived_at AS "archivedAt"
+        FROM messages m
+        JOIN message_recipients mr ON mr.message_id = m.id AND mr.tenant_id = m.tenant_id
+        WHERE m.tenant_id = ${DEFAULT_TENANT_ID}
+          AND mr.recipient_user_id = ${userId}
+          AND mr.deleted_at IS NULL
+          ${filterClause}
+        ORDER BY m.created_at DESC
+        LIMIT ${limit} OFFSET ${offset}`,
+  );
+  const totalRow = await dbGet<{ n: number | string }>(
+    pdb,
+    sql`SELECT COUNT(*) AS n
+        FROM messages m
+        JOIN message_recipients mr ON mr.message_id = m.id AND mr.tenant_id = m.tenant_id
+        WHERE m.tenant_id = ${DEFAULT_TENANT_ID}
+          AND mr.recipient_user_id = ${userId}
+          AND mr.deleted_at IS NULL
+          ${filterClause}`,
+  );
+
+  return {
+    // Reuses the same 140-char truncation `sendNotification` uses for its
+    // own bell/toast preview — identical shape, different call site.
+    // Bigint columns (createdAt/readAt/archivedAt) are coerced explicitly —
+    // node-postgres returns them as strings with no global type parser
+    // registered in this codebase (see `hydrateNotificationRow`'s identical
+    // note).
+    items: rows.map(({ body, ...rest }) => ({
+      ...rest,
+      bodyPreview: truncateNotificationSummary(body),
+      createdAt: coerceNum(rest.createdAt),
+      readAt: coerceNumOrNull(rest.readAt),
+      archivedAt: coerceNumOrNull(rest.archivedAt),
+    })),
+    total: coerceNum(totalRow?.n ?? 0),
+  };
+}
+
+/** A message's full detail, scoped to one recipient's own read/archive state. */
+export interface MessageDetailItem {
+  id: string;
+  tenantId: string;
+  senderType: string;
+  senderId: string | null;
+  senderDisplay: string | null;
+  subject: string;
+  body: string;
+  bodyFormat: string;
+  sourcePluginId: string | null;
+  sourceRefType: string | null;
+  sourceRefId: string | null;
+  createdAt: number;
+  updatedAt: number;
+  readAt: number | null;
+  archivedAt: number | null;
+}
+
+/** Fetch one message's full detail for a recipient. `undefined` if not found/not a recipient/soft-deleted by them. */
+export async function getUserMessage(
+  pdb: PlatformDb,
+  id: string,
+  userId: string,
+): Promise<MessageDetailItem | undefined> {
+  const raw = await dbGet<MessageDetailItem>(
+    pdb,
+    sql`SELECT m.id, m.tenant_id AS "tenantId", m.sender_type AS "senderType",
+               m.sender_id AS "senderId", m.sender_display AS "senderDisplay",
+               m.subject, m.body, m.body_format AS "bodyFormat",
+               m.source_plugin_id AS "sourcePluginId", m.source_ref_type AS "sourceRefType",
+               m.source_ref_id AS "sourceRefId", m.created_at AS "createdAt",
+               m.updated_at AS "updatedAt",
+               mr.read_at AS "readAt", mr.archived_at AS "archivedAt"
+        FROM messages m
+        JOIN message_recipients mr ON mr.message_id = m.id AND mr.tenant_id = m.tenant_id
+        WHERE m.id = ${id}
+          AND m.tenant_id = ${DEFAULT_TENANT_ID}
+          AND mr.recipient_user_id = ${userId}
+          AND mr.deleted_at IS NULL`,
+  );
+  if (!raw) return undefined;
+  // Bigint columns coerced explicitly — see `hydrateNotificationRow`'s identical note.
+  return {
+    ...raw,
+    createdAt: coerceNum(raw.createdAt),
+    updatedAt: coerceNum(raw.updatedAt),
+    readAt: coerceNumOrNull(raw.readAt),
+    archivedAt: coerceNumOrNull(raw.archivedAt),
+  };
+}
+
+/** Marks a message read for one recipient. No-op if already read, not a recipient, or soft-deleted by them. */
+export async function markMessageRead(pdb: PlatformDb, id: string, userId: string): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`UPDATE message_recipients
+        SET read_at = COALESCE(read_at, ${now})
+        WHERE message_id = ${id}
+          AND tenant_id = ${DEFAULT_TENANT_ID}
+          AND recipient_user_id = ${userId}
+          AND deleted_at IS NULL`,
+  );
+}
+
+/** Marks a message unread for one recipient — messages support an explicit unread toggle, unlike notifications' one-way `markRead`. */
+export async function markMessageUnread(
+  pdb: PlatformDb,
+  id: string,
+  userId: string,
+): Promise<void> {
+  await dbRun(
+    pdb,
+    sql`UPDATE message_recipients
+        SET read_at = NULL
+        WHERE message_id = ${id}
+          AND tenant_id = ${DEFAULT_TENANT_ID}
+          AND recipient_user_id = ${userId}
+          AND deleted_at IS NULL`,
+  );
+}
+
+/** Archives a message for one recipient. */
+export async function archiveMessage(pdb: PlatformDb, id: string, userId: string): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`UPDATE message_recipients
+        SET archived_at = ${now}
+        WHERE message_id = ${id}
+          AND tenant_id = ${DEFAULT_TENANT_ID}
+          AND recipient_user_id = ${userId}
+          AND deleted_at IS NULL`,
+  );
+}
+
+/** Unarchives a message for one recipient. */
+export async function unarchiveMessage(pdb: PlatformDb, id: string, userId: string): Promise<void> {
+  await dbRun(
+    pdb,
+    sql`UPDATE message_recipients
+        SET archived_at = NULL
+        WHERE message_id = ${id}
+          AND tenant_id = ${DEFAULT_TENANT_ID}
+          AND recipient_user_id = ${userId}
+          AND deleted_at IS NULL`,
+  );
+}
+
+/**
+ * Soft-deletes the caller's own copy of a message (sets `deleted_at` on
+ * their `message_recipients` row only) — the shared `messages` row is left
+ * alone, since other recipients may still hold it. Only `deleteUserData`'s
+ * hard delete (account deletion) can actually orphan and prune the parent row.
+ */
+export async function deleteUserMessage(
+  pdb: PlatformDb,
+  id: string,
+  userId: string,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await dbRun(
+    pdb,
+    sql`UPDATE message_recipients
+        SET deleted_at = ${now}
+        WHERE message_id = ${id}
+          AND tenant_id = ${DEFAULT_TENANT_ID}
+          AND recipient_user_id = ${userId}
+          AND deleted_at IS NULL`,
+  );
 }
 
 // ── Web Push subscriptions (RFC 0016) ────────────────────────────────────────
@@ -3673,6 +4056,23 @@ export async function deleteUserData(
   platformRowsDeleted++;
   await del(
     sql`DELETE FROM notification_prefs WHERE tenant_id = ${DEFAULT_TENANT_ID} AND user_id = ${userId}`,
+  );
+  platformRowsDeleted++;
+  // Hard-delete the user's own recipient rows first, THEN prune any
+  // `messages` row left with zero recipients — the self-service delete
+  // (`deleteUserMessage`) is soft, so this is the only path that can
+  // actually orphan a message. Order matters: pruning before the recipient
+  // delete would see the row as still-referenced and skip it.
+  await del(
+    sql`DELETE FROM message_recipients WHERE tenant_id = ${DEFAULT_TENANT_ID} AND recipient_user_id = ${userId}`,
+  );
+  platformRowsDeleted++;
+  await del(
+    sql`DELETE FROM messages
+        WHERE tenant_id = ${DEFAULT_TENANT_ID}
+          AND id NOT IN (
+            SELECT message_id FROM message_recipients WHERE tenant_id = ${DEFAULT_TENANT_ID}
+          )`,
   );
   platformRowsDeleted++;
   await del(

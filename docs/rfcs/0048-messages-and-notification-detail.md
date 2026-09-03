@@ -1,10 +1,10 @@
 ---
 rfc: 0048
 title: Messages and notification detail
-status: Draft
+status: Implemented
 date: June 2026
 author: kasunben
-scope: packages/db, packages/sdk, packages/manifest, runtime, plugins/account, plugins/console, docs; builds on RFC 0005, RFC 0015, RFC 0016, RFC 0034, RFC 0041, RFC 0046
+scope: packages/db, packages/sdk, packages/manifest, runtime, plugins/inbox, plugins/console, docs; builds on RFC 0005, RFC 0015, RFC 0016, RFC 0034, RFC 0041, RFC 0046
 incorporated_into_plan: 'Yes — epic task 4.4'
 ---
 
@@ -262,21 +262,29 @@ Existing fields remain accepted for compatibility:
 - `category` defaults to `info`;
 - `bodyFormat` defaults to `plain`.
 
-### 5. Account UI
+### 5. UI
 
-Add account routes:
+**Implemented shape (workstream 0018 leg 1) — deviates from this section's
+original draft.** Rather than nesting the list/detail UI under Account, it
+ships as a new platform-type plugin, **`fs.sovereign.inbox`** (`/inbox`),
+resolving Open Question 1 below as "yes, a first-class platform area."
+Routes:
 
 ```text
-/account/notifications
-/account/notifications/<id>
-/account/messages
-/account/messages/<id>
+/inbox                       (Tabs: Notifications | Messages, ?tab=-synced)
+/inbox/<id>                  (notification detail)
+/inbox/messages/<id>         (message detail)
 ```
 
-The existing bell remains in shell chrome. It is not replaced by the message
-inbox.
+Notification _preferences_ (push subscription, muted categories, poll
+interval) stay exactly where they already lived — `/account/notifications`
+— untouched and not duplicated into Inbox; the Notifications tab links
+across to them instead. The existing bell remains in shell chrome, reached
+the same way as before, now pointing at `/inbox`/`/inbox/<id>` instead of
+navigating directly to `action_url` for every item. Full design rationale:
+`docs/plugins/inbox.md`.
 
-Account Messages page:
+Inbox's Messages tab:
 
 - inbox list with subject, sender, preview, time, unread state;
 - filters: inbox, archived, unread;
@@ -286,19 +294,23 @@ Account Messages page:
 - soft delete for the current recipient;
 - empty state.
 
-Account Notifications page:
+Inbox's Notifications tab:
 
 - fuller list than bell panel;
-- filters: unread, category, archived/dismissed if exposed;
+- an "Unread only" filter (client-side over up to 100 most recent rows —
+  see `docs/plugins/inbox.md`'s Open Questions for the server-pagination
+  tradeoff this accepts);
 - notification detail view;
-- mark read/unread;
-- dismiss/archive.
+- mark read;
+- dismiss.
 
 Console:
 
-- admin broadcast notification remains available;
-- add admin message compose for selected users or all active users;
-- admin messages are audited.
+- admin broadcast notification remains available at `/console/broadcast`;
+- admin message compose added at `/console/messages`, for selected users or
+  all active users;
+- admin messages are audited (`logActivity`) — broadcast's own pre-existing
+  audit gap is unrelated and untouched.
 
 ### 6. Preferences and delivery policy
 
@@ -449,20 +461,34 @@ preference semantics.
 
 ## Open questions
 
-1. **Route location:** should top-level routes be `/account/messages` and
-   `/account/notifications`, or should the shell expose `/messages` as a
-   first-class platform area?
-2. **Message replies:** should replies remain fully deferred, or should v1 reserve
-   `thread_id` to avoid migration churn?
-3. **Message notifications:** should `notify` default to true for user-visible
-   sends, or should senders always opt in?
-4. **Mute semantics:** should muted plugin notification rows be dropped entirely
-   or stored as read/archived?
-5. **Retention:** should read/dismissed notifications expire automatically while
-   messages are kept until recipient deletion?
-6. **Markdown:** is safe markdown sufficient for v1, or should body format stay
-   plain text until the sanitizer policy is implemented?
-7. **User senders:** when should user-to-user messages become available, if ever?
+1. **Route location:** ✅ **Resolved (workstream 0018 leg 1):** first-class
+   platform area — a new `type: "platform"` plugin, `fs.sovereign.inbox`
+   (`/inbox`), not nested under Account. Notification preferences stay at
+   `/account/notifications`, untouched. See §5 and `docs/plugins/inbox.md`.
+2. **Message replies:** ✅ **Resolved:** remain fully deferred — no `thread_id`
+   reserved, per this repo's anti-speculative-design convention. Add it if
+   and when replies are actually built.
+3. **Message notifications:** ✅ **Resolved:** `notify` defaults to `true`
+   when omitted from `sdk.messages.send()`.
+4. **Mute semantics:** ✅ **Resolved:** implemented as a `sourceType`-keyed
+   rule in `deliverNotification()` (`runtime/src/notification-delivery.ts`)
+   — plugin-sourced + muted → dropped entirely; platform/admin-sourced +
+   muted → stored silently (pre-dismissed, for audit); `security` is never
+   mutable regardless of source. Flagged in that file's own doc comment as
+   an interpretation of this RFC's prose, not verbatim text — the RFC never
+   fully pinned down the `sourceType`-vs-`category` framing.
+5. **Retention:** ✅ **Resolved for v1:** no scheduled expiry job.
+   `expires_at` is a query-time filter only (hides expired notifications
+   from list/count queries); messages have no automatic expiry at all —
+   kept until the recipient deletes them or their account is deleted.
+   Automatic retention policies remain a future addition if needed.
+6. **Markdown:** ✅ **Resolved for v1:** `body_format: 'plain' | 'markdown'`
+   is accepted and stored (schema forward-compatible), but both render as
+   plain escaped text — no markdown-to-HTML pipeline exists anywhere in this
+   repo, and adding a sanitizer dependency was out of scope for this leg.
+7. **User senders:** ✅ **Resolved for v1:** not exposed via any UI or SDK
+   surface — `sender_type: 'user'` stays reserved in the schema, unreachable
+   until a future RFC actually designs user-to-user messaging.
 
 ## Adoption path
 
@@ -483,12 +509,12 @@ preference semantics.
 
 ## Package impact
 
-| Package                 | Impact                                                    |
-| ----------------------- | --------------------------------------------------------- |
-| `@sovereignfs/db`       | New message tables; notification schema additions.        |
-| `@sovereignfs/sdk`      | New `sdk.messages`; expanded notification input types.    |
-| `@sovereignfs/manifest` | New `messages:send` permission.                           |
-| `runtime`               | APIs, account routes, delivery policy, permission checks. |
-| `plugins/account`       | Messages and notification detail UI.                      |
-| `plugins/console`       | Admin message compose.                                    |
-| `docs`                  | Plugin development docs and upgrade notes.                |
+| Package                 | Impact                                                                    |
+| ----------------------- | ------------------------------------------------------------------------- |
+| `@sovereignfs/db`       | New message tables; notification schema additions.                        |
+| `@sovereignfs/sdk`      | New `sdk.messages`; expanded notification input types.                    |
+| `@sovereignfs/manifest` | New `messages:send` permission.                                           |
+| `runtime`               | APIs, notification-delivery mute-policy funnel, permission checks.        |
+| `plugins/inbox`         | New platform plugin — notification list/detail and Message Inbox UI (§5). |
+| `plugins/console`       | Admin message compose.                                                    |
+| `docs`                  | Plugin development docs and upgrade notes.                                |

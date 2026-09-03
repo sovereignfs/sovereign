@@ -63,7 +63,10 @@ export const CONSOLE_SECTIONS: ConsoleSectionGroup[] = [
   {
     id: 'communication',
     label: 'Communication',
-    items: [{ id: 'broadcast', label: 'Broadcast', href: '/console/broadcast', icon: 'send' }],
+    items: [
+      { id: 'broadcast', label: 'Broadcast', href: '/console/broadcast', icon: 'send' },
+      { id: 'messages', label: 'Messages', href: '/console/messages', icon: 'mail' },
+    ],
   },
 ];
 

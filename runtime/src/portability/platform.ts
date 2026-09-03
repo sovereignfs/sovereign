@@ -8,17 +8,26 @@ import {
   getAccountPrefs,
   getE2eeProfile,
   getE2eeRecoveryWrapper,
+  getUserMessage,
   listE2eeDeviceEnrollments,
+  listUserMessages,
+  listUserNotifications,
   listUserPluginSecretRefs,
   setAccountPrefs,
   upsertE2eeRecoveryWrapper,
+  type PlatformDb,
 } from '@sovereignfs/db';
 import { isValidTheme, isValidTimezone } from '@/src/account';
 import { avatarsDir, findAvatarFile } from '@/src/avatars';
 import { getPlatformDb } from '@/src/db';
 import { getDisabledPluginIds } from '@/src/plugin-status';
 import { getInstalledPlugins } from '@/src/registry';
-import type { PlatformE2eeExportData, PlatformExportData } from './assemble';
+import type {
+  MessageExportRow,
+  NotificationExportRow,
+  PlatformE2eeExportData,
+  PlatformExportData,
+} from './assemble';
 import type { InstalledPluginRosterEntry } from './bundle';
 import type { PlatformAccountSection } from './restore';
 import { toSecretRef } from '@/src/secrets';
@@ -119,6 +128,8 @@ export async function gatherPlatformExport(
   }
 
   const e2ee = await gatherE2eeExport(pdb, userId);
+  const notifications = await gatherNotificationsExport(pdb, userId);
+  const messages = await gatherMessagesExport(pdb, userId);
 
   return {
     name,
@@ -129,7 +140,93 @@ export async function gatherPlatformExport(
     vaultSecrets,
     avatar,
     e2ee,
+    notifications,
+    messages,
   };
+}
+
+/**
+ * Notification rows visible to the user (RFC 0048 §9). Bounded by
+ * `listUserNotifications`'s own 100-row cap — a full unbounded history isn't
+ * this leg's scope; `includeDismissed: true` so a dismissed-but-not-yet-
+ * purged notification still round-trips.
+ */
+async function gatherNotificationsExport(
+  pdb: PlatformDb,
+  userId: string,
+): Promise<NotificationExportRow[]> {
+  const rows = await listUserNotifications(pdb, userId, { includeDismissed: true, limit: 100 });
+  return rows.map((row) => ({
+    id: row.id,
+    source: row.source,
+    sourceType: row.sourceType,
+    title: row.title,
+    body: row.body,
+    summary: row.summary,
+    actionUrl: row.actionUrl,
+    category: row.category,
+    priority: row.priority,
+    readAt: row.readAt,
+    dismissedAt: row.dismissedAt,
+    createdAt: row.createdAt,
+  }));
+}
+
+/** Cap on total messages walked per filter — keeps this a bounded operation, not a full unbounded export. */
+const MAX_EXPORTED_MESSAGES_PER_FILTER = 500;
+const MESSAGE_EXPORT_PAGE_SIZE = 100;
+
+/**
+ * Every message where the user is a recipient (RFC 0048 §9) — "received
+ * messages... where applicable"; `sender_type: 'user'` is unreachable in v1
+ * (no user-to-user messaging), so this is simply every message this
+ * recipient hasn't hard-deleted, inbox and archived alike, paginated up to
+ * `MAX_EXPORTED_MESSAGES_PER_FILTER` per filter.
+ */
+async function gatherMessagesExport(pdb: PlatformDb, userId: string): Promise<MessageExportRow[]> {
+  const rows: MessageExportRow[] = [];
+  const seenIds = new Set<string>();
+  for (const filter of ['inbox', 'archived'] as const) {
+    let offset = 0;
+    for (;;) {
+      const { items } = await listUserMessages(pdb, userId, {
+        filter,
+        limit: MESSAGE_EXPORT_PAGE_SIZE,
+        offset,
+      });
+      if (items.length === 0) break;
+      for (const item of items) {
+        // Already seen this id under a different filter this run — 'inbox'
+        // and 'archived' are mutually exclusive at any instant, but a
+        // concurrent archive/unarchive mid-export could otherwise double it.
+        if (seenIds.has(item.id)) continue;
+        seenIds.add(item.id);
+        // listUserMessages only returns a truncated bodyPreview and no
+        // source-ref fields — fetch the full detail so the export isn't
+        // lossy and plugin source refs export as inert metadata (RFC 0048 §9).
+        const detail = await getUserMessage(pdb, item.id, userId);
+        if (!detail) continue;
+        rows.push({
+          id: detail.id,
+          senderType: detail.senderType,
+          senderDisplay: detail.senderDisplay,
+          subject: detail.subject,
+          body: detail.body,
+          sourcePluginId: detail.sourcePluginId,
+          sourceRefType: detail.sourceRefType,
+          sourceRefId: detail.sourceRefId,
+          createdAt: detail.createdAt,
+          readAt: detail.readAt,
+          archivedAt: detail.archivedAt,
+        });
+      }
+      offset += MESSAGE_EXPORT_PAGE_SIZE;
+      if (offset >= MAX_EXPORTED_MESSAGES_PER_FILTER || items.length < MESSAGE_EXPORT_PAGE_SIZE) {
+        break;
+      }
+    }
+  }
+  return rows;
 }
 
 /**

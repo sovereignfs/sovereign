@@ -26,6 +26,7 @@ export const RESERVED_API_SEGMENTS: ReadonlySet<string> = new Set([
   'directory',
   'events',
   'health',
+  'inbox',
   'instance',
   'manifest',
   'plugins',

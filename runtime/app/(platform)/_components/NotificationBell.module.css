@@ -355,3 +355,21 @@ button.itemTitle {
     background: var(--sv-color-surface-sunken);
   }
 }
+
+.viewAll {
+  display: block;
+  flex: 0 0 auto;
+  text-align: center;
+  padding: var(--sv-space-2) var(--sv-space-3);
+  border-top: 1px solid var(--sv-color-border);
+  font-size: var(--sv-font-size-caption, 13px);
+  color: var(--sv-color-text-muted);
+  text-decoration: none;
+}
+
+@media (hover: hover) {
+  .viewAll:hover {
+    color: var(--sv-color-text-primary);
+    background: var(--sv-color-surface-sunken);
+  }
+}

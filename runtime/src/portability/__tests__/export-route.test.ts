@@ -50,6 +50,8 @@ describe('GET /api/account/export', () => {
       vaultSecrets: [],
       avatar: null,
       e2ee: null,
+      notifications: [],
+      messages: [],
     });
     vi.mocked(eligibleExportPlugins).mockResolvedValue({});
     vi.mocked(installedPluginsRoster).mockResolvedValue([]);
@@ -84,6 +86,8 @@ describe('GET /api/account/export', () => {
       vaultSecrets: [],
       avatar: null,
       e2ee: null,
+      notifications: [],
+      messages: [],
     });
     vi.mocked(eligibleExportPlugins).mockResolvedValue({});
     vi.mocked(installedPluginsRoster).mockResolvedValue([]);
@@ -106,6 +110,8 @@ describe('GET /api/account/export', () => {
       vaultSecrets: [],
       avatar: null,
       e2ee: null,
+      notifications: [],
+      messages: [],
     });
     vi.mocked(eligibleExportPlugins).mockResolvedValue({});
     vi.mocked(installedPluginsRoster).mockResolvedValue([]);

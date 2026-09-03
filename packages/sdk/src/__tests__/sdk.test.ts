@@ -130,6 +130,11 @@ beforeAll(() => {
         /* no-op */
       },
     },
+    messages: {
+      async send() {
+        return { messageId: 'msg-1', sentTo: [], skipped: [] };
+      },
+    },
     webhooks: {
       async verifyHmac(_input, _pluginId) {
         return false;

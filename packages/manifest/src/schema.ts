@@ -25,6 +25,7 @@ export const permissionSchema = z.enum([
   'mailer:sendExternal',
   'storage:readWrite',
   'notifications:send',
+  'messages:send',
   'jobs:write',
   'events:publish',
   'events:subscribe',

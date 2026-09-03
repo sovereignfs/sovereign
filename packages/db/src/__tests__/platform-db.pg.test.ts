@@ -25,10 +25,18 @@ import {
   createPluginStatusRowIfAbsent,
   createStorageObject,
   createUserGroup,
+  archiveMessage,
   deletePluginSecret,
   deletePluginProviderConfig,
   deleteStorageObject,
   deleteUserData,
+  deleteUserMessage,
+  getUserMessage,
+  listUserMessages,
+  markMessageRead,
+  markMessageUnread,
+  sendMessage,
+  unarchiveMessage,
   enqueueJob,
   getJobById,
   getJobHealthSummary,
@@ -760,6 +768,97 @@ describe.skipIf(!PG_URL)('plugin secret vault helpers (RFC 0043)', () => {
         userId: null,
       }),
     ).toBeDefined();
+  });
+});
+
+describe.skipIf(!PG_URL)('messages (RFC 0048)', () => {
+  it('sends a message to multiple recipients and lists/reads it per-recipient', async () => {
+    const db = await freshDb();
+    await sendMessage(db, {
+      id: 'msg-1',
+      recipientUserIds: ['u1', 'u2'],
+      senderType: 'admin',
+      senderId: 'admin-1',
+      subject: 'Scheduled maintenance',
+      body: 'The instance will restart at midnight.',
+    });
+
+    const inboxU1 = await listUserMessages(db, 'u1');
+    expect(inboxU1.total).toBe(1);
+    expect(inboxU1.items[0]).toMatchObject({ id: 'msg-1', subject: 'Scheduled maintenance' });
+
+    const detail = await getUserMessage(db, 'msg-1', 'u2');
+    expect(detail).toMatchObject({
+      subject: 'Scheduled maintenance',
+      body: 'The instance will restart at midnight.',
+      readAt: null,
+      archivedAt: null,
+    });
+
+    // Not a recipient — must not resolve.
+    expect(await getUserMessage(db, 'msg-1', 'u3')).toBeUndefined();
+  });
+
+  it('supports read/unread/archive/unarchive independently per recipient', async () => {
+    const db = await freshDb();
+    await sendMessage(db, {
+      id: 'msg-2',
+      recipientUserIds: ['u1', 'u2'],
+      senderType: 'plugin',
+      senderId: 'com.example.notes',
+      subject: 'Report ready',
+      body: 'Your export is ready to download.',
+    });
+
+    await markMessageRead(db, 'msg-2', 'u1');
+    expect((await getUserMessage(db, 'msg-2', 'u1'))?.readAt).not.toBeNull();
+    expect((await getUserMessage(db, 'msg-2', 'u2'))?.readAt).toBeNull();
+
+    await markMessageUnread(db, 'msg-2', 'u1');
+    expect((await getUserMessage(db, 'msg-2', 'u1'))?.readAt).toBeNull();
+
+    await archiveMessage(db, 'msg-2', 'u1');
+    expect((await listUserMessages(db, 'u1', { filter: 'inbox' })).total).toBe(0);
+    expect((await listUserMessages(db, 'u1', { filter: 'archived' })).total).toBe(1);
+    expect((await listUserMessages(db, 'u2', { filter: 'inbox' })).total).toBe(1);
+
+    await unarchiveMessage(db, 'msg-2', 'u1');
+    expect((await listUserMessages(db, 'u1', { filter: 'inbox' })).total).toBe(1);
+  });
+
+  it('soft-deletes only the caller’s own recipient row, leaving the message for other recipients', async () => {
+    const db = await freshDb();
+    await sendMessage(db, {
+      id: 'msg-3',
+      recipientUserIds: ['u1', 'u2'],
+      senderType: 'admin',
+      subject: 'Hello',
+      body: 'Hi there.',
+    });
+
+    await deleteUserMessage(db, 'msg-3', 'u1');
+    expect(await getUserMessage(db, 'msg-3', 'u1')).toBeUndefined();
+    expect(await getUserMessage(db, 'msg-3', 'u2')).toBeDefined();
+  });
+
+  it('deleteUserData hard-deletes the recipient row, then prunes the message once every recipient is gone', async () => {
+    const db = await freshDb();
+    await sendMessage(db, {
+      id: 'msg-4',
+      recipientUserIds: ['u1', 'u2'],
+      senderType: 'admin',
+      subject: 'Both recipients',
+      body: 'Sent to both u1 and u2.',
+    });
+
+    await deleteUserData(db, 'u1');
+    // u1's own recipient row is gone, but the message survives — u2 is still a recipient.
+    expect(await getUserMessage(db, 'msg-4', 'u1')).toBeUndefined();
+    expect(await getUserMessage(db, 'msg-4', 'u2')).toBeDefined();
+
+    await deleteUserData(db, 'u2');
+    // Now u2's own recipient row is also gone — the message row itself must be pruned.
+    expect(await getUserMessage(db, 'msg-4', 'u2')).toBeUndefined();
   });
 });
 

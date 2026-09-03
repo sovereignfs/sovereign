@@ -55,7 +55,7 @@ export const notifications = {
    * ```
    */
   async send(input: SendNotificationInput, requestHeaders?: Headers): Promise<void> {
-    const pluginId = requestHeaders ? (getPluginId(requestHeaders) ?? 'unknown') : 'unknown';
+    const pluginId = requestHeaders ? getPluginId(requestHeaders) : null;
     return requireHost().notifications.send(input, pluginId);
   },
 

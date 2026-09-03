@@ -64,6 +64,7 @@ runtime/generated/*
 /plugins/*/
 !/plugins/account/
 !/plugins/console/
+!/plugins/inbox/
 !/plugins/launcher/
 !/plugins/warden/
 

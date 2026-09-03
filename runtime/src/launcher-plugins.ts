@@ -5,13 +5,15 @@ import type { PluginRouteInfo } from './route-guard';
 
 /**
  * Platform chrome plugins — reachable through the sidebar chrome (home `/`,
- * Console ⚙, Account avatar), never listed among the Launcher tiles or the
- * sidebar's middle plugin-icon section (SRS LCH-04, PLT-12).
+ * Console ⚙, Account avatar, Inbox 🔔 bell), never listed among the
+ * Launcher tiles or the sidebar's middle plugin-icon section (SRS LCH-04,
+ * PLT-12).
  */
 export const CHROME_PLUGIN_IDS: ReadonlySet<string> = new Set([
   'fs.sovereign.launcher',
   'fs.sovereign.account',
   'fs.sovereign.console',
+  'fs.sovereign.inbox',
 ]);
 
 /** The Launcher-visible projection of a plugin manifest. */

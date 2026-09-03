@@ -88,6 +88,11 @@ describe('sdk.mailer / sdk.email — plugin ID resolution (RFC 0062)', () => {
         async dismiss() {},
         async dismissAll() {},
       },
+      messages: {
+        async send() {
+          return { messageId: 'msg-1', sentTo: [], skipped: [] };
+        },
+      },
       webhooks: {
         async verifyHmac() {
           return false;

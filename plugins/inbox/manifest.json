@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "fs.sovereign.inbox",
+  "name": "Inbox",
+  "version": "0.1.0",
+  "description": "Your notifications and messages — alerts from apps and admins, and durable messages you can read, archive, or delete.",
+  "type": "platform",
+  "runtime": "native",
+  "routePrefix": "/inbox",
+  "shell": "default",
+  "icon": "icon.svg",
+  "permissions": ["auth:session", "db:readWrite"],
+  "compatibility": {
+    "minPlatformVersion": "0.119.0"
+  }
+}

@@ -124,6 +124,11 @@ describe('sdk.jobs — header resolution', () => {
         async dismiss() {},
         async dismissAll() {},
       },
+      messages: {
+        async send() {
+          return { messageId: 'msg-1', sentTo: [], skipped: [] };
+        },
+      },
       webhooks: {
         async verifyHmac() {
           return false;

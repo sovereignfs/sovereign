@@ -251,6 +251,8 @@ Declared SDK capabilities. The v1-functional ones:
 
 | `notifications:send` | Send notifications to users via `sdk.notifications.send()`, and read/manage the calling user's own cross-plugin Notification Center inbox via `sdk.notifications.list()/markRead()/markAllRead()/dismiss()/dismissAll()` — not scoped to notifications the calling plugin itself sent (RFC 0015). |
 
+| `messages:send` | Send a durable message to one or more users via `sdk.messages.send()` — send-only, no read surface (RFC 0048). |
+
 | `jobs:write` | Enqueue/schedule/cancel/read background jobs via `sdk.jobs` (RFC 0046). |
 
 | `events:publish` | Publish realtime events via `sdk.events.publish()` (RFC 0045). |
@@ -2267,11 +2269,12 @@ grant-management surface, and Account does not aggregate "resources shared
 with me" across plugins. Both may be added later once real plugins have
 proven the pattern.
 
-### `notifications` — Notification Center (RFC 0015)
+### `notifications` — Notification Center (RFC 0015; detail fields RFC 0048)
 
 Plugins can send in-app notifications to users by declaring the `notifications:send` permission
 and calling `sdk.notifications.send()`. Notifications appear in the bell icon in the platform
-chrome; users see toasts for new items and can manage preferences in **Account → Notifications**.
+chrome; users see toasts for new items, a fuller list with detail pages at the **Inbox** app
+(`/inbox`, `fs.sovereign.inbox`), and can manage preferences in **Account → Notifications**.
 
 ```json
 {
@@ -2288,9 +2291,12 @@ await sdk.notifications.send(
   {
     recipientUserId: userId,
     title: 'Your export is ready',
-    body: 'Click to download your data archive.',
-    url: '/myPlugin/exports',
+    summary: 'Click to download your data archive.', // short bell/toast/push preview
+    body: 'The generated CSV is attached below. It will be available for 7 days.', // full detail-view body
+    actionUrl: '/myPlugin/exports', // replaces `url`, which still works for compatibility
     category: 'info', // 'info' | 'announcement' | 'security' | custom
+    priority: 'normal', // 'low' | 'normal' | 'high' | 'security' — 'security' can never be muted
+    dedupeKey: `export:${exportId}`, // optional — lets a caller look up/coalesce repeated alerts
     // icon is optional — a URL to an image shown in the OS push notification.
     // Defaults to your plugin's own /plugin-icons/<id>.svg; only set it to
     // override with a notification-specific image instead.
@@ -2298,6 +2304,14 @@ await sdk.notifications.send(
   await headers(), // pass the request headers so the runtime can read the plugin ID
 );
 ```
+
+**Notification detail (RFC 0048).** When `summary`/`body` are both omitted, only `title` is
+required — exactly today's behavior. When `body` is set, the bell/Inbox list link to a full
+detail page (`/inbox/<notificationId>`) instead of navigating straight to `actionUrl`; an
+action-only notification (no `body`) still deep-links directly. `body` is always rendered as
+plain text, regardless of `bodyFormat` — there is no markdown-to-HTML rendering pipeline in this
+platform yet, so `bodyFormat: 'markdown'` is accepted and stored but displayed identically to
+`'plain'`.
 
 **Categories and muting:**
 
@@ -2334,7 +2348,9 @@ import { sdk } from '@sovereignfs/sdk';
 
 const { items, unreadCount } = await sdk.notifications.list();
 // items: NotificationItem[] — id, source, sourceType, title, body, url,
-// category, icon, readAt, dismissedAt, createdAt (all fields the row has).
+// category, icon, readAt, dismissedAt, createdAt, plus RFC 0048's detail
+// fields (summary, bodyFormat, actionUrl, priority) — summary/actionUrl are
+// already coalesced against body/url server-side.
 
 await sdk.notifications.markRead(id);
 await sdk.notifications.markAllRead();
@@ -2347,6 +2363,54 @@ the platform's live SSE push stream (`/api/account/notifications/stream`), since
 server-sent-events connection isn't naturally modeled as a request/response SDK call. A plugin
 that wants live updates polls `list()` on an interval instead (the platform's own bell does the
 same thing as its fallback transport when SSE isn't available).
+
+### `messages` — Message Inbox (RFC 0048)
+
+Plugins can send a durable message to one or more users by declaring the `messages:send`
+permission and calling `sdk.messages.send()`. Unlike a notification, a message is a durable
+object with its own subject/body, sender identity, and per-recipient read/archive/delete
+lifecycle — users read it in the **Inbox** app's Messages tab (`/inbox?tab=messages`,
+`fs.sovereign.inbox`), not the bell. `sdk.messages` is **send-only** — plugins have no way to
+read a user's message inbox, even their own sent messages, matching the same "plugins do not
+read user inboxes" principle as the rest of the Notification Center.
+
+```json
+{
+  "permissions": ["messages:send"]
+}
+```
+
+```ts
+// Inside a plugin server action or route handler (server-side only):
+import { sdk } from '@sovereignfs/sdk';
+import { headers } from 'next/headers';
+
+const result = await sdk.messages.send(
+  {
+    recipientUserIds: [userId], // up to 50 per call
+    subject: 'Your report is ready',
+    body: 'The generated report is attached to this message.',
+    bodyFormat: 'plain', // 'plain' (default) | 'markdown' — see the notifications section above;
+    // markdown is stored but rendered as plain text in v1, same caveat.
+    notify: true, // default true — also creates a notification alert linking to the message
+    sourceRef: { type: 'report', id: reportId }, // optional, inert metadata only
+  },
+  await headers(), // pass the request headers so the runtime can read the plugin ID
+);
+// result: { messageId, sentTo: string[], skipped: { userId, reason: 'RECIPIENT_NOT_FOUND' }[] }
+// A recipient id that isn't an active user in the tenant is skipped, not fatal, unless every
+// recipient fails — sending then throws instead of creating an empty message.
+```
+
+**Runtime enforcement (RFC 0048 §7):** the runtime resolves and stamps sender identity from
+trusted request context (plugins cannot forge it), verifies the `messages:send` permission,
+validates every recipient against the user directory, caps batch size at 50 recipients per
+call, and rate-limits per plugin and per recipient. A plugin without `messages:send` gets a
+clear error, not a silent no-op.
+
+**Admin messages.** Console can compose a message to selected users or all active users
+(`/console/messages`) — an internal helper, not reachable via the plugin SDK, and always audited
+via the activity log.
 
 ### `schedules` — recurring background jobs (RFC 0046 Phase 1)
 
@@ -3081,15 +3145,21 @@ version?)` (sync, `false` until the handshake resolves — capabilities are
   calling plugin's effective server-side provider config, merging plugin-scoped
   runtime env vars with Console-managed config where Console values take
   precedence.
-- **`notifications`** — Notification Center (RFC 0015). `sdk.notifications.send(input, requestHeaders)`
+- **`notifications`** — Notification Center (RFC 0015; detail fields RFC 0048). `sdk.notifications.send(input, requestHeaders)`
   delivers a notification to a user's inbox. Requires the `notifications:send` manifest
   permission. The runtime injects `source` (plugin ID) and `sourceType` automatically —
-  plugins supply `recipientUserId`, `title`, and optionally `body`, `url`, `category`,
-  and `icon`. Users can mute categories (except `security`) in their Account Notifications
-  tab. `sdk.notifications.list()/markRead()/markAllRead()/dismiss()/dismissAll()` read and
+  plugins supply `recipientUserId`, `title`, and optionally `body`, `summary`, `bodyFormat`,
+  `url`/`actionUrl`, `category`, `priority`, `dedupeKey`, and `icon`. Users can mute categories
+  (except `security`) in their Account Notifications tab.
+  `sdk.notifications.list()/markRead()/markAllRead()/dismiss()/dismissAll()` read and
   manage the _current user's own_ inbox — the same real cross-plugin data the platform's own
-  bell shows, always self-scoped (no target-user parameter exists). See
-  [notifications (RFC 0015)](#notifications-rfc-0015) below.
+  bell and the Inbox app show, always self-scoped (no target-user parameter exists). See
+  [notifications](#notifications--notification-center-rfc-0015-detail-fields-rfc-0048) below.
+- **`messages`** — Message Inbox (RFC 0048). `sdk.messages.send(input, requestHeaders)` sends a
+  durable message to one or more users (send-only — no read surface). Requires the
+  `messages:send` manifest permission. Recipients are capped at 50 per call, validated against
+  the user directory, and rate-limited per plugin and per recipient. See
+  [messages](#messages--message-inbox-rfc-0048) below.
 - **`billing`** — plugin monetization / entitlement gating (RFC 0003).
   `sdk.billing.getEntitlement(headers)` returns the current user's active
   entitlement for the calling plugin (tier + expiry), or `null` if none exists.

@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getPlatformSetting, sendNotification, setPlatformSetting } from '@sovereignfs/db';
-import { randomUUID } from 'node:crypto';
+import { getPlatformSetting, setPlatformSetting } from '@sovereignfs/db';
 import { hasCapability } from '@/src/capabilities';
 import { getPlatformDb } from '@/src/db';
-import { fanOutPushToUsers } from '@/src/push';
+import { deliverNotification } from '@/src/notification-delivery';
 
 /** Minimum seconds between admin broadcasts (rate-limit guard). */
 const BROADCAST_COOLDOWN_SECS = 60;
@@ -59,10 +58,13 @@ export async function POST(request: Request): Promise<Response> {
 
   await setPlatformSetting(pdb, 'last_broadcast_at', String(Math.floor(Date.now() / 1000)));
 
+  // deliverNotification() (not a raw sendNotification()+push insert) applies
+  // RFC 0048 §6's mute-policy matrix per recipient — broadcast used to write
+  // inbox rows and push regardless of muted-category prefs, the exact bug
+  // the RFC's own Current State section calls out by name.
   await Promise.all(
     body.recipientUserIds.map((userId) =>
-      sendNotification(pdb, {
-        id: randomUUID(),
+      deliverNotification(pdb, {
         recipientUserId: userId,
         source: 'admin',
         sourceType: 'admin',
@@ -73,14 +75,6 @@ export async function POST(request: Request): Promise<Response> {
       }),
     ),
   );
-
-  // Push fan-out for all recipients at once (broadcast bypasses per-user category prefs).
-  void fanOutPushToUsers(body.recipientUserIds, {
-    title: body.title,
-    body: body.body,
-    url: body.url,
-    category: body.category ?? 'announcement',
-  });
 
   return NextResponse.json({ ok: true, sent: body.recipientUserIds.length });
 }

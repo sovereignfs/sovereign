@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getPlatformSetting, sendNotification, setPlatformSetting } from '@sovereignfs/db';
-import { randomUUID } from 'node:crypto';
+import { getPlatformSetting, setPlatformSetting } from '@sovereignfs/db';
 import { checkAdminKey } from '@/src/admin-guard';
 import { getPlatformDb } from '@/src/db';
+import { deliverNotification } from '@/src/notification-delivery';
 
 /** Minimum seconds between admin broadcasts (rate-limit guard). */
 const BROADCAST_COOLDOWN_SECS = 60;
@@ -59,12 +59,12 @@ export async function POST(request: Request): Promise<Response> {
 
   await setPlatformSetting(pdb, 'last_broadcast_at', String(Math.floor(Date.now() / 1000)));
 
-  // Send one notification per recipient. Fire-and-forget style — we don't wait
-  // for every insert to finish before responding, but we do await the batch.
+  // deliverNotification() (not a raw sendNotification() insert) applies RFC
+  // 0048 §6's mute-policy matrix per recipient — see the sibling
+  // /api/account/broadcast route's identical fix for the full rationale.
   await Promise.all(
     body.recipientUserIds.map((userId) =>
-      sendNotification(pdb, {
-        id: randomUUID(),
+      deliverNotification(pdb, {
         recipientUserId: userId,
         source: 'admin',
         sourceType: 'admin',

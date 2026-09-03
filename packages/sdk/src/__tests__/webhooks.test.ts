@@ -111,6 +111,11 @@ describe('sdk.webhooks — header resolution', () => {
         async dismiss() {},
         async dismissAll() {},
       },
+      messages: {
+        async send() {
+          return { messageId: 'msg-1', sentTo: [], skipped: [] };
+        },
+      },
       webhooks: {
         async verifyHmac(input, pluginId) {
           seenHmacInput = input;

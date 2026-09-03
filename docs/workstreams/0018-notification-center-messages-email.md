@@ -1,6 +1,6 @@
 # Workstream 0018 — Notification Center: messages and email channel
 
-**Status:** 📋 Planned\
+**Status:** ⏳ In progress — leg 1 (task 4.4) implemented as the new `fs.sovereign.inbox` plugin (see leg 1's own changelog entry for the RFC-0048-route-shape deviation); not yet committed or opened as a PR this session per explicit developer instruction. Leg 2 (4.5) not started.\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -23,15 +23,17 @@ fan-out from ordinary plugin notifications.
 
 ## Definition of done
 
-- [ ] `4.4` — notifications gain `summary`/`body`/`body_format`/`action_url`
-      and expiry/dedupe/priority semantics; `/account/notifications` and
-      `/account/notifications/<id>` exist; `messages`/`message_recipients`
-      tables exist with per-recipient read/archive/delete state;
-      `/account/messages` and `/account/messages/<id>` exist;
-      `sdk.messages.send()` and `messages:send` permission exist; Console
-      can compose to selected or all active users; sending is hardened at
-      the runtime host boundary (trusted source, permission check,
-      recipient validation, batch caps, rate limits).
+- [x] `4.4` — notifications gain `summary`/`body`/`body_format`/`action_url`
+      and expiry/dedupe/priority semantics; `/inbox/<id>` (notification
+      detail) and `/inbox` (Messages tab, list) + `/inbox/messages/<id>`
+      exist — as the new `fs.sovereign.inbox` plugin rather than nested
+      under `/account/*` as originally drafted here, see leg 1's own
+      changelog entry; `messages`/`message_recipients` tables exist with
+      per-recipient read/archive/delete state; `sdk.messages.send()` and
+      `messages:send` permission exist; Console can compose to selected or
+      all active users (`/console/messages`); sending is hardened at the
+      runtime host boundary (trusted source, permission check, recipient
+      validation, batch caps, rate limits).
 - [ ] `4.5` — delivery-channel intent (`inbox`/`toast`/`push`/`email`) is
       explicit; `sdk.notifications.send()` never emails unless a sender
       opts into a future SDK-versioned email channel; Console/API broadcasts
@@ -147,6 +149,7 @@ mandatory-email-must-never-be-mutable guarantee.
 
 ## Changelog
 
-| Version | Date        | Change                                                  |
-| ------- | ----------- | ------------------------------------------------------- |
-| 0.1     | August 2026 | Initial draft — 2 tasks (4.4, 4.5), strictly sequential |
+| Version | Date           | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026    | Initial draft — 2 tasks (4.4, 4.5), strictly sequential                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 0.2     | September 2026 | Leg 1 (4.4) implemented, deviating from RFC 0048's own route sketch: rather than nesting the list/detail UI under Account, it ships as a new platform-type plugin, `fs.sovereign.inbox` (`/inbox`) — resolving the RFC's Open Question 1 as "yes, a first-class platform area," per direct developer direction mid-session. Notification preferences stay at `/account/notifications`, untouched — a second, explicit developer correction to an earlier plan draft that would have moved them into Inbox. Schema (8 new `notifications` columns + `messages`/`message_recipients` tables, both dialects, real `drizzle-kit`-generated migrations), `sdk.messages.send()`, the `messages:send` permission, `deliverNotification()`'s mute-policy funnel (RFC §6), `sdk.notifications.send()`'s previously-unenforced hardening (RFC §7), Console's admin message compose (`/console/messages`, audited), and export participation (RFC §9) all land in this leg. Two real pre-existing bugs caught and fixed along the way, verified against a real Postgres instance: `COUNT(*)` and bigint timestamp columns returning as strings from node-postgres with no global type parser registered (affected `countUnreadNotifications` too, not just this leg's own new queries). RFC 0048 marked `Implemented`; leg 2 (4.5, email channel) remains a separate, not-yet-started leg. |

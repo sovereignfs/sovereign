@@ -23,6 +23,8 @@ const PLATFORM: PlatformExportData = {
   vaultSecrets: [],
   avatar: { ext: 'png', bytes: new Uint8Array([137, 80, 78, 71]) },
   e2ee: null,
+  notifications: [],
+  messages: [],
 };
 
 function getEntry(files: Record<string, Uint8Array | undefined>, key: string): Uint8Array {
@@ -63,6 +65,63 @@ describe('assembleExport', () => {
     );
     expect(manifest.formatVersion).toBe(2);
     expect(manifest.sections.map((s) => s.pluginId)).toEqual([PLATFORM_SECTION_ID]);
+  });
+
+  it('includes notifications and messages in the platform slice (RFC 0048 §9)', async () => {
+    const platformWithInbox: PlatformExportData = {
+      ...PLATFORM,
+      notifications: [
+        {
+          id: 'notif-1',
+          source: 'com.example.notes',
+          sourceType: 'plugin',
+          title: 'Export ready',
+          body: 'Your export finished.',
+          summary: 'Your export finished.',
+          actionUrl: '/notes/exports/1',
+          category: 'info',
+          priority: 'normal',
+          readAt: null,
+          dismissedAt: null,
+          createdAt: 1_700_000_000,
+        },
+      ],
+      messages: [
+        {
+          id: 'msg-1',
+          senderType: 'admin',
+          senderDisplay: null,
+          subject: 'Scheduled maintenance',
+          body: 'The instance will restart at midnight.',
+          sourcePluginId: null,
+          sourceRefType: null,
+          sourceRefId: null,
+          createdAt: 1_700_000_100,
+          readAt: null,
+          archivedAt: null,
+        },
+      ],
+    };
+
+    const zip = await assembleExport({
+      userId: 'u1',
+      tenantId: 'default',
+      platform: platformWithInbox,
+      platformVersion: '0.6.0',
+      sourceInstance: null,
+      exportPlugins: {},
+      installedPlugins: [],
+    });
+    const files = readZip(zip);
+    const account = u8ToJson<{
+      notifications: unknown[];
+      messages: { id: string; subject: string }[];
+    }>(getEntry(files, 'platform/account.json'));
+
+    expect(account.notifications).toHaveLength(1);
+    expect(account.messages).toEqual([
+      expect.objectContaining({ id: 'msg-1', subject: 'Scheduled maintenance' }),
+    ]);
   });
 
   it('invokes a registered plugin exporter and includes its section + blobs', async () => {

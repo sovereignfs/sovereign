@@ -15,6 +15,8 @@ import type {
   ProviderConfig,
   ResolveUsersInput,
   SearchUsersInput,
+  SendMessageInput,
+  SendMessageResult,
   SendNotificationInput,
   SendToUserEmailInput,
   CheckWebhookReplayInput,
@@ -203,9 +205,12 @@ export interface SdkHost {
     /**
      * Deliver one notification to a user. The runtime injects `source`,
      * `sourceType`, and `tenantId` from the request context so the plugin only
-     * supplies the payload fields.
+     * supplies the payload fields. `pluginId` is `null` when the calling
+     * plugin's identity couldn't be resolved (missing/forged
+     * `x-sovereign-plugin-id` header) — the host rejects rather than
+     * defaulting to an `'unknown'` source (RFC 0048 §7).
      */
-    send(input: SendNotificationInput, pluginId: string): Promise<void>;
+    send(input: SendNotificationInput, pluginId: string | null): Promise<void>;
     /**
      * Read the CALLING USER's own Notification Center inbox — the same real,
      * cross-plugin list the platform's own bell shows, never scoped to the
@@ -226,6 +231,15 @@ export interface SdkHost {
     dismiss(id: string, userId: string, pluginId: string): Promise<void>;
     /** Dismiss all of the calling user's own non-dismissed notifications. */
     dismissAll(userId: string, pluginId: string): Promise<void>;
+  };
+  messages: {
+    /**
+     * Send a durable message to one or more users (RFC 0048). Send-only —
+     * plugins have no read surface for messages. `pluginId` is `null` when
+     * the calling plugin's identity couldn't be resolved; the host rejects
+     * rather than defaulting to an `'unknown'` sender.
+     */
+    send(input: SendMessageInput, pluginId: string | null): Promise<SendMessageResult>;
   };
   webhooks: {
     /** Verify an HMAC signature against a plugin-scoped secret (RFC 0050). */

@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/runtime",
-  "version": "0.93.0",
+  "version": "0.94.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,6 +12,9 @@
   },
   "dependencies": {
     "@better-auth/passkey": "^1.6.25",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@ducanh2912/next-pwa": "^10.2.9",
     "@next/env": "^16.2.12",
     "@sovereignfs/bridge": "workspace:*",
@@ -20,15 +23,26 @@
     "@sovereignfs/manifest": "workspace:*",
     "@sovereignfs/sdk": "workspace:*",
     "@sovereignfs/ui": "workspace:*",
+    "@tiptap/core": "^3.27.3",
+    "@tiptap/extension-table": "^3.27.3",
+    "@tiptap/extension-table-cell": "^3.27.3",
+    "@tiptap/extension-table-header": "^3.27.3",
+    "@tiptap/extension-table-row": "^3.27.3",
+    "@tiptap/pm": "^3.27.3",
+    "@tiptap/react": "^3.27.3",
+    "@tiptap/starter-kit": "^3.27.3",
     "age-encryption": "0.3.1",
     "better-auth": "^1.6.25",
     "better-sqlite3-multiple-ciphers": "catalog:",
     "drizzle-orm": "^0.45.2",
     "fflate": "^0.8.3",
+    "hyperformula": "^3.3.0",
+    "nanoid": "^5.0.9",
     "next": "catalog:",
     "qrcode": "^1.5.4",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "tiptap-markdown": "^0.9.0",
     "web-push": "^3.6.7"
   },
   "optionalDependencies": {
@@ -38,10 +52,12 @@
     "@sovereignfs/tsconfig": "workspace:*",
     "@testing-library/dom": "catalog:",
     "@testing-library/react": "catalog:",
+    "@types/pg": "^8.20.0",
     "@types/qrcode": "^1.5.6",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@types/web-push": "^3.6.4",
+    "pg": "^8.22.0",
     "typescript": "catalog:"
   }
 }

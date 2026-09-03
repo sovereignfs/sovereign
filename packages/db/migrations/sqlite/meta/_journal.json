@@ -211,6 +211,13 @@
       "when": 1788102474823,
       "tag": "0029_third_giant_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1788442453068,
+      "tag": "0030_happy_power_pack",
+      "breakpoints": true
     }
   ]
 }

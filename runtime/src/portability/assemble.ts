@@ -37,6 +37,38 @@ export interface PlatformE2eeExportData {
   }[];
 }
 
+/** One exported notification row (RFC 0048 §9) — same shape as `@sovereignfs/db`'s `NotificationRow`. */
+export interface NotificationExportRow {
+  id: string;
+  source: string;
+  sourceType: string;
+  title: string;
+  body: string | null;
+  summary: string | null;
+  actionUrl: string | null;
+  category: string;
+  priority: string;
+  readAt: number | null;
+  dismissedAt: number | null;
+  createdAt: number;
+}
+
+/** One exported message row, scoped to this user's own recipient state (RFC 0048 §9). */
+export interface MessageExportRow {
+  id: string;
+  senderType: string;
+  senderDisplay: string | null;
+  subject: string;
+  body: string;
+  /** Plugin source references are exported as inert metadata, never dereferenced (RFC 0048 §9). */
+  sourcePluginId: string | null;
+  sourceRefType: string | null;
+  sourceRefId: string | null;
+  createdAt: number;
+  readAt: number | null;
+  archivedAt: number | null;
+}
+
 /** The platform-owned slice of a user's data (not contributed by a plugin). */
 export interface PlatformExportData {
   name: string | null;
@@ -59,6 +91,10 @@ export interface PlatformExportData {
   /** The avatar file bytes + extension, read from disk by the caller. */
   avatar: { ext: string; bytes: Uint8Array } | null;
   e2ee: PlatformE2eeExportData | null;
+  /** Notification rows visible to the user (RFC 0048 §9) — first time notifications participate in export at all. */
+  notifications: NotificationExportRow[];
+  /** Received messages, scoped to this recipient's own state (RFC 0048 §9) — first time messages participate in export. */
+  messages: MessageExportRow[];
 }
 
 export interface AssembleArgs {
@@ -109,6 +145,8 @@ export async function assembleExport(args: AssembleArgs): Promise<Uint8Array> {
     preferences: { timezone: args.platform.timezone, theme: args.platform.theme },
     vaultSecrets: args.platform.vaultSecrets,
     e2ee: args.platform.e2ee,
+    notifications: args.platform.notifications,
+    messages: args.platform.messages,
   });
   files['platform/account.json'] = accountJson;
   sections.push({ pluginId: PLATFORM_SECTION_ID, schemaVersion: 1, checksum: sha256(accountJson) });

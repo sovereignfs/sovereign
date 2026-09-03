@@ -231,6 +231,14 @@ export const notifications = pgTable(
     readAt: bigint('read_at', { mode: 'number' }),
     dismissedAt: bigint('dismissed_at', { mode: 'number' }),
     createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+    summary: text('summary'),
+    bodyFormat: text('body_format').notNull().default('plain'),
+    actionUrl: text('action_url'),
+    metadata: text('metadata'),
+    expiresAt: bigint('expires_at', { mode: 'number' }),
+    dedupeKey: text('dedupe_key'),
+    priority: text('priority').notNull().default('normal'),
+    deliveryState: text('delivery_state'),
   },
   (table) => [
     index('notifications_user_feed').on(
@@ -239,6 +247,7 @@ export const notifications = pgTable(
       table.createdAt.desc(),
     ),
     index('notifications_unread').on(table.tenantId, table.recipientUserId, table.readAt),
+    index('notifications_dedupe').on(table.tenantId, table.source, table.dedupeKey),
   ],
 );
 
@@ -249,6 +258,49 @@ export const notificationPrefs = pgTable('notification_prefs', {
   pollIntervalSecs: integer('poll_interval_secs').notNull().default(30),
   updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
 });
+
+export const messages = pgTable(
+  'messages',
+  {
+    id: text('id').primaryKey(),
+    tenantId: text('tenant_id').notNull(),
+    senderType: text('sender_type').notNull(),
+    senderId: text('sender_id'),
+    senderDisplay: text('sender_display'),
+    subject: text('subject').notNull(),
+    body: text('body').notNull(),
+    bodyFormat: text('body_format').notNull().default('plain'),
+    sourcePluginId: text('source_plugin_id'),
+    sourceRefType: text('source_ref_type'),
+    sourceRefId: text('source_ref_id'),
+    createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+    updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
+  },
+  (table) => [index('messages_tenant_feed').on(table.tenantId, table.createdAt.desc())],
+);
+
+export const messageRecipients = pgTable(
+  'message_recipients',
+  {
+    messageId: text('message_id').notNull(),
+    tenantId: text('tenant_id').notNull(),
+    recipientUserId: text('recipient_user_id').notNull(),
+    deliveredAt: bigint('delivered_at', { mode: 'number' }),
+    readAt: bigint('read_at', { mode: 'number' }),
+    archivedAt: bigint('archived_at', { mode: 'number' }),
+    deletedAt: bigint('deleted_at', { mode: 'number' }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.messageId, table.recipientUserId] }),
+    index('message_recipients_inbox').on(
+      table.tenantId,
+      table.recipientUserId,
+      table.deletedAt,
+      table.archivedAt,
+    ),
+    index('message_recipients_unread').on(table.tenantId, table.recipientUserId, table.readAt),
+  ],
+);
 
 export const activityLog = pgTable('activity_log', {
   id: text('id').primaryKey(),

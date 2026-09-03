@@ -52,7 +52,6 @@ import {
   recordActivity,
   revokeE2eeDeviceEnrollment,
   scheduleJob,
-  sendNotification,
   sumPluginStorageBytes,
   updatePluginConnection,
   updatePluginSecret,
@@ -96,6 +95,8 @@ import type {
   SecretContext,
   SecretRef,
   SecretScope,
+  SendMessageInput,
+  SendMessageResult,
   SendNotificationInput,
   SendToUserEmailInput,
   VerifyWebhookHmacInput,
@@ -116,7 +117,12 @@ import type {
   ToolRef,
 } from '@sovereignfs/sdk';
 import { requireJobsPluginContext } from './jobs';
-import { requireNotificationsPluginContext } from './notification-permissions';
+import {
+  checkNotificationRateLimit,
+  requireNotificationsPluginContext,
+} from './notification-permissions';
+import { deliverNotification } from './notification-delivery';
+import { sendPluginMessage } from './messages';
 import { getBackgroundPluginContext } from './background-plugin-context';
 import type { EventEnvelope } from './event-broker';
 import { getDisabledPluginIds } from './plugin-status';
@@ -126,8 +132,6 @@ import {
 } from './portability/plugin-context';
 import { registerDeleter, registerExporter, registerImporter } from './portability/registry';
 import { getGrantResolver, registerGrantResolver } from './authz-registry';
-import { fanOutPushToUser } from './push';
-import { getBroker } from './notification-broker';
 import { getEventBroker } from './event-broker';
 import { assertEventPayloadSize } from './event-limits';
 import { requireEventsPluginContext } from './plugin-events';
@@ -479,7 +483,8 @@ async function auditToolExecution(input: {
   });
 }
 
-async function fetchDirectoryUsers(body: Record<string, unknown>): Promise<DirectoryUser[]> {
+/** Exported for `runtime/src/messages.ts`'s recipient-validation reuse (RFC 0048 §7). */
+export async function fetchDirectoryUsers(body: Record<string, unknown>): Promise<DirectoryUser[]> {
   const res = await fetch(`${AUTH_URL}/api/admin/directory`, {
     method: 'POST',
     headers: {
@@ -896,46 +901,31 @@ provideHost({
     },
   },
   notifications: {
-    async send(input: SendNotificationInput, pluginId: string): Promise<void> {
+    async send(input: SendNotificationInput, pluginId: string | null): Promise<void> {
+      const manifest = registry.find((m) => m.id === pluginId);
+      requireNotificationsPluginContext(pluginId, manifest);
+      const limited = checkNotificationRateLimit(pluginId, input.recipientUserId);
+      if (!limited.allowed) {
+        throw new Error(
+          `Plugin notification rate limit exceeded (${String(limited.scope)}). ` +
+            `Retry after ${String(limited.retryAfterSeconds ?? 60)} seconds.`,
+        );
+      }
       const pdb = await getPlatformDb();
-      const notifId = randomUUID();
-      await sendNotification(pdb, {
-        id: notifId,
+      await deliverNotification(pdb, {
         recipientUserId: input.recipientUserId,
         source: pluginId,
         sourceType: 'plugin',
         title: input.title,
         body: input.body,
+        summary: input.summary,
+        bodyFormat: input.bodyFormat,
         url: input.url,
+        actionUrl: input.actionUrl,
         category: input.category,
+        priority: input.priority,
+        dedupeKey: input.dedupeKey,
         icon: input.icon,
-      });
-
-      // Broker publish for SSE/Redis transport (no-op in polling mode).
-      const broker = getBroker();
-      if (broker) {
-        void broker.publish(input.recipientUserId, {
-          notificationId: notifId,
-          userId: input.recipientUserId,
-          title: input.title,
-          body: input.body ?? undefined,
-          url: input.url ?? undefined,
-          category: input.category ?? 'info',
-          source: pluginId,
-        });
-      }
-
-      // Fire-and-forget push fan-out (respects per-user muted-category prefs).
-      // source: pluginId lets fanOutPushToUser default the OS notification's
-      // icon to this plugin's own /plugin-icons/<pluginId>.svg when the
-      // plugin didn't pass an explicit icon.
-      void fanOutPushToUser(input.recipientUserId, {
-        title: input.title,
-        body: input.body,
-        url: input.url,
-        category: input.category,
-        icon: input.icon,
-        source: pluginId,
       });
     },
     async list(
@@ -985,6 +975,15 @@ provideHost({
       );
       const pdb = await getPlatformDb();
       await dismissAllNotifications(pdb, userId);
+    },
+  },
+  messages: {
+    async send(input: SendMessageInput, pluginIdInput: string | null): Promise<SendMessageResult> {
+      const manifest = registry.find((m) => m.id === pluginIdInput);
+      const pdb = await getPlatformDb();
+      return sendPluginMessage(pdb, input, pluginIdInput, manifest, (ids) =>
+        fetchDirectoryUsers({ mode: 'resolve', ids }),
+      );
     },
   },
   webhooks: {

@@ -1,6 +1,8 @@
 # RFC 0085 — Vertical section navigation for overlay-shell plugins (`NavRail`)
 
-**Status:** Superseded (Console only) — see update below\
+**Status:** Partially implemented — Account's half fully shipped across tasks
+14.5 and 14.6; Console's half superseded by workstream 0022's different
+design — see update below\
 **Date:** August 2026\
 **Author:** Claude Code + kasunben\
 **Scope:** `packages/ui` (new component, `Dialog` sizing, Storybook),
@@ -11,7 +13,8 @@
 **Incorporated into plan:** Partially — Console's half (originally epic task
 9.22 in the [Design System](../epics/design-system.md) epic) was rejected as
 scoped; see below. Account's half is scoped as
-[epic task 14.5](../epics/plugin-accounts.md) in the
+[epic task 14.5](../epics/plugin-accounts.md) (desktop rail) and
+[epic task 14.6](../epics/plugin-accounts.md) (mobile drill-down nav) in the
 [Plugin — Accounts](../epics/plugin-accounts.md) epic.
 
 > **Update:** Written independently of, and in parallel with,
@@ -58,6 +61,20 @@ scoped; see below. Account's half is scoped as
 > a true fixed box like `lg` (content never resizes it) but capped at
 > `64rem × 44rem` instead of filling the viewport. See task 14.5's own
 > Status note for the full three-round account.
+
+> **Update 3:** This RFC's own Alternatives/Open-questions entries below
+> ("Ship the full mobile drill-down... Noted as explicit future work so it
+> isn't lost" / "Full mobile drill-down list. Explicitly future work... not
+> scheduled by this RFC") are picked up by
+> [epic task 14.6](../epics/plugin-accounts.md), scoped as a follow-up to
+> 14.5 rather than folded into it. Account's mobile nav now matches the
+> drill-down pattern Console itself shipped for its own mobile nav (task
+> 13.17, workstream 0022): a full-screen index of tappable section rows,
+> selecting one navigates into that section, which shows a `‹ Account`
+> back-link instead of any persistent nav. See task 14.6's own Status note
+> for the full account, including a real correctness risk found and
+> resolved during planning (a redirect-vs-viewport race, same bug class as
+> task 14.5's own rounds 3–4).
 
 ---
 
@@ -221,7 +238,8 @@ silently decided — see Open questions for the exact target dimensions.
 **Ship the full mobile drill-down (Claude Mobile-style list) now.** Rejected
 for this RFC's scope — it's new mobile UX, not a reuse of an existing
 mechanism, and would meaningfully grow this change's surface. Noted as
-explicit future work so it isn't lost.
+explicit future work so it isn't lost. **Picked up by [epic task
+14.6](../epics/plugin-accounts.md)** — see Update 3 above.
 
 ## Open questions
 
@@ -246,7 +264,8 @@ explicit future work so it isn't lost.
   it.
 - **Full mobile drill-down list.** Explicitly future work (see Alternatives)
   — not scheduled by this RFC, but the intent is recorded so it isn't
-  forgotten.
+  forgotten. **Picked up by [epic task 14.6](../epics/plugin-accounts.md)**
+  — see Update 3 above.
 
 ## Adoption path
 

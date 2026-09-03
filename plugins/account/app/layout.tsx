@@ -3,63 +3,45 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { NavList, OfflineGate, PageContainer, useOverlaySecondRow } from '@sovereignfs/ui';
+import { Icon, NavList, OfflineGate, PageContainer, useOverlaySecondRow } from '@sovereignfs/ui';
 import type { NavListGroup } from '@sovereignfs/ui';
 import styles from './account.module.css';
-import { ActiveNavLink } from './_components/ActiveNavLink';
-
-const SECTIONS = [
-  { id: 'profile', label: 'Profile', href: '/account/profile', icon: 'user' },
-  { id: 'security', label: 'Security', href: '/account/security', icon: 'shield' },
-  {
-    id: 'preferences',
-    label: 'Preferences',
-    href: '/account/preferences',
-    icon: 'sliders-horizontal',
-  },
-  { id: 'notifications', label: 'Notifications', href: '/account/notifications', icon: 'bell' },
-  { id: 'billing', label: 'Billing', href: '/account/billing', icon: 'credit-card' },
-  { id: 'data', label: 'Data', href: '/account/data', icon: 'lock' },
-  { id: 'activity', label: 'Activity', href: '/account/activity', icon: 'activity' },
-] as const;
-
-function isSectionActive(pathname: string, href: string): boolean {
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
+import { ACCOUNT_SECTIONS, activeAccountSectionId } from './_lib/sections';
 
 export default function AccountLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const isIndex = pathname === '/account';
+  const activeId = activeAccountSectionId(pathname);
 
-  const tabStrip = (
-    <nav className={styles.tabs} aria-label="Account sections">
-      {SECTIONS.map((section) => (
-        <ActiveNavLink
-          key={section.href}
-          href={section.href}
-          className={styles.tab}
-          activeClassName={`${styles.tab} ${styles.tabActive}`}
-        >
-          {section.label}
-        </ActiveNavLink>
-      ))}
-    </nav>
+  const backOrTitle = isIndex ? (
+    <h1 className={styles.title}>Account</h1>
+  ) : (
+    // replace, not push: this Link lives inside an overlay Dialog dismissed
+    // via router.back() — push-based navigation would stack history so a
+    // single back only returns to the index, not close the dialog
+    // (CLAUDE.md's overlay-navigation rule) — same reasoning as the rail's
+    // own links below.
+    <Link href="/account" replace className={styles.backLink}>
+      <Icon name="chevron-left" size="sm" aria-hidden />
+      Account
+    </Link>
   );
 
-  // Hands the tab strip up to the enclosing Dialog's mobile OverlayHeader
-  // (soft-navigated overlay case) — a no-op, returning false, on the
-  // standalone hard-navigation route, which has no Dialog ancestor and must
-  // keep rendering its own header below at every width.
-  const insideOverlay = useOverlaySecondRow(tabStrip);
+  // Hands the title/back-link up to the enclosing Dialog's mobile
+  // OverlayHeader (soft-navigated overlay case) — a no-op, returning false,
+  // on the standalone hard-navigation route, which has no Dialog ancestor
+  // and must keep rendering its own header below at every width. On the
+  // index route this hands up `null`: Dialog's own OverlayHeader already
+  // shows "Account" as its row-1 title (from the plugin manifest name), so
+  // a second "Account" heading here would just duplicate it.
+  const insideOverlay = useOverlaySecondRow(isIndex ? null : backOrTitle);
 
   const navGroups: NavListGroup[] = [
     {
       id: 'account',
-      items: SECTIONS.map((section) => ({
-        id: section.id,
-        label: section.label,
-        href: section.href,
-        icon: section.icon,
-        active: isSectionActive(pathname, section.href),
+      items: ACCOUNT_SECTIONS.map((section) => ({
+        ...section,
+        active: section.id === activeId,
       })),
     },
   ];
@@ -72,7 +54,7 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
     <PageContainer maxWidth="full" className={styles.account}>
       {/* Mobile only (account.module.css's grid-template-areas swap below) —
           desktop renders the vertical rail instead. Rendered unconditionally,
-          not JS-forked, so useOverlaySecondRow above always has the tab strip
+          not JS-forked, so useOverlaySecondRow above always has backOrTitle
           to hand up to the Dialog's mobile OverlayHeader regardless of the
           viewport NavList would otherwise show at. */}
       <header
@@ -80,15 +62,15 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
           .filter(Boolean)
           .join(' ')}
       >
-        <h1 className={styles.title}>Account</h1>
-        {tabStrip}
+        {backOrTitle}
       </header>
 
       {/* Desktop only — vertical rail nav (epic task 14.5, re-derived from
           RFC 0085). Renders identically inside the Dialog overlay and on the
           standalone hard-navigation route, since this split is purely
           viewport-width-driven (account.module.css), not overlay-context-
-          driven. Mobile keeps the horizontal strip above, unchanged. */}
+          driven. Mobile instead gets the title-or-back-link above plus, at
+          the bare index route, a drill-down list (task 14.6, page.tsx). */}
       <div className={styles.rail}>
         <h1 className={styles.railTitle}>Account</h1>
         <NavList

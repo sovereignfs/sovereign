@@ -85,9 +85,19 @@ export function backupsDir(): string {
  * Deterministic archive path for a queued backup job, computed from its id
  * alone so `enqueueBackupJob` can populate the schema's `NOT NULL`
  * `archivePath` column up front, before the job has actually run.
+ *
+ * Extension depends on `scope`: instance-scope produces a `sv backup`
+ * archive (`.tar.gz`, itself SQLCipher-encrypted only if the source DBs
+ * are); user-scope produces an age-encrypted ZIP (`.zip.age`) — this is the
+ * literal filename the download route hands back via `Content-Disposition`
+ * (`resolveBackupArchivePath`'s caller derives it from this same path), so
+ * getting the extension right isn't cosmetic — a `.tar.gz` name on
+ * something that isn't a tarball would mislead whoever downloads it about
+ * how to open it.
  */
-export function backupArchivePathForJob(jobId: string): string {
-  return join(backupsDir(), `sovereign-backup-${jobId}.tar.gz`);
+export function backupArchivePathForJob(jobId: string, scope: 'instance' | 'user'): string {
+  const ext = scope === 'user' ? 'zip.age' : 'tar.gz';
+  return join(backupsDir(), `sovereign-backup-${jobId}.${ext}`);
 }
 
 /**

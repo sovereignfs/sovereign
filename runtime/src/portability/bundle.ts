@@ -73,7 +73,7 @@ export interface InstalledPluginRosterEntry {
  */
 export interface NotExportedEntry {
   pluginId: string;
-  reason: 'no-export-hook' | 'disabled';
+  reason: 'no-export-hook' | 'disabled' | 'user-excluded';
 }
 
 export interface BundleManifest {

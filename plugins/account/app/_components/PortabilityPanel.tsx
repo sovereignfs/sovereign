@@ -1,8 +1,8 @@
 'use client';
 
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { strFromU8, unzipSync } from 'fflate';
-import { Button, Checkbox, FileDropzone } from '@sovereignfs/ui';
+import { Alert, Button, Checkbox, FileDropzone, FormField, Input } from '@sovereignfs/ui';
 import styles from '../account.module.css';
 
 interface ImportSummary {
@@ -13,8 +13,19 @@ interface ImportSummary {
 
 interface NotExportedEntry {
   pluginId: string;
-  reason: 'no-export-hook' | 'disabled';
+  reason: 'no-export-hook' | 'disabled' | 'user-excluded';
 }
+
+interface BackupJobStatus {
+  jobId: string;
+  status: 'queued' | 'running' | 'complete' | 'failed';
+  sizeBytes: number;
+  errorMessage: string | null;
+  downloadUrl: string | null;
+}
+
+const POLL_INTERVAL_MS = 3000;
+const MIN_PASSPHRASE_LENGTH = 8;
 
 /** Read `manifest.json`'s `notExported` list straight out of the downloaded ZIP — no second request needed. */
 function readNotExported(zipBytes: Uint8Array): NotExportedEntry[] {
@@ -30,8 +41,9 @@ function readNotExported(zipBytes: Uint8Array): NotExportedEntry[] {
 }
 
 /**
- * Account → Data: self-service export (download a versioned ZIP) and
- * import/restore (upload a bundle, with a per-section result summary). RFC 0007.
+ * Account → Data: self-service export (download a versioned ZIP), an async
+ * selective full backup (RFC 0084, epic task 8.18), and import/restore
+ * (upload a bundle, with a per-section result summary). RFC 0007.
  */
 export function PortabilityPanel() {
   const [exporting, setExporting] = useState(false);
@@ -43,6 +55,15 @@ export function PortabilityPanel() {
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [summary, setSummary] = useState<ImportSummary | null>(null);
+
+  // Full backup (async, selective, passphrase-encrypted).
+  const [backupIncludeFiles, setBackupIncludeFiles] = useState(true);
+  const [excludedPluginIds, setExcludedPluginIds] = useState<Set<string>>(new Set());
+  const [backupPassphrase, setBackupPassphrase] = useState('');
+  const [backupStarting, setBackupStarting] = useState(false);
+  const [backupError, setBackupError] = useState<string | null>(null);
+  const [backupJob, setBackupJob] = useState<BackupJobStatus | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function loadPluginNames() {
     try {
@@ -57,6 +78,86 @@ export function PortabilityPanel() {
     }
   }
 
+  useEffect(() => {
+    void loadPluginNames();
+  }, []);
+
+  function stopPolling() {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }
+
+  // Stop the poll interval on unmount, regardless of job state at that point.
+  useEffect(() => stopPolling, []);
+
+  async function pollBackupJob(jobId: string) {
+    try {
+      const res = await fetch(`/api/account/backup-jobs/${jobId}`);
+      if (!res.ok) return;
+      const data = (await res.json()) as BackupJobStatus;
+      setBackupJob(data);
+      if (data.status === 'complete' || data.status === 'failed') stopPolling();
+    } catch {
+      // Transient failure — the next tick tries again.
+    }
+  }
+
+  async function onStartBackup() {
+    setBackupError(null);
+    if (backupPassphrase.length < MIN_PASSPHRASE_LENGTH) {
+      setBackupError(`Passphrase must be at least ${String(MIN_PASSPHRASE_LENGTH)} characters.`);
+      return;
+    }
+    setBackupStarting(true);
+    stopPolling();
+    setBackupJob(null);
+    try {
+      const res = await fetch('/api/account/backup-jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          passphrase: backupPassphrase,
+          includeFiles: backupIncludeFiles,
+          excludePluginIds: Array.from(excludedPluginIds),
+        }),
+      });
+      const data = (await res.json()) as { jobId?: string; error?: string };
+      const jobId = data.jobId;
+      if (!res.ok || !jobId) {
+        throw new Error(data.error ?? `Could not start backup (${res.status})`);
+      }
+      // The passphrase is never sent again and never stored client-side beyond this point.
+      setBackupPassphrase('');
+      setBackupJob({
+        jobId,
+        status: 'queued',
+        sizeBytes: 0,
+        errorMessage: null,
+        downloadUrl: null,
+      });
+      pollRef.current = setInterval(() => void pollBackupJob(jobId), POLL_INTERVAL_MS);
+    } catch (e) {
+      setBackupError(e instanceof Error ? e.message : 'Could not start backup');
+    } finally {
+      setBackupStarting(false);
+    }
+  }
+
+  function toggleExcluded(pluginId: string, excluded: boolean) {
+    setExcludedPluginIds((prev) => {
+      const next = new Set(prev);
+      if (excluded) next.add(pluginId);
+      else next.delete(pluginId);
+      return next;
+    });
+  }
+
+  const backupPending =
+    backupStarting || backupJob?.status === 'queued' || backupJob?.status === 'running';
+  const backupDownloadUrl = backupJob?.status === 'complete' ? backupJob.downloadUrl : null;
+
   async function onExport() {
     setExporting(true);
     setExportError(null);
@@ -68,7 +169,6 @@ export function PortabilityPanel() {
       const bytes = new Uint8Array(await blob.arrayBuffer());
       const skipped = readNotExported(bytes);
       setNotExported(skipped);
-      if (skipped.length > 0) void loadPluginNames();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -156,6 +256,104 @@ export function PortabilityPanel() {
               ? ' (some are disabled).'
               : " (these apps don't support data export yet)."}
           </p>
+        )}
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Full backup</h2>
+          <p className={styles.sectionSubtitle}>
+            A larger, encrypted backup generated in the background — come back later for the
+            download link. Choose which apps to include and set a passphrase to decrypt it.
+          </p>
+        </div>
+
+        {Object.keys(pluginNames).length > 0 && (
+          <div style={{ marginBottom: 'var(--sv-space-3)' }}>
+            <p className={styles.help} style={{ marginBottom: 'var(--sv-space-2)' }}>
+              Include:
+            </p>
+            {Object.entries(pluginNames).map(([id, name]) => (
+              <div key={id} style={{ marginBottom: 'var(--sv-space-1)' }}>
+                <Checkbox
+                  checked={!excludedPluginIds.has(id)}
+                  onChange={(checked) => toggleExcluded(id, !checked)}
+                  label={name}
+                  disabled={backupPending}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ marginBottom: 'var(--sv-space-3)' }}>
+          <Checkbox
+            checked={backupIncludeFiles}
+            onChange={setBackupIncludeFiles}
+            label="Include files and attachments from participating apps"
+            disabled={backupPending}
+          />
+        </div>
+
+        <FormField
+          label="Passphrase"
+          id="full-backup-passphrase"
+          hint="Needed to decrypt the archive later — Sovereign does not store it"
+        >
+          {(field) => (
+            <Input
+              {...field}
+              type="password"
+              autoComplete="off"
+              value={backupPassphrase}
+              onChange={(e) => setBackupPassphrase(e.target.value)}
+              disabled={backupPending}
+            />
+          )}
+        </FormField>
+
+        {backupError && (
+          <p className={styles.feedbackError} role="status" aria-live="polite">
+            {backupError}
+          </p>
+        )}
+
+        <div style={{ alignSelf: 'flex-start', marginTop: 'var(--sv-space-3)' }}>
+          <Button type="button" onClick={() => void onStartBackup()} disabled={backupPending}>
+            {backupPending ? 'Backing up…' : 'Start full backup'}
+          </Button>
+        </div>
+
+        {backupJob && (
+          <div style={{ marginTop: 'var(--sv-space-3)' }}>
+            {(backupJob.status === 'queued' || backupJob.status === 'running') && (
+              <p className={styles.help}>
+                {backupJob.status === 'queued' ? 'Queued…' : 'Preparing your backup…'} You can leave
+                this page — it&apos;ll keep running.
+              </p>
+            )}
+            {backupJob.status === 'failed' && (
+              <Alert variant="error" heading="Backup failed">
+                {backupJob.errorMessage ?? 'Something went wrong. Try again.'}
+              </Alert>
+            )}
+            {backupDownloadUrl && (
+              <Alert variant="success" heading="Backup ready">
+                <p className={styles.help}>
+                  {(backupJob.sizeBytes / (1024 * 1024)).toFixed(1)} MB, encrypted with the
+                  passphrase you set.
+                </p>
+                <div style={{ marginTop: 'var(--sv-space-2)' }}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => window.location.assign(backupDownloadUrl)}
+                  >
+                    Download
+                  </Button>
+                </div>
+              </Alert>
+            )}
+          </div>
         )}
       </section>
 

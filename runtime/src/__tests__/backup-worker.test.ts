@@ -4,15 +4,21 @@ import {
   backupWorkerEnabled,
   backupWorkerTickOnce,
   claimAndRunJob,
+  runBackupJob,
   startBackupWorker,
   stopBackupWorker,
   sweepExpiredJobs,
   type BackupWorkerDeps,
 } from '../backup-worker';
 import { notifyBackupCompletion } from '../backup-notification';
+import { runInstanceBackup, runUserBackup } from '../backup-run';
 
 vi.mock('../backup-notification', () => ({
   notifyBackupCompletion: vi.fn(async () => undefined),
+}));
+vi.mock('../backup-run', () => ({
+  runInstanceBackup: vi.fn(async () => ({ archivePath: '/instance.tar.gz', sizeBytes: 1 })),
+  runUserBackup: vi.fn(async () => ({ archivePath: '/user.zip.age', sizeBytes: 2 })),
 }));
 
 function job(overrides: Partial<BackupJobRow> = {}): BackupJobRow {
@@ -51,6 +57,23 @@ afterEach(() => {
   stopBackupWorker();
   vi.useRealTimers();
   delete process.env.SOVEREIGN_BACKUP_WORKER_ENABLED;
+  vi.clearAllMocks();
+});
+
+describe('runBackupJob', () => {
+  it('dispatches a user-scope job to runUserBackup, not runInstanceBackup', async () => {
+    const j = job({ scope: 'user', requestedByUserId: 'user-1' });
+    await runBackupJob(j);
+    expect(runUserBackup).toHaveBeenCalledWith(j);
+    expect(runInstanceBackup).not.toHaveBeenCalled();
+  });
+
+  it('dispatches an instance-scope job to runInstanceBackup, not runUserBackup', async () => {
+    const j = job({ scope: 'instance' });
+    await runBackupJob(j);
+    expect(runInstanceBackup).toHaveBeenCalledWith(j);
+    expect(runUserBackup).not.toHaveBeenCalled();
+  });
 });
 
 describe('claimAndRunJob', () => {

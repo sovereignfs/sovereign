@@ -14,6 +14,16 @@ export interface ExportContext {
 export interface ExportOptions {
   /** Whether to include plugin-contributed file blobs. Defaults to `true`. */
   includeFiles: boolean;
+  /**
+   * Plugin ids the user explicitly chose to leave out of this export (epic
+   * task 8.18 — resolves RFC 0007 Open Question #7, "Selective export").
+   * A plugin in this list is recorded in the bundle manifest's
+   * `notExported` with reason `'user-excluded'`, distinct from a plugin
+   * that has no export hook or is disabled — "the user chose not to
+   * include this" must never be conflated with "this plugin can't
+   * participate" (RFC 0068's transparency requirement).
+   */
+  excludePluginIds?: string[];
 }
 
 /** Supplied by the runtime to an import handler — scoped to the importing user. */

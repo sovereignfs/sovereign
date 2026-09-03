@@ -70,6 +70,10 @@ catalog:
   '@dnd-kit/core': ^6.3.1
   '@dnd-kit/sortable': ^10.0.0
   '@dnd-kit/utilities': ^3.2.2
+  # age (RFC 0064/0084 backup encryption) — shared by runtime (server-side
+  # passphrase/recipient encrypt) and plugins/account (client-side identity
+  # generation, workstream 0023 leg 2). Pure JS, same version needed in both.
+  age-encryption: 0.3.1
 
 # Forced transitive resolutions for dependencies we don't control directly.
 # nanoid: GHSA-2v37-7h3g-55p8 (custom generators looping indefinitely on

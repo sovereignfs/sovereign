@@ -329,6 +329,10 @@
 .sessionMeta {
   font-size: var(--sv-font-size-caption, 13px);
   color: var(--sv-color-text-muted);
+  /* Connection metadata summaries can include long, unbreakable tokens (an
+   * age recipient, a URL) with no natural wrap point — without this, one
+   * causes the whole row to overflow horizontally on mobile. */
+  overflow-wrap: anywhere;
 }
 
 /* Green "● Active" badge for current session */

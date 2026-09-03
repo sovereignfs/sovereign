@@ -1811,7 +1811,7 @@ with).
 
 ---
 
-#### 📋 8.38 — Per-user AGE identity generation & git connection storage (workstream 0023 leg 2)
+#### ✅ 8.38 — Per-user AGE identity generation & git connection storage (workstream 0023 leg 2)
 
 **Goal:** Let any user generate their own age identity entirely client-side and connect a personal git repository as a labeled destination, with the private key never transmitted to or stored by the server.
 
@@ -1831,6 +1831,51 @@ with).
 - Network traffic during identity generation is inspected directly (not just code-reviewed) to confirm the private key never appears in any request.
 - A user cannot read or list another user's git connection.
 - Disconnecting a connection deletes its linked secret atomically, matching `sdk.connections.disconnect()`'s existing behavior.
+
+**Shipped:** New `plugins/account/app/_lib/backup-destinations.ts` (client fetch
+helpers) and `plugins/account/app/data/actions.ts`
+(`connectBackupDestinationAction`, an `ActionResult`/`useActionState` server
+action per this repo's own convention) mirror `plugins/warden/app/_lib/providers.ts`'s
+shape exactly: `sdk.secrets.create({ scope: 'user', ... })` for the PAT/SSH
+credential, `sdk.connections.create({ scope: 'user', provider: 'git.custom',
+secretRef, metadata: { repoUrl, branch, ageRecipient } })` for the record.
+New `BackupDestinationPanel.tsx` wires an in-browser `age-encryption` identity
+generator ("Generate a backup key") into the existing "Connect a backup
+destination" form, and is mounted in `plugins/account/app/data/page.tsx`
+alongside the existing `PortabilityPanel`.
+
+Two real bugs caught and fixed before this was considered done, both from
+this repo's own documented bug classes: (1) `BackupDestinationPanel`'s
+success `useEffect` initially re-fired whenever its `onConnected` prop's
+identity changed, not only on a genuine new submission — fixed with the
+`handledStateRef` guard `AddProviderForm.tsx` (Warden, `0.112.3`) already
+established for this exact class of bug, confirmed by a regression test that
+first failed against the naive fix (dependency array alone) before the
+guard was added. (2) None of the three connect-form inputs had
+`disabled={pending}`, the same gap `ProviderRow.tsx`/`AddProviderForm.tsx`
+each shipped and had to fix separately (`0.112.5`/`0.113.2`) — added
+proactively here rather than waiting for a third occurrence.
+
+Verified live end-to-end against a real dev server: generating a backup key
+runs entirely client-side — confirmed via direct network-tab inspection
+during generation that no request contains the private identity, only the
+public `age1...` recipient ever reaches the connect form. Also found and
+fixed a real mobile layout bug live-testing this: `.sessionMeta`'s connection
+summary had no `overflow-wrap`, so a long `age1...` recipient string
+overflowed the viewport horizontally at 375px — fixed with
+`overflow-wrap: anywhere`. Two follow-up gaps were found but deliberately
+left unfixed, out of scope for this task, and flagged separately: the Data
+page's `secrets` list doesn't refresh after a connection disconnect deletes
+its linked secret (stale UI until reload), and a broader pre-existing
+horizontal-overflow issue on the Data page unrelated to this task's own
+changes. `sdk.connections`' existing per-user scoping (already shipped,
+exercised here only as a consumer) covers "a user cannot read another user's
+connection" — no new authorization code was written in this task.
+
+Full `plugins/account` + `runtime/src` suite green (105 files, 1067 tests),
+`pnpm --filter runtime typecheck`, `pnpm lint`, `pnpm format:check`, and
+`pnpm exec tsx scripts/design-tokens-check.ts` all clean.
+`plugins/account/manifest.json` bumped `0.4.3` → `0.4.4`.
 
 ---
 

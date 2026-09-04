@@ -8,7 +8,8 @@ const panel = (label: string, tone: 'raised' | 'base') => (
       height: '100%',
       background: tone === 'raised' ? 'var(--sv-color-surface-raised)' : 'var(--sv-color-surface)',
       color: 'var(--sv-color-text-primary)',
-      font: 'var(--sv-font-body)',
+      fontFamily: 'var(--sv-font-family)',
+      fontSize: 'var(--sv-font-size-sm)',
     }}
   >
     {label}

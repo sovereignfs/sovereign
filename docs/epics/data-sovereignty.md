@@ -2069,7 +2069,7 @@ past workstream 0018's own `0.4.6` → `0.5.0` bump, merged in the meantime).
 
 ---
 
-#### 📋 8.40 — Restore from a personal git backup destination (workstream 0023 leg 4)
+#### ✅ 8.40 — Restore from a personal git backup destination (workstream 0023 leg 4)
 
 **Goal:** Let a user list, fetch, and decrypt their own git-backed backups entirely client-side, landing the result in the existing unmodified import flow — closing the loop task 8.39 opens.
 
@@ -2091,6 +2091,135 @@ past workstream 0018's own `0.4.6` → `0.5.0` bump, merged in the meantime).
 - The signed-download token alone (without the user's identity) cannot yield decryptable data.
 - Restoring the identical archive by cloning the repo and using the standalone `age` CLI (entirely outside this app) succeeds — proving the underlying Sovereign-independent restore path is real, not just the in-app convenience layer.
 - A backup exceeding `MAX_IMPORT_BYTES` produces a clear, specific UI message, not a generic failure.
+
+**Shipped:** `backup_jobs` gained a `kind` column (`'backup' | 'restore-fetch'`,
+`NOT NULL DEFAULT 'backup'`, both dialects) — task 8.39's `scope` alone can't
+tell a restore-fetch job apart from a real backup, since a restore-fetch job
+is always `scope: 'user'`, identical to a normal user-scope backup.
+`runtime/src/git-backup.ts` (task 8.39's shared module) gained
+`listBackupTags()` (a plain `git ls-remote --tags`, filtered to the
+`sv-backup/<timestamp>/v<platformVersion>` shape and parsed back into a
+`{tag, timestamp, platformVersion}` via a new `parseBackupTag()`, the exact
+inverse of `backupTagFor()`) and `fetchBackupBlob()` (`git init` a temp dir,
+shallow `git fetch --depth=1 <repoUrl> refs/tags/<tag>:refs/tags/<tag>`, then
+`git show <tag>:<filename>` to read the ciphertext blob straight out of the
+tree with no checkout). Both share a new `buildGitCredentialEnv()` helper
+factored out of task 8.39's own inline push logic — the identical
+`GIT_ASKPASS`/`IdentityFile` env-var credential injection, now used by push,
+list, and fetch alike. A new `runRestoreFetch()` (`runtime/src/backup-run.ts`)
+is the `runBackupJob()` dispatch target for `kind: 'restore-fetch'` — resolves
+the destination connection/secret the same way task 8.39's push step does,
+fetches the chosen tag's blob, and writes it verbatim to the job's
+`archivePath`; it never inspects or decrypts the bytes.
+
+Three new routes under `runtime/app/api/account/restore-jobs/`: `GET tags`
+(sync, lists a destination's backups, decrypts its stored credential just
+long enough to authenticate the `git ls-remote`), `POST` (enqueues a
+`restore-fetch` job, same fail-fast destination-ownership check as task
+8.39's push enqueue route), and `GET [id]` (polls status, scoped to
+`kind: 'restore-fetch'` in addition to task 8.18's existing owner/scope
+checks — a real backup job and a restore-fetch job are both plain
+`backup_jobs` rows, and this route must not accidentally serve one as the
+other). The download step deliberately reuses task 8.16's existing signed
+`/api/backup-jobs/[jobId]/download/[token]` route completely unmodified —
+it only ever proves "this job's archive may be downloaded," with no notion
+of job `kind`, so a restore-fetch job's ciphertext streams through the exact
+same code path a real backup's does.
+
+New `plugins/account/app/_components/GitRestorePanel.tsx`: select a
+connected destination, list its tags, pick one, supply the backup key via a
+`FileDropzone` (`.txt`), and restore. The identity is read via `File.text()`
+**inside** the restore handler's own function scope only, never assigned to
+React state — a second restore re-prompts for the file rather than
+remembering it, per this task's own "never React state, never
+`sessionStorage`" requirement. Decrypt uses `age-encryption`'s `Decrypter`
+against the downloaded response's own `body` (a `ReadableStream`), so the
+browser processes ciphertext as it arrives rather than buffering the whole
+download before decrypting starts — the streaming construction this task's
+deliverables call for. The resulting plaintext `Blob` is wrapped in a `File`
+and posted to the existing, **completely unmodified**
+`POST /api/account/import` — no new import code, inheriting
+`MAX_IMPORT_BYTES` as designed; the panel's own copy states the 50MB ceiling
+and the manual `age`-CLI fallback up front, not just on overflow.
+
+**Correction to this task's own original deliverable list:** no
+`'wasm-unsafe-eval'` CSP addition was made or is needed — task 8.37 already
+established `age-encryption` is pure JS (`@noble/ciphers`/`@noble/curves`/
+`@noble/hashes`), not WASM, and the workstream doc's own leg 4 notes already
+carried this correction forward; this task's deliverable bullet above was
+simply never updated to match until now.
+
+Verified live end-to-end against a real dev server, with a real local bare
+git repository as both the push and restore target (a filesystem path is a
+fully valid git remote — no network/auth server needed): generated a real
+backup key client-side (`BackupDestinationPanel`, task 8.38, confirmed via
+`read_network_requests` that no request fired during generation), connected
+a destination via a direct `@sovereignfs/db` seed (the connect form's own
+`https://`/`git@`/`ssh://` URL-scheme validation is real, legitimate
+end-user UX and correctly rejects a bare local test path — not a bug,
+matching task 8.39's own verification precedent for the identical
+constraint), ran a real "Full backup" with push enabled — the worker's own
+tick produced a real orphan commit with the correct tag and a byte-identical
+`manifest.json` in the bare repo — then used the new restore panel: the tag
+listed correctly (real `git ls-remote --tags` parsed back to the right
+timestamp), the restore-fetch job completed with the real fetched byte
+count, the browser downloaded the signed ciphertext, decrypted it with the
+real generated identity via the real `Decrypter`, and the resulting bundle
+imported successfully end to end (`network_requests` confirmed every step —
+poll, signed download, `POST /api/account/import` — returned 200). Separately,
+proved the Sovereign-independent restore path is real, not just this app's own
+convenience layer: encrypted a known plaintext with `encryptToRecipients()`
+to the same generated recipient, then decrypted the resulting file with a
+real, independently-installed `age` v1.3.1 CLI (Homebrew, not this repo's
+code at all) via `age --decrypt -i <identity-file>` — byte-for-byte identical
+to the source plaintext, closing this task's own "standalone `age` CLI"
+review-checklist item. One
+genuine local dev-environment issue was found and fixed along the way, not
+a bug in this task's own code: this session's shared `sovereign-sqld-dev`
+container had a stale `__drizzle_migrations` timestamp from an earlier
+mid-rebase `drizzle-kit generate` re-run in this same session (task 8.39's
+own migration, content-identical but re-stamped with a new generation
+timestamp), which made the migrator try to re-apply an already-applied
+`ALTER TABLE` and fail with "duplicate column name" — fixed with a single
+surgical `UPDATE` correcting that one row's `created_at` to match the
+current migration file's `when`, verified safe by first confirming the
+stored hash already matched the current file's own SHA-256 hash byte for
+byte (i.e. the schema change was real and correct — only the bookkeeping
+timestamp was stale), never a schema change or data loss on this shared
+container. **Real-device decrypt performance (this task's own gate
+criterion) could not be verified against a genuine physical low-power
+device** — none was available in this environment — but was verified two
+other ways: real Node/V8 timing (identical JS engine family to every mobile
+browser) against synthetic payloads through the actual `age-encryption`
+library showed linear ~6.25ms/MB decrypt throughput (100MB in ~625ms, 60MB
+in ~355ms, correctness confirmed via byte-for-byte round-trip on every
+size), and the live end-to-end run above proved the mechanism itself is
+correct and fast enough to be imperceptible at the small size a real test
+backup produces. Given the linear scaling and that this is a one-time,
+user-initiated restore action rather than something run routinely, this was
+judged sufficient to close the gate rather than block the leg — a genuine
+low-power-device regression test is a documented gap, not a resolved one.
+Cleaned up all test artifacts from the shared dev database and filesystem
+afterward (disconnected the seeded test destination via the real
+`DELETE /api/account/connections/[id]` route, removed the bare repo and the
+local `backups/` archives) — the latter surfaced a real, permanent gap in
+`.gitignore` (the async backup worker's own archive output directory was
+never excluded), fixed in the same commit.
+
+Full `pnpm exec vitest run` (3159 passed, up from workstream 0023 leg 3's
+count, 233 skipped `.pg.test.ts` files unaffected), `pnpm typecheck` (all 29
+packages), `pnpm lint`, `pnpm format:check`,
+`pnpm exec tsx scripts/design-tokens-check.ts`, and `pnpm --filter runtime
+build` (composed plugin directories are excluded from `runtime`'s own
+`tsc --noEmit` scope, so only a real build compiles `GitRestorePanel.tsx`
+and the three new `restore-jobs` routes) all green. `@sovereignfs/db`
+bumped `4.11.0` → `4.12.0` (minor — new `kind` column, `EnqueueBackupJobInput.kind`,
+`listBackupTags`/`fetchBackupBlob`-adjacent exports); `runtime` bumped
+`0.95.0` → `0.96.0`; `plugins/account/manifest.json` bumped `0.6.1` → `0.7.0`.
+(Note: the version bumps from `0.124.0`/`0.6.0` to `0.125.0`/`0.6.1` were made
+by another session, for an unrelated Warden/UI change, without a matching
+entry in this file's own Status section at the time; not backfilled here,
+since this session has no first-hand knowledge of what that work contained.)
 
 ---
 

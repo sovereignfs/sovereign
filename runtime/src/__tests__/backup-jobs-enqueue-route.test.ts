@@ -82,6 +82,7 @@ describe('POST /api/account/backup-jobs', () => {
       expiresAt: 2000,
       pushStatus: null,
       pushError: null,
+      kind: 'backup',
     });
 
     const res = await POST(
@@ -132,6 +133,7 @@ describe('POST /api/account/backup-jobs', () => {
       expiresAt: 2000,
       pushStatus: null,
       pushError: null,
+      kind: 'backup',
     });
 
     await POST(request({ passphrase: 'correct horse battery staple' }));
@@ -204,6 +206,7 @@ describe('POST /api/account/backup-jobs', () => {
         expiresAt: 2000,
         pushStatus: null,
         pushError: null,
+        kind: 'backup',
       });
 
       await POST(

@@ -537,7 +537,8 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
       completed_at ${ts},
       expires_at ${ts} NOT NULL,
       push_status TEXT,
-      push_error TEXT
+      push_error TEXT,
+      kind TEXT NOT NULL DEFAULT 'backup'
     )`,
     `CREATE INDEX IF NOT EXISTS backup_jobs_status_idx
        ON backup_jobs (status)`,

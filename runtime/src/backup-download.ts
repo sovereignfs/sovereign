@@ -101,6 +101,18 @@ export function backupArchivePathForJob(jobId: string, scope: 'instance' | 'user
 }
 
 /**
+ * Deterministic path for a `restore-fetch` job (workstream 0023 leg 4, epic
+ * 8.40) — same up-front-computation reasoning as `backupArchivePathForJob`.
+ * The extension is always `.age`: the fetched blob is recipient-mode
+ * ciphertext straight from the user's git destination, never decrypted
+ * server-side (never even inspected — only the `Decrypter` in the browser
+ * ever sees the plaintext).
+ */
+export function restoreFetchArchivePathForJob(jobId: string): string {
+  return join(backupsDir(), `sovereign-restore-${jobId}.age`);
+}
+
+/**
  * Resolve a `backup_jobs.archivePath` value to an absolute file path,
  * refusing to serve anything outside `backupsDir()` even if a future bug
  * ever wrote a traversal sequence or an unrelated absolute path into the

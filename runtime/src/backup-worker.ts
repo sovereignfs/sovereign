@@ -9,14 +9,20 @@ import {
 } from '@sovereignfs/db';
 import { resolveBackupArchivePath } from './backup-download';
 import { notifyBackupCompletion } from './backup-notification';
-import { runInstanceBackup, runUserBackup } from './backup-run';
+import { runInstanceBackup, runRestoreFetch, runUserBackup } from './backup-run';
 import { getPlatformDb } from './db';
 import { logger } from './logger';
 
-/** Dispatches to the instance-scope (subprocess) or user-scope (in-process) runner by `job.scope`. */
+/**
+ * Dispatches by `job.kind` first (a `restore-fetch` job, epic 8.40, is
+ * always `scope: 'user'` — indistinguishable from a real backup by scope
+ * alone), then by `job.scope` for the remaining `'backup'` case
+ * (instance-scope subprocess vs. user-scope in-process).
+ */
 export function runBackupJob(
   job: BackupJobRow,
 ): Promise<{ archivePath: string; sizeBytes: number }> {
+  if (job.kind === 'restore-fetch') return runRestoreFetch(job);
   return job.scope === 'user' ? runUserBackup(job) : runInstanceBackup(job);
 }
 

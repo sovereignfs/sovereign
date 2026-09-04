@@ -8,7 +8,7 @@ vi.mock('@/src/backup-download', () => ({
 vi.mock('@/src/db', () => ({ getPlatformDb: vi.fn(async () => ({})) }));
 
 import { getBackupJob } from '@sovereignfs/db';
-import { GET } from '../../app/api/account/backup-jobs/[id]/route';
+import { GET } from '../../app/api/account/restore-jobs/[id]/route';
 
 function job(overrides: Partial<BackupJobRow> = {}): BackupJobRow {
   return {
@@ -18,7 +18,7 @@ function job(overrides: Partial<BackupJobRow> = {}): BackupJobRow {
     requestedByUserId: 'user-1',
     status: 'queued',
     optionsJson: null,
-    archivePath: '/backups/job-1.zip.age',
+    archivePath: '/backups/restore-job-1.age',
     sizeBytes: 0,
     errorMessage: null,
     createdAt: 1000,
@@ -27,13 +27,13 @@ function job(overrides: Partial<BackupJobRow> = {}): BackupJobRow {
     expiresAt: 2000,
     pushStatus: null,
     pushError: null,
-    kind: 'backup',
+    kind: 'restore-fetch',
     ...overrides,
   };
 }
 
 function request(headers: Record<string, string> = { 'x-sovereign-user-id': 'user-1' }): Request {
-  return new Request('http://localhost/api/account/backup-jobs/job-1', { headers });
+  return new Request('http://localhost/api/account/restore-jobs/job-1', { headers });
 }
 
 function params(id = 'job-1'): { params: Promise<{ id: string }> } {
@@ -44,7 +44,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('GET /api/account/backup-jobs/[id]', () => {
+describe('GET /api/account/restore-jobs/[id]', () => {
   it('rejects an unauthenticated request', async () => {
     const res = await GET(request({}), params());
     expect(res.status).toBe(401);
@@ -57,13 +57,19 @@ describe('GET /api/account/backup-jobs/[id]', () => {
     expect(res.status).toBe(404);
   });
 
-  it('404s for a job belonging to a different user — never confirms it exists', async () => {
+  it('404s for a job belonging to a different user', async () => {
     vi.mocked(getBackupJob).mockResolvedValue(job({ requestedByUserId: 'someone-else' }));
     const res = await GET(request(), params());
     expect(res.status).toBe(404);
   });
 
-  it('404s for an instance-scope job — this route is user-scope only', async () => {
+  it('404s for a real backup job (kind !== restore-fetch), not just any user-scope job', async () => {
+    vi.mocked(getBackupJob).mockResolvedValue(job({ kind: 'backup' }));
+    const res = await GET(request(), params());
+    expect(res.status).toBe(404);
+  });
+
+  it('404s for an instance-scope job', async () => {
     vi.mocked(getBackupJob).mockResolvedValue(job({ scope: 'instance', requestedByUserId: null }));
     const res = await GET(request(), params());
     expect(res.status).toBe(404);
@@ -80,49 +86,18 @@ describe('GET /api/account/backup-jobs/[id]', () => {
 
   it('returns the error message for a failed job', async () => {
     vi.mocked(getBackupJob).mockResolvedValue(
-      job({ status: 'failed', errorMessage: 'No passphrase available for this job.' }),
+      job({ status: 'failed', errorMessage: 'git fetch failed: unreachable remote' }),
     );
     const res = await GET(request(), params());
     const data = (await res.json()) as { errorMessage: string | null };
-    expect(data.errorMessage).toBe('No passphrase available for this job.');
+    expect(data.errorMessage).toBe('git fetch failed: unreachable remote');
   });
 
-  it('includes a signed download URL once complete', async () => {
+  it('includes a signed download URL once complete — the same route a real backup uses', async () => {
     vi.mocked(getBackupJob).mockResolvedValue(job({ status: 'complete', sizeBytes: 4096 }));
     const res = await GET(request(), params());
     const data = (await res.json()) as { downloadUrl: string; sizeBytes: number };
     expect(data.downloadUrl).toBe('/api/backup-jobs/job-1/download/signed-token');
     expect(data.sizeBytes).toBe(4096);
-  });
-
-  it('surfaces pushStatus/pushError distinctly from status/errorMessage (epic 8.39)', async () => {
-    vi.mocked(getBackupJob).mockResolvedValue(
-      job({
-        status: 'complete',
-        errorMessage: null,
-        pushStatus: 'failed',
-        pushError: 'git push failed: unreachable remote',
-      }),
-    );
-    const res = await GET(request(), params());
-    const data = (await res.json()) as {
-      status: string;
-      errorMessage: string | null;
-      pushStatus: string | null;
-      pushError: string | null;
-    };
-    // A push failure never masquerades as a job failure...
-    expect(data.status).toBe('complete');
-    expect(data.errorMessage).toBeNull();
-    // ...but is never silently indistinguishable from a real success either.
-    expect(data.pushStatus).toBe('failed');
-    expect(data.pushError).toBe('git push failed: unreachable remote');
-  });
-
-  it('reports pushStatus null when no push was requested for this job', async () => {
-    vi.mocked(getBackupJob).mockResolvedValue(job({ status: 'complete' }));
-    const res = await GET(request(), params());
-    const data = (await res.json()) as { pushStatus: string | null };
-    expect(data.pushStatus).toBeNull();
   });
 });

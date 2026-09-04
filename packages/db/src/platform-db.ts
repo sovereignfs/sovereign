@@ -4391,6 +4391,8 @@ export interface BackupJobRow {
   /** Set only when a push to a connected git backup destination was requested (epic 8.39). */
   pushStatus: 'succeeded' | 'failed' | null;
   pushError: string | null;
+  /** Distinguishes a real backup from a `restore-fetch` job (epic 8.40). See schema doc comment. */
+  kind: 'backup' | 'restore-fetch';
 }
 
 interface RawBackupJobRow {
@@ -4409,6 +4411,7 @@ interface RawBackupJobRow {
   expiresAt: number | string;
   pushStatus: string | null;
   pushError: string | null;
+  kind: string;
 }
 
 function coerceBackupJobRow(row: RawBackupJobRow): BackupJobRow {
@@ -4428,6 +4431,7 @@ function coerceBackupJobRow(row: RawBackupJobRow): BackupJobRow {
     expiresAt: Number(row.expiresAt),
     pushStatus: row.pushStatus as 'succeeded' | 'failed' | null,
     pushError: row.pushError,
+    kind: row.kind as 'backup' | 'restore-fetch',
   };
 }
 
@@ -4881,7 +4885,7 @@ const BACKUP_JOB_COLUMNS_SQL = `id, tenant_id AS "tenantId", scope, requested_by
   status, options_json AS "optionsJson", archive_path AS "archivePath", size_bytes AS "sizeBytes",
   error_message AS "errorMessage", created_at AS "createdAt", started_at AS "startedAt",
   completed_at AS "completedAt", expires_at AS "expiresAt", push_status AS "pushStatus",
-  push_error AS "pushError"`;
+  push_error AS "pushError", kind`;
 
 const BACKUP_JOB_SELECT = sql.raw(`SELECT ${BACKUP_JOB_COLUMNS_SQL} FROM backup_jobs`);
 const BACKUP_JOB_RETURNING = sql.raw(`RETURNING ${BACKUP_JOB_COLUMNS_SQL}`);
@@ -4905,6 +4909,8 @@ export interface EnqueueBackupJobInput {
   archivePath: string;
   optionsJson?: string | null;
   expiresInSeconds?: number;
+  /** Defaults to `'backup'` — pass `'restore-fetch'` for a leg-4 restore job (epic 8.40). */
+  kind?: 'backup' | 'restore-fetch';
 }
 
 /**
@@ -4925,9 +4931,10 @@ export async function enqueueBackupJob(
     pdb,
     sql`INSERT INTO backup_jobs
           (id, tenant_id, scope, requested_by_user_id, status, options_json,
-           archive_path, size_bytes, created_at, expires_at)
+           archive_path, size_bytes, created_at, expires_at, kind)
         VALUES (${input.id}, ${input.tenantId}, ${input.scope}, ${input.requestedByUserId ?? null},
-                'queued', ${input.optionsJson ?? null}, ${input.archivePath}, 0, ${now}, ${expiresAt})
+                'queued', ${input.optionsJson ?? null}, ${input.archivePath}, 0, ${now}, ${expiresAt},
+                ${input.kind ?? 'backup'})
         ${BACKUP_JOB_RETURNING}`,
   );
   if (!row) throw new Error('Failed to enqueue backup job.');

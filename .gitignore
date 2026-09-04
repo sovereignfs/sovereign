@@ -51,6 +51,10 @@ runtime/generated/*
 # plugin DB provisioner — runtime data, never committed.
 **/data/plugins/
 
+# `sv backup` / the async backup worker (RFC 0084) writes archives to
+# <workspace root>/backups/ — runtime data, never committed.
+/backups/
+
 # Externally-installed plugins (cloned by scripts/install-plugins.ts) are not
 # committed here — they live in their own repositories. Ignore every plugin
 # directory except the platform plugins that ship in this monorepo.

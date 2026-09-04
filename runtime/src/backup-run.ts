@@ -15,7 +15,7 @@ import {
 import { encrypt, encryptToRecipients } from './backup-encryption';
 import { takeBackupPassphrase } from './backup-passphrase-store';
 import { getPlatformDb } from './db';
-import { type GitPushAuthType, pushBackupToGit } from './git-backup';
+import { fetchBackupBlob, type GitPushAuthType, pushBackupToGit } from './git-backup';
 import { logger } from './logger';
 import { getPlatformVersion } from './platform-version';
 import { assembleExport } from './portability/assemble';
@@ -38,6 +38,11 @@ interface UserBackupJobOptions {
   excludePluginIds?: string[];
   /** A connected `plugins/account` backup-destination id — opts this job into a git push (epic 8.39). */
   pushDestinationId?: string;
+}
+
+interface RestoreFetchJobOptions {
+  destinationId?: string;
+  tag?: string;
 }
 
 // Matches plugins/account/app/_lib/backup-destinations.ts's PROVIDER_KIND
@@ -336,4 +341,57 @@ export async function runUserBackup(
   }
 
   return { archivePath: job.archivePath, sizeBytes: bytes.length };
+}
+
+/**
+ * Default production `runBackup` for a `kind: 'restore-fetch'` job
+ * (workstream 0023 leg 4, epic task 8.40) — the async half of in-app git
+ * restore. Runs entirely in-process, same as `runUserBackup`, not affected
+ * by the Docker `sv`-CLI-spawn gap. Pulls exactly one tagged ciphertext blob
+ * down from the user's connected git destination and writes it to
+ * `job.archivePath` untouched — this function never decrypts anything, never
+ * even inspects the bytes beyond moving them; the existing signed-download
+ * route then serves them exactly like a real backup's archive, and the
+ * browser is the only place that ever holds the identity needed to read them.
+ */
+export async function runRestoreFetch(
+  job: BackupJobRow,
+): Promise<{ archivePath: string; sizeBytes: number }> {
+  if (!job.requestedByUserId) {
+    throw new Error('Restore-fetch job has no requestedByUserId — cannot run.');
+  }
+  const userId = job.requestedByUserId;
+  const options = parseOptions<RestoreFetchJobOptions>(job.optionsJson);
+  if (!options.destinationId || !options.tag) {
+    throw new Error('Restore-fetch job is missing its destination or tag.');
+  }
+
+  const pdb = await getPlatformDb();
+  const context = { tenantId: DEFAULT_TENANT_ID, pluginId: BACKUP_DESTINATION_PLUGIN_ID, userId };
+  const connection = await getPluginConnection(pdb, options.destinationId, context);
+  if (!connection) throw new Error('Backup destination not found or no longer connected.');
+  if (!connection.secretRef) throw new Error('Backup destination has no stored credential.');
+
+  const destination = parseDestinationMetadata(connection.metadata);
+  const secretRow = await getPluginSecret(pdb, connection.secretRef, context);
+  if (!secretRow) throw new Error('Backup destination credential could not be read.');
+  const credential = decryptSecretValue(secretRow.ciphertext, {
+    tenantId: context.tenantId,
+    pluginId: context.pluginId,
+    scope: secretRow.scope,
+    userId: context.userId,
+  });
+
+  const blob = await fetchBackupBlob(
+    { repoUrl: destination.repoUrl, authType: destination.authType, credential },
+    options.tag,
+  );
+
+  mkdirSync(dirname(job.archivePath), { recursive: true });
+  writeFileSync(job.archivePath, blob);
+
+  await markPluginConnectionUsed(pdb, options.destinationId, context);
+  logger.info('backup-run: restore-fetch complete', { jobId: job.id, tag: options.tag });
+
+  return { archivePath: job.archivePath, sizeBytes: blob.length };
 }

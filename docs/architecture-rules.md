@@ -819,29 +819,49 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   signed-URL download route, copy that file's shape — dynamic segment per
   path element the handler reads from `params`, verified by checking the
   actual `app/api/**` directory tree, not just the doc comment describing it.
-- **The production `runner` Docker image cannot invoke `bin/sv.ts` (the `sv`
-  CLI) at all** — `Dockerfile`'s `runner` stage is a fresh minimal
-  `node:24-alpine` image containing only the traced Next.js standalone
-  output (`runtime/.next/standalone`), not `bin/`, `scripts/`, `tsx`, or a
-  full `node_modules`. Only the separate `tools` stage (`FROM builder`, the
-  full monorepo checkout) can run `pnpm sv <command>`, and `tools` is an
-  on-demand, `--rm` container (`docker-compose.prod.yml`'s `tools` profile),
-  not the persistent process any `runtime`-hosted background worker actually
-  runs in. Any future in-process worker that needs to shell out to `sv`
-  (`runtime/src/backup-run.ts`'s `runInstanceBackup`, RFC 0084 epic task
-  8.16, is the first case) will fail cleanly with `ENOENT` in this topology
-  today — a real, currently-unresolved gap, not a bug in the worker's own
-  claim/run/sweep logic, which is dialect- and topology-agnostic and works
-  correctly wherever the subprocess itself is reachable (verified against a
-  native `pnpm dev` checkout). Resolving it means either bundling the needed
-  CLI surface into `runner`, or moving that worker's execution into a
-  `tools`-capable process — a deliberate infrastructure decision, not
-  something to silently work around with a broader image. Separately, `sv
-backup`'s own Postgres path additionally requires `pg_dump`, not installed
-  in any current image (`apk add` never lists `postgresql-client`), and its
-  SQLite (sqld) path is explicitly unimplemented in the CLI itself
-  (`bin/sv.ts`'s own `backup`/`restore` error messages) — both pre-existing
-  CLI gaps, independent of the container-topology one above.
+- **RESOLVED (epic task 8.16).** The production `runner` Docker image
+  previously could not invoke `bin/sv.ts` (the `sv` CLI) at all — `runner`
+  is a fresh minimal `node:24-alpine` image with only the traced Next.js
+  standalone output, no `bin/`, `scripts/`, `tsx`, or full `node_modules`.
+  `runtime/src/backup-run.ts`'s `runInstanceBackup` (RFC 0084 epic 8.16)
+  failed cleanly with `ENOENT` there as a result. Fixed by bundling, not
+  moving execution to a separate process: `bin/backup-restore.ts` holds
+  `backup`/`restore`'s command logic (shared unchanged with `bin/sv.ts`),
+  and `bin/sv-backup-cli.ts` — a minimal entrypoint registering only those
+  two commands, deliberately not the full ~30-subcommand `sv` CLI — is
+  `tsup`-bundled (`bin/tsup.config.ts`, `pnpm run build:cli`) into
+  `runtime/dist-cli/sv-backup-cli.js`, copied into `runner` by the
+  Dockerfile, and run there with plain `node` — no `pnpm`/`tsx` needed.
+  `runInstanceBackup` spawns this bundle when present, falling back to
+  `pnpm sv backup` unchanged for native `pnpm dev`/`tools` checkouts. The
+  bundle deliberately duplicates two trivial functions from
+  `packages/db/src/{dialect,client}.ts` rather than importing
+  `@sovereignfs/db`, to avoid pulling that package's full barrel
+  (`drizzle-orm`/`cron-parser`/`@libsql/client`/the native
+  `better-sqlite3-multiple-ciphers` addon) into a bundle that only needs two
+  env-var reads — see `bin/backup-restore.ts`'s own doc comment. A
+  separate-`tools`-capable-process alternative was considered and rejected:
+  it would have silently broken the already-shipped user-scope backup path
+  instead (`runtime/src/portability/registry.ts`'s plugin export-hook
+  registry is populated by request-scoped plugin code, not at boot — a
+  headless worker process that never serves an HTTP page would see an
+  always-empty registry and produce backups silently missing every plugin's
+  data), and there is no existing pattern in this codebase for a second
+  persistent process sharing `runtime/`'s own source to build from.
+  `pg_dump`/`pg_restore` (`postgresql16-client`, version-pinned to
+  `docker-compose.postgres.yml`'s `postgres:16-alpine`) are now installed in
+  both `builder`/`tools` and `runner` — previously in neither. `git` is now
+  also installed in `runner` — previously only in `builder`/`tools`, meaning
+  the already-shipped user-scope git-push/restore-fetch path (workstream
+  0023 legs 3–4, `runtime/src/git-backup.ts`) would also have `ENOENT`'d in
+  real production; confirmed empirically
+  (`docker run --rm node:24-alpine sh -c "git --version"` → not found)
+  before this fix. **Postgres dialect only** — SQLite (sqld) instance
+  backup/restore has no CLI implementation to spawn in the first place
+  (`bin/backup-restore.ts`'s own error message); building it needs its own
+  RFC first, per `docs/research/0017-sqld-backup-and-restore.md`'s own
+  explicit gate — an accepted, separately-tracked limitation, not resolved
+  by this fix.
   `usePublishShellChromeHeight` (above) uses it.
 - **`packages/db/src/bootstrap.ts` is a second, hand-written schema
   definition for at least `instance_config` and `backup_jobs`, and it does

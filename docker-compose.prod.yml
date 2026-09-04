@@ -184,6 +184,14 @@ services:
       SOVEREIGN_EXAMPLES_ENABLED: '${SOVEREIGN_EXAMPLES_ENABLED:-}'
       # Hide plugins flagged development: true (shown by default). See .env.example.
       SOVEREIGN_HIDE_DEVELOPMENT_PLUGINS: '${SOVEREIGN_HIDE_DEVELOPMENT_PLUGINS:-}'
+      # Async backup job worker (RFC 0084, epic task 8.16) — off by default.
+      # Previously this var wasn't listed here at all, so setting it in .env
+      # had no effect on this container regardless of anything else being
+      # ready. Postgres-dialect instance-scope jobs actually work now (see
+      # Dockerfile); SQLite (sqld) instance-scope backup is still
+      # unimplemented — see docs/research/0017-sqld-backup-and-restore.md.
+      # User-scope jobs (Account → Data → Full backup) work on both dialects.
+      SOVEREIGN_BACKUP_WORKER_ENABLED: '${SOVEREIGN_BACKUP_WORKER_ENABLED:-}'
       SMTP_HOST: '${SMTP_HOST:-}'
       SMTP_PORT: '${SMTP_PORT:-587}'
       SMTP_USER: '${SMTP_USER:-}'
@@ -220,11 +228,16 @@ services:
       # Shared with the auth service — both resolve relative SQLite paths
       # against /app (the cwd), so both DBs and avatars land in this volume.
       - sovereign_data:/app/data
-      # Same host ./backups dir the tools service below writes archives into
-      # (RFC 0084, epic task 8.16) — the backup-jobs download route reads
-      # from here. Read-only: runtime only ever serves archives, it never
-      # produces them (only `tools`/`sv backup` does).
-      - ./backups:/app/backups:ro
+      # Same host ./backups dir the tools service below writes archives into.
+      # Read-write (was read-only until epic task 8.16 closed the Docker-spawn
+      # gap): this container now produces archives itself too, in-process,
+      # via SOVEREIGN_BACKUP_WORKER_ENABLED (both scopes) — not just `tools`/
+      # manual `sv backup` runs. First-time setup needs one host-side step —
+      # see docs/upgrade.md — so the non-root `nextjs` user (uid 1001,
+      # Dockerfile) can actually create files here; `tools` itself runs as
+      # root and has no ownership-fixup for this path the way it does for the
+      # data volume (docker/tools-entrypoint.sh only covers $SOVEREIGN_DATA_DIR).
+      - ./backups:/app/backups
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000/api/health']
       interval: 30s

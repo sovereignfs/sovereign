@@ -3,6 +3,9 @@ node_modules/
 
 # Build output
 dist/
+# bin/sv-backup-cli.ts's tsup bundle (epic task 8.16, "pnpm build:cli") —
+# built fresh inside the Dockerfile's app-builder stage, never committed.
+/runtime/dist-cli/
 # TypeScript project-reference build cache (packages/tsconfig/library.json's
 # "composite"/"incremental" — Task 0.14) — a throwaway .d.ts + .tsbuildinfo
 # cache for `tsc -b`, deliberately separate from tsup's own "dist/" so

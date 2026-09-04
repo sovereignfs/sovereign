@@ -38,8 +38,15 @@ ARG SOVEREIGN_EXAMPLES_ENABLED=0
 ENV SOVEREIGN_EXAMPLES_ENABLED=${SOVEREIGN_EXAMPLES_ENABLED}
 # git is needed to clone any external plugins declared in sovereign.plugins.json
 # at their pinned refs. This step requires network access during the build;
-# the refs are pinned so the result is reproducible.
-RUN apk add --no-cache git
+# the refs are pinned so the result is reproducible. postgresql16-client
+# (pinned to match docker-compose.postgres.yml's postgres:16-alpine server —
+# pg_restore reading a custom-format dump is safest version-matched to the
+# pg_dump that produced it) is `sv backup`/`sv restore`'s Postgres branch's
+# own dependency (epic task 8.16) — added here, not just in `runner` below,
+# because `tools` (which branches off this stage) already advertises
+# `sv backup`/`sv restore` as directly runnable and was silently missing it
+# too until now.
+RUN apk add --no-cache git postgresql16-client
 # Clone the declared external plugins into plugins/<id>/ at their pinned refs,
 # then compose every plugin app/ tree (plugins/ plus example-plugins/ when
 # SOVEREIGN_EXAMPLES_ENABLED is set) into the route group — both must precede
@@ -108,6 +115,15 @@ CMD ["sh", "-c", "echo 'Usage: docker compose --profile tools run --rm tools pnp
 FROM builder AS app-builder
 # tsup packages → next build → runtime/.next/standalone
 RUN pnpm --filter @sovereignfs/runtime build
+# Bundles bin/sv-backup-cli.ts (a minimal backup/restore-only CLI, sharing
+# bin/backup-restore.ts's command logic with the full `sv` CLI unchanged)
+# into runtime/dist-cli/ — see bin/tsup.config.ts's own doc comment. This is
+# what lets `runInstanceBackup()` (runtime/src/backup-run.ts) spawn a real
+# backup/restore from inside the `runner` stage below, which has no
+# `pnpm`/`tsx`/full `node_modules` to run the rest of `bin/sv.ts` (epic task
+# 8.16 — previously, instance-scope backup jobs failed cleanly with an
+# actionable error in every production deployment; see docs/architecture-rules.md).
+RUN pnpm run build:cli
 
 # Stage each plugin's manifest.json + migrations/ (if any) into a curated
 # directory for the runner — not the full plugins/ tree, which would drag
@@ -152,12 +168,34 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 WORKDIR /app
 
-RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
+# git: runtime/src/git-backup.ts's execFileSync('git', ...) calls — the
+# user-scope git-push/restore-fetch path (workstream 0023 legs 3-4) runs
+# in-process inside this same server, so it needs `git` on PATH here, not
+# just in builder/tools. postgresql16-client: bin/sv-backup-cli.js's (below)
+# Postgres branch shells out to pg_dump/pg_restore (epic task 8.16) — see the
+# builder stage's identical `apk add` for the version-pin rationale. Neither
+# was previously installed in this stage at all — confirmed empirically
+# (`docker run --rm node:24-alpine sh -c "git --version"` → not found) —
+# meaning both of these already-shipped features silently could not work in
+# any real production deployment until this fix.
+RUN apk add --no-cache git postgresql16-client
+
+# UID/GID pinned (was auto-assigned, unpinned, before this fix) so a
+# self-hoster enabling SOVEREIGN_BACKUP_WORKER_ENABLED for the first time has
+# a stable, documentable value to `chown` the host ./backups bind mount to
+# (docker-compose.prod.yml) — see docs/upgrade.md.
+RUN addgroup -g 1001 -S nodejs && adduser -u 1001 -S nextjs -G nodejs
 
 # Standalone output (tracing rooted at the monorepo root) replicates the repo
 # layout: server.js lives under runtime/, with traced node_modules + packages.
 COPY --from=app-builder --chown=nextjs:nodejs /app/runtime/.next/standalone ./
 COPY --from=app-builder --chown=nextjs:nodejs /app/runtime/.next/static ./runtime/.next/static
+# bin/sv-backup-cli.ts's tsup bundle (epic task 8.16) — see app-builder
+# stage's "RUN pnpm run build:cli" and bin/tsup.config.ts's own doc comment.
+# runInstanceBackup() (runtime/src/backup-run.ts) spawns
+# runtime/dist-cli/sv-backup-cli.js directly with plain `node`, no `pnpm`/
+# `tsx` needed in this image.
+COPY --from=app-builder --chown=nextjs:nodejs /app/runtime/dist-cli ./runtime/dist-cli
 # public/ holds the PWA assets generated at build (sw.js, workbox-*, fallback-*,
 # manifest.json, icons).
 COPY --from=app-builder --chown=nextjs:nodejs /app/runtime/public ./runtime/public

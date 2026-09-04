@@ -1,6 +1,6 @@
 {
   "name": "sovereign",
-  "version": "0.126.0",
+  "version": "0.127.0",
   "private": true,
   "type": "module",
   "description": "Sovereign — a modular, self-hostable workspace runtime.",
@@ -11,6 +11,7 @@
   },
   "scripts": {
     "build": "turbo build",
+    "build:cli": "tsup --config bin/tsup.config.ts",
     "dev": "tsx scripts/ensure-sqld.ts && turbo dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -83,6 +84,7 @@
     "semver": "catalog:",
     "sharp": "0.35.3",
     "simple-git-hooks": "^2.13.1",
+    "tsup": "catalog:",
     "tsx": "^4.23.1",
     "turbo": "^2.10.8",
     "typescript": "catalog:",

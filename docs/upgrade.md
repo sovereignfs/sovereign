@@ -119,6 +119,18 @@ See the [Runtime version map](#runtime-version-map) and [v1.0.0 release checklis
 
 Notes call out any required configuration changes, schema changes, or action required.
 
+### v0.96.0 → v0.97.0
+
+- **Instance-scope async backups (epic task 8.16, `SOVEREIGN_BACKUP_WORKER_ENABLED`) now actually work in the documented Docker Compose production deployment — Postgres dialect only.** Previously the worker's `sv backup` subprocess spawn failed with `ENOENT` in the `runner` image (no `bin/`/`scripts/`/`tsx` there); this is fixed by bundling a minimal backup/restore-only CLI into the image instead (no behavior change to `pnpm sv backup`/`sv restore` themselves). Two related, already-shipped-but-silently-broken things are also fixed by this same change: the `runner` image previously had no `git` binary at all, so the per-user git-push/restore-fetch backup destination feature (workstream 0023 legs 3–4) could not have worked in real production either; and `runtime`'s own `./backups` bind mount was read-only, which would have failed the very first archive write for either backup scope.
+  - **Action required — instance operators who enable `SOVEREIGN_BACKUP_WORKER_ENABLED`:** the `runner` container's non-root user now runs as a pinned UID/GID (`1001:1001`, previously auto-assigned) so the host `./backups` directory can be `chown`-ed to it. Before starting the upgraded image with the worker enabled for the first time:
+    ```bash
+    mkdir -p backups && chown 1001:1001 backups
+    ```
+    If you don't enable `SOVEREIGN_BACKUP_WORKER_ENABLED`, no action is needed — this only matters once the worker actually tries to write an archive.
+  - **Action required — none for everyone else.** No schema or data migration. The `runner`/`tools` image layers are modestly larger (added `git`, `postgresql16-client`, and a small bundled CLI artifact).
+  - **Still not supported:** SQLite (sqld) instance-scope backup/restore — `sv backup`/`sv restore` still explicitly refuse that dialect. Building it needs its own RFC first (see `docs/research/0017-sqld-backup-and-restore.md`); user-scope backups (Account → Data → Full backup) already work on both dialects and are unaffected either way.
+  - See `docs/architecture-rules.md`'s (now-resolved) entry on this gap and `bin/backup-restore.ts`'s own doc comment for the implementation.
+
 ### v0.86.1 → v0.87.0
 
 - **Breaking for plugin developers: the runtime shell no longer pads plugin

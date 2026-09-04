@@ -25,7 +25,7 @@
 .helpText {
   margin: 0;
   font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-secondary);
+  color: var(--sv-color-text-muted);
 }
 
 .retentionRow {
@@ -38,5 +38,5 @@
 .feedbackText {
   margin: 0;
   font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-secondary);
+  color: var(--sv-color-text-muted);
 }

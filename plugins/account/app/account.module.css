@@ -343,8 +343,8 @@
   flex: none;
   padding: 3px var(--sv-space-3);
   border-radius: var(--sv-radius-sm);
-  background-color: var(--sv-color-success-surface, #ecfdf3);
-  color: var(--sv-color-success-text, #167c4a);
+  background-color: var(--sv-color-success-surface);
+  color: var(--sv-color-success-text);
   font-size: var(--sv-font-size-sm);
   font-weight: var(--sv-font-weight-medium);
   white-space: nowrap;
@@ -440,7 +440,7 @@
   height: 18px;
   border-radius: 50%;
   background-color: white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--sv-shadow-control);
   transition: transform 150ms ease;
 }
 
@@ -667,7 +667,7 @@
   border: none;
   border-radius: var(--sv-radius-md);
   background-color: var(--sv-red-700);
-  color: #fff;
+  color: var(--sv-color-text-on-error);
   font-size: var(--sv-font-size-sm);
   font-weight: var(--sv-font-weight-medium);
   cursor: pointer;

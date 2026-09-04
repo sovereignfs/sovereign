@@ -1958,7 +1958,7 @@ Full `plugins/account` + `runtime/src` suite green (105 files, 1067 tests),
 
 ---
 
-#### 📋 8.39 — Per-user git-push backup destination (workstream 0023 leg 3)
+#### ✅ 8.39 — Per-user git-push backup destination (workstream 0023 leg 3)
 
 **Goal:** Let a user's existing async data backup (task 8.18) optionally push as an age-recipient-encrypted, tagged commit to their connected git repository.
 
@@ -1978,6 +1978,94 @@ Full `plugins/account` + `runtime/src` suite green (105 files, 1067 tests),
 - A real backup pushes a resolvable, correctly-tagged orphan commit to a real test git remote end to end.
 - A simulated push failure (auth rejection, unreachable remote) leaves the connection in `error`/`needs_reauth` and the job status clearly distinct from a fully-succeeded backup.
 - No user-supplied value (repo URL, branch, token) ever reaches a shell as an interpolated string — verified by reading `git-backup.ts` directly, not just by testing the happy path.
+
+**Shipped:** New `runtime/src/git-backup.ts` provides `pushBackupToGit()` — one
+orphan commit per backup (a fresh `git init` temp directory always starts on
+an unborn branch, so its first commit has no parent by construction, no
+`--orphan` checkout needed), tagged `sv-backup/<timestamp>/v<platformVersion>`
+per RFC 0064, pushed via `execFileSync` with argv arrays throughout. The
+credential (HTTPS token or SSH private key) is passed to `git` exclusively
+through environment variables read by a short-lived `GIT_ASKPASS` script or
+an `IdentityFile`, written to a 0600 temp file removed in a `finally` block —
+never as a literal argv element or embedded in the remote URL, both of which
+are visible to any user on the host via `ps`, unlike an env var. Deliberate
+scope reduction from this task's own original deliverable list: task 8.17
+(Console instance backup UI) still hasn't shipped, so there is no existing
+operator git-push logic to refactor onto this shared module yet — 8.17 gets
+the module already built when it lands, rather than this leg blocking on a
+task with no code to share with.
+
+`runUserBackup()` (`runtime/src/backup-run.ts`) gained an optional push step,
+gated on a new `pushDestinationId` in the job's `optionsJson`: it encrypts
+the **same plaintext export bundle a second time**, to the destination's age
+recipient via task 8.37's `encryptToRecipients` — deliberately never the
+same ciphertext the direct-download path gets from the requester's
+passphrase, since the whole point of a personal git destination is that it's
+decryptable only with the user's own downloaded private key, never a
+passphrase a git host operator could guess or brute-force. The push step is
+wrapped in its own try/catch that never propagates: per this task's own "do
+not proceed if" clause, a failed push must never turn an otherwise-successful
+archive generation into a failed job. Failure is instead recorded via two
+new `backup_jobs` columns, `push_status`/`push_error` (new
+`markBackupJobPushResult()`, `@sovereignfs/db`) — deliberately separate
+columns from the existing `status`/`error_message`, not a new value in the
+`status` enum, so the existing 8.18 UI's status handling needed zero changes
+— and on the connection itself via the existing `markPluginConnectionError()`
+(`error` by default, `needs_reauth` for a light regex-classified
+authentication-flavored failure message). `runtime/app/api/account/backup-jobs/route.ts`
+validates a supplied `pushDestinationId` exists and is `connected` at enqueue
+time (fail-fast 400, better UX than only discovering it on the worker's next
+tick) — `runUserBackup()`'s own re-fetch remains the actual authorization
+boundary regardless, unaffected by a race between enqueue and claim.
+`plugins/account/app/_components/PortabilityPanel.tsx`'s "Full backup"
+section gained a destination picker (only shown when the user has at least
+one `connected` `git.custom` destination) and shows the push outcome
+alongside the existing download-ready state once the job completes.
+
+Verified live end-to-end against a real dev server with a real local bare
+git repository standing in as the remote (a filesystem path is a fully valid
+git transport — no network/auth server needed to exercise real orphan-commit
+and tag mechanics), seeding real connection/secret rows through the same
+`@sovereignfs/db` functions the app itself uses rather than the connect
+form's own client-side URL-scheme validation (`https://`/`git@`/`ssh://`
+only, a legitimate real-world guard, not a bug, that a bare local test path
+can't satisfy): a real backup job queued with `pushDestinationId` set,
+the worker's real 60s tick claimed and ran it, and the bare repo received a
+tag matching `sv-backup/<timestamp>/v0.121.1` on a commit with **no parents**
+(confirmed via `git log --format=%P`), containing the encrypted payload and
+a plaintext `manifest.json`. The pushed ciphertext's header read
+`age-encryption.org/v1` / `-> X25519 ...` — confirmed recipient-mode, not
+the `-> scrypt ...` passphrase-mode header the direct-download archive uses
+— and was successfully decrypted with the real private identity generated
+client-side in an earlier step, yielding a valid ZIP with the correct
+`manifest.json` (right user, right platform version). A second live run
+against a nonexistent remote path confirmed the failure path end to end:
+`pushStatus: "failed"` with git's real captured stderr, the connection
+flipped to `status: "error"`, and the job itself stayed `status: "complete"`
+with `errorMessage: null` and a working `downloadUrl` — the local archive
+succeeding independent of the push outcome, exactly as this task's own "do
+not proceed if" clause requires. New `runtime/src/__tests__/git-backup.test.ts`
+covers the same orphan-commit/tag/argv-safety properties against a real
+local bare repo at the unit level (13 test cases across both files touching
+this leg's new push behavior). A live UI render of the new destination
+picker itself could not be completed — this session's browser preview tool
+stopped hydrating client components partway through verification, confirmed
+unrelated to this task's own code since the identical symptom affected
+`plugins/account/app/data/page.tsx`'s pre-existing, unmodified data-loading
+effect on the same page, and persisted across two full dev-server restarts
+and a fresh browser tab; the component itself is typecheck- and lint-clean
+and follows the identical `FormField`/`Select` pattern already shipped
+elsewhere in the same file.
+
+Full repository suite green (312 files, 3049 tests, 0 failed),
+`pnpm --filter runtime typecheck`, `pnpm --filter @sovereignfs/db typecheck`,
+`pnpm lint`, `pnpm format:check`, `pnpm exec tsx scripts/design-tokens-check.ts`,
+and `pnpm --filter runtime build` (composed plugin directories are excluded
+from `runtime`'s own `tsc --noEmit` scope) all clean. `@sovereignfs/db`
+bumped `4.10.0` → `4.11.0` (new `push_status`/`push_error` columns on
+`backup_jobs`, plus `markBackupJobPushResult()`); `runtime` bumped `0.94.0`
+→ `0.95.0`; `plugins/account/manifest.json` bumped `0.5.0` → `0.6.0` (rebased
+past workstream 0018's own `0.4.6` → `0.5.0` bump, merged in the meantime).
 
 ---
 

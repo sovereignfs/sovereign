@@ -36,5 +36,11 @@ export async function GET(request: Request, { params }: RouteParams): Promise<Re
     sizeBytes: job.sizeBytes,
     errorMessage: job.errorMessage,
     downloadUrl,
+    // Deliberately separate from `status`/`errorMessage` (workstream 0023 leg
+    // 3, epic 8.39): a failed push never turns a successful archive into a
+    // failed job, and must never be silently indistinguishable from a
+    // genuinely completed push either. `null` means no push was requested.
+    pushStatus: job.pushStatus,
+    pushError: job.pushError,
   });
 }

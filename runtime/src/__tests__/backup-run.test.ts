@@ -8,10 +8,19 @@ const mkdirSyncMock = vi.hoisted(() => vi.fn());
 const writeFileSyncMock = vi.hoisted(() => vi.fn());
 const takeBackupPassphraseMock = vi.hoisted(() => vi.fn());
 const encryptMock = vi.hoisted(() => vi.fn());
+const encryptToRecipientsMock = vi.hoisted(() => vi.fn());
 const assembleExportMock = vi.hoisted(() => vi.fn());
 const gatherPlatformExportMock = vi.hoisted(() => vi.fn());
 const eligibleExportPluginsMock = vi.hoisted(() => vi.fn());
 const installedPluginsRosterMock = vi.hoisted(() => vi.fn());
+const getPlatformDbMock = vi.hoisted(() => vi.fn(async () => ({}) as never));
+const getPluginConnectionMock = vi.hoisted(() => vi.fn());
+const getPluginSecretMock = vi.hoisted(() => vi.fn());
+const markBackupJobPushResultMock = vi.hoisted(() => vi.fn());
+const markPluginConnectionErrorMock = vi.hoisted(() => vi.fn());
+const markPluginConnectionUsedMock = vi.hoisted(() => vi.fn());
+const pushBackupToGitMock = vi.hoisted(() => vi.fn());
+const decryptSecretValueMock = vi.hoisted(() => vi.fn());
 
 vi.mock('node:child_process', () => ({ spawnSync: spawnSyncMock }));
 vi.mock('node:fs', () => ({
@@ -22,12 +31,23 @@ vi.mock('node:fs', () => ({
 }));
 vi.mock('@sovereignfs/db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@sovereignfs/db')>();
-  return { ...actual, findWorkspaceRoot: () => '/workspace' };
+  return {
+    ...actual,
+    findWorkspaceRoot: () => '/workspace',
+    getPluginConnection: getPluginConnectionMock,
+    getPluginSecret: getPluginSecretMock,
+    markBackupJobPushResult: markBackupJobPushResultMock,
+    markPluginConnectionError: markPluginConnectionErrorMock,
+    markPluginConnectionUsed: markPluginConnectionUsedMock,
+  };
 });
 vi.mock('../backup-passphrase-store', () => ({
   takeBackupPassphrase: takeBackupPassphraseMock,
 }));
-vi.mock('../backup-encryption', () => ({ encrypt: encryptMock }));
+vi.mock('../backup-encryption', () => ({
+  encrypt: encryptMock,
+  encryptToRecipients: encryptToRecipientsMock,
+}));
 vi.mock('../platform-version', () => ({ getPlatformVersion: () => '0.99.0' }));
 vi.mock('../portability/assemble', () => ({ assembleExport: assembleExportMock }));
 vi.mock('../portability/platform', () => ({
@@ -35,6 +55,9 @@ vi.mock('../portability/platform', () => ({
   eligibleExportPlugins: eligibleExportPluginsMock,
   installedPluginsRoster: installedPluginsRosterMock,
 }));
+vi.mock('../db', () => ({ getPlatformDb: getPlatformDbMock }));
+vi.mock('../git-backup', () => ({ pushBackupToGit: pushBackupToGitMock }));
+vi.mock('../secrets', () => ({ decryptSecretValue: decryptSecretValueMock }));
 
 const { runInstanceBackup, runUserBackup } = await import('../backup-run');
 
@@ -53,6 +76,8 @@ function job(overrides: Partial<BackupJobRow> = {}): BackupJobRow {
     startedAt: 1_000_000_000,
     completedAt: null,
     expiresAt: 1_000_200_000,
+    pushStatus: null,
+    pushError: null,
     ...overrides,
   };
 }
@@ -201,5 +226,146 @@ describe('runUserBackup', () => {
     expect(assembleExportMock).toHaveBeenCalledWith(
       expect.objectContaining({ options: { includeFiles: true, excludePluginIds: undefined } }),
     );
+  });
+
+  describe('optional git push (workstream 0023 leg 3, epic 8.39)', () => {
+    const CONNECTION = {
+      id: 'dest-1',
+      secretRef: 'secret-1',
+      metadata: JSON.stringify({
+        repoUrl: 'https://git.example.com/me/backups.git',
+        branch: 'backups',
+        authType: 'https-token',
+        ageRecipient: 'age1testrecipient',
+      }),
+    };
+    const SECRET = { ciphertext: 'envelope', scope: 'user' as const };
+
+    function setUpHappyPathThrough(): void {
+      takeBackupPassphraseMock.mockReturnValue('correct horse battery staple');
+      gatherPlatformExportMock.mockResolvedValue({});
+      eligibleExportPluginsMock.mockResolvedValue({});
+      installedPluginsRosterMock.mockResolvedValue([]);
+      assembleExportMock.mockResolvedValue(new Uint8Array([9, 9, 9]));
+      encryptMock.mockResolvedValue(Buffer.from('ciphertext').toString('base64url'));
+    }
+
+    it('does not push at all when optionsJson has no pushDestinationId', async () => {
+      setUpHappyPathThrough();
+      await runUserBackup(userJob({ optionsJson: JSON.stringify({}) }));
+      expect(getPluginConnectionMock).not.toHaveBeenCalled();
+      expect(pushBackupToGitMock).not.toHaveBeenCalled();
+      expect(markBackupJobPushResultMock).not.toHaveBeenCalled();
+    });
+
+    it('encrypts to the destination age recipient (never the passphrase) and pushes a tagged commit', async () => {
+      setUpHappyPathThrough();
+      getPluginConnectionMock.mockResolvedValue(CONNECTION);
+      getPluginSecretMock.mockResolvedValue(SECRET);
+      decryptSecretValueMock.mockReturnValue('the-real-token');
+      encryptToRecipientsMock.mockResolvedValue(
+        Buffer.from('recipient-ciphertext').toString('base64url'),
+      );
+      pushBackupToGitMock.mockResolvedValue({ tag: 'sv-backup/x/v0.99.0', commitSha: 'abc123' });
+
+      const j = userJob({ optionsJson: JSON.stringify({ pushDestinationId: 'dest-1' }) });
+      const result = await runUserBackup(j);
+
+      // The archive itself still succeeds and is unaffected by the push step.
+      expect(result.archivePath).toBe(j.archivePath);
+
+      expect(getPluginConnectionMock).toHaveBeenCalledWith(
+        {},
+        'dest-1',
+        expect.objectContaining({ pluginId: 'fs.sovereign.account', userId: 'user-1' }),
+      );
+      expect(decryptSecretValueMock).toHaveBeenCalledWith(
+        'envelope',
+        expect.objectContaining({ scope: 'user', userId: 'user-1' }),
+      );
+      // Recipient-mode encryption, not the passphrase-mode encrypt() used for direct download.
+      expect(encryptToRecipientsMock).toHaveBeenCalledWith(Buffer.from([9, 9, 9]), [
+        'age1testrecipient',
+      ]);
+      expect(pushBackupToGitMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          repoUrl: 'https://git.example.com/me/backups.git',
+          branch: 'backups',
+          authType: 'https-token',
+          credential: 'the-real-token',
+        }),
+        Buffer.from('recipient-ciphertext'),
+        'backup.age',
+        expect.objectContaining({ platformVersion: '0.99.0', scope: 'user' }),
+        '0.99.0',
+      );
+      expect(markPluginConnectionUsedMock).toHaveBeenCalledWith({}, 'dest-1', expect.anything());
+      expect(markBackupJobPushResultMock).toHaveBeenCalledWith({}, j.id, { status: 'succeeded' });
+      expect(markPluginConnectionErrorMock).not.toHaveBeenCalled();
+    });
+
+    it('a failed push never fails the job — the archive result still resolves, and failure is recorded on the connection and the job pushStatus, not the job status/errorMessage', async () => {
+      setUpHappyPathThrough();
+      getPluginConnectionMock.mockResolvedValue(CONNECTION);
+      getPluginSecretMock.mockResolvedValue(SECRET);
+      decryptSecretValueMock.mockReturnValue('the-real-token');
+      encryptToRecipientsMock.mockResolvedValue(Buffer.from('x').toString('base64url'));
+      pushBackupToGitMock.mockRejectedValue(new Error('git push failed: unreachable remote'));
+
+      const j = userJob({ optionsJson: JSON.stringify({ pushDestinationId: 'dest-1' }) });
+      await expect(runUserBackup(j)).resolves.toEqual({
+        archivePath: j.archivePath,
+        sizeBytes: expect.any(Number) as unknown as number,
+      });
+
+      expect(markBackupJobPushResultMock).toHaveBeenCalledWith({}, j.id, {
+        status: 'failed',
+        error: expect.stringContaining('unreachable remote') as unknown as string,
+      });
+      expect(markPluginConnectionErrorMock).toHaveBeenCalledWith(
+        {},
+        'dest-1',
+        expect.anything(),
+        expect.stringContaining('unreachable remote'),
+        'error',
+      );
+    });
+
+    it('classifies an authentication-flavored push failure as needs_reauth rather than the generic error status', async () => {
+      setUpHappyPathThrough();
+      getPluginConnectionMock.mockResolvedValue(CONNECTION);
+      getPluginSecretMock.mockResolvedValue(SECRET);
+      decryptSecretValueMock.mockReturnValue('the-real-token');
+      encryptToRecipientsMock.mockResolvedValue(Buffer.from('x').toString('base64url'));
+      pushBackupToGitMock.mockRejectedValue(new Error('git push failed: Authentication failed'));
+
+      await runUserBackup(
+        userJob({ optionsJson: JSON.stringify({ pushDestinationId: 'dest-1' }) }),
+      );
+
+      expect(markPluginConnectionErrorMock).toHaveBeenCalledWith(
+        {},
+        'dest-1',
+        expect.anything(),
+        expect.any(String),
+        'needs_reauth',
+      );
+    });
+
+    it('treats a missing/disconnected destination as a push failure rather than throwing out of the job', async () => {
+      setUpHappyPathThrough();
+      getPluginConnectionMock.mockResolvedValue(undefined);
+
+      const j = userJob({ optionsJson: JSON.stringify({ pushDestinationId: 'dest-missing' }) });
+      await expect(runUserBackup(j)).resolves.toEqual({
+        archivePath: j.archivePath,
+        sizeBytes: expect.any(Number) as unknown as number,
+      });
+      expect(pushBackupToGitMock).not.toHaveBeenCalled();
+      expect(markBackupJobPushResultMock).toHaveBeenCalledWith({}, j.id, {
+        status: 'failed',
+        error: expect.stringContaining('not found') as unknown as string,
+      });
+    });
   });
 });

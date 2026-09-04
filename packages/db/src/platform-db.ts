@@ -4388,6 +4388,9 @@ export interface BackupJobRow {
   startedAt: number | null;
   completedAt: number | null;
   expiresAt: number;
+  /** Set only when a push to a connected git backup destination was requested (epic 8.39). */
+  pushStatus: 'succeeded' | 'failed' | null;
+  pushError: string | null;
 }
 
 interface RawBackupJobRow {
@@ -4404,6 +4407,8 @@ interface RawBackupJobRow {
   startedAt: number | string | null;
   completedAt: number | string | null;
   expiresAt: number | string;
+  pushStatus: string | null;
+  pushError: string | null;
 }
 
 function coerceBackupJobRow(row: RawBackupJobRow): BackupJobRow {
@@ -4421,6 +4426,8 @@ function coerceBackupJobRow(row: RawBackupJobRow): BackupJobRow {
     startedAt: row.startedAt ? Number(row.startedAt) : null,
     completedAt: row.completedAt ? Number(row.completedAt) : null,
     expiresAt: Number(row.expiresAt),
+    pushStatus: row.pushStatus as 'succeeded' | 'failed' | null,
+    pushError: row.pushError,
   };
 }
 
@@ -4873,7 +4880,8 @@ export async function getJobHealthSummary(pdb: PlatformDb): Promise<JobHealthSum
 const BACKUP_JOB_COLUMNS_SQL = `id, tenant_id AS "tenantId", scope, requested_by_user_id AS "requestedByUserId",
   status, options_json AS "optionsJson", archive_path AS "archivePath", size_bytes AS "sizeBytes",
   error_message AS "errorMessage", created_at AS "createdAt", started_at AS "startedAt",
-  completed_at AS "completedAt", expires_at AS "expiresAt"`;
+  completed_at AS "completedAt", expires_at AS "expiresAt", push_status AS "pushStatus",
+  push_error AS "pushError"`;
 
 const BACKUP_JOB_SELECT = sql.raw(`SELECT ${BACKUP_JOB_COLUMNS_SQL} FROM backup_jobs`);
 const BACKUP_JOB_RETURNING = sql.raw(`RETURNING ${BACKUP_JOB_COLUMNS_SQL}`);
@@ -4991,6 +4999,28 @@ export async function completeBackupJobFailure(
     sql`UPDATE backup_jobs
         SET status = 'failed', error_message = ${errorMessage}, completed_at = ${now}
         WHERE id = ${jobId} AND status = 'running'`,
+  );
+}
+
+/**
+ * Record the outcome of an optional git-push step (epic 8.39) — deliberately
+ * separate from `completeBackupJobSuccess`/`completeBackupJobFailure`: a push
+ * failure must never turn an otherwise-successful archive generation into a
+ * failed job, and must never be silently indistinguishable from a genuinely
+ * completed push either. Called by `runUserBackup` itself before the worker's
+ * own `completeBackupJobSuccess` call, so no status guard is needed here —
+ * the job is still `running` at this point in every real call site.
+ */
+export async function markBackupJobPushResult(
+  pdb: PlatformDb,
+  jobId: string,
+  result: { status: 'succeeded' } | { status: 'failed'; error: string },
+): Promise<void> {
+  await dbRun(
+    pdb,
+    sql`UPDATE backup_jobs
+        SET push_status = ${result.status}, push_error = ${result.status === 'failed' ? result.error : null}
+        WHERE id = ${jobId}`,
   );
 }
 

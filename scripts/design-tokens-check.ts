@@ -66,6 +66,17 @@ const TOKEN_USE_RE = /var\((--sv-[\w-]+)/g;
 const HEX_RE = /#[0-9a-fA-F]{3,8}\b/g;
 const RGB_RE = /rgba?\(/g;
 
+// `prefix` must resolve to files directly via `git ls-files`, not rely on a
+// bare mid-path wildcard to recurse. A wildcard path component with nothing
+// after it (e.g. plugins/<id>/app with no trailing wildcard segment) matches
+// only that literal path component — it does not walk into the matched
+// directory the way a literal directory prefix (e.g. plugins/warden/app)
+// does; a trailing wildcard segment is required for that. Found live: this
+// silently zeroed out every plugin-scanning call site below for as long as
+// this script has existed — undefined tokens shipped undetected in
+// plugins/warden. (Not phrased as a JSDoc block comment: the literal
+// three-segment path this bug is about contains "*" immediately before "/",
+// which closes a /** */ comment early.)
 function gitFiles(prefix: string, extensions: string[]): string[] {
   const out = execFileSync('git', ['ls-files', prefix], { cwd: ROOT, encoding: 'utf8' });
   return out
@@ -111,7 +122,7 @@ function checkUndefinedTokens(defined: Set<string>): Violation[] {
   const files = [
     ...gitFiles('packages/ui/src', ['.css', '.tsx', '.ts']),
     ...gitFiles('runtime/app', ['.css', '.tsx', '.ts']),
-    ...gitFiles('plugins/*/app', ['.css', '.tsx', '.ts']),
+    ...gitFiles('plugins/*/app/*', ['.css', '.tsx', '.ts']),
   ];
   for (const file of files) {
     const content = readFileSync(join(ROOT, file), 'utf8');
@@ -137,7 +148,7 @@ function checkHardcodedLiterals(): Violation[] {
   const files = [
     ...gitFiles('packages/ui/src/components', ['.module.css']),
     ...gitFiles('runtime/app', ['.module.css']),
-    ...gitFiles('plugins/*/app', ['.module.css']),
+    ...gitFiles('plugins/*/app/*', ['.module.css']),
   ];
   for (const file of files) {
     const content = readFileSync(join(ROOT, file), 'utf8');

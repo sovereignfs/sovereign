@@ -3069,11 +3069,11 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             <ComponentCard
               name="Markdown"
               importLine="import { Markdown } from '@sovereignfs/ui';"
-              usage="Renders a constrained markdown subset (headings, paragraphs, bold/italic/code, links, lists, blockquotes) as Typography-based React elements — no HTML string injection. Built for first-party long-form content pages (privacy policy, terms of service), not arbitrary or user-supplied markdown."
+              usage="Renders a constrained markdown subset (headings, paragraphs, bold/italic/code, links, ordered and unordered lists, fenced code blocks, blockquotes) as Typography-based React elements — no HTML string injection. Built for first-party long-form content and model-generated replies; still not a full CommonMark parser (no tables, images, or nested blocks)."
             >
               <Markdown
                 content={
-                  '## Heading\n\nA paragraph with **bold** and a [link](/privacy).\n\n- One\n- Two'
+                  '## Heading\n\nA paragraph with **bold** and a [link](/privacy).\n\n- One\n- Two\n\n1. First\n2. Second\n\n```ts\nconst a = 1;\n```'
                 }
               />
             </ComponentCard>

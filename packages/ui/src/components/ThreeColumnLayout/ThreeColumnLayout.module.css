@@ -11,6 +11,15 @@
   border-right: var(--sv-border-width-hairline) solid var(--sv-color-border);
 }
 
+/*
+ * `display: none`, not `width: 0` — a zero-width flex item still paints its
+ * own `border-right` as a 1px hairline down the edge of the viewport, which
+ * reads as a stray line rather than a hidden column.
+ */
+.sidebarHidden {
+  display: none;
+}
+
 .main {
   flex: 1;
   min-width: 0;

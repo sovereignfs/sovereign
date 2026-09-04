@@ -486,6 +486,31 @@ sidebar (always visible, not part of the scrollable session list), opening
 
 ### 11. Settings
 
+> **Update (superseded in part).** The three-tab consolidation below shipped
+> as task 22.9, and has since been reversed for Providers and Models.
+>
+> The consolidation was designed before §10's sidebar existed. Once it did,
+> a full-page settings surface meant the navigation the user had just used
+> disappeared out from under them — and after the shell moved into a route
+> group layout, a settings _page_ was the only thing in Warden that still
+> tore the whole screen down.
+>
+> Current shape:
+>
+> - **Providers** → `/warden/providers`, and **Models** → `/warden/models`,
+>   restored as standalone routes but rendered inside the chat shell's main
+>   column (`app/(chat)/`), so the sidebar persists and both rows can show a
+>   real active state. `ProvidersView`/`ModelsView` are unchanged in
+>   behavior — relocated only, again.
+> - **General** — what remains (default model, retention, export link) is
+>   small and self-contained, so it is a dialog opened from the sidebar
+>   rather than a route of its own.
+> - `/warden/settings` is removed outright, along with the `Tabs`-based
+>   `SettingsView`. No redirect, for the same reason the original routes got
+>   none: negligible real usage this early.
+>
+> The prose below is kept as the record of what 22.9 decided and why.
+
 Consolidates provider and model management — currently the standalone
 `/warden/providers` and `/warden/models` routes — into one settings surface
 reachable only from the sidebar (§10), with three tabs:

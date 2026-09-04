@@ -4,10 +4,12 @@
   gap: var(--sv-space-6);
 }
 
-.tabPanel {
+/* Renamed from `.tabPanel` — there are no tabs any more; Providers and
+   Models became their own routes and this is all that remains. */
+.sections {
   display: flex;
   flex-direction: column;
-  gap: var(--sv-space-6);
+  gap: var(--sv-space-5);
 }
 
 .section {
@@ -16,9 +18,16 @@
   gap: var(--sv-space-3);
 }
 
+/*
+ * Explicit size: with no `font-size` these inherited the UA default for
+ * `h2` (~24px), which was sized for the standalone settings *page* this
+ * used to be — inside a dialog that already says "Settings" they read as
+ * competing titles rather than as its sections.
+ */
 .sectionTitle {
   margin: 0;
-  font-weight: 600;
+  font-size: var(--sv-font-size-md);
+  font-weight: var(--sv-font-weight-medium);
   color: var(--sv-color-text-primary);
 }
 
@@ -39,4 +48,29 @@
   margin: 0;
   font-size: var(--sv-font-size-sm);
   color: var(--sv-color-text-muted);
+}
+
+/* A failed bulk delete used to land in the same muted grey as a successful
+   one, so "nothing was deleted because something went wrong" looked exactly
+   like "nothing needed deleting". */
+.feedbackTextError {
+  color: var(--sv-color-error-text);
+}
+
+/* The Link is only a navigation wrapper around the Button — keep it out of
+   the layout so it doesn't add an inline box around a block control. */
+.exportLink {
+  display: inline-flex;
+  align-self: flex-start;
+  text-decoration: none;
+}
+
+/*
+ * A model name is short and the placeholder is the longest thing this will
+ * ever show, so a full-dialog-width control was far wider than its content
+ * ever needs — and read as a text field rather than a picker.
+ */
+.modelSelect {
+  width: 100%;
+  max-width: 24rem;
 }

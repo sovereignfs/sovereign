@@ -2,14 +2,6 @@
   height: 100%;
 }
 
-.collapsedShell {
-  height: 100%;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  background: var(--sv-color-surface);
-}
-
 .mainColumn {
   height: 100%;
   min-height: 0;
@@ -32,6 +24,12 @@
   top: 0;
   left: 0;
   z-index: 1;
+  display: flex;
+  align-items: center;
+  /* No gap: both children are icon buttons that already carry their own
+     padding, so any extra here reads as a gap between two unrelated
+     controls rather than one cluster. */
+  gap: 0;
   padding: var(--sv-space-2) var(--sv-space-2) 0;
 }
 

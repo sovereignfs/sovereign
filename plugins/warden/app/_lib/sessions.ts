@@ -1,4 +1,4 @@
-import { asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { sdk } from '@sovereignfs/sdk';
 import { wardenSessions, wardenMessages } from '../_db/schema';
@@ -186,7 +186,15 @@ export async function renameSession(
   const database = await db();
   const existing = await getOwnSession(database, userId, sessionId);
   if (!existing) throw new SessionNotFoundError();
-  const trimmed = title.trim() || null;
+  // Capped to the same length `deriveTitle()` produces. A server action is
+  // a public endpoint, so without this a crafted call could store (and the
+  // sidebar would then render) an arbitrarily long title.
+  const collapsed = title.trim().replace(/\s+/g, ' ');
+  const trimmed = collapsed
+    ? collapsed.length <= TITLE_MAX_CHARS
+      ? collapsed
+      : `${collapsed.slice(0, TITLE_MAX_CHARS - 1).trimEnd()}…`
+    : null;
   await database
     .update(wardenSessions)
     .set({ title: trimmed })
@@ -360,6 +368,29 @@ export async function deleteInactiveSessions(
   await database.delete(wardenMessages).where(inArray(wardenMessages.sessionId, staleIds));
   await database.delete(wardenSessions).where(inArray(wardenSessions.id, staleIds));
   return staleIds.length;
+}
+
+/**
+ * Deletes one message by id, ownership-checked through its session.
+ *
+ * Used to undo a persisted user turn when the reply it was waiting on never
+ * produced any content (`app/api/chat/route.ts`). Deleting by exact id
+ * rather than "the last message in this session" keeps it unambiguous if
+ * anything else has written to the session in the meantime — a concurrent
+ * send from another tab, say.
+ */
+export async function deleteMessage(
+  userId: string,
+  _tenantId: string,
+  sessionId: string,
+  messageId: string,
+): Promise<void> {
+  const database = await db();
+  const existing = await getOwnSession(database, userId, sessionId);
+  if (!existing) throw new SessionNotFoundError();
+  await database
+    .delete(wardenMessages)
+    .where(and(eq(wardenMessages.id, messageId), eq(wardenMessages.sessionId, sessionId)));
 }
 
 /** Deletes every message in a session — kept for parity with the original

@@ -4,13 +4,80 @@
   flex-direction: column;
 }
 
-.chat {
+/*
+ * Full-width surface behind the centered reading column. Carries the
+ * incognito tint and status bar so both span the whole main column — a tint
+ * that stopped at `.chat`'s 720px would read as a floating panel rather
+ * than a change of mode.
+ */
+.chatSurface {
+  /* One source of truth for the reading column's width. It is applied to
+     the message list and the composer individually rather than to a shared
+     ancestor, so that the *scroll container* can stay full width — see
+     `.chat`. */
+  --warden-column-width: 720px;
+
   height: 100%;
-  width: 100%;
-  max-width: 720px;
-  margin: 0 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  transition: background-color 150ms ease;
+}
+
+/*
+ * Full width, deliberately. Capping this at the reading width would also
+ * cap the scroll container inside it, putting the scrollbar against the
+ * text rather than at the edge of the window. The reading width is applied
+ * to the content within instead (`.messageColumn`, `.composer`).
+ */
+.chat {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/*
+ * Absolute, not an in-flow sibling: `.chat`'s empty state is vertically
+ * centered, and an in-flow bar here would shift it (the same class of bug
+ * an in-flow sidebar toggle once caused). `.chatSurface` is static, so this
+ * resolves against `.mainColumn` — the same containing block the shell's
+ * own top-left toggle uses, which is what lines the two up.
+ */
+.chatTopBar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  padding: var(--sv-space-2) var(--sv-space-2) 0;
+}
+
+/*
+ * Standing reminder while incognito is on. In flow (unlike `.chatTopBar`)
+ * because it is real chrome that should push the conversation down — and it
+ * only ever appears in a mode the user deliberately turned on, so it never
+ * moves content unexpectedly.
+ */
+.incognitoBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sv-space-2);
+  /* Extra room at the bottom: the bar sits flush against the top of the
+     column, so symmetric padding left it looking crowded against the
+     conversation below. */
+  padding: var(--sv-space-3) var(--sv-space-4) var(--sv-space-4);
+  background: var(--sv-color-surface-sunken);
+  border-bottom: var(--sv-border-width-hairline) solid var(--sv-color-border);
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-sm);
+}
+
+/* Subtle, deliberately not a colour: Sovereign's v1 identity is monochrome,
+   and the accent is the instance admin's to define. */
+.chatIncognito {
+  background: var(--sv-color-surface-sunken);
 }
 
 /**
@@ -32,10 +99,30 @@
   gap: var(--sv-space-6);
 }
 
+/*
+ * No horizontal padding: any inset here would push the scroll container
+ * (and therefore its scrollbar) in from the edge of the window. Spacing
+ * lives on `.messageColumn` instead, inside the scroller.
+ */
 .scrollArea {
   flex: 1;
   min-height: 0;
-  padding: var(--sv-space-6) var(--sv-space-4) 0;
+}
+
+/*
+ * The reading column, inside the full-width scroller. Takes over the
+ * message spacing that `MessageScroller`'s own `.scrollContainer` gap used
+ * to provide — that gap applied between its direct flex children, and this
+ * wrapper is now the only one.
+ */
+.messageColumn {
+  width: 100%;
+  max-width: var(--warden-column-width);
+  margin: 0 auto;
+  padding: var(--sv-space-4) var(--sv-space-4) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
 }
 
 .emptyState {
@@ -43,6 +130,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/*
+ * Scroll container for a non-chat destination (Providers, Models) rendered
+ * inside the chat shell's main column. The shell root is
+ * `data-plugin-fullbleed`, so the document itself never scrolls — a pane
+ * that can outgrow the viewport has to own its own scrolling, the same way
+ * `ChatView`'s message list does. `PageContainer` inside still supplies the
+ * gutter and max-width.
+ */
+.paneScroll {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .banner {
@@ -59,7 +160,12 @@
   display: flex;
   flex-direction: column;
   gap: var(--sv-space-2);
-  margin: 0 var(--sv-space-4) var(--sv-space-4);
+  /* Carries the reading width itself, now that `.chat` is full width. The
+     `calc` keeps the side gutters below the cap instead of letting the
+     composer run to the edges on a narrow viewport. */
+  width: calc(100% - 2 * var(--sv-space-4));
+  max-width: var(--warden-column-width);
+  margin: 0 auto var(--sv-space-4);
   padding: var(--sv-space-3);
   background: var(--sv-color-surface-raised);
   border: var(--sv-border-width-hairline) solid var(--sv-color-border);
@@ -94,6 +200,31 @@
   display: flex;
   align-items: center;
   gap: var(--sv-space-2);
+}
+
+/* Icon buttons at a fixed size — nothing here should give way. */
+.composerToolbarStart {
+  flex-shrink: 0;
+}
+
+/*
+ * `min-width: 0` is the load-bearing part: a flex item's default
+ * `min-width: auto` pins it to its content width, so this group would
+ * refuse to shrink and push `Send` past the composer's right edge on a
+ * narrow viewport instead of letting the model name truncate.
+ */
+.composerToolbarEnd {
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+/* Holds its size while the model picker beside it truncates. Marked
+   explicitly rather than by excluding the picker with an attribute
+   selector: that would depend on the picker's generated CSS-module class
+   name, and would tie at equal specificity with the picker's own rule —
+   leaving which one wins up to stylesheet order. */
+.composerSend {
+  flex-shrink: 0;
 }
 
 .hiddenFileInput {

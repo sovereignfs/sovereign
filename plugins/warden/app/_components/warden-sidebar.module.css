@@ -97,12 +97,25 @@
 
 .rowMenuTrigger {
   flex-shrink: 0;
-  opacity: 0;
 }
 
-.row:hover .rowMenuTrigger,
-.row:focus-within .rowMenuTrigger {
-  opacity: 1;
+/*
+ * Reveal-on-hover only where hover actually exists. A touch device has no
+ * hover state, and tapping the row follows its link before any sticky
+ * `:hover` could apply — so an unconditional `opacity: 0` left rename, pin
+ * and delete reachable only by tapping an invisible (but still hit-testable)
+ * target. Warden ships `shell: "default"`, so mobile is a supported surface
+ * here. `:focus-within` keeps it reachable by keyboard on pointer devices.
+ */
+@media (hover: hover) {
+  .rowMenuTrigger {
+    opacity: 0;
+  }
+
+  .row:hover .rowMenuTrigger,
+  .row:focus-within .rowMenuTrigger {
+    opacity: 1;
+  }
 }
 
 /*
@@ -161,15 +174,26 @@ button.rowMenuTrigger:active:not(:disabled) {
   padding: var(--sv-space-2);
 }
 
+/*
+ * A <button> (it opens the settings dialog) styled as a sidebar row, so it
+ * needs the UA button chrome reset — background, border, font inheritance
+ * and full-width left alignment — that an <a> never had.
+ */
 .settingsLink {
   display: flex;
   align-items: center;
   gap: var(--sv-space-2);
+  width: 100%;
+  border: none;
+  background: none;
   border-radius: var(--sv-radius-md);
   padding: var(--sv-space-2);
   color: var(--sv-color-text-primary);
+  text-align: left;
   text-decoration: none;
+  font: inherit;
   font-size: var(--sv-font-size-sm);
+  cursor: pointer;
 }
 
 @media (hover: hover) {

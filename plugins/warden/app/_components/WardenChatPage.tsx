@@ -1,13 +1,11 @@
 import { sdk } from '@sovereignfs/sdk';
 import { ChatView } from './ChatView';
 import { SetupPrompt } from './SetupPrompt';
-import { WardenLayoutShell } from './WardenLayoutShell';
-import { WardenSidebar } from './WardenSidebar';
-import { SIDEBAR_RECENT_LIMIT, listMessages, listSessions } from '../_lib/sessions';
+import { listMessages, listSessions } from '../_lib/sessions';
+import { resolveActiveSessionId } from '../_lib/active-session';
 import { discoverModels } from '../_lib/model-discovery';
 import { isModelVisible, listVisibilityOverrides } from '../_lib/model-visibility';
 import { getDefaultModelKey } from '../_lib/user-settings';
-import styles from '../warden.module.css';
 
 /**
  * Shared render body for both of Warden's chat routes — `/warden`
@@ -18,11 +16,10 @@ import styles from '../warden.module.css';
  * shape; only `forceNewChat` and how each route computes
  * `requestedSessionId` differ.
  *
- * `data-plugin-fullbleed` opts into the shell's hard-locked viewport height +
- * zero padding (`runtime/app/(platform)/shell.module.css`) so `ChatView`'s
- * own internal `MessageScroller` can rely on `height: 100%` cascading
- * correctly instead of the whole document scrolling as one unit —
- * `SetupPrompt`'s own centering works the same way under fullbleed.
+ * Renders the chat column only. The surrounding shell — sidebar, collapse
+ * state, and the `data-plugin-fullbleed` root — belongs to
+ * `app/(chat)/layout.tsx`, so navigating between these two routes swaps
+ * just this subtree instead of rebuilding the whole screen.
  *
  * Shows the first-run setup prompt only when there's genuinely nothing to
  * chat with (no provider *configured* and no local model reachable) — a
@@ -49,27 +46,23 @@ export async function WardenChatPage({
   const hasAnyProviderConfigured = discovery.providers.length > 0;
   const hasAnyModel = hasAnyProviderConfigured || discovery.local.available;
 
-  if (!hasAnyModel) {
-    return (
-      <div className={styles.page} data-plugin-fullbleed>
-        <SetupPrompt />
-      </div>
-    );
-  }
+  if (!hasAnyModel) return <SetupPrompt />;
 
   const [allSessions, visibilityOverrides, defaultModelKey] = await Promise.all([
     listSessions(session.user.id, session.user.tenantId),
     listVisibilityOverrides(session.user.id, session.user.tenantId),
     getDefaultModelKey(session.user.id, session.user.tenantId),
   ]);
-  const activeSession = forceNewChat
-    ? null
-    : (requestedSessionId && allSessions.find((s) => s.id === requestedSessionId)) ||
-      allSessions[0] ||
-      null;
-  const initialMessages = activeSession
-    ? await listMessages(session.user.id, session.user.tenantId, activeSession.id)
+  // Same rule the sidebar applies client-side — see `active-session.ts`.
+  const activeSessionId = resolveActiveSessionId(
+    allSessions.map((s) => s.id),
+    requestedSessionId,
+    forceNewChat,
+  );
+  const initialMessages = activeSessionId
+    ? await listMessages(session.user.id, session.user.tenantId, activeSessionId)
     : [];
+
   const visibleModels = discovery.models.filter((model) =>
     isModelVisible(model.key, visibilityOverrides),
   );
@@ -82,36 +75,30 @@ export async function WardenChatPage({
       ? defaultModelKey
       : (visibleModels[0]?.key ?? '');
 
-  const pinnedSessions = allSessions
-    .filter((s) => s.pinnedAt !== null)
-    .sort((a, b) => (b.pinnedAt ?? 0) - (a.pinnedAt ?? 0));
-  const recentSessions = allSessions
-    .filter((s) => s.pinnedAt === null)
-    .slice(0, SIDEBAR_RECENT_LIMIT);
-
   return (
-    <div className={styles.page} data-plugin-fullbleed>
-      <WardenLayoutShell
-        sidebar={
-          <WardenSidebar
-            pinnedSessions={pinnedSessions}
-            recentSessions={recentSessions}
-            activeSessionId={activeSession?.id ?? null}
-          />
-        }
-      >
-        <ChatView
-          initialSessionId={activeSession?.id ?? null}
-          initialMessages={initialMessages}
-          models={visibleModels}
-          providers={discovery.providers.map((provider) => ({
-            id: provider.id,
-            label: provider.label,
-          }))}
-          defaultModelKey={resolvedDefaultModelKey}
-          allModelsHidden={allModelsHidden}
-        />
-      </WardenLayoutShell>
-    </div>
+    /*
+      `key` is load-bearing, not cosmetic. `ChatView` seeds every piece of
+      its state from these props in `useState` initializers, which only run
+      on mount — and the sidebar switches sessions with
+      `/warden?session=<id>`, a search-param-only navigation. Next.js builds
+      a segment's React key from `createRouterCacheKey(segment, true)` —
+      deliberately excluding search params — so without a key of our own
+      React reuses the same fiber, the initializers never re-run, and the
+      previous session's messages stay on screen while `sessionId` still
+      points at the old session. The next send is then written into the
+      session the user thought they had navigated away from.
+    */
+    <ChatView
+      key={activeSessionId ?? 'new'}
+      initialSessionId={activeSessionId}
+      initialMessages={initialMessages}
+      models={visibleModels}
+      providers={discovery.providers.map((provider) => ({
+        id: provider.id,
+        label: provider.label,
+      }))}
+      defaultModelKey={resolvedDefaultModelKey}
+      allModelsHidden={allModelsHidden}
+    />
   );
 }

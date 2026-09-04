@@ -4,6 +4,7 @@ import { composeDocumentContent, processAttachment } from '../../_lib/attachment
 import {
   appendMessage,
   createSession,
+  deleteMessage,
   deleteSession,
   getRecentMessagesForContext,
   SessionNotFoundError,
@@ -242,21 +243,57 @@ async function dispatchAndRespond(
       // to wait for the reply. The assistant's side is persisted once
       // `teeAndCapture` finishes accumulating it; the client is never
       // blocked on either write.
-      void appendMessage(persist.userId, persist.tenantId, persist.sessionId, {
+      //
+      // The promise is kept (rather than fired and forgotten) so the
+      // cleanup path below can sequence itself after this write instead of
+      // racing it — an immediate stream failure can otherwise reach the
+      // capture callback before the insert has landed.
+      const userMessageWrite = appendMessage(persist.userId, persist.tenantId, persist.sessionId, {
         role: 'user',
         content: persist.contentForPersistence,
         providerId: persist.providerId,
         model: persist.model,
-      }).catch((error) => console.error('[warden] failed to persist user message:', error));
+      }).catch((error) => {
+        console.error('[warden] failed to persist user message:', error);
+        return null;
+      });
 
-      response = teeAndCapture(response, ({ text }) => {
-        if (!text) return;
-        void appendMessage(persist.userId, persist.tenantId, persist.sessionId, {
-          role: 'assistant',
-          content: text,
-          providerId: persist.providerId,
-          model: persist.model,
-        }).catch((error) => console.error('[warden] failed to persist assistant message:', error));
+      response = teeAndCapture(response, ({ text, errorMessage }) => {
+        if (text) {
+          void appendMessage(persist.userId, persist.tenantId, persist.sessionId, {
+            role: 'assistant',
+            content: text,
+            providerId: persist.providerId,
+            model: persist.model,
+          }).catch((error) =>
+            console.error('[warden] failed to persist assistant message:', error),
+          );
+          return;
+        }
+        // A stream that opened successfully but produced no content at all
+        // (provider failed mid-stream, connection dropped). The user's own
+        // message was already persisted above, so returning here would
+        // strand it: the thread keeps a user turn with no reply, and the
+        // *next* send hands the model two consecutive user messages. Clean
+        // up instead — a session this request created goes entirely, and
+        // otherwise just the stranded user turn does.
+        if (!errorMessage) return;
+        void userMessageWrite
+          .then((userMessage) => {
+            if (persist.sessionWasCreated) {
+              return deleteSession(persist.userId, persist.tenantId, persist.sessionId);
+            }
+            if (!userMessage) return undefined;
+            return deleteMessage(
+              persist.userId,
+              persist.tenantId,
+              persist.sessionId,
+              userMessage.id,
+            );
+          })
+          .catch((error) =>
+            console.error('[warden] failed to clean up after an empty stream:', error),
+          );
       });
     }
 
@@ -316,6 +353,23 @@ export async function POST(request: Request): Promise<Response> {
   if (!parsed.modelKey) return badRequest('A model selection is required.');
 
   if (parsed.incognito) {
+    // Incognito is the one path where the client supplies the whole
+    // transcript (the server keeps nothing to reconstruct it from), so its
+    // size has to be bounded here. Only the *last* message used to be
+    // length-checked, with no cap on how many messages could be sent or on
+    // the total payload — an authenticated user could push arbitrarily
+    // large bodies through, and Route Handlers apply no body-size limit of
+    // their own. `limits.ts`: "enforced server-side, not left to the client."
+    if (parsed.messages.length > MAX_RECENT_TURNS) {
+      return badRequest(`Incognito conversations are limited to ${MAX_RECENT_TURNS} messages.`);
+    }
+    const totalChars = parsed.messages.reduce(
+      (sum, message) => sum + (typeof message.content === 'string' ? message.content.length : 0),
+      0,
+    );
+    if (totalChars > MAX_INPUT_CHARS * MAX_RECENT_TURNS) {
+      return badRequest('This conversation is too long. Start a new incognito chat.');
+    }
     const lastContent = parsed.messages[parsed.messages.length - 1]?.content;
     if (typeof lastContent === 'string' && lastContent.length > MAX_INPUT_CHARS) {
       return badRequest(`Messages are limited to ${MAX_INPUT_CHARS} characters.`);

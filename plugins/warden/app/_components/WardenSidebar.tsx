@@ -20,6 +20,14 @@ import {
   unpinSessionAction,
 } from '../actions';
 import type { SessionView } from '../_lib/sessions';
+import {
+  MODELS_PATHNAME,
+  NEW_CHAT_PATHNAME,
+  PROVIDERS_PATHNAME,
+  resolveActiveSessionId,
+} from '../_lib/active-session';
+import type { DiscoveredModel } from '../_lib/model-discovery';
+import { WardenSettingsDialog } from './WardenSettingsDialog';
 import styles from './warden-sidebar.module.css';
 
 /**
@@ -31,10 +39,14 @@ import styles from './warden-sidebar.module.css';
  * Every mutation (rename/pin/unpin/delete) calls its server action, then
  * `router.refresh()` to re-fetch the list from the server — same
  * mutate-then-refresh pattern `ProvidersView`/`ModelsView` already use.
- * `activeSessionId` and the composer's own selected session both derive
- * from the same URL-driven server data (`?session=`), so they can never
- * disagree about which session is "open" (the leg's own "do not proceed
- * if" condition).
+ *
+ * Which row is highlighted is derived here from the URL rather than handed
+ * down as a prop: this component now renders from `app/(chat)/layout.tsx`
+ * (so it survives navigation between `/warden` and `/warden/new` instead of
+ * being rebuilt each time), and a layout receives no `searchParams`. The
+ * composer's own session comes from the server applying the *same*
+ * `resolveActiveSessionId` rule to the same ordered list, so the two still
+ * can never disagree about which session is "open".
  *
  * `onToggleCollapse` is optional and supplied by `WardenLayoutShell` via
  * `cloneElement` (it owns the collapse state, this component doesn't) — when
@@ -45,17 +57,34 @@ import styles from './warden-sidebar.module.css';
 export function WardenSidebar({
   pinnedSessions,
   recentSessions,
-  activeSessionId,
+  orderedSessionIds,
+  settingsModels,
+  settingsDefaultModelKey,
   onToggleCollapse,
 }: {
   pinnedSessions: SessionView[];
   recentSessions: SessionView[];
-  activeSessionId: string | null;
+  /** Every session id in `listSessions()` order — needed to apply the same
+   *  "no `?session=` falls back to the most recent" rule the server uses. */
+  orderedSessionIds: string[];
+  /** Data for the General settings dialog this sidebar opens. Resolved in
+   *  the layout rather than fetched on open — it's a couple of cheap reads
+   *  plus an already-memoised discovery pass. */
+  settingsModels: DiscoveredModel[];
+  settingsDefaultModelKey: string | null;
   onToggleCollapse?: () => void;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  // Derived from the URL rather than passed in — this renders from a
+  // layout, which gets no `searchParams`. Shares one rule with the server
+  // so the highlighted row and the loaded conversation can't drift apart.
+  const activeSessionId = resolveActiveSessionId(
+    orderedSessionIds,
+    searchParams.get('session'),
+    pathname === NEW_CHAT_PATHNAME,
+  );
   const toast = useToast();
   const [, startTransition] = useTransition();
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
@@ -63,6 +92,7 @@ export function WardenSidebar({
   const [renameValue, setRenameValue] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletePending, setDeletePending] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const renameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -162,7 +192,13 @@ export function WardenSidebar({
             aria-label={`Rename "${label}"`}
           />
         ) : (
-          <Link href={`/warden?session=${session.id}`} className={styles.rowLabel}>
+          <Link
+            href={`/warden?session=${session.id}`}
+            className={styles.rowLabel}
+            // The active row was conveyed by background colour alone, which
+            // no screen reader announces. `NavList` above already does this.
+            aria-current={isActive ? 'page' : undefined}
+          >
             {label}
           </Link>
         )}
@@ -195,9 +231,6 @@ export function WardenSidebar({
     (s) => s.id === confirmDeleteId,
   );
 
-  const activeSettingsTab =
-    pathname === '/warden/settings' ? (searchParams.get('tab') ?? 'general') : null;
-
   const primaryNavGroups: NavListGroup[] = [
     {
       id: 'primary',
@@ -205,23 +238,25 @@ export function WardenSidebar({
         {
           id: 'new',
           label: 'New chat',
-          href: '/warden/new',
+          href: NEW_CHAT_PATHNAME,
           icon: 'plus',
-          active: pathname === '/warden/new',
+          active: pathname === NEW_CHAT_PATHNAME,
         },
+        // Real destinations inside the chat shell now, not tabs on a
+        // separate settings page — so these can genuinely be the active row.
         {
           id: 'providers',
           label: 'Providers',
-          href: '/warden/settings?tab=providers',
+          href: PROVIDERS_PATHNAME,
           icon: 'link',
-          active: activeSettingsTab === 'providers',
+          active: pathname === PROVIDERS_PATHNAME,
         },
         {
           id: 'models',
           label: 'Models',
-          href: '/warden/settings?tab=models',
+          href: MODELS_PATHNAME,
           icon: 'layers',
-          active: activeSettingsTab === 'models',
+          active: pathname === MODELS_PATHNAME,
         },
       ],
     },
@@ -279,11 +314,18 @@ export function WardenSidebar({
       </div>
 
       <div className={styles.footer}>
-        <Link href="/warden/settings" className={styles.settingsLink}>
+        <button type="button" className={styles.settingsLink} onClick={() => setSettingsOpen(true)}>
           <Icon name="settings" size="sm" aria-hidden />
           Settings
-        </Link>
+        </button>
       </div>
+
+      <WardenSettingsDialog
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        visibleModels={settingsModels}
+        defaultModelKey={settingsDefaultModelKey}
+      />
 
       <ConfirmDialog
         open={confirmDeleteId !== null}

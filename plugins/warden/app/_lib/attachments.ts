@@ -73,11 +73,24 @@ export async function processAttachment(file: File): Promise<ProcessAttachmentRe
     };
   }
 
+  // Everything below is anticipated failure, reported as a result — but
+  // `getDocumentProxy`/`extractText` *throw* on a malformed, encrypted or
+  // password-protected PDF, and `file.text()` can throw on a decoding
+  // error. Uncaught, those escaped the route entirely and surfaced as an
+  // opaque 500, which `ChatView` renders as "Warden is unavailable right
+  // now." — blaming the model provider for what is actually a bad file.
   let extracted: string;
   if (file.type === 'application/pdf') {
-    const pdf = await getDocumentProxy(new Uint8Array(await file.arrayBuffer()));
-    const result = await extractText(pdf, { mergePages: true });
-    extracted = typeof result.text === 'string' ? result.text : result.text.join('\n');
+    try {
+      const pdf = await getDocumentProxy(new Uint8Array(await file.arrayBuffer()));
+      const result = await extractText(pdf, { mergePages: true });
+      extracted = typeof result.text === 'string' ? result.text : result.text.join('\n');
+    } catch {
+      return {
+        ok: false,
+        error: "This PDF couldn't be read. It may be corrupt, encrypted, or password-protected.",
+      };
+    }
     if (extracted.trim().length === 0) {
       return {
         ok: false,
@@ -85,7 +98,11 @@ export async function processAttachment(file: File): Promise<ProcessAttachmentRe
       };
     }
   } else {
-    extracted = await file.text();
+    try {
+      extracted = await file.text();
+    } catch {
+      return { ok: false, error: "This file couldn't be read as text." };
+    }
   }
 
   const { text, truncated } = truncateExtractedText(extracted);

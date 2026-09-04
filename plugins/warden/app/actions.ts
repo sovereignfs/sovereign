@@ -3,6 +3,7 @@
 import { NotAuthenticatedError, sdk } from '@sovereignfs/sdk';
 import { invalidateDiscoveryCacheForUser } from './_lib/model-discovery';
 import { createProvider, deleteProvider, updateProvider } from './_lib/providers';
+import { MAX_RETENTION_DAYS, MIN_RETENTION_DAYS } from './_lib/limits';
 import { setModelVisibility } from './_lib/model-visibility';
 import {
   deleteInactiveSessions,
@@ -218,6 +219,20 @@ export async function setDefaultModelAction(modelKey: string | null): Promise<Ac
 export async function deleteInactiveSessionsAction(olderThanDays: number): Promise<ActionResult> {
   try {
     const session = await sdk.auth.requireSession();
+    // The stepper's own min/max is not enforcement — this is a public POST
+    // endpoint dispatched by action id. A `0`, negative, or non-finite
+    // value would put the cutoff at or after "now" and delete every
+    // unpinned session, including one used seconds ago.
+    if (
+      !Number.isInteger(olderThanDays) ||
+      olderThanDays < MIN_RETENTION_DAYS ||
+      olderThanDays > MAX_RETENTION_DAYS
+    ) {
+      return {
+        ok: false,
+        error: `Choose an inactivity threshold between ${MIN_RETENTION_DAYS} and ${MAX_RETENTION_DAYS} days.`,
+      };
+    }
     const deleted = await deleteInactiveSessions(
       session.user.id,
       session.user.tenantId,

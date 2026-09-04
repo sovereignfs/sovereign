@@ -21,6 +21,17 @@ export const MAX_OUTPUT_TOKENS = 1024;
 export const MAX_RECENT_TURNS = 20;
 export const REQUEST_TIMEOUT_MS = 120_000;
 
+/**
+ * Bounds for the manual "delete sessions inactive for over N days" action.
+ * Shared by the stepper's own `min`/`max` and the server action's guard —
+ * the stepper alone is not enforcement, since a `'use server'` function is a
+ * public POST endpoint dispatched by action id. Unbounded, a `0` or negative
+ * value puts the cutoff at or after "now" and deletes every unpinned
+ * session, including ones used seconds ago.
+ */
+export const MIN_RETENTION_DAYS = 1;
+export const MAX_RETENTION_DAYS = 365;
+
 /** A single file per message, checked before any bytes are read. */
 export const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024;
 

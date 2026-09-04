@@ -1,7 +1,12 @@
 import { eq, inArray } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { sdk } from '@sovereignfs/sdk';
-import { wardenSessions, wardenMessages } from '../_db/schema';
+import {
+  wardenSessions,
+  wardenMessages,
+  wardenModelVisibilityOverrides,
+  wardenUserSettings,
+} from '../_db/schema';
 import { listMessages, listSessions } from './sessions';
 
 /**
@@ -33,10 +38,29 @@ export async function registerPortability(): Promise<void> {
         messages: await listMessages(ctx.userId, ctx.tenantId, session.id),
       })),
     );
+    // schemaVersion 3 (was 2): per-user preferences now travel with the
+    // history. `modelVisibility` is the exceptions-only override list, so
+    // it reads as a set of model keys rather than a full catalog.
+    const database = (await sdk.db.getClient()) as BaseSQLiteDatabase<'async', unknown>;
+    const [visibility, settings] = await Promise.all([
+      database
+        .select({ modelKey: wardenModelVisibilityOverrides.modelKey })
+        .from(wardenModelVisibilityOverrides)
+        .where(eq(wardenModelVisibilityOverrides.userId, ctx.userId)),
+      database
+        .select({ defaultModelKey: wardenUserSettings.defaultModelKey })
+        .from(wardenUserSettings)
+        .where(eq(wardenUserSettings.userId, ctx.userId)),
+    ]);
+
     return {
       pluginId: 'fs.sovereign.warden',
-      schemaVersion: 2,
-      data: { sessions: withMessages },
+      schemaVersion: 3,
+      data: {
+        sessions: withMessages,
+        modelVisibility: visibility.map((row) => row.modelKey),
+        defaultModelKey: settings[0]?.defaultModelKey ?? null,
+      },
     };
   });
 
@@ -63,9 +87,31 @@ export async function registerPortability(): Promise<void> {
       .select({ id: wardenMessages.id })
       .from(wardenMessages)
       .where(inArray(wardenMessages.sessionId, sessionIds));
+    // Warden owns four user-scoped tables, not two. The preference tables
+    // were missed when they were introduced (task 22.9), leaving a deleted
+    // account's model-visibility choices — which reveal exactly which
+    // models they used — and their default model behind indefinitely.
+    // Both carry `user_id` directly, so neither needs the session join.
+    const [visibility, settings] = await Promise.all([
+      database
+        .select({ id: wardenModelVisibilityOverrides.id })
+        .from(wardenModelVisibilityOverrides)
+        .where(eq(wardenModelVisibilityOverrides.userId, ctx.userId)),
+      database
+        .select({ id: wardenUserSettings.id })
+        .from(wardenUserSettings)
+        .where(eq(wardenUserSettings.userId, ctx.userId)),
+    ]);
+
     await database.delete(wardenMessages).where(inArray(wardenMessages.sessionId, sessionIds));
     await database.delete(wardenSessions).where(eq(wardenSessions.userId, ctx.userId));
+    await database
+      .delete(wardenModelVisibilityOverrides)
+      .where(eq(wardenModelVisibilityOverrides.userId, ctx.userId));
+    await database.delete(wardenUserSettings).where(eq(wardenUserSettings.userId, ctx.userId));
 
-    return { deleted: messages.length + sessions.length };
+    return {
+      deleted: messages.length + sessions.length + visibility.length + settings.length,
+    };
   });
 }

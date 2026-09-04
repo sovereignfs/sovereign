@@ -232,6 +232,13 @@
       "when": 1788543281555,
       "tag": "0032_bumpy_the_fallen",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1788546328853,
+      "tag": "0033_simple_lady_bullseye",
+      "breakpoints": true
     }
   ]
 }

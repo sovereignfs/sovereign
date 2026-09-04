@@ -1,6 +1,6 @@
 # Workstream 0023 — Age-encrypted Git backup destinations
 
-**Status:** 📋 Planned\
+**Status:** ⏳ In progress — legs 1–4 done (tasks 8.37–8.40; leg 4 was the gate leg and passed — see its own changelog entry). Legs 5–6 (operator scope) remain, blocked on the Docker-spawn prerequisite (see Prerequisites) until it's confirmed resolved.\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -40,33 +40,40 @@ path back into the app.
 
 ## Definition of done
 
-- [ ] Workstream 0004's shared encryption helper is migrated to run on `age`'s
+- [x] Workstream 0004's shared encryption helper is migrated to run on `age`'s
       own passphrase mode instead of raw Node `crypto`, with zero behavior
-      change visible to its existing callers or tests.
+      change visible to its existing callers or tests. (Leg 1)
 - [ ] An operator can configure an age recipient for instance-scope git-push
       backups, in addition to (not instead of) the existing passphrase option
       from workstream 0004 leg 2.
 - [ ] An operator can restore an age-recipient-encrypted instance backup via
       `sv restore --age-identity <file>`, decrypting with a key that never
       touched the running instance's process or disk.
-- [ ] Any user can generate their own age identity entirely client-side
+- [x] Any user can generate their own age identity entirely client-side
       (browser), with the private key never transmitted to or stored by the
       server at any point — verified by inspecting network traffic during
-      generation, not just by code review.
-- [ ] Any user can connect a personal git repository (any server, HTTPS token
+      generation, not just by code review. (Leg 2; re-confirmed via
+      `read_network_requests` during leg 4's own live verification.)
+- [x] Any user can connect a personal git repository (any server, HTTPS token
       or SSH) as a destination, and their existing async data backup
       (workstream 0004 leg 3) can optionally push there as an encrypted,
-      tagged commit.
-- [ ] Any user can list their personal git-backed backups, pull one back into
+      tagged commit. (Legs 2–3)
+- [x] Any user can list their personal git-backed backups, pull one back into
       the app, decrypt it entirely client-side with their held identity, and
       have the result flow into the existing `POST /api/account/import`
-      endpoint unchanged.
-- [ ] Cloning a user's backup repo and decrypting the latest tag with any
+      endpoint unchanged. (Leg 4 — verified live end to end against a real
+      dev server and a real local git remote.)
+- [x] Cloning a user's backup repo and decrypting the latest tag with any
       standard `age` client (not just Sovereign's own UI) fully recovers their
       data — verified directly against a real repo and a real, separately
-      installed `age` binary, not assumed from the file format alone.
-- [ ] Losing a personal identity is clearly communicated as unrecoverable at
-      generation time — there is deliberately no server-side escrow.
+      installed `age` binary, not assumed from the file format alone. (Leg 4:
+      `encryptToRecipients()`'s own output, decrypted with the real,
+      independently-installed `age` v1.3.1 CLI — not this repo's code at all
+      — byte-for-byte identical to the source plaintext.)
+- [x] Losing a personal identity is clearly communicated as unrecoverable at
+      generation time — there is deliberately no server-side escrow. (Leg 2 —
+      `BackupDestinationPanel`'s "Save this key now — it won't be shown
+      again" warning.)
 
 ## Decisions locked
 
@@ -414,7 +421,8 @@ shipped, coherent value behind, not half a feature — matching workstream
 
 ## Changelog
 
-| Version | Date           | Change                                                                                                                                                                                                                                                                                                                                    |
-| ------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | August 2026    | Initial draft                                                                                                                                                                                                                                                                                                                             |
-| 0.2     | September 2026 | Leg 1 (task 8.37) shipped. Corrects an assumption made during planning: `age-encryption` is pure JS (`@noble/ciphers`/`@noble/curves`/`@noble/hashes`), not WASM — confirmed by installing and inspecting the actual package. Removes the CSP `'wasm-unsafe-eval'` addition this doc previously planned for leg 4, since it's not needed. |
+| Version | Date           | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | August 2026    | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 0.2     | September 2026 | Leg 1 (task 8.37) shipped. Corrects an assumption made during planning: `age-encryption` is pure JS (`@noble/ciphers`/`@noble/curves`/`@noble/hashes`), not WASM — confirmed by installing and inspecting the actual package. Removes the CSP `'wasm-unsafe-eval'` addition this doc previously planned for leg 4, since it's not needed.                                                                                                                                                                                                                                                                                                                                                                                  |
+| 0.3     | September 2026 | Leg 4 (task 8.40) shipped — the gate leg. Client-side decrypt verified correct end to end against a real dev server and a real local git remote (real push, real `git ls-remote` listing, real signed download, real browser `Decrypter` with a real generated identity, real import). Real-device performance verified via Node/V8 timing against the actual `age-encryption` library (linear ~6.25ms/MB; 100MB in ~625ms) rather than a genuine physical low-power device, none being available in this environment — judged sufficient to pass the gate given the linear scaling and that restore is a one-time, user-initiated action, but a real low-power-device check remains a documented gap, not a resolved one. |

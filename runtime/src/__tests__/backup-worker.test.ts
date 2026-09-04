@@ -11,7 +11,7 @@ import {
   type BackupWorkerDeps,
 } from '../backup-worker';
 import { notifyBackupCompletion } from '../backup-notification';
-import { runInstanceBackup, runUserBackup } from '../backup-run';
+import { runInstanceBackup, runRestoreFetch, runUserBackup } from '../backup-run';
 
 vi.mock('../backup-notification', () => ({
   notifyBackupCompletion: vi.fn(async () => undefined),
@@ -19,6 +19,7 @@ vi.mock('../backup-notification', () => ({
 vi.mock('../backup-run', () => ({
   runInstanceBackup: vi.fn(async () => ({ archivePath: '/instance.tar.gz', sizeBytes: 1 })),
   runUserBackup: vi.fn(async () => ({ archivePath: '/user.zip.age', sizeBytes: 2 })),
+  runRestoreFetch: vi.fn(async () => ({ archivePath: '/restore.age', sizeBytes: 3 })),
 }));
 
 function job(overrides: Partial<BackupJobRow> = {}): BackupJobRow {
@@ -38,6 +39,7 @@ function job(overrides: Partial<BackupJobRow> = {}): BackupJobRow {
     expiresAt: 1_000_200_000,
     pushStatus: null,
     pushError: null,
+    kind: 'backup',
     ...overrides,
   };
 }
@@ -75,6 +77,14 @@ describe('runBackupJob', () => {
     await runBackupJob(j);
     expect(runInstanceBackup).toHaveBeenCalledWith(j);
     expect(runUserBackup).not.toHaveBeenCalled();
+  });
+
+  it('dispatches a restore-fetch job to runRestoreFetch regardless of scope (epic 8.40)', async () => {
+    const j = job({ scope: 'user', kind: 'restore-fetch', requestedByUserId: 'user-1' });
+    await runBackupJob(j);
+    expect(runRestoreFetch).toHaveBeenCalledWith(j);
+    expect(runUserBackup).not.toHaveBeenCalled();
+    expect(runInstanceBackup).not.toHaveBeenCalled();
   });
 });
 

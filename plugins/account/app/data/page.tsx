@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ConfirmDialog, ConsentPrompt, FormField, Input } from '@sovereignfs/ui';
 import { BackupDestinationPanel } from '../_components/BackupDestinationPanel';
+import { GitRestorePanel } from '../_components/GitRestorePanel';
 import { PortabilityPanel } from '../_components/PortabilityPanel';
 import styles from '../account.module.css';
 
@@ -467,6 +468,8 @@ export default function DataPage() {
       </section>
 
       <BackupDestinationPanel onConnected={load} />
+
+      <GitRestorePanel />
 
       <PortabilityPanel />
 

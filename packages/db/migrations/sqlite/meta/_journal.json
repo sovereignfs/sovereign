@@ -232,6 +232,13 @@
       "when": 1788543280870,
       "tag": "0032_nappy_medusa",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1788546328415,
+      "tag": "0033_clear_stone_men",
+      "breakpoints": true
     }
   ]
 }

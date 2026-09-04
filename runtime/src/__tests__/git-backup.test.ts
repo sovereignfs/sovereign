@@ -3,7 +3,13 @@ import { existsSync, mkdtempSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { backupTagFor, pushBackupToGit } from '../git-backup';
+import {
+  backupTagFor,
+  fetchBackupBlob,
+  listBackupTags,
+  parseBackupTag,
+  pushBackupToGit,
+} from '../git-backup';
 
 // Real git operations against a real local bare repo (a filesystem path is a
 // fully valid git remote — no network/auth server needed) rather than mocked
@@ -152,6 +158,124 @@ describe('pushBackupToGit', () => {
     ).rejects.toThrow(/git push failed/);
     const after = readTmpEntries().filter((e) => !before.has(e));
     expect(after.find((e) => e.startsWith('sv-git-backup-'))).toBeUndefined();
+  });
+});
+
+describe('parseBackupTag', () => {
+  it('inverts backupTagFor', () => {
+    const now = new Date('2026-07-06T12:30:00.123Z');
+    const parsed = parseBackupTag(backupTagFor(now, '0.121.1'));
+    expect(parsed).not.toBeNull();
+    expect(parsed?.timestamp.getTime()).toBe(now.getTime());
+    expect(parsed?.platformVersion).toBe('0.121.1');
+  });
+
+  it('returns null for a tag that does not match the shape', () => {
+    expect(parseBackupTag('some-other-tag')).toBeNull();
+    expect(parseBackupTag('sv-backup/not-a-timestamp/v1.0.0')).toBeNull();
+  });
+});
+
+describe('listBackupTags', () => {
+  it('lists every sv-backup tag on the remote, newest first', async () => {
+    const source = { repoUrl: bareRepoPath, authType: 'https-token' as const, credential: 'token' };
+    const older = new Date('2026-07-01T00:00:00.000Z');
+    const newer = new Date('2026-07-06T12:30:00.000Z');
+    await pushBackupToGit(
+      { ...source, branch: 'backups' },
+      Buffer.from('a'),
+      'backup.age',
+      {},
+      '0.121.0',
+      older,
+    );
+    await pushBackupToGit(
+      { ...source, branch: 'backups' },
+      Buffer.from('b'),
+      'backup.age',
+      {},
+      '0.121.1',
+      newer,
+    );
+
+    const tags = await listBackupTags(source);
+    expect(tags).toHaveLength(2);
+    expect(tags[0]?.tag).toBe(backupTagFor(newer, '0.121.1'));
+    expect(tags[0]?.timestamp.getTime()).toBe(newer.getTime());
+    expect(tags[1]?.tag).toBe(backupTagFor(older, '0.121.0'));
+  });
+
+  it('silently skips a tag that does not match the sv-backup shape', async () => {
+    const workRepo = mkdtempSync(join(tmpdir(), 'sv-git-seed-'));
+    try {
+      execFileSync('git', ['clone', '--quiet', bareRepoPath, workRepo]);
+      execFileSync('git', [
+        '-C',
+        workRepo,
+        '-c',
+        'user.email=test@sovereign.local',
+        '-c',
+        'user.name=Test',
+        'commit',
+        '--quiet',
+        '--allow-empty',
+        '-m',
+        'seed',
+      ]);
+      execFileSync('git', ['-C', workRepo, 'tag', 'not-a-backup-tag']);
+      execFileSync('git', ['-C', workRepo, 'push', '--quiet', 'origin', '--tags']);
+    } finally {
+      rmSync(workRepo, { recursive: true, force: true });
+    }
+
+    const tags = await listBackupTags({
+      repoUrl: bareRepoPath,
+      authType: 'https-token',
+      credential: 'token',
+    });
+    expect(tags).toEqual([]);
+  });
+
+  it('returns an empty list for a remote with no tags at all', async () => {
+    const tags = await listBackupTags({
+      repoUrl: bareRepoPath,
+      authType: 'https-token',
+      credential: 'token',
+    });
+    expect(tags).toEqual([]);
+  });
+});
+
+describe('fetchBackupBlob', () => {
+  it('fetches the exact ciphertext bytes for a tagged backup via a shallow fetch', async () => {
+    const payload = Buffer.from('encrypted-payload-bytes-not-plaintext');
+    const now = new Date('2026-07-06T12:30:00.000Z');
+    const pushed = await pushBackupToGit(
+      { repoUrl: bareRepoPath, branch: 'backups', authType: 'https-token', credential: 'token' },
+      payload,
+      'backup.age',
+      {},
+      '0.121.1',
+      now,
+    );
+
+    const blob = await fetchBackupBlob(
+      { repoUrl: bareRepoPath, authType: 'https-token', credential: 'token' },
+      pushed.tag,
+    );
+    expect(blob.equals(payload)).toBe(true);
+  });
+
+  it('cleans up its temp working directory even when the fetch fails', async () => {
+    const before = new Set(readTmpEntries());
+    await expect(
+      fetchBackupBlob(
+        { repoUrl: join(workDir, 'does-not-exist.git'), authType: 'https-token', credential: 'x' },
+        'sv-backup/2026-07-06T12-30-00-000Z/v0.121.1',
+      ),
+    ).rejects.toThrow();
+    const after = readTmpEntries().filter((e) => !before.has(e));
+    expect(after.find((e) => e.startsWith('sv-git-fetch-'))).toBeUndefined();
   });
 });
 

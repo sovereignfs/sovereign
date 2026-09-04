@@ -1025,6 +1025,16 @@ export const backupJobs = sqliteTable(
     // pushed" either. `null` means no push was requested for this job.
     pushStatus: text('push_status'), // 'succeeded' | 'failed' | null
     pushError: text('push_error'),
+    // Workstream 0023 leg 4 (epic 8.40) — distinguishes a real backup job
+    // from a `restore-fetch` job (pulls one tagged ciphertext blob down from
+    // a connected git destination so the browser can decrypt and import it).
+    // Both kinds share this same table/worker/claim/download-token
+    // infrastructure rather than a second pipeline; `scope` alone can't
+    // distinguish them since restore-fetch is always `scope = 'user'`, same
+    // as a normal user-scope backup. Defaults to `'backup'` so every
+    // pre-existing row (and any insert that doesn't specify it) is
+    // unambiguously a real backup, not a restore fetch.
+    kind: text('kind').notNull().default('backup'), // 'backup' | 'restore-fetch'
   },
   (table) => [
     index('backup_jobs_status_idx').on(table.status),

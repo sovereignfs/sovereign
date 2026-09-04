@@ -20,6 +20,7 @@ const markBackupJobPushResultMock = vi.hoisted(() => vi.fn());
 const markPluginConnectionErrorMock = vi.hoisted(() => vi.fn());
 const markPluginConnectionUsedMock = vi.hoisted(() => vi.fn());
 const pushBackupToGitMock = vi.hoisted(() => vi.fn());
+const fetchBackupBlobMock = vi.hoisted(() => vi.fn());
 const decryptSecretValueMock = vi.hoisted(() => vi.fn());
 
 vi.mock('node:child_process', () => ({ spawnSync: spawnSyncMock }));
@@ -56,10 +57,13 @@ vi.mock('../portability/platform', () => ({
   installedPluginsRoster: installedPluginsRosterMock,
 }));
 vi.mock('../db', () => ({ getPlatformDb: getPlatformDbMock }));
-vi.mock('../git-backup', () => ({ pushBackupToGit: pushBackupToGitMock }));
+vi.mock('../git-backup', () => ({
+  pushBackupToGit: pushBackupToGitMock,
+  fetchBackupBlob: fetchBackupBlobMock,
+}));
 vi.mock('../secrets', () => ({ decryptSecretValue: decryptSecretValueMock }));
 
-const { runInstanceBackup, runUserBackup } = await import('../backup-run');
+const { runInstanceBackup, runRestoreFetch, runUserBackup } = await import('../backup-run');
 
 function job(overrides: Partial<BackupJobRow> = {}): BackupJobRow {
   return {
@@ -78,6 +82,7 @@ function job(overrides: Partial<BackupJobRow> = {}): BackupJobRow {
     expiresAt: 1_000_200_000,
     pushStatus: null,
     pushError: null,
+    kind: 'backup',
     ...overrides,
   };
 }
@@ -367,5 +372,92 @@ describe('runUserBackup', () => {
         error: expect.stringContaining('not found') as unknown as string,
       });
     });
+  });
+});
+
+describe('runRestoreFetch', () => {
+  const CONNECTION = {
+    id: 'dest-1',
+    secretRef: 'secret-1',
+    metadata: JSON.stringify({
+      repoUrl: 'https://git.example.com/me/backups.git',
+      branch: 'backups',
+      authType: 'https-token',
+      ageRecipient: 'age1testrecipient',
+    }),
+  };
+  const SECRET = { ciphertext: 'envelope', scope: 'user' as const };
+
+  function restoreJob(overrides: Partial<BackupJobRow> = {}): BackupJobRow {
+    return job({
+      scope: 'user',
+      kind: 'restore-fetch',
+      requestedByUserId: 'user-1',
+      archivePath: '/workspace/backups/sovereign-restore-job-1.age',
+      optionsJson: JSON.stringify({ destinationId: 'dest-1', tag: 'sv-backup/x/v0.99.0' }),
+      ...overrides,
+    });
+  }
+
+  it('fails if the job has no requestedByUserId — cannot run', async () => {
+    await expect(runRestoreFetch(restoreJob({ requestedByUserId: null }))).rejects.toThrow(
+      /requestedByUserId/,
+    );
+  });
+
+  it('fails cleanly when optionsJson is missing the destination or tag', async () => {
+    await expect(
+      runRestoreFetch(restoreJob({ optionsJson: JSON.stringify({ tag: 'x' }) })),
+    ).rejects.toThrow(/missing its destination or tag/);
+    await expect(
+      runRestoreFetch(restoreJob({ optionsJson: JSON.stringify({ destinationId: 'dest-1' }) })),
+    ).rejects.toThrow(/missing its destination or tag/);
+  });
+
+  it('throws if the destination no longer exists — this job is expected to fail, not silently no-op', async () => {
+    getPluginConnectionMock.mockResolvedValue(undefined);
+    await expect(runRestoreFetch(restoreJob())).rejects.toThrow(/not found or no longer connected/);
+  });
+
+  it('fetches the ciphertext blob from the destination and writes it verbatim to archivePath', async () => {
+    getPluginConnectionMock.mockResolvedValue(CONNECTION);
+    getPluginSecretMock.mockResolvedValue(SECRET);
+    decryptSecretValueMock.mockReturnValue('the-real-token');
+    const blob = Buffer.from('recipient-mode-ciphertext-bytes');
+    fetchBackupBlobMock.mockResolvedValue(blob);
+
+    const j = restoreJob();
+    const result = await runRestoreFetch(j);
+
+    expect(result).toEqual({ archivePath: j.archivePath, sizeBytes: blob.length });
+    expect(getPluginConnectionMock).toHaveBeenCalledWith(
+      {},
+      'dest-1',
+      expect.objectContaining({ pluginId: 'fs.sovereign.account', userId: 'user-1' }),
+    );
+    expect(decryptSecretValueMock).toHaveBeenCalledWith(
+      'envelope',
+      expect.objectContaining({ scope: 'user', userId: 'user-1' }),
+    );
+    expect(fetchBackupBlobMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repoUrl: 'https://git.example.com/me/backups.git',
+        authType: 'https-token',
+        credential: 'the-real-token',
+      }),
+      'sv-backup/x/v0.99.0',
+    );
+    expect(writeFileSyncMock).toHaveBeenCalledWith(j.archivePath, blob);
+    expect(markPluginConnectionUsedMock).toHaveBeenCalledWith({}, 'dest-1', expect.anything());
+  });
+
+  it('propagates a fetch failure — the worker records it as a genuine job failure, unlike a push', async () => {
+    getPluginConnectionMock.mockResolvedValue(CONNECTION);
+    getPluginSecretMock.mockResolvedValue(SECRET);
+    decryptSecretValueMock.mockReturnValue('the-real-token');
+    fetchBackupBlobMock.mockRejectedValue(new Error('git fetch failed: unreachable remote'));
+
+    await expect(runRestoreFetch(restoreJob())).rejects.toThrow(/unreachable remote/);
+    expect(writeFileSyncMock).not.toHaveBeenCalled();
   });
 });

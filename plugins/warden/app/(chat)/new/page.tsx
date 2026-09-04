@@ -1,4 +1,4 @@
-import { WardenChatPage } from '../_components/WardenChatPage';
+import { WardenChatPage } from '../../_components/WardenChatPage';
 
 /**
  * Warden's dedicated "always blank" entry point — distinct from plain

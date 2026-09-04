@@ -1,4 +1,4 @@
-import { WardenChatPage } from './_components/WardenChatPage';
+import { WardenChatPage } from '../_components/WardenChatPage';
 
 /**
  * Warden's routed chat page (RFC 0063, epic tasks 22.3-22.10).

@@ -409,3 +409,31 @@ describe('deleteSessionAction', () => {
     expect(deleteSession).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * A `'use server'` function is a public POST endpoint dispatched by action
+ * id, so `QuantityStepper`'s own min/max in `GeneralSettings` is not
+ * enforcement. Unbounded, a `0` or negative threshold puts the cutoff at or
+ * after "now" and deletes every unpinned session — including ones used
+ * seconds ago — with no confirmation and no undo.
+ */
+describe('deleteInactiveSessionsAction — input validation', () => {
+  it.each([0, -1, -3650, 1.5, Number.NaN, Number.POSITIVE_INFINITY, 366])(
+    'rejects %p without touching the database',
+    async (value) => {
+      const result = await deleteInactiveSessionsAction(value);
+
+      expect(result.ok).toBe(false);
+      expect(deleteInactiveSessions).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([1, 30, 365])('accepts %p', async (value) => {
+    deleteInactiveSessions.mockResolvedValue(0);
+
+    const result = await deleteInactiveSessionsAction(value);
+
+    expect(result.ok).toBe(true);
+    expect(deleteInactiveSessions).toHaveBeenCalledWith('user-1', 'tenant-1', value);
+  });
+});

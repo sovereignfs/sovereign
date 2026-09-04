@@ -1,8 +1,44 @@
+/*
+ * Shrinking the model picker takes three `min-width: 0`s, one per nesting
+ * level, because each one's default `auto` minimum pins it to its content
+ * width:
+ *
+ *   .triggerContainer  the wrapper `Popover` renders around the trigger
+ *   .trigger           the trigger `Button` itself
+ *   .triggerLabel      the model name inside it, which does the truncating
+ *
+ * Miss any one and the whole chain refuses to give up space, pushing `Send`
+ * out of the composer on a narrow viewport rather than ellipsizing.
+ */
+.triggerContainer {
+  min-width: 0;
+}
+
+/* The one flexible thing in the composer toolbar: a provider-qualified
+   model id is the only part that can be arbitrarily long. */
 .trigger {
   max-width: 220px;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+/*
+ * The label truncates, not the button. `Button` is `display: inline-flex`,
+ * so its text is an anonymous flex item — `text-overflow` on the button
+ * itself does nothing (it sat here inert for exactly that reason). It needs
+ * its own block container to ellipsize in.
+ */
+.triggerLabel {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The affordance that says "this opens a menu" — never the thing that
+   gives way when space runs out. */
+.triggerChevron {
+  flex-shrink: 0;
 }
 
 .list {
@@ -55,6 +91,22 @@
 .itemSelected {
   background: var(--sv-color-accent-subtle);
   font-weight: var(--sv-font-weight-semibold);
+}
+
+/*
+ * The keyboard cursor (`aria-activedescendant`), which is distinct from the
+ * selected model — focus stays on the listbox container, so without an
+ * explicit style there is nothing on screen showing where Enter would land.
+ * An outline rather than a fill, so it stays legible on top of
+ * `.itemSelected`'s accent background.
+ */
+.itemActive {
+  outline: var(--sv-border-width-hairline) solid var(--sv-color-accent);
+  outline-offset: calc(-1 * var(--sv-border-width-hairline));
+}
+
+.list:focus-visible {
+  outline: none;
 }
 
 .empty {

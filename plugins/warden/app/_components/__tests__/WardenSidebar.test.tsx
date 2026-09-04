@@ -20,11 +20,19 @@ const push = vi.fn();
 const replace = vi.fn();
 const refresh = vi.fn();
 const usePathnameMock = vi.fn(() => '/warden');
+const useSearchParamsMock = vi.fn(() => new URLSearchParams());
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push, replace, refresh }),
   usePathname: () => usePathnameMock(),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => useSearchParamsMock(),
 }));
+
+/** The sidebar reads `?session=` itself now (it renders from a layout,
+ *  which gets no searchParams), so "which row is active" is set through the
+ *  URL rather than a prop. */
+function setUrlSession(id: string) {
+  useSearchParamsMock.mockReturnValue(new URLSearchParams(`session=${id}`));
+}
 
 // Menu forks Popover/Drawer via useIsMobile (matchMedia) and Popover uses
 // pointer capture — same fixture setup as Menu's own test suite
@@ -68,6 +76,10 @@ function installDialogPolyfill() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // `clearAllMocks` clears call history but not a `mockReturnValue`, so an
+  // active session set by one test would otherwise leak into the next.
+  useSearchParamsMock.mockReturnValue(new URLSearchParams());
+  usePathnameMock.mockReturnValue('/warden');
   installMatchMedia();
   installPointerCapture();
   installDialogPolyfill();
@@ -92,7 +104,14 @@ function session(overrides: Partial<SessionView> = {}): SessionView {
 function renderSidebar(props: Partial<Parameters<typeof WardenSidebar>[0]> = {}) {
   return render(
     <ToastProvider>
-      <WardenSidebar pinnedSessions={[]} recentSessions={[]} activeSessionId={null} {...props} />
+      <WardenSidebar
+        pinnedSessions={[]}
+        recentSessions={[]}
+        orderedSessionIds={[]}
+        settingsModels={[]}
+        settingsDefaultModelKey={null}
+        {...props}
+      />
     </ToastProvider>,
   );
 }
@@ -135,9 +154,10 @@ describe('WardenSidebar — groups', () => {
   });
 
   it('highlights the active session distinctly from the others', () => {
+    setUrlSession('r-2');
     renderSidebar({
       recentSessions: [session({ id: 'r-1', title: 'One' }), session({ id: 'r-2', title: 'Two' })],
-      activeSessionId: 'r-2',
+      orderedSessionIds: ['r-1', 'r-2'],
     });
     const activeRow = screen.getByRole('link', { name: 'Two' }).closest('div');
     const inactiveRow = screen.getByRole('link', { name: 'One' }).closest('div');
@@ -168,21 +188,35 @@ describe('WardenSidebar — groups', () => {
     expect(screen.getByRole('link', { name: 'New chat' }).getAttribute('aria-current')).toBeNull();
   });
 
-  it('links Settings to /warden/settings', () => {
+  it('opens General settings in a dialog rather than navigating to a page', () => {
     renderSidebar();
-    expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe(
-      '/warden/settings',
-    );
+    // A button, not a link — General settings is small enough that leaving
+    // the chat for it was the wrong trade.
+    expect(screen.queryByRole('link', { name: 'Settings' })).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+
+    expect(screen.getByRole('dialog', { name: 'Settings' })).toBeDefined();
   });
 
   it('places Providers and Models links under New chat, in the primary nav', () => {
     renderSidebar();
     expect(screen.getByRole('link', { name: 'Providers' }).getAttribute('href')).toBe(
-      '/warden/settings?tab=providers',
+      '/warden/providers',
     );
     expect(screen.getByRole('link', { name: 'Models' }).getAttribute('href')).toBe(
-      '/warden/settings?tab=models',
+      '/warden/models',
     );
+  });
+
+  it('marks the Providers row active on its own route', () => {
+    usePathnameMock.mockReturnValue('/warden/providers');
+    renderSidebar();
+    expect(screen.getByRole('link', { name: 'Providers' }).getAttribute('aria-current')).toBe(
+      'page',
+    );
+    expect(screen.getByRole('link', { name: 'Models' }).getAttribute('aria-current')).toBeNull();
   });
 });
 
@@ -311,9 +345,10 @@ describe('WardenSidebar — delete', () => {
 
   it('deletes on confirm and navigates home when the active session was deleted', async () => {
     deleteSessionAction.mockResolvedValue({ ok: true, message: 'Session deleted.' });
+    setUrlSession('r-1');
     renderSidebar({
       recentSessions: [session({ id: 'r-1', title: 'Doomed chat' })],
-      activeSessionId: 'r-1',
+      orderedSessionIds: ['r-1'],
     });
 
     openMenuFor('Doomed chat');
@@ -327,9 +362,10 @@ describe('WardenSidebar — delete', () => {
 
   it('deletes on confirm and refreshes (no navigation) when a non-active session was deleted', async () => {
     deleteSessionAction.mockResolvedValue({ ok: true, message: 'Session deleted.' });
+    setUrlSession('r-2');
     renderSidebar({
       recentSessions: [session({ id: 'r-1', title: 'Doomed chat' })],
-      activeSessionId: 'r-2',
+      orderedSessionIds: ['r-2', 'r-1'],
     });
 
     openMenuFor('Doomed chat');

@@ -640,6 +640,23 @@ tests) all green; `pnpm --filter runtime typecheck`, `pnpm lint`, and
 
 #### ✅ 22.9 — Warden settings consolidation
 
+> **Update:** the Providers and Models halves of this consolidation were
+> later reversed. Both are standalone routes again — `/warden/providers` and
+> `/warden/models` — but now render inside the chat shell's main column
+> (`app/(chat)/`) rather than as pages of their own, so the sidebar persists
+> and each nav row carries a real active state. What remained of the General
+> tab (default model, retention, export link) became a dialog opened from
+> the sidebar, and `/warden/settings` plus its `Tabs`-based `SettingsView`
+> were removed outright — no redirect, the same reasoning this task used
+> when it removed the original two routes.
+>
+> The consolidation was designed before task 22.10's sidebar existed; with a
+> persistent sidebar, a full-page settings surface meant the navigation the
+> user had just used disappeared out from under them. See
+> [RFC 0063 §11](../rfcs/0063-core-assistant-warden.md)'s own update block.
+> This task's deliverables and review checklist below describe what shipped
+> at the time and are not rewritten to match the later change.
+
 **Goal:** Replace the standalone `/warden/providers` and `/warden/models`
 routes with a single `/warden/settings` surface (General/Providers/Models
 tabs), reachable from the sidebar's Settings entry once task 22.10 ships it.
@@ -966,6 +983,56 @@ given epic task IDs until a future scheduling pass:
 - **The RFC 0040 (Sovereign Harness) revisit** — whether Harness becomes
   this foundation extended with memory/orchestration/tool-routing, or a
   separate later product built on top of it. Not decided by this epic.
+
+#### ✅ 22.12 — Warden correctness, accessibility and navigation pass
+
+**Goal:** Close the defects found reviewing everything workstream 0021
+shipped, and finish the navigation model the sidebar implied but didn't
+have. Not a new capability — a correctness and follow-through pass over
+tasks 22.8-22.11.
+
+**Deliverables:**
+
+- **Session switching actually switches the conversation.** `ChatView`
+  seeds all state from props in `useState` initializers, and the sidebar
+  navigates by search param only — which Next.js deliberately excludes from
+  a segment's React key, so the component was never remounted. The previous
+  session's messages stayed on screen and the next send was written to the
+  session the user thought they had left. Fixed with an explicit `key` on
+  the resolved session id.
+- **A stable shell tree.** `WardenLayoutShell` returned a structurally
+  different tree per collapse state, remounting the whole chat column on
+  every toggle (and once on every load for anyone with the sidebar
+  expanded) — discarding in-flight streams, composer text, and incognito
+  conversations. Now one tree, with `ThreeColumnLayout`'s new
+  `sidebarHidden` prop doing the hiding.
+- **Incognito no longer leaks.** An attachment staged before toggling
+  incognito on survived the toggle, and `send()` routes anything carrying a
+  file down the persisted path — writing the message and the extracted
+  document text to the database while the UI promised nothing was saved.
+- **Streaming recovers.** The SSE read loop had no error handling: a
+  mid-stream failure left the composer permanently disabled. A stranded
+  user turn is now cleaned up server-side rather than left with no reply.
+- **Account deletion covers all four tables** (`warden_user_settings` and
+  `warden_model_visibility_overrides` were silently retained).
+- **Assistant markdown renders** — via `@sovereignfs/ui`'s `Markdown`,
+  extended with ordered lists and fenced code blocks for LLM output.
+- **Providers and Models return to standalone routes**, rendered in the
+  chat shell's main column; General settings becomes a dialog. See task
+  22.9's update block for the reasoning and what was removed.
+- Stop-generating and copy-reply controls; model picker listbox semantics
+  and keyboard support; touch-visible session overflow menu; server-side
+  validation on the retention action.
+
+**Review checklist:**
+
+- [x] Switching sessions swaps the rendered conversation, both directions
+- [x] Toggling the sidebar preserves composer text and the same DOM node
+- [x] An attachment staged before incognito is cleared, not persisted
+- [x] An aborted stream leaves no dangling user message in the database
+- [x] Assistant replies render bold, lists and code blocks, not raw markdown
+- [x] `/warden/providers` and `/warden/models` render with the sidebar intact
+      and a correct active row; `/warden/settings` is gone
 
 ## Review checklist (epic-level)
 

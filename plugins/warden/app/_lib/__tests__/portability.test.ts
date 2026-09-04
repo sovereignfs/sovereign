@@ -9,6 +9,9 @@ vi.mock('@sovereignfs/sdk', () => ({
       provideExport: (...args: unknown[]) => provideExport(...args),
       provideDelete: (...args: unknown[]) => provideDelete(...args),
     },
+    // The export resolver reads the two preference tables directly (the
+    // deletion handler gets its client via `ctx.db` instead).
+    db: { getClient: async () => fakeDb() },
   },
 }));
 
@@ -48,6 +51,39 @@ function matches(row: Record<string, unknown>, predicate: Predicate): boolean {
 
 let sessionRows: Array<{ id: string; userId: string }>;
 let messageRows: Array<{ id: string; sessionId: string }>;
+let visibilityRows: Array<{ id: string; userId: string; modelKey: string }>;
+let settingsRows: Array<{ id: string; userId: string; defaultModelKey: string | null }>;
+
+type AnyRow = Record<string, unknown>;
+
+function rowsFor(tableName: string): AnyRow[] {
+  switch (tableName) {
+    case 'warden_sessions':
+      return sessionRows;
+    case 'warden_model_visibility_overrides':
+      return visibilityRows;
+    case 'warden_user_settings':
+      return settingsRows;
+    default:
+      return messageRows;
+  }
+}
+
+function replaceRows(tableName: string, next: AnyRow[]): void {
+  switch (tableName) {
+    case 'warden_sessions':
+      sessionRows = next as typeof sessionRows;
+      break;
+    case 'warden_model_visibility_overrides':
+      visibilityRows = next as typeof visibilityRows;
+      break;
+    case 'warden_user_settings':
+      settingsRows = next as typeof settingsRows;
+      break;
+    default:
+      messageRows = next as typeof messageRows;
+  }
+}
 
 function fakeDb() {
   return {
@@ -55,10 +91,8 @@ function fakeDb() {
       from(table: Table) {
         const tableName = getTableName(table);
         return {
-          where: async (predicate: Predicate) => {
-            const rows = tableName === 'warden_sessions' ? sessionRows : messageRows;
-            return rows.filter((r) => matches(r as Record<string, unknown>, predicate));
-          },
+          where: async (predicate: Predicate) =>
+            rowsFor(tableName).filter((r) => matches(r, predicate)),
         };
       },
     })),
@@ -66,15 +100,10 @@ function fakeDb() {
       const tableName = getTableName(table);
       return {
         where: async (predicate: Predicate) => {
-          if (tableName === 'warden_messages') {
-            messageRows = messageRows.filter(
-              (m) => !matches(m as Record<string, unknown>, predicate),
-            );
-          } else {
-            sessionRows = sessionRows.filter(
-              (s) => !matches(s as Record<string, unknown>, predicate),
-            );
-          }
+          replaceRows(
+            tableName,
+            rowsFor(tableName).filter((r) => !matches(r, predicate)),
+          );
         },
       };
     }),
@@ -87,6 +116,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   sessionRows = [];
   messageRows = [];
+  visibilityRows = [];
+  settingsRows = [];
 });
 
 describe('registerPortability — export', () => {
@@ -111,8 +142,10 @@ describe('registerPortability — export', () => {
     expect(listSessions).toHaveBeenCalledWith('user-1', 'tenant-1');
     expect(section).toEqual({
       pluginId: 'fs.sovereign.warden',
-      schemaVersion: 2,
+      schemaVersion: 3,
       data: {
+        modelVisibility: [],
+        defaultModelKey: null,
         sessions: [
           {
             id: 'session-1',
@@ -133,6 +166,27 @@ describe('registerPortability — export', () => {
         ],
       },
     });
+  });
+
+  it('includes the model-visibility overrides and default model', async () => {
+    visibilityRows = [
+      { id: 'v1', userId: 'user-1', modelKey: 'conn-1:gpt-4o-mini' },
+      { id: 'v2', userId: 'user-1', modelKey: 'local' },
+      { id: 'v3', userId: 'user-2', modelKey: 'conn-9:other' },
+    ];
+    settingsRows = [{ id: 's1', userId: 'user-1', defaultModelKey: 'conn-1:gpt-4o-mini' }];
+    listSessions.mockResolvedValue([]);
+
+    await registerPortability();
+    const resolver = provideExport.mock.calls[0][0];
+    const section = await resolver({
+      userId: 'user-1',
+      tenantId: 'tenant-1',
+      options: { includeFiles: true },
+    });
+
+    expect(section.data.modelVisibility).toEqual(['conn-1:gpt-4o-mini', 'local']);
+    expect(section.data.defaultModelKey).toBe('conn-1:gpt-4o-mini');
   });
 
   it('never includes provider connection or secret data in the export', async () => {
@@ -180,6 +234,34 @@ describe('registerPortability — delete', () => {
     expect(messageRows).toEqual([{ id: 'm1', sessionId: 'session-2' }]);
   });
 
+  /**
+   * Warden owns four user-scoped tables. The two preference tables were
+   * missed when they were added (task 22.9), so a deleted account left its
+   * model-visibility choices — which reveal exactly which models it used —
+   * and its default model behind indefinitely.
+   */
+  it('clears the model-visibility overrides and user settings too', async () => {
+    sessionRows = [{ id: 'session-1', userId: 'user-1' }];
+    messageRows = [{ id: 'm1', sessionId: 'session-1' }];
+    visibilityRows = [
+      { id: 'v1', userId: 'user-1', modelKey: 'local' },
+      { id: 'v2', userId: 'user-2', modelKey: 'local' },
+    ];
+    settingsRows = [
+      { id: 's1', userId: 'user-1', defaultModelKey: 'local' },
+      { id: 's2', userId: 'user-2', defaultModelKey: null },
+    ];
+
+    await registerPortability();
+    const handler = provideDelete.mock.calls[0][0];
+    const result = await handler({ userId: 'user-1', tenantId: 'tenant-1', db: fakeDb() });
+
+    // 1 message + 1 session + 1 visibility override + 1 settings row.
+    expect(result).toEqual({ deleted: 4 });
+    expect(visibilityRows).toEqual([{ id: 'v2', userId: 'user-2', modelKey: 'local' }]);
+    expect(settingsRows).toEqual([{ id: 's2', userId: 'user-2', defaultModelKey: null }]);
+  });
+
   it('returns zero deleted for a user with no sessions yet', async () => {
     await registerPortability();
     const handler = provideDelete.mock.calls[0][0];
@@ -213,10 +295,11 @@ describe('registerPortability — delete', () => {
     expect(sessionRows).toEqual([]);
     expect(messageRows).toEqual([]);
 
-    // Fixed at 4 total database calls regardless of session count: one
-    // select (session ids), one select (message ids for the count), one
-    // delete (messages), one delete (sessions) — not a per-session loop.
-    expect(db.select).toHaveBeenCalledTimes(2);
-    expect(db.delete).toHaveBeenCalledTimes(2);
+    // Fixed at 8 total database calls regardless of session count: four
+    // selects (session ids, message ids, visibility rows, settings rows —
+    // the last three only for the returned count) and four deletes, one per
+    // owned table. Still flat, not a per-session loop.
+    expect(db.select).toHaveBeenCalledTimes(4);
+    expect(db.delete).toHaveBeenCalledTimes(4);
   });
 });

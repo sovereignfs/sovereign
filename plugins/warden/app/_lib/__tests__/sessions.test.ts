@@ -9,9 +9,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  * simple descriptor objects this fake understands, rather than real SQL
  * fragments.
  */
-type Predicate = { columnName: string; value: unknown } | { columnName: string; values: unknown[] };
+type Predicate =
+  | { columnName: string; value: unknown }
+  | { columnName: string; values: unknown[] }
+  | { all: Predicate[] };
 
 function matches(row: Record<string, unknown>, predicate: Predicate): boolean {
+  if ('all' in predicate) return predicate.all.every((inner) => matches(row, inner));
   return 'values' in predicate
     ? predicate.values.includes(row[predicate.columnName])
     : row[predicate.columnName] === predicate.value;
@@ -61,6 +65,9 @@ vi.mock('drizzle-orm', async (importOriginal) => {
     inArray: (column: { name: string }, values: unknown[]): Predicate => ({
       columnName: toCamelCase(column.name),
       values,
+    }),
+    and: (...predicates: Array<Predicate | undefined>): Predicate => ({
+      all: predicates.filter((p): p is Predicate => p !== undefined),
     }),
     asc: (column: { name: string }): Order => ({
       columnName: toCamelCase(column.name),
@@ -152,6 +159,7 @@ const {
   appendMessage,
   createSession,
   deleteInactiveSessions,
+  deleteMessage,
   deleteSession,
   getMostRecentSession,
   getRecentMessagesForContext,
@@ -440,6 +448,67 @@ describe('pinSession / unpinSession', () => {
   });
 });
 
+/**
+ * Undoes a persisted user turn when the reply it was waiting on produced no
+ * content at all — otherwise the thread keeps a user message with no answer,
+ * and the next send hands the model two consecutive user turns.
+ */
+describe('deleteMessage', () => {
+  async function seedTwo() {
+    const session = await createSession('user-1', 'tenant-1');
+    const first = await appendMessage('user-1', 'tenant-1', session.id, {
+      role: 'user',
+      content: 'keep me',
+      providerId: null,
+      model: 'local',
+    });
+    const second = await appendMessage('user-1', 'tenant-1', session.id, {
+      role: 'user',
+      content: 'strand me',
+      providerId: null,
+      model: 'local',
+    });
+    return { session, first, second };
+  }
+
+  it('deletes exactly the message it is given, leaving the rest of the thread', async () => {
+    const { session, first, second } = await seedTwo();
+
+    await deleteMessage('user-1', 'tenant-1', session.id, second.id);
+
+    expect((await listMessages('user-1', 'tenant-1', session.id)).map((m) => m.id)).toEqual([
+      first.id,
+    ]);
+  });
+
+  it('refuses to touch another user’s session', async () => {
+    const { session, second } = await seedTwo();
+
+    await expect(deleteMessage('user-2', 'tenant-1', session.id, second.id)).rejects.toBeInstanceOf(
+      SessionNotFoundError,
+    );
+    expect((await listMessages('user-1', 'tenant-1', session.id)).length).toBe(2);
+  });
+
+  it('is a silent no-op for a message id from a different session', async () => {
+    const { session } = await seedTwo();
+    const other = await createSession('user-1', 'tenant-1');
+    const stray = await appendMessage('user-1', 'tenant-1', other.id, {
+      role: 'user',
+      content: 'elsewhere',
+      providerId: null,
+      model: 'local',
+    });
+
+    await deleteMessage('user-1', 'tenant-1', session.id, stray.id);
+
+    expect((await listMessages('user-1', 'tenant-1', other.id)).map((m) => m.id)).toEqual([
+      stray.id,
+    ]);
+    expect((await listMessages('user-1', 'tenant-1', session.id)).length).toBe(2);
+  });
+});
+
 describe('deleteSession', () => {
   it('deletes the session and all of its messages', async () => {
     const session = await createSession('user-1', 'tenant-1');
@@ -533,5 +602,25 @@ describe('deleteInactiveSessions', () => {
     ageSession(fresh.id, 1);
     expect(await deleteInactiveSessions('user-1', 'tenant-1', 30)).toBe(0);
     expect(sessions).toHaveLength(1);
+  });
+});
+
+describe('renameSession — title length', () => {
+  it('caps a very long title to the same length deriveTitle produces', async () => {
+    const session = await createSession('user-1', 'tenant-1');
+
+    const renamed = await renameSession('user-1', 'tenant-1', session.id, 'x'.repeat(5000));
+
+    const title = renamed.title ?? '';
+    expect(title).not.toBe('');
+    expect(title.length).toBeLessThanOrEqual(60);
+    expect(title.endsWith('…')).toBe(true);
+  });
+
+  it('collapses whitespace and still clears on an empty title', async () => {
+    const session = await createSession('user-1', 'tenant-1');
+
+    expect((await renameSession('user-1', 'tenant-1', session.id, '  a   b  ')).title).toBe('a b');
+    expect((await renameSession('user-1', 'tenant-1', session.id, '   ')).title).toBeNull();
   });
 });

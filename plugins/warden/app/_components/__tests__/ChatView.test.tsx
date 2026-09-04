@@ -4,12 +4,14 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { ChatView } from '../ChatView';
 
 const replace = vi.fn();
+const refresh = vi.fn();
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace }),
+  useRouter: () => ({ replace, refresh }),
 }));
 
 beforeEach(() => {
   replace.mockClear();
+  refresh.mockClear();
 });
 
 afterEach(() => {
@@ -44,7 +46,7 @@ function openModelPicker(currentTriggerLabel: string) {
 
 function selectModelFromPicker(displayName: string) {
   const dialog = screen.getByRole('dialog', { name: 'Model' });
-  fireEvent.click(within(dialog).getByRole('button', { name: displayName }));
+  fireEvent.click(within(dialog).getByRole('option', { name: displayName }));
 }
 
 const models = [
@@ -153,6 +155,10 @@ describe('ChatView — persisted mode (default)', () => {
     // The session id didn't change on the second send — no redundant
     // history entry for what the user experiences as the same conversation.
     expect(replace).toHaveBeenCalledTimes(1);
+    // The sidebar lives in the route-group layout, which is not re-run for a
+    // navigation inside it — so a brand-new session only reaches the list
+    // via an explicit refresh, and only on the send that created it.
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 
   it('sends a message, streams the response, and appends both turns', async () => {
@@ -446,6 +452,61 @@ describe('ChatView — attachments', () => {
     expect(init.body.get('file')).toBe(image);
   });
 
+  /**
+   * The attach control is disabled while incognito is on, but that only
+   * stops a *new* attachment being started — one staged beforehand used to
+   * survive the toggle, and any request carrying a file goes down the
+   * multipart branch, which is the persisted one. The result was the
+   * message and the full extracted document text being written to the
+   * database while the UI promised nothing was saved.
+   */
+  it('discards a staged attachment when incognito is switched on', () => {
+    const { container } = renderChatView({ defaultModelKey: 'conn-1:gpt-4o-mini' });
+    const pdf = new File([new Uint8Array([1])], 'secret.pdf', { type: 'application/pdf' });
+
+    selectFile(container, pdf);
+    expect(screen.getByText('secret.pdf')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: /Incognito/ }));
+
+    expect(screen.queryByText('secret.pdf')).toBeNull();
+    expect(fileInput(container).value).toBe('');
+  });
+
+  it('never sends a persisted multipart request while incognito is on', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse([{ type: 'done' }]));
+    vi.stubGlobal('fetch', fetchMock);
+    const { container } = renderChatView({ defaultModelKey: 'conn-1:gpt-4o-mini' });
+
+    selectFile(
+      container,
+      new File([new Uint8Array([1])], 'secret.pdf', { type: 'application/pdf' }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Incognito/ }));
+    sendMessage('summarise this');
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const [, init] = fetchMock.mock.calls[0];
+    // JSON incognito shape, not FormData — nothing to persist.
+    expect(init.body).not.toBeInstanceOf(FormData);
+    expect(JSON.parse(init.body).incognito).toBe(true);
+  });
+
+  it('does not send an incognito field on an ordinary attachment send', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse([{ type: 'done' }]));
+    vi.stubGlobal('fetch', fetchMock);
+    const { container } = renderChatView({ defaultModelKey: 'conn-1:gpt-4o-mini' });
+
+    selectFile(container, new File([new Uint8Array([1])], 'photo.png', { type: 'image/png' }));
+    sendMessage('what is this');
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const [, init] = fetchMock.mock.calls[0];
+    // The route tests this field for truthiness, so a literal 'false'
+    // would reject every ordinary attachment send.
+    expect(init.body.get('incognito')).toBeNull();
+  });
+
   it('clears the attachment chip after sending', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(sseResponse([{ type: 'done' }])));
     const { container } = renderChatView({ defaultModelKey: 'conn-1:gpt-4o-mini' });
@@ -488,7 +549,7 @@ describe('ChatView — model selection', () => {
     const dialog = screen.getByRole('dialog', { name: 'Model' });
     expect(within(dialog).getByText('Local model')).toBeDefined();
     expect(within(dialog).getByText('OpenRouter')).toBeDefined();
-    expect(within(dialog).getByRole('button', { name: 'gpt-4o-mini' })).toBeDefined();
+    expect(within(dialog).getByRole('option', { name: 'gpt-4o-mini' })).toBeDefined();
   });
 });
 
@@ -500,15 +561,15 @@ describe('ChatView — composer redesign (task 22.11)', () => {
     expect(screen.queryByText('Web search')).toBeNull();
   });
 
-  it("model picker popover's footer links into Settings → Providers and → Models", () => {
+  it("model picker popover's footer links to Providers and Models", () => {
     renderChatView();
     openModelPicker('Local model (this server)');
     const dialog = screen.getByRole('dialog', { name: 'Model' });
     expect(
       within(dialog).getByRole('link', { name: 'Manage providers' }).getAttribute('href'),
-    ).toBe('/warden/settings?tab=providers');
+    ).toBe('/warden/providers');
     expect(within(dialog).getByRole('link', { name: 'Manage models' }).getAttribute('href')).toBe(
-      '/warden/settings?tab=models',
+      '/warden/models',
     );
   });
 
@@ -530,5 +591,213 @@ describe('ChatView — composer redesign (task 22.11)', () => {
     expect(screen.getByRole('button', { name: "Incognito — don't save this conversation" })).toBe(
       incognitoToggle,
     );
+  });
+});
+
+describe('ChatView — interrupted stream', () => {
+  /** A 200 response whose body starts streaming, then fails mid-read —
+   *  a dropped connection, a server crash, or a provider-side deadline
+   *  destroying the socket. */
+  function failingStreamResponse(framesBeforeFailure: object[] = []): Response {
+    const encoder = new TextEncoder();
+    let delivered = 0;
+    // Pull-based, not a single `start()` burst: erroring a stream discards
+    // anything still queued, so the frames have to be handed over one pull
+    // at a time and the failure raised on a later pull for the partial-text
+    // case to be reachable at all.
+    const body = new ReadableStream({
+      pull(controller) {
+        if (delivered < framesBeforeFailure.length) {
+          const frame = framesBeforeFailure[delivered++];
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(frame)}\n\n`));
+          return;
+        }
+        controller.error(new Error('network died'));
+      },
+    });
+    return new Response(body, { status: 200 });
+  }
+
+  it('recovers the composer when the stream fails before any token arrives', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(failingStreamResponse()));
+    renderChatView();
+
+    sendMessage('hello');
+
+    // The regression: state stayed 'streaming' forever, leaving every
+    // control disabled with no way back except a page reload.
+    await waitFor(() =>
+      expect(screen.getByLabelText('Message Warden')).toHaveProperty('disabled', false),
+    );
+    expect(screen.getByRole('alert').textContent).toBe('The response was interrupted.');
+    // Send is legitimately disabled on an empty composer, so prove recovery
+    // by typing again rather than by asserting on the cleared state.
+    fireEvent.change(screen.getByLabelText('Message Warden'), { target: { value: 'retry' } });
+    expect(screen.getByRole('button', { name: 'Send' })).toHaveProperty('disabled', false);
+  });
+
+  it('keeps a partial reply and still surfaces the interruption', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(failingStreamResponse([{ type: 'token', text: 'partial ' }])),
+    );
+    renderChatView();
+
+    sendMessage('hello');
+
+    await waitFor(() => expect(screen.getByText('partial')).toBeDefined());
+    expect(screen.getByRole('alert').textContent).toBe('The response was interrupted.');
+    expect(screen.getByLabelText('Message Warden')).toHaveProperty('disabled', false);
+  });
+});
+
+describe('ChatView — stop and copy', () => {
+  /** Never resolves on its own, so the request stays in flight until aborted. */
+  function hangingFetch() {
+    return vi.fn(
+      (_url: string, init: { signal: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          init.signal.addEventListener('abort', () =>
+            reject(Object.assign(new Error('aborted'), { name: 'AbortError' })),
+          );
+        }),
+    );
+  }
+
+  it('swaps Send for Stop while streaming, and cancels the request', async () => {
+    const fetchMock = hangingFetch();
+    vi.stubGlobal('fetch', fetchMock);
+    renderChatView();
+
+    sendMessage('hello');
+
+    const stop = await screen.findByRole('button', { name: 'Stop' });
+    expect(screen.queryByRole('button', { name: 'Send' })).toBeNull();
+    expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(false);
+
+    fireEvent.click(stop);
+
+    await waitFor(() => expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(true));
+    // A cancel is the user getting what they asked for — no error banner,
+    // and definitely not the blocking "unavailable" state.
+    await waitFor(() =>
+      expect(screen.getByLabelText('Message Warden')).toHaveProperty('disabled', false),
+    );
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('Warden is unavailable')).toBeNull();
+  });
+
+  it('aborts an in-flight request when the component unmounts', async () => {
+    const fetchMock = hangingFetch();
+    vi.stubGlobal('fetch', fetchMock);
+    const { unmount } = renderChatView();
+
+    sendMessage('hello');
+    await screen.findByRole('button', { name: 'Stop' });
+
+    unmount();
+
+    expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(true);
+  });
+
+  it('offers a copy action on assistant replies only', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(sseResponse([{ type: 'token', text: 'the reply' }, { type: 'done' }])),
+    );
+
+    renderChatView();
+    sendMessage('hi');
+    await waitFor(() => expect(screen.getByText('the reply')).toBeDefined());
+
+    // One assistant turn, one copy button — the user turn has none.
+    const copyButtons = await screen.findAllByRole('button', { name: 'Copy this reply' });
+    expect(copyButtons).toHaveLength(1);
+
+    fireEvent.click(copyButtons[0]);
+    expect(writeText).toHaveBeenCalledWith('the reply');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Copied' })).toBeDefined());
+  });
+});
+
+describe('ChatView — markdown rendering', () => {
+  const assistantMarkdown = {
+    id: '2',
+    role: 'assistant' as const,
+    content: '**What is rain?**\n\n1. Evaporation\n2. Condensation\n\n```js\nconst a = 1;\n```',
+    providerId: null,
+    model: 'local',
+    createdAt: 2,
+  };
+
+  it('renders an assistant reply as markdown, not raw asterisks', () => {
+    const { container } = renderChatView({ initialMessages: [assistantMarkdown] });
+
+    expect(container.querySelector('strong')?.textContent).toBe('What is rain?');
+    expect(container.querySelectorAll('ol li')).toHaveLength(2);
+    expect(container.querySelector('pre code')?.textContent).toBe('const a = 1;');
+    expect(screen.queryByText(/\*\*What is rain\?\*\*/)).toBeNull();
+  });
+
+  it('leaves a user turn verbatim — they typed text, not markup', () => {
+    const { container } = renderChatView({
+      initialMessages: [
+        {
+          id: '1',
+          role: 'user',
+          content: 'what does **this** mean?',
+          providerId: null,
+          model: 'local',
+          createdAt: 1,
+        },
+      ],
+    });
+
+    expect(container.querySelector('strong')).toBeNull();
+    expect(screen.getByText('what does **this** mean?')).toBeDefined();
+  });
+
+  it('renders streaming text as markdown as it arrives', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(sseResponse([{ type: 'token', text: '# Heading' }, { type: 'done' }])),
+    );
+    const { container } = renderChatView();
+
+    sendMessage('hi');
+
+    await waitFor(() => expect(container.querySelector('h1')?.textContent).toBe('Heading'));
+  });
+
+  it('shows a standing incognito banner and only one incognito control', () => {
+    renderChatView();
+    expect(screen.queryByRole('status')).toBeNull();
+    const toggles = screen.getAllByRole('button', {
+      name: "Incognito — don't save this conversation",
+    });
+    // The composer's duplicate was removed — one control for one mode.
+    expect(toggles).toHaveLength(1);
+
+    const toggle = screen.getByRole('button', {
+      name: "Incognito — don't save this conversation",
+    });
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+
+    fireEvent.click(toggle);
+
+    // A banner that persists past the empty state, which disappears on the
+    // first send — exactly when forgetting the mode starts to matter.
+    expect(screen.getByRole('status').textContent).toContain('isn');
+    expect(
+      screen
+        .getByRole('button', { name: "Incognito — don't save this conversation" })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
   });
 });

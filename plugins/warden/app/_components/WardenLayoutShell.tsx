@@ -2,7 +2,9 @@
 
 import { cloneElement, isValidElement, useEffect, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
+import Link from 'next/link';
 import { Button, Icon, ThreeColumnLayout } from '@sovereignfs/ui';
+import { NEW_CHAT_PATHNAME } from '../_lib/active-session';
 import styles from './warden-layout-shell.module.css';
 
 const COLLAPSE_STORAGE_KEY = 'warden:sidebarCollapsed';
@@ -26,12 +28,19 @@ const COLLAPSE_STORAGE_KEY = 'warden:sidebarCollapsed';
  * must never also hide the only way to bring it back, which is exactly what
  * the main-column fallback guarantees for the collapsed case.
  *
- * When collapsed, `ThreeColumnLayout` is bypassed entirely rather than
- * rendered with `sidebarWidth={0}`: its `.sidebar` slot always carries a
- * `border-right`, which a zero-width flex item still renders as a visible
- * 1px hairline down the left edge of the screen — not a real "collapsed"
- * look. The bypassed path re-renders the same `.mainColumn`/`.toggleBar`/
- * `.content` structure at full width instead.
+ * Collapsing swaps nothing structural: the same `ThreeColumnLayout` wraps
+ * the same `.mainColumn`/`.content` in both states, with the sidebar column
+ * hidden via `sidebarHidden` (a `display: none`, which also avoids the 1px
+ * `border-right` hairline a zero-width column would still paint).
+ *
+ * This must stay a single stable tree. An earlier version returned a
+ * different wrapper per state (`.collapsedShell` vs. `ThreeColumnLayout`),
+ * which changed `children`'s parent element type and so unmounted and
+ * remounted `ChatView` on every toggle — discarding an in-flight stream,
+ * unsent composer text, and any incognito conversation (which is
+ * memory-only and therefore unrecoverable). It also fired once on every
+ * page load for anyone with the sidebar expanded, since `collapsed` starts
+ * `true` and flips in `useEffect`.
  */
 export function WardenLayoutShell({
   sidebar,
@@ -54,10 +63,21 @@ export function WardenLayoutShell({
     });
   }
 
-  if (collapsed) {
-    return (
-      <div className={styles.collapsedShell}>
-        <div className={styles.mainColumn}>
+  const sidebarWithToggle = isValidElement(sidebar)
+    ? cloneElement(sidebar as ReactElement<{ onToggleCollapse?: () => void }>, {
+        onToggleCollapse: toggle,
+      })
+    : sidebar;
+
+  return (
+    <ThreeColumnLayout sidebarWidth={280} sidebarHidden={collapsed} className={styles.layout}>
+      {sidebarWithToggle}
+      <div className={styles.mainColumn}>
+        {/* Only rendered while collapsed — expanded, the sidebar holds its
+            own copy of this control (injected above). Kept as a conditional
+            sibling in a fixed slot so `.content` never changes position,
+            and absolutely positioned so it never shrinks `.content`'s box. */}
+        {collapsed && (
           <div className={styles.toggleBar}>
             <Button
               type="button"
@@ -68,23 +88,18 @@ export function WardenLayoutShell({
             >
               <Icon name="panel-left" size="sm" aria-hidden />
             </Button>
+            {/* "New chat" is the sidebar's first row, so it disappears with
+                the sidebar. Surfacing it here keeps the one action a
+                collapsed user is most likely to want reachable without
+                reopening the sidebar first — and it goes away again the
+                moment the sidebar (which already has it) comes back. */}
+            <Link href={NEW_CHAT_PATHNAME} aria-label="New chat" title="New chat">
+              <Button type="button" variant="ghost" size="sm" aria-hidden tabIndex={-1}>
+                <Icon name="plus" size="sm" aria-hidden />
+              </Button>
+            </Link>
           </div>
-          <div className={styles.content}>{children}</div>
-        </div>
-      </div>
-    );
-  }
-
-  const sidebarWithToggle = isValidElement(sidebar)
-    ? cloneElement(sidebar as ReactElement<{ onToggleCollapse?: () => void }>, {
-        onToggleCollapse: toggle,
-      })
-    : sidebar;
-
-  return (
-    <ThreeColumnLayout sidebarWidth={280} className={styles.layout}>
-      {sidebarWithToggle}
-      <div className={styles.mainColumn}>
+        )}
         <div className={styles.content}>{children}</div>
       </div>
     </ThreeColumnLayout>

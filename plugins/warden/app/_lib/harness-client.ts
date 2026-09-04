@@ -5,6 +5,7 @@
  * `SOVEREIGN_AUTH_URL` pattern `plugins/account/app/actions.ts` already
  * uses for its own internal service address.
  */
+import { REQUEST_TIMEOUT_MS } from './limits';
 
 const HARNESS_URL =
   process.env.SOVEREIGN_HARNESS_URL ?? `http://localhost:${process.env.HARNESS_PORT ?? '3003'}`;
@@ -54,7 +55,13 @@ export function resetHarnessClientForTests(): void {
 async function enroll(): Promise<{ token: string } | { error: string }> {
   let response: Response;
   try {
-    response = await fetch(`${HARNESS_URL}/api/enroll`, { method: 'POST' });
+    response = await fetch(`${HARNESS_URL}/api/enroll`, {
+      method: 'POST',
+      // Same reasoning as HARNESS_HEALTH_TIMEOUT_MS above: `fetch()` has no
+      // default timeout, so a harness that is stalled or dropping packets
+      // (rather than cleanly refusing) hangs this call indefinitely.
+      signal: AbortSignal.timeout(HARNESS_HEALTH_TIMEOUT_MS),
+    });
   } catch {
     return { error: 'apps/harness is unreachable.' };
   }
@@ -78,6 +85,11 @@ async function postChat(token: string, messages: ChatMessage[], maxTokens?: numb
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
     body: JSON.stringify({ messages, ...(maxTokens ? { maxTokens } : {}) }),
+    // The external-provider path has bounded its equivalent call since it
+    // was written (`provider-chat.ts`'s REQUEST_TIMEOUT_MS); the local path
+    // had no bound at all, so a stalled harness hung `POST /warden/api/chat`
+    // forever with the composer stuck in its streaming state.
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
 }
 

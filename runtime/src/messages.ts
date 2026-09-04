@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { sendMessage, type PlatformDb } from '@sovereignfs/db';
 import type { DirectoryUser } from '@sovereignfs/sdk';
+import { deliverCommunicationEmail, escapeHtml } from './communication-email';
 import { DIRECTORY_MAX_LIMIT } from './directory';
 import {
   checkMessageRateLimit,
@@ -40,11 +41,20 @@ function normalizeRecipientIds(ids: readonly string[]): string[] {
 async function resolveValidRecipients(
   recipientUserIds: string[],
   resolveRecipients: DirectoryUserResolver,
-): Promise<{ validRecipientUserIds: string[]; skipped: SendMessageResult['skipped'] }> {
+): Promise<{
+  validRecipientUserIds: string[];
+  /** Full resolved users for the valid subset — lets a caller reach `.email` without a second directory lookup. */
+  validRecipients: DirectoryUser[];
+  skipped: SendMessageResult['skipped'];
+}> {
   const resolvedUsers = await resolveRecipients(recipientUserIds);
-  const resolvedIds = new Set(resolvedUsers.map((u) => u.id));
+  const requestedIds = new Set(recipientUserIds);
+  // Guard against a resolver returning a user nobody asked for.
+  const validRecipients = resolvedUsers.filter((u) => requestedIds.has(u.id));
+  const resolvedIds = new Set(validRecipients.map((u) => u.id));
   return {
     validRecipientUserIds: recipientUserIds.filter((id) => resolvedIds.has(id)),
+    validRecipients,
     skipped: recipientUserIds
       .filter((id) => !resolvedIds.has(id))
       .map((userId) => ({ userId, reason: 'RECIPIENT_NOT_FOUND' as const })),
@@ -166,6 +176,8 @@ export interface SendAdminMessageInput {
   bodyFormat?: string;
   /** Defaults to `true` — set `false` to create the message without an accompanying notification. */
   notify?: boolean;
+  /** Also send email to recipients who have opted into communication email (RFC 0062 §6). Off by default. */
+  sendEmail?: boolean;
 }
 
 /**
@@ -192,7 +204,7 @@ export async function sendAdminMessage(
     );
   }
 
-  const { validRecipientUserIds, skipped } = await resolveValidRecipients(
+  const { validRecipientUserIds, validRecipients, skipped } = await resolveValidRecipients(
     recipientUserIds,
     resolveRecipients,
   );
@@ -218,6 +230,28 @@ export async function sendAdminMessage(
           pdb,
           messageNotificationInput(messageId, input.subject, 'admin', 'admin', recipientUserId),
         ),
+      ),
+    );
+  }
+
+  // Optional communication-class email (RFC 0062 §6) — off by default;
+  // deliverCommunicationEmail() itself re-checks each recipient's own
+  // communicationEmail opt-in.
+  if (input.sendEmail) {
+    const text = `${input.subject}\n\n${input.body}`;
+    const html = `<p><strong>${escapeHtml(input.subject)}</strong></p><p>${escapeHtml(input.body)}</p>`;
+    await Promise.all(
+      validRecipients.map((recipient) =>
+        deliverCommunicationEmail(pdb, {
+          recipientUserId: recipient.id,
+          recipientEmail: recipient.email,
+          subject: input.subject,
+          text,
+          html,
+          source: 'console',
+          templateId: 'admin-message',
+          actorUserId,
+        }),
       ),
     );
   }

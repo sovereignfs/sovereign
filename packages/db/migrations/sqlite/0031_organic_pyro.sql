@@ -1,0 +1,1 @@
+ALTER TABLE `notification_prefs` ADD `communication_email` integer DEFAULT false NOT NULL;

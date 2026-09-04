@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { sql } from 'drizzle-orm';
 import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -21,6 +22,16 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
  * against the same shared `TEST_DATABASE_URL`, which is what actually raced
  * before this fix — see the other file's header for the full story).
  *
+ * `sendAdminMessage`'s `sendEmail: true` path (RFC 0062 §6) similarly ends in
+ * `sendPlatformEmail` (`../platform-email`), which — like `fanOutPushToUser`
+ * — always resolves the real, unmocked `getPlatformDb()` singleton
+ * internally rather than accepting the `pdb` passed around this file, so it
+ * can never see this file's isolated schema either; mocked here for the
+ * same reason. `deliverCommunicationEmail`'s own opt-out short-circuit
+ * (before ever reaching `sendPlatformEmail`) does use the passed `pdb`
+ * directly, so that branch is still exercised against the real isolated
+ * schema and asserted via a live `email_delivery_log` row below.
+ *
  * Isolation via a fresh `randomUUID()` recipientUserId per test, same
  * strategy as `notification-delivery.pg.test.ts`.
  */
@@ -28,7 +39,20 @@ const PG_URL = process.env.TEST_DATABASE_URL;
 
 vi.mock('../push', () => ({ fanOutPushToUser: async () => {} }));
 
-import { bootstrapPlatformDb, countUnreadNotifications, listUserMessages } from '@sovereignfs/db';
+const { sendPlatformEmail } = vi.hoisted(() => ({
+  sendPlatformEmail: vi.fn(async () => ({ status: 'sent' as const })),
+}));
+vi.mock('../platform-email', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../platform-email')>();
+  return { ...actual, sendPlatformEmail };
+});
+
+import {
+  bootstrapPlatformDb,
+  countUnreadNotifications,
+  listUserMessages,
+  setNotificationPrefs,
+} from '@sovereignfs/db';
 import type { DirectoryUser } from '@sovereignfs/sdk';
 import { resetMessageRateLimitForTests } from '../message-permissions';
 import { sendAdminMessage, sendPluginMessage } from '../messages';
@@ -52,6 +76,21 @@ async function freshSchema(): Promise<import('@sovereignfs/db').PlatformDb> {
   } as unknown as import('@sovereignfs/db').PlatformDb;
 }
 
+/** Reads the `email_delivery_log` row `deliverCommunicationEmail()` wrote for one recipient/template. */
+async function lastEmailDeliveryLogRow(
+  recipientUserId: string,
+  templateId: string,
+): Promise<{ status: string; errorCode: string | null } | undefined> {
+  const result = await (
+    pdb.db as unknown as { execute: (q: unknown) => Promise<{ rows: unknown[] }> }
+  ).execute(
+    sql`SELECT status, error_code AS "errorCode" FROM email_delivery_log
+        WHERE recipient_user_id = ${recipientUserId} AND template_id = ${templateId}
+        ORDER BY created_at DESC LIMIT 1`,
+  );
+  return result.rows[0] as { status: string; errorCode: string | null } | undefined;
+}
+
 beforeAll(async () => {
   if (!PG_URL) return;
   process.env.DB_DIALECT = 'postgres';
@@ -66,6 +105,7 @@ afterAll(async () => {
 
 beforeEach(() => {
   resetMessageRateLimitForTests();
+  sendPlatformEmail.mockClear();
 });
 
 /** A resolver that treats every id in `knownIds` as a real directory user, everything else as unknown. */
@@ -229,5 +269,57 @@ describe.skipIf(!PG_URL)('sendAdminMessage (RFC 0048)', () => {
       fakeResolver(recipients),
     );
     expect(result.sentTo).toHaveLength(10);
+  });
+
+  it('sendEmail: true reaches sendPlatformEmail for a recipient who opted into communicationEmail (RFC 0062 §6)', async () => {
+    const optedIn = randomUUID();
+    await setNotificationPrefs(pdb, optedIn, { communicationEmail: true });
+
+    await sendAdminMessage(
+      pdb,
+      { recipientUserIds: [optedIn], subject: 'Maintenance', body: 'body', sendEmail: true },
+      'admin-user-1',
+      fakeResolver([optedIn]),
+    );
+
+    expect(sendPlatformEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        deliveryClass: 'communication',
+        templateId: 'admin-message',
+        toUserId: optedIn,
+        toEmail: `${optedIn}@example.test`,
+        subject: 'Maintenance',
+      }),
+    );
+  });
+
+  it('sendEmail: true short-circuits before sendPlatformEmail for a recipient who has not opted in', async () => {
+    const optedOut = randomUUID(); // communicationEmail defaults to false
+
+    await sendAdminMessage(
+      pdb,
+      { recipientUserIds: [optedOut], subject: 'Maintenance', body: 'body', sendEmail: true },
+      'admin-user-1',
+      fakeResolver([optedOut]),
+    );
+
+    expect(sendPlatformEmail).not.toHaveBeenCalled();
+    const row = await lastEmailDeliveryLogRow(optedOut, 'admin-message');
+    expect(row).toEqual({ status: 'skipped', errorCode: 'COMMUNICATION_EMAIL_DISABLED' });
+  });
+
+  it('sends no email at all when sendEmail is omitted', async () => {
+    const recipient = randomUUID();
+    await setNotificationPrefs(pdb, recipient, { communicationEmail: true });
+
+    await sendAdminMessage(
+      pdb,
+      { recipientUserIds: [recipient], subject: 'Maintenance', body: 'body' },
+      'admin-user-1',
+      fakeResolver([recipient]),
+    );
+
+    expect(sendPlatformEmail).not.toHaveBeenCalled();
+    expect(await lastEmailDeliveryLogRow(recipient, 'admin-message')).toBeUndefined();
   });
 });

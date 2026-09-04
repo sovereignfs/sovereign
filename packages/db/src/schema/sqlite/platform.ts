@@ -564,6 +564,8 @@ export const notificationPrefs = sqliteTable('notification_prefs', {
   mutedCategories: text('muted_categories').notNull().default('[]'),
   /** Client poll interval in seconds (15 / 30 / 60). Ignored in SSE mode. */
   pollIntervalSecs: integer('poll_interval_secs').notNull().default(30),
+  /** Opt-in for Console-triggered broadcast/admin-message email (RFC 0062 §5/§6). Never governs mandatory authentication/security/administrative email. */
+  communicationEmail: integer('communication_email', { mode: 'boolean' }).notNull().default(false),
   updatedAt: integer('updated_at').notNull(),
 });
 

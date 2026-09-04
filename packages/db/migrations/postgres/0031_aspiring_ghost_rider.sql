@@ -1,0 +1,1 @@
+ALTER TABLE "notification_prefs" ADD COLUMN "communication_email" boolean DEFAULT false NOT NULL;

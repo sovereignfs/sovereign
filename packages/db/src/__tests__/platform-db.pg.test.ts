@@ -49,6 +49,7 @@ import {
   getDefaultTenant,
   getE2eeProfile,
   getE2eeRecoveryWrapper,
+  getNotificationPrefs,
   getPluginAccessPolicy,
   getPluginConnection,
   getPluginProviderConfig,
@@ -112,6 +113,7 @@ import {
   seedAccountPrefsTimezone,
   setAccountPrefs,
   setInstanceConfig,
+  setNotificationPrefs,
   setPlatformSetting,
   setPluginAccessPolicy,
   setPluginEnabled,
@@ -426,6 +428,41 @@ describe.skipIf(!PG_URL)('account preferences helpers', () => {
       theme: 'system',
       sidebarPlugins: null,
       textSize: 'default',
+    });
+  });
+});
+
+describe.skipIf(!PG_URL)('notification preferences helpers', () => {
+  it('returns defaults (including communicationEmail: false) when no row exists', async () => {
+    expect(await getNotificationPrefs(await freshDb(), 'u1')).toEqual({
+      mutedCategories: [],
+      pollIntervalSecs: 30,
+      communicationEmail: false,
+    });
+  });
+
+  it('round-trips communicationEmail alongside the existing fields', async () => {
+    const db = await freshDb();
+    const next = await setNotificationPrefs(db, 'u1', {
+      mutedCategories: ['announcement'],
+      communicationEmail: true,
+    });
+    expect(next).toEqual({
+      mutedCategories: ['announcement'],
+      pollIntervalSecs: 30,
+      communicationEmail: true,
+    });
+    expect(await getNotificationPrefs(db, 'u1')).toEqual(next);
+  });
+
+  it('merges a communicationEmail-only update, leaving mutedCategories/pollIntervalSecs intact', async () => {
+    const db = await freshDb();
+    await setNotificationPrefs(db, 'u1', { mutedCategories: ['info'], pollIntervalSecs: 60 });
+    const next = await setNotificationPrefs(db, 'u1', { communicationEmail: true });
+    expect(next).toEqual({
+      mutedCategories: ['info'],
+      pollIntervalSecs: 60,
+      communicationEmail: true,
     });
   });
 });

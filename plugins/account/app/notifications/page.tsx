@@ -8,6 +8,7 @@ import notifStyles from './notifications.module.css';
 interface NotificationPrefs {
   mutedCategories: string[];
   pollIntervalSecs: number;
+  communicationEmail: boolean;
 }
 
 interface PushState {
@@ -227,6 +228,23 @@ export default function NotificationsPage() {
             </li>
           ))}
         </ul>
+      </section>
+
+      {/* Communication email ──────────────────────────────────────────────── */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Broadcast &amp; message email</h2>
+        <p className={styles.help}>
+          When enabled, admin broadcasts and messages may also be delivered by email, in addition to
+          your inbox. Off by default. This never affects mandatory account security emails (password
+          changes, sign-in alerts, etc.) — those are always sent.
+        </p>
+        <Checkbox
+          id="communication-email"
+          checked={prefs.communicationEmail}
+          onChange={() => void save({ communicationEmail: !prefs.communicationEmail })}
+          disabled={saving}
+          label="Email me about broadcasts and admin messages"
+        />
       </section>
 
       {/* Poll interval — only meaningful when the server is actually polling;

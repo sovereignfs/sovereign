@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getPlatformSetting, setPlatformSetting } from '@sovereignfs/db';
 import { hasCapability } from '@/src/capabilities';
+import { deliverCommunicationEmail, escapeHtml } from '@/src/communication-email';
 import { getPlatformDb } from '@/src/db';
 import { deliverNotification } from '@/src/notification-delivery';
+import { fetchDirectoryUsers } from '@/src/sdk-host';
 
 /** Minimum seconds between admin broadcasts (rate-limit guard). */
 const BROADCAST_COOLDOWN_SECS = 60;
@@ -24,6 +26,8 @@ export async function POST(request: Request): Promise<Response> {
     body?: string;
     url?: string;
     category?: string;
+    /** Also send email to recipients who have opted into communication email (RFC 0062 §6). Off by default. */
+    sendEmail?: boolean;
   };
 
   if (!body.title?.trim()) {
@@ -75,6 +79,31 @@ export async function POST(request: Request): Promise<Response> {
       }),
     ),
   );
+
+  // Optional communication-class email (RFC 0062 §6) — off by default;
+  // deliverCommunicationEmail() itself re-checks each recipient's own
+  // communicationEmail opt-in, so an admin checking this box only reaches
+  // users who have separately allowed it.
+  if (body.sendEmail) {
+    const recipients = await fetchDirectoryUsers({ mode: 'resolve', ids: body.recipientUserIds });
+    const text = body.body ? `${body.title}\n\n${body.body}` : body.title;
+    const html = body.body
+      ? `<p><strong>${escapeHtml(body.title)}</strong></p><p>${escapeHtml(body.body)}</p>`
+      : `<p>${escapeHtml(body.title)}</p>`;
+    await Promise.all(
+      recipients.map((recipient) =>
+        deliverCommunicationEmail(pdb, {
+          recipientUserId: recipient.id,
+          recipientEmail: recipient.email,
+          subject: body.title,
+          text,
+          html,
+          source: 'console',
+          templateId: 'broadcast',
+        }),
+      ),
+    );
+  }
 
   return NextResponse.json({ ok: true, sent: body.recipientUserIds.length });
 }

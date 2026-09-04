@@ -256,6 +256,8 @@ export const notificationPrefs = pgTable('notification_prefs', {
   tenantId: text('tenant_id').notNull(),
   mutedCategories: text('muted_categories').notNull().default('[]'),
   pollIntervalSecs: integer('poll_interval_secs').notNull().default(30),
+  /** Opt-in for Console-triggered broadcast/admin-message email (RFC 0062 §5/§6). Never governs mandatory authentication/security/administrative email. */
+  communicationEmail: boolean('communication_email').notNull().default(false),
   updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
 });
 

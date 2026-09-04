@@ -45,6 +45,8 @@ export async function POST(request: Request): Promise<Response> {
     notify?: boolean;
     recipientUserIds?: string[];
     allActiveUsers?: boolean;
+    /** Also send email to recipients who have opted into communication email (RFC 0062 §6). Off by default. */
+    sendEmail?: boolean;
   };
 
   if (!body.subject?.trim()) {
@@ -77,7 +79,13 @@ export async function POST(request: Request): Promise<Response> {
   try {
     result = await sendAdminMessage(
       pdb,
-      { recipientUserIds, subject, body: body.body.trim(), notify: body.notify },
+      {
+        recipientUserIds,
+        subject,
+        body: body.body.trim(),
+        notify: body.notify,
+        sendEmail: body.sendEmail,
+      },
       actorUserId,
       (ids) => fetchDirectoryUsers({ mode: 'resolve', ids }),
     );

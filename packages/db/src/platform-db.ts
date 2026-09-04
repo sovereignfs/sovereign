@@ -3087,11 +3087,14 @@ export async function dismissAllNotifications(pdb: PlatformDb, userId: string): 
 export interface NotificationPrefsValue {
   mutedCategories: string[];
   pollIntervalSecs: number;
+  /** Opt-in for Console-triggered broadcast/admin-message email (RFC 0062 §5/§6). Never governs mandatory authentication/security/administrative email. */
+  communicationEmail: boolean;
 }
 
 const DEFAULT_NOTIFICATION_PREFS: NotificationPrefsValue = {
   mutedCategories: [],
   pollIntervalSecs: 30,
+  communicationEmail: false,
 };
 
 /** Get a user's notification preferences, falling back to defaults. */
@@ -3099,15 +3102,21 @@ export async function getNotificationPrefs(
   pdb: PlatformDb,
   userId: string,
 ): Promise<NotificationPrefsValue> {
-  const row = await dbGet<{ mutedCategories: string; pollIntervalSecs: number }>(
+  const row = await dbGet<{
+    mutedCategories: string;
+    pollIntervalSecs: number;
+    communicationEmail: boolean | number;
+  }>(
     pdb,
-    sql`SELECT muted_categories AS "mutedCategories", poll_interval_secs AS "pollIntervalSecs"
+    sql`SELECT muted_categories AS "mutedCategories", poll_interval_secs AS "pollIntervalSecs",
+               communication_email AS "communicationEmail"
         FROM notification_prefs WHERE user_id = ${userId}`,
   );
   if (!row) return DEFAULT_NOTIFICATION_PREFS;
   return {
     mutedCategories: JSON.parse(row.mutedCategories) as string[],
     pollIntervalSecs: row.pollIntervalSecs,
+    communicationEmail: Boolean(row.communicationEmail),
   };
 }
 
@@ -3127,15 +3136,17 @@ export async function setNotificationPrefs(
       (category) => category !== 'security',
     ),
     pollIntervalSecs: prefs.pollIntervalSecs ?? current.pollIntervalSecs,
+    communicationEmail: prefs.communicationEmail ?? current.communicationEmail,
   };
   const now = Math.floor(Date.now() / 1000);
   await dbRun(
     pdb,
-    sql`INSERT INTO notification_prefs (user_id, tenant_id, muted_categories, poll_interval_secs, updated_at)
-        VALUES (${userId}, ${DEFAULT_TENANT_ID}, ${JSON.stringify(next.mutedCategories)}, ${next.pollIntervalSecs}, ${now})
+    sql`INSERT INTO notification_prefs (user_id, tenant_id, muted_categories, poll_interval_secs, communication_email, updated_at)
+        VALUES (${userId}, ${DEFAULT_TENANT_ID}, ${JSON.stringify(next.mutedCategories)}, ${next.pollIntervalSecs}, ${next.communicationEmail}, ${now})
         ON CONFLICT (user_id)
         DO UPDATE SET muted_categories = excluded.muted_categories,
                       poll_interval_secs = excluded.poll_interval_secs,
+                      communication_email = excluded.communication_email,
                       updated_at = excluded.updated_at`,
   );
   return next;

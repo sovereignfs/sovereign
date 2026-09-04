@@ -25,6 +25,7 @@ export default function ConsoleMessagesPage() {
   const [recipientIds, setRecipientIds] = useState('');
   const [allActiveUsers, setAllActiveUsers] = useState(false);
   const [notify, setNotify] = useState(true);
+  const [sendEmail, setSendEmail] = useState(false);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<SendResult | null>(null);
 
@@ -59,6 +60,7 @@ export default function ConsoleMessagesPage() {
           subject: subject.trim(),
           body: body.trim(),
           notify,
+          sendEmail,
           ...(allActiveUsers ? { allActiveUsers: true } : { recipientUserIds: ids }),
         }),
       });
@@ -69,6 +71,7 @@ export default function ConsoleMessagesPage() {
         setBody('');
         setRecipientIds('');
         setAllActiveUsers(false);
+        setSendEmail(false);
       }
     } catch {
       setResult({ error: 'Network error — please try again.' });
@@ -123,6 +126,13 @@ export default function ConsoleMessagesPage() {
           onChange={() => setAllActiveUsers((v) => !v)}
           disabled={sending}
           label="Send to all active users"
+        />
+        <Checkbox
+          id="message-send-email"
+          checked={sendEmail}
+          onChange={() => setSendEmail((v) => !v)}
+          disabled={sending}
+          label="Also send email (only to users who allow communication email)"
         />
         {!allActiveUsers && (
           <FormField

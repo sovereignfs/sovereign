@@ -150,7 +150,22 @@ existing SSE route shape this task rewires)
 
 ---
 
-#### 📋 4.5 — Email channel for broadcasts and messages (RFC 0062)
+#### ✅ 4.5 — Email channel for broadcasts and messages (RFC 0062)
+
+> Shipped as workstream 0018 leg 2. Scoped narrower than the deliverables
+> below once implementation started: RFC 0062 §§1–5 and §7 (delivery
+> classes, `sendPlatformEmail()`, `email_delivery_log`, `mailer:send`
+> enforcement) were already fully built by tasks 1.14/3.26, so this task
+> covers only §6 — the notification/message email bridge. `sdk.notifications.send()`
+> and `sdk.messages.send()` (both plugin-facing) do **not** gain an email
+> option in this task — deferred to a future SDK minor version, confirmed
+> with the developer before implementation (no plugin in this repo
+> declares `messages:send` yet, so extending it was more abuse-surface
+> than this task's scope warranted). Email is opt-in via a new
+> `communicationEmail` account preference (default `false`) and reachable
+> only from Console-triggered sends (broadcast, admin message compose) —
+> see `docs/plugin-development.md`'s `### Plugin email` section for the
+> shipped shape.
 
 **Goal:** Add email as an explicit, preference-aware delivery channel for platform broadcasts
 and future durable messages without turning every notification into an email.

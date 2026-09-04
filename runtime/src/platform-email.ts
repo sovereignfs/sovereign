@@ -43,7 +43,7 @@ export async function isSmtpConfigured(): Promise<boolean> {
   return (await getMailer()).configured;
 }
 
-function recipientHash(email: string): string {
+export function recipientHash(email: string): string {
   return createHash('sha256').update(email.trim().toLowerCase()).digest('hex');
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, FormField, Input, Textarea } from '@sovereignfs/ui';
+import { Button, Checkbox, FormField, Input, Textarea } from '@sovereignfs/ui';
 import styles from '../console.module.css';
 import broadcastStyles from './broadcast.module.css';
 
@@ -16,6 +16,7 @@ export default function BroadcastPage() {
   const [body, setBody] = useState('');
   const [url, setUrl] = useState('');
   const [recipientIds, setRecipientIds] = useState('');
+  const [sendEmail, setSendEmail] = useState(false);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<BroadcastResult | null>(null);
 
@@ -48,6 +49,7 @@ export default function BroadcastPage() {
           body: body.trim() || undefined,
           url: url.trim() || undefined,
           category: 'announcement',
+          sendEmail,
         }),
       });
       const data = (await res.json()) as BroadcastResult;
@@ -57,6 +59,7 @@ export default function BroadcastPage() {
         setBody('');
         setUrl('');
         setRecipientIds('');
+        setSendEmail(false);
       }
     } catch {
       setResult({ error: 'Network error — please try again.' });
@@ -126,6 +129,13 @@ export default function BroadcastPage() {
             />
           )}
         </FormField>
+        <Checkbox
+          id="broadcast-send-email"
+          checked={sendEmail}
+          onChange={() => setSendEmail((v) => !v)}
+          disabled={sending}
+          label="Also send email (only to users who allow communication email)"
+        />
 
         {result && (
           <div

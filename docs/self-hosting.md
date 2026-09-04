@@ -1061,6 +1061,11 @@ Sovereign classifies outbound email by delivery class:
   completed security action.
 - Administrative email, such as invites, role changes, deactivation, reactivation, and admin MFA
   reset, is best-effort but surfaces a warning to the admin where the UI has a copy-link fallback.
+- Communication email — Console broadcasts and admin-composed messages — is opt-in per user
+  (**Account → Notifications → "Email me about broadcasts and admin messages"**, off by default)
+  and only ever sent when the admin composing the broadcast/message explicitly checks "Also send
+  email." This preference has no effect on any of the three delivery classes above — mandatory
+  authentication/security/administrative email is never user-mutable.
 
 Console → Health reports sanitized email diagnostics: whether SMTP is configured, the last delivery
 status and timestamp, the last failure code, and the number of failures in the last 24 hours. The

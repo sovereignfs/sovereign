@@ -390,6 +390,19 @@ await sdk.email.sendToUser(
 );
 ```
 
+**Communication email is a separate, Console-only concept — not part of
+either method above.** Account users can opt into "Email me about broadcasts
+and admin messages" (`/account/notifications`, RFC 0062 §6); when a Console
+admin sends a broadcast or admin message with that channel checked, opted-in
+recipients also get an email, recorded under the `communication` delivery
+class. This preference is read only by that Console-triggered path — it has
+no effect on `sdk.mailer.send()`/`sdk.email.sendToUser()`, which remain
+governed solely by `mailer:send` and the rate limits above, and no effect on
+mandatory authentication/security/administrative email (task 1.14), which is
+never user-mutable. `sdk.notifications.send()` and `sdk.messages.send()`
+(both plugin-facing) do not have an email channel — see the `messages`
+section below.
+
 ### `apiProvider` and the public `/api/*` namespace (PLT-16)
 
 The runtime reserves the top-level `/api/*` namespace for plugin-served **public**
@@ -2410,7 +2423,9 @@ clear error, not a silent no-op.
 
 **Admin messages.** Console can compose a message to selected users or all active users
 (`/console/messages`) — an internal helper, not reachable via the plugin SDK, and always audited
-via the activity log.
+via the activity log. Console's compose UI can also optionally email opted-in recipients
+alongside the message (RFC 0062 §6, see the `### Plugin email` section above) — `sdk.messages.send()`
+itself has no email option; that stays scoped to Console-triggered sends only.
 
 ### `schedules` — recurring background jobs (RFC 0046 Phase 1)
 

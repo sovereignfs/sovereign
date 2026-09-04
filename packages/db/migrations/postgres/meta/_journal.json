@@ -218,6 +218,13 @@
       "when": 1788442453495,
       "tag": "0030_smooth_nightmare",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1788475812582,
+      "tag": "0031_aspiring_ghost_rider",
+      "breakpoints": true
     }
   ]
 }

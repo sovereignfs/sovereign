@@ -28,12 +28,14 @@ export async function PATCH(request: Request): Promise<Response> {
   const body = (await request.json()) as {
     mutedCategories?: string[];
     pollIntervalSecs?: number;
+    communicationEmail?: boolean;
   };
 
   const pdb = await getPlatformDb();
   const updated = await setNotificationPrefs(pdb, userId, {
     mutedCategories: body.mutedCategories,
     pollIntervalSecs: body.pollIntervalSecs,
+    communicationEmail: body.communicationEmail,
   });
   return NextResponse.json({ prefs: updated });
 }

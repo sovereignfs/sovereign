@@ -1,7 +1,7 @@
 ---
 rfc: 0062
 title: Email delivery coverage
-status: Draft
+status: Implemented
 date: July 2026
 author: kasunben
 scope: apps/auth, runtime, packages/sdk, packages/db, packages/manifest, plugins/account, plugins/console, docs; builds on RFC 0015, RFC 0016, RFC 0031, RFC 0035, RFC 0048
@@ -227,6 +227,20 @@ durable communication objects. A message may create an inbox message, a bell
 notification, Web Push, and an email according to user preferences and sender
 policy.
 
+> **Implementation note (epic task 4.5, workstream 0018 leg 2):** shipped as a
+> per-send `sendEmail: boolean` opt-in on Console/API broadcasts and Console's
+> admin message compose only — not the `DeliveryChannels` interface sketched
+> above, and not on `sdk.notifications.send()`/`sdk.messages.send()`
+> (plugin-facing sends). Gated per-recipient on a new `communicationEmail`
+> account preference (`notification_prefs`, default `false`). The
+> plugin-facing "future SDK minor version" text above still describes
+> accurately unshipped, deferred work — including for `sdk.messages.send()`,
+> by the same reasoning: no plugin in this repo declares `messages:send` yet,
+> so extending it with an email channel was judged to be more abuse-surface
+> than this task's scope warranted, confirmed with the developer before
+> implementation. See `docs/plugin-development.md`'s `### Plugin email`
+> section and the workstream's own changelog for the full account.
+
 ### 7. Plugin email permission enforcement
 
 Before documenting direct plugin email sending as supported, the runtime host
@@ -403,6 +417,7 @@ Semver impact:
 
 ## Changelog
 
-| Version | Date      | Change        |
-| ------- | --------- | ------------- |
-| 0.1     | July 2026 | Initial draft |
+| Version | Date           | Change                                                                                                                                                                                                                                                                                                                                                                  |
+| ------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | July 2026      | Initial draft                                                                                                                                                                                                                                                                                                                                                           |
+| 0.2     | September 2026 | Status → Implemented — all three `incorporated_into_plan` tasks (1.14, 3.26, 4.5) are now ✅. Tasks 1.14/3.26 shipped §§1–5 and §7 in full ahead of this update; task 4.5 (workstream 0018 leg 2) added §6's notification/message email bridge, scoped to Console-triggered sends only — see the new implementation note under §6 for the plugin-facing-sends deferral. |

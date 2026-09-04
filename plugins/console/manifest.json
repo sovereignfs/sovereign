@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "fs.sovereign.console",
   "name": "Console",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "Platform administration: users, plugins, settings, and system health.",
   "type": "platform",
   "runtime": "native",

@@ -345,6 +345,7 @@ export function platformBootstrapStatements(dialect: Dialect): readonly string[]
       tenant_id TEXT NOT NULL,
       muted_categories TEXT NOT NULL DEFAULT '[]',
       poll_interval_secs INTEGER NOT NULL DEFAULT 30,
+      communication_email ${bool} NOT NULL DEFAULT ${dialect === 'postgres' ? 'FALSE' : '0'},
       updated_at ${ts} NOT NULL
     )`,
     // RFC 0048 — Messages and notification detail

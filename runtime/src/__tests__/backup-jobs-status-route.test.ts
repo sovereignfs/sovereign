@@ -25,6 +25,8 @@ function job(overrides: Partial<BackupJobRow> = {}): BackupJobRow {
     startedAt: null,
     completedAt: null,
     expiresAt: 2000,
+    pushStatus: null,
+    pushError: null,
     ...overrides,
   };
 }
@@ -90,5 +92,36 @@ describe('GET /api/account/backup-jobs/[id]', () => {
     const data = (await res.json()) as { downloadUrl: string; sizeBytes: number };
     expect(data.downloadUrl).toBe('/api/backup-jobs/job-1/download/signed-token');
     expect(data.sizeBytes).toBe(4096);
+  });
+
+  it('surfaces pushStatus/pushError distinctly from status/errorMessage (epic 8.39)', async () => {
+    vi.mocked(getBackupJob).mockResolvedValue(
+      job({
+        status: 'complete',
+        errorMessage: null,
+        pushStatus: 'failed',
+        pushError: 'git push failed: unreachable remote',
+      }),
+    );
+    const res = await GET(request(), params());
+    const data = (await res.json()) as {
+      status: string;
+      errorMessage: string | null;
+      pushStatus: string | null;
+      pushError: string | null;
+    };
+    // A push failure never masquerades as a job failure...
+    expect(data.status).toBe('complete');
+    expect(data.errorMessage).toBeNull();
+    // ...but is never silently indistinguishable from a real success either.
+    expect(data.pushStatus).toBe('failed');
+    expect(data.pushError).toBe('git push failed: unreachable remote');
+  });
+
+  it('reports pushStatus null when no push was requested for this job', async () => {
+    vi.mocked(getBackupJob).mockResolvedValue(job({ status: 'complete' }));
+    const res = await GET(request(), params());
+    const data = (await res.json()) as { pushStatus: string | null };
+    expect(data.pushStatus).toBeNull();
   });
 });

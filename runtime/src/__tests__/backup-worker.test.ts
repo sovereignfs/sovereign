@@ -36,6 +36,8 @@ function job(overrides: Partial<BackupJobRow> = {}): BackupJobRow {
     startedAt: 1_000_000_000,
     completedAt: null,
     expiresAt: 1_000_200_000,
+    pushStatus: null,
+    pushError: null,
     ...overrides,
   };
 }

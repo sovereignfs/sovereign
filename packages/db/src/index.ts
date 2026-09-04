@@ -181,6 +181,7 @@ export {
   claimNextBackupJob,
   completeBackupJobSuccess,
   completeBackupJobFailure,
+  markBackupJobPushResult,
   listExpiredBackupJobs,
   reclaimStuckBackupJobs,
   getJobHealthSummary,

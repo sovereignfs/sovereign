@@ -696,6 +696,15 @@ export const backupJobs = pgTable(
     startedAt: bigint('started_at', { mode: 'number' }),
     completedAt: bigint('completed_at', { mode: 'number' }),
     expiresAt: bigint('expires_at', { mode: 'number' }).notNull(),
+    // Workstream 0023 leg 3 (epic 8.39) — set only when the requester opted
+    // into pushing to a connected git backup destination. Deliberately a
+    // separate signal from `status`/`errorMessage`: a push failure must never
+    // make an otherwise-successful archive generation look like a failed job
+    // (the user's data did leave the instance, it's just not in git yet), and
+    // must never be silently indistinguishable from "archive generated and
+    // pushed" either. `null` means no push was requested for this job.
+    pushStatus: text('push_status'), // 'succeeded' | 'failed' | null
+    pushError: text('push_error'),
   },
   (table) => [
     index('backup_jobs_status_idx').on(table.status),

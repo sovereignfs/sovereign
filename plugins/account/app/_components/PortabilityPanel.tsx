@@ -2,7 +2,7 @@
 
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { strFromU8, unzipSync } from 'fflate';
-import { Alert, Button, Checkbox, FileDropzone, FormField, Input } from '@sovereignfs/ui';
+import { Alert, Button, Checkbox, FileDropzone, FormField, Input, Select } from '@sovereignfs/ui';
 import styles from '../account.module.css';
 
 interface ImportSummary {
@@ -22,6 +22,13 @@ interface BackupJobStatus {
   sizeBytes: number;
   errorMessage: string | null;
   downloadUrl: string | null;
+  pushStatus: 'succeeded' | 'failed' | null;
+  pushError: string | null;
+}
+
+interface BackupDestinationOption {
+  id: string;
+  label: string;
 }
 
 const POLL_INTERVAL_MS = 3000;
@@ -63,6 +70,9 @@ export function PortabilityPanel() {
   const [backupStarting, setBackupStarting] = useState(false);
   const [backupError, setBackupError] = useState<string | null>(null);
   const [backupJob, setBackupJob] = useState<BackupJobStatus | null>(null);
+  const [destinations, setDestinations] = useState<BackupDestinationOption[]>([]);
+  const [pushDestinationId, setPushDestinationId] = useState('');
+  const [pushDestinationLabel, setPushDestinationLabel] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function loadPluginNames() {
@@ -78,8 +88,33 @@ export function PortabilityPanel() {
     }
   }
 
+  /**
+   * `/api/account/connections` returns every connection regardless of
+   * provider (Warden's model providers included) — filtered client-side to
+   * `git.custom` (workstream 0023's backup-destination provider kind) and
+   * `connected` status, since a disconnected/errored destination can't
+   * receive a push.
+   */
+  async function loadDestinations() {
+    try {
+      const res = await fetch('/api/account/connections');
+      if (!res.ok) return;
+      const data = (await res.json()) as {
+        connections?: { id: string; provider: string; label: string; status: string }[];
+      };
+      setDestinations(
+        (data.connections ?? [])
+          .filter((c) => c.provider === 'git.custom' && c.status === 'connected')
+          .map((c) => ({ id: c.id, label: c.label })),
+      );
+    } catch {
+      // Best-effort — the push option is simply unavailable this load.
+    }
+  }
+
   useEffect(() => {
     void loadPluginNames();
+    void loadDestinations();
   }, []);
 
   function stopPolling() {
@@ -121,6 +156,7 @@ export function PortabilityPanel() {
           passphrase: backupPassphrase,
           includeFiles: backupIncludeFiles,
           excludePluginIds: Array.from(excludedPluginIds),
+          pushDestinationId: pushDestinationId || undefined,
         }),
       });
       const data = (await res.json()) as { jobId?: string; error?: string };
@@ -130,12 +166,15 @@ export function PortabilityPanel() {
       }
       // The passphrase is never sent again and never stored client-side beyond this point.
       setBackupPassphrase('');
+      setPushDestinationLabel(destinations.find((d) => d.id === pushDestinationId)?.label ?? null);
       setBackupJob({
         jobId,
         status: 'queued',
         sizeBytes: 0,
         errorMessage: null,
         downloadUrl: null,
+        pushStatus: null,
+        pushError: null,
       });
       pollRef.current = setInterval(() => void pollBackupJob(jobId), POLL_INTERVAL_MS);
     } catch (e) {
@@ -311,6 +350,30 @@ export function PortabilityPanel() {
           )}
         </FormField>
 
+        {destinations.length > 0 && (
+          <FormField
+            label="Push to a connected destination"
+            id="full-backup-push-destination"
+            hint="Optional — pushes an age-encrypted copy to your own git repo once the backup is ready"
+          >
+            {(field) => (
+              <Select
+                {...field}
+                value={pushDestinationId}
+                onChange={(e) => setPushDestinationId(e.target.value)}
+                disabled={backupPending}
+              >
+                <option value="">Don&apos;t push</option>
+                {destinations.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.label}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </FormField>
+        )}
+
         {backupError && (
           <p className={styles.feedbackError} role="status" aria-live="polite">
             {backupError}
@@ -351,6 +414,20 @@ export function PortabilityPanel() {
                     Download
                   </Button>
                 </div>
+              </Alert>
+            )}
+            {backupJob.status === 'complete' && backupJob.pushStatus === 'succeeded' && (
+              <p className={styles.help} style={{ marginTop: 'var(--sv-space-2)' }}>
+                Also pushed to {pushDestinationLabel ?? 'your connected destination'}.
+              </p>
+            )}
+            {backupJob.status === 'complete' && backupJob.pushStatus === 'failed' && (
+              <Alert
+                variant="warning"
+                heading={`Couldn't push to ${pushDestinationLabel ?? 'your connected destination'}`}
+              >
+                {backupJob.pushError ?? 'Something went wrong pushing the backup. Try again.'} The
+                backup itself is still ready to download above.
               </Alert>
             )}
           </div>

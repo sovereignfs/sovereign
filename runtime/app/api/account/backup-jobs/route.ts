@@ -1,12 +1,17 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
-import { DEFAULT_TENANT_ID, enqueueBackupJob } from '@sovereignfs/db';
+import { DEFAULT_TENANT_ID, enqueueBackupJob, getPluginConnection } from '@sovereignfs/db';
 import { logActivity } from '@/src/activity';
 import { backupArchivePathForJob } from '@/src/backup-download';
 import { storeBackupPassphrase } from '@/src/backup-passphrase-store';
 import { getPlatformDb } from '@/src/db';
 
 const MIN_PASSPHRASE_LENGTH = 8;
+
+// Matches plugins/account/app/_lib/backup-destinations.ts's PROVIDER_KIND
+// owner — backup destinations are always created under the account plugin's
+// own id, regardless of which route later reads them back.
+const BACKUP_DESTINATION_PLUGIN_ID = 'fs.sovereign.account';
 
 /**
  * Enqueue an async, selective, passphrase-encrypted backup of the current
@@ -24,6 +29,7 @@ export async function POST(request: Request): Promise<Response> {
     passphrase?: unknown;
     includeFiles?: unknown;
     excludePluginIds?: unknown;
+    pushDestinationId?: unknown;
   } | null;
 
   const passphrase = typeof body?.passphrase === 'string' ? body.passphrase : '';
@@ -39,16 +45,37 @@ export async function POST(request: Request): Promise<Response> {
     ? body.excludePluginIds.filter((id): id is string => typeof id === 'string')
     : undefined;
 
+  const pdb = await getPlatformDb();
+
+  const pushDestinationId =
+    typeof body?.pushDestinationId === 'string' && body.pushDestinationId.length > 0
+      ? body.pushDestinationId
+      : undefined;
+  if (pushDestinationId) {
+    // Fail fast with a clear 400 for an unknown/foreign/disconnected
+    // destination, rather than letting the job queue and only discover this
+    // much later on the worker's own tick — runUserBackup() re-checks this
+    // independently regardless, since that's the actual authorization
+    // boundary, not this convenience check.
+    const connection = await getPluginConnection(pdb, pushDestinationId, {
+      tenantId: DEFAULT_TENANT_ID,
+      pluginId: BACKUP_DESTINATION_PLUGIN_ID,
+      userId,
+    });
+    if (!connection || connection.status === 'disconnected') {
+      return NextResponse.json({ error: 'Backup destination not found.' }, { status: 400 });
+    }
+  }
+
   const jobId = randomUUID();
   const archivePath = backupArchivePathForJob(jobId, 'user');
-  const pdb = await getPlatformDb();
   const job = await enqueueBackupJob(pdb, {
     id: jobId,
     tenantId: DEFAULT_TENANT_ID,
     scope: 'user',
     requestedByUserId: userId,
     archivePath,
-    optionsJson: JSON.stringify({ includeFiles, excludePluginIds }),
+    optionsJson: JSON.stringify({ includeFiles, excludePluginIds, pushDestinationId }),
   });
 
   // Stored only after the row exists, so a crash between the two never

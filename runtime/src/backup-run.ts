@@ -1,9 +1,21 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { DEFAULT_TENANT_ID, findWorkspaceRoot, type BackupJobRow } from '@sovereignfs/db';
-import { encrypt } from './backup-encryption';
+import {
+  DEFAULT_TENANT_ID,
+  findWorkspaceRoot,
+  getPluginConnection,
+  getPluginSecret,
+  markBackupJobPushResult,
+  markPluginConnectionError,
+  markPluginConnectionUsed,
+  type BackupJobRow,
+  type PlatformDb,
+} from '@sovereignfs/db';
+import { encrypt, encryptToRecipients } from './backup-encryption';
 import { takeBackupPassphrase } from './backup-passphrase-store';
+import { getPlatformDb } from './db';
+import { type GitPushAuthType, pushBackupToGit } from './git-backup';
 import { logger } from './logger';
 import { getPlatformVersion } from './platform-version';
 import { assembleExport } from './portability/assemble';
@@ -12,6 +24,7 @@ import {
   gatherPlatformExport,
   installedPluginsRoster,
 } from './portability/platform';
+import { decryptSecretValue } from './secrets';
 
 const SUBPROCESS_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes — generous ceiling for a large instance archive
 const MAX_CAPTURED_OUTPUT_CHARS = 4000; // keep a verbose subprocess from blowing up the stored error message
@@ -23,6 +36,135 @@ interface InstanceBackupJobOptions {
 interface UserBackupJobOptions {
   includeFiles?: boolean;
   excludePluginIds?: string[];
+  /** A connected `plugins/account` backup-destination id — opts this job into a git push (epic 8.39). */
+  pushDestinationId?: string;
+}
+
+// Matches plugins/account/app/_lib/backup-destinations.ts's PROVIDER_KIND
+// owner — connections/secrets for this feature are always created under the
+// account plugin's own id, regardless of which job later reads them back.
+const BACKUP_DESTINATION_PLUGIN_ID = 'fs.sovereign.account';
+
+interface BackupDestinationMetadata {
+  repoUrl?: unknown;
+  branch?: unknown;
+  authType?: unknown;
+  ageRecipient?: unknown;
+}
+
+function parseDestinationMetadata(metadataJson: string | null): {
+  repoUrl: string;
+  branch: string;
+  authType: GitPushAuthType;
+  ageRecipient: string;
+} {
+  const raw = metadataJson ? (JSON.parse(metadataJson) as BackupDestinationMetadata) : {};
+  const repoUrl = typeof raw.repoUrl === 'string' ? raw.repoUrl : '';
+  const branch = typeof raw.branch === 'string' ? raw.branch : '';
+  const authType: GitPushAuthType = raw.authType === 'ssh-key' ? 'ssh-key' : 'https-token';
+  const ageRecipient = typeof raw.ageRecipient === 'string' ? raw.ageRecipient : '';
+  if (!repoUrl || !branch || !ageRecipient) {
+    throw new Error(
+      'Backup destination is missing required configuration (repo URL, branch, or age recipient).',
+    );
+  }
+  return { repoUrl, branch, authType, ageRecipient };
+}
+
+/** Light heuristic only — an unrecognized failure always falls back to the safe 'error' status. */
+function classifyPushFailure(message: string): 'error' | 'needs_reauth' {
+  return /authentication failed|permission denied|unauthorized|403|401|invalid credentials/i.test(
+    message,
+  )
+    ? 'needs_reauth'
+    : 'error';
+}
+
+/**
+ * Optional git-push step for a user-scope backup (workstream 0023 leg 3,
+ * epic task 8.39) — encrypts the same plaintext export bundle a second time,
+ * to the destination's age recipient rather than the requester's passphrase
+ * (never the same ciphertext: the whole point of a personal git destination
+ * is that it's decryptable only with the user's own downloaded private key,
+ * never a passphrase that could be guessed or brute-forced by whoever
+ * controls the git host), then pushes it as a tagged orphan commit.
+ *
+ * Deliberately swallows every failure here rather than letting it propagate:
+ * per this leg's own "do not proceed if" clause, a failed push must never
+ * turn an otherwise-successful archive generation into a failed job. Failure
+ * is instead recorded on the connection (`markPluginConnectionError`) and on
+ * the job's own `pushStatus`/`pushError` fields, both of which the read path
+ * surfaces distinctly from job `status`.
+ */
+async function pushUserBackupToDestination(
+  pdb: PlatformDb,
+  job: BackupJobRow,
+  destinationId: string,
+  userId: string,
+  plaintext: Buffer,
+): Promise<void> {
+  const context = { tenantId: DEFAULT_TENANT_ID, pluginId: BACKUP_DESTINATION_PLUGIN_ID, userId };
+  try {
+    const connection = await getPluginConnection(pdb, destinationId, context);
+    if (!connection) throw new Error('Backup destination not found or no longer connected.');
+    if (!connection.secretRef) throw new Error('Backup destination has no stored credential.');
+
+    const destination = parseDestinationMetadata(connection.metadata);
+    const secretRow = await getPluginSecret(pdb, connection.secretRef, context);
+    if (!secretRow) throw new Error('Backup destination credential could not be read.');
+    const credential = decryptSecretValue(secretRow.ciphertext, {
+      tenantId: context.tenantId,
+      pluginId: context.pluginId,
+      scope: secretRow.scope,
+      userId: context.userId,
+    });
+
+    const ciphertext = await encryptToRecipients(plaintext, [destination.ageRecipient]);
+    const platformVersion = getPlatformVersion();
+
+    await pushBackupToGit(
+      {
+        repoUrl: destination.repoUrl,
+        branch: destination.branch,
+        authType: destination.authType,
+        credential,
+      },
+      Buffer.from(ciphertext, 'base64url'),
+      'backup.age',
+      {
+        createdAt: Math.floor(Date.now() / 1000),
+        platformVersion,
+        scope: 'user',
+      },
+      platformVersion,
+    );
+
+    await markPluginConnectionUsed(pdb, destinationId, context);
+    await markBackupJobPushResult(pdb, job.id, { status: 'succeeded' });
+    logger.info('backup-run: pushed user backup to git destination', {
+      jobId: job.id,
+      destinationId,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error('backup-run: git push failed', { jobId: job.id, destinationId, err: message });
+    try {
+      await markPluginConnectionError(
+        pdb,
+        destinationId,
+        context,
+        message,
+        classifyPushFailure(message),
+      );
+      await markBackupJobPushResult(pdb, job.id, { status: 'failed', error: message });
+    } catch (markErr) {
+      logger.error('backup-run: failed to record git push failure', {
+        jobId: job.id,
+        destinationId,
+        err: markErr instanceof Error ? markErr.message : String(markErr),
+      });
+    }
+  }
 }
 
 function parseOptions<T>(optionsJson: string | null): T {
@@ -180,11 +322,18 @@ export async function runUserBackup(
     },
   });
 
-  const ciphertext = await encrypt(Buffer.from(zip), passphrase);
+  const plaintext = Buffer.from(zip);
+  const ciphertext = await encrypt(plaintext, passphrase);
   const bytes = Buffer.from(ciphertext, 'base64url');
   mkdirSync(dirname(job.archivePath), { recursive: true });
   writeFileSync(job.archivePath, bytes);
 
   logger.info('backup-run: user backup complete', { jobId: job.id, archivePath: job.archivePath });
+
+  if (options.pushDestinationId) {
+    const pdb = await getPlatformDb();
+    await pushUserBackupToDestination(pdb, job, options.pushDestinationId, userId, plaintext);
+  }
+
   return { archivePath: job.archivePath, sizeBytes: bytes.length };
 }

@@ -65,6 +65,10 @@ vi.mock('../secrets', () => ({ decryptSecretValue: decryptSecretValueMock }));
 
 const { runInstanceBackup, runRestoreFetch, runUserBackup } = await import('../backup-run');
 
+// Matches join(findWorkspaceRoot(), 'runtime', 'dist-cli', 'sv-backup-cli.js')
+// — findWorkspaceRoot is mocked to '/workspace' above.
+const BUNDLED_CLI_PATH = '/workspace/runtime/dist-cli/sv-backup-cli.js';
+
 function job(overrides: Partial<BackupJobRow> = {}): BackupJobRow {
   return {
     id: 'job-1',
@@ -107,9 +111,10 @@ describe('runInstanceBackup', () => {
     await expect(runInstanceBackup(j)).resolves.toMatchObject({ sizeBytes: 123 });
   });
 
-  it('spawns `pnpm sv backup --out <archivePath>` with an argv array, no shell string', async () => {
+  it('falls back to `pnpm sv backup --out <archivePath>` (argv array, no shell string) when the bundled CLI has not been built', async () => {
     spawnSyncMock.mockReturnValue({ status: 0, error: undefined, signal: null, stderr: '' });
-    existsSyncMock.mockReturnValue(true);
+    // Bundled CLI absent (native `pnpm dev`/`tools` checkout) — job.archivePath present (real archive produced).
+    existsSyncMock.mockImplementation((p: unknown) => p !== BUNDLED_CLI_PATH);
     statSyncMock.mockReturnValue({ size: 4096 });
 
     const j = job();
@@ -118,6 +123,23 @@ describe('runInstanceBackup', () => {
     expect(spawnSyncMock).toHaveBeenCalledWith(
       'pnpm',
       ['sv', 'backup', '--out', j.archivePath],
+      expect.objectContaining({ cwd: '/workspace' }),
+    );
+    expect(result).toEqual({ archivePath: j.archivePath, sizeBytes: 4096 });
+  });
+
+  it('spawns the bundled CLI directly with `node` (argv array, no shell string) when present — epic task 8.16', async () => {
+    spawnSyncMock.mockReturnValue({ status: 0, error: undefined, signal: null, stderr: '' });
+    // Bundled CLI present (production `runner` image) — job.archivePath also present (real archive produced).
+    existsSyncMock.mockReturnValue(true);
+    statSyncMock.mockReturnValue({ size: 4096 });
+
+    const j = job();
+    const result = await runInstanceBackup(j);
+
+    expect(spawnSyncMock).toHaveBeenCalledWith(
+      'node',
+      [BUNDLED_CLI_PATH, 'backup', '--out', j.archivePath],
       expect.objectContaining({ cwd: '/workspace' }),
     );
     expect(result).toEqual({ archivePath: j.archivePath, sizeBytes: 4096 });

@@ -525,7 +525,7 @@ encrypt`, same as today.
 
 ---
 
-#### 📋 8.16 — Backup job infrastructure & signed download delivery (RFC 0084)
+#### ✅ 8.16 — Backup job infrastructure & signed download delivery (RFC 0084)
 
 **Goal:** Give both the operator (instance) and user (self-service) backup flows a
 shared, minimal async-job primitive and a delivery mechanism that fits an archive
@@ -570,51 +570,91 @@ pure platform primitive; nothing user-facing ships in this task.
   is required separately.
 - Expired jobs' archive files are actually removed from disk by the sweep.
 
-**Progress note (in progress, not yet complete — kept at 📋):** the schema,
-worker orchestration (claim/run/mark/sweep, boot-time reclaim of orphaned
-`running` jobs), encryption helper, and download route all exist and are
-tested — the encryption helper and the claim/complete/sweep DB primitives
-against a live sqld instance, the worker's orchestration logic against
-injected fakes. Two deliverables are still genuinely incomplete, not just
-untested:
+**Shipped:** The schema, worker orchestration (claim/run/mark/sweep,
+boot-time reclaim of orphaned `running` jobs), encryption helper, download
+route, and notification-on-completion wiring were already built and tested
+by the time this task was picked back up — user-scope jobs (task 8.18,
+`assembleExport()`) have shipped and been exercised end to end since
+`0.121.0`, including through workstream 0023's git-push/restore-fetch legs.
+The one deliverable that was still genuinely incomplete, not just untested —
+**instance-scope jobs could not succeed in the documented production Docker
+deployment** — is closed by this task, for the **Postgres dialect only**
+(SQLite/sqld instance backup remains an accepted, separately-tracked gap; see
+below).
 
-- **Instance-scope jobs cannot succeed in the documented production Docker
-  deployment yet.** `runInstanceBackup` (`runtime/src/backup-run.ts`) spawns
-  `pnpm sv backup` as designed, but the `runtime` service's production image
-  has no `bin/`/`scripts/`/`tsx` to spawn at all (only the separate, on-demand
-  `tools` image does) — see `docs/architecture-rules.md`'s new entry for the
-  full account. A claimed job fails cleanly with an actionable error in this
-  topology today; none actually succeed until this is resolved. Works
-  correctly in a native `pnpm dev` checkout, which is how the worker logic
-  itself was verified.
-- **Notification-on-completion now sends when the requester is known**
-  (`runtime/src/backup-notification.ts`, closed by workstream 0020 task
-  `0.25`) — a completed/failed job writes a `notifications` row, publishes to
-  the broker, and fans out a push to `backup_jobs.requestedByUserId` when
-  set. The one remaining gap: an instance-scope job with no identifiable
-  requester has nowhere to send a notification, since no primitive anywhere
-  in `packages/db`/`runtime/src` enumerates admin user IDs (role data lives
-  in the separate `apps/auth` service). This case is explicit and logged
-  (`logger.warn`), not silently dropped — closing it fully needs a
-  cross-service admin-listing primitive, out of scope for `0.25`.
+Root cause was exactly as previously documented: `runInstanceBackup()`
+(`runtime/src/backup-run.ts`) spawns `pnpm sv backup`, but the `runner`
+image has no `bin/`/`scripts/`/`tsx`/full `node_modules` to run it — only the
+separate, on-demand `tools` image does. Fixed by bundling a minimal
+backup/restore-only CLI straight into `runner`, rather than moving worker
+execution to a separate `tools`-based service (the alternative floated in
+the prior architecture-rules entry): a `tools`-based worker process would
+silently produce user-scope backups missing every plugin's data, since the
+portability export-hook registry (`runtime/src/portability/registry.ts`) is
+populated by request-scoped plugin code as pages load, never at boot — a
+headless process that never serves an HTTP page would always see an empty
+registry. Bundling avoids that regression entirely and reuses this repo's
+existing `tsup` convention.
 
-User-scope jobs (`assembleExport()`) are correctly out of scope here per the
-RFC's own adoption path (task 8.18) — `runInstanceBackup` rejects a
-`scope: 'user'` job with a clear "not implemented yet" error rather than
-attempting a partial integration; there is no enqueue path at all yet for
-either scope (Console/Account UI is 8.17/8.18). Encryption is deliberately
-not wired into job execution: the requester's passphrase must never be
-persisted, and no mechanism yet carries it from wherever a job is enqueued
-through to whichever later tick actually claims and runs it — unresolved
-design work for whichever of 8.17/8.18 builds the first real enqueue path,
-not a coding gap in this task.
+- `bin/sv.ts`'s `backup`/`restore` command bodies were extracted unchanged
+  into `bin/backup-restore.ts` (shared, zero behavior change for `pnpm sv
+backup`/`tools sv backup`) and re-exported into a new minimal entrypoint,
+  `bin/sv-backup-cli.ts`, registering only those two commands. `citty`/
+  `consola` are both genuinely zero-dependency, so the bundle
+  (`bin/tsup.config.ts`, `pnpm build:cli` → `runtime/dist-cli/sv-backup-cli.js`)
+  needs no native addon and stays small.
+- `runInstanceBackup()` now spawns adaptively: `node
+runtime/dist-cli/sv-backup-cli.js backup --out <path>` when the bundled
+  file exists (production `runner`), falling back to the unchanged `pnpm sv
+backup --out <path>` otherwise (native `pnpm dev`/`tools`) — exactly one of
+  the two always runs, verified by two separate unit tests.
+- Two more already-shipped-code production bugs were found and fixed along
+  the way, neither previously documented: **`runner` had no `git` binary at
+  all**, meaning workstream 0023 legs 3–4's git-push/restore-fetch code
+  (`runtime/src/git-backup.ts`) could not have worked in real production
+  either — confirmed empirically (`docker run --rm node:24-alpine sh -c "git
+--version"` → not found) before fixing; and **`docker-compose.prod.yml`
+  mounted `runtime`'s `/app/backups` read-only** while both
+  `runInstanceBackup()` and `runUserBackup()` write archives to exactly that
+  path — enabling the worker for either scope would have failed on the first
+  write. Both fixed: `builder`/`runner` now install `git postgresql16-client`
+  (version-pinned to `docker-compose.postgres.yml`'s `postgres:16-alpine`);
+  the `runtime` service's `./backups` mount lost its `:ro`; and
+  `SOVEREIGN_BACKUP_WORKER_ENABLED` — previously entirely absent from
+  `docker-compose.prod.yml`'s `runtime.environment` block, so setting it in
+  `.env` had no effect on the container regardless of anything else — is now
+  wired through.
+- `runner`'s non-root user gained a pinned UID/GID (`1001:1001`, previously
+  auto-assigned) so operators have a stable, documentable value to `chown`
+  the host `./backups` directory to — see `docs/upgrade.md`'s entry for the
+  one-time step this requires on upgrade.
+- **SQLite/sqld instance backup/restore has no implementation to spawn in
+  the first place** — `sv backup`/`sv restore`'s SQLite branch still
+  correctly refuses, matching `docs/research/0017-sqld-backup-and-restore.md`'s
+  own explicit gate ("graduate to an RFC once [a transaction-consistency
+  question] is answered... until that RFC lands, `sv backup`/`sv restore`
+  continue to correctly refuse the SQLite dialect"). Not attempted here —
+  it's a missing feature needing its own RFC, not a Docker-topology problem.
+- The narrow notification gap noted previously (an instance-scope job with
+  no identifiable requester has nowhere to send a notification, since no
+  primitive enumerates admin user IDs across the `apps/auth` service
+  boundary) is unchanged by this task — still explicit and logged
+  (`logger.warn`), not silently dropped, and still out of scope here.
 
-Given both gaps above, the worker is gated behind `SOVEREIGN_BACKUP_WORKER_ENABLED`
-(opt-in, off by default — see `runtime/src/backup-worker.ts`'s doc comment),
-unlike the scheduler/plugin-job-worker it mirrors. With no enqueue path yet,
-a running worker would only ever tick over an empty table — pure DB-query
-overhead on every existing self-hosted instance for a feature nobody can
-reach. Flip it on once 8.17/8.18 land.
+Verified via the full existing + new/updated automated test suite (new
+`bin/__tests__/backup-restore.test.ts`; `runtime/src/__tests__/backup-run.test.ts`
+split into bundled-path-exists and fallback cases) plus a real Docker
+build and an end-to-end Postgres round trip — a real `backup_jobs` row
+enqueued directly (no UI yet; that's task 8.17), claimed by the worker
+inside the real `runner` container, and driven to completion via the bundled
+CLI. See this task's own PR description for the exact verification
+transcript.
+
+Marking this epic ✅ reflects the backup **infrastructure** being complete
+and proven end to end for the Postgres dialect — it does not mean an
+instance owner can trigger a backup from the UI yet. That's task 8.17
+(Console instance backup UI), not started, and workstream 0023 legs 5–6
+(operator git-push/restore destinations) remain blocked on it.
 
 ---
 

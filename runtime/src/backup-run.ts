@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import {
   DEFAULT_TENANT_ID,
   findWorkspaceRoot,
@@ -198,27 +198,30 @@ function truncate(text: string): string {
 
 /**
  * Default production `runBackup` for `backup-worker.ts`. Instance-scope jobs
- * spawn the existing `pnpm sv backup` CLI (RFC 0084's own "existing CLI,
+ * spawn the `backup`/`restore` CLI logic (RFC 0084's own "existing CLI,
  * unchanged archive logic" design) as a child process via an argv array —
  * never a shell string (see docs/architecture-rules.md's shell-injection
  * rule) — with a hard timeout so a hung subprocess cannot leave the job
  * `running` forever.
  *
- * KNOWN GAP, not resolved here: this only works where `pnpm`/`tsx`/`bin/sv.ts`
- * are actually present in the running container. They are in a native
- * `pnpm dev` checkout and in the separate `tools` Docker image, but NOT in
- * the minimal `runner` production image that actually serves this worker —
- * `Dockerfile`'s `runner` stage copies only the traced Next.js standalone
- * output, no `bin/`/`scripts/`/`tsx`. Every instance-scope job fails cleanly
- * with an actionable `errorMessage` in that topology today (see below),
- * rather than silently doing nothing or crashing the worker loop — but no
- * job actually succeeds there until this is resolved (bundle the CLI into
- * `runner`, or run this worker from a `tools`-capable process instead — a
- * deliberate follow-up decision, not made here). Separately, `sv backup`'s
- * own Postgres path requires `pg_dump`, not installed in any current image,
- * and its SQLite (sqld) path is explicitly not implemented yet (`bin/sv.ts`'s
- * own error message) — both pre-existing CLI gaps, not introduced by this
- * worker.
+ * Docker-spawn gap CLOSED (epic task 8.16): the production `runner` image
+ * has no `pnpm`/`tsx`/full `node_modules` to run `bin/sv.ts` itself, so this
+ * spawns a dedicated, `tsup`-bundled artifact instead —
+ * `runtime/dist-cli/sv-backup-cli.js` (built by `pnpm run build:cli`, copied
+ * into `runner` by the Dockerfile) — runnable with plain `node`, no other
+ * tooling required. `bin/sv-backup-cli.ts` and `bin/sv.ts` both register the
+ * exact same command objects from `bin/backup-restore.ts`, so this is not a
+ * second implementation. Falls back to `pnpm sv backup` when the bundle
+ * hasn't been built (native `pnpm dev`/`tools` checkouts) — unchanged
+ * behavior there.
+ *
+ * Postgres-dialect only: `sv backup`'s SQLite (sqld) path is explicitly not
+ * implemented yet (`bin/backup-restore.ts`'s own error message) — building
+ * it needs its own RFC first (see `docs/research/0017-sqld-backup-and-restore.md`),
+ * an accepted, tracked-separately limitation, not something this fix
+ * resolves. `pg_dump`/`pg_restore` (Postgres path) and `git` (the git-push/
+ * restore-fetch path used by user-scope jobs below) are both now installed
+ * in `runner` — see the Dockerfile.
  *
  * Encryption (RFC 0084: "always applied — no opt-out") is intentionally not
  * wired in here yet for the instance-scope path specifically: the
@@ -243,7 +246,14 @@ export async function runInstanceBackup(
   }
 
   const root = findWorkspaceRoot();
-  const result = spawnSync('pnpm', ['sv', 'backup', '--out', job.archivePath], {
+  // The bundled CLI (production runner image) takes priority when present;
+  // `pnpm sv backup` (dev/tools, unchanged) is the fallback. Neither path is
+  // ever silently skipped — exactly one of the two always runs.
+  const bundledCli = join(root, 'runtime', 'dist-cli', 'sv-backup-cli.js');
+  const [command, commandArgs] = existsSync(bundledCli)
+    ? ['node', [bundledCli, 'backup', '--out', job.archivePath]]
+    : ['pnpm', ['sv', 'backup', '--out', job.archivePath]];
+  const result = spawnSync(command, commandArgs, {
     cwd: root,
     timeout: SUBPROCESS_TIMEOUT_MS,
     encoding: 'utf8',

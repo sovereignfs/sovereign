@@ -25,6 +25,7 @@ import { ShieldIcon } from './shield';
 import { LockIcon } from './lock';
 import { EyeIcon } from './eye';
 import { EyeOffIcon } from './eye-off';
+import { HatGlassesIcon } from './hat-glasses';
 import { MailIcon } from './mail';
 import { BellIcon } from './bell';
 import { InboxIcon } from './inbox';
@@ -121,6 +122,7 @@ export type IconName =
   | 'lock'
   | 'eye'
   | 'eye-off'
+  | 'hat-glasses'
   | 'mail'
   | 'bell'
   | 'inbox'
@@ -219,6 +221,7 @@ export const ICONS: Record<IconName, IconComponent> = {
   lock: LockIcon,
   eye: EyeIcon,
   'eye-off': EyeOffIcon,
+  'hat-glasses': HatGlassesIcon,
   mail: MailIcon,
   bell: BellIcon,
   inbox: InboxIcon,
@@ -315,6 +318,7 @@ export { ShieldIcon } from './shield';
 export { LockIcon } from './lock';
 export { EyeIcon } from './eye';
 export { EyeOffIcon } from './eye-off';
+export { HatGlassesIcon } from './hat-glasses';
 export { MailIcon } from './mail';
 export { BellIcon } from './bell';
 export { InboxIcon } from './inbox';

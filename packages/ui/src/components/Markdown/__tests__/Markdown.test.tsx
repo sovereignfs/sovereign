@@ -40,3 +40,66 @@ describe('Markdown', () => {
     expect(container.querySelectorAll('li')).toHaveLength(2);
   });
 });
+
+describe('Markdown — ordered lists and fenced code', () => {
+  it('renders an ordered list, numbering from the browser', () => {
+    const { container } = render(<Markdown content={'1. first\n2. second\n3. third'} />);
+
+    const list = container.querySelector('ol');
+    expect(list).not.toBeNull();
+    expect([...(list?.querySelectorAll('li') ?? [])].map((li) => li.textContent)).toEqual([
+      'first',
+      'second',
+      'third',
+    ]);
+    expect(list?.getAttribute('start')).toBeNull();
+  });
+
+  it('honours a list that starts at a number other than 1', () => {
+    const { container } = render(<Markdown content={'4. fourth\n5. fifth'} />);
+    expect(container.querySelector('ol')?.getAttribute('start')).toBe('4');
+  });
+
+  it('accepts the 1) marker style and applies inline formatting inside items', () => {
+    const { container } = render(<Markdown content={'1) do **this**'} />);
+
+    expect(container.querySelector('ol')).not.toBeNull();
+    expect(container.querySelector('ol strong')?.textContent).toBe('this');
+  });
+
+  it('keeps ordered and unordered lists as separate blocks', () => {
+    const { container } = render(<Markdown content={'- bullet\n1. number'} />);
+
+    expect(container.querySelectorAll('ul')).toHaveLength(1);
+    expect(container.querySelectorAll('ol')).toHaveLength(1);
+  });
+
+  it('renders a fenced code block verbatim, without parsing its contents', () => {
+    const content = ['```ts', 'const a = 1; // **not bold**', '', '# not a heading', '```'].join(
+      '\n',
+    );
+    const { container } = render(<Markdown content={content} />);
+
+    const code = container.querySelector('pre code');
+    expect(code?.textContent).toBe('const a = 1; // **not bold**\n\n# not a heading');
+    expect(container.querySelector('strong')).toBeNull();
+    expect(container.querySelector('h1')).toBeNull();
+  });
+
+  it('exposes the fence language for styling hooks', () => {
+    const { container } = render(<Markdown content={'```python\nx = 1\n```'} />);
+    expect(container.querySelector('pre code')?.getAttribute('data-language')).toBe('python');
+  });
+
+  it('terminates on an unclosed fence instead of looping', () => {
+    const { container } = render(<Markdown content={'text\n\n```\nnever closed'} />);
+    expect(container.querySelector('pre code')?.textContent).toBe('never closed');
+  });
+
+  it('separates a code block from the paragraph before it', () => {
+    const { container } = render(<Markdown content={'Try this:\n```\nrun me\n```'} />);
+
+    expect(container.querySelector('p')?.textContent).toBe('Try this:');
+    expect(container.querySelector('pre code')?.textContent).toBe('run me');
+  });
+});

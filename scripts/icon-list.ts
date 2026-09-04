@@ -36,6 +36,8 @@ export const ICON_LIST = [
   'lock',
   'eye',
   'eye-off',
+  // Incognito / private-session mode (Warden's composer + chat header).
+  'hat-glasses',
   // Content / status
   'mail',
   'bell',

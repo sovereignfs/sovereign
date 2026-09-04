@@ -35,6 +35,17 @@ export interface PopoverProps {
    * regardless of CSS module load order, unlike passing an extra className.
    */
   panelStyle?: CSSProperties;
+  /**
+   * Class applied to the popover's own wrapper around `trigger` — the
+   * element that participates in the caller's layout.
+   *
+   * Mostly needed for flex sizing: the wrapper is an `inline-flex` box with
+   * the default `min-width: auto`, which pins it to the trigger's content
+   * width. Inside a flex row that has to shrink, that stops a truncatable
+   * trigger from ever giving up space, and pushes its siblings out of the
+   * container instead. Pass a class setting `min-width: 0` there.
+   */
+  className?: string;
   'aria-label': string;
   children: ReactNode;
 }
@@ -83,6 +94,7 @@ export function Popover({
   align = 'right',
   width = 288,
   panelStyle,
+  className,
   'aria-label': ariaLabel,
   children,
 }: PopoverProps) {
@@ -252,7 +264,7 @@ export function Popover({
   }, [open, onClose]);
 
   return (
-    <div ref={containerRef} className={styles.container}>
+    <div ref={containerRef} className={[styles.container, className].filter(Boolean).join(' ')}>
       {trigger}
       {open && (
         <div

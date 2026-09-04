@@ -47,3 +47,27 @@
   padding: 0.1em 0.35em;
   border-radius: var(--sv-radius-sm);
 }
+
+/*
+ * Long lines scroll inside the block rather than widening the page — a code
+ * sample is the most likely thing in this component to overflow its
+ * container, and the surrounding prose should not reflow because of it.
+ */
+.codeBlock {
+  margin: 0;
+  padding: var(--sv-space-4);
+  background: var(--sv-color-surface-sunken);
+  border-radius: var(--sv-radius-md);
+  overflow-x: auto;
+}
+
+/* The block already carries the panel background and padding; the inline
+   `code` chrome would otherwise double up inside it. */
+.codeBlock code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: var(--sv-font-size-sm);
+  line-height: 1.6;
+  white-space: pre;
+}

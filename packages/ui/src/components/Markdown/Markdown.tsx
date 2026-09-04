@@ -3,12 +3,12 @@ import { Typography } from '../Typography/Typography';
 import styles from './Markdown.module.css';
 
 export interface MarkdownProps {
-  /** Raw markdown source. Supports the subset used by Sovereign's own
-   * long-form content pages: headings (#/##/###), paragraphs, **bold**,
-   * *italic*, `code`, [links](url), unordered lists (-), and blockquotes
-   * (>), including soft-wrapped continuation lines within a paragraph or
-   * list item. Not a general-purpose CommonMark parser — no tables,
-   * images, ordered lists, or nested blocks. */
+  /** Raw markdown source. Supports: headings (#/##/###), paragraphs,
+   * **bold**, *italic*, `code`, [links](url), unordered lists (-), ordered
+   * lists (1. / 1)), fenced code blocks (```), and blockquotes (>),
+   * including soft-wrapped continuation lines within a paragraph or list
+   * item. Not a general-purpose CommonMark parser — no tables, images, or
+   * nested blocks. */
   content: string;
   /** Renders every line within a paragraph on its own visual line (a
    * `<br>` between them) instead of the default CommonMark-style soft-wrap
@@ -67,18 +67,29 @@ function parseInline(text: string): ReactNode[] {
 const isQuote = (l: string) => l.startsWith('> ') || l === '>';
 const isListItem = (l: string) => l.startsWith('- ');
 const isHeading = (l: string) => /^#{1,3}\s+/.test(l);
+/** ```` ```lang ```` — an opening (or closing) code fence. */
+const isFence = (l: string) => /^\s*`{3,}/.test(l);
+/** `1. item` or `1) item`. Bounded digit count so a long numeric line
+ *  can't be mistaken for a list marker. */
+const isOrderedItem = (l: string) => /^\d{1,9}[.)]\s+/.test(l);
 /** A line that ends the current *paragraph* run — a blank line, or the
- * start of a heading, quote, or list block. Anything else (including an
- * indented continuation line) is folded into the paragraph, matching how
+ * start of a heading, quote, list, or code block. Anything else (including
+ * an indented continuation line) is folded into the paragraph, matching how
  * the source markdown soft-wraps prose across lines. */
-const endsParagraph = (l: string) => l.trim() === '' || isHeading(l) || isQuote(l) || isListItem(l);
-/** A line that ends the current *list* run — a blank line, or the start of
- * a heading or quote. Deliberately does NOT include `isListItem`: a list
- * item's own opening line legitimately satisfies `isListItem`, so reusing
- * `endsParagraph` here (which does) would treat the first line of every
- * list as ending the list before it started — the list-collection loop
- * would then never advance, looping forever. */
-const endsList = (l: string) => l.trim() === '' || isHeading(l) || isQuote(l);
+const endsParagraph = (l: string) =>
+  l.trim() === '' || isHeading(l) || isQuote(l) || isListItem(l) || isOrderedItem(l) || isFence(l);
+/** A line that ends the current *unordered list* run — a blank line, or the
+ * start of a heading, quote, code block, or an *ordered* item. Deliberately
+ * does NOT include `isListItem`: a list item's own opening line legitimately
+ * satisfies `isListItem`, so reusing `endsParagraph` here (which does) would
+ * treat the first line of every list as ending the list before it started —
+ * the list-collection loop would then never advance, looping forever. */
+const endsList = (l: string) =>
+  l.trim() === '' || isHeading(l) || isQuote(l) || isFence(l) || isOrderedItem(l);
+/** The ordered-list mirror of `endsList` — excludes `isOrderedItem` for the
+ *  same reason, and treats an unordered item as the start of a new block. */
+const endsOrderedList = (l: string) =>
+  l.trim() === '' || isHeading(l) || isQuote(l) || isFence(l) || isListItem(l);
 
 function parseBlocks(content: string, preserveLineBreaks: boolean): ReactNode[] {
   const lines = content.replace(/\r\n/g, '\n').split('\n');
@@ -91,6 +102,34 @@ function parseBlocks(content: string, preserveLineBreaks: boolean): ReactNode[] 
 
     if (line.trim() === '') {
       i++;
+      continue;
+    }
+
+    // Checked before every other block type: everything between the fences
+    // is verbatim, including blank lines and lines that would otherwise
+    // read as headings, quotes, or list items.
+    if (isFence(line)) {
+      const fenceMatch = /^\s*(`{3,})(.*)$/.exec(line);
+      const fence = fenceMatch?.[1] ?? '```';
+      const language = (fenceMatch?.[2] ?? '').trim();
+      const closing = new RegExp(`^\\s*${fence}\\s*$`);
+      i++;
+      const codeLines: string[] = [];
+      while (i < lines.length && !closing.test(lines[i] ?? '')) {
+        codeLines.push(lines[i] ?? '');
+        i++;
+      }
+      // Steps past the closing fence; a no-op at end of input, so an
+      // unterminated fence renders the remainder as code (as CommonMark
+      // does) rather than looping.
+      i++;
+      blocks.push(
+        <div key={blockKey++} className={styles.block}>
+          <pre className={styles.codeBlock}>
+            <code data-language={language || undefined}>{codeLines.join('\n')}</code>
+          </pre>
+        </div>,
+      );
       continue;
     }
 
@@ -121,6 +160,41 @@ function parseBlocks(content: string, preserveLineBreaks: boolean): ReactNode[] 
               {parseInline(quoteLines.join(' '))}
             </Typography>
           </blockquote>
+        </div>,
+      );
+      continue;
+    }
+
+    if (isOrderedItem(line)) {
+      const items: string[] = [];
+      let start: number | undefined;
+      while (i < lines.length && !endsOrderedList(lines[i] ?? '')) {
+        const current = lines[i] ?? '';
+        const match = /^(\d{1,9})[.)]\s+(.*)$/.exec(current);
+        if (match) {
+          // Honour the author's own starting number (a list resuming at 4),
+          // but let the browser number the rest — markdown's own numbers
+          // are conventionally ignored after the first.
+          if (start === undefined) start = Number(match[1]);
+          items.push(match[2] ?? '');
+        } else {
+          const lastIndex = items.length - 1;
+          items[lastIndex] = `${items[lastIndex] ?? ''} ${current.trim()}`;
+        }
+        i++;
+      }
+      blocks.push(
+        <div key={blockKey++} className={styles.block}>
+          <ol
+            className={styles.list}
+            start={start !== undefined && start !== 1 ? start : undefined}
+          >
+            {items.map((item, idx) => (
+              <Typography key={idx} variant="body" as="li">
+                {parseInline(item)}
+              </Typography>
+            ))}
+          </ol>
         </div>,
       );
       continue;

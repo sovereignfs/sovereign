@@ -17,6 +17,19 @@ export interface ThreeColumnLayoutProps {
   sidebarWidth?: number;
   /** px. Fixed width of the third column, when present. Default 360. */
   detailWidth?: number;
+  /**
+   * Hides the sidebar column entirely — no width, no border, no layout box
+   * — while keeping it mounted and every sibling in its own stable position.
+   *
+   * Prefer this over conditionally omitting the sidebar child, or swapping
+   * to a different wrapper when collapsed. Omitting it shifts `main` into
+   * the sidebar slot, and swapping the surrounding element type unmounts
+   * `main`'s entire subtree — silently discarding its React state (a live
+   * stream, unsent composer text, an in-memory-only conversation) on every
+   * collapse toggle. Found live in Warden, whose chat column lost all of
+   * that each time the sidebar was shown or hidden.
+   */
+  sidebarHidden?: boolean;
   className?: string;
 }
 
@@ -36,6 +49,7 @@ export function ThreeColumnLayout({
   children,
   sidebarWidth = 280,
   detailWidth = 360,
+  sidebarHidden = false,
   className,
 }: ThreeColumnLayoutProps) {
   const items = Children.toArray(children);
@@ -50,7 +64,16 @@ export function ThreeColumnLayout({
 
   return (
     <div className={[styles.shell, className].filter(Boolean).join(' ')}>
-      <div className={styles.sidebar} style={{ width: sidebarWidth }}>
+      {/* `hidden` (not just the class) so the column leaves the
+          accessibility tree and the tab order too, rather than staying
+          reachable by keyboard while invisible. */}
+      <div
+        className={[styles.sidebar, sidebarHidden && styles.sidebarHidden]
+          .filter(Boolean)
+          .join(' ')}
+        style={sidebarHidden ? undefined : { width: sidebarWidth }}
+        hidden={sidebarHidden}
+      >
         {sidebar}
       </div>
       <div className={styles.main}>{main}</div>

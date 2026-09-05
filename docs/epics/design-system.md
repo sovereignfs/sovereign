@@ -1427,7 +1427,7 @@ either in a patch); `@sovereignfs/create-plugin` → **patch**.
 
 ---
 
-#### 📋 9.28 — `NavList` component (grouped icon+label nav, static + drilldown variants)
+#### ✅ 9.28 — `NavList` component (grouped icon+label nav, static + drilldown variants)
 
 **Goal:** Add a new `packages/ui` component, `NavList`, for the "vertical list
 of icon+label rows, optionally grouped under section headers" shape — needed
@@ -1490,6 +1490,20 @@ design decision. No RFC governs it (see that workstream's "Why no RFC").
 - `packages/ui`'s `package.json` `version` bumped **minor** (new additive
   component/exports, no breaking change) per NFR-04.
 - `docs/design-system.md`'s component reference gains a `NavList` entry.
+
+**Result:** Shipped at platform version `0.105.0`, alongside task 13.17 (its
+first consumer). One deliberate deviation from this task's own Deliverables
+draft above, caught before any code shipped: `NavList` is framework-agnostic
+like the existing `NavTabs` — it does **not** call `usePathname()` internally
+and has no `next/navigation`/`next/link` import; active state and navigation
+come from the consumer instead, via `item.active` and an optional
+`renderLink` prop. This was confirmed by reading `NavTabs.tsx` before writing
+`NavList.tsx`, since the Deliverables text above had assumed `NavList` would
+resolve its own active state internally, which would have broken that
+established convention. Both variants shipped as specified — `static`
+(active row highlighted, no chevron) backs Console's desktop sidebar;
+`drilldown` (trailing chevron, no active state) backs its mobile index.
+`packages/ui` bumped `0.74.0` → `0.75.0` (minor, additive component/exports).
 
 #### ✅ 9.29 — `Dialog`: remove duplicate Escape-dismissal
 

@@ -160,7 +160,8 @@ each: `docs/architecture-rules.md`.
   (`item.active`, `renderLink`).
 - **Extend `packages/tsconfig`** (`base`/`nextjs`/`library`) in every package/app.
 - **Plugin tables are slug-prefixed** (`tasks_lists`); every user-scoped table
-  has `tenant_id`.
+  has `tenant_id`; every non-platform plugin gets its own isolated
+  `plugin_<slug>` schema/namespace (epic 8.28).
 - **A plugin declaring `data:import` must register `sdk.portability.provideImport()`**
   (and `data:export` ↔ `provideExport()`); a missing handler is silently skipped
   on restore, not an error.
@@ -188,9 +189,11 @@ each: `docs/architecture-rules.md`.
 
 - **Platform data layer is always async:** `await getPlatformDb()`,
   `await getConfig()`, every `packages/db` helper — even on SQLite.
-- **Relative SQLite paths resolve against the workspace root** (nearest
-  `pnpm-workspace.yaml`), duplicated deliberately in `packages/db` and
-  `apps/auth/src/db.ts`.
+- **Relative on-disk paths resolve against the workspace root** (nearest
+  `pnpm-workspace.yaml`) — the migrations folder, avatars, and the legacy
+  `.db` files the migration tools read. The live server never opens a SQLite
+  file itself (SQLite is sqld-backed). Duplicated deliberately in
+  `packages/db` and `apps/auth`.
 - **`apps/auth` reads the same `DB_DIALECT`/`POSTGRES_DB_URL` as the platform**
   (no separate auth URL) and gets its own `sovereign_auth` schema/namespace; it
   duplicates dialect resolution rather than importing `@sovereignfs/db`.
@@ -262,15 +265,18 @@ each: `docs/architecture-rules.md`.
   use a manual index scan.
 - **`bypassPluginVisibilityInDev()` checks `NODE_ENV === 'development'` exactly**,
   never `!== 'production'` — widening it disables gating under test.
-- **Never make the service worker's `pages*` cache entries stale-serving** —
-  pages are per-user SSR; keep `NetworkFirst` with `networkTimeoutSeconds`.
+- **The service worker never stores a per-user page.** The `pages` entry is
+  `NetworkFirst` in name only (workbox-build rejects `networkTimeoutSeconds`
+  on `NetworkOnly`) with a `cacheWillUpdate` that returns `null`; keep it that
+  way and bound latency with `networkTimeoutSeconds` + `fallbacks.document`.
 
 ### Runtime, boot, Docker
 
 - **Never `NEXT_PUBLIC_*` for runtime-varying values** — inlined at build time;
   Docker images build without `.env`.
 - **Never drop the `pnpm-workspace.yaml` COPY from Dockerfiles** —
-  `findWorkspaceRoot()` needs it or SQLite files land outside the volume.
+  `findWorkspaceRoot()` needs it or on-disk writes land outside the volume
+  and the runtime fails to boot on migrations lookup.
 - **The runtime Dockerfile ships every plugin's `manifest.json` and `migrations/`**
   into `/app/.deploy/plugins`; a missing one is skipped silently and surfaces
   as a production 500.

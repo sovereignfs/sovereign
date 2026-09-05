@@ -61,8 +61,10 @@ two-layer model, including the Docker build-arg mechanics.
 | `fs.sovereign.example-api`            | `/example-api`            | API provider serve-route pattern (PLT-16)                                                                                                                 |
 | `fs.sovereign.example-monetized`      | `/example-monetized`      | Monetization manifest field, Ed25519 license gating, paywall flow (RFC 0003)                                                                              |
 | `fs.sovereign.example-mobile`         | `/example-mobile`         | `@sovereignfs/ui`'s PWA/mobile layout: responsive breakpoint fork, swipeable carousel                                                                     |
+| `fs.sovereign.example-mobile-poc`     | `/example-mobile-poc`     | Stability POC for `@sovereignfs/ui`'s `MobileHeader`/`MobileFooter`/`SwipableMobileCarousel`: desktop sidebar fork + mobile section-index carousel        |
 | `fs.sovereign.example-encrypted`      | `/example-encrypted`      | App-level field encryption (RFC 0092): classified schema, seal/open, blind-index search, registration, plaintext export                                   |
 | `fs.sovereign.example-device-only`    | `/example-device-only`    | `offline: "device-only"` (RFC 0093): `DeviceOnlyGate`/`DeviceStorageKeyGate`, encrypted notes via `device-only-kv.ts`, unlock-session status/lock control |
+| `fs.sovereign.example-layouts`        | `/example-layouts`        | `@sovereignfs/ui`'s page-layout primitives: `ThreeColumnLayout`, `HeaderFooterLayout`, `RootLayout`, `PageLayout`                                         |
 
 Each plugin's own `manifest.json` and (where present) `README.md` cover its
 specifics — start there for the pattern you want to copy.

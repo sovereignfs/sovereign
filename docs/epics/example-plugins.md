@@ -4,13 +4,13 @@
 
 ## Status
 
-✅ Complete — 12.1 (starter template & examples), 12.2 (extraction to own repo, later reversed), 12.3 (admin disable surface), 12.4 (manifest cleanup & example-set expansion), 12.5 (`example-mobile-poc` relocated into the set).
+✅ Complete — 12.1 (starter template & examples), 12.2 (extraction to own repo, later reversed), 12.3 (admin disable surface), 12.4 (manifest cleanup & example-set expansion), 12.5 (`example-mobile-poc` relocated into the set), 12.6 (`example-encrypted` field-encryption reference, RFC 0092), 12.7 (`example-device-only` device-only tier reference, RFC 0093), 12.8 (`example-layouts` layout-primitives reference).
 
 ## Overview
 
 Task 0.5.28 delivered three entry points to the same canonical skeleton: a GitHub template repo (`sovereign-plugin-template`), a `sv plugin new <name>` CLI command, and an `npm create @sovereignfs/plugin` initializer. Capability-demo examples (`example-basic`, `example-api`) demonstrate runtime composition, route-guard patterns, `apiProvider`, and plugin-declared capabilities (Task 0.6.1 extends `example-basic` to demo the `capabilities` manifest field). These examples also serve as fixtures for integration and E2E tests.
 
-The example set has since grown to nine plugins (`example-basic`, `example-api`, `example-minimal`, `example-monetized`, `example-overlay-small/medium/large`, `example-mobile`, `example-mobile-poc`) committed directly in `example-plugins/` (a sibling of `plugins/`, composed only when `SOVEREIGN_EXAMPLES_ENABLED` is set). Tasks 12.2–12.3 originally moved that set out of the monorepo into a dedicated `sovereign-plugins-examples` repository and gave operators a first-class way to identify and disable example plugins (in bulk or one at a time); Task 12.2's externalization was itself reversed on 2026-08-01 back to the current in-repo model (see its correction note). Task 12.4 covers the manifest-schema tightening and the expansion from the original two examples to eight; Task 12.5 covers the ninth.
+The example set has since grown to twelve plugins (`example-basic`, `example-api`, `example-minimal`, `example-monetized`, `example-overlay-small/medium/large`, `example-mobile`, `example-mobile-poc`, `example-encrypted`, `example-device-only`, `example-layouts`) committed directly in `example-plugins/` (a sibling of `plugins/`, composed only when `SOVEREIGN_EXAMPLES_ENABLED` is set). Tasks 12.2–12.3 originally moved that set out of the monorepo into a dedicated `sovereign-plugins-examples` repository and gave operators a first-class way to identify and disable example plugins (in bulk or one at a time); Task 12.2's externalization was itself reversed on 2026-08-01 back to the current in-repo model (see its correction note). Task 12.4 covers the manifest-schema tightening and the expansion from the original two examples to eight; Task 12.5 covers the ninth; Task 12.6 covers the tenth (field-encryption reference, RFC 0092); Task 12.7 covers the eleventh (device-only tier reference, RFC 0093); Task 12.8 covers the twelfth (layout-primitives reference).
 
 ## Related RFCs
 
@@ -377,5 +377,63 @@ actual plugin would.
   and the underlying modules' own real-WebCrypto unit tests are what back
   this plugin's correctness, not an end-to-end UI run — the same honest gap
   already documented for task 20.13's native capability.
+
+---
+
+#### ✅ 12.8 — `example-layouts`: `@sovereignfs/ui` layout-primitives reference plugin
+
+**Goal:** Give each of `@sovereignfs/ui`'s page-layout primitives —
+`ThreeColumnLayout`, `HeaderFooterLayout`, `RootLayout`, `PageLayout` — a
+live, copyable reference showing real composition and responsive-fallback
+behavior, not just Storybook isolation, the same role `example-mobile`/
+`example-mobile-poc` already play for the mobile-carousel/shell primitives.
+
+**Delivered:**
+
+- `example-plugins/example-layouts` (`fs.sovereign.example-layouts`,
+  `/example-layouts`): an index page (`app/page.tsx`) linking to one demo
+  route per primitive, added incrementally alongside each primitive's own
+  `packages/ui` introduction rather than as a single task.
+- `three-column`: `ThreeColumnLayout` demo — sidebar + main + detail-column
+  list/detail shape, plus a `ResponsiveSurface`-forked `MobileStackedDemo`
+  fallback showing how a plugin composes around the component's own lack of
+  built-in responsiveness instead of overflowing at narrow widths.
+- `header-footer`: `HeaderFooterLayout` demo — fixed-height header/footer
+  around a scrollable list, proving "footer always at the bottom" falls out
+  of plain flex layout alone, with no `position: fixed` involved.
+- `root-layout`: `RootLayoutDemo` — all four `RootLayout` variants (plain,
+  sidebar, header, shell), each a fixed web+mobile pairing. Building this
+  demo surfaced and fixed three real `packages/ui` bugs before ship: a
+  `min-height`-vs-`height` percentage-resolution mismatch that collapsed the
+  shell row, `sidebarWidth`/`headerHeight` defaults that didn't match the
+  platform's own real values (`--sv-shell-sidebar-width`, Kanban's compact
+  header), and a Storybook demo wrapper leaving most of its canvas as dead
+  space. Also added this plugin's own `shellConfig: { mobileHeader: false,
+mobileFooter: false }` (matching `example-mobile-poc`/Tasks' convention),
+  fixing double mobile chrome from `RootLayout`'s self-rendered header/footer
+  stacking on top of the platform shell's own.
+- `page-layout`: `PageLayoutDemo` — composes `RootLayout(variant="sidebar")`
+  with `PageLayout` the way a real plugin actually would, with a live
+  padding-step switcher; confirms `PageLayout`'s unpadded-by-default,
+  opt-in padding scale is a behavior-neutral stand-in for `PageContainer`,
+  which it's intended to eventually replace.
+
+**SRS reference:** None — four separate ad-hoc `packages/ui` additions (no
+RFC filed for any of the four primitives); each demo route's own doc
+comment carries its specific design rationale. This task backfills the
+plugin's own missing entry in this epic file and in
+`example-plugins/README.md`'s reference table — both had zero mentions of
+`example-layouts` despite it having shipped across four already-merged
+commits.
+
+**Review checklist:**
+
+- `pnpm --filter @sovereignfs/example-layouts typecheck` clean; manifest
+  validates against the current schema.
+- With `SOVEREIGN_EXAMPLES_ENABLED` set, the plugin composes and all four
+  demo routes render at both breakpoints with no console errors.
+- `pnpm design:tokens:check` passes.
+- `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test` clean
+  across the monorepo.
 
 ---

@@ -2504,7 +2504,7 @@ on this task.
 
 ---
 
-#### 📋 8.42 — `sv restore --age-identity` + docs (workstream 0023 leg 6)
+#### ✅ 8.42 — `sv restore --age-identity` + docs (workstream 0023 leg 6)
 
 **Goal:** Let an operator restore an age-recipient-encrypted instance backup from the CLI, and document both new destination types.
 
@@ -2522,6 +2522,63 @@ on this task.
 - `sv restore --age-identity` recovers a real recipient-mode instance backup end to end.
 - The existing passphrase-mode `sv restore` path is unaffected.
 - `docs/self-hosting.md` and `docs/security.md` accurately describe both new destination types and the no-escrow warning.
+
+**Shipped:** `bin/backup-restore.ts`'s `restore` command gains `--age-identity <file>`.
+A new `parseIdentityFile()` splits the file's raw content into candidate key
+lines the same way the real `age` CLI's own `-i` flag does — blank lines and
+`#`-prefixed comments ignored — since `age-encryption`'s own
+`Decrypter.addIdentity()` accepts only a bare `AGE-SECRET-KEY-1...` string
+and throws on anything else, unlike the real CLI; `age-keygen -o <file>`'s
+default output has exactly the comment-plus-key shape this needed to
+tolerate. A new local `decryptWithIdentity()` (duplicated in this file
+rather than imported from `runtime/src/backup-encryption.ts`, matching this
+file's own established convention of never importing across that boundary,
+for its bundle-ability into the dependency-free `sv-backup-cli.js`
+artifact) decrypts into a temp file inside a dedicated `.sv-restore-decrypt-*`
+directory, which the existing restore logic then reads unmodified — cleaned
+up in a `finally` block regardless of success or failure. `age-encryption`
+is a genuine new dependency for `bin/` (added to root `package.json` as
+`catalog:`, and to `bin/tsup.config.ts`'s `noExternal` list alongside
+`citty`/`consola` — all three are pure JS with no native addon, so the
+bundle's dependency-free property for the production `runner` image is
+unaffected). No passphrase-mode flag was added — a passphrase-encrypted
+archive is still decrypted with the standalone `age` CLI before being handed
+to `sv restore`, exactly as before this leg; only recipient mode gets the
+convenience flag, matching this task's own scoped deliverable.
+
+Verified live end to end against real Postgres infrastructure, reusing the
+real recipient-mode archive and operator identity from task 8.41's own
+verification rather than regenerating them: built the `tools` image (which
+has `pnpm`/`tsx`/`pg_restore`, unlike `runner`) with this leg's changes,
+spun up two fresh, empty, throwaway Postgres containers, and ran
+`sv restore --age-identity <identity> <archive.tar.gz.age>` against the
+first — it decrypted correctly and populated 4 real schemas (`public`,
+`drizzle`, `sovereign_auth`, `plugin_fs_sovereign_warden`) and 58 real
+tables, not an empty or partial restore. Separately confirmed the existing
+plain-archive path is completely unaffected: took a fresh `sv backup` off
+that now-populated instance and restored it with no `--age-identity` flag
+into the second throwaway Postgres — identical 4 schemas and 58 tables, and
+the CLI's own log output showed no decryption step at all, confirming the
+original code path runs unchanged. Also confirmed the failure mode live: an
+independently-generated, non-matching identity against the same recipient
+archive fails cleanly (`Decryption failed: the identity does not match...`,
+exit code 1) before ever reaching `pg_restore`, leaving the target database
+untouched. All three runs used real `pg_dump`/`pg_restore`/`tar`/`age`
+subprocess invocations inside the actual container image, not mocked. Full
+`pnpm exec vitest run` (3213 passed, up from 3205 — 8 new tests in
+`bin/__tests__/backup-restore.test.ts`, generating real ciphertext via
+`age-encryption`'s own `generateIdentity()`/`identityToRecipient()` rather
+than mocking the crypto), `pnpm typecheck`, `pnpm lint`, `pnpm format:check`,
+and `pnpm exec tsx scripts/design-tokens-check.ts` all green. Root platform
+bumped `0.129.0` → `0.130.0` — no `runtime` bump, since nothing under
+`runtime/` changed this leg. `docs/self-hosting.md`'s pre-existing "Backups"
+section (its manual `age`/GPG recipe, written before this workstream
+existed) was also corrected as a drive-by fix — it no longer reads as if no
+backup is ever encrypted automatically, now noting that the job-driven
+flows already encrypt before the archive reaches disk. This completes
+workstream 0023 in full — all six legs (encryption primitives, per-user
+identity/connection/push/restore, operator recipient destination, operator
+CLI restore + docs) are now ✅.
 
 ---
 

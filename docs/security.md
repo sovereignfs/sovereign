@@ -183,6 +183,25 @@ the RFC 0060 adoption notes) — not something that broadens automatically.
   this same wrapped material (still ciphertext-only) so a user's ability to
   unlock their data can travel with a data export/migration, provided they
   still have their recovery secret.
+- **Backup encryption (RFC 0064/0084, workstream 0023) is always applied —
+  no opt-out — and its recipient mode has no server-side recovery path, by
+  design.** Every job-driven backup (Account → Data → Full backup,
+  user-scope; Console → Backups, instance-scope, Postgres dialect only) is
+  encrypted before the archive ever reaches disk or download, using one of
+  two `age` modes: a passphrase typed fresh for that one backup and never
+  persisted anywhere, or — when a personal (Account → Data) or operator
+  (`SV_BACKUP_GIT_AGE_RECIPIENT`) age identity is configured — recipient
+  mode for the copy pushed to a connected git remote. **Losing an age
+  identity is unrecoverable: there is no server-side escrow for either the
+  per-user browser-generated identity or an operator's own `age-keygen`
+  file.** The running instance process never holds a private key at any
+  point — recipient-mode decryption happens only client-side in the
+  browser (a user restoring their own backup) or in an operator's own
+  offline `sv restore --age-identity <file>` invocation, structurally the
+  same as already having to supply a passphrase for the passphrase-mode
+  case. A recipient-encrypted backup pushed to a git remote is decryptable
+  with nothing but that repository and the held identity — no dependency
+  on Sovereign being installed, running, or even the same version.
 
 ## Self-hoster hardening checklist
 

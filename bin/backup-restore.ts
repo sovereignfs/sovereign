@@ -14,14 +14,20 @@
  * (`drizzle-orm`, `cron-parser`, `@libsql/client`, the native
  * `better-sqlite3-multiple-ciphers` addon) into the bundle; importing
  * `bin/helpers.ts` would pull in `@sovereignfs/manifest` (zod, semver) the
- * same way. None of that is needed here — `citty` and `consola` (both
- * genuinely zero-dependency) are the bundle's only real dependencies.
+ * same way. `citty`, `consola`, and `age-encryption` (added for `restore`'s
+ * `--age-identity` flag, epic task 8.42, workstream 0023 leg 6) are the
+ * bundle's only real dependencies — all three genuinely zero-dependency,
+ * pure-JS packages (see `bin/tsup.config.ts`'s own comment), so none of them
+ * threaten this file's bundle-ability into the dependency-free
+ * `sv-backup-cli.js` artifact the way `@sovereignfs/db`/`bin/helpers.ts`
+ * would.
  */
 import { mkdirSync, mkdtempSync, existsSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { defineCommand } from 'citty';
 import { consola } from 'consola';
+import { Decrypter } from 'age-encryption';
 
 /** Mirrors packages/db/src/client.ts's findWorkspaceRoot — see this file's own doc comment for why duplicated. */
 function findWorkspaceRoot(): string {
@@ -92,6 +98,53 @@ function parseRepeatedStringFlag(rawArgs: string[] | undefined, flag: string): s
     }
   }
   return values;
+}
+
+/**
+ * Parse an age identity file's raw content into the bare secret-key
+ * line(s) `age-encryption`'s own `Decrypter.addIdentity()` expects (it
+ * accepts only a string starting with `AGE-SECRET-KEY-1`/`-PQ-1` — unlike
+ * the real `age` CLI's `-i` flag, this library throws on anything else, so
+ * a raw `age-keygen -o <file>` output can't be handed to it unparsed).
+ * Mirrors the real `age` CLI's own documented identity-file convention:
+ * blank lines and lines starting with `#` are comments, everything else is
+ * a candidate key — `age-keygen`'s default output is exactly this shape
+ * (`# created: ...` / `# public key: ...` comment lines above the real
+ * `AGE-SECRET-KEY-1...` line).
+ */
+function parseIdentityFile(content: string): string[] {
+  return content
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith('#'));
+}
+
+/**
+ * Decrypt a recipient-mode-encrypted archive with an operator-supplied
+ * identity file (epic task 8.42, workstream 0023 leg 6) — the one place
+ * this CLI ever holds a private key. This doesn't violate workstream 0023's
+ * "Sovereign never holds a private key" invariant: that invariant is about
+ * the *running instance process* never possessing one, and this is the
+ * operator's own offline CLI invocation, using a key file they supply from
+ * their own storage — structurally identical to how they already have to
+ * supply a passphrase for the passphrase-mode case (this function has no
+ * passphrase-mode equivalent; a passphrase-encrypted archive is decrypted
+ * with the standalone `age` CLI before being handed to `sv restore`, same
+ * as before this leg).
+ */
+async function decryptWithIdentity(ciphertext: Buffer, identities: string[]): Promise<Buffer> {
+  const decrypter = new Decrypter();
+  for (const identity of identities) {
+    decrypter.addIdentity(identity);
+  }
+  try {
+    const plaintext = await decrypter.decrypt(ciphertext);
+    return Buffer.from(plaintext);
+  } catch {
+    throw new Error(
+      'Decryption failed: the identity does not match this archive, or it is tampered/corrupted.',
+    );
+  }
 }
 
 const ROOT = findWorkspaceRoot();
@@ -219,16 +272,26 @@ export const restore = defineCommand({
     archive: {
       type: 'positional',
       required: true,
-      description: 'Path to the .tar.gz backup archive',
+      description:
+        'Path to the .tar.gz backup archive (or a recipient-mode-encrypted ' +
+        '.tar.gz.age archive, with --age-identity)',
     },
     dataDir: {
       type: 'string',
       description: 'Restore destination (default: ./data)',
       default: join(ROOT, 'data'),
     },
+    ageIdentity: {
+      type: 'string',
+      description:
+        'Path to an age identity file (e.g. produced by `age-keygen`) to decrypt a ' +
+        'recipient-mode-encrypted archive before restoring it (epic task 8.42). Omit for ' +
+        'an already-decrypted archive, or a passphrase-mode one — decrypt those with the ' +
+        'standalone `age` CLI first; this flag only handles recipient mode.',
+    },
   },
   async run({ args }) {
-    const archivePath = resolve(args.archive);
+    let archivePath = resolve(args.archive);
     const dataDir = resolve(args.dataDir);
 
     if (!existsSync(archivePath)) {
@@ -245,67 +308,105 @@ export const restore = defineCommand({
         'Stop the server before restoring to avoid data corruption.',
     );
 
-    if (dialect === 'postgres') {
-      const pgUrl = process.env.POSTGRES_DB_URL;
-      if (!pgUrl) {
-        consola.error('DB_DIALECT=postgres requires POSTGRES_DB_URL to be set.');
+    let decryptedTempPath: string | null = null;
+    if (args.ageIdentity) {
+      const identityPath = resolve(args.ageIdentity);
+      if (!existsSync(identityPath)) {
+        consola.error(`Age identity file not found: ${identityPath}`);
         process.exit(1);
       }
-      // Extract the dump file then pg_restore it — one database now covers
-      // the platform's own tables, the auth schema, and every plugin schema
-      // (see `backup`'s identical comment).
-      const tmp = mkdtempSync(join(dataDir, '.sv-restore-'));
-      const cleanup = (): void => rmSync(tmp, { recursive: true, force: true });
+      const identities = parseIdentityFile(readFileSync(identityPath, 'utf8'));
+      if (identities.length === 0) {
+        consola.error(`No age identity found in ${identityPath}.`);
+        process.exit(1);
+      }
+
+      consola.start('Decrypting archive with the supplied age identity...');
+      let plaintext: Buffer;
       try {
-        const extractResult = spawnSync('tar', ['-xzf', archivePath, '-C', tmp], {
-          stdio: 'inherit',
-        });
-        if (extractResult.status !== 0) {
-          cleanup();
-          consola.error('tar extraction failed.');
+        plaintext = await decryptWithIdentity(readFileSync(archivePath), identities);
+      } catch (err) {
+        consola.error(err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
+
+      const decryptDir = mkdtempSync(join(dataDir, '.sv-restore-decrypt-'));
+      decryptedTempPath = join(decryptDir, 'sovereign-backup.tar.gz');
+      writeFileSync(decryptedTempPath, plaintext);
+      archivePath = decryptedTempPath;
+      consola.success('Archive decrypted.');
+    }
+
+    try {
+      if (dialect === 'postgres') {
+        const pgUrl = process.env.POSTGRES_DB_URL;
+        if (!pgUrl) {
+          consola.error('DB_DIALECT=postgres requires POSTGRES_DB_URL to be set.');
           process.exit(1);
         }
-
-        const dumpPath = join(tmp, 'sovereign.pgdump');
-        if (existsSync(dumpPath)) {
-          const result = spawnSync(
-            'pg_restore',
-            ['--clean', '--if-exists', `--dbname=${pgUrl}`, dumpPath],
-            { stdio: 'inherit' },
-          );
-          if (result.status !== 0) {
-            cleanup();
-            consola.error('pg_restore failed.');
-            process.exit(1);
-          }
-        }
-
-        // Restore avatars if present in the archive.
-        const avatarsSrc = join(tmp, 'avatars');
-        if (existsSync(avatarsSrc)) {
-          rmSync(join(dataDir, 'avatars'), { recursive: true, force: true });
-          const mvResult = spawnSync('mv', [avatarsSrc, join(dataDir, 'avatars')], {
+        // Extract the dump file then pg_restore it — one database now covers
+        // the platform's own tables, the auth schema, and every plugin schema
+        // (see `backup`'s identical comment).
+        const tmp = mkdtempSync(join(dataDir, '.sv-restore-'));
+        const cleanup = (): void => rmSync(tmp, { recursive: true, force: true });
+        try {
+          const extractResult = spawnSync('tar', ['-xzf', archivePath, '-C', tmp], {
             stdio: 'inherit',
           });
-          if (mvResult.status !== 0) {
+          if (extractResult.status !== 0) {
             cleanup();
-            consola.error('Failed to restore avatars.');
+            consola.error('tar extraction failed.');
             process.exit(1);
           }
+
+          const dumpPath = join(tmp, 'sovereign.pgdump');
+          if (existsSync(dumpPath)) {
+            const result = spawnSync(
+              'pg_restore',
+              ['--clean', '--if-exists', `--dbname=${pgUrl}`, dumpPath],
+              { stdio: 'inherit' },
+            );
+            if (result.status !== 0) {
+              cleanup();
+              consola.error('pg_restore failed.');
+              process.exit(1);
+            }
+          }
+
+          // Restore avatars if present in the archive.
+          const avatarsSrc = join(tmp, 'avatars');
+          if (existsSync(avatarsSrc)) {
+            rmSync(join(dataDir, 'avatars'), { recursive: true, force: true });
+            const mvResult = spawnSync('mv', [avatarsSrc, join(dataDir, 'avatars')], {
+              stdio: 'inherit',
+            });
+            if (mvResult.status !== 0) {
+              cleanup();
+              consola.error('Failed to restore avatars.');
+              process.exit(1);
+            }
+          }
+          cleanup();
+        } catch (err) {
+          cleanup();
+          throw err;
         }
-        cleanup();
-      } catch (err) {
-        cleanup();
-        throw err;
+      } else {
+        // See `backup`'s identical branch — sqld's data isn't reachable as a
+        // local directory this CLI can tar/restore.
+        consola.error(
+          'Automated restore for the SQLite (sqld) dialect is not implemented yet. Restore the ' +
+            '`sovereign_sqld_data` Docker volume directly from your own volume-level backup.',
+        );
+        process.exit(1);
       }
-    } else {
-      // See `backup`'s identical branch — sqld's data isn't reachable as a
-      // local directory this CLI can tar/restore.
-      consola.error(
-        'Automated restore for the SQLite (sqld) dialect is not implemented yet. Restore the ' +
-          '`sovereign_sqld_data` Docker volume directly from your own volume-level backup.',
-      );
-      process.exit(1);
+    } finally {
+      // Clean up the decrypted plaintext temp copy (epic task 8.42) — never
+      // leave it behind, success or failure, so an --age-identity restore
+      // doesn't quietly accumulate unencrypted archive copies in dataDir.
+      if (decryptedTempPath) {
+        rmSync(dirname(decryptedTempPath), { recursive: true, force: true });
+      }
     }
 
     consola.success('Restore complete. Restart the server to apply.');

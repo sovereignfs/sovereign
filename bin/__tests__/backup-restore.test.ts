@@ -10,6 +10,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Encrypter, generateIdentity, identityToRecipient } from 'age-encryption';
 
 const spawnSyncMock = vi.hoisted(() => vi.fn());
 vi.mock('node:child_process', () => ({ spawnSync: spawnSyncMock }));
@@ -258,5 +259,172 @@ describe('restore', () => {
     expect(pgRestoreCall[1]).toEqual(expect.arrayContaining(['--dbname=postgres://x']));
     expect(mvCall[0]).toBe('mv');
     expect(existsSync(join(dataDir, 'avatars'))).toBe(false); // mv itself is mocked, not really run
+  });
+
+  describe('--age-identity (epic task 8.42, workstream 0023 leg 6)', () => {
+    async function makeRecipientEncryptedArchive(recipient: string): Promise<string> {
+      const encrypter = new Encrypter();
+      encrypter.addRecipient(recipient);
+      const ciphertext = await encrypter.encrypt(Buffer.from('fake raw tar.gz bytes'));
+      const archivePath = join(root, 'backup.tar.gz.age');
+      writeFileSync(archivePath, Buffer.from(ciphertext));
+      return archivePath;
+    }
+
+    function writeIdentityFile(identity: string, withComments = false): string {
+      const identityPath = join(root, 'identity.txt');
+      const content = withComments
+        ? `# created: 2026-09-05T00:00:00Z\n# public key: age1fake\n${identity}\n`
+        : identity;
+      writeFileSync(identityPath, content);
+      return identityPath;
+    }
+
+    function mockTarExtractOnly(): void {
+      spawnSyncMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'tar' && args[0] === '-xzf') {
+          const tmp = args[3] as string;
+          mkdirSync(tmp, { recursive: true });
+          writeFileSync(join(tmp, 'sovereign.pgdump'), 'dump');
+        }
+        return { status: 0 };
+      });
+    }
+
+    beforeEach(() => {
+      process.env.DB_DIALECT = 'postgres';
+      process.env.POSTGRES_DB_URL = 'postgres://x';
+    });
+
+    it('decrypts a real recipient-mode archive and restores normally, feeding the decrypted temp file (not the .age input) to tar', async () => {
+      const identity = await generateIdentity();
+      const recipient = await identityToRecipient(identity);
+      const archivePath = await makeRecipientEncryptedArchive(recipient);
+      const identityPath = writeIdentityFile(identity);
+      mockTarExtractOnly();
+
+      await restore.run({
+        args: { archive: archivePath, dataDir, ageIdentity: identityPath, _: [] },
+      } as never);
+
+      expect(spawnSyncMock).toHaveBeenCalledTimes(2); // tar extract + pg_restore, no avatars
+      const [tarCall] = spawnSyncMock.mock.calls;
+      const tarArgs = tarCall[1] as string[];
+      expect(tarArgs[1]).not.toBe(archivePath); // decrypted temp file, not the original .age path
+      expect((tarArgs[1] as string).endsWith('.tar.gz')).toBe(true);
+    });
+
+    it("tolerates age-keygen's default comment-line format in the identity file", async () => {
+      const identity = await generateIdentity();
+      const recipient = await identityToRecipient(identity);
+      const archivePath = await makeRecipientEncryptedArchive(recipient);
+      const identityPath = writeIdentityFile(identity, true); // WITH # comment lines
+      mockTarExtractOnly();
+
+      await restore.run({
+        args: { archive: archivePath, dataDir, ageIdentity: identityPath, _: [] },
+      } as never);
+
+      expect(spawnSyncMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('fails cleanly with a non-matching identity, never reaching tar/pg_restore', async () => {
+      const identity = await generateIdentity();
+      const recipient = await identityToRecipient(identity);
+      const wrongIdentity = await generateIdentity();
+      const archivePath = await makeRecipientEncryptedArchive(recipient);
+      const identityPath = writeIdentityFile(wrongIdentity);
+
+      await expect(
+        restore.run({
+          args: { archive: archivePath, dataDir, ageIdentity: identityPath, _: [] },
+        } as never),
+      ).rejects.toThrow('process.exit(1)');
+      expect(spawnSyncMock).not.toHaveBeenCalled();
+    });
+
+    it('fails cleanly when the identity file does not exist', async () => {
+      const archivePath = makeArchive(); // content is irrelevant — fails before it's ever read
+
+      await expect(
+        restore.run({
+          args: {
+            archive: archivePath,
+            dataDir,
+            ageIdentity: join(root, 'missing-identity.txt'),
+            _: [],
+          },
+        } as never),
+      ).rejects.toThrow('process.exit(1)');
+      expect(spawnSyncMock).not.toHaveBeenCalled();
+    });
+
+    it('fails cleanly when the identity file has no usable key line (comments/blank only)', async () => {
+      const archivePath = makeArchive();
+      const identityPath = join(root, 'empty-identity.txt');
+      writeFileSync(identityPath, '# just a comment\n\n');
+
+      await expect(
+        restore.run({
+          args: { archive: archivePath, dataDir, ageIdentity: identityPath, _: [] },
+        } as never),
+      ).rejects.toThrow('process.exit(1)');
+      expect(spawnSyncMock).not.toHaveBeenCalled();
+    });
+
+    it('cleans up the decrypted temp file after a successful restore', async () => {
+      const identity = await generateIdentity();
+      const recipient = await identityToRecipient(identity);
+      const archivePath = await makeRecipientEncryptedArchive(recipient);
+      const identityPath = writeIdentityFile(identity);
+      mockTarExtractOnly();
+
+      await restore.run({
+        args: { archive: archivePath, dataDir, ageIdentity: identityPath, _: [] },
+      } as never);
+
+      const leftovers = existsSync(dataDir)
+        ? readdirSync(dataDir).filter((f: string) => f.startsWith('.sv-restore-decrypt-'))
+        : [];
+      expect(leftovers).toEqual([]);
+    });
+
+    it('cleans up the decrypted temp file even when pg_restore fails', async () => {
+      const identity = await generateIdentity();
+      const recipient = await identityToRecipient(identity);
+      const archivePath = await makeRecipientEncryptedArchive(recipient);
+      const identityPath = writeIdentityFile(identity);
+      spawnSyncMock.mockImplementation((cmd: string, args: string[]) => {
+        if (cmd === 'tar' && args[0] === '-xzf') {
+          const tmp = args[3] as string;
+          mkdirSync(tmp, { recursive: true });
+          writeFileSync(join(tmp, 'sovereign.pgdump'), 'dump');
+          return { status: 0 };
+        }
+        return { status: 1 }; // pg_restore fails
+      });
+
+      await expect(
+        restore.run({
+          args: { archive: archivePath, dataDir, ageIdentity: identityPath, _: [] },
+        } as never),
+      ).rejects.toThrow('process.exit(1)');
+
+      const leftovers = existsSync(dataDir)
+        ? readdirSync(dataDir).filter((f: string) => f.startsWith('.sv-restore-decrypt-'))
+        : [];
+      expect(leftovers).toEqual([]);
+    });
+
+    it('leaves the existing passphrase-mode path (no --age-identity) completely unaffected — the original archive path reaches tar unchanged', async () => {
+      const archivePath = makeArchive();
+      mockTarExtractOnly();
+
+      await restore.run({ args: { archive: archivePath, dataDir, _: [] } } as never);
+
+      const [tarCall] = spawnSyncMock.mock.calls;
+      const tarArgs = tarCall[1] as string[];
+      expect(tarArgs[1]).toBe(archivePath); // no decryption step — original path passed straight through
+    });
   });
 });

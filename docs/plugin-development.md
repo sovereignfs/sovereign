@@ -189,13 +189,13 @@ are never hoisted — they're not needed at runtime.
 | `permissions`          | array of permission strings                             | yes (may be `[]`)                    | SDK capabilities the plugin declares (see below).                                                                                                                                                                                                                                                                                                                                                                  |
 | `shell`                | `default` \| `minimal` \| `overlay`                     | no                                   | Presentation mode. `default` = full page under the platform sidebar; `overlay` = dialog over the current page (see below); `minimal` = chrome-free, full-bleed (see below).                                                                                                                                                                                                                                        |
 | `shellConfig`          | object (see below)                                      | no                                   | Per-shell tuning. Holds `overlaySize` (`sm` \| `md` \| `lg` \| `auto` \| `fixed`, default `lg`) for `shell: overlay` plugins, and `mobileHeader`/`mobileFooter` (booleans, default `true`) for `shell: default` plugins (RFC 0075). Each field is only valid for its own `shell` value.                                                                                                                            |
-| `adminOnly`            | boolean                                                 | no (default `false`)                 | When `true`, only `platform:admin` users may reach the plugin's routes (403 otherwise).                                                                                                                                                                                                                                                                                                                            |
+| `adminOnly`            | boolean                                                 | no (default `false`)                 | When `true`, only users holding the `console:access` capability (the owner, admin, and auditor roles — RFC 0021) may reach the plugin's routes; everyone else gets 403.                                                                                                                                                                                                                                            |
 | `minVerificationLevel` | `0` \| `1` \| `2` \| `3`                                | no (default `0`)                     | Minimum progressive verification level (RFC 0035) a user needs to reach this plugin's routes: `0` registered, `1` email_verified, `2` mfa_enrolled, `3` admin_vouched. Enforced at the plugin route boundary — see the worked example below.                                                                                                                                                                       |
 | `apiProvider`          | boolean                                                 | no (default `false`)                 | When `true`, the plugin serves the public `/api/*` namespace (PLT-16). One provider per instance — see below.                                                                                                                                                                                                                                                                                                      |
 | `publicRoutes`         | array (see below)                                       | no                                   | Manifest-declared public page routes (RFC 0042). Each entry exempts a path prefix — relative to `routePrefix` — from the session-redirect gate; the plugin owns authorization for the exempted paths.                                                                                                                                                                                                              |
 | `webhooks`             | array (see below)                                       | no                                   | Manifest-declared public webhook endpoints (RFC 0050) — unauthenticated machine-to-machine ingress, distinct from `publicRoutes`' human-facing pages. Each entry is one exact endpoint with method/body-size limits enforced before your handler runs.                                                                                                                                                             |
 | `public`               | boolean                                                 | no (default `false`)                 | Marks the whole plugin as public — no auth requirement at all (RFC 0089). Requires `shell: "minimal"` explicitly; cannot combine with `adminOnly`, a paid `monetization.model`, or `publicRoutes`. See below.                                                                                                                                                                                                      |
-| `offline`              | boolean (see below)                                     | no (default `false`)                 | Marks the plugin's bare `routePrefix` page as its one offline-capable entry point (RFC 0074, flattened by RFC 0078 from the original `offline.routes[]`/`offline.root` object shape). Grants no auth exemption; the route must render a user-neutral shell and hydrate data client-side via `sdk.offline`.                                                                                                         |
+| `offline`              | `offline-first` \| `device-only` (see below)            | no (absent = no offline support)     | Marks the plugin's bare `routePrefix` page as its one offline-capable entry point (RFC 0074, flattened by RFC 0078 from the original `offline.routes[]`/`offline.root` object shape). Grants no auth exemption; the route must render a user-neutral shell and hydrate data client-side via `sdk.offline`.                                                                                                         |
 | `installable`          | boolean (see below)                                     | no (default `false`)                 | Lets the plugin be installed from a browser as its own home-screen app, scoped to `routePrefix`, via a dedicated manifest at `/api/manifest/<id>` (RFC 0081). Deliberately independent of `offline` — see below.                                                                                                                                                                                                   |
 | `icons`                | object (see below)                                      | no                                   | Author-supplied raster icon set (RFC 0081) — overrides the platform's auto-generated icons for `installable: true`, per variant (`png192`/`png512`/`maskable512`), for a glyph that rasterizes poorly. `installable: true` requires `icon` or `icons`.                                                                                                                                                             |
 | `surfaces`             | array of `browser` \| `mobile` \| `desktop` (see below) | no (default: every surface)          | Surfaces this plugin is available on (RFC 0080). Filters Launcher/sidebar/mobile-drawer presentation only — not a security boundary.                                                                                                                                                                                                                                                                               |
@@ -234,53 +234,37 @@ manifest validation until the corresponding runtime support ships.
 
 Declared SDK capabilities. The v1-functional ones:
 
-| Permission            | Declares                                                                                       |
-| --------------------- | ---------------------------------------------------------------------------------------------- |
-| `auth:session`        | Read the current session via `sdk.auth`.                                                       |
-| `db:readWrite`        | Read/write access to the platform DB via `sdk.db`.                                             |
-| `db:readOnly`         | Read-only DB access.                                                                           |
-| `mailer:send`         | Send email via `sdk.mailer.send()` or `sdk.email.sendToUser()` (RFC 0062).                     |
-| `mailer:sendExternal` | Send email to a raw address (not a platform-resolved user) via `sdk.mailer.send()` (RFC 0062). |
-| `data:provide`        | Expose read-only data contracts for other plugins to query (RFC 0002, `sdk.data`).             |
-| `data:consume`        | Read data from another plugin's contracts, subject to user consent (RFC 0002, `sdk.data`).     |
-| `data:export`         | Participate in a user's data export bundle — `sdk.portability.provideExport()` (RFC 0007).     |
-| `data:import`         | Participate in a data import/restore — `sdk.portability.provideImport()` (RFC 0007).           |
-| `admin:*`             | Administrative capabilities (platform plugins).                                                |
+| Permission             | Declares                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auth:session`         | Read the current session via `sdk.auth`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `db:readWrite`         | Read/write access to the plugin's own dedicated store via `sdk.db.getClient()`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `db:readOnly`          | Read-only DB access.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `mailer:send`          | Send email via `sdk.mailer.send()` or `sdk.email.sendToUser()` (RFC 0062).                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `mailer:sendExternal`  | Send email to a raw address (not a platform-resolved user) via `sdk.mailer.send()` (RFC 0062).                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `data:provide`         | Expose read-only data contracts for other plugins to query (RFC 0002, `sdk.data`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `data:consume`         | Read data from another plugin's contracts, subject to user consent (RFC 0002, `sdk.data`).                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `data:export`          | Participate in a user's data export bundle — `sdk.portability.provideExport()` (RFC 0007).                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `data:import`          | Participate in a data import/restore — `sdk.portability.provideImport()` (RFC 0007).                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `admin:*`              | Administrative capabilities (platform plugins).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `activity:write`       | Record activity-log events via `sdk.activity.log()` (RFC 0005).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `notifications:send`   | Send notifications to users via `sdk.notifications.send()`, and read/manage the calling user's own cross-plugin Notification Center inbox via `sdk.notifications.list()/markRead()/markAllRead()/dismiss()/dismissAll()` — not scoped to notifications the calling plugin itself sent (RFC 0015).                                                                                                                                                                                                                                                    |
+| `messages:send`        | Send a durable message to one or more users via `sdk.messages.send()` — send-only, no read surface (RFC 0048).                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `jobs:write`           | Enqueue/schedule/cancel/read background jobs via `sdk.jobs` (RFC 0046).                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `events:publish`       | Publish realtime events via `sdk.events.publish()` (RFC 0045).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `events:subscribe`     | Declares the plugin's channels are subscribable — a `GET /api/events/stream`/`poll` caller must still pass a manifest-declared `events[]` channel authorizer before actually receiving anything (RFC 0045).                                                                                                                                                                                                                                                                                                                                          |
+| `storage:readWrite`    | Read/write plugin-scoped binary objects via `sdk.storage` (RFC 0044).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `crypto:use`           | Server-side field encryption via `sdk.crypto.encryptField()`/`decryptField()` (RFC 0092).                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `device:haptics`       | Use `sdk.device.haptics.impact()` (RFC 0083).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `device:notifications` | Use `sdk.device.nativeNotifications.*` (RFC 0083).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `device:biometrics`    | Use `sdk.device.biometrics.confirm()` (RFC 0083, sovereign-mobile epic task 20.7).                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `handoffs:send`        | Create a signed handoff token addressed to another plugin's declared receiver via `sdk.handoffs.create()` (RFC 0053).                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `handoffs:receive`     | Declare `handoffs.receives[]` entries and consume tokens addressed to them via `sdk.handoffs.consume()` (RFC 0053).                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `tools:provide`        | Expose tool contracts other plugins can preview/execute via `sdk.tools.provide()` (RFC 0047).                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `tools:call`           | Preview/execute another plugin's declared tools via `sdk.tools.preview()`/`sdk.tools.execute()` (RFC 0047).                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `device:secureStorage` | Required for `offline: 'device-only'` (research 0012, RFC 0093) — durable, encrypted, device-auth-gated key/value storage. The web/PWA backend (WebAuthn PRF key custody + OPFS, via `@sovereignfs/sdk/device-only-kv`) is implemented; the native Capacitor/Keychain backend is the `secureStorage` bridge capability, which no shell transport implements yet (epic task 20.13; 8.20 is parked) — `sdk.device.supports('secureStorage')` reports `false` on native until it ships. Check `isDeviceOnlyTierAvailable()` before relying on the tier. |
 
-| `activity:write` | Record activity-log events via `sdk.activity.log()` (RFC 0005). |
-
-| `notifications:send` | Send notifications to users via `sdk.notifications.send()`, and read/manage the calling user's own cross-plugin Notification Center inbox via `sdk.notifications.list()/markRead()/markAllRead()/dismiss()/dismissAll()` — not scoped to notifications the calling plugin itself sent (RFC 0015). |
-
-| `messages:send` | Send a durable message to one or more users via `sdk.messages.send()` — send-only, no read surface (RFC 0048). |
-
-| `jobs:write` | Enqueue/schedule/cancel/read background jobs via `sdk.jobs` (RFC 0046). |
-
-| `events:publish` | Publish realtime events via `sdk.events.publish()` (RFC 0045). |
-
-| `events:subscribe` | Declares the plugin's channels are subscribable — a `GET /api/events/stream`/`poll` caller must still pass a manifest-declared `events[]` channel authorizer before actually receiving anything (RFC 0045). |
-
-| `storage:readWrite` | Read/write plugin-scoped binary objects via `sdk.storage` (RFC 0044). |
-
-| `crypto:use` | Server-side field encryption via `sdk.crypto.encryptField()`/`decryptField()` (RFC 0092). |
-
-| `device:haptics` | Use `sdk.device.haptics.impact()` (RFC 0083). |
-
-| `device:notifications` | Use `sdk.device.nativeNotifications.*` (RFC 0083). |
-
-| `device:biometrics` | Use `sdk.device.biometrics.confirm()` (RFC 0083, sovereign-mobile epic task 20.7). |
-
-| `device:secureStorage` | Required for `offline: 'device-only'` (research 0012, RFC 0093). Durable, encrypted, device-auth-gated key/value storage — native Keychain/Keystore key custody + SQLCipher on Capacitor, WebAuthn PRF key custody + OPFS on web. Check availability with `sdk.device.supports('secureStorage')` before relying on it; it reports `false` until a shell's transport actually implements it. Reserved — the backing bridge capability and SDK surface are not implemented yet (workstream 0008 leg 4, epic tasks 20.13/8.20/1.22); declaring it today is accepted metadata only. |
-
-| `handoffs:send` | Create a signed handoff token addressed to another plugin's declared receiver via `sdk.handoffs.create()` (RFC 0053). |
-
-| `handoffs:receive` | Declare `handoffs.receives[]` entries and consume tokens addressed to them via `sdk.handoffs.consume()` (RFC 0053). |
-
-| `tools:provide` | Expose tool contracts other plugins can preview/execute via `sdk.tools.provide()` (RFC 0047). |
-
-| `tools:call` | Preview/execute another plugin's declared tools via `sdk.tools.preview()`/`sdk.tools.execute()` (RFC 0047). |
-
-Reserved (declaring them is allowed; the backing surfaces throw `NotImplementedError` until
-implemented): `device:secureStorage`. `e2ee:use` (client-side encryption,
+Nothing in the table is reserved-only anymore except the native half of
+`device:secureStorage` (above). `e2ee:use` (client-side encryption,
 `sdk.e2ee` — RFC 0060) and `crypto:use` (server-side field encryption, `sdk.crypto` —
 RFC 0092) are both implemented and deliberately distinct: the runtime _can_ decrypt a
 `sdk.crypto` field, and can never decrypt an `sdk.e2ee` object.
@@ -325,13 +309,18 @@ _calls_ genuinely unforgeable on that transport. It does not, and cannot,
 make the _web_ transport's permission model any more enforceable than the
 browser's own origin-wide `Notification.permission` already is.
 
-Permission declarations are part of the manifest contract and are used by
-platform flows such as portability (`data:export` / `data:import`) and by the
-`mailer:send` / `mailer:sendExternal` host-side enforcement described below
-(RFC 0062). Other SDK host surfaces currently rely on the declaration as
-compatibility metadata rather than a complete runtime authorization boundary;
-plugins should still declare the permissions they use so future host-side
-gates can be enforced without changing the manifest.
+Permission declarations are part of the manifest contract. The runtime
+enforces these at the SDK host boundary — the call throws (or the hook is
+skipped) when the calling plugin's manifest lacks the permission:
+`mailer:send`/`mailer:sendExternal`, `notifications:send`, `messages:send`,
+`jobs:write`, `events:publish`/`events:subscribe`, `crypto:use`,
+`data:export`/`data:import`, `tools:provide`/`tools:call`, and
+`handoffs:send`/`handoffs:receive`. The rest are declaration-only today —
+`auth:session`, `db:*`, `storage:readWrite`, `e2ee:use`, `activity:write`,
+`data:provide`/`data:consume` (gated per user by consent rather than by the
+manifest), and the `device:*` family (client-side, unenforceable — see below).
+Declare every permission you use regardless, so a future host-side gate can be
+turned on without a manifest change.
 
 ### Plugin email (`sdk.mailer` / `sdk.email`, RFC 0062)
 
@@ -417,9 +406,12 @@ APIs. A plugin that sets `apiProvider: true` becomes the instance's API provider
 - **Exactly one** provider is allowed per instance; the build fails if two
   plugins declare `apiProvider: true`. With no provider installed (or the
   provider disabled), `/api/*` returns **404**.
-- The segments the runtime serves itself — `account`, `admin`, `health`,
-  `plugins` — are reserved and never delegated; a provider must reject them (and
-  any future runtime segment) as slugs.
+- The segments the runtime serves itself — `account`, `admin`, `auth`,
+  `backup-jobs`, `directory`, `events`, `health`, `inbox`, `instance`,
+  `manifest`, `plugins`, `storage` (the live list is `RESERVED_API_SEGMENTS` in
+  `runtime/src/api-namespace.ts`, parity-tested against the on-disk routes) —
+  are reserved and never delegated; a provider must reject them (and any future
+  runtime segment) as slugs.
 
 ### `publicRoutes` — public plugin page routes (RFC 0042)
 
@@ -1686,8 +1678,8 @@ installed, enabled, and available before offering the integration.
 Each entry: `provider` (the sibling's manifest `id`), `reason` (human-readable,
 shown in install/discovery UI), `contracts` (optional array of data contract
 names this integration would consume), `tools` (optional array of RFC 0047
-tool names this integration would invoke — reserved, RFC 0047 not yet
-implemented).
+tool names this integration would invoke — see [`tools`](#tools--plugin-tool-contracts-rfc-0047)
+above).
 
 ```json
 "integrations": {
@@ -2455,7 +2447,7 @@ The entry module's **default export** is a `ScheduleHandler` from
 import { sdk, type ScheduleContext } from '@sovereignfs/sdk';
 
 export default async function dueReminders(ctx: ScheduleContext): Promise<void> {
-  const db = await sdk.db();
+  const db = await sdk.db.getClient();
   // …query your plugin's tables, then notify:
   await sdk.notifications.send(
     { recipientUserId: userId, title: 'Task due', url: '/tasks' },
@@ -2945,12 +2937,21 @@ The SDK surface (`sdk.*`):
   }
   ```
 
-- **`db`** — `getClient()` returns the platform Drizzle client (await it — the
-  data layer is dialect-agnostic and async). Query your own slug-prefixed tables
-  with it (see Database).
+- **`db`** — `getClient()` returns your plugin's own Drizzle client, bound to its
+  dedicated store (await it — the data layer is dialect-agnostic and async).
+  `type: "platform"` plugins get the platform DB instead. No table prefix is
+  needed; keep `tenant_id` on user-scoped tables (see Database).
   ```ts
   const db = await sdk.db.getClient();
   ```
+- **`jobs`**, **`tools`**, **`handoffs`**, **`authz`**, **`crypto`**, **`e2ee`** —
+  each documented with its manifest field above:
+  [`jobs`](#jobs--background-jobs-rfc-0046),
+  [`tools`](#tools--plugin-tool-contracts-rfc-0047),
+  [`handoffs`](#handoffs--plugin-flow-handoffs-rfc-0053),
+  [`roles`/`sdk.authz`](#roles-and-sdkauthz--plugin-scoped-roles-and-grants-rfc-0054),
+  [`sdk.crypto`](#server-side-field-encryption-sdkcrypto-rfc-0092),
+  [Client-side encryption](#client-side-encryption-rfc-0060).
 - **`mailer`** — `send({ to, subject, text, html }, requestHeaders?)`. Requires
   `mailer:send` and `mailer:sendExternal` (RFC 0062 — see "Plugin email"
   above); pass `await headers()` as `requestHeaders`. No-ops when SMTP is
@@ -3400,7 +3401,7 @@ your plugin name) is shown as a fallback when no `icon.svg` is present.
 ## Database
 
 Plugins access the database through `await sdk.db.getClient()`. Every plugin gets its own
-dedicated store — a separate SQLite file (or `sqld` namespace) or Postgres schema. There is
+dedicated store — an sqld namespace (SQLite dialect) or a Postgres schema. There is
 no `shared`/`isolated` choice to make: no table prefix is required, and uninstalling a
 plugin drops its entire store. Migrations live at `plugins/<id>/migrations/` and always
 run against the plugin's own dedicated store — once a migration file ships, treat it as
@@ -3447,8 +3448,8 @@ const db = await sdk.db.getClient();
   schema for that. See `docs/plugin-database.md` for the full pattern.
 
 See **[`docs/plugin-database.md`](../docs/plugin-database.md)** for the full reference:
-shared conventions, isolated provisioning details (SQLite file path, Postgres schema
-naming), migration setup, lifecycle (provision / uninstall / `--keep-data`), and backup.
+shared conventions, provisioning details (sqld namespace and Postgres schema naming),
+migration setup, lifecycle (provision / uninstall / `--keep-data`), and backup.
 
 ## Plugin file storage (RFC 0044)
 
@@ -3722,11 +3723,11 @@ it). A plugin's store always resolves to the operator's instance-wide
 
 #### Database setup for local plugins
 
-If your plugin declares a database mode, add migration files before running
+If your plugin has a database, add its migration files before running
 `pnpm dev`. The platform applies pending migrations at server startup — but it
 will error on the first boot if the migrations folder is missing or malformed.
 
-**Required layout** (same for both modes):
+**Required layout:**
 
 ```
 plugins/your-plugin.local/
@@ -3759,10 +3760,10 @@ plugins/your-plugin.local/
 Each SQL file gets one entry. `tag` is the filename without `.sql`. `when` is a
 Unix millisecond timestamp (any reasonable value; used for display only).
 
-For `isolated` plugins the migration runs against the plugin's own DB file in
-`data/plugins/`. For `shared` plugins it runs against the platform DB
-(`data/sovereign.db`) — table-name prefixing (e.g. `tasks_`, `myapp_`) is
-mandatory to avoid conflicts.
+Migrations always run against the plugin's own dedicated store — its sqld
+namespace on the SQLite dialect, its `plugin_<slug>` schema on Postgres. A
+Postgres-dialect instance reads `migrations/postgres/` instead, generated from
+a separate `pgTable` schema file — see `docs/plugin-database.md`.
 
 #### Applying migrations without restarting the server
 
@@ -3776,9 +3777,9 @@ pnpm sv plugin migrate fs.sovereign.your-plugin
 pnpm sv plugin migrate
 ```
 
-The command reads from your plugin's `migrations/sqlite/` folder and updates
-the DB (plugin file for `isolated`, platform DB for `shared`). The running dev
-server picks up the new schema on the next request — no restart needed.
+The command reads from your plugin's `migrations/<dialect>/` folder and applies
+it to the plugin's own store. The running dev server picks up the new schema on
+the next request — no restart needed.
 
 #### Migration files are append-only once shipped
 

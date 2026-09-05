@@ -355,7 +355,7 @@ export const DotsManyCompact: Story = {
     docs: {
       description: {
         story:
-          'density="compact" halves the gap between dots (only the gap — each dot keeps its own 20px hit target). Opt-in: every existing consumer\'s spacing is unchanged unless it passes this prop.',
+          'density="compact" halves the gap between dots and shrinks each dot\'s own hit target from 20px to 16px — the visible 6px dot itself is unchanged; only its surrounding tap-target box shrinks. Opt-in: every existing consumer\'s spacing is unchanged unless it passes this prop.',
       },
     },
   },

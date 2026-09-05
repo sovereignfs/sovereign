@@ -300,10 +300,15 @@ describe('runInstanceBackup', () => {
         }),
         Buffer.from('ciphertext'), // the exact same bytes written to job.archivePath
         'sovereign-backup.tar.gz.age',
-        expect.objectContaining({ platformVersion: '0.99.0', scope: 'instance' }),
+        expect.objectContaining({
+          platformVersion: '0.99.0',
+          scope: 'instance',
+          encryptionMode: 'passphrase',
+        }),
         '0.99.0',
       );
       expect(markBackupJobPushResultMock).toHaveBeenCalledWith({}, j.id, { status: 'succeeded' });
+      expect(encryptToRecipientsMock).not.toHaveBeenCalled();
     });
 
     it('respects a configured SV_BACKUP_GIT_BRANCH instead of the "backups" default', async () => {
@@ -361,6 +366,89 @@ describe('runInstanceBackup', () => {
       expect(markBackupJobPushResultMock).toHaveBeenCalledWith({}, j.id, {
         status: 'failed',
         error: expect.stringContaining('not configured') as unknown as string,
+      });
+    });
+
+    describe('age-recipient encryption (epic task 8.41, workstream 0023 leg 5)', () => {
+      function setUpGitPushEnv(): void {
+        process.env.SV_BACKUP_GIT_REPOSITORY = 'https://git.example.com/org/backups.git';
+        process.env.SV_BACKUP_GIT_TOKEN = 'the-configured-token';
+      }
+
+      it('encrypts the git-pushed copy to the recipient instead of the passphrase — a separate pass over the raw plaintext, not the already-passphrase-encrypted bytes', async () => {
+        setUpHappyPathThrough();
+        spawnSyncMock.mockReturnValue({ status: 0, error: undefined, signal: null, stderr: '' });
+        existsSyncMock.mockReturnValue(true);
+        setUpGitPushEnv();
+        process.env.SV_BACKUP_GIT_AGE_RECIPIENT = 'age1testoperatorrecipient';
+        encryptToRecipientsMock.mockResolvedValue(
+          Buffer.from('recipient-ciphertext').toString('base64url'),
+        );
+        pushBackupToGitMock.mockResolvedValue({ tag: 'sv-backup/x/v0.99.0', commitSha: 'abc123' });
+
+        const j = job({ optionsJson: JSON.stringify({ pushToGit: true }) });
+        const result = await runInstanceBackup(j);
+
+        // The direct-download archive is completely unaffected — still the
+        // passphrase ciphertext, regardless of the recipient being configured.
+        expect(result.archivePath).toBe(j.archivePath);
+        expect(writeFileSyncMock).toHaveBeenCalledWith(j.archivePath, Buffer.from('ciphertext'));
+
+        expect(encryptToRecipientsMock).toHaveBeenCalledWith(
+          Buffer.from('raw archive bytes'), // the raw plaintext, not encryptMock's ciphertext output
+          ['age1testoperatorrecipient'],
+        );
+        expect(pushBackupToGitMock).toHaveBeenCalledWith(
+          expect.anything(),
+          Buffer.from('recipient-ciphertext'), // recipient ciphertext pushed, NOT the passphrase ciphertext
+          'sovereign-backup.tar.gz.age',
+          expect.objectContaining({ scope: 'instance', encryptionMode: 'recipient' }),
+          '0.99.0',
+        );
+        expect(markBackupJobPushResultMock).toHaveBeenCalledWith({}, j.id, {
+          status: 'succeeded',
+        });
+      });
+
+      it('a recipient-encryption failure is recorded as a push failure — the archive job still succeeds', async () => {
+        setUpHappyPathThrough();
+        spawnSyncMock.mockReturnValue({ status: 0, error: undefined, signal: null, stderr: '' });
+        existsSyncMock.mockReturnValue(true);
+        setUpGitPushEnv();
+        process.env.SV_BACKUP_GIT_AGE_RECIPIENT = 'not-a-valid-recipient';
+        encryptToRecipientsMock.mockRejectedValue(new Error('invalid recipient'));
+
+        const j = job({ optionsJson: JSON.stringify({ pushToGit: true }) });
+        await expect(runInstanceBackup(j)).resolves.toEqual({
+          archivePath: j.archivePath,
+          sizeBytes: expect.any(Number) as unknown as number,
+        });
+
+        expect(pushBackupToGitMock).not.toHaveBeenCalled();
+        expect(markBackupJobPushResultMock).toHaveBeenCalledWith({}, j.id, {
+          status: 'failed',
+          error: expect.stringContaining('invalid recipient') as unknown as string,
+        });
+      });
+
+      it('has no effect when configured without SV_BACKUP_GIT_REPOSITORY/_TOKEN — still a "not configured" push failure', async () => {
+        setUpHappyPathThrough();
+        spawnSyncMock.mockReturnValue({ status: 0, error: undefined, signal: null, stderr: '' });
+        existsSyncMock.mockReturnValue(true);
+        // SV_BACKUP_GIT_REPOSITORY/TOKEN deliberately left unset.
+        process.env.SV_BACKUP_GIT_AGE_RECIPIENT = 'age1testoperatorrecipient';
+
+        const j = job({ optionsJson: JSON.stringify({ pushToGit: true }) });
+        await expect(runInstanceBackup(j)).resolves.toEqual({
+          archivePath: j.archivePath,
+          sizeBytes: expect.any(Number) as unknown as number,
+        });
+        expect(encryptToRecipientsMock).not.toHaveBeenCalled();
+        expect(pushBackupToGitMock).not.toHaveBeenCalled();
+        expect(markBackupJobPushResultMock).toHaveBeenCalledWith({}, j.id, {
+          status: 'failed',
+          error: expect.stringContaining('not configured') as unknown as string,
+        });
       });
     });
   });

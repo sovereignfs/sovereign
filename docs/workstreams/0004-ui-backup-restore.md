@@ -1,6 +1,9 @@
 # Workstream 0004 — UI-driven backup & restore
 
-**Status:** 📋 Planned\
+**Status:** ⏳ In Progress — leg 1 (8.16) and leg 3 (8.18) shipped; leg 2
+(8.17) partially shipped — backup half only (v0.128.0), with the restore
+half, a new maintenance-mode primitive, and a typed-confirmation UI
+deferred to a separate follow-on task\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -284,7 +287,8 @@ shipped, coherent value behind, not half a feature.
 
 ## Changelog
 
-| Version | Date        | Change                                                                                    |
-| ------- | ----------- | ----------------------------------------------------------------------------------------- |
-| 0.1     | August 2026 | Initial draft                                                                             |
-| 0.2     | August 2026 | Amended by workstream 0023: Leg 1's encryption helper migrates to `age`'s passphrase mode |
+| Version | Date           | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0.1     | August 2026    | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 0.2     | August 2026    | Amended by workstream 0023: Leg 1's encryption helper migrates to `age`'s passphrase mode                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 0.3     | September 2026 | Reality check against actual shipped versions: leg 1 (8.16, backup job infrastructure) shipped at platform v0.127.0; leg 3 (8.18, Account async user backup) shipped at v0.120.0 — both fully done. Leg 2 (8.17, Console instance backup & restore) shipped its backup half only, at v0.128.0; restore, the new maintenance-mode primitive, and the typed-confirmation UI remain a separate, not-yet-started follow-on task. Status corrected from Planned to In Progress to reflect this. |

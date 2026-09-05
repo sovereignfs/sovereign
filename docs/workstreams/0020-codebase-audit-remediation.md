@@ -1,6 +1,8 @@
 # Workstream 0020 — Codebase audit remediation
 
-**Status:** ⏳ In Progress — all 9 legs shipped, pending final merge confirmation. Leg 1 done (`3.39`, `3.40`, `3.41`, `22.6`), Leg 2 done (`0.21`), Leg 3 done (`3.42`, `3.43`), Leg 4 done (`2.34`, `2.35`), Leg 5 done (`0.22`, `0.23`, `0.24`, `0.25`), Leg 6 done (`8.35`, `8.36`, `22.7`), Leg 7 done (`13.10`, `13.11`, `13.12`, `13.13`), Leg 8 done (`13.14`, `13.15`, `13.16`, `14.3`, `14.4`), Leg 9 done (`9.26`, `9.27`, `3.44`, `0.26`)\
+**Status:** ✅ Complete — all 9 legs shipped and merged; all 29 underlying
+epic tasks are ✅ in `ROADMAP.md` and their matching `docs/epics/*.md` files.
+Leg 1 done (`3.39`, `3.40`, `3.41`, `22.6`), Leg 2 done (`0.21`), Leg 3 done (`3.42`, `3.43`), Leg 4 done (`2.34`, `2.35`), Leg 5 done (`0.22`, `0.23`, `0.24`, `0.25`), Leg 6 done (`8.35`, `8.36`, `22.7`), Leg 7 done (`13.10`, `13.11`, `13.12`, `13.13`), Leg 8 done (`13.14`, `13.15`, `13.16`, `14.3`, `14.4`), Leg 9 done (`9.26`, `9.27`, `3.44`, `0.26`)\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\

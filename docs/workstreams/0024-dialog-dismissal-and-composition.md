@@ -1,9 +1,13 @@
 # Workstream 0024 — Dialog dismissal correctness and composition
 
-**Status:** ⏳ In Progress — all five legs (`9.29`–`9.39`) implemented and
-verified (unit tests + live-browser checks where applicable), not yet
-committed/PR'd; see each leg's own detail for what changed and any
-deviations from plan\
+**Status:** ✅ Done — all five legs (`9.29`–`9.39`) shipped and merged to
+`main` on 2026-08-31/09-01 (e.g. commits `297c4ac7`, `21b30ea5`, `2b26e547`,
+`21db77e9`); the epic task IDs and this workstream's own number were
+renumbered from a pre-rebase collision by `5e9b7b25`, which is why this
+status line hadn't been updated until now. See each leg's own detail below
+for what changed and any deviations from plan — those per-leg "Status:"
+notes predate the merge and describe the pre-merge branch/implementation
+state, not current status\
 **Date:** August 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\

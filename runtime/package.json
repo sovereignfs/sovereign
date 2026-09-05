@@ -46,7 +46,7 @@
     "web-push": "^3.6.7"
   },
   "optionalDependencies": {
-    "ioredis": "^5.11.1"
+    "ioredis": "^6.0.0"
   },
   "devDependencies": {
     "@sovereignfs/tsconfig": "workspace:*",

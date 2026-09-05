@@ -200,21 +200,43 @@ export function resolveInstanceGitPushConfig(): {
   repoUrl: string;
   branch: string;
   token: string;
+  /** Optional age-recipient (epic task 8.41, workstream 0023 leg 5) — plain
+   *  config, not a secret, since a public recipient string can't decrypt
+   *  anything. `null` when unset, matching the passphrase-only behavior this
+   *  push already had before this leg. */
+  ageRecipient: string | null;
 } | null {
   const repoUrl = process.env.SV_BACKUP_GIT_REPOSITORY;
   const token = process.env.SV_BACKUP_GIT_TOKEN;
   if (!repoUrl || !token) return null;
-  return { repoUrl, branch: process.env.SV_BACKUP_GIT_BRANCH || 'backups', token };
+  return {
+    repoUrl,
+    branch: process.env.SV_BACKUP_GIT_BRANCH || 'backups',
+    token,
+    ageRecipient: process.env.SV_BACKUP_GIT_AGE_RECIPIENT || null,
+  };
 }
 
 /**
- * Optional git-push step for an instance-scope backup (epic task 8.17).
- * Simpler than the user-scope equivalent above: there is only one secret
- * here (the requester's passphrase), so the ciphertext already written to
- * `job.archivePath` is pushed as-is — no second encryption pass to a
- * separate recipient. Age-recipient encryption for this push is a later,
- * explicitly deferred addition (epic task 8.41, workstream 0023 leg 5),
- * "alongside (not instead of) task 8.17's existing passphrase option."
+ * Optional git-push step for an instance-scope backup (epic task 8.17,
+ * extended by epic task 8.41 / workstream 0023 leg 5). When no age recipient
+ * is configured, this is unchanged from 8.17's original behavior: the same
+ * passphrase ciphertext already written to `job.archivePath` is pushed as-is.
+ *
+ * When `SV_BACKUP_GIT_AGE_RECIPIENT` *is* configured, the pushed copy is a
+ * **separate** encryption pass over the original plaintext — to the
+ * recipient, not the passphrase — mirroring `pushUserBackupToDestination`
+ * above and for the identical reason: the passphrase is a one-off value
+ * typed fresh into the Console trigger form for this specific request and
+ * never persisted anywhere, while the recipient corresponds to a long-lived
+ * identity file the operator holds indefinitely. Every git-pulled instance
+ * backup should be decryptable by that one held identity regardless of which
+ * passphrase protected that particular direct-download copy — combining both
+ * into a single multi-recipient `age` file (which the format does support)
+ * was considered and rejected: it would make the git copy *also*
+ * passphrase-decryptable, silently reproducing the exact "decrypts only with
+ * the matching identity" property epic task 8.41's own review checklist
+ * requires *not* to hold.
  *
  * Same "never fail the job over a push failure" contract as the user-scope
  * version — recorded on the job's own `pushStatus`/`pushError` only, since
@@ -223,7 +245,8 @@ export function resolveInstanceGitPushConfig(): {
 async function pushInstanceBackupToGit(
   pdb: PlatformDb,
   job: BackupJobRow,
-  ciphertext: Buffer,
+  plaintext: Buffer,
+  passphraseCiphertext: Buffer,
 ): Promise<void> {
   try {
     const config = resolveInstanceGitPushConfig();
@@ -239,15 +262,27 @@ async function pushInstanceBackupToGit(
       authType: 'https-token',
       credential: config.token,
     };
+    const encryptionMode = config.ageRecipient ? 'recipient' : 'passphrase';
+    const payload = config.ageRecipient
+      ? Buffer.from(await encryptToRecipients(plaintext, [config.ageRecipient]), 'base64url')
+      : passphraseCiphertext;
     await pushBackupToGit(
       destination,
-      ciphertext,
+      payload,
       'sovereign-backup.tar.gz.age',
-      { createdAt: Math.floor(Date.now() / 1000), platformVersion, scope: 'instance' },
+      {
+        createdAt: Math.floor(Date.now() / 1000),
+        platformVersion,
+        scope: 'instance',
+        encryptionMode,
+      },
       platformVersion,
     );
     await markBackupJobPushResult(pdb, job.id, { status: 'succeeded' });
-    logger.info('backup-run: pushed instance backup to git destination', { jobId: job.id });
+    logger.info('backup-run: pushed instance backup to git destination', {
+      jobId: job.id,
+      encryptionMode,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     logger.error('backup-run: instance git push failed', { jobId: job.id, err: message });
@@ -387,7 +422,7 @@ export async function runInstanceBackup(
 
     if (options.pushToGit) {
       const pdb = await getPlatformDb();
-      await pushInstanceBackupToGit(pdb, job, bytes);
+      await pushInstanceBackupToGit(pdb, job, plaintext, bytes);
     }
 
     return { archivePath: job.archivePath, sizeBytes: bytes.length };

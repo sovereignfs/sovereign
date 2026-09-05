@@ -2404,7 +2404,7 @@ since this session has no first-hand knowledge of what that work contained.)
 
 ---
 
-#### 📋 8.41 — Operator age-recipient backup destination (workstream 0023 leg 5)
+#### ✅ 8.41 — Operator age-recipient backup destination (workstream 0023 leg 5)
 
 **Goal:** Give operators an age-recipient encryption option for instance-scope git-push backups, alongside (not instead of) task 8.17's existing passphrase option.
 
@@ -2422,6 +2422,85 @@ since this session has no first-hand knowledge of what that work contained.)
 - A real instance backup, with an age recipient configured, pushes a resolvable, correctly-tagged orphan commit that decrypts only with the matching identity.
 - Verified against the actual production-shaped Docker topology, not only a native `pnpm dev` checkout.
 - The existing passphrase-only flow (task 8.17) is unaffected when no recipient is configured.
+
+**Shipped:** A new `SV_BACKUP_GIT_AGE_RECIPIENT` env var (plain config, not
+`sdk.secrets` — a public recipient string can't decrypt anything), read
+alongside the existing `SV_BACKUP_GIT_REPOSITORY`/`_BRANCH`/`_TOKEN` by
+`resolveInstanceGitPushConfig()` (`runtime/src/backup-run.ts`). No Console UI
+change — the recipient is instance-wide operator config exactly like the
+other three `SV_BACKUP_GIT_*` vars, not a per-backup choice on the trigger
+form, so the existing "Also push to the configured Git remote" checkbox
+needed no changes.
+
+**A real implementation-time design call, deliberately left open by this
+task's own workstream doc** ("age supports multiple recipients per file
+natively... though whether to expose that combination in the UI is an
+implementation-time call, not a locked decision here"): when a recipient is
+configured, the git-pushed copy is a **separate** re-encryption pass over
+the original plaintext — to the recipient only, never combined with the
+passphrase into one multi-recipient `age` file. The direct-download archive
+stays passphrase-only, always, regardless of this setting. Rejected the
+combined-file alternative specifically because this task's own review
+checklist says the pushed copy must decrypt "only with the matching
+identity" — a combined file would also accept the passphrase, silently
+failing that property — and because it mirrors task 8.39's own per-user
+precedent exactly (`pushUserBackupToDestination` already does a second,
+independent `encryptToRecipients()` pass rather than reusing the passphrase
+ciphertext), for the identical underlying reason: the passphrase is a
+one-off value typed fresh into the trigger form per request and never
+persisted anywhere, while the recipient corresponds to a long-lived identity
+file the operator holds indefinitely — every git-pulled backup should be
+recoverable with that one held identity regardless of which passphrase
+protected that particular direct-download copy. `pushBackupToGit()`'s
+existing plain-JSON `manifest.json` (committed alongside the archive, never
+secret) gained one new field, `encryptionMode: 'passphrase' | 'recipient'`,
+so a human inspecting the bare repo directly — the whole point of this
+workstream's git-backed design — can tell which decrypt path applies
+without guessing or trial-and-error.
+
+Verified live end to end against real Docker/Postgres infrastructure (per
+this task's own review checklist — a native `pnpm dev` SQLite checkout
+cannot produce a real instance backup at all, an unrelated pre-existing
+limitation): rebuilt the `auth`/`runtime` images with these changes, brought
+up the stack with a real local bare git repository as the push target and a
+freshly `age-keygen`-generated operator identity, and triggered a real
+backup with `pushToGit: true`. Confirmed: the job completed successfully; a
+correctly-tagged, zero-parent orphan commit landed in the bare repo with the
+expected `manifest.json` (`encryptionMode: "recipient"`) and
+`sovereign-backup.tar.gz.age` tree entries. A full four-way cross-decrypt
+then confirmed the isolation this task's review checklist requires — the
+git-pushed copy decrypts with the real, independently-installed `age` v1.3.1
+CLI and the generated identity file (Sovereign-independent proof, matching
+this workstream's own established verification bar) but is correctly
+rejected by `age` when given the passphrase instead (`file is
+passphrase-encrypted but identities were specified` — proving the two
+copies are genuinely different `age` payload types, not a same-file
+coincidence); conversely, the direct-download copy decrypts with the real
+`runtime/src/backup-encryption.ts` `decrypt()` using the passphrase, and
+that same passphrase is correctly rejected by `decrypt()` against the
+git-pushed bytes (`wrong passphrase or tampered/corrupted data`). Also
+confirmed via `docker exec` that `SV_BACKUP_GIT_AGE_RECIPIENT` reaches the
+running container from `docker-compose.prod.yml` as configured, not merely
+declared in `.env.example`.
+
+New tests in `runtime/src/__tests__/backup-run.test.ts`'s existing "optional
+git push (epic task 8.17)" describe block (a nested "age-recipient
+encryption (epic task 8.41, workstream 0023 leg 5)" group): the recipient
+path calls `encryptToRecipients()` on the raw plaintext (not the
+already-passphrase-encrypted bytes) and pushes that ciphertext instead of
+the passphrase one; a recipient-encryption failure is recorded as a push
+failure without ever failing the archive job itself, matching the existing
+"never fail the job over a push failure" contract; and the recipient var
+alone (without `SV_BACKUP_GIT_REPOSITORY`/`_TOKEN`) has no effect. The
+pre-existing "pushes the SAME ciphertext... no second encryption pass" test
+required no changes and continues to lock in the no-recipient-configured
+behavior byte-for-byte. Full `pnpm exec vitest run` (3205 passed, up from
+3202), `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and
+`pnpm exec tsx scripts/design-tokens-check.ts` all green. `runtime` bumped
+`0.98.1` → `0.99.0`; root platform bumped `0.128.1` → `0.129.0`. This
+completes workstream 0023's operator-scope leg 5; leg 6
+(`sv restore --age-identity` + docs, epic task 8.42) remains, depending only
+on this task.
 
 ---
 

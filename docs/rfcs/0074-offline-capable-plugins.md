@@ -12,11 +12,12 @@
 > design still relies on. Not deleted; see `docs/research/README.md`'s
 > lifecycle convention.
 
-**Status:** Implemented — platform plumbing (manifest fields `offline.routes`/
-`offline.root`, SDK surface, SW precaching, logout+login purge, shared-shell
-neutrality, Launcher as the PWA cold-start entry point) is in place; Shopper
-and Wallet have adopted `offline.routes` in their own repositories, Launcher
-adopts `offline.root`\
+**Status:** Superseded (see banner above) — platform plumbing (manifest
+fields `offline.routes`/`offline.root`, SDK surface, SW precaching,
+logout+login purge, shared-shell neutrality, Launcher as the PWA cold-start
+entry point) shipped and was in place; Shopper and Wallet had adopted
+`offline.routes` in their own repositories, Launcher had adopted
+`offline.root`\
 **Date:** July 2026\
 **Author:** kasunben\
 **Scope:** `packages/manifest` (new `offline` manifest field), `packages/sdk`

@@ -1,7 +1,7 @@
 ---
 rfc: 0058
 title: Native mobile app shell (Capacitor)
-status: Partially implemented (task 20.2 shipped; task 20.1 substantially implemented in sovereign-mobile)
+status: Partially implemented (task 20.2 shipped; task 20.1 substantially implemented in sovereign-mobile; tasks 20.6, 20.7, 20.8 — native photo picker/camera capture, biometric auth, haptics — also shipped in sovereign-mobile)
 date: July 2026
 author: kasunben
 scope: sovereign-mobile (separate repo), docs, packages/sdk

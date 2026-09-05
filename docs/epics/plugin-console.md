@@ -763,7 +763,7 @@ Subsequent tasks added Console sections as part of other epics:
 
 ---
 
-#### 📋 13.17 — Console shell: overlay → default + `ThreeColumnLayout` sidebar/main + mobile drilldown
+#### ✅ 13.17 — Console shell: overlay → default + `ThreeColumnLayout` sidebar/main + mobile drilldown
 
 **Goal:** Console moves from `shell: "overlay"` to `shell: "default"` and its
 `layout.tsx` is rebuilt around `@sovereignfs/ui`'s `ThreeColumnLayout`: a
@@ -811,6 +811,37 @@ leg 1 — this entry tracks the task, not the design.
 pnpm typecheck && pnpm test` pass, `pnpm generate` no longer emits a
 `@modal/(.)console/*` tree, and `__tests__/e2e/console.spec.ts`/
 `console-auditor.spec.ts`/`console-settings.spec.ts` pass against the new DOM.
+
+**Outcome:** Shipped at platform version `0.105.0`, alongside task 9.28
+(`NavList`, its own prerequisite). `plugins/console/manifest.json` switched
+`"shell": "overlay"` → `"shell": "default"` (a full reversal of task 2.5's
+original migration, scoped to Console only — Account stayed on
+`shell: "overlay"`), and `layout.tsx`/`page.tsx` were rebuilt around
+`NavList`: desktop renders `@sovereignfs/ui`'s `ThreeColumnLayout`
+(`NavList variant="static"` sidebar + a main column) inside a
+`data-plugin-fullbleed` root, so the two columns scroll independently instead
+of the whole page scrolling as one unit — `PageContainer` is dropped from
+that desktop tree in favor of new `.sidebar`/`.main` CSS gutters. Mobile has
+no persistent sidebar: the bare `/console` route (Overview) forks via
+`ResponsiveSurface` into a `NavList variant="drilldown"` index, grouped
+exactly like the desktop sidebar (People: Users/Groups; Apps: Plugins/
+Entitlements/External clients; Configuration: Settings/Identity; Monitoring:
+Health/Activity; Communication: Broadcast — via a new
+`plugins/console/app/_lib/sections.ts`, one source of truth for both
+surfaces), and every other section gets a plain `‹ Console` back link above
+its content instead; mobile keeps `PageContainer`'s normal gutter, unlike
+desktop. The dead horizontal tab strip (`.nav`/`.navLink`/`.navLinkActive`/
+`.header`/`.headerHiddenOnMobile` and their mobile media queries) and the
+now-unused `ConsoleNavLink.tsx`/`useOverlaySecondRow` usage were deleted
+outright. `pnpm generate` confirmed the `@modal/(.)console/*` interception
+tree (the overlay Dialog's composed copy) is gone; a full
+`pnpm --filter runtime build` compiled every `/console/*` route cleanly.
+`docs/architecture-rules.md`'s overlay-size reference narrowed to Account
+only; `docs/plugins/console.md` updated to describe `shell: "default"`.
+`packages/ui` bumped `0.74.0` → `0.75.0` (additive `NavList` component/
+exports); `plugins/console/manifest.json` bumped `0.5.8` → `0.6.0`. Legs 2-5
+(tasks 13.18-13.21, selection-driven detail columns) shipped separately, as
+tracked below.
 
 ---
 

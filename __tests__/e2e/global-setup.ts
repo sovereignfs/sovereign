@@ -3,11 +3,16 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, type FullConfig } from '@playwright/test';
+import { loadRootEnv, resolveAppPort } from '../../scripts/dev-ports.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 const AUTH_DIR = path.join(ROOT, '.auth');
-const RUNTIME = 'http://localhost:3000';
+// A no-op once playwright.config.ts's own loadRootEnv() has already run in
+// this process (or a parent worker inherited the resolved env) — kept here
+// too so this file resolves the right port even if ever run in isolation.
+loadRootEnv(ROOT);
+const RUNTIME = `http://localhost:${resolveAppPort('runtime')}`;
 
 async function loginAndSave(
   browser: Awaited<ReturnType<typeof chromium.launch>>,

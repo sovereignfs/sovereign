@@ -1,4 +1,10 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { test, expect } from './fixtures';
+import { loadRootEnv, resolveAppPort } from '../../scripts/dev-ports.mjs';
+
+loadRootEnv(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..'));
+const RUNTIME = `http://localhost:${resolveAppPort('runtime')}`;
 
 test.describe('Platform shell navigation — golden paths', () => {
   test('root URL / stays at / (middleware rewrite) and shows launcher content', async ({
@@ -6,7 +12,7 @@ test.describe('Platform shell navigation — golden paths', () => {
   }) => {
     await page.goto('/');
     // URL must remain / — middleware rewrites to the root plugin without redirecting.
-    await expect(page).toHaveURL('http://localhost:3000/');
+    await expect(page).toHaveURL(`${RUNTIME}/`);
     // Launcher grid (the default root plugin) renders at least one tile.
     await expect(page.locator('ul li a').first()).toBeVisible();
   });
@@ -14,10 +20,10 @@ test.describe('Platform shell navigation — golden paths', () => {
   test('brand link returns to / from any page', async ({ adminPage: page }) => {
     await page.goto('/launcher');
     await Promise.all([
-      page.waitForURL('http://localhost:3000/'),
+      page.waitForURL(`${RUNTIME}/`),
       page.getByRole('link', { name: 'Sovereign home' }).click(),
     ]);
-    await expect(page).toHaveURL('http://localhost:3000/');
+    await expect(page).toHaveURL(`${RUNTIME}/`);
   });
 
   test('avatar menu opens and can be dismissed with Escape', async ({ adminPage: page }) => {

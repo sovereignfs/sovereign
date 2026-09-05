@@ -4900,6 +4900,34 @@ export async function getBackupJob(
   return row ? coerceBackupJobRow(row) : undefined;
 }
 
+export interface ListBackupJobsInput {
+  scope: 'instance' | 'user';
+  tenantId: string;
+  /** Defaults to 20 — a Console/Account job list, not an unbounded export. */
+  limit?: number;
+}
+
+/**
+ * Recent jobs for a scope, most recent first (epic task 8.17's Console
+ * backup-job list; the equivalent Account UI reads one job at a time by id
+ * via `getBackupJob` instead, since task 8.18 only ever shows the
+ * most-recently-triggered job).
+ */
+export async function listBackupJobs(
+  pdb: PlatformDb,
+  input: ListBackupJobsInput,
+): Promise<BackupJobRow[]> {
+  const limit = input.limit ?? 20;
+  const rows = await dbAll<RawBackupJobRow>(
+    pdb,
+    sql`${BACKUP_JOB_SELECT}
+        WHERE scope = ${input.scope} AND tenant_id = ${input.tenantId}
+        ORDER BY created_at DESC
+        LIMIT ${limit}`,
+  );
+  return rows.map(coerceBackupJobRow);
+}
+
 export interface EnqueueBackupJobInput {
   id: string;
   tenantId: string;

@@ -44,6 +44,7 @@ export const ICON_LIST = [
   'inbox',
   'activity',
   'package',
+  'database',
   'layers',
   'grid-2x2',
   'layout-dashboard',

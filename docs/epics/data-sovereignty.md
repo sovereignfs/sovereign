@@ -712,6 +712,147 @@ RFC 0064 (partial — Git push only, not retention/scoped restore).
 - Git push (when configured) produces a resolvable tag; when not configured, the
   checkbox is absent, not merely disabled.
 
+**Shipped (partial — backup half only):** This task's own deliverable list
+bundles two very different halves — a backup-trigger UI and a guarded
+restore flow needing two things that didn't exist anywhere in this codebase
+yet (a maintenance-mode primitive, a typed-confirmation UI pattern).
+Confirmed with the developer before implementation (`AskUserQuestion`): ship
+the backup half now, defer restore + maintenance mode + typed confirmation
+to a separate follow-on task — not just for size, but because epic 8.41
+(workstream 0023 leg 5) turned out to only need this half ("extends task
+8.17's Console git-push settings"), so splitting this way unblocks it
+immediately rather than waiting on the harder, riskier restore half too.
+
+- `bin/backup-restore.ts`'s `backup` command gains a repeatable
+  `--exclude-plugin <id>` flag, mapping to `pg_dump --exclude-schema=plugin_<id>`
+  per id — safe and complete on its own because every non-platform-type
+  plugin is unconditionally schema-isolated (epic 8.28 retired the old
+  per-plugin `shared`/`isolated` manifest choice), so there's no
+  shared-table-prefix case left to handle. citty's `defineCommand` args have
+  no native "repeatable" type (confirmed by reading its source — it delegates
+  to `node:util`'s `parseArgs` with `multiple` never set for any option, so a
+  repeated flag would just silently keep the last value); reads `rawArgs`
+  directly instead. Also writes a small, non-secret
+  `sovereign-backup-manifest.json` into the archive (schema version,
+  platform version, dialect, excluded plugins) — nothing reads it yet, but
+  the restore half's compatibility-preview step will, and backfilling it
+  onto archives taken before that ships isn't possible.
+- `runInstanceBackup()` (`runtime/src/backup-run.ts`) now applies the exact
+  encryption RFC 0084 requires ("always applied — no opt-out"), reusing
+  8.18's `backup-passphrase-store.ts` and `backup-encryption.ts` unchanged:
+  the CLI writes a **raw** archive to a sibling temp path, which is then
+  encrypted with the requester's passphrase before being written to
+  `job.archivePath` (extension: `.tar.gz.age`, was `.tar.gz`) — the temp file
+  is always deleted, including on every error path.
+- Git push reuses `runtime/src/git-backup.ts`'s `pushBackupToGit()`
+  completely unchanged (confirmed generic — no `@sovereignfs/db` or `userId`
+  coupling at all), but the destination is resolved differently than the
+  per-user case: plain env vars (`SV_BACKUP_GIT_REPOSITORY`/
+  `SV_BACKUP_GIT_BRANCH`/`SV_BACKUP_GIT_TOKEN`, HTTPS-token auth only), not a
+  `plugin_connections`/`plugin_secrets` row. **Correction to this task's own
+  original deliverable list**, found by cross-checking against epic 8.41/
+  8.42's clearer, later-written text (both frame `SV_BACKUP_GIT_*` as a
+  `docs/self-hosting.md`-documented env var surface): the "stored via the
+  same encrypted-secret pattern SmtpSettingsForm.tsx establishes" line above
+  was an imprecise steer, not the real design — there is no Console-managed
+  secret for this at all. Only one secret exists here (the passphrase), so
+  unlike the per-user git-push (which re-encrypts a second time to an age
+  recipient), the exact same ciphertext already written to `job.archivePath`
+  is what gets pushed.
+- New Console page `plugins/console/app/backups/` (`page.tsx`, `actions.ts`,
+  `BackupTriggerForm.tsx`, `BackupJobList.tsx`) — gated on a new capability,
+  `instance:backup` (`runtime/src/capabilities.ts`, admin + owner), checked
+  independently in every Server Action per this repo's own
+  server-action-authorization rule, not just relied on via the page's
+  `adminOnly` gate. **A real architectural correction made before writing
+  any of this code**, not after: Console cannot import `@sovereignfs/db` or
+  `@sovereignfs/manifest` directly (the SDK boundary ESLint rule blocks this
+  for Console too, even though its `runtime/src`/`@/*` restriction is
+  lifted) — so `enqueueBackupJob`/`getBackupJob`/`listBackupJobs` and the
+  isolated-plugin-list computation (`manifestDatabaseIsolation`) all had to
+  move into two new routes, `runtime/app/api/admin/backup-jobs/route.ts`
+  (GET list+metadata, POST enqueue) and its `[id]/route.ts` (GET poll),
+  admin-key authenticated (`checkAdminKey`) like every other `/api/admin/*`
+  route — Console's own actions call these over HTTP, matching
+  `entitlements/actions.ts`'s established pattern exactly, rather than
+  importing platform DB functions directly.
+- New `listBackupJobs(pdb, {scope, tenantId, limit?})` in
+  `packages/db/src/platform-db.ts` — no schema change, reads the existing
+  table.
+- The job-list UI mirrors 8.18's `PortabilityPanel.tsx` polling shape
+  exactly (a plain `setInterval`, `downloadUrl` embedded once `complete`,
+  download via `window.location.assign`), generalized to poll every
+  in-flight job in the list on one shared timer rather than one job per
+  timer.
+
+Verified via the full existing + new automated test suite (new
+`bin/__tests__/backup-restore.test.ts` cases, `runtime/src/__tests__/backup-run.test.ts`
+encryption/git-push cases, a live-sqld `listBackupJobs` test, a new
+`instance:backup` capability test, and Console-side `actions.test.ts` +
+`BackupTriggerForm.test.tsx` + `BackupJobList.test.tsx`) plus a real
+`pnpm --filter runtime build` — necessary, not optional, since Console has no
+`tsconfig.json`/`typecheck` script of its own and was never actually covered
+by `pnpm typecheck` at all; only a genuine build compiles its composed route
+tree. That build is exactly what caught nothing further, but the new
+component tests already had: two real bugs found and fixed before this
+shipped, both in the new code, not pre-existing — `EmptyState`'s actual prop
+is `heading`, not `title` (used in both `page.tsx` and `BackupJobList.tsx`,
+silently invisible to `tsc` for the reason above), and a test fixture
+mismatch where the mocked poll response used `id` instead of the real
+`BackupJobStatus` shape's `jobId`, which made a genuinely-working poll loop
+_look_ stuck in a first draft of the test.
+
+Live end-to-end verification against real Docker/Postgres infrastructure
+followed the automated suite, not just a substitute for it: built
+`p6-auth`/`p6-runtime`/`p6-tools` images, brought the stack up via
+`docker-compose.prod.yml` + `docker-compose.postgres.yml` plus a scratch
+Compose override bind-mounting a real local bare git repository into the
+`runtime` container and setting `SV_BACKUP_GIT_REPOSITORY`/
+`SV_BACKUP_GIT_TOKEN`, then triggered a real backup via `curl` directly
+against the running container's `POST /api/admin/backup-jobs` — deliberately
+not a separate `tools`-container script the way earlier verification in this
+epic worked, because `storeBackupPassphrase()`'s in-memory store is anchored
+on `globalThis` and does not cross OS process boundaries, so the passphrase
+has to reach the exact process running the worker — with one plugin excluded
+(`fs.sovereign.warden`) and `pushToGit: true`. Confirmed: the job reached
+`complete` with a nonzero `sizeBytes`; a correctly-tagged orphan commit
+landed in the bare git repo; the archive (read directly from the
+host-mounted `./backups/` volume — see the known download-route gap below)
+decrypted successfully with the real `runtime/src/backup-encryption.ts`
+`decrypt()` and the correct passphrase, and failed cleanly with a wrong one;
+the embedded `sovereign-backup-manifest.json` matched exactly
+(`excludedPlugins: ["fs.sovereign.warden"]`, correct platform version and
+dialect); and `pg_restore --list` against the underlying dump confirmed the
+`plugin_fs_sovereign_warden` schema was completely absent — by direct
+comparison against this same epic's earlier task 8.16 verification output,
+where that schema was present in an unexcluded backup, proving
+`--exclude-plugin` genuinely works end-to-end and not merely at the
+CLI-argv level the unit tests already covered. Also confirmed directly
+inside the running container (`docker exec`) that both
+`SOVEREIGN_BACKUP_WORKER_ENABLED` and the new `SV_BACKUP_GIT_*` vars reach
+it from `docker-compose.prod.yml` as configured, not merely declared in
+`.env.example`.
+
+**A real, pre-existing bug in already-shipped code (task 8.16) was found
+during this verification and is deliberately not fixed here**: the signed
+backup-download route (`/api/backup-jobs/[jobId]/download/[token]`)
+303-redirects to `/login` instead of serving the file. Its own doc comment
+claims a `runtime/middleware.ts` matcher exemption "by design," modeling
+itself on the `api/storage` route (which genuinely is excluded), but
+`api/backup-jobs` was never actually added to that exclusion list —
+confirmed live via `curl -v` showing the redirect. This affects epic 8.18's
+existing Account download flow equally, not just this task's new Console
+one, so it's a shared-middleware fix, not a backup-triggering one — out of
+scope for this task and flagged separately as a follow-up rather than
+folded into this PR.
+
+**Deliberately not touched here:** the guarded restore flow, maintenance
+mode, and typed-confirmation UI — a separate, not-yet-started follow-on
+task. SQLite (sqld) instance backup remains unimplemented (epic 8.16's own
+accepted limitation, unchanged). Age-recipient encryption for the git-push
+copy is epic 8.41's own explicit addition, "alongside (not instead of) task
+8.17's existing passphrase option" — not attempted here.
+
 ---
 
 #### ✅ 8.18 — Account: async selective data backup UI (regular users) (RFC 0084)

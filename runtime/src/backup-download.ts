@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { join, resolve, sep } from 'node:path';
-import { findWorkspaceRoot } from '@sovereignfs/db';
+import { findWorkspaceRoot, type BackupJobRow } from '@sovereignfs/db';
 
 const TOKEN_VERSION = 'sv1';
 const DEFAULT_TTL_SECONDS = 48 * 60 * 60;
@@ -58,6 +58,18 @@ export function createBackupDownloadToken(input: {
   return `${encoded}.${sign(encoded)}`;
 }
 
+/**
+ * `job`'s signed download URL once complete, `null` otherwise — shared by
+ * every route that surfaces a `BackupJobRow` to a caller (the account and
+ * Console job-list/status routes, epic tasks 8.18/8.17), so "when is a job
+ * downloadable" is answered in exactly one place rather than reimplemented
+ * per route.
+ */
+export function backupJobDownloadUrl(job: Pick<BackupJobRow, 'id' | 'status'>): string | null {
+  if (job.status !== 'complete') return null;
+  return `/api/backup-jobs/${job.id}/download/${createBackupDownloadToken({ jobId: job.id })}`;
+}
+
 /** Verify and decode a backup download token. Throws on any invalid, tampered, or expired token. */
 export function verifyBackupDownloadToken(token: string): BackupDownloadTokenPayload {
   const [encoded, signature] = token.split('.');
@@ -86,17 +98,17 @@ export function backupsDir(): string {
  * alone so `enqueueBackupJob` can populate the schema's `NOT NULL`
  * `archivePath` column up front, before the job has actually run.
  *
- * Extension depends on `scope`: instance-scope produces a `sv backup`
- * archive (`.tar.gz`, itself SQLCipher-encrypted only if the source DBs
- * are); user-scope produces an age-encrypted ZIP (`.zip.age`) — this is the
- * literal filename the download route hands back via `Content-Disposition`
- * (`resolveBackupArchivePath`'s caller derives it from this same path), so
- * getting the extension right isn't cosmetic — a `.tar.gz` name on
- * something that isn't a tarball would mislead whoever downloads it about
- * how to open it.
+ * Both scopes now produce an age-passphrase-encrypted archive (RFC 0084:
+ * "always applied — no opt-out") — instance-scope a `.tar.gz.age` (the raw
+ * `sv backup` tarball, encrypted; epic task 8.17), user-scope a `.zip.age`.
+ * This is the literal filename the download route hands back via
+ * `Content-Disposition` (`resolveBackupArchivePath`'s caller derives it from
+ * this same path), so getting the extension right isn't cosmetic — a name
+ * that doesn't end in `.age` would mislead whoever downloads it about
+ * needing a passphrase to open it.
  */
 export function backupArchivePathForJob(jobId: string, scope: 'instance' | 'user'): string {
-  const ext = scope === 'user' ? 'zip.age' : 'tar.gz';
+  const ext = scope === 'user' ? 'zip.age' : 'tar.gz.age';
   return join(backupsDir(), `sovereign-backup-${jobId}.${ext}`);
 }
 

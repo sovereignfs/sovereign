@@ -23,6 +23,7 @@ export type Capability =
   | 'plugin:manage' // enable / disable plugins
   | 'instance:view' // view instance settings
   | 'instance:configure' // change instance settings + root plugin
+  | 'instance:backup' // trigger/download a full-instance backup (RFC 0084, epic task 8.17)
   | 'health:view' // view system health report
   | 'activity:view' // view activity log (RFC 0005)
   | 'role:assign' // assign roles to other users (owner-only)
@@ -90,6 +91,7 @@ const ADMIN_CAPS = new Set<Capability>([
   'plugin:manage',
   'instance:view',
   'instance:configure',
+  'instance:backup',
   'health:view',
   'activity:view',
 ]);
@@ -103,6 +105,7 @@ const OWNER_CAPS = new Set<Capability>([
   'plugin:manage',
   'instance:view',
   'instance:configure',
+  'instance:backup',
   'health:view',
   'activity:view',
   'role:assign',

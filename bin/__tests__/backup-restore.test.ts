@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -81,6 +89,96 @@ describe('backup', () => {
     expect(pgDumpCall[1]).toEqual(expect.arrayContaining(['--format=custom', 'postgres://x']));
     expect(tarCall[0]).toBe('tar');
     expect(tarCall[1]).toEqual(expect.arrayContaining(['-czf', out]));
+  });
+
+  it('adds no --exclude-schema args when no plugin is excluded', async () => {
+    mkdirSync(dataDir, { recursive: true });
+    process.env.DB_DIALECT = 'postgres';
+    process.env.POSTGRES_DB_URL = 'postgres://x';
+    spawnSyncMock.mockReturnValue({ status: 0 });
+
+    await backup.run({
+      args: { dataDir, out: undefined, _: [] },
+      rawArgs: [],
+    } as never);
+
+    const [pgDumpCall] = spawnSyncMock.mock.calls;
+    expect((pgDumpCall[1] as string[]).some((a) => a.startsWith('--exclude-schema'))).toBe(false);
+  });
+
+  it('translates repeated --exclude-plugin flags into repeated pg_dump --exclude-schema args', async () => {
+    mkdirSync(dataDir, { recursive: true });
+    process.env.DB_DIALECT = 'postgres';
+    process.env.POSTGRES_DB_URL = 'postgres://x';
+    spawnSyncMock.mockReturnValue({ status: 0 });
+
+    await backup.run({
+      args: { dataDir, out: undefined, _: [] },
+      rawArgs: [
+        '--exclude-plugin',
+        'fs.sovereign.warden',
+        '--exclude-plugin',
+        'fs.sovereign.tasks',
+      ],
+    } as never);
+
+    const [pgDumpCall] = spawnSyncMock.mock.calls;
+    expect(pgDumpCall[1]).toEqual(
+      expect.arrayContaining([
+        '--exclude-schema=plugin_fs_sovereign_warden',
+        '--exclude-schema=plugin_fs_sovereign_tasks',
+      ]),
+    );
+  });
+
+  it('also accepts the --exclude-plugin=value form', async () => {
+    mkdirSync(dataDir, { recursive: true });
+    process.env.DB_DIALECT = 'postgres';
+    process.env.POSTGRES_DB_URL = 'postgres://x';
+    spawnSyncMock.mockReturnValue({ status: 0 });
+
+    await backup.run({
+      args: { dataDir, out: undefined, _: [] },
+      rawArgs: ['--exclude-plugin=fs.sovereign.warden'],
+    } as never);
+
+    const [pgDumpCall] = spawnSyncMock.mock.calls;
+    expect(pgDumpCall[1]).toEqual(
+      expect.arrayContaining(['--exclude-schema=plugin_fs_sovereign_warden']),
+    );
+  });
+
+  it('writes a non-secret backup manifest into the archive with excluded-plugin metadata', async () => {
+    mkdirSync(dataDir, { recursive: true });
+    process.env.DB_DIALECT = 'postgres';
+    process.env.POSTGRES_DB_URL = 'postgres://x';
+    let manifestRaw: string | undefined;
+    spawnSyncMock.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'tar') {
+        const tmp = args[3] as string; // ['-czf', archivePath, '-C', tmp, '.']
+        manifestRaw = readFileSync(join(tmp, 'sovereign-backup-manifest.json'), 'utf8');
+      }
+      return { status: 0 };
+    });
+
+    await backup.run({
+      args: { dataDir, out: undefined, _: [] },
+      rawArgs: ['--exclude-plugin', 'fs.sovereign.warden'],
+    } as never);
+
+    expect(manifestRaw).toBeDefined();
+    // platformVersion isn't asserted against a literal: readPlatformVersion(ROOT)
+    // reads from `ROOT`, a module-level constant resolved once at import time
+    // from the real workspace root — this test's own fake package.json (in a
+    // fresh per-test dir) is never what it reads, by design (ROOT mirrors
+    // production's real invocation, where cwd() genuinely is the repo root).
+    expect(JSON.parse(manifestRaw as string)).toEqual({
+      schemaVersion: 1,
+      platformVersion: expect.any(String),
+      dialect: 'postgres',
+      createdAt: expect.any(Number),
+      excludedPlugins: ['fs.sovereign.warden'],
+    });
   });
 
   it('cleans up its temp dir even when pg_dump fails', async () => {

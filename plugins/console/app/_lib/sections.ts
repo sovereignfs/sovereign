@@ -53,6 +53,7 @@ export const CONSOLE_SECTIONS: ConsoleSectionGroup[] = [
     items: [
       { id: 'settings', label: 'Settings', href: '/console/settings', icon: 'settings' },
       { id: 'identity', label: 'Identity', href: '/console/identity', icon: 'paint-bucket' },
+      { id: 'backups', label: 'Backups', href: '/console/backups', icon: 'database' },
     ],
   },
   {

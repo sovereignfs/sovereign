@@ -192,6 +192,11 @@ services:
       # unimplemented — see docs/research/0017-sqld-backup-and-restore.md.
       # User-scope jobs (Account → Data → Full backup) work on both dialects.
       SOVEREIGN_BACKUP_WORKER_ENABLED: '${SOVEREIGN_BACKUP_WORKER_ENABLED:-}'
+      # Optional instance-scope backup git-push destination (epic task 8.17,
+      # RFC 0064) — see .env.example's own comment for the enable conditions.
+      SV_BACKUP_GIT_REPOSITORY: '${SV_BACKUP_GIT_REPOSITORY:-}'
+      SV_BACKUP_GIT_BRANCH: '${SV_BACKUP_GIT_BRANCH:-}'
+      SV_BACKUP_GIT_TOKEN: '${SV_BACKUP_GIT_TOKEN:-}'
       SMTP_HOST: '${SMTP_HOST:-}'
       SMTP_PORT: '${SMTP_PORT:-587}'
       SMTP_USER: '${SMTP_USER:-}'

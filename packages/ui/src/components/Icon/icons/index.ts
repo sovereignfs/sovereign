@@ -31,6 +31,7 @@ import { BellIcon } from './bell';
 import { InboxIcon } from './inbox';
 import { ActivityIcon } from './activity';
 import { PackageIcon } from './package';
+import { DatabaseIcon } from './database';
 import { LayersIcon } from './layers';
 import { Grid2x2Icon } from './grid-2x2';
 import { LayoutDashboardIcon } from './layout-dashboard';
@@ -128,6 +129,7 @@ export type IconName =
   | 'inbox'
   | 'activity'
   | 'package'
+  | 'database'
   | 'layers'
   | 'grid-2x2'
   | 'layout-dashboard'
@@ -227,6 +229,7 @@ export const ICONS: Record<IconName, IconComponent> = {
   inbox: InboxIcon,
   activity: ActivityIcon,
   package: PackageIcon,
+  database: DatabaseIcon,
   layers: LayersIcon,
   'grid-2x2': Grid2x2Icon,
   'layout-dashboard': LayoutDashboardIcon,
@@ -324,6 +327,7 @@ export { BellIcon } from './bell';
 export { InboxIcon } from './inbox';
 export { ActivityIcon } from './activity';
 export { PackageIcon } from './package';
+export { DatabaseIcon } from './database';
 export { LayersIcon } from './layers';
 export { Grid2x2Icon } from './grid-2x2';
 export { LayoutDashboardIcon } from './layout-dashboard';

@@ -17,7 +17,7 @@
  * same way. None of that is needed here — `citty` and `consola` (both
  * genuinely zero-dependency) are the bundle's only real dependencies.
  */
-import { mkdirSync, mkdtempSync, existsSync, rmSync, readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, existsSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { defineCommand } from 'citty';
@@ -63,6 +63,37 @@ function readPlatformVersion(workspaceRoot: string): string {
   }
 }
 
+/** Mirrors packages/db/src/plugin-client.ts's pluginSchemaName — see this file's own doc comment for why duplicated. */
+function pluginSchemaName(pluginId: string): string {
+  return `plugin_${pluginId.replace(/[.-]/g, '_')}`;
+}
+
+/**
+ * citty's `defineCommand` args have no "repeatable" arg type — it parses via
+ * Node's own `util.parseArgs()` with `multiple` never set for any option, so
+ * a flag passed more than once just silently keeps the last occurrence
+ * (confirmed by reading node_modules/citty's own parser). Reading `rawArgs`
+ * directly instead gives `--exclude-plugin a --exclude-plugin b` its
+ * expected meaning — both values, in order — matching the equally-repeatable
+ * `pg_dump --exclude-schema` flag this maps onto below. Handles both
+ * `--flag value` and `--flag=value` forms.
+ */
+function parseRepeatedStringFlag(rawArgs: string[] | undefined, flag: string): string[] {
+  const values: string[] = [];
+  const eqPrefix = `${flag}=`;
+  const args = rawArgs ?? [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === flag) {
+      const next = args[i + 1];
+      if (next !== undefined && !next.startsWith('--')) values.push(next);
+    } else if (arg?.startsWith(eqPrefix)) {
+      values.push(arg.slice(eqPrefix.length));
+    }
+  }
+  return values;
+}
+
 const ROOT = findWorkspaceRoot();
 
 export const backup = defineCommand({
@@ -80,12 +111,19 @@ export const backup = defineCommand({
       type: 'string',
       description: 'Output archive path (default: ./backups/sovereign-backup-<ts>-v<ver>.tar.gz)',
     },
+    excludePlugin: {
+      type: 'string',
+      description:
+        "Exclude a schema-isolated plugin's data from the backup, by plugin id (repeatable). " +
+        'No effect on a shared-schema (platform-type) plugin id.',
+    },
   },
-  async run({ args }) {
+  async run({ args, rawArgs }) {
     const dataDir = resolve(args.dataDir);
     const version = readPlatformVersion(ROOT);
     const archivePath = resolve(args.out ?? defaultArchivePath(ROOT, version));
     const archiveDir = dirname(archivePath);
+    const excludePlugins = parseRepeatedStringFlag(rawArgs, '--exclude-plugin');
 
     if (!existsSync(dataDir)) {
       consola.error(`Data directory not found: ${dataDir}`);
@@ -100,7 +138,8 @@ export const backup = defineCommand({
       // One pg_dump of the whole database — the platform's own tables
       // (public schema), the auth schema (sovereign_auth), and every
       // isolated plugin's schema (plugin_<slug>) all live in this same
-      // database now, so a single dump already captures everything.
+      // database now, so a single dump already captures everything unless
+      // explicitly excluded.
       consola.start(`Creating Postgres backup → ${archivePath}`);
       const tmp = mkdtempSync(join(archiveDir, '.sv-backup-'));
       const cleanup = (): void => rmSync(tmp, { recursive: true, force: true });
@@ -111,16 +150,31 @@ export const backup = defineCommand({
           consola.error('DB_DIALECT=postgres requires POSTGRES_DB_URL to be set.');
           process.exit(1);
         }
-        const dumpResult = spawnSync(
-          'pg_dump',
-          ['--format=custom', `--file=${join(tmp, 'sovereign.pgdump')}`, pgUrl],
-          { stdio: 'inherit' },
-        );
+        const dumpArgs = ['--format=custom', `--file=${join(tmp, 'sovereign.pgdump')}`];
+        for (const pluginId of excludePlugins) {
+          dumpArgs.push(`--exclude-schema=${pluginSchemaName(pluginId)}`);
+        }
+        dumpArgs.push(pgUrl);
+        const dumpResult = spawnSync('pg_dump', dumpArgs, { stdio: 'inherit' });
         if (dumpResult.status !== 0) {
           cleanup();
           consola.error('pg_dump failed.');
           process.exit(1);
         }
+        // Non-secret metadata for a later restore's compatibility check
+        // (epic task 8.17's follow-on) — plain JSON, not encrypted; the
+        // archive as a whole may be encrypted by whoever calls this CLI
+        // (runtime/src/backup-run.ts does, for job-driven backups).
+        writeFileSync(
+          join(tmp, 'sovereign-backup-manifest.json'),
+          JSON.stringify({
+            schemaVersion: 1,
+            platformVersion: version,
+            dialect,
+            createdAt: Math.floor(Date.now() / 1000),
+            excludedPlugins: excludePlugins,
+          }),
+        );
         // Include avatars if they exist.
         const avatarsDir = join(dataDir, 'avatars');
         const tarArgs = ['-czf', archivePath, '-C', tmp, '.'];

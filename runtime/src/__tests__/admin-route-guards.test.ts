@@ -102,13 +102,13 @@ beforeEach(() => {
 });
 
 describe('admin route discovery', () => {
-  it('finds exactly 36 route.ts files under runtime/app/api/admin', () => {
-    expect(Object.keys(routeModules)).toHaveLength(36);
+  it('finds exactly 38 route.ts files under runtime/app/api/admin', () => {
+    expect(Object.keys(routeModules)).toHaveLength(38);
   });
 
-  it('finds exactly 49 checkAdminKey-guarded handlers (50 total minus the 1 exempted preview route)', async () => {
+  it('finds exactly 52 checkAdminKey-guarded handlers (53 total minus the 1 exempted preview route)', async () => {
     const handlers = await discoverHandlers();
-    expect(handlers).toHaveLength(49);
+    expect(handlers).toHaveLength(52);
   });
 });
 

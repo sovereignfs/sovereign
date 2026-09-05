@@ -3,9 +3,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const spawnSyncMock = vi.hoisted(() => vi.fn());
 const existsSyncMock = vi.hoisted(() => vi.fn());
-const statSyncMock = vi.hoisted(() => vi.fn());
 const mkdirSyncMock = vi.hoisted(() => vi.fn());
 const writeFileSyncMock = vi.hoisted(() => vi.fn());
+const readFileSyncMock = vi.hoisted(() => vi.fn());
+const unlinkSyncMock = vi.hoisted(() => vi.fn());
 const takeBackupPassphraseMock = vi.hoisted(() => vi.fn());
 const encryptMock = vi.hoisted(() => vi.fn());
 const encryptToRecipientsMock = vi.hoisted(() => vi.fn());
@@ -26,9 +27,10 @@ const decryptSecretValueMock = vi.hoisted(() => vi.fn());
 vi.mock('node:child_process', () => ({ spawnSync: spawnSyncMock }));
 vi.mock('node:fs', () => ({
   existsSync: existsSyncMock,
-  statSync: statSyncMock,
   mkdirSync: mkdirSyncMock,
   writeFileSync: writeFileSyncMock,
+  readFileSync: readFileSyncMock,
+  unlinkSync: unlinkSyncMock,
 }));
 vi.mock('@sovereignfs/db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@sovereignfs/db')>();
@@ -77,7 +79,7 @@ function job(overrides: Partial<BackupJobRow> = {}): BackupJobRow {
     requestedByUserId: null,
     status: 'running',
     optionsJson: null,
-    archivePath: '/workspace/backups/sovereign-backup-job-1.tar.gz',
+    archivePath: '/workspace/backups/sovereign-backup-job-1.tar.gz.age',
     sizeBytes: 0,
     errorMessage: null,
     createdAt: 1_000_000_000,
@@ -96,56 +98,127 @@ afterEach(() => {
 });
 
 describe('runInstanceBackup', () => {
-  it('rejects optionsJson.excludePlugins — sv backup has no --exclude-plugin flag yet', async () => {
-    const j = job({ optionsJson: JSON.stringify({ excludePlugins: ['com.example.notes'] }) });
-    await expect(runInstanceBackup(j)).rejects.toThrow(/exclude-plugin/);
+  function setUpHappyPathThrough(): void {
+    takeBackupPassphraseMock.mockReturnValue('correct horse battery staple');
+    readFileSyncMock.mockReturnValue(Buffer.from('raw archive bytes'));
+    encryptMock.mockResolvedValue(Buffer.from('ciphertext').toString('base64url'));
+  }
+
+  it('fails cleanly when no passphrase is available (server restarted before claim)', async () => {
+    takeBackupPassphraseMock.mockReturnValue(undefined);
+    await expect(runInstanceBackup(job())).rejects.toThrow(/No passphrase available/);
     expect(spawnSyncMock).not.toHaveBeenCalled();
   });
 
   it('tolerates malformed optionsJson (falls back to no options)', async () => {
+    setUpHappyPathThrough();
     spawnSyncMock.mockReturnValue({ status: 0, error: undefined, signal: null, stderr: '' });
     existsSyncMock.mockReturnValue(true);
-    statSyncMock.mockReturnValue({ size: 123 });
 
     const j = job({ optionsJson: '{not valid json' });
-    await expect(runInstanceBackup(j)).resolves.toMatchObject({ sizeBytes: 123 });
+    const result = await runInstanceBackup(j);
+    expect(result).toEqual({
+      archivePath: j.archivePath,
+      sizeBytes: Buffer.from('ciphertext').length,
+    });
   });
 
-  it('falls back to `pnpm sv backup --out <archivePath>` (argv array, no shell string) when the bundled CLI has not been built', async () => {
+  it('falls back to `pnpm sv backup --out <rawArchivePath>` (argv array, no shell string) when the bundled CLI has not been built', async () => {
+    setUpHappyPathThrough();
     spawnSyncMock.mockReturnValue({ status: 0, error: undefined, signal: null, stderr: '' });
-    // Bundled CLI absent (native `pnpm dev`/`tools` checkout) — job.archivePath present (real archive produced).
+    // Bundled CLI absent (native `pnpm dev`/`tools` checkout) — the raw archive path is present.
     existsSyncMock.mockImplementation((p: unknown) => p !== BUNDLED_CLI_PATH);
-    statSyncMock.mockReturnValue({ size: 4096 });
 
     const j = job();
     const result = await runInstanceBackup(j);
 
     expect(spawnSyncMock).toHaveBeenCalledWith(
       'pnpm',
-      ['sv', 'backup', '--out', j.archivePath],
+      ['sv', 'backup', '--out', `${j.archivePath}.raw`],
       expect.objectContaining({ cwd: '/workspace' }),
     );
-    expect(result).toEqual({ archivePath: j.archivePath, sizeBytes: 4096 });
+    expect(result).toEqual({
+      archivePath: j.archivePath,
+      sizeBytes: Buffer.from('ciphertext').length,
+    });
   });
 
   it('spawns the bundled CLI directly with `node` (argv array, no shell string) when present — epic task 8.16', async () => {
+    setUpHappyPathThrough();
     spawnSyncMock.mockReturnValue({ status: 0, error: undefined, signal: null, stderr: '' });
-    // Bundled CLI present (production `runner` image) — job.archivePath also present (real archive produced).
     existsSyncMock.mockReturnValue(true);
-    statSyncMock.mockReturnValue({ size: 4096 });
 
     const j = job();
     const result = await runInstanceBackup(j);
 
     expect(spawnSyncMock).toHaveBeenCalledWith(
       'node',
-      [BUNDLED_CLI_PATH, 'backup', '--out', j.archivePath],
+      [BUNDLED_CLI_PATH, 'backup', '--out', `${j.archivePath}.raw`],
       expect.objectContaining({ cwd: '/workspace' }),
     );
-    expect(result).toEqual({ archivePath: j.archivePath, sizeBytes: 4096 });
+    expect(result).toEqual({
+      archivePath: j.archivePath,
+      sizeBytes: Buffer.from('ciphertext').length,
+    });
+  });
+
+  it('translates optionsJson.excludePlugins into repeated --exclude-plugin argv entries (epic task 8.17)', async () => {
+    setUpHappyPathThrough();
+    spawnSyncMock.mockReturnValue({ status: 0, error: undefined, signal: null, stderr: '' });
+    existsSyncMock.mockReturnValue(true);
+
+    const j = job({
+      optionsJson: JSON.stringify({
+        excludePlugins: ['fs.sovereign.warden', 'fs.sovereign.tasks'],
+      }),
+    });
+    await runInstanceBackup(j);
+
+    expect(spawnSyncMock).toHaveBeenCalledWith(
+      'node',
+      [
+        BUNDLED_CLI_PATH,
+        'backup',
+        '--out',
+        `${j.archivePath}.raw`,
+        '--exclude-plugin',
+        'fs.sovereign.warden',
+        '--exclude-plugin',
+        'fs.sovereign.tasks',
+      ],
+      expect.objectContaining({ cwd: '/workspace' }),
+    );
+  });
+
+  it("encrypts the raw archive with the requester's passphrase and cleans up the temp raw file", async () => {
+    setUpHappyPathThrough();
+    spawnSyncMock.mockReturnValue({ status: 0, error: undefined, signal: null, stderr: '' });
+    existsSyncMock.mockReturnValue(true);
+
+    const j = job();
+    await runInstanceBackup(j);
+
+    expect(readFileSyncMock).toHaveBeenCalledWith(`${j.archivePath}.raw`);
+    expect(encryptMock).toHaveBeenCalledWith(
+      Buffer.from('raw archive bytes'),
+      'correct horse battery staple',
+    );
+    expect(writeFileSyncMock).toHaveBeenCalledWith(j.archivePath, expect.any(Buffer));
+    expect(unlinkSyncMock).toHaveBeenCalledWith(`${j.archivePath}.raw`);
+  });
+
+  it('cleans up the temp raw file even when the subprocess fails', async () => {
+    takeBackupPassphraseMock.mockReturnValue('a passphrase');
+    spawnSyncMock.mockReturnValue({ status: 1, error: undefined, signal: null, stderr: 'boom' });
+    existsSyncMock.mockReturnValue(true); // simulates a partially-written raw file surviving the failure
+
+    await expect(runInstanceBackup(job())).rejects.toThrow(/boom/);
+    expect(unlinkSyncMock).toHaveBeenCalled();
+    expect(encryptMock).not.toHaveBeenCalled();
   });
 
   it('fails with a clear message when the subprocess cannot be spawned at all', async () => {
+    takeBackupPassphraseMock.mockReturnValue('a passphrase');
     spawnSyncMock.mockReturnValue({
       status: null,
       error: new Error('spawn pnpm ENOENT'),
@@ -157,6 +230,7 @@ describe('runInstanceBackup', () => {
   });
 
   it('fails with a clear message when the subprocess is killed (timeout)', async () => {
+    takeBackupPassphraseMock.mockReturnValue('a passphrase');
     spawnSyncMock.mockReturnValue({
       status: null,
       error: undefined,
@@ -168,6 +242,7 @@ describe('runInstanceBackup', () => {
   });
 
   it('fails with captured stderr when sv backup exits non-zero', async () => {
+    takeBackupPassphraseMock.mockReturnValue('a passphrase');
     spawnSyncMock.mockReturnValue({
       status: 1,
       error: undefined,
@@ -178,11 +253,116 @@ describe('runInstanceBackup', () => {
     await expect(runInstanceBackup(job())).rejects.toThrow(/POSTGRES_DB_URL/);
   });
 
-  it('fails if sv backup exits 0 but no archive was actually written', async () => {
+  it('fails if sv backup exits 0 but no raw archive was actually written', async () => {
+    takeBackupPassphraseMock.mockReturnValue('a passphrase');
     spawnSyncMock.mockReturnValue({ status: 0, error: undefined, signal: null, stderr: '' });
     existsSyncMock.mockReturnValue(false);
 
     await expect(runInstanceBackup(job())).rejects.toThrow(/no archive was found/);
+  });
+
+  describe('optional git push (epic task 8.17)', () => {
+    const ORIGINAL_ENV = { ...process.env };
+
+    afterEach(() => {
+      process.env = { ...ORIGINAL_ENV };
+    });
+
+    it('does not push at all when optionsJson has no pushToGit', async () => {
+      setUpHappyPathThrough();
+      spawnSyncMock.mockReturnValue({ status: 0, error: undefined, signal: null, stderr: '' });
+      existsSyncMock.mockReturnValue(true);
+
+      await runInstanceBackup(job({ optionsJson: JSON.stringify({}) }));
+      expect(pushBackupToGitMock).not.toHaveBeenCalled();
+      expect(markBackupJobPushResultMock).not.toHaveBeenCalled();
+    });
+
+    it('pushes the SAME ciphertext already written to archivePath — no second encryption pass', async () => {
+      setUpHappyPathThrough();
+      spawnSyncMock.mockReturnValue({ status: 0, error: undefined, signal: null, stderr: '' });
+      existsSyncMock.mockReturnValue(true);
+      process.env.SV_BACKUP_GIT_REPOSITORY = 'https://git.example.com/org/backups.git';
+      process.env.SV_BACKUP_GIT_TOKEN = 'the-configured-token';
+      pushBackupToGitMock.mockResolvedValue({ tag: 'sv-backup/x/v0.99.0', commitSha: 'abc123' });
+
+      const j = job({ optionsJson: JSON.stringify({ pushToGit: true }) });
+      const result = await runInstanceBackup(j);
+
+      expect(result.archivePath).toBe(j.archivePath);
+      expect(encryptMock).toHaveBeenCalledTimes(1); // only once — for the direct-download archive
+      expect(pushBackupToGitMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          repoUrl: 'https://git.example.com/org/backups.git',
+          branch: 'backups', // default when SV_BACKUP_GIT_BRANCH is unset
+          authType: 'https-token',
+          credential: 'the-configured-token',
+        }),
+        Buffer.from('ciphertext'), // the exact same bytes written to job.archivePath
+        'sovereign-backup.tar.gz.age',
+        expect.objectContaining({ platformVersion: '0.99.0', scope: 'instance' }),
+        '0.99.0',
+      );
+      expect(markBackupJobPushResultMock).toHaveBeenCalledWith({}, j.id, { status: 'succeeded' });
+    });
+
+    it('respects a configured SV_BACKUP_GIT_BRANCH instead of the "backups" default', async () => {
+      setUpHappyPathThrough();
+      spawnSyncMock.mockReturnValue({ status: 0, error: undefined, signal: null, stderr: '' });
+      existsSyncMock.mockReturnValue(true);
+      process.env.SV_BACKUP_GIT_REPOSITORY = 'https://git.example.com/org/backups.git';
+      process.env.SV_BACKUP_GIT_BRANCH = 'nightly';
+      process.env.SV_BACKUP_GIT_TOKEN = 'the-configured-token';
+      pushBackupToGitMock.mockResolvedValue({ tag: 'x', commitSha: 'y' });
+
+      await runInstanceBackup(job({ optionsJson: JSON.stringify({ pushToGit: true }) }));
+
+      expect(pushBackupToGitMock).toHaveBeenCalledWith(
+        expect.objectContaining({ branch: 'nightly' }),
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
+    it('a failed push never fails the job — recorded on pushStatus/pushError, not job status/errorMessage', async () => {
+      setUpHappyPathThrough();
+      spawnSyncMock.mockReturnValue({ status: 0, error: undefined, signal: null, stderr: '' });
+      existsSyncMock.mockReturnValue(true);
+      process.env.SV_BACKUP_GIT_REPOSITORY = 'https://git.example.com/org/backups.git';
+      process.env.SV_BACKUP_GIT_TOKEN = 'the-configured-token';
+      pushBackupToGitMock.mockRejectedValue(new Error('git push failed: unreachable remote'));
+
+      const j = job({ optionsJson: JSON.stringify({ pushToGit: true }) });
+      await expect(runInstanceBackup(j)).resolves.toEqual({
+        archivePath: j.archivePath,
+        sizeBytes: expect.any(Number) as unknown as number,
+      });
+
+      expect(markBackupJobPushResultMock).toHaveBeenCalledWith({}, j.id, {
+        status: 'failed',
+        error: expect.stringContaining('unreachable remote') as unknown as string,
+      });
+    });
+
+    it('treats pushToGit:true with SV_BACKUP_GIT_* unset as a recorded push failure, not a silent no-op or a crash', async () => {
+      setUpHappyPathThrough();
+      spawnSyncMock.mockReturnValue({ status: 0, error: undefined, signal: null, stderr: '' });
+      existsSyncMock.mockReturnValue(true);
+      // SV_BACKUP_GIT_REPOSITORY/TOKEN deliberately left unset.
+
+      const j = job({ optionsJson: JSON.stringify({ pushToGit: true }) });
+      await expect(runInstanceBackup(j)).resolves.toEqual({
+        archivePath: j.archivePath,
+        sizeBytes: expect.any(Number) as unknown as number,
+      });
+      expect(pushBackupToGitMock).not.toHaveBeenCalled();
+      expect(markBackupJobPushResultMock).toHaveBeenCalledWith({}, j.id, {
+        status: 'failed',
+        error: expect.stringContaining('not configured') as unknown as string,
+      });
+    });
   });
 });
 

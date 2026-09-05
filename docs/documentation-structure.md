@@ -15,17 +15,18 @@ topic has one canonical owner; other pages summarize it and link to that owner.
 
 ## Content classes
 
-| Class               | Purpose                                                                       | Canonical location                                                            | Published        |
-| ------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ---------------- |
-| Product             | Explain Sovereign's value, capabilities, apps, and direction                  | `product/`, `product-roadmap.md`, `instances.md`                              | Yes              |
-| Get started         | Short, sequential paths for users, operators, and app developers              | `get-started/`                                                                | Yes              |
-| Audience hubs       | Route each audience to canonical guides and references                        | `guides/`                                                                     | Yes              |
-| Technical reference | Describe current behavior, configuration, APIs, and architecture              | Named root references and `plugins/`                                          | Yes              |
-| Research            | Explore open-ended questions before a design is proposed                      | `research/`                                                                   | No               |
-| Decisions           | Record accepted and proposed cross-cutting designs                            | `rfcs/`                                                                       | Yes, with status |
-| Incidents           | Record production incidents — timeline, root cause(s), resolution, follow-ups | `incidents/`                                                                  | No               |
-| Workstreams         | Sequence an accepted design's tasks across epics in dependency order          | `workstreams/`                                                                | No               |
-| Project operations  | Track tasks, plans, findings, and internal coordination                       | `epics/`, `adhoc/` (being phased out — see below), roadmap and planning files | No               |
+| Class               | Purpose                                                                                                                      | Canonical location                                                            | Published        |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ---------------- |
+| Product             | Explain Sovereign's value, capabilities, apps, and direction                                                                 | `product/`, `product-roadmap.md`, `instances.md`                              | Yes              |
+| Get started         | Short, sequential paths for users, operators, and app developers                                                             | `get-started/`                                                                | Yes              |
+| Audience hubs       | Route each audience to canonical guides and references                                                                       | `guides/`                                                                     | Yes              |
+| Technical reference | Describe current behavior, configuration, APIs, and architecture                                                             | Named root references and `plugins/`                                          | Yes              |
+| Legal templates     | Operator-fillable templates — privacy/terms extending the shipped root `PRIVACY.md`/`TOS.md`, plus a breach-response runbook | `legal/`                                                                      | Yes              |
+| Research            | Explore open-ended questions before a design is proposed                                                                     | `research/`                                                                   | No               |
+| Decisions           | Record accepted and proposed cross-cutting designs                                                                           | `rfcs/`                                                                       | Yes, with status |
+| Incidents           | Record production incidents — timeline, root cause(s), resolution, follow-ups                                                | `incidents/`                                                                  | No               |
+| Workstreams         | Sequence an accepted design's tasks across epics in dependency order                                                         | `workstreams/`                                                                | No               |
+| Project operations  | Track tasks, plans, findings, and internal coordination                                                                      | `epics/`, `adhoc/` (being phased out — see below), roadmap and planning files | No               |
 
 ## Ownership rules
 
@@ -94,6 +95,11 @@ topic has one canonical owner; other pages summarize it and link to that owner.
   open-ended findings/plans go in `research/` or a package/app-local doc as
   appropriate, and existing `adhoc/` content stays where it is until someone
   deliberately migrates or retires it — don't add new files there.
+- `docs/public/` is not a content class — it is the docs site's static-asset
+  directory (favicons, the social-preview image, per-plugin icon SVGs used on
+  product pages), copied verbatim into the built site the way any VitePress
+  `public/` directory is. It carries no documentation prose, so it has no row
+  in the table above and no ownership rule beyond this one.
 
 ## Technical-reference metadata
 

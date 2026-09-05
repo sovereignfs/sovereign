@@ -135,16 +135,22 @@ For a new screen, feature, or redesign, produce a spec before code:
 1. **Inventory the surface**: every screen including both home states, every
    mode, every dialog, and the "pages intentionally not redesigned".
 2. **Wireframe each screen** as standalone SVGs in
-   `docs/adhoc/<topic>/NN-name.svg` (they render on GitHub and in editors)
-   using light neutral fills and real copy — placeholder copy hides
-   plain-language problems.
-3. **Write the doc** at `docs/adhoc/<topic>.md`: problem, direction, jargon
-   table, screens with embedded images and per-screen notes, engineering
-   notes (new dependencies called out honestly), open questions, and a
-   **phased plan where each phase is independently shippable** — a copy pass
-   is usually phase 1 and delivers outsized value.
+   `.claude/wireframes/<topic>/NN-name.svg` (they still render on GitHub and
+   in editors once committed to the branch) using light neutral fills and
+   real copy — placeholder copy hides plain-language problems. Never write
+   these under `docs/adhoc/` — per `docs/documentation-structure.md`, that
+   directory is being phased out and must not receive new files, even
+   transient ones.
+3. **Write the doc** at `.claude/wireframes/<topic>.md`: problem, direction,
+   jargon table, screens with embedded images and per-screen notes,
+   engineering notes (new dependencies called out honestly), open questions,
+   and a **phased plan where each phase is independently shippable** — a
+   copy pass is usually phase 1 and delivers outsized value.
 4. Get the developer's sign-off on the doc before implementing; each phase
-   then maps to one roadmap task.
+   then maps to one roadmap task. These files are working artifacts for that
+   sign-off conversation, not permanent documentation — delete them once the
+   feature ships (precedent: commit `8bdd6172`), the same way `CURRENT_TASK.md`
+   is never kept around after a task completes.
 
 ## Pre-merge checklist
 

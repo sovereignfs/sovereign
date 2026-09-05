@@ -179,14 +179,14 @@ describe('parseBackupTag', () => {
 describe('listBackupTags', () => {
   it('lists every sv-backup tag on the remote, newest first', async () => {
     const source = { repoUrl: bareRepoPath, authType: 'https-token' as const, credential: 'token' };
-    const older = new Date('2026-07-01T00:00:00.000Z');
-    const newer = new Date('2026-07-06T12:30:00.000Z');
+    const older = new Date('2026-08-01T00:00:00.000Z');
+    const newer = new Date('2026-08-06T12:30:00.000Z');
     await pushBackupToGit(
       { ...source, branch: 'backups' },
       Buffer.from('a'),
       'backup.age',
       {},
-      '0.121.0',
+      '0.122.0',
       older,
     );
     await pushBackupToGit(
@@ -194,15 +194,15 @@ describe('listBackupTags', () => {
       Buffer.from('b'),
       'backup.age',
       {},
-      '0.121.1',
+      '0.122.1',
       newer,
     );
 
     const tags = await listBackupTags(source);
     expect(tags).toHaveLength(2);
-    expect(tags[0]?.tag).toBe(backupTagFor(newer, '0.121.1'));
+    expect(tags[0]?.tag).toBe(backupTagFor(newer, '0.122.1'));
     expect(tags[0]?.timestamp.getTime()).toBe(newer.getTime());
-    expect(tags[1]?.tag).toBe(backupTagFor(older, '0.121.0'));
+    expect(tags[1]?.tag).toBe(backupTagFor(older, '0.122.0'));
   });
 
   it('silently skips a tag that does not match the sv-backup shape', async () => {
@@ -218,6 +218,7 @@ describe('listBackupTags', () => {
         'user.name=Test',
         'commit',
         '--quiet',
+        '--no-verify',
         '--allow-empty',
         '-m',
         'seed',
@@ -249,13 +250,13 @@ describe('listBackupTags', () => {
 describe('fetchBackupBlob', () => {
   it('fetches the exact ciphertext bytes for a tagged backup via a shallow fetch', async () => {
     const payload = Buffer.from('encrypted-payload-bytes-not-plaintext');
-    const now = new Date('2026-07-06T12:30:00.000Z');
+    const now = new Date('2026-09-01T08:00:00.000Z');
     const pushed = await pushBackupToGit(
       { repoUrl: bareRepoPath, branch: 'backups', authType: 'https-token', credential: 'token' },
       payload,
       'backup.age',
       {},
-      '0.121.1',
+      '0.123.0',
       now,
     );
 

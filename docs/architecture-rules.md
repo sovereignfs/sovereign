@@ -1072,3 +1072,137 @@ search_path`/session GUCs meant to persist across statements, temp
   traffic instead of just repeated bad-key guesses. Once an IP trips the
   limiter, every request from it returns `429` until the window resets,
   including one presenting the correct key.
+
+---
+
+## Rules promoted from the CLAUDE.md release log (2026-09-06)
+
+These were each learned in a specific task and previously recorded only in
+CLAUDE.md's per-release narrative (now archived in `docs/task-history.md`).
+Each is a genuine, reusable constraint; the originating release is noted so the
+full story is one grep away.
+
+- **A plugin declaring `data:import` must register `sdk.portability.provideImport()`**,
+  and `data:export` must be paired with `provideExport()`. The restore path
+  looks up handlers by plugin id at import time and _skips_ a section with no
+  handler ("no import handler registered for this plugin") rather than
+  failing, so a manifest can claim a permission the plugin never honours and
+  a user's data silently fails to come back. Every first-party plugin that
+  declares both permissions implements both handlers symmetrically. Found in
+  `0.130.2` (Warden had declared `data:import` since epic 22.5 with no handler).
+- **`plugins/console` may import `runtime/src`/`@/` but not
+  `@sovereignfs/db`/`@sovereignfs/manifest`/`@sovereignfs/mailer`.**
+  `eslint.config.ts` gives Console its own narrower boundary block, not a
+  blanket exemption. Anything Console needs from those packages goes behind an
+  admin-key-authenticated `runtime/app/api/admin/*` route it calls over HTTP
+  (the `entitlements/actions.ts` pattern). Found in `0.128.0`, where
+  `enqueueBackupJob`/`listBackupJobs` had to move behind such a route.
+- **`pnpm typecheck` never compiles composed plugin route files.**
+  `runtime/tsconfig.json` excludes `runtime/app/(platform)/(plugins)` and
+  `(minimal)`, and the platform plugins have no `typecheck` script of their own
+  (`cd plugins/console && npx tsc --noEmit` silently resolves an unrelated root
+  tsconfig). Only `pnpm --filter runtime build` compiles a plugin's real
+  `app/` tree. A wrong prop name on a `@sovereignfs/ui` component in Console
+  passed every standalone check and was caught only by a component test.
+- **`bin/backup-restore.ts` and `bin/sv-backup-cli.ts` never import
+  `runtime/src`.** They are `tsup`-bundled (`bin/tsup.config.ts`, `noExternal`)
+  into `runtime/dist-cli/sv-backup-cli.js` so the production `runner` image —
+  which has no `pnpm`/`tsx`/`bin/` — can run backup/restore with plain `node`.
+  Any dependency added there must be pure JS (no native addon) and listed in
+  `noExternal`; a helper that also exists in `runtime/src` (e.g. age decrypt)
+  is duplicated locally rather than imported. `0.127.0`–`0.130.0`.
+- **`/api/admin/*` routes authenticate with `checkAdminKey()` and nothing
+  else.** The middleware matcher deliberately excludes this path, so the
+  `x-sovereign-user-id`/`-role` trust headers middleware injects elsewhere are
+  never set _or stripped_ here — a caller can forge
+  `x-sovereign-user-role: platform:owner` with `curl -H`. Three routes were
+  found trusting that header (`0.94.15`). The one route that cannot carry an
+  `Authorization` header (the email-template preview `<iframe>`) verifies the
+  real session cookie in-route via `verifySession` instead.
+- **`runtime/middleware.ts` runs on Next.js's Edge runtime.** It cannot load
+  `ioredis` (needs Node `net`/`tls`) or any Node built-in, and it avoids DB
+  writes for the same reason. Moving it to Node.js Middleware is a
+  platform-wide change with its own blast radius (paused task 2.29, RFC 0086
+  open question), not something to fold into another task.
+- **node-postgres returns `bigint` columns and `COUNT(*)` as JS strings** from
+  raw queries unless a global type parser is registered. `row.started === now`
+  comparisons silently fail; `Number()` before comparing. Bit twice: HMAC
+  rotation (`0.102.0`) and unread-notification counts (`0.120.0`).
+- **Never fork a _navigation_ decision by viewport.** `ResponsiveSurface`'s
+  `useIsMobile()` returns `false` on first paint and corrects in a `useEffect`;
+  React runs child effects before parent effects in the same commit, so a
+  redirect inside the "desktop" branch fires on real phones too, before the
+  corrective effect runs. Fork only what _renders_ — Console's bare `/console`
+  and Account's bare `/account` both work this way. `0.119.0`.
+- **A React element produced by a Server Component and stored into a Client
+  Component's state loses its `key`.** It crosses the RSC boundary as an
+  opaque Flight reference object with no `.key`, so a downstream
+  `Children.toArray`/reconciliation sees a stable positional key and updates
+  the existing fiber in place — `defaultValue`-seeded inputs stay frozen on the
+  first selection. Thread a plain string key prop through props/context and
+  apply it as `key` on a `Fragment` the client creates itself. `0.114.2`.
+- **Credentials for a spawned `git` go through the environment.** `GIT_ASKPASS`
+  script for HTTPS tokens, `GIT_SSH_COMMAND` with an `IdentityFile` written to
+  a `0600` temp file and removed in `finally` for SSH keys — never argv, never
+  an embedded URL, both of which are visible to every user on the host via
+  `ps`. `runtime/src/git-backup.ts` is the reference implementation. `0.124.0`.
+- **`packages/ui` components are framework-agnostic.** No `next/navigation` or
+  `next/link` imports; active state comes from the consumer (`item.active`)
+  and links via an optional `renderLink`. `NavTabs` and `NavList` both follow
+  this; an epic task draft assuming `NavList` would call `usePathname()`
+  internally was corrected before it shipped. `0.105.0`.
+- **`drizzle-kit generate` cannot run non-interactively for a rename.** A table
+  or column rename triggers its own TTY prompt ("renamed or created new?").
+  Hand-author the migration for both dialects in drizzle-kit's own output
+  format, then verify two ways: `drizzle-kit check` (snapshot/journal
+  consistency) and a follow-up `drizzle-kit generate` that reports "No schema
+  changes". `0.103.0`.
+- **Third-party plugin dependencies are never committed to
+  `runtime/package.json` or `runtime/generated/plugin-deps.json`.**
+  `sovereign.plugins.json` is gitignored per checkout, and hoisting (RFC 0057,
+  `bin/plugin-deps.ts`) runs on the operator's own checkout via `sv plugin add`,
+  `scripts/install-plugins.ts`, and `pnpm dev`'s `.local` sync. A first fix
+  attempt that committed travellog's deps directly was reverted as exactly the
+  anti-pattern the mechanism exists to avoid. `0.101.7`.
+- **Background workers run inside the runtime process.** The portability
+  export/import registry (`runtime/src/portability/registry.ts`) is populated
+  request-scoped as plugin pages load, never at boot, so a separate headless
+  worker process always sees an empty registry and silently produces
+  user-scope backups with no plugin data. This is why the backup CLI was
+  bundled into `runner` rather than moved to a `tools`-based service. `0.127.0`.
+- **`sdk.*` permission checks reject a missing plugin id.** A
+  `getPluginId(headers) ?? 'unknown'` fallback laundered a missing identity
+  into a no-op check in `sdk.notifications.send()`; the check must fail
+  closed. `0.120.0`.
+- **Every outbound `fetch` on a server render path has a timeout, and a route
+  that blocks on network has a `loading.tsx`.** An unbounded health probe left
+  `/warden` rendering nothing for the duration of a stalled upstream; with a
+  3s timeout plus `loading.tsx`, the first HTML chunk arrived in 7ms while the
+  slow discovery still took 8s in the background. `0.112.1`.
+- **`router.push()` to the route's own current URL does not refetch server
+  data** — use `router.refresh()`. And a callback passed as a `useEffect`
+  dependency must be memoized (`useCallback`), or a parent re-render re-fires
+  the effect; guard success effects with a ref keyed on the state object so a
+  forgotten memoization upstream can't replay a toast. `0.112.4`–`0.112.5`.
+- **Overriding a DS component's own module class needs higher specificity.**
+  `.cardChevron { display: none }` vs `Icon.module.css`'s `.root
+{ display: inline-block }` is a tie decided by Next.js's per-route CSS bundle
+  order, which differed between `/console/groups` and `/console/oauth-clients`.
+  Qualify the selector (`svg.cardChevron`). `0.111.0`.
+- **A composer-style surface keeps a stable element tree across state
+  transitions.** Rendering the composer inside a wrapper that only exists in
+  the empty state remounted the whole subtree — including the incognito
+  toggle — every time the empty/non-empty boundary was crossed. Keep the
+  siblings permanent and swap a modifier class. `0.110.0`.
+- **citty `defineCommand` args have no repeatable type** — it delegates to
+  `node:util`'s `parseArgs` with `multiple` never set, so a repeated flag
+  silently keeps the last value. Read `rawArgs` for a flag that may repeat
+  (`--exclude-plugin`). `0.128.0`.
+- **Test hygiene learned the hard way:** await every async operation a test
+  starts (an un-awaited jsdom `FileReader` completion lands as an unhandled
+  exception after the test returns and fails the whole run, `0.94.14`); scope
+  a long `testTimeout` to the one slow test (`0.94.13`); a `.pg.test.ts` using
+  an isolated schema must mock modules that resolve the real `getPlatformDb()`
+  singleton internally — `sendPlatformEmail`, `fanOutPushToUser`
+  (`0.120.0`, `0.123.0`); keep Postgres identifiers under 63 bytes or they
+  truncate silently and collide (`0.101.9`).

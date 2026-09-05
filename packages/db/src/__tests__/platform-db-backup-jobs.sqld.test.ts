@@ -8,6 +8,7 @@ import {
   completeBackupJobSuccess,
   enqueueBackupJob,
   getBackupJob,
+  listBackupJobs,
   listExpiredBackupJobs,
   reclaimStuckBackupJobs,
 } from '../platform-db';
@@ -208,6 +209,56 @@ describe.skipIf(!LIVE)('backup_jobs claim/complete/sweep (RFC 0084, epic task 8.
     expect(expiredIds).not.toContain(stillQueuedButExpired);
 
     await drain(stillQueuedButExpired);
+  });
+
+  it('listBackupJobs returns jobs for the given scope+tenant only, most recent first', async () => {
+    // A dedicated, random tenantId isolates this test from every other
+    // test's own 'default'-tenant jobs in this shared namespace — listBackupJobs
+    // filters by (scope, tenantId), so this keeps the assertions exact rather
+    // than fuzzy contains() checks against a namespace-wide job list.
+    const tenantId = `test_list_${randomUUID().replace(/-/g, '_')}`;
+    const older = newJobId();
+    const newer = newJobId();
+    const userScoped = newJobId();
+
+    try {
+      await enqueue(older, { tenantId });
+      // created_at has 1-second granularity — without a real gap, `older`
+      // and `newer` can tie, making DESC order undefined rather than wrong.
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+      await enqueue(newer, { tenantId });
+      // A different scope, same tenantId — must never appear in an 'instance' list.
+      await enqueueBackupJob(pdb, {
+        id: userScoped,
+        tenantId,
+        scope: 'user',
+        archivePath: `/backups/${userScoped}.zip.age`,
+      });
+
+      const rows = await listBackupJobs(pdb, { scope: 'instance', tenantId });
+      expect(rows.map((r) => r.id)).toEqual([newer, older]); // created_at DESC
+      expect(rows.every((r) => r.scope === 'instance')).toBe(true);
+    } finally {
+      // Always drains, even on assertion failure — a leaked queued/running
+      // row here would silently steal a claim meant for a later test (see
+      // this file's own top-of-file doc comment).
+      await drain(older);
+      await drain(newer);
+      await drain(userScoped);
+    }
+  });
+
+  it('listBackupJobs respects the limit', async () => {
+    const tenantId = `test_list_limit_${randomUUID().replace(/-/g, '_')}`;
+    const ids = [newJobId(), newJobId(), newJobId()];
+    try {
+      for (const id of ids) await enqueue(id, { tenantId });
+
+      const rows = await listBackupJobs(pdb, { scope: 'instance', tenantId, limit: 2 });
+      expect(rows).toHaveLength(2);
+    } finally {
+      for (const id of ids) await drain(id);
+    }
   });
 
   it('reclaimStuckBackupJobs fails every running job and leaves others untouched', async () => {

@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import {
   DEFAULT_TENANT_ID,
@@ -15,7 +15,12 @@ import {
 import { encrypt, encryptToRecipients } from './backup-encryption';
 import { takeBackupPassphrase } from './backup-passphrase-store';
 import { getPlatformDb } from './db';
-import { fetchBackupBlob, type GitPushAuthType, pushBackupToGit } from './git-backup';
+import {
+  fetchBackupBlob,
+  type GitPushAuthType,
+  type GitPushDestination,
+  pushBackupToGit,
+} from './git-backup';
 import { logger } from './logger';
 import { getPlatformVersion } from './platform-version';
 import { assembleExport } from './portability/assemble';
@@ -31,6 +36,8 @@ const MAX_CAPTURED_OUTPUT_CHARS = 4000; // keep a verbose subprocess from blowin
 
 interface InstanceBackupJobOptions {
   excludePlugins?: string[];
+  /** Opts this job into a git push (epic task 8.17) — see `resolveInstanceGitPushConfig()`. */
+  pushToGit?: boolean;
 }
 
 interface UserBackupJobOptions {
@@ -172,6 +179,89 @@ async function pushUserBackupToDestination(
   }
 }
 
+/**
+ * Instance-scope git-push destination (epic task 8.17) — unlike the
+ * per-user destination above, this is plain env-var config an operator sets
+ * in `.env`/Compose, not a `plugin_connections`/`plugin_secrets` row: RFC
+ * 0064 (`docs/rfcs/0064-git-backed-operator-backups.md`) documents
+ * `SV_BACKUP_GIT_REPOSITORY`/`SV_BACKUP_GIT_BRANCH`/`SV_BACKUP_GIT_TOKEN` as
+ * a `docs/self-hosting.md`-level config surface. HTTPS-token auth only —
+ * RFC 0064 states SSH URLs rely on the operator's own ambient SSH
+ * agent/key, not new plumbing here.
+ *
+ * Exported for this module's own tests, not for reuse by
+ * `plugins/console/app/backups/page.tsx` — the SDK boundary rule forbids a
+ * plugin (Console included) from importing `runtime/src` at all. Console's
+ * own "is git push available" check duplicates just the two env var *names*
+ * directly (`entitlements/page.tsx`'s own `SOVEREIGN_ADMIN_KEY` read is the
+ * established precedent for this), never this function or its logic.
+ */
+export function resolveInstanceGitPushConfig(): {
+  repoUrl: string;
+  branch: string;
+  token: string;
+} | null {
+  const repoUrl = process.env.SV_BACKUP_GIT_REPOSITORY;
+  const token = process.env.SV_BACKUP_GIT_TOKEN;
+  if (!repoUrl || !token) return null;
+  return { repoUrl, branch: process.env.SV_BACKUP_GIT_BRANCH || 'backups', token };
+}
+
+/**
+ * Optional git-push step for an instance-scope backup (epic task 8.17).
+ * Simpler than the user-scope equivalent above: there is only one secret
+ * here (the requester's passphrase), so the ciphertext already written to
+ * `job.archivePath` is pushed as-is — no second encryption pass to a
+ * separate recipient. Age-recipient encryption for this push is a later,
+ * explicitly deferred addition (epic task 8.41, workstream 0023 leg 5),
+ * "alongside (not instead of) task 8.17's existing passphrase option."
+ *
+ * Same "never fail the job over a push failure" contract as the user-scope
+ * version — recorded on the job's own `pushStatus`/`pushError` only, since
+ * there's no per-destination connection row to mark here.
+ */
+async function pushInstanceBackupToGit(
+  pdb: PlatformDb,
+  job: BackupJobRow,
+  ciphertext: Buffer,
+): Promise<void> {
+  try {
+    const config = resolveInstanceGitPushConfig();
+    if (!config) {
+      throw new Error(
+        'Git push was requested but SV_BACKUP_GIT_REPOSITORY/SV_BACKUP_GIT_TOKEN are not configured.',
+      );
+    }
+    const platformVersion = getPlatformVersion();
+    const destination: GitPushDestination = {
+      repoUrl: config.repoUrl,
+      branch: config.branch,
+      authType: 'https-token',
+      credential: config.token,
+    };
+    await pushBackupToGit(
+      destination,
+      ciphertext,
+      'sovereign-backup.tar.gz.age',
+      { createdAt: Math.floor(Date.now() / 1000), platformVersion, scope: 'instance' },
+      platformVersion,
+    );
+    await markBackupJobPushResult(pdb, job.id, { status: 'succeeded' });
+    logger.info('backup-run: pushed instance backup to git destination', { jobId: job.id });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error('backup-run: instance git push failed', { jobId: job.id, err: message });
+    try {
+      await markBackupJobPushResult(pdb, job.id, { status: 'failed', error: message });
+    } catch (markErr) {
+      logger.error('backup-run: failed to record instance git push failure', {
+        jobId: job.id,
+        err: markErr instanceof Error ? markErr.message : String(markErr),
+      });
+    }
+  }
+}
+
 function parseOptions<T>(optionsJson: string | null): T {
   if (!optionsJson) return {} as T;
   try {
@@ -223,68 +313,87 @@ function truncate(text: string): string {
  * restore-fetch path used by user-scope jobs below) are both now installed
  * in `runner` — see the Dockerfile.
  *
- * Encryption (RFC 0084: "always applied — no opt-out") is intentionally not
- * wired in here yet for the instance-scope path specifically: the
- * requester's passphrase is never persisted, and no mechanism yet exists to
- * carry it from wherever an instance-scope job is enqueued through to
- * whichever later tick actually claims and runs it. That's unresolved design
- * work, not a coding gap — solving it belongs to epic task 8.17 (Console
- * instance backup UI), which decides passphrase collection for that scope.
- * User-scope jobs are encrypted — see `runUserBackup` below, which solves
- * the identical carry-the-passphrase problem for its own scope via
- * `backup-passphrase-store.ts`.
+ * Encryption (RFC 0084: "always applied — no opt-out", epic task 8.17)
+ * mirrors `runUserBackup` below: the CLI writes a **raw** archive to a
+ * sibling temp path (never `job.archivePath` directly), which is then
+ * encrypted with the requester's passphrase (taken, single-use, from
+ * `backup-passphrase-store.ts`) before being written to `job.archivePath` —
+ * the temp file is deleted either way, including on every error path.
+ * `--exclude-plugin <id>` (repeatable) is passed straight through from
+ * `optionsJson.excludePlugins` to the CLI.
  */
 export async function runInstanceBackup(
   job: BackupJobRow,
 ): Promise<{ archivePath: string; sizeBytes: number }> {
   const options = parseOptions<InstanceBackupJobOptions>(job.optionsJson);
-  if (options.excludePlugins && options.excludePlugins.length > 0) {
+
+  const passphrase = takeBackupPassphrase(job.id);
+  if (!passphrase) {
     throw new Error(
-      '`sv backup --exclude-plugin` does not exist yet (epic task 8.17) — cannot honor ' +
-        'optionsJson.excludePlugins for this job.',
+      'No passphrase available for this job (the server may have restarted before it was ' +
+        'claimed) — please trigger a new backup.',
     );
   }
 
   const root = findWorkspaceRoot();
+  const rawArchivePath = `${job.archivePath}.raw`;
+  const excludeArgs = (options.excludePlugins ?? []).flatMap((id) => ['--exclude-plugin', id]);
   // The bundled CLI (production runner image) takes priority when present;
   // `pnpm sv backup` (dev/tools, unchanged) is the fallback. Neither path is
   // ever silently skipped — exactly one of the two always runs.
   const bundledCli = join(root, 'runtime', 'dist-cli', 'sv-backup-cli.js');
   const [command, commandArgs] = existsSync(bundledCli)
-    ? ['node', [bundledCli, 'backup', '--out', job.archivePath]]
-    : ['pnpm', ['sv', 'backup', '--out', job.archivePath]];
-  const result = spawnSync(command, commandArgs, {
-    cwd: root,
-    timeout: SUBPROCESS_TIMEOUT_MS,
-    encoding: 'utf8',
-  });
+    ? ['node', [bundledCli, 'backup', '--out', rawArchivePath, ...excludeArgs]]
+    : ['pnpm', ['sv', 'backup', '--out', rawArchivePath, ...excludeArgs]];
 
-  if (result.error) {
-    throw new Error(`Failed to spawn \`sv backup\`: ${result.error.message}`);
-  }
-  if (result.signal) {
-    const minutes = String(SUBPROCESS_TIMEOUT_MS / 60_000);
-    throw new Error(
-      `\`sv backup\` was killed (signal ${result.signal}) — likely the ${minutes}-minute timeout.`,
-    );
-  }
-  if (result.status !== 0) {
-    const stderr = truncate((result.stderr ?? '').trim());
-    throw new Error(
-      `\`sv backup\` exited with code ${String(result.status)}: ${stderr || '(no output)'}`,
-    );
-  }
-  if (!existsSync(job.archivePath)) {
-    throw new Error(
-      `\`sv backup\` reported success but no archive was found at ${job.archivePath}.`,
-    );
-  }
+  try {
+    const result = spawnSync(command, commandArgs, {
+      cwd: root,
+      timeout: SUBPROCESS_TIMEOUT_MS,
+      encoding: 'utf8',
+    });
 
-  logger.info('backup-run: instance backup complete', {
-    jobId: job.id,
-    archivePath: job.archivePath,
-  });
-  return { archivePath: job.archivePath, sizeBytes: statSync(job.archivePath).size };
+    if (result.error) {
+      throw new Error(`Failed to spawn \`sv backup\`: ${result.error.message}`);
+    }
+    if (result.signal) {
+      const minutes = String(SUBPROCESS_TIMEOUT_MS / 60_000);
+      throw new Error(
+        `\`sv backup\` was killed (signal ${result.signal}) — likely the ${minutes}-minute timeout.`,
+      );
+    }
+    if (result.status !== 0) {
+      const stderr = truncate((result.stderr ?? '').trim());
+      throw new Error(
+        `\`sv backup\` exited with code ${String(result.status)}: ${stderr || '(no output)'}`,
+      );
+    }
+    if (!existsSync(rawArchivePath)) {
+      throw new Error(
+        `\`sv backup\` reported success but no archive was found at ${rawArchivePath}.`,
+      );
+    }
+
+    const plaintext = readFileSync(rawArchivePath);
+    const ciphertext = await encrypt(plaintext, passphrase);
+    const bytes = Buffer.from(ciphertext, 'base64url');
+    mkdirSync(dirname(job.archivePath), { recursive: true });
+    writeFileSync(job.archivePath, bytes);
+
+    logger.info('backup-run: instance backup complete', {
+      jobId: job.id,
+      archivePath: job.archivePath,
+    });
+
+    if (options.pushToGit) {
+      const pdb = await getPlatformDb();
+      await pushInstanceBackupToGit(pdb, job, bytes);
+    }
+
+    return { archivePath: job.archivePath, sizeBytes: bytes.length };
+  } finally {
+    if (existsSync(rawArchivePath)) unlinkSync(rawArchivePath);
+  }
 }
 
 /**

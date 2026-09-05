@@ -2076,7 +2076,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             <ComponentCard
               name="Icon"
               importLine="import { Icon } from '@sovereignfs/ui';"
-              usage="SVG icon primitive. 93 bundled icons. Decorative: aria-hidden. Meaningful: aria-label. Three sizes: sm, md, lg."
+              usage="SVG icon primitive. 96 bundled icons. Decorative: aria-hidden. Meaningful: aria-label. Three sizes: sm, md, lg."
             >
               {(
                 [

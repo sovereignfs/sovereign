@@ -993,6 +993,71 @@ a decision, written up as an RFC — not working platform code.
 
 ---
 
+#### 📋 0.27 — Next.js 16 upgrade (Turbopack vs `@ducanh2912/next-pwa`)
+
+**Goal:** Upgrade both Next.js apps from 15.5 to 16. Dependabot's bump (#346,
+closed) fails the build because Next 16 defaults to Turbopack and
+`@ducanh2912/next-pwa` is a webpack plugin ("This build is using Turbopack,
+with a `webpack` config and no `turbopack` config"). This is a decision about
+the PWA toolchain, not a version bump.
+
+**Deliverables:**
+
+- Decide: keep next-pwa and build with `next build --webpack` (accepting the
+  slower build and whatever Next deprecates around it), or replace it with a
+  Turbopack-compatible service-worker setup that preserves the `pages`
+  never-store guarantee, `offline-shells`, `fallbacks.document`, and the push
+  handler in `runtime/worker/index.ts` (`docs/architecture-rules.md`'s cached
+  authenticated-document rule)
+- Bump `next` in the pnpm catalog and remove the Dependabot major ignore for
+  it once shipped
+- Re-verify the three middleware-adjacent behaviors Next majors tend to move:
+  the 303 login redirect, `applyCsp` on every return path, Edge-runtime
+  restrictions
+- `docs/upgrade.md` note
+
+**Dependencies:** none
+
+**SRS reference:** PLT-09 (PWA), SRS §3.11
+
+**Review checklist:**
+
+- `pnpm build` green on both apps; `pnpm test:e2e` green
+- Service worker still never stores a per-user page (regression test in
+  `runtime/src/__tests__/` passes)
+- Lighthouse installability unchanged
+
+---
+
+#### 📋 0.28 — TypeScript 6 migration
+
+**Goal:** Move the catalog from `typescript ^5.9` to 6.x deliberately.
+Dependabot's bump (#305, closed) fails typecheck with `TS2591: Cannot find
+name 'process'` across `packages/create-plugin` — TS 6 changed how
+`@types/node` is discovered, so every package that relied on implicit
+inclusion needs an explicit `types` entry or an import. CLAUDE.md records TS 6
+once leaking in via an unpinned peer range; the catalog pin exists for this.
+
+**Deliverables:**
+
+- Audit every `tsconfig.json` extending `packages/tsconfig` for implicit
+  `@types/node` reliance; fix in the shared base where possible
+- Bump the catalog, `packages/tsconfig`, and `typescript-eslint` together
+- Remove the Dependabot major ignore for `typescript` once shipped
+- `@sovereignfs/sdk`/`@sovereignfs/ui` `.d.ts` output diffed before/after —
+  a public-contract change here is an NFR-04 minor bump
+
+**Dependencies:** none
+
+**SRS reference:** NFR-04
+
+**Review checklist:**
+
+- `pnpm typecheck`, `pnpm build`, Storybook build all green
+- Published packages' emitted types unchanged, or the bump documented
+
+---
+
 ## Related RFCs
 
 - [RFC 0006 — Deployment & upgrade strategy](../rfcs/0006-deployment-upgrade-strategy.md)

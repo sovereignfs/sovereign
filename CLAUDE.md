@@ -444,7 +444,7 @@ pnpm sv <cmd>           # CLI (seed, backup, restore, plugin add/remove, …)
 
 ## Environment notes
 
-- Node ≥20 (dev on 24.x), pnpm 11.5.2 (`packageManager`). pnpm 11 blocks
+- Node 24.15+ (`.node-version` pins the exact patch; jsdom 30 needs ≥24.15), pnpm 11.5.2 (`packageManager`). pnpm 11 blocks
   dependency build scripts; `esbuild` and `better-sqlite3` are allowlisted in
   `pnpm-workspace.yaml` `allowBuilds`; `simple-git-hooks` is `false` there (the
   root `prepare` script installs hooks).

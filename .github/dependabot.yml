@@ -15,13 +15,39 @@ updates:
     # "Plugins version only their manifest.json") — Dependabot only ever
     # touches dependency ranges, never that field, so no extra config is
     # needed to protect it.
+    # Majors that are deliberate migrations, not dependency bumps — each has
+    # an epic task and a reason a bot PR can't merge it (2026-09-06 triage):
+    #   typescript — catalog-pinned ^5.9; TS 6 changed @types/node pickup
+    #                (epic task 0.28)
+    #   next       — Next 16 defaults to Turbopack; @ducanh2912/next-pwa is a
+    #                webpack plugin (epic task 0.27)
+    #   @types/node — tracks the root `engines` major (24), not the newest
+    #                Node release
+    ignore:
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'next'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
     groups:
+      # better-auth minors change persisted schema and the signed session
+      # cookie-cache format the runtime middleware verifies offline (1.6→1.7
+      # broke both, found in a grouped bump) — never ride along in the
+      # routine batch; own PR, own live verification (epic task 1.26).
+      better-auth:
+        patterns:
+          - 'better-auth'
+          - '@better-auth/*'
       # Batch routine patch/minor bumps into fewer PRs; a major bump always
       # gets its own PR regardless of grouping, since it may be breaking.
       minor-and-patch:
         update-types:
           - 'minor'
           - 'patch'
+        exclude-patterns:
+          - 'better-auth'
+          - '@better-auth/*'
 
   # Workflow action versions (actions/checkout@vN, etc.) — separate ecosystem,
   # same weekly cadence.

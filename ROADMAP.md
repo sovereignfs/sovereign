@@ -26,20 +26,23 @@ open architectural questions.
 
 #### Phase v0.3 — Foundation
 
-| Version | Task                                             | Status | Epic task                                                                            |
-| ------- | ------------------------------------------------ | ------ | ------------------------------------------------------------------------------------ |
-| 0.3.1   | Monorepo scaffold                                | ✅     | [0.1](docs/epics/infrastructure.md#-01--monorepo-scaffold)                           |
-| 0.3.2   | Shared TypeScript config                         | ✅     | [0.2](docs/epics/infrastructure.md#-02--shared-typescript-config)                    |
-| 0.3.3   | Code quality tooling                             | ✅     | [0.3](docs/epics/infrastructure.md#-03--code-quality-tooling)                        |
-| 0.3.4   | `packages/db` — Drizzle client factory           | ✅     | [0.4](docs/epics/infrastructure.md#-04--packagesdb--drizzle-client-factory)          |
-| 0.3.5   | `packages/manifest` — schema and validation      | ✅     | [3.1](docs/epics/plugins-runtime.md#-31--packagesmanifest--schema-and-validation)    |
-| 0.3.6   | `packages/mailer` — SMTP abstraction             | ✅     | [0.5](docs/epics/infrastructure.md#-05--packagesmailer--smtp-abstraction)            |
-| 0.3.7   | `packages/ui` — Sovereign Design System scaffold | ✅     | [9.1](docs/epics/design-system.md#-91--packagesui--sovereign-design-system-scaffold) |
-| 0.3.8   | `packages/sdk` — interface definitions           | ✅     | [3.2](docs/epics/plugins-runtime.md#-32--packagessdk--interface-definitions)         |
-| 0.3.9   | `apps/auth` — better-auth server                 | ✅     | [1.1](docs/epics/users-auth.md#-11--appsauth--better-auth-server)                    |
-| 0.3.10  | Runtime scaffold                                 | ✅     | [2.1](docs/epics/platform-shell.md#-21--runtime-scaffold)                            |
-| 0.3.11  | Generate script                                  | ✅     | [2.2](docs/epics/platform-shell.md#-22--generate-script)                             |
-| 0.3.12  | Docker Compose for local dev                     | ✅     | [0.6](docs/epics/infrastructure.md#-06--docker-compose-for-local-dev)                |
+| Version | Task                                                     | Status | Epic task                                                                                      |
+| ------- | -------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------- |
+| 0.3.1   | Monorepo scaffold                                        | ✅     | [0.1](docs/epics/infrastructure.md#-01--monorepo-scaffold)                                     |
+| 0.3.2   | Shared TypeScript config                                 | ✅     | [0.2](docs/epics/infrastructure.md#-02--shared-typescript-config)                              |
+| 0.3.3   | Code quality tooling                                     | ✅     | [0.3](docs/epics/infrastructure.md#-03--code-quality-tooling)                                  |
+| 0.3.4   | `packages/db` — Drizzle client factory                   | ✅     | [0.4](docs/epics/infrastructure.md#-04--packagesdb--drizzle-client-factory)                    |
+| 0.3.5   | `packages/manifest` — schema and validation              | ✅     | [3.1](docs/epics/plugins-runtime.md#-31--packagesmanifest--schema-and-validation)              |
+| 0.3.6   | `packages/mailer` — SMTP abstraction                     | ✅     | [0.5](docs/epics/infrastructure.md#-05--packagesmailer--smtp-abstraction)                      |
+| 0.3.7   | `packages/ui` — Sovereign Design System scaffold         | ✅     | [9.1](docs/epics/design-system.md#-91--packagesui--sovereign-design-system-scaffold)           |
+| 0.3.8   | `packages/sdk` — interface definitions                   | ✅     | [3.2](docs/epics/plugins-runtime.md#-32--packagessdk--interface-definitions)                   |
+| 0.3.9   | `apps/auth` — better-auth server                         | ✅     | [1.1](docs/epics/users-auth.md#-11--appsauth--better-auth-server)                              |
+| 0.3.10  | Runtime scaffold                                         | ✅     | [2.1](docs/epics/platform-shell.md#-21--runtime-scaffold)                                      |
+| 0.3.11  | Generate script                                          | ✅     | [2.2](docs/epics/platform-shell.md#-22--generate-script)                                       |
+| 0.3.12  | Docker Compose for local dev                             | ✅     | [0.6](docs/epics/infrastructure.md#-06--docker-compose-for-local-dev)                          |
+| —       | better-auth 1.7 upgrade with session-cookie verification | 📋     | [1.26](docs/epics/users-auth.md#-126--better-auth-17-upgrade-with-session-cookie-verification) |
+| —       | Next.js 16 upgrade (Turbopack vs next-pwa)               | 📋     | [0.27](docs/epics/infrastructure.md#-027--nextjs-16-upgrade-turbopack-vs-ducanh2912next-pwa)   |
+| —       | TypeScript 6 migration                                   | 📋     | [0.28](docs/epics/infrastructure.md#-028--typescript-6-migration)                              |
 
 ---
 

@@ -1359,6 +1359,42 @@ replaces it.
 
 ---
 
+#### 📋 1.26 — better-auth 1.7 upgrade with session-cookie verification
+
+**Goal:** Move `apps/auth` from better-auth 1.6.x to 1.7.x deliberately.
+Dependabot's grouped bump (#623, closed) surfaced two real breaks: the
+`oauthClient` table gains a `public` column the sqld test schema doesn't
+create, and the signed session cookie-cache encoding changed
+(`session-verify.test.ts` fails with "Bad control character in string
+literal in JSON") — the exact cookie `runtime/middleware.ts` verifies offline
+on every request.
+
+**Deliverables:**
+
+- Bump `better-auth`, `@better-auth/passkey`, `@better-auth/oauth-provider`
+  together (they now have their own Dependabot group)
+- Fix or migrate the `oauthClient` schema in `apps/auth`'s sqld test fixture
+  and confirm the real migrator adds the column on both dialects
+- Update `runtime/src/session-verify.ts` (or the cookie-cache parser) for the
+  new encoding, keeping a test that decodes a 1.6-era cookie so an upgrade
+  never logs every user out mid-rollout
+- Live check: sign in on a 1.6 instance, upgrade, confirm the existing
+  session cookie still verifies offline in middleware (no `/api/verify`
+  fallback storm in the logs)
+
+**Dependencies:** none
+
+**SRS reference:** AUTH-05/06, `docs/architecture-rules.md` (middleware
+session verification)
+
+**Review checklist:**
+
+- `session-verify.test.ts` and `builtin-oauth-clients.sqld.test.ts` pass
+- A 1.6-format cookie fixture still decodes
+- `docs/upgrade.md` notes the version and whether sessions survive
+
+---
+
 ## Related RFCs
 
 - [RFC 0012 — Passkeys & TOTP MFA](../rfcs/0012-passkeys-and-mfa.md)

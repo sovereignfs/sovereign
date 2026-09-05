@@ -1,9 +1,11 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test, expect } from '@playwright/test';
+import { loadRootEnv, resolveAppPort } from '../../scripts/dev-ports.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const RUNTIME = 'http://localhost:3000';
+loadRootEnv(path.resolve(__dirname, '../..'));
+const RUNTIME = `http://localhost:${resolveAppPort('runtime')}`;
 const ADMIN_STATE = path.join(__dirname, '../../.auth/admin.json');
 
 test.describe('Auth — golden paths', () => {

@@ -46,6 +46,10 @@ By default, Playwright starts:
 - auth at `http://localhost:3001/login`
 - runtime at `http://localhost:3000/api/health`
 
+These follow a local `.env`'s `AUTH_PORT`/`RUNTIME_PORT` override, if set (see
+`scripts/dev-ports.mjs`, shared with `scripts/next-server.mjs`) — the ports
+above are only the fallback default.
+
 During local runs, existing servers are reused. In CI, fresh servers are started
 and Chromium retries are enabled.
 

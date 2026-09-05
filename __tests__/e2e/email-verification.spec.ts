@@ -1,4 +1,9 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { test, expect } from '@playwright/test';
+import { loadRootEnv, resolveAppPort } from '../../scripts/dev-ports.mjs';
+
+loadRootEnv(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..'));
 
 // The auth server owns the better-auth API (`/api/auth/*`) plus the `/login`,
 // `/login/2fa` and `/verify-email` pages. Every other auth *page* —
@@ -6,8 +11,8 @@ import { test, expect } from '@playwright/test';
 // runtime; the auth server's duplicates were removed when the two were
 // deduplicated. Navigating to one of those on AUTH_SERVER renders the auth
 // app's not-found page, so always reach them via RUNTIME.
-const AUTH_SERVER = 'http://localhost:3001';
-const RUNTIME = 'http://localhost:3000';
+const AUTH_SERVER = `http://localhost:${resolveAppPort('auth')}`;
+const RUNTIME = `http://localhost:${resolveAppPort('runtime')}`;
 
 /**
  * The e2e webServer runs with AUTH_REQUIRE_EMAIL_VERIFICATION=false (see

@@ -1,4 +1,9 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { test, expect } from '@playwright/test';
+import { loadRootEnv, resolveAppPort } from '../../scripts/dev-ports.mjs';
+
+loadRootEnv(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..'));
 
 // The auth server owns the better-auth API (`/api/auth/*`) plus the `/login`,
 // `/login/2fa` and `/verify-email` pages. Every other auth *page* —
@@ -7,9 +12,12 @@ import { test, expect } from '@playwright/test';
 // deduplicated. Navigating to one of those on AUTH_SERVER renders the auth
 // app's not-found page, so always reach them via RUNTIME. API calls below stay
 // on AUTH_SERVER.
-const AUTH_SERVER = 'http://localhost:3001';
-const RUNTIME = 'http://localhost:3000';
-const MAILPIT_API = 'http://localhost:8025/api/v1';
+const AUTH_SERVER = `http://localhost:${resolveAppPort('auth')}`;
+const RUNTIME = `http://localhost:${resolveAppPort('runtime')}`;
+// Not one of DEV_APPS (Mailpit is a Docker service, not a spawned Next.js
+// dev server) — read directly, matching docker-compose.yml's own optional
+// MAILPIT_UI_PORT override (default 8025).
+const MAILPIT_API = `http://localhost:${process.env.MAILPIT_UI_PORT ?? '8025'}/api/v1`;
 
 // ---------------------------------------------------------------------------
 // Mailpit helpers

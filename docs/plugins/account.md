@@ -142,31 +142,46 @@ Same applied-pre-paint, applied-immediately shape as ACC-08.
 
 ## Directory structure
 
-Account lives in the monorepo under `plugins/account/`.
+Account lives in the monorepo under `plugins/account/`. The plugin has grown
+from the original 3-tab layout to 7 sections, driven by
+`app/_lib/sections.ts`'s `ACCOUNT_SECTIONS` (the single source of truth for
+both the desktop rail and the mobile drill-down index — see [UI](#ui)):
 
 ```
 plugins/account/
 ├── manifest.json
 ├── icon.svg                          # Account icon (user silhouette or similar)
 ├── app/
-│   ├── layout.tsx                    # Account sub-navigation (Profile / Security / Preferences tabs)
-│   ├── page.tsx                      # Redirect to /account/profile
+│   ├── layout.tsx                    # Vertical rail nav (desktop) / mobile header + back-link — task 14.5
+│   ├── page.tsx                      # Bare /account — mobile drill-down index / desktop empty-state (task 14.6; no longer a redirect)
 │   ├── profile/
 │   │   └── page.tsx                  # Display name + avatar
 │   ├── security/
-│   │   └── page.tsx                  # Password change + active sessions
-│   └── preferences/
-│       └── page.tsx                  # Timezone + appearance
-├── db/
-│   └── schema.ts                     # account_prefs table
-├── migrations/
-└── components/
-    ├── AvatarUpload.tsx              # Image picker + upload + crop
-    ├── SessionList.tsx               # Active sessions table with revoke buttons
-    ├── TimezoneSelect.tsx            # Searchable IANA timezone dropdown
-    ├── ThemeControl.tsx              # System / Light / Dark segmented control
-    └── TextSizeControl.tsx           # Default / Large / Larger segmented control (task 10.2)
+│   │   └── page.tsx                  # Password change, 2FA, passkeys, active sessions
+│   ├── preferences/
+│   │   └── page.tsx                  # Timezone, appearance, text size, sidebar customisation
+│   ├── notifications/
+│   │   └── page.tsx                  # Notification + communication-email preferences, push opt-in
+│   ├── billing/
+│   │   └── page.tsx                  # Entitlement / billing status
+│   ├── data/
+│   │   └── page.tsx                  # Export/import, backup destinations, git-backed restore
+│   ├── activity/
+│   │   └── page.tsx                  # Personal activity log
+│   ├── _components/                  # AvatarUpload, SessionList, TimezoneSelect, ThemeControl,
+│   │                                  # TextSizeControl, TotpSection, PasskeySection, and more
+│   └── _lib/
+│       └── sections.ts               # ACCOUNT_SECTIONS — single source of truth for the rail and drill-down index
+└── db/
+    └── schema.ts                     # account_prefs table
 ```
+
+Components live under `app/_components/` — a private App Router folder, not a
+sibling `components/` as originally sketched — because the generate script
+composes only each plugin's `app/` tree into the runtime (see the Changelog).
+There is no `migrations/` directory: `db/schema.ts` marks the plugin's `db/`
+directory, but the authoritative Drizzle definition for `account_prefs` lives
+in `packages/db` until `sdk.db` exposes a scoped, plugin-owned client.
 
 ---
 
@@ -210,12 +225,19 @@ record in `packages/db` (maintained by the platform, not this plugin) holds the
 
 Account consumes `@sovereignfs/ui` exclusively.
 
-**Layout:** Three-tab navigation within the plugin (Profile / Security /
-Preferences). Uses `shell: overlay` (RFC 0001): clicking the avatar opens Account
-as a dialog over the current page (a full-screen sheet on mobile); a hard load of
-`/account` renders the full-page fallback. The three tabs navigate within the
-dialog. Because the root plugin serves `/` as a full page, an overlay plugin is
-not eligible as the root plugin (CON-11).
+**Layout:** A vertical rail nav on desktop (`NavList variant="static"`, task
+14.5) lists all 7 sections — Profile, Security, Preferences, Notifications,
+Billing, Data, Activity — beside the routed content. Mobile has no persistent
+rail: the bare `/account` route renders a `NavList variant="drilldown"` index
+instead (task 14.6), and every other section shows a `‹ Account` back link
+above its content. Uses `shell: overlay` (RFC 0001, `overlaySize: "fixed"`):
+clicking the avatar opens Account as a dialog over the current page (a
+full-screen sheet on mobile); a hard load of `/account` renders the same
+content as a full page. Every in-dialog navigation link uses `router.replace`,
+not push, since the dialog is dismissed via `router.back()` — a push would
+stack history and require more than one back to exit. Because the root plugin
+serves `/` as a full page, an overlay plugin is not eligible as the root
+plugin (CON-11).
 
 **Net-new primitives likely needed in `packages/ui`:**
 

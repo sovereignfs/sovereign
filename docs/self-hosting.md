@@ -1417,13 +1417,23 @@ Warden's basic local chat. Entirely optional and off by default — a plain
 plugin) shows a clean "unavailable" state instead of a broken chat page
 when `apps/harness` isn't running.
 
-**Currently deprioritized.** Warden's manifest declares `disabled: true` — a
-build-time hard disable (see `docs/plugin-development.md`'s manifest
-reference and `docs/architecture-rules.md`), unrelated to and stronger than
-the `harness` Compose profile below. Even with `apps/harness` running,
-Warden itself stays unreachable until that manifest flag is removed. This
-section is left in place for when the plugin is re-enabled — see
-[RFC 0063](rfcs/0063-core-assistant-warden.md) for background.
+**Active, not disabled.** Warden's manifest sets `disabled: false` — it's one
+of the platform plugins that always ship (see
+[Bundled default plugins](#bundled-default-plugins) above) and is reachable at
+`/warden` out of the box, with no manifest flag to flip. It does still carry
+`development: true` (shown by default, sorted last, badged "in development" —
+see [Hiding in-development plugins](#hiding-in-development-plugins) above),
+but that only affects sort order and badging, not reachability. Warden has
+shipped extensively since this section was first written: sessions, a
+sidebar, provider/model management, a settings page, and a composer with a
+model picker and incognito mode. What stays optional and off by default is
+the **harness** piece described in the rest of this section — `apps/harness`'s
+local-inference add-on. Most self-hosters won't need it, since Warden also
+supports bringing your own hosted model provider (an OpenAI-compatible
+endpoint, OpenRouter, etc.), configured directly in Warden's own
+Settings → Providers page. See
+[RFC 0063](rfcs/0063-core-assistant-warden.md) for background on the harness
+design.
 
 ### Enabling it
 

@@ -49,6 +49,7 @@ activity, sub-project shortcuts) is explicitly deferred to post-v1.
 | `shell`                            | `default`                     |
 | `adminOnly`                        | omitted (`false`)             |
 | `icon`                             | `icon.svg`                    |
+| `offline`                          | `"offline-first"`             |
 | `permissions`                      | `auth:session`, `db:readOnly` |
 | `compatibility.minPlatformVersion` | `0.4.0`                       |
 
@@ -66,6 +67,7 @@ Proposed `manifest.json`:
   "routePrefix": "/launcher",
   "shell": "default",
   "icon": "icon.svg",
+  "offline": "offline-first",
   "permissions": ["auth:session", "db:readOnly"],
   "compatibility": {
     "minPlatformVersion": "0.4.0"
@@ -76,6 +78,15 @@ Proposed `manifest.json`:
 No `repository` field — platform plugins live in the monorepo. The Launcher
 declares `db:readOnly` (not `db:readWrite`) — it only reads the plugin registry
 and writes nothing in v1.
+
+The Launcher also declares `offline: "offline-first"` (RFC 0078): its bare
+`/launcher` page is the plugin's one offline-capable entry point, rendered
+client-side by `LauncherOfflineView.tsx` — it shows whatever `sdk.offline` has
+cached immediately (works with no network), then always attempts a fresh
+fetch of `/api/plugins` (and the self-service plugin directory), updating
+both the view and the cache when it succeeds, and simply falling back to the
+cached render — or a "Not available offline yet" empty state on a first-ever
+visit with nothing cached — when it doesn't.
 
 ---
 
@@ -110,6 +121,7 @@ or reuse an LCH-\* id.
 | LCH-03 | Plugins with `adminOnly: true` are shown in a separate "Admin" section below the main grid. This section is hidden for `platform:user` role users.                                                                                                                                                                                                                                                                                                                                                                                      |
 | LCH-04 | Platform chrome plugins (`fs.sovereign.launcher`, `fs.sovereign.account`, `fs.sovereign.console`) are excluded from all grid sections.                                                                                                                                                                                                                                                                                                                                                                                                  |
 | LCH-05 | If no non-chrome plugins are installed, show an empty-state message with a pointer to the Console plugin to install plugins.                                                                                                                                                                                                                                                                                                                                                                                                            |
+| LCH-07 | Search and filter the plugin grid by name or description — a live, case-insensitive text search over the tile grid (`SearchableGrid.tsx`), matched against both fields.                                                                                                                                                                                                                                                                                                                                                                 |
 | LCH-09 | A plugin with manifest `development: true` shows an amber "In development" badge in its tile's bottom badge row, alongside the type badge — purely informational for badging purposes (no effect on which tiles render), but see LCH-10 for a real ordering effect. Mirrors CON-15's Console Plugins page badge, sourced from the same manifest field.                                                                                                                                                                                  |
 | LCH-10 | `development: true` plugins sort after non-development ones in both the Launcher grid's default order and the sidebar's middle icon section's default order (`selectLauncherPlugins`/`selectSidebarPlugins`, `runtime/src/launcher-plugins.ts`), relative order otherwise preserved. This is the _default_ order only — a user's own saved sidebar reordering (Account → Preferences → Sidebar, Task 2.13) still fully overrides it for any plugin id already in their saved order; a newly installed plugin is appended per this rule. |
 | LCH-11 | `SOVEREIGN_HIDE_DEVELOPMENT_PLUGINS` (env) removes `development: true` plugins from the Launcher grid and the sidebar's middle icon section entirely — no tile, no icon, routes 404 — rather than just sorting/badging them (LCH-09/LCH-10). No per-plugin exception: an id in this state is folded into `getDisabledPluginIds` (`runtime/src/plugin-status.ts`) unconditionally, same mechanism the middleware route gate reads, so a direct URL hit 404s too.                                                                         |
@@ -119,7 +131,6 @@ or reuse an LCH-\* id.
 | ID     | Requirement                                                                                                                                      |
 | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | LCH-06 | Multi-project plugins (e.g. Plainwrite) show a compact list of the user's recent sub-projects inline in the tile, plus a "New project" shortcut. |
-| LCH-07 | Search and filter the plugin grid by name or description.                                                                                        |
 | LCH-08 | Tiles display a badge for unread notification counts (once the notification SDK surface is available).                                           |
 
 ---

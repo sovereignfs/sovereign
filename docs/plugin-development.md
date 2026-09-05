@@ -2986,6 +2986,21 @@ The SDK surface (`sdk.*`):
   default, 50 maximum. Do not call Console/admin user routes from plugins; store
   selected user IDs in your own membership/share table and resolve them through
   this SDK surface when rendering.
+- **`id`** — random ID generation. No manifest permission required.
+  `sdk.id.uuid()` returns a random RFC 4122 v4 UUID string; `sdk.id.short(size?)`
+  returns a random, URL-safe short ID (`A-Za-z0-9-_` alphabet, default 21
+  characters — matching nanoid's own default) and throws if `size` isn't a
+  positive integer. Pure computation via the standard Web Crypto API
+  (`crypto.randomUUID()` / `crypto.getRandomValues()`) — unlike most SDK
+  surfaces, `id` has no host indirection, so it runs identically in Node 20+,
+  browsers, and edge runtimes, from server or client code alike. Removes the
+  need to add a third-party dependency (typically `nanoid`) and carry it
+  through the manifest dependency-hoisting pipeline (RFC 0057) just for this.
+  ```ts
+  const listId = sdk.id.uuid(); // "e77e1c53-...-9a2e"
+  const shareToken = sdk.id.short(); // 21-char URL-safe string
+  const shortSlug = sdk.id.short(8); // custom length
+  ```
 - **`secrets`** — encrypted runtime-created plugin secrets (RFC 0043). Use
   `create/get/list/update/delete` for OAuth tokens, PATs, webhook secrets, and
   other values created after deployment. `list` returns metadata only; exports

@@ -41,6 +41,19 @@ Full reference for load-bearing constraints enforced by ESLint, CI, or runtime b
   Never add `@sovereignfs/db`/`@sovereignfs/mailer` back as dependencies of the
   SDK — the `noExternal`-bundle plan is explicitly dropped. Platform internals
   belong in `runtime/src/sdk-host.ts`, not in `packages/sdk`.
+- **Adding a new top-level member to `SdkHost` (`packages/sdk/src/host.ts`) is
+  a host-implementer-facing breaking change per NFR-04 — bump
+  `@sovereignfs/sdk` minor, not patch.** Same bar as widening an existing
+  field's type (e.g. `StorageContext.pluginId`, RFC 0044). Not just a semver
+  formality: it breaks `pnpm typecheck` immediately, not just in theory. Five
+  hand-rolled mock `SdkHost` objects exist specifically to test the SDK-side
+  wrapper functions in isolation, without a real runtime —
+  `packages/sdk/src/__tests__/{events,jobs,mailer-email-plugin-id,sdk,webhooks}.test.ts`
+  — each needs a matching stub added for the new member before typecheck
+  passes again, since none of them import the real `runtime/src/sdk-host.ts`.
+  Found generalizing the `sdk.storage`/`sdk.db.getClient()`
+  background-invocation fallback to `sdk.env.get()`, which needed a new `env`
+  host member with no prior host indirection at all.
 - **Every package/app extends `packages/tsconfig`** (`base`/`nextjs`/`library`),
   established in Task 0.3.2. Easy to forget on new packages.
 - **Manifests are validated at build time.** Invalid manifest = failed build.

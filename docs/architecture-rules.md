@@ -22,7 +22,11 @@ Full reference for load-bearing constraints enforced by ESLint, CI, or runtime b
   platform-type plugin built and shipped as part of this same monorepo, not
   a third-party one, and its `@sovereignfs/db`/`manifest`/`mailer`
   restriction still fully applies (`eslint.config.ts` gives it its own,
-  narrower rule block, not a blanket exclusion). Do not extend this
+  narrower rule block, not a blanket exclusion). Anything Console needs from
+  those packages goes behind an admin-key-authenticated
+  `runtime/app/api/admin/*` route it calls over HTTP (the
+  `entitlements/actions.ts` pattern) — `enqueueBackupJob`/`listBackupJobs`
+  had to move behind such a route for exactly this reason. Do not extend this
   exception to Launcher, Account, or any other plugin without the same
   deliberate, documented reasoning.
 - **Reusable UI/UX capability ships from the design system, not from plugins.**
@@ -57,8 +61,11 @@ Full reference for load-bearing constraints enforced by ESLint, CI, or runtime b
 - **Every package/app extends `packages/tsconfig`** (`base`/`nextjs`/`library`),
   established in Task 0.3.2. Easy to forget on new packages.
 - **Manifests are validated at build time.** Invalid manifest = failed build.
-- **Plugin tables are slug-prefixed** (`tasks_lists`, `splitify_groups`).
-  Single shared schema, no per-plugin DBs in v1.
+- **Plugin tables are slug-prefixed** (`tasks_lists`, `splitify_groups`), and
+  every non-platform plugin gets its own isolated store — a `plugin_<slug>`
+  Postgres schema or sqld namespace — since epic task 8.28 retired the
+  `database.isolation: "shared"` manifest option. Only the platform-type
+  plugins (Console, Launcher, Account) write to the platform DB.
 - **`tenant_id` everywhere** on user-scoped tables from day one (future
   multi-tenancy), even though no multi-tenant logic exists in v1.
 - **DB is dialect-agnostic** (Drizzle): SQLite default, Postgres via env only.
@@ -66,14 +73,20 @@ Full reference for load-bearing constraints enforced by ESLint, CI, or runtime b
 - **The platform data layer is async** (Task 0.5.3). Postgres (node-postgres)
   has no synchronous query, so `getPlatformDb()` and every `packages/db` platform
   helper (`getPlatformSetting`, `setAccountPrefs`, …) and `sdk.platform.getConfig()`
-  return promises — always `await` them. (On SQLite the underlying better-sqlite3
-  calls still run synchronously; the async signature is the dialect-agnostic
-  contract.) Never reintroduce a synchronous platform-DB read.
-- **Relative SQLite paths resolve against the workspace root** (nearest
-  ancestor with `pnpm-workspace.yaml`), not the process cwd — all SQLite files
-  land in the single root-level `data/` directory regardless of which app
-  opens them. Implemented in both `packages/db` and `apps/auth/src/db.ts`
-  (duplicated deliberately; auth does not depend on `packages/db`).
+  return promises — always `await` them. (SQLite is served by sqld over `@libsql/client`,
+  which is itself async — no synchronous SQLite path is left in the live
+  server; `better-sqlite3` survives only in the one-time legacy-file readers
+  behind `sv db migrate-to-postgres` and the sqld cutover.) Never reintroduce a synchronous platform-DB read.
+- **Relative on-disk paths resolve against the workspace root** (nearest
+  ancestor with `pnpm-workspace.yaml`, via `findWorkspaceRoot()`), not the
+  process cwd — the drizzle migrations folder
+  (`packages/db/migrations/<dialect>`), the avatars directory
+  (`runtime/src/avatars.ts`), auth's legal content, and the legacy `.db`
+  files that `sv db migrate-to-postgres` and the sqld cutover read. The live
+  server never opens a SQLite file itself: SQLite is sqld-backed with no
+  plain-file fallback (`packages/db/src/client.ts`). Implemented in both
+  `packages/db` and `apps/auth` (duplicated deliberately; auth does not
+  depend on `packages/db`).
 - **No secrets with defaults.** `AUTH_SECRET` / `SOVEREIGN_AUTH_SECRET` etc.
   must throw on startup if unset.
 - **Plugins compose at their `routePrefix` under a `shell`-selected route
@@ -94,7 +107,13 @@ dev`); production uses a real symlink instead so a plugin's imports resolve
   symlink isn't followed by TypeScript's own module resolution either,
   `runtime/tsconfig.json` excludes composed plugin directories (`(plugins)`
   and `(minimal)`) from its type scope — each plugin already typechecks
-  itself in its own repo/CI.
+  itself in its own repo/CI. The platform plugins in this monorepo have no
+  `typecheck` script of their own either (`cd plugins/console && npx tsc
+--noEmit` silently resolves an unrelated root tsconfig), so **`pnpm
+typecheck` never compiles a composed plugin's route files — only
+  `pnpm --filter runtime build` does**; a wrong prop name on a
+  `@sovereignfs/ui` component in Console passed every standalone check and
+  was caught only by a component test.
   **`shell: overlay` (RFC 0001, Task 0.5.10) composes TWICE:** the full-page
   fallback under `(plugins)/<routePrefix>/` (same as default) **and** an
   interception copy under `(plugins)/@modal/(.)<routePrefix>/`. The `@modal`
@@ -229,7 +248,8 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   specific resize/visibility events — never on a plain pathname change — so it
   can't be relied on to correct a stale inline value across navigations.
 - **`adminOnly` routes are gated in the runtime middleware.** A request under an
-  admin-only plugin's `routePrefix` from a non-`platform:admin` user returns 403
+  admin-only plugin's `routePrefix` from a user without the `console:access`
+  capability (RFC 0021 — owner, admin, and auditor hold it) returns 403
   (SRS §3.4, PLT-03).
 - **Every server action authorizes inside the action — the middleware's
   path-based gate is not a substitute.** A `'use server'` function is a public
@@ -289,7 +309,10 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   `getPlatformDb()` (`packages/db/src/bootstrap.ts`, `INTEGER`/`BIGINT` +
   `INTEGER`/`BOOLEAN` per dialect); the DDL must stay in sync with the Drizzle
   schemas (`schema/sqlite` + `schema/postgres`, guarded by a parity test).
-  drizzle-kit migrations replace this later (0.5.05+).
+  drizzle-kit migrations (`packages/db/migrations/<dialect>`, `runMigrations()`)
+  are the primary schema mechanism, but this bootstrap DDL is still what
+  creates these tables wherever migrations haven't run first — see the
+  `bootstrap.ts` bullet below; a new column needs both.
 - **A row-less plugin (no `plugin_status` row) defaults to disabled and
   access-restricted — except automatically in local dev.** `getDisabledPluginIds`
   and `canUserOpenPlugin`/`getRestrictedPluginIds` (`runtime/src/plugin-status.ts`,
@@ -323,7 +346,9 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   (forwarding the session cookie), not import the registry — the SDK boundary
   rule forbids plugins importing `runtime/src` or internal packages. The route
   is session-gated (middleware injects `x-sovereign-user-role`) and role-filters
-  via `selectLauncherPlugins`; `sdk.db` replaces this fetch in Task 0.5.5.
+  via `selectLauncherPlugins`. Launcher, Account's portability panel, and
+  Console's plugin actions all use this route; `sdk.db` is for a plugin's own
+  data, never the registry.
 - **The `/api/*` namespace is split: reserved runtime segments vs. the public
   provider namespace (PLT-16).** The runtime serves its own first-level segments
   — `account`, `admin`, `auth`, `health`, `instance`, `manifest`, `plugins`
@@ -349,7 +374,7 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   `NextResponse.redirect` default of `307`.** 307 preserves the request method,
   so an unauthenticated **POST** to a gated route (the logout form once the
   session has lapsed, any plugin form submit, a server action) redirects as
-  `POST /login` — and `runtime/app/login/route.ts` only handles `GET`, returning 405. 303 (See Other) forces the browser to GET. Any browser-facing redirect to
+  `POST /login` — and `runtime/app/login/page.tsx` is a page route that only serves `GET`, so the browser gets 405. 303 (See Other) forces the browser to GET. Any browser-facing redirect to
   `/login` (middleware, logout route) must target the **public** auth URL
   (`SOVEREIGN_AUTH_PUBLIC_URL`), never the internal `SOVEREIGN_AUTH_URL`
   (`auth:3001`), which the browser cannot resolve in Docker.
@@ -422,8 +447,10 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   middleware feeds the parsed auth origin (`authPublicOrigin()`) to
   `buildContentSecurityPolicy` (`authFormActionOrigin`). Postgres connects over
   TLS when the connection string sets `sslmode` (`pgSslMode` in
-  `packages/db/src/client.ts`; CA via `PGSSLROOTCERT`). At-rest encryption
-  (Tiers 2–4) is deferred to Task 1.0.01.
+  `packages/db/src/client.ts`; CA via `PGSSLROOTCERT`). Application-level at-rest
+  encryption (RFC 0071, SQLite-only) shipped and was later retired after
+  repeated hardening rounds (`docs/incidents/2026-07-24-rfc-0071-encryption-rollout.md`);
+  no dialect has one today.
 - **A quick-entry input that commits on Enter must also commit on blur**, via
   `useCommitOnEnterOrBlur` (`@sovereignfs/ui`). iOS Safari's native
   "Previous / Next / Done" keyboard-accessory toolbar — added automatically
@@ -501,8 +528,11 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
 
   **How it is met today:** the `pages` entry in `runtime/next.config.ts`
   (real per-user SSR — Console, Account, any plugin without an `offline` tier)
-  is `NetworkOnly`, not caching at all — try the network, and on any failure
-  fall straight to the generic `/offline` page. There is no cached document to
+  never stores a response — try the network, and on any failure fall straight
+  to the generic `/offline` page. (The handler reads `NetworkFirst`, not
+  `NetworkOnly`, only because workbox-build rejects `networkTimeoutSeconds`
+  on any other handler; its `cacheWillUpdate` plugin returns `null`, so
+  nothing is ever written and the effect is `NetworkOnly`.) There is no cached document to
   ever replay to the wrong user, because none exists. Manifest-declared
   offline routes (`offline: 'offline-first' | 'device-only'`, research 0012)
   are the one exception, cached via the separate `offline-shells` entry — safe
@@ -564,8 +594,9 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   gate); the admin-key-gated `/api/admin/health` stays the richer report.
   **`docker-compose.prod.yml` uses a named volume (`sovereign_data`), not a host
   bind mount**, for `/app/data`: the images run **non-root**, and a named volume
-  inherits the image's `/app/data` ownership so SQLite/avatar writes work with
-  zero host `chown` (a bind mount keeps host ownership and breaks non-root writes
+  inherits the image's `/app/data` ownership so avatar and other on-disk
+  writes work with zero host `chown`; database data itself lives in the `sqld`
+  service's own `sovereign_sqld_data` volume (a bind mount keeps host ownership and breaks non-root writes
   on Linux — macOS VirtioFS hides this). Dev (`docker-compose.yml`) keeps the
   `./data` bind mount (runs as root). The named volume is **pinned with an
   explicit `name: sovereign_data`** so Compose doesn't prefix it with the project
@@ -575,14 +606,16 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   `apps/auth` Dockerfiles). Next.js standalone `server.js` calls
   `process.chdir(__dirname)` at boot, moving cwd to `/app/runtime` (or
   `/app/apps/auth`). `findWorkspaceRoot()` walks up from cwd and stops at the
-  `pnpm-workspace.yaml` marker, returning `/app` — so **relative SQLite paths**
-  (`sovereign.db`, `auth.db`) and the **drizzle migrations folder**
-  (`packages/db/migrations/`, runtime only) resolve against `/app`, i.e. the
-  mounted `/app/data` volume. **Without the marker** `findWorkspaceRoot()` falls
-  back to the post-`chdir` cwd and the DBs land at `/app/runtime/data` /
-  `/app/apps/auth/data` — OUTSIDE the volume: data does not persist across
-  container recreates and is missing from backups, and the runtime fails to boot
-  (`Can't find meta/_journal.json`). Never drop the `pnpm-workspace.yaml` COPY
+  `pnpm-workspace.yaml` marker, returning `/app` — so the **drizzle migrations
+  folder** (`packages/db/migrations/`, runtime only), the avatars directory,
+  and auth's legal content resolve against `/app`, i.e. the mounted `/app/data`
+  volume. **Without the marker** `findWorkspaceRoot()` falls back to the
+  post-`chdir` cwd: on-disk writes land at `/app/runtime/data` /
+  `/app/apps/auth/data` — OUTSIDE the volume, lost on container recreate and
+  missing from backups — and the runtime fails to boot
+  (`Can't find meta/_journal.json`). (Before the sqld cutover this also put
+  the SQLite database files themselves outside the volume; database data now
+  lives in the `sqld` service's `sovereign_sqld_data` volume.) Never drop the `pnpm-workspace.yaml` COPY
   from either Dockerfile.
 - **The runtime Dockerfile must ship every plugin's `manifest.json` and
   `migrations/` folder into the runner image**, staged into a curated
@@ -818,6 +851,7 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   `ResizeObserver`-based measurement isn't firing and the element is
   provably rendered with a stable, non-zero size, don't spend time adding
   more `ResizeObserver` debugging — switch to this pattern first.
+  `usePublishShellChromeHeight` (above) uses it.
 - **A signed-download route's token lives in its own `[token]` path segment,
   never in `params` without a matching folder and never read off `params` at
   all if the route was only ever given a `[jobId]`-shaped directory.** Found
@@ -855,50 +889,38 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   directly (`runtime/src/__tests__/middleware-regression.test.ts`'s
   `middleware matcher` describe block) rather than relying on a doc comment
   — confirmed to fail against the pre-fix matcher before being trusted.
-- **RESOLVED (epic task 8.16).** The production `runner` Docker image
-  previously could not invoke `bin/sv.ts` (the `sv` CLI) at all — `runner`
-  is a fresh minimal `node:24-alpine` image with only the traced Next.js
-  standalone output, no `bin/`, `scripts/`, `tsx`, or full `node_modules`.
-  `runtime/src/backup-run.ts`'s `runInstanceBackup` (RFC 0084 epic 8.16)
-  failed cleanly with `ENOENT` there as a result. Fixed by bundling, not
-  moving execution to a separate process: `bin/backup-restore.ts` holds
-  `backup`/`restore`'s command logic (shared unchanged with `bin/sv.ts`),
-  and `bin/sv-backup-cli.ts` — a minimal entrypoint registering only those
-  two commands, deliberately not the full ~30-subcommand `sv` CLI — is
-  `tsup`-bundled (`bin/tsup.config.ts`, `pnpm run build:cli`) into
-  `runtime/dist-cli/sv-backup-cli.js`, copied into `runner` by the
-  Dockerfile, and run there with plain `node` — no `pnpm`/`tsx` needed.
-  `runInstanceBackup` spawns this bundle when present, falling back to
-  `pnpm sv backup` unchanged for native `pnpm dev`/`tools` checkouts. The
-  bundle deliberately duplicates two trivial functions from
-  `packages/db/src/{dialect,client}.ts` rather than importing
-  `@sovereignfs/db`, to avoid pulling that package's full barrel
-  (`drizzle-orm`/`cron-parser`/`@libsql/client`/the native
-  `better-sqlite3-multiple-ciphers` addon) into a bundle that only needs two
-  env-var reads — see `bin/backup-restore.ts`'s own doc comment. A
-  separate-`tools`-capable-process alternative was considered and rejected:
-  it would have silently broken the already-shipped user-scope backup path
-  instead (`runtime/src/portability/registry.ts`'s plugin export-hook
-  registry is populated by request-scoped plugin code, not at boot — a
-  headless worker process that never serves an HTTP page would see an
-  always-empty registry and produce backups silently missing every plugin's
-  data), and there is no existing pattern in this codebase for a second
-  persistent process sharing `runtime/`'s own source to build from.
-  `pg_dump`/`pg_restore` (`postgresql16-client`, version-pinned to
-  `docker-compose.postgres.yml`'s `postgres:16-alpine`) are now installed in
-  both `builder`/`tools` and `runner` — previously in neither. `git` is now
-  also installed in `runner` — previously only in `builder`/`tools`, meaning
-  the already-shipped user-scope git-push/restore-fetch path (workstream
-  0023 legs 3–4, `runtime/src/git-backup.ts`) would also have `ENOENT`'d in
-  real production; confirmed empirically
-  (`docker run --rm node:24-alpine sh -c "git --version"` → not found)
-  before this fix. **Postgres dialect only** — SQLite (sqld) instance
-  backup/restore has no CLI implementation to spawn in the first place
-  (`bin/backup-restore.ts`'s own error message); building it needs its own
-  RFC first, per `docs/research/0017-sqld-backup-and-restore.md`'s own
-  explicit gate — an accepted, separately-tracked limitation, not resolved
-  by this fix.
-  `usePublishShellChromeHeight` (above) uses it.
+- **The production `runner` image runs instance backup/restore through a
+  bundled, dependency-free CLI, and the backup worker runs inside the runtime
+  process — never a separate worker process.** `runner` is a minimal
+  `node:24-alpine` image with only the traced Next.js standalone output — no
+  `bin/`, `scripts/`, `tsx`, or full `node_modules` — so
+  `runtime/src/backup-run.ts`'s `runInstanceBackup` cannot shell out to
+  `pnpm sv backup` there (it `ENOENT`'d in production until epic task 8.16).
+  Instead `bin/backup-restore.ts` holds the `backup`/`restore` command logic
+  (shared unchanged with `bin/sv.ts`), `bin/sv-backup-cli.ts` registers only
+  those two commands, and `tsup` (`bin/tsup.config.ts`, `pnpm run build:cli`)
+  bundles it into `runtime/dist-cli/sv-backup-cli.js`, which the Dockerfile
+  copies into `runner` and `runInstanceBackup` spawns with plain `node` when
+  present, falling back to `pnpm sv backup` on native `pnpm dev`/`tools`
+  checkouts. Consequences: those two `bin/` files never import `runtime/src`
+  or `@sovereignfs/db` (two trivial helpers from
+  `packages/db/src/{dialect,client}.ts` are duplicated locally rather than
+  pulling that barrel — `drizzle-orm`/`cron-parser`/`@libsql/client`/the
+  native `better-sqlite3-multiple-ciphers` addon — into a bundle that needs
+  two env-var reads), and any dependency added there must be pure JS and
+  listed in `noExternal`. Moving the worker to a separate `tools`-based
+  process was considered and rejected: `runtime/src/portability/registry.ts`'s
+  export-hook registry is populated by request-scoped plugin code as pages
+  load, never at boot, so a headless worker process sees an always-empty
+  registry and silently produces user-scope backups missing every plugin's
+  data. `runner` also installs `git` and `postgresql16-client` (version-pinned
+  to `docker-compose.postgres.yml`'s `postgres:16-alpine`) — previously in
+  neither `runner` nor `tools`, which would have `ENOENT`'d the user-scope
+  git-push/restore-fetch path (`runtime/src/git-backup.ts`) too, confirmed
+  empirically (`docker run --rm node:24-alpine sh -c "git --version"` → not
+  found). **Postgres dialect only** — SQLite (sqld) instance backup/restore
+  has no CLI implementation yet; building it needs its own RFC first, per
+  `docs/research/0017-sqld-backup-and-restore.md`'s gate.
 - **`packages/db/src/bootstrap.ts` is a second, hand-written schema
   definition for at least `instance_config` and `backup_jobs`, and it does
   not automatically stay in sync with `schema/{sqlite,postgres}/platform.ts`
@@ -1071,7 +1093,15 @@ search_path`/session GUCs meant to persist across statements, temp
   admin action), so counting successes too would throttle legitimate
   traffic instead of just repeated bad-key guesses. Once an IP trips the
   limiter, every request from it returns `429` until the window resets,
-  including one presenting the correct key.
+  including one presenting the correct key. `checkAdminKey()` is also the
+  _only_ thing these routes may trust: because the matcher skips this path,
+  the `x-sovereign-user-id`/`-role` headers middleware injects elsewhere are
+  never set _or stripped_ here — a caller can forge
+  `x-sovereign-user-role: platform:owner` with `curl -H`, and three routes
+  were found doing exactly that (fixed in `0.94.15`). The one route that
+  cannot carry an `Authorization` header (the email-template preview
+  `<iframe>`) verifies the real session cookie in-route via `verifySession`
+  instead.
 
 ---
 
@@ -1090,35 +1120,6 @@ full story is one grep away.
   a user's data silently fails to come back. Every first-party plugin that
   declares both permissions implements both handlers symmetrically. Found in
   `0.130.2` (Warden had declared `data:import` since epic 22.5 with no handler).
-- **`plugins/console` may import `runtime/src`/`@/` but not
-  `@sovereignfs/db`/`@sovereignfs/manifest`/`@sovereignfs/mailer`.**
-  `eslint.config.ts` gives Console its own narrower boundary block, not a
-  blanket exemption. Anything Console needs from those packages goes behind an
-  admin-key-authenticated `runtime/app/api/admin/*` route it calls over HTTP
-  (the `entitlements/actions.ts` pattern). Found in `0.128.0`, where
-  `enqueueBackupJob`/`listBackupJobs` had to move behind such a route.
-- **`pnpm typecheck` never compiles composed plugin route files.**
-  `runtime/tsconfig.json` excludes `runtime/app/(platform)/(plugins)` and
-  `(minimal)`, and the platform plugins have no `typecheck` script of their own
-  (`cd plugins/console && npx tsc --noEmit` silently resolves an unrelated root
-  tsconfig). Only `pnpm --filter runtime build` compiles a plugin's real
-  `app/` tree. A wrong prop name on a `@sovereignfs/ui` component in Console
-  passed every standalone check and was caught only by a component test.
-- **`bin/backup-restore.ts` and `bin/sv-backup-cli.ts` never import
-  `runtime/src`.** They are `tsup`-bundled (`bin/tsup.config.ts`, `noExternal`)
-  into `runtime/dist-cli/sv-backup-cli.js` so the production `runner` image —
-  which has no `pnpm`/`tsx`/`bin/` — can run backup/restore with plain `node`.
-  Any dependency added there must be pure JS (no native addon) and listed in
-  `noExternal`; a helper that also exists in `runtime/src` (e.g. age decrypt)
-  is duplicated locally rather than imported. `0.127.0`–`0.130.0`.
-- **`/api/admin/*` routes authenticate with `checkAdminKey()` and nothing
-  else.** The middleware matcher deliberately excludes this path, so the
-  `x-sovereign-user-id`/`-role` trust headers middleware injects elsewhere are
-  never set _or stripped_ here — a caller can forge
-  `x-sovereign-user-role: platform:owner` with `curl -H`. Three routes were
-  found trusting that header (`0.94.15`). The one route that cannot carry an
-  `Authorization` header (the email-template preview `<iframe>`) verifies the
-  real session cookie in-route via `verifySession` instead.
 - **`runtime/middleware.ts` runs on Next.js's Edge runtime.** It cannot load
   `ioredis` (needs Node `net`/`tls`) or any Node built-in, and it avoids DB
   writes for the same reason. Moving it to Node.js Middleware is a
@@ -1164,12 +1165,6 @@ full story is one grep away.
   `scripts/install-plugins.ts`, and `pnpm dev`'s `.local` sync. A first fix
   attempt that committed travellog's deps directly was reverted as exactly the
   anti-pattern the mechanism exists to avoid. `0.101.7`.
-- **Background workers run inside the runtime process.** The portability
-  export/import registry (`runtime/src/portability/registry.ts`) is populated
-  request-scoped as plugin pages load, never at boot, so a separate headless
-  worker process always sees an empty registry and silently produces
-  user-scope backups with no plugin data. This is why the backup CLI was
-  bundled into `runner` rather than moved to a `tools`-based service. `0.127.0`.
 - **`sdk.*` permission checks reject a missing plugin id.** A
   `getPluginId(headers) ?? 'unknown'` fallback laundered a missing identity
   into a no-op check in `sdk.notifications.send()`; the check must fail

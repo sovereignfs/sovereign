@@ -40,35 +40,9 @@ Each layer has a single job:
 
 Work is organized into domain epics. Each task has a **stable epic task ID** (`<epic>.<seq>`) that can be cited in PRs, RFCs, and commits independently of roadmap version numbers.
 
-| ID  | Epic file                | Domain                                                                                              |
-| --- | ------------------------ | --------------------------------------------------------------------------------------------------- |
-| 0   | `infrastructure.md`      | Monorepo, Docker, CI, testing pipeline, deployment                                                  |
-| 1   | `users-auth.md`          | Auth server, sessions, MFA, roles, capabilities                                                     |
-| 2   | `platform-shell.md`      | Runtime host, middleware, shell modes, SDK bridge                                                   |
-| 3   | `plugins-runtime.md`     | Manifest, generate script, SDK contract, plugin lifecycle                                           |
-| 4   | `notification-center.md` | In-app inbox, toasts, web push, pub/sub                                                             |
-| 5   | `activity-logs.md`       | Audit trail for user and admin actions                                                              |
-| 6   | `analytics.md`           | Self-hosted privacy-first usage analytics                                                           |
-| 7   | `monetization.md`        | Ed25519 entitlement tokens, billing, payments                                                       |
-| 8   | `data-sovereignty.md`    | Backup/restore, portability, per-plugin DB, deletion                                                |
-| 9   | `design-system.md`       | Design system, white-labeling, instance identity, i18n                                              |
-| 10  | `accessibility.md`       | WCAG 2.1 AA, a11y lint, plugin a11y contract                                                        |
-| 11  | `i18n.md`                | Internationalization infrastructure and translations                                                |
-| 12  | `example-plugins.md`     | Starter templates and capability-demo plugins                                                       |
-| 13  | `plugin-console.md`      | Admin console plugin                                                                                |
-| 14  | `plugin-accounts.md`     | Account plugin                                                                                      |
-| 15  | `plugin-launcher.md`     | Launcher plugin                                                                                     |
-| 16  | `docs.md`                | Docs site content and project landing page (VitePress build now lives in `sovereignfs/sovereignfs`) |
-| 17  | `desktop.md`             | Native desktop shell                                                                                |
-| 18  | `sovereign-harness.md`   | AI assistant and orchestration layer                                                                |
-| 19  | `sovereign-council.md`   | Multi-model deliberation workspace                                                                  |
-| 20  | `mobile.md`              | Native mobile shell                                                                                 |
-| 21  | `sovereign-wallet.md`    | Encrypted wallet platform plugin                                                                    |
-| 22  | `core-assistant.md`      | Runtime assistant and local inference                                                               |
-| 23  | `p2p-chat.md`            | Companion P2P chat, identity, transport, and E2EE                                                   |
-| 24  | `plugin-guide.md`        | First-run orientation and operator guidance plugin                                                  |
-
-The epic index is `docs/epics/README.md` in the repository planning docs.
+The epic index — every epic's ID, file, status, and summary — is
+[`docs/epics/README.md`](epics/README.md). It is the only copy; look IDs up
+there rather than in a table here that would drift.
 
 ### Stable IDs vs volatile slots
 
@@ -158,7 +132,8 @@ version is known:
 
 ```
 /sv-verify          — runs all checks, returns structured pass/fail summary
-/sv-security-check  — only if diff touches auth/middleware/CSP/SDK paths
+/sv-security-check  — only if diff touches auth, middleware, API routes,
+                      server actions, SDK/manifest, bin/, Docker, or env
 main agent          — applies required version bumps
 /sv-update-task-docs— records version, relocates/completes roadmap row,
                       updates epic heading, deletes CURRENT_TASK.md
@@ -190,10 +165,20 @@ explicit human instruction.
 
 Status lives in exactly two places:
 
-| Location                     | What it tracks                               |
-| ---------------------------- | -------------------------------------------- |
-| `ROADMAP.md` row Status cell | ✅ / ⏳ / 📋 per task — the canonical record |
-| Open PRs                     | Which tasks are currently in flight          |
+| Location                     | What it tracks                      |
+| ---------------------------- | ----------------------------------- |
+| `ROADMAP.md` row Status cell | per task — the canonical record     |
+| Open PRs                     | Which tasks are currently in flight |
+
+Status values, used identically in `ROADMAP.md` rows and epic headings:
+
+| Status | Meaning                                                                                                  |
+| ------ | -------------------------------------------------------------------------------------------------------- |
+| 📋     | Planned — not started                                                                                    |
+| ⏳     | In progress — a branch/PR is open for it                                                                 |
+| ✅     | Complete — merged to `main`                                                                              |
+| 🚧     | Parked — deliberately paused; the heading names what must be re-read before resuming (e.g. 17.4, 8.20)   |
+| ❌     | Rejected — decided against, kept for the record (e.g. 2.20, 8.19, 9.13); never delete the row or heading |
 
 **Epic file headings (`#### ✅ X.Y — …`) are updated when a task completes.** To close a task, mark both the roadmap row and the matching `docs/epics/<file>.md` task heading ✅ in the same PR.
 
@@ -201,15 +186,20 @@ Status lives in exactly two places:
 
 ## `CURRENT_TASK.md` — the active task file
 
-`CURRENT_TASK.md` is a transient file written by `/sv-task-start` and deleted by `/sv-task-complete`. It is never committed.
+`CURRENT_TASK.md` is a transient, gitignored file written by `/sv-task-start`
+and deleted by `/sv-update-task-docs` (the last step `/sv-task-complete` runs).
+It is never committed. It has two modes: **task** (one epic task) and **leg**
+(one workstream leg — the leg's detail block plus every task block in it).
 
 ```markdown
 # Current Task
 
+**Mode:** task
 **Epic task:** 9.9
 **Roadmap version:** 0.9.1
 **Branch:** feat/email-templates
 **Epic file:** docs/epics/design-system.md
+**RFCs:** 0031
 
 ---
 
@@ -223,6 +213,10 @@ Status lives in exactly two places:
 
 **Review checklist:** …
 ```
+
+Leg mode uses `**Mode:** leg`, `**Workstream:**`, `**Leg:**`, `**Epic tasks:**`,
+and `**Epic files:**` instead, followed by a `## Leg detail` block and one
+`## Task <id>` block per task — the exact shape is in the `sv-task-start` skill.
 
 Any agent or sub-agent working on the current task should read this file first. It is the single source of truth for what is being built right now.
 
@@ -269,14 +263,20 @@ defines a more specific slug.
 
 Focused skills cover the non-implementation phases of a task. Each needs only `CURRENT_TASK.md` plus its own skill file — no full project orientation required. The skills live in `.agents/skills/` (Codex) and `.claude/skills/` (Claude Code) as byte-identical copies; `scripts/__tests__/agent-skills-sync.test.ts` fails CI if they diverge, so edit one and copy to the other.
 
-| Skill                  | Trigger                                                 | What it does                                                          |
-| ---------------------- | ------------------------------------------------------- | --------------------------------------------------------------------- |
-| `/sv-verify`           | Parallel with `/sv-update-task-docs` at task-complete   | Runs all checks, returns structured pass/fail table                   |
-| `/sv-update-task-docs` | Parallel with `/sv-verify` at task-complete             | Marks roadmap and epic heading ✅, deletes CURRENT_TASK.md            |
-| `/sv-security-check`   | Conditional — when diff touches auth/middleware/CSP/SDK | Reviews diff against hard architectural rules, blocks PR on violation |
-| `/sv-task-start`       | Session start                                           | Writes CURRENT_TASK.md, creates branch                                |
+| Skill                  | Trigger                                                                       | What it does                                                                                      |
+| ---------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `/sv-task-start`       | Session start, with a task or leg assignment                                  | Writes CURRENT_TASK.md (task or leg mode), creates the branch                                     |
+| `/sv-ui-design`        | Any change a user sees                                                        | DS-first rules, plain-language copy, error UX, wireframe-before-build, pre-merge checklist        |
+| `/sv-task-complete`    | Implementation done                                                           | Orchestrates the four steps below in order, then drafts the PR description                        |
+| `/sv-verify`           | Step 1 of task-complete, or standalone                                        | Runs all checks, returns a structured pass/fail table                                             |
+| `/sv-security-check`   | Step 2, conditional — auth, middleware, API, server actions, SDK, bin, Docker | Reviews the diff against the security-relevant hard rules, blocks the PR on a violation           |
+| `/sv-update-task-docs` | Step 4, after the version bump                                                | Marks roadmap row(s) and epic heading(s) ✅, syncs RFC/workstream status, deletes CURRENT_TASK.md |
+| `/sv-create-pr`        | Only when the developer asks                                                  | Opens the GitHub PR as a draft                                                                    |
 
-Each agent is briefed with `CURRENT_TASK.md` (~50 lines) rather than the full project context. The Verifier and Docs Updater run in parallel, so the task-complete wall-clock is bounded by whichever takes longer (verification, ~30–60s) rather than their sum.
+Each agent is briefed with `CURRENT_TASK.md` rather than the full project
+context. The steps run **sequentially**, not in parallel: verification must
+pass before anything else, and the docs updater needs the final root version
+from the bump step, so it runs last.
 
 ---
 
@@ -291,5 +291,7 @@ Each agent is briefed with `CURRENT_TASK.md` (~50 lines) rather than the full pr
 | Roadmap version number for a task    | `ROADMAP.md`                                            |
 | Which epic a roadmap task belongs to | `ROADMAP.md` → Epic task column                         |
 | Epic file for a given epic ID        | `docs/epics/README.md`                                  |
-| Project conventions and hard rules   | `CLAUDE.md`                                             |
-| Security rules to check against      | `CLAUDE.md` → "Hard architectural rules" section        |
+| Project conventions and hard rules   | `CLAUDE.md` (Claude Code) / `AGENTS.md` (Codex)         |
+| Full detail behind any hard rule     | `docs/architecture-rules.md`                            |
+| Security rules to check against      | `docs/architecture-rules.md` via `/sv-security-check`   |
+| How a task or leg is run end to end  | `.agents/skills/sv-*/SKILL.md` (mirrored in `.claude/`) |

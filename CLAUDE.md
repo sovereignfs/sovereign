@@ -21,6 +21,11 @@ Read the relevant sections before any task — they are authoritative over assum
   (`CURRENT_TASK.md`, epic task IDs).
 - `docs/multi-agent.md` — how Claude Code and Codex divide work, commit attribution.
 - `docs/architecture-rules.md` — full detail behind every hard rule listed below.
+- `.claude/skills/sv-*` — task lifecycle skills (`/sv-task-start`,
+  `/sv-task-complete`, `/sv-verify`, `/sv-security-check`,
+  `/sv-update-task-docs`, `/sv-create-pr`, `/sv-ui-design`). Byte-identical
+  copies live in `.agents/skills/` for Codex; a test enforces it — edit one,
+  copy to the other.
 
 **Research precedes RFCs.** An open-ended architectural or strategic question
 with no concrete design gets a research doc in `docs/research/` (findings,

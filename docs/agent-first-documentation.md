@@ -213,7 +213,7 @@ The full implementation lives in the Sovereign repository. The key files are:
 - [`docs/epics/`](https://github.com/sovereignfs/sovereign/tree/main/docs/epics) — 16 domain epic files with full task detail
 - [`ROADMAP.md`](https://github.com/sovereignfs/sovereign/blob/main/ROADMAP.md) — 139-line version-indexed table
 - [`docs/development-workflow.md`](development-workflow.md) — workflow reference for agents and contributors
-- [`.claude/commands/`](https://github.com/sovereignfs/sovereign/tree/main/.claude/commands) and [`.agents/skills/`](https://github.com/sovereignfs/sovereign/tree/main/.agents/skills) — task lifecycle commands and skills
+- [`.agents/skills/`](https://github.com/sovereignfs/sovereign/tree/main/.agents/skills) and [`.claude/skills/`](https://github.com/sovereignfs/sovereign/tree/main/.claude/skills) — task lifecycle skills, byte-identical copies for Codex and Claude Code
 
 ---
 

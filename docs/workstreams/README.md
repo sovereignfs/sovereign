@@ -186,14 +186,13 @@ passphrase mode) — see 0004's own changelog.
 
 _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · ⏸️ Paused · ❌ Stopped_
 
-## Not yet wired into the task skills
+## Wired into the task skills
 
-This document defines the workstream class and its leg contract. The task
-lifecycle skills (`/sv-task-start`, `/sv-task-complete`,
-`/sv-update-task-docs`) are still **per-task** and have no workstream or leg
-awareness — `CURRENT_TASK.md` describes one task, not a leg.
-
-Until that wiring exists, running a workstream means starting a leg's first task
-the normal way and treating the workstream document as the authority on what
-else belongs in that leg and when to stop. Making the skills leg-aware is a
-follow-up change to `docs/development-workflow.md` and the skills themselves.
+`/sv-task-start` accepts a leg assignment ("workstream NNNN leg N"), checks the
+previous leg's PR is merged and the leg's **Do not proceed if** clause doesn't
+hold, and writes `CURRENT_TASK.md` in leg mode: the leg's detail block plus
+every epic task block in it. `/sv-task-complete` then verifies once, bumps
+once (by the leg's largest change), and `/sv-update-task-docs` marks every task
+in the leg ✅ in `ROADMAP.md` and its epic file, syncs any RFC the leg advances,
+and appends a row to the workstream's Changelog before the draft PR. The agent
+stops there — the next leg is a new assignment.

@@ -1,14 +1,14 @@
 # Sovereign — Roadmap
 
-**Version:** 0.101.4 · **Last updated:** 2026-08-29
+**Version:** 0.130.2 · **Last updated:** 2026-09-06
 
 _(This header tracks the root `package.json` version as of the date above — a
 freshness marker for the document as a whole, not the version of the most
 recently completed row below; the "Non-prioritised tasks" table in particular
 is a backlog, not chronological, so its rows' own versions are not monotonic.
-No skill currently syncs this automatically — `/sv-update-task-docs` records a
-completed task's version into its own row (see the Phase v0.9+ note below) but
-does not touch this line, so update it by hand whenever you notice it's stale.)_
+`/sv-update-task-docs` syncs this line whenever a branch bumps the root
+version, alongside the completed row's own Version cell (see the Phase v0.9+
+note below), and `/sv-verify` fails when it disagrees with `package.json`.)_
 
 Chronological build index — one row per PR. Full task detail lives in [`docs/epics/`](docs/epics/).
 

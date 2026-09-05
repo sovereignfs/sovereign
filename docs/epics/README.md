@@ -35,5 +35,6 @@ Full architecture and requirements: [sovereign-proposal-plan-srs.md](../sovereig
 | 22  | [Warden (Core Assistant)](core-assistant.md)  | 📋 Planned     | Phase 1 foundation: Warden platform plugin + dedicated `apps/harness` engine service                                              |
 | 23  | [Sovereign P2P Chat](p2p-chat.md)             | 📋 Planned     | Companion app with federated identity, E2EE messaging, and Veilid transport                                                       |
 | 24  | [Plugin — Guide](plugin-guide.md)             | 📋 Planned     | First-run orientation, per-user progress, and operator guidance                                                                   |
+| 25  | [UI Component Parity](ui-component-parity.md) | 📋 Planned     | Sizing/rhythm alignment of `@sovereignfs/ui` plus the curated generic primitives it lacks                                         |
 
-_Status key: ✅ Complete · ⏳ In Progress · 📋 Planned_
+_Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked (deliberately paused; the heading says what must be re-read before resuming) · ❌ Rejected_

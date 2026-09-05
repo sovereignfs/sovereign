@@ -1,3 +1,10 @@
+---
+docSection: contributors
+docType: reference
+audiences:
+  - contributor
+---
+
 # Task History
 
 Completed task log, archived from CLAUDE.md. See `ROADMAP.md` for the canonical task queue and completion record; the release-narrative archive below holds the per-release notes that used to live in CLAUDE.md.

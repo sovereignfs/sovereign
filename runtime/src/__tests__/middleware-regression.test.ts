@@ -1430,4 +1430,25 @@ describe('middleware matcher', () => {
   ])('does not gate the plugin icon asset %s (RFC 0081)', (pathname) => {
     expect(matches(pathname)).toBe(false);
   });
+
+  // Regression, found live-verifying epic task 8.17: the signed backup
+  // archive download route
+  // (`runtime/app/api/backup-jobs/[jobId]/download/[token]/route.ts`) claims
+  // in its own doc comment that it's "not part of the session-gated
+  // middleware surface by design," mirroring `api/storage`'s already-correct
+  // exemption above — but `api/backup-jobs` was never actually added to this
+  // matcher. A request carrying a genuinely valid, unexpired HMAC-signed
+  // token still 303-redirected to `/login` before the route's own token
+  // check ever ran, reproduced live via `curl` with no session cookie
+  // against a real completed backup job. The route's authorization is fully
+  // self-contained (the signed token plus a path-containment check, nothing
+  // read from the request otherwise), so — like `api/storage` — excluding it
+  // from the session gate does not weaken authorization; it just lets the
+  // route's own check run at all for a caller with no session, which is the
+  // whole point of a signed download URL (epic tasks 8.16/8.17/8.18).
+  it('does not gate the signed backup-archive download route (RFC 0084)', () => {
+    expect(matches('/api/backup-jobs/job-1/download/sv1.eyJqb2JJZCI6ImpvYi0xIn0.abc123')).toBe(
+      false,
+    );
+  });
 });

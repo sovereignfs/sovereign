@@ -107,7 +107,7 @@ import { FileDropzone } from '../components/FileDropzone/FileDropzone';
 import { OverlayHeader } from '../components/OverlayHeader/OverlayHeader';
 import { Sheet } from '../components/Sheet/Sheet';
 import { ConfirmDialog } from '../components/ConfirmDialog/ConfirmDialog';
-import { Menu } from '../components/Menu/Menu';
+import { Menu, MenuEntries } from '../components/Menu/Menu';
 import { Calendar } from '../components/Calendar/Calendar';
 import { DatePicker } from '../components/DatePicker/DatePicker';
 import { CurrencyInput } from '../components/CurrencyInput/CurrencyInput';
@@ -859,6 +859,24 @@ function MenuDemo() {
         { label: 'Delete', icon: 'trash-2', destructive: true, onSelect: () => {} },
       ]}
     />
+  );
+}
+
+function MenuEntriesDemo() {
+  return (
+    <div style={{ width: '100%', maxWidth: 240 }}>
+      <MenuEntries
+        items={[
+          { type: 'label', label: 'Sort by' },
+          { label: 'Manual', checked: true },
+          { label: 'Title', checked: false },
+          { type: 'separator' },
+          { label: 'Rename', icon: 'pencil' },
+          { label: 'Delete', icon: 'trash-2', destructive: true },
+        ]}
+        onSelect={() => {}}
+      />
+    </div>
   );
 }
 
@@ -2157,6 +2175,15 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               usage="Adaptive action menu: Popover on desktop, Drawer on mobile. Same items list renders in both — for '⋯' row/list actions. Entries can be a plain item, a { type: 'label' } section heading, a { type: 'separator' } divider, or a checkable item (pass checked on every item in the group) for a mutually-exclusive set like sort order."
             >
               <MenuDemo />
+            </ComponentCard>
+
+            {/* MenuEntries */}
+            <ComponentCard
+              name="MenuEntries"
+              importLine="import { MenuEntries } from '@sovereignfs/ui';"
+              usage='The <ul role="menu"> item list itself, factored out of Menu so other adaptive-surface components (ContextMenu, Menubar) can render the exact same items/destructive/checked/icon markup inside their own positioning shell instead of re-deriving it. No panel chrome of its own — the background/border/shadow around it belongs to whichever surface hosts it.'
+            >
+              <MenuEntriesDemo />
             </ComponentCard>
 
             {/* Calendar */}

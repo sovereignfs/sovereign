@@ -8,8 +8,9 @@ audiences:
 # Self-hosting Sovereign
 
 Sovereign is designed to run on a single machine. Docker Compose is the
-canonical deployment path — two containers (runtime + auth) on a shared
-internal network. For production, put a reverse proxy in front of the public
+canonical deployment path — three containers on a shared internal network:
+runtime, auth, and `sqld` (the SQLite dialect's database server, RFC 0091;
+the Postgres overlay replaces it with a `postgres` service). For production, put a reverse proxy in front of the public
 runtime origin and the browser-facing auth origin; server-to-server runtime →
 auth traffic still uses the internal Docker hostname.
 
@@ -71,7 +72,7 @@ docker compose up --build
 The runtime is now at **`http://localhost:3000`**.
 
 Open it in your browser — the first user to register automatically becomes the
-platform admin. If `AUTH_INVITE_ONLY=true`, skip ahead to the
+platform owner (`platform:owner`, the highest role). If `AUTH_INVITE_ONLY=true`, skip ahead to the
 [invite-only](#invite-only-registration) section.
 
 ---
@@ -84,7 +85,8 @@ platform admin. If `AUTH_INVITE_ONLY=true`, skip ahead to the
 Browser → localhost:3000 (runtime)   localhost:3001 (auth — dev only)
                 │                              │
                 └─────── internal network ─────┘
-                                   ──► mailpit:1025 (dev email, SMTP)
+                       ├──► sqld:8080 / :8081 (SQLite dialect database server)
+                       └──► mailpit:1025 (dev email, SMTP)
 ```
 
 **Prod** (`docker-compose.prod.yml`):
@@ -93,6 +95,7 @@ Browser → localhost:3000 (runtime)   localhost:3001 (auth — dev only)
 Browser → localhost:4000 (runtime)   localhost:4001 (auth — for local QA)
                 │                              │
                 └─────── internal network ─────┘
+                       └──► sqld:8080 / :8081 (or postgres:5432 with the overlay)
 ```
 
 Both the runtime and the auth server are mapped to host ports in both Compose
@@ -106,9 +109,9 @@ as `example.com` and `auth.example.com`. Override `AUTH_PORT` and
 ## Bundled default plugins
 
 `sovereign.plugins.json` at the repo root declares which non-platform plugins
-`pnpm install:plugins` clones and composes into the runtime — the **platform
-plugins** (`console`, `launcher`, `account`, `warden`) always ship regardless,
-since they live in this repository. `sovereign.plugins.json` is a **local, gitignored
+`pnpm install:plugins` clones and composes into the runtime — the in-repo
+plugins (`console`, `launcher`, `account`, `inbox`, and the `warden` assistant)
+always ship regardless, since they live in this repository. `sovereign.plugins.json` is a **local, gitignored
 file**, never committed: a fresh checkout, `pnpm dev`, and the CI-published
 image all fall back to the committed `sovereign.plugins.default.json` when it
 doesn't exist, which declares **no plugins** (`{"plugins": []}`). The default
@@ -237,7 +240,7 @@ to get started — every variable is documented there.
 | `AUTH_WEBAUTHN_ORIGIN`                                         | no                       | `NEXT_PUBLIC_RUNTIME_URL,SOVEREIGN_AUTH_PUBLIC_URL` | Comma-separated list of WebAuthn origins allowed during credential verification. Must include the runtime origin because passkey sign-in and management go through the runtime proxy. Keep the auth server's public origin included while its compatibility routes remain exposed. Defaults to `http://localhost:3000,http://localhost:3001` in dev. In production set to e.g. `https://example.com,https://auth.example.com`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `AUTH_INVITE_ONLY`                                             | no                       | `false`                                             | When `true`, registration requires a valid invite token. The first user is exempt.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `AUTH_REQUIRE_EMAIL_VERIFICATION`                              | no                       | `true`                                              | When `true` (default), a new account must click an emailed verification link before signing in — registration does not create a session, and sign-in is blocked until the link is clicked. Set to `false` for air-gapped/internal deployments where the invite mechanism itself is sufficient proof of identity. Requires SMTP to be configured (see `SMTP_HOST` below); the auth server logs a startup warning if it isn't. Accounts that existed before this was enabled are grandfathered automatically on first boot after upgrading — only new registrations go through the email flow.                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `AUTH_REQUIRE_MFA`                                             | no                       | `false`                                             | When `true`, verification level 2 (`mfa_enrolled`, RFC 0035) requires TOTP or a passkey to be enrolled, rather than merely offering it. Opt-in, unlike email verification. Has no live enforcement point on its own yet — Phase 1 (epic task 1.8) only tracks and propagates `x-sovereign-verification-level`; Phase 2 (task 1.9) wires the capability/manifest gate that actually consults this flag.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `AUTH_REQUIRE_MFA`                                             | no                       | `false`                                             | When `true`, verification level 2 (`mfa_enrolled`, RFC 0035) requires TOTP or a passkey to be enrolled, rather than merely offering it. Opt-in, unlike email verification. **Currently read into the auth server's config but not consulted by any code path** — the level-2 gates (the `role:assign` capability, plugins declaring `minVerificationLevel: 2`) check actual enrolment regardless of this flag, so setting it has no effect today.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `AUTH_PASSWORD_MIN_LENGTH`                                     | no                       | `8`                                                 | Minimum password length, enforced by better-auth on sign-up, password reset, and password change. Same default better-auth itself uses.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `AUTH_PASSWORD_REQUIRE_UPPERCASE`                              | no                       | `false`                                             | When `true`, a password must contain at least one uppercase letter (`A`–`Z`). Enforced on sign-up, password reset, and password change alike, so the policy can't be bypassed by resetting to a non-compliant password after a compliant signup.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `AUTH_PASSWORD_REQUIRE_LOWERCASE`                              | no                       | `false`                                             | When `true`, a password must contain at least one lowercase letter (`a`–`z`). Same enforcement scope as `AUTH_PASSWORD_REQUIRE_UPPERCASE`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
@@ -753,10 +756,10 @@ pnpm sv serve
 > **Note:** `sv serve` runs `next start` from each package's `node_modules/.bin/`
 > — `next` does not need to be on your system `PATH`.
 
-> **Important:** `sv serve` serves the **built** output in
-> `runtime/.next/standalone/` and `apps/auth/.next/standalone/`. Run
-> `pnpm build` before every `sv serve` call. Source changes have no effect
-> until you rebuild.
+> **Important:** `sv serve` runs `next start` in each package against the
+> `pnpm build` output (the standalone `server.js` entry points below are what
+> the Docker images and the PM2 config use, not `sv serve`). Run `pnpm build`
+> before every `sv serve` call. Source changes have no effect until you rebuild.
 
 ### PM2 — production process supervision
 
@@ -881,17 +884,22 @@ cp -r apps/auth/.next/static apps/auth/.next/standalone/apps/auth/.next/static
 pm2 reload ecosystem.config.js   # zero-downtime reload where possible
 ```
 
-Back up before upgrading. Once RFC 0064 lands, use the platform-owned CLI flow:
+Back up before upgrading with the platform-owned CLI flow:
 
 ```bash
-pnpm sv backup
+pnpm sv backup                                   # Postgres dialect
+pnpm sv restore <archive>                        # …and to restore
+pnpm sv restore --age-identity <file> <archive>  # a recipient-encrypted (git-pushed) archive
 ```
 
-Until then, the current `sovereign-infra` template ships GitHub-specific backup
-helper scripts for VPS operators. Those scripts age-encrypt Postgres, user avatars, the plugin
-manifest, and isolated plugin SQLite databases before pushing them to a private GitHub backup
-repository. RFC 0064 tracks the platform-owned future `sv backup`/`sv restore` flow, which
-generalizes Git-backed encrypted backups beyond the infra template.
+On the SQLite dialect `sv backup` refuses — back up the sqld volume as described
+under [Data persistence](#data-persistence) instead (sqld instance backup is
+tracked separately, research 0017). The same backup runs from the UI —
+**Console → Backups** (instance scope) and **Account → Data → Full backup**
+(per user) — always passphrase-encrypted, with an optional encrypted push to a
+git remote (`SV_BACKUP_GIT_*` above, RFC 0064/0084, workstream 0023). The
+`sovereign-infra` template's own backup scripts predate this flow and remain
+usable alongside it.
 
 **Named-volume Docker production deployments** (`docker-compose.prod.yml`)
 have no host path to run `pnpm sv backup` against directly — use the
@@ -976,9 +984,12 @@ There is no automatic data migration. To move an existing instance:
 2. Stand up PostgreSQL and start the stack with the Postgres overlay once so the
    schema is created on the new database.
 3. Copy your data across with a tool such as
-   [pgloader](https://pgloader.io/) (pointed at the SQLite files under the
-   `sovereign_data` volume), or re-enter it. Timestamps are stored as integers
-   and booleans/`active` flags map directly, so a straight table copy works.
+   [pgloader](https://pgloader.io/) (pointed at the SQLite database files
+   inside sqld's `sovereign_sqld_data` volume — `/var/lib/sqld` in the `sqld`
+   container, one database per namespace), or re-enter it. Timestamps are
+   stored as integers and booleans/`active` flags map directly, so a straight
+   table copy works. For a per-plugin move there is also
+   `sv db migrate-to-postgres` (below).
 4. Verify login, Console access, and your plugins, then retire the SQLite files.
 
 Uploaded files (avatars under `/app/data`) are independent of the database and
@@ -1214,9 +1225,9 @@ locked out), the `sv` CLI provides a direct database reset:
 pnpm sv user reset-mfa admin@example.com
 ```
 
-This opens the auth database directly and does not require a running server.
-Only available for SQLite deployments; Postgres instances must use the
-Console or a direct SQL query.
+This talks to the auth store directly — the `sovereign_auth` sqld namespace or
+Postgres schema, per `DB_DIALECT` — and does not require a running server.
+Works on both dialects.
 
 **Named-volume production deployments** (`docker-compose.prod.yml`) have no
 host path to run this against directly — the command needs the full monorepo
@@ -1417,8 +1428,8 @@ Warden's basic local chat. Entirely optional and off by default — a plain
 plugin) shows a clean "unavailable" state instead of a broken chat page
 when `apps/harness` isn't running.
 
-**Active, not disabled.** Warden's manifest sets `disabled: false` — it's one
-of the platform plugins that always ship (see
+**Active, not disabled.** Warden's manifest sets `disabled: false` — it's an
+in-repo plugin that always ships (see
 [Bundled default plugins](#bundled-default-plugins) above) and is reachable at
 `/warden` out of the box, with no manifest flag to flip. It does still carry
 `development: true` (shown by default, sorted last, badged "in development" —
@@ -1483,8 +1494,10 @@ First boot on a slow connection can take a few minutes for the ~1.1GB
 ### Known limitation
 
 No tool execution, task handoff, floating quick-access button, or voice —
-this phase is deliberately basic chat only (RFC 0063's phase 1 scope).
-Chat history is ephemeral, never persisted.
+the harness engine is deliberately basic completion only (RFC 0063's phase 1
+scope). Chat history is Warden's concern, not the harness's: Warden persists
+named sessions per user (RFC 0063 third revision); the harness itself keeps
+nothing between requests.
 
 ---
 
@@ -1561,7 +1574,7 @@ client-side.
 ### Checking transport status
 
 ```bash
-curl -H "x-sovereign-admin-key: $SOVEREIGN_ADMIN_KEY" \
+curl -H "Authorization: Bearer $SOVEREIGN_ADMIN_KEY" \
      http://localhost:3000/api/admin/health | jq .notifications
 # → { "transport": "sse", "brokerConnected": true }
 ```
@@ -1576,7 +1589,7 @@ but SSE push is silently skipped until Redis recovers.
 
 When `AUTH_INVITE_ONLY=true`, only users with a valid invite token can
 register. The first user is always exempt — they register normally and become
-the platform admin.
+the platform owner.
 
 After the first user registers, invite new users via the Console:
 `/console/users/invite` (Task 0.4.2).
@@ -1732,13 +1745,13 @@ mock database. Remove the header to return to real data — no restart needed.
 
 ### What is and isn't mocked
 
-| Layer                     | In dev-mode                                                  |
-| ------------------------- | ------------------------------------------------------------ |
-| Platform database         | **Mock DB** (`SOVEREIGN_DEV_DATABASE_URL`)                   |
-| Plugin isolated databases | **Mock DB** (resolved through the same context-aware switch) |
-| Auth sessions / identity  | **Real** — you sign in with a real account                   |
-| Auth database (`auth.db`) | **Real** — user records, passwords, MFA are untouched        |
-| Activity log              | **Real** — dev-mode activations are logged to the real DB    |
+| Layer                         | In dev-mode                                                  |
+| ----------------------------- | ------------------------------------------------------------ |
+| Platform database             | **Mock DB** (`SOVEREIGN_DEV_DATABASE_URL`)                   |
+| Plugin isolated databases     | **Mock DB** (resolved through the same context-aware switch) |
+| Auth sessions / identity      | **Real** — you sign in with a real account                   |
+| Auth store (`sovereign_auth`) | **Real** — user records, passwords, MFA are untouched        |
+| Activity log                  | **Real** — dev-mode activations are logged to the real DB    |
 
 In v1 there is no way to mock the auth layer on prod (the "auth crux" per RFC 0020). Use the seeded test credentials (`owner@sovereign.local`, `admin@sovereign.local`, `auditor@sovereign.local`, `user@sovereign.local`) on a local or staging instance for that level of isolation.
 
@@ -1804,7 +1817,8 @@ Track 1 operators keep upstream source untouched. Typical customisation lives in
   SMTP delivery (owner-only), and user/admin configuration.
 - `sovereign.plugins.json` entries or `pnpm sv plugin add <repo>` for community
   plugins.
-- Uploaded brand assets once the RFC 0027 branding phases are available.
+- Brand assets (logo, favicon, identity values) uploaded through Console →
+  Settings → Instance identity (RFC 0027).
 
 This track has no fork-specific git workflow. Upgrade by pulling the next image
 or upstream checkout, taking a backup, and following [upgrade.md](upgrade.md).
@@ -1947,11 +1961,12 @@ If you need a new core extension point, propose an upstream RFC instead.
 Do not replace upstream files in `runtime/public/` or app layouts just to brand a
 fork.
 
-- **Before RFC 0027 branding is available:** place static operator assets under
-  `operator/assets/` and serve them from an operator-owned plugin route, such as
-  `plugins/com.acme.brand/app/logo/route.ts`.
-- **After RFC 0027 branding is available:** upload logos, favicons, and identity
-  values through Console. Those assets live in deployment data, not in the fork.
+- Upload logos, favicons, and identity values through Console → Settings →
+  Instance identity (RFC 0027, implemented). Those assets live in deployment
+  data, not in the fork.
+- For any static operator asset that identity system doesn't cover, place it
+  under `operator/assets/` and serve it from an operator-owned plugin route,
+  such as `plugins/com.acme.brand/app/logo/route.ts`.
 
 ### Upstream sync
 

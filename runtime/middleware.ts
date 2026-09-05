@@ -641,10 +641,22 @@ export const config = {
     // Exclude: auth pages, privacy/tos pages, admin API (self-authenticated),
     // public liveness probe, dynamic manifest (browsers fetch it before login
     // for PWA install), offline fallback, PWA assets, plugin icons (RFC 0081,
-    // see the comment above this array), Next.js static assets, and the
-    // signed-URL storage download route (RFC 0044 — self-authenticated by its
-    // HMAC-signed token, not a session; must work for a plain `<img src>`/
-    // direct fetch with no session cookie).
-    '/((?!login|register|forgot-password|reset-password|privacy|tos|offline|api/auth|api/admin|api/health|api/manifest|api/storage|manifest.json|sw.js|workbox-|worker-|fallback-|icons/|plugin-icons/|_next/static|_next/image|favicon.ico).*)',
+    // see the comment above this array), Next.js static assets, and the two
+    // signed-URL download routes — storage (RFC 0044) and backup archives
+    // (RFC 0084) — both self-authenticated by an HMAC-signed token, not a
+    // session; each must work for a plain `<img src>`/direct fetch with no
+    // session cookie.
+    //
+    // `api/backup-jobs` has exactly one route underneath it
+    // (`[jobId]/download/[token]/route.ts`), unlike `api/instance` above — no
+    // other privileged endpoint shares this prefix, so excluding the whole
+    // prefix carries none of that entry's risk. The download route's own doc
+    // comment already claimed this exemption as "by design" before it was
+    // actually added here: confirmed live via `curl` that a request bearing a
+    // genuinely valid signed token still 303-redirected to `/login` (the
+    // route's own token check never ran) until this line was added — a real,
+    // shipped gap from epic task 8.16, affecting both the Account (8.18) and
+    // Console (8.17) download buttons.
+    '/((?!login|register|forgot-password|reset-password|privacy|tos|offline|api/auth|api/admin|api/health|api/manifest|api/storage|api/backup-jobs|manifest.json|sw.js|workbox-|worker-|fallback-|icons/|plugin-icons/|_next/static|_next/image|favicon.ico).*)',
   ],
 };

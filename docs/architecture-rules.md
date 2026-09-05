@@ -819,6 +819,29 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   signed-URL download route, copy that file's shape — dynamic segment per
   path element the handler reads from `params`, verified by checking the
   actual `app/api/**` directory tree, not just the doc comment describing it.
+  **A second, distinct bug was later found in this same route (epic task
+  8.17 live verification):** the route's own doc comment claimed a
+  `runtime/middleware.ts` matcher exemption "by design" — modeling itself on
+  `api/storage`'s already-correct exemption — but `api/backup-jobs` was
+  never actually added to the matcher's negative-lookahead list. A request
+  carrying a genuinely valid, unexpired signed token still 303-redirected to
+  `/login` before the route's own token check ever ran, because middleware
+  intercepted it first; reproduced live via `curl` with no session cookie
+  against a real completed backup job, and confirmed fixed the same way
+  against a real Postgres-backed job (200, correct bytes, decrypts with the
+  real passphrase). The lesson generalizes: a route's own doc comment
+  claiming a middleware exemption is not proof it was actually applied —
+  check the real `matcher` array in `runtime/middleware.ts` directly before
+  trusting it. Fixed by adding `api/backup-jobs` to that array — safe here
+  specifically because, like `api/storage`, no other route shares this
+  prefix (unlike `api/instance` above, which is deliberately kept _inside_
+  the matcher because other, privileged routes share its prefix and must
+  stay session-gated). This affected both epic 8.18's existing Account
+  download flow and epic 8.17's new Console one, since both surface the
+  exact same download URL. A new regression test exercises `config.matcher`
+  directly (`runtime/src/__tests__/middleware-regression.test.ts`'s
+  `middleware matcher` describe block) rather than relying on a doc comment
+  — confirmed to fail against the pre-fix matcher before being trusted.
 - **RESOLVED (epic task 8.16).** The production `runner` Docker image
   previously could not invoke `bin/sv.ts` (the `sv` CLI) at all — `runner`
   is a fresh minimal `node:24-alpine` image with only the traced Next.js

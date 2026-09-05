@@ -12,13 +12,13 @@
 > and the "cannot be centrally enforced" permission caveat, both still
 > relevant. Not deleted; see `docs/research/README.md`'s lifecycle convention.
 
-**Status:** Implemented — platform plumbing (manifest breaking change,
-`offline:write` permission validation, `@sovereignfs/sdk/offline-queue`
-client module, runtime simplification, logout+login purge) is in place.
-`offline:write` permission enforcement against the queue module itself is
-not yet wired (see `docs/plugin-development.md`'s `permissions` section).
-Shopper's own read+write adoption happens in its own repository, outside
-this monorepo.\
+**Status:** Superseded (see banner above) — platform plumbing (manifest
+breaking change, `offline:write` permission validation,
+`@sovereignfs/sdk/offline-queue` client module, runtime simplification,
+logout+login purge) shipped and was in place. `offline:write` permission
+enforcement against the queue module itself was never wired (see
+`docs/plugin-development.md`'s `permissions` section). Shopper's own
+read+write adoption happened in its own repository, outside this monorepo.\
 **Date:** July 2026\
 **Author:** kasunben\
 **Scope:** `packages/manifest` (breaking change to the `offline` field —

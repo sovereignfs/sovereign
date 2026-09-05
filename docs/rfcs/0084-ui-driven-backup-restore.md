@@ -1,6 +1,8 @@
 # RFC 0084 — UI-driven backup & restore
 
-**Status:** Draft\
+**Status:** Partially implemented (epic tasks 8.16 and 8.18 shipped; epic task
+8.17's backup half shipped at v0.128.0 — the guarded restore flow,
+maintenance-mode gate, and typed confirmation remain pending)\
 **Date:** August 2026\
 **Author:** kasunben\
 **Scope:** new `backup_jobs` table (`packages/db`), new `runtime/src/backup-worker.ts`,

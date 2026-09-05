@@ -473,6 +473,15 @@ Sovereign-specific configuration.
 
 ### Backups
 
+**Account → Data → Full backup and Console → Backups already encrypt
+automatically** — passphrase mode always, plus an optional age-recipient
+mode for the copy pushed to a connected git remote (`SV_BACKUP_GIT_AGE_RECIPIENT`
+above; see [security.md](security.md#what-v1-enforces)) — before the
+archive ever reaches disk or download. The manual recipe below applies
+specifically to the raw `sv backup` CLI output used directly (outside those
+job-driven flows) and to the sqld volume-level backup further down, neither
+of which has automated encryption.
+
 A backup archive carries the same sensitive data as the live volume, and
 often leaves the encrypted host entirely (off-site storage, downloaded to a
 laptop) — encrypt it independently rather than relying on it inheriting the

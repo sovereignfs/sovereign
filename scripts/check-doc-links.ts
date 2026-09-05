@@ -70,6 +70,26 @@ const docsRouteRewrites: Record<string, string> = Object.fromEntries(
   }),
 );
 
+// GitHub renders a leading `/` in a markdown link as repo-root-relative
+// when viewing the file on github.com — a different convention from
+// `docsRouteRewrites` above, which is about the *published VitePress docs
+// site's* own root-relative routing. `docs/legal/operator-template-*.md`
+// deliberately link to the platform's canonical root-level policy files
+// this way (they exist to describe copying that default policy onto an
+// operator's own instance) — those files are never duplicated into docs/
+// just to satisfy this checker's usual docs-relative resolution.
+const repoRootMarkdownFiles: Record<string, string> = {
+  '/PRIVACY.md': 'PRIVACY.md',
+  '/TOS.md': 'TOS.md',
+};
+
+// A handful of docs/ links deliberately point at a *live application
+// route* (e.g. `runtime/app/privacy`, a real Next.js page an operator's
+// deployed instance serves), not a markdown file at all — nothing under
+// docs/ or the repo root corresponds to them, and nothing should. Skip
+// these rather than trying to resolve them as markdown.
+const liveApplicationRouteTargets = new Set(['/privacy']);
+
 function walk(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     if (entry.isDirectory() && ignoredDirectories.has(entry.name)) return [];
@@ -161,14 +181,22 @@ function getAnchors(markdownFile: string): Set<string> {
 function extractTargets(content: string): Array<{ line: number; target: string }> {
   const targets: Array<{ line: number; target: string }> = [];
   const patterns = [
-    /!?\[[^\]]*\]\(\s*<?([^\s)>]+)>?(?:\s+["'][^"']*["'])?\s*\)/g,
+    // A `<...>`-wrapped destination (CommonMark's escape for a path
+    // containing spaces or, as here, unescaped parens — e.g. a Next.js
+    // route-group directory like `(minimal)`) is captured by the first
+    // alternative, allowing any char but `<`/`>` inside; a plain
+    // destination falls through to the second, unchanged from before.
+    // `[^\s)>]+` alone (no bracket alternative) would stop at the *first*
+    // `)` even inside a `<...>`-escaped destination, silently truncating
+    // any path with a literal paren in it.
+    /!?\[[^\]]*\]\(\s*(?:<([^<>]*)>|([^\s)>]+))(?:\s+["'][^"']*["'])?\s*\)/g,
     /^\s*\[[^\]]+\]:\s*<?([^\s>]+)>?/gm,
     /<(?:a|img)\s+[^>]*(?:href|src)=["']([^"']+)["']/gi,
   ];
 
   for (const pattern of patterns) {
     for (const match of content.matchAll(pattern)) {
-      const target = match[1];
+      const target = match[1] ?? match[2];
       if (!target || match.index === undefined) continue;
       targets.push({
         line: content.slice(0, match.index).split('\n').length,
@@ -219,6 +247,10 @@ function resolveLocalTarget(sourceFile: string, rawTarget: string): string | nul
   if (!targetWithoutFragment) return null;
 
   if (targetWithoutFragment.startsWith('/')) {
+    if (liveApplicationRouteTargets.has(targetWithoutFragment)) return null;
+    const repoRootFile = repoRootMarkdownFiles[targetWithoutFragment];
+    if (repoRootFile) return path.join(root, repoRootFile);
+
     const normalizedRoute = targetWithoutFragment.replace(/\.html$/, '').replace(/\/$/, '') || '/';
     const routeKey = normalizedRoute === '/docs' ? '/docs/' : normalizedRoute;
     const rewrittenSource = docsRouteRewrites[routeKey];
@@ -322,6 +354,27 @@ for (const absoluteFile of walk(root)) {
     if (!fragment || !resolvedTarget.endsWith('.md')) continue;
 
     const decodedFragment = decodeURIComponent(fragment).toLowerCase();
+
+    // GitHub line-range/line-number anchors (#L171, #L171-L198) are
+    // generated from the target file's actual line count at render time,
+    // not from its heading structure, so getAnchors() (heading-slug-only)
+    // can never recognize them — validate directly against the file's
+    // real line count instead of heading-anchor matching.
+    const lineAnchorMatch = /^l(\d+)(?:-l(\d+))?$/.exec(decodedFragment);
+    if (lineAnchorMatch) {
+      const start = Number(lineAnchorMatch[1]);
+      const end = lineAnchorMatch[2] ? Number(lineAnchorMatch[2]) : start;
+      const totalLines = readFileSync(resolvedTarget, 'utf8').split('\n').length;
+      if (end >= start && end <= totalLines) continue;
+      findings.push({
+        file: relativeFile,
+        line,
+        target,
+        reason: `line range ${String(start)}-${String(end)} exceeds ${path.relative(root, resolvedTarget)}'s ${String(totalLines)} lines`,
+      });
+      continue;
+    }
+
     if (getAnchors(resolvedTarget).has(decodedFragment)) continue;
 
     findings.push({

@@ -121,12 +121,12 @@ Consequences:
 - A leg marked a **gate** determines whether later legs proceed at all; a
   negative result stops the workstream rather than being worked around.
 
-> **Not yet wired into the skills.** `/sv-task-start`, `/sv-task-complete`, and
-> `/sv-update-task-docs` are still per-task — `CURRENT_TASK.md` describes one
-> task, not a leg. Until that changes, running a workstream means starting the
-> leg's first task normally and treating the workstream document as the authority
-> on what else belongs in the leg and when to stop. Making the skills leg-aware
-> is a follow-up.
+> **Wired into the skills.** `/sv-task-start` accepts a leg assignment
+> ("workstream 0023 leg 5") and writes `CURRENT_TASK.md` in **leg mode** — the
+> leg's detail block plus every task block in it. `/sv-task-complete` and
+> `/sv-update-task-docs` read that mode: one verification pass, one version
+> bump, every task's roadmap row and epic heading marked ✅, the workstream
+> doc's changelog updated, and a stop at the draft PR.
 
 Full definition, required sections, and the authoring template:
 [`docs/workstreams/README.md`](workstreams/README.md).
@@ -139,12 +139,12 @@ Full definition, required sections, and the authoring template:
 
 Run `/sv-task-start`. The skill:
 
-1. The developer specifies the task (epic task ID or description) — there is no `⏳ Next` pointer. See `docs/multi-agent.md`.
-2. Confirms `main` is clean and pulls latest.
-3. Looks up the epic file via `docs/epics/README.md`, then greps for the task heading to extract the full task block (Goal → Deliverables → SRS reference → Review checklist).
-4. Writes **`CURRENT_TASK.md`** in the repo root — the full task spec in one file, no further navigation needed.
-5. Reads the relevant RFC if one is referenced.
-6. Prints a summary and creates the feature branch.
+1. The developer specifies the task (epic task ID or description) or the workstream leg ("workstream 0023 leg 5") — there is no `⏳ Next` pointer. See `docs/multi-agent.md`.
+2. Confirms `main` is clean and pulls latest; for a leg, confirms the previous leg's PR is merged and the leg's "Do not proceed if" clause doesn't hold.
+3. Looks up the epic file via `docs/epics/README.md`, then greps for the task heading to extract the full task block (Goal → Deliverables → SRS reference → Review checklist) — for every task in the leg.
+4. Writes **`CURRENT_TASK.md`** in the repo root — the full spec in one file (`**Mode:** task` or `**Mode:** leg`), no further navigation needed.
+5. Reads the relevant RFC(s) if referenced.
+6. Prints a summary and creates the branch (`feat/<workstream-slug>-leg-<n>` for a leg).
 
 ### During implementation
 
@@ -166,16 +166,18 @@ main agent          — prepares PR description
 /sv-create-pr       — creates the GitHub PR as a draft when requested
 ```
 
-**`/sv-verify`** reads `CURRENT_TASK.md`, runs `format:check`, `lint`, `typecheck`, `test` (and docs-parity if relevant), and returns a summary table — not raw output. Failures block the PR draft.
+**`/sv-verify`** reads `CURRENT_TASK.md`, runs `format:check`, `lint`, `typecheck`, `design:tokens:check`, `docs:check-links`, `test`, and `build` (plus docs-parity, UI typecheck, and `registry:check` when relevant), checks the version-bearing docs agree with `package.json`, and returns a summary table — not raw output. Failures block the PR draft.
 
 **`/sv-update-task-docs`** reads `CURRENT_TASK.md` for metadata, records the
 final root platform version when one was bumped, moves completed rows out of
-Non-prioritised Tasks into the correct client phase, marks the roadmap row and
-matching epic heading ✅, and deletes `CURRENT_TASK.md`. It does not append
-completion entries to `CLAUDE.md` or `AGENTS.md` — `ROADMAP.md` and the
-task's epic heading are the canonical completion markers.
+Non-prioritised Tasks into the correct client phase, marks the roadmap row(s)
+and matching epic heading(s) ✅, updates the `Status:` line of any RFC the work
+advances (and its row in `docs/rfcs/README.md`), appends a workstream changelog
+row in leg mode, and deletes `CURRENT_TASK.md`. It does not append completion
+entries to `CLAUDE.md` or `AGENTS.md` — `ROADMAP.md`, the task's epic heading,
+and the PR body are the canonical record.
 
-**`/sv-security-check`** (conditional) reviews the diff against the hard architectural rules in `CLAUDE.md` — redirect codes, CSP construction, cookie clearing, session config, `NEXT_PUBLIC_*` usage. Violations block the PR draft.
+**`/sv-security-check`** (conditional) reviews the diff against the security-relevant hard rules (`docs/architecture-rules.md`) — server-action authorization, `/api/admin` trust, middleware redirects/matcher/CSP, secrets, spawned processes, SDK permission checks. Violations block the PR draft.
 
 **`/sv-create-pr`** creates the GitHub pull request. Agent-created PRs are
 always opened as **draft** PRs first with `gh pr create --draft`, even when the
@@ -265,7 +267,7 @@ defines a more specific slug.
 
 ## Role agents
 
-Four focused skills cover the non-implementation phases of a task. Each needs only `CURRENT_TASK.md` plus its own skill file — no full project orientation required.
+Focused skills cover the non-implementation phases of a task. Each needs only `CURRENT_TASK.md` plus its own skill file — no full project orientation required. The skills live in `.agents/skills/` (Codex) and `.claude/skills/` (Claude Code) as byte-identical copies; `scripts/__tests__/agent-skills-sync.test.ts` fails CI if they diverge, so edit one and copy to the other.
 
 | Skill                  | Trigger                                                 | What it does                                                          |
 | ---------------------- | ------------------------------------------------------- | --------------------------------------------------------------------- |

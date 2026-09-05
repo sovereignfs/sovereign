@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Sovereign Task Complete'
+  short_description: 'Verify, bump, document, and draft the PR for a finished task or leg.'
+  default_prompt: 'Use sv-task-complete to finish the current Sovereign task.'

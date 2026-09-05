@@ -212,8 +212,11 @@ typecheck`.
 
 ## Codex-specific notes
 
-- Use Codex tools and local repo context directly; do not invoke Claude-specific
-  slash commands.
+- The task-lifecycle skills in `.agents/skills/` (`sv-task-start`,
+  `sv-task-complete`, `sv-verify`, `sv-security-check`, `sv-update-task-docs`,
+  `sv-create-pr`, `sv-ui-design`) are byte-identical to Claude Code's
+  `.claude/skills/` copies — a test enforces it. Edit one, copy to the other.
+  Where a skill says "your instruction file", that is this file.
 - Prefer small, reviewable patches. Use repo patterns over new abstractions.
 - When using subagents, keep them read-heavy or verification-focused unless the
   user explicitly asks for parallel implementation.

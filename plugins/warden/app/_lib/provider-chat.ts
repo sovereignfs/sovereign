@@ -27,15 +27,20 @@ interface OpenAiStreamChunk {
 function toWardenFrames(upstream: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
+  const reader = upstream.getReader();
+  let cancelled = false;
+
+  function frame(payload: object): Uint8Array {
+    return encoder.encode(`data: ${JSON.stringify(payload)}\n\n`);
+  }
 
   return new ReadableStream({
     async start(controller) {
-      const reader = upstream.getReader();
       let buffer = '';
       try {
         for (;;) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done || cancelled) break;
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
           buffer = lines.pop() ?? '';
@@ -51,23 +56,25 @@ function toWardenFrames(upstream: ReadableStream<Uint8Array>): ReadableStream<Ui
               continue;
             }
             const text = parsed.choices?.[0]?.delta?.content;
-            if (text) {
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ type: 'token', text })}\n\n`),
-              );
-            }
+            if (text) controller.enqueue(frame({ type: 'token', text }));
           }
         }
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`));
+        if (!cancelled) controller.enqueue(frame({ type: 'done' }));
       } catch {
-        controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({ type: 'error', message: 'The response was interrupted.' })}\n\n`,
-          ),
-        );
+        if (!cancelled) {
+          controller.enqueue(frame({ type: 'error', message: 'The response was interrupted.' }));
+        }
       } finally {
-        controller.close();
+        if (!cancelled) controller.close();
       }
+    },
+    // The consumer (the route's `captureAndPersist`) is cancelling because
+    // the browser went away. Cancel the upstream reader too — that is what
+    // actually aborts the provider request — and stop the loop above from
+    // touching a controller that no longer accepts writes.
+    cancel(reason) {
+      cancelled = true;
+      return reader.cancel(reason).catch(() => {});
     },
   });
 }

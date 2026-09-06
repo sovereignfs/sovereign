@@ -9,13 +9,18 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace, refresh }),
 }));
 
+const replaceState = vi.fn();
+
 beforeEach(() => {
   replace.mockClear();
   refresh.mockClear();
+  replaceState.mockClear();
+  vi.spyOn(window.history, 'replaceState').mockImplementation(replaceState);
 });
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
@@ -143,7 +148,13 @@ describe('ChatView — persisted mode (default)', () => {
       content: 'first message',
     });
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/warden?session=session-new'));
+    // The URL is updated through the native history API, never a router
+    // navigation — a navigation swaps the page segment and remounted this
+    // component mid-stream, losing the first reply of every new chat.
+    await waitFor(() =>
+      expect(replaceState).toHaveBeenCalledWith(null, '', '/warden?session=session-new'),
+    );
+    expect(replace).not.toHaveBeenCalled();
 
     sendMessage('second message');
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
@@ -154,11 +165,39 @@ describe('ChatView — persisted mode (default)', () => {
     });
     // The session id didn't change on the second send — no redundant
     // history entry for what the user experiences as the same conversation.
-    expect(replace).toHaveBeenCalledTimes(1);
+    expect(replaceState).toHaveBeenCalledTimes(1);
     // The sidebar lives in the route-group layout, which is not re-run for a
     // navigation inside it — so a brand-new session only reaches the list
     // via an explicit refresh, and only on the send that created it.
-    expect(refresh).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+  });
+
+  it('defers the sidebar refresh until the stream has finished', async () => {
+    let finish: () => void = () => {};
+    const encoder = new TextEncoder();
+    const body = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(`data: {"type":"token","text":"Hi"}\n\n`));
+        finish = () => {
+          controller.enqueue(encoder.encode(`data: {"type":"done"}\n\n`));
+          controller.close();
+        };
+      },
+    });
+    const response = new Response(body, { status: 200 });
+    response.headers.set('x-warden-session-id', 'session-new');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response));
+
+    renderChatView();
+    sendMessage('first message');
+
+    await waitFor(() => expect(replaceState).toHaveBeenCalled());
+    await screen.findByText('Hi');
+    // Still streaming: a refresh now would remount this view mid-reply.
+    expect(refresh).not.toHaveBeenCalled();
+
+    finish();
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
   });
 
   it('sends a message, streams the response, and appends both turns', async () => {

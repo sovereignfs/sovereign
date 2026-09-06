@@ -71,12 +71,27 @@ export async function WardenChatPage({
     isModelVisible(model.key, visibilityOverrides),
   );
   const allModelsHidden = discovery.models.length > 0 && visibleModels.length === 0;
-  // The user's explicit Settings → General default (task 22.9), if it's
-  // still a visible model — otherwise fall back to the first visible one,
-  // same as before this setting existed.
-  const resolvedDefaultModelKey =
-    defaultModelKey && visibleModels.some((model) => model.key === defaultModelKey)
-      ? defaultModelKey
+  const isVisibleKey = (key: string | null) =>
+    key !== null && visibleModels.some((model) => model.key === key);
+  // An existing session keeps the model it was last using — what the
+  // Settings copy has always promised ("existing sessions keep whatever
+  // model they were already using"), and what makes the post-first-send
+  // segment swap (`ChatView`'s deferred `router.refresh()`) invisible: the
+  // remounted composer preselects the model the user just sent with rather
+  // than snapping back to their global default. A brand-new session uses
+  // the user's explicit Settings → General default (task 22.9), if it's
+  // still a visible model — otherwise the first visible one, same as before
+  // that setting existed.
+  const lastMessage = initialMessages[initialMessages.length - 1];
+  const sessionModelKey = lastMessage
+    ? lastMessage.providerId
+      ? `${lastMessage.providerId}:${lastMessage.model}`
+      : 'local'
+    : null;
+  const resolvedDefaultModelKey = isVisibleKey(sessionModelKey)
+    ? (sessionModelKey as string)
+    : isVisibleKey(defaultModelKey)
+      ? (defaultModelKey as string)
       : (visibleModels[0]?.key ?? '');
 
   return (

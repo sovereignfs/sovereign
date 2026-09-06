@@ -296,22 +296,27 @@ export function ChatView({
       return;
     }
 
+    let createdSessionThisSend = false;
     if (!incognito) {
       const resolvedSessionId = response.headers.get('x-warden-session-id');
       // Only a brand-new session's first send changes this — an existing
       // session's id is already in the URL, so there is nothing to sync.
-      // `replace` (not `push`) so this doesn't stack a history entry for
-      // what the user experiences as "still the same conversation."
       if (resolvedSessionId && resolvedSessionId !== sessionId) {
         setSessionId(resolvedSessionId);
-        router.replace(`/warden?session=${resolvedSessionId}`);
-        // The sidebar lives in `(chat)/layout.tsx`, and a layout is not
-        // re-run for a navigation within the routes it wraps — so without
-        // this the session just created would be missing from the list
-        // until something else happened to refresh it. `refresh()`
-        // re-fetches server components while preserving client state, so
-        // the conversation on screen is unaffected.
-        router.refresh();
+        createdSessionThisSend = true;
+        // The native history API, not `router.replace()`. Next.js syncs its
+        // router state (`usePathname`/`useSearchParams`) to a `replaceState`
+        // without fetching or re-rendering any route segment — which is the
+        // point: this send started on `/warden/new` (a different page
+        // segment from `/warden`), or on `/warden` with a `key` of `'new'`,
+        // so a real navigation to `/warden?session=<id>` remounted this
+        // component the moment the new segment arrived, mid-stream. Its
+        // unmount effect aborted the fetch and the fresh instance seeded
+        // from the database, which held only the user's turn — the first
+        // reply of every new chat vanished until a reload. `replaceState`
+        // (not `pushState`) so this doesn't stack a history entry for what
+        // the user experiences as "still the same conversation."
+        window.history.replaceState(null, '', `/warden?session=${resolvedSessionId}`);
       }
     }
 
@@ -381,6 +386,18 @@ export function ChatView({
         );
       }
       setState({ kind: 'idle' });
+      // The sidebar lives in `(chat)/layout.tsx`, and a layout is not
+      // re-run for a navigation within the routes it wraps — so without
+      // this the session just created would be missing from the list until
+      // something else happened to refresh it. Deferred to *after* the
+      // stream has ended (see the `replaceState` above for why it must not
+      // run mid-stream): the server withholds the stream's `done` frame
+      // until the reply is persisted, so the refresh always reads back both
+      // turns. The URL now names `/warden?session=<id>`, so the refresh
+      // also swaps this `/warden/new` segment for the ordinary chat page —
+      // whose server-derived session model matches what was just used, so
+      // the swap changes nothing on screen.
+      if (createdSessionThisSend) router.refresh();
     }
   }
 

@@ -9,6 +9,7 @@ const appendMessage = vi.fn();
 const getRecentMessagesForContext = vi.fn();
 const createSession = vi.fn();
 const deleteSession = vi.fn();
+const deleteMessage = vi.fn();
 
 class SessionNotFoundError extends Error {
   constructor() {
@@ -43,6 +44,7 @@ vi.mock('../../../_lib/sessions', () => ({
   getRecentMessagesForContext: (...args: unknown[]) => getRecentMessagesForContext(...args),
   createSession: (...args: unknown[]) => createSession(...args),
   deleteSession: (...args: unknown[]) => deleteSession(...args),
+  deleteMessage: (...args: unknown[]) => deleteMessage(...args),
   SessionNotFoundError,
 }));
 
@@ -103,6 +105,12 @@ async function drain(response: Response): Promise<void> {
   }
 }
 
+function readerOf(response: Response): ReadableStreamDefaultReader<Uint8Array> {
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('expected a response body');
+  return reader;
+}
+
 async function waitForBackgroundPersist(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 10));
 }
@@ -113,6 +121,7 @@ beforeEach(() => {
   getRecentMessagesForContext.mockResolvedValue([]);
   appendMessage.mockResolvedValue(undefined);
   deleteSession.mockResolvedValue(undefined);
+  deleteMessage.mockResolvedValue(undefined);
   createSession.mockResolvedValue({
     id: 'session-new',
     title: null,
@@ -279,6 +288,59 @@ describe('POST /warden/api/chat — local routing', () => {
       providerId: null,
       model: 'local',
     });
+  });
+});
+
+describe('POST /warden/api/chat — client cancellation', () => {
+  it('persists exactly the partial reply the user saw when they stop mid-stream', async () => {
+    const encoder = new TextEncoder();
+    const upstreamCancel = vi.fn();
+    const body = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(`data: {"type":"token","text":"Partial "}\n\n`));
+        // Never closes — the model is still generating when the user stops.
+      },
+      cancel: upstreamCancel,
+    });
+    requestHarnessChat.mockResolvedValue({
+      kind: 'stream',
+      response: new Response(body, { status: 200 }),
+    });
+
+    const res = await POST(
+      chatRequest({ modelKey: 'local', sessionId: 'session-1', content: 'hello' }),
+    );
+    const reader = readerOf(res);
+    await reader.read();
+    await reader.cancel('client disconnected');
+
+    // The provider request is actually torn down, not left generating.
+    expect(upstreamCancel).toHaveBeenCalled();
+    await waitForBackgroundPersist();
+    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-1', {
+      role: 'assistant',
+      content: 'Partial ',
+      providerId: null,
+      model: 'local',
+    });
+  });
+
+  it('cleans up the stranded user turn when the user stops before any token arrived', async () => {
+    appendMessage.mockResolvedValueOnce({ id: 'msg-user' });
+    const body = new ReadableStream({ start() {} });
+    requestHarnessChat.mockResolvedValue({
+      kind: 'stream',
+      response: new Response(body, { status: 200 }),
+    });
+
+    const res = await POST(
+      chatRequest({ modelKey: 'local', sessionId: 'session-1', content: 'hello' }),
+    );
+    await readerOf(res).cancel('client disconnected');
+    await waitForBackgroundPersist();
+
+    expect(appendMessage).toHaveBeenCalledTimes(1);
+    expect(deleteMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-1', 'msg-user');
   });
 });
 

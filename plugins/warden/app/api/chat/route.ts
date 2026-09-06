@@ -22,7 +22,7 @@ import {
 } from '../../_lib/limits';
 import { getProviderApiKey, listProviders } from '../../_lib/providers';
 import { requestProviderChat, type ProviderChatResult } from '../../_lib/provider-chat';
-import { teeAndCapture } from '../../_lib/stream-capture';
+import { captureAndPersist } from '../../_lib/stream-capture';
 import type { HarnessChatResult } from '../../_lib/harness-client';
 
 /**
@@ -241,8 +241,10 @@ async function dispatchAndRespond(
     if (persist) {
       // Persist the user's side immediately — it's already known, no need
       // to wait for the reply. The assistant's side is persisted once
-      // `teeAndCapture` finishes accumulating it; the client is never
-      // blocked on either write.
+      // `captureAndPersist` has the whole reply; the client's stream is
+      // held open (its `done` frame withheld) until that write lands, so a
+      // client that re-reads the conversation the moment its stream ends
+      // always finds the reply there.
       //
       // The promise is kept (rather than fired and forgotten) so the
       // cleanup path below can sequence itself after this write instead of
@@ -258,42 +260,48 @@ async function dispatchAndRespond(
         return null;
       });
 
-      response = teeAndCapture(response, ({ text, errorMessage }) => {
-        if (text) {
-          void appendMessage(persist.userId, persist.tenantId, persist.sessionId, {
-            role: 'assistant',
-            content: text,
-            providerId: persist.providerId,
-            model: persist.model,
-          }).catch((error) =>
-            console.error('[warden] failed to persist assistant message:', error),
-          );
-          return;
-        }
-        // A stream that opened successfully but produced no content at all
-        // (provider failed mid-stream, connection dropped). The user's own
-        // message was already persisted above, so returning here would
-        // strand it: the thread keeps a user turn with no reply, and the
-        // *next* send hands the model two consecutive user messages. Clean
-        // up instead — a session this request created goes entirely, and
-        // otherwise just the stranded user turn does.
-        if (!errorMessage) return;
-        void userMessageWrite
-          .then((userMessage) => {
-            if (persist.sessionWasCreated) {
-              return deleteSession(persist.userId, persist.tenantId, persist.sessionId);
-            }
-            if (!userMessage) return undefined;
-            return deleteMessage(
-              persist.userId,
-              persist.tenantId,
-              persist.sessionId,
-              userMessage.id,
+      response = captureAndPersist(response, {
+        onComplete: async ({ text, errorMessage, cancelled }) => {
+          if (text) {
+            // Also the cancelled case: the user pressed Stop, so what they
+            // saw on screen is the reply — persisting exactly that keeps a
+            // reload consistent with the conversation they were looking at.
+            await appendMessage(persist.userId, persist.tenantId, persist.sessionId, {
+              role: 'assistant',
+              content: text,
+              providerId: persist.providerId,
+              model: persist.model,
+            }).catch((error) =>
+              console.error('[warden] failed to persist assistant message:', error),
             );
-          })
-          .catch((error) =>
-            console.error('[warden] failed to clean up after an empty stream:', error),
-          );
+            return;
+          }
+          // A stream that opened successfully but produced no content at all
+          // (provider failed mid-stream, connection dropped, or the user
+          // stopped it before the first token). The user's own message was
+          // already persisted above, so returning here would strand it: the
+          // thread keeps a user turn with no reply, and the *next* send
+          // hands the model two consecutive user messages. Clean up instead
+          // — a session this request created goes entirely, and otherwise
+          // just the stranded user turn does.
+          if (!errorMessage && !cancelled) return;
+          await userMessageWrite
+            .then((userMessage) => {
+              if (persist.sessionWasCreated) {
+                return deleteSession(persist.userId, persist.tenantId, persist.sessionId);
+              }
+              if (!userMessage) return undefined;
+              return deleteMessage(
+                persist.userId,
+                persist.tenantId,
+                persist.sessionId,
+                userMessage.id,
+              );
+            })
+            .catch((error) =>
+              console.error('[warden] failed to clean up after an empty stream:', error),
+            );
+        },
       });
     }
 

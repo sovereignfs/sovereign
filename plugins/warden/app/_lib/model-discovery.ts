@@ -15,6 +15,21 @@ import {
 
 const MODEL_FETCH_TIMEOUT_MS = 8000;
 
+const UNDECRYPTABLE_KEY_MESSAGE =
+  'Stored API key cannot be decrypted (SOVEREIGN_VAULT_KEY changed?). Re-enter it.';
+
+/**
+ * `runtime/src/secrets.ts` throws `SecretUndecryptableError` when a stored
+ * secret's AES-GCM auth tag fails to verify — the row was encrypted under a
+ * different `SOVEREIGN_VAULT_KEY` (rotated, lost, or two checkouts sharing
+ * one dev database with different `.env` files). Matched by `name` because
+ * a plugin may not import `runtime/src`; anything else (a DB fault, a
+ * missing vault key) is a genuine error and keeps propagating.
+ */
+function isUndecryptableSecretError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'SecretUndecryptableError';
+}
+
 /**
  * `discoverModels()` used to run a live health/auth check against every
  * configured provider (a real network round trip, potentially downloading
@@ -143,7 +158,25 @@ async function runDiscovery(): Promise<ModelDiscoveryResult> {
 
   const providerStatuses = await Promise.all(
     providers.map(async (provider): Promise<ProviderDiscoveryStatus> => {
-      const apiKey = await getProviderApiKey(provider.id);
+      let apiKey: string | null;
+      try {
+        apiKey = await getProviderApiKey(provider.id);
+      } catch (error) {
+        // One undecryptable key must degrade only its own provider. Before
+        // this guard the rejection escaped the `Promise.all`, so a single
+        // stale row took down the whole Warden UI (chat, local model, and
+        // every healthy provider) via the plugin error boundary.
+        if (!isUndecryptableSecretError(error)) throw error;
+        await markProviderError(provider.id, UNDECRYPTABLE_KEY_MESSAGE);
+        return {
+          id: provider.id,
+          label: provider.label,
+          baseUrl: provider.baseUrl,
+          ok: false,
+          message: UNDECRYPTABLE_KEY_MESSAGE,
+          modelCount: 0,
+        };
+      }
       if (!apiKey) {
         await markProviderError(provider.id, 'This provider has no stored API key.');
         return {

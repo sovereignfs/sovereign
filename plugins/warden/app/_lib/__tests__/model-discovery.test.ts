@@ -180,6 +180,55 @@ describe('discoverModels', () => {
     );
   });
 
+  it('degrades a provider whose stored key cannot be decrypted (vault key changed) without failing the rest', async () => {
+    checkHarnessHealth.mockResolvedValue({ kind: 'ready' });
+    const good = { ...provider, id: 'conn-good' };
+    const stale = { ...provider, id: 'conn-stale', label: 'Stale' };
+    listProviders.mockResolvedValue([good, stale]);
+    getProviderApiKey.mockImplementation(async (id: string) => {
+      if (id === 'conn-stale') {
+        // What runtime/src/secrets.ts throws when the row was encrypted under
+        // a different SOVEREIGN_VAULT_KEY (AES-GCM auth tag mismatch).
+        const error = new Error('Unsupported state or unable to authenticate data');
+        error.name = 'SecretUndecryptableError';
+        throw error;
+      }
+      return 'sk-test';
+    });
+    pinnedFetch.mockResolvedValue(jsonResponse({ data: [{ id: 'model-a' }] }));
+
+    const result = await discoverModels();
+    expect(result.local.available).toBe(true);
+    expect(result.providers.find((p) => p.id === 'conn-good')?.ok).toBe(true);
+    expect(result.providers.find((p) => p.id === 'conn-stale')).toEqual({
+      id: 'conn-stale',
+      label: 'Stale',
+      baseUrl: provider.baseUrl,
+      ok: false,
+      message: 'Stored API key cannot be decrypted (SOVEREIGN_VAULT_KEY changed?). Re-enter it.',
+      modelCount: 0,
+    });
+    expect(markProviderError).toHaveBeenCalledWith(
+      'conn-stale',
+      'Stored API key cannot be decrypted (SOVEREIGN_VAULT_KEY changed?). Re-enter it.',
+    );
+    // Only the healthy provider was ever contacted.
+    expect(pinnedFetch).toHaveBeenCalledTimes(1);
+    expect(result.models).toEqual([
+      { key: 'local', label: 'Local model (this server)' },
+      { key: 'conn-good:model-a', label: 'OpenRouter — model-a' },
+    ]);
+  });
+
+  it('still surfaces an unexpected secrets failure (not the undecryptable class) as an error', async () => {
+    checkHarnessHealth.mockResolvedValue({ kind: 'ready' });
+    listProviders.mockResolvedValue([provider]);
+    getProviderApiKey.mockRejectedValue(new Error('database is locked'));
+
+    await expect(discoverModels()).rejects.toThrow('database is locked');
+    expect(markProviderError).not.toHaveBeenCalled();
+  });
+
   it('treats a non-array/malformed model list as zero models, not a failure', async () => {
     checkHarnessHealth.mockResolvedValue({ kind: 'unreachable' });
     listProviders.mockResolvedValue([provider]);

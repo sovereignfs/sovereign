@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Button, EmptyState } from '@sovereignfs/ui';
+import { Badge, EmptyState } from '@sovereignfs/ui';
 import { getInstanceBackupJobStatusAction } from './actions';
 import styles from '../console.module.css';
 
@@ -26,6 +26,35 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${String(bytes)} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function JobStatusBadge({ status }: { status: BackupJobView['status'] }) {
+  switch (status) {
+    case 'queued':
+      return (
+        <Badge variant="status" size="sm" status="pending">
+          Queued
+        </Badge>
+      );
+    case 'running':
+      return (
+        <Badge variant="status" size="sm" status="pending">
+          Running
+        </Badge>
+      );
+    case 'complete':
+      return (
+        <Badge variant="status" size="sm" status="active">
+          Complete
+        </Badge>
+      );
+    case 'failed':
+      return (
+        <Badge variant="status" size="sm" status="failed">
+          Failed
+        </Badge>
+      );
+  }
 }
 
 /**
@@ -103,36 +132,38 @@ export function BackupJobList({ initialJobs }: { initialJobs: BackupJobView[] })
   }, [hasInFlight]);
 
   if (jobs.length === 0) {
-    return <EmptyState heading="No backups yet" description="Trigger one above to see it here." />;
+    return <EmptyState heading="No backups yet" description="Start one above to see it here." />;
   }
 
   return (
-    <ul className={styles.cards}>
-      {jobs.map((job) => (
-        <li key={job.id} className={styles.card}>
-          <div>
-            <strong>{new Date(job.createdAt * 1000).toLocaleString()}</strong>
-            <p className={styles.helpText}>
-              {job.status}
-              {job.status === 'complete' && ` · ${formatBytes(job.sizeBytes)}`}
-              {job.status === 'failed' && job.errorMessage ? ` · ${job.errorMessage}` : ''}
-              {job.pushStatus === 'succeeded' && ' · pushed to Git'}
-              {job.pushStatus === 'failed' && job.pushError
-                ? ` · Git push failed: ${job.pushError}`
-                : ''}
-            </p>
-          </div>
-          {job.downloadUrl && (
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => window.location.assign(job.downloadUrl as string)}
-            >
-              Download
-            </Button>
-          )}
-        </li>
-      ))}
+    <ul className={styles.compactList} aria-live="polite">
+      {jobs.map((job) => {
+        const when = new Date(job.createdAt * 1000);
+        return (
+          <li key={job.id} className={styles.compactRow}>
+            <span className={styles.compactRowLabel}>
+              <span className={styles.compactRowTitle}>
+                <time dateTime={when.toISOString()}>{when.toLocaleString()}</time>
+              </span>
+              <span className={styles.compactRowSubtitle}>
+                {job.status === 'complete' && formatBytes(job.sizeBytes)}
+                {job.status === 'failed' && (job.errorMessage ?? 'The backup did not complete.')}
+                {job.pushStatus === 'succeeded' && ' · Pushed to Git'}
+                {job.pushStatus === 'failed' &&
+                  ` · Git push failed${job.pushError ? `: ${job.pushError}` : ''}`}
+              </span>
+            </span>
+            <span className={styles.rowActions}>
+              <JobStatusBadge status={job.status} />
+              {job.downloadUrl && (
+                <a href={job.downloadUrl} className={styles.paginationLink} download>
+                  Download
+                </a>
+              )}
+            </span>
+          </li>
+        );
+      })}
     </ul>
   );
 }

@@ -2,6 +2,7 @@ import { sdk } from '@sovereignfs/sdk';
 import { Alert, EmptyState } from '@sovereignfs/ui';
 import { BackupJobList, type BackupJobView } from './BackupJobList';
 import { BackupTriggerForm } from './BackupTriggerForm';
+import { ConsolePageHeader } from '../_components/ConsolePageHeader';
 import styles from '../console.module.css';
 import { renderFetchSignal } from '../_lib/fetch-timeout';
 
@@ -56,8 +57,8 @@ export default async function BackupsPage() {
   if (!canBackup) {
     return (
       <EmptyState
-        heading="Insufficient privileges"
-        description="Only an instance owner or admin can trigger or download instance backups."
+        heading="Admin access required"
+        description="Only an instance owner or admin can start or download instance backups."
       />
     );
   }
@@ -67,13 +68,21 @@ export default async function BackupsPage() {
   const unavailable = unavailableReason(data);
 
   return (
-    <div className={styles.sections}>
-      <section className={styles.section}>
-        <h2>Back up this instance</h2>
-        <p className={styles.helpText}>
-          Snapshots every platform, auth, and app table into a single passphrase-encrypted archive.
-          Restoring is not yet available from Console — see <code>sv restore</code> on the server.
-        </p>
+    <div>
+      <ConsolePageHeader
+        title="Backups"
+        count={`${jobs.length} ${jobs.length === 1 ? 'backup' : 'backups'}`}
+        description={
+          <>
+            Snapshots every platform, auth, and app table into a single passphrase-encrypted
+            archive. Restoring is not yet available from Console — use{' '}
+            <code className={styles.codeInline}>sv restore</code> on the server.
+          </>
+        }
+      />
+
+      <div className={styles.overviewSection}>
+        <h3 className={styles.overviewSectionTitle}>Back up this instance</h3>
         {unavailable ? (
           <Alert variant="warning">{unavailable}</Alert>
         ) : (
@@ -82,12 +91,12 @@ export default async function BackupsPage() {
             gitPushAvailable={gitPushAvailable}
           />
         )}
-      </section>
+      </div>
 
-      <section className={styles.section}>
-        <h2>Recent backups</h2>
+      <div className={styles.overviewSection}>
+        <h3 className={styles.overviewSectionTitle}>Recent backups</h3>
         <BackupJobList initialJobs={jobs} />
-      </section>
+      </div>
     </div>
   );
 }

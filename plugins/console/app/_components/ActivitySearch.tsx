@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useRef } from 'react';
-import styles from '../console.module.css';
+import { SearchBar } from './SearchBar';
 
 export function ActivitySearch({ total, initialQ }: { total: number; initialQ: string }) {
   const router = useRouter();
@@ -26,31 +26,12 @@ export function ActivitySearch({ total, initialQ }: { total: number; initialQ: s
   }
 
   return (
-    <div className={styles.activitySearchBar}>
-      <svg
-        className={styles.activitySearchIcon}
-        width="15"
-        height="15"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <circle cx="11" cy="11" r="8" />
-        <path d="m21 21-4.35-4.35" />
-      </svg>
-      <input
-        type="search"
-        placeholder="Search events or descriptions…"
-        defaultValue={initialQ}
-        onChange={handleChange}
-        className={styles.activitySearchInput}
-        aria-label="Search activity events"
-      />
-      <span className={styles.activitySearchCount}>{total} events</span>
-    </div>
+    <SearchBar
+      defaultValue={initialQ}
+      onChange={handleChange}
+      placeholder="Search events or descriptions…"
+      aria-label="Search activity events"
+      count={`${total} ${total === 1 ? 'event' : 'events'}`}
+    />
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { ConfirmDialog } from '@sovereignfs/ui';
+import { ConfirmDialog, Icon } from '@sovereignfs/ui';
 import { removePluginAction } from './remove-actions';
 import styles from '../console.module.css';
 
@@ -54,26 +54,10 @@ export function RemovePluginButton({
           type="button"
           className={className ?? styles.iconBtnDanger}
           onClick={() => setOpen(true)}
+          aria-label={`Remove ${pluginName}`}
           title={`Remove ${pluginName}`}
         >
-          {label ?? (
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-              <path d="M10 11v6M14 11v6" />
-              <path d="M9 6V4h6v2" />
-            </svg>
-          )}
+          {label ?? <Icon name="trash-2" size="sm" aria-hidden />}
         </button>
       )}
 

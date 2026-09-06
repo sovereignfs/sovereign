@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import {
   Badge,
   Button,
   ConfirmDialog,
+  Dialog,
   FormField,
   Icon,
   Input,
@@ -15,6 +15,8 @@ import {
 } from '@sovereignfs/ui';
 import { OAuthClientDetailPane } from './OAuthClientDetailPane';
 import { ConsoleDetailSlot } from '../_components/ConsoleDetailSlot';
+import { ConsolePageHeader } from '../_components/ConsolePageHeader';
+import { CopyIdButton } from '../_components/CopyIdButton';
 import styles from '../console.module.css';
 
 interface OAuthClientRow {
@@ -61,15 +63,119 @@ async function authFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return parsed as T;
 }
 
-export function OAuthClientsClient() {
+function ClientStatusBadge({ disabled, size = 'sm' }: { disabled?: boolean; size?: 'xs' | 'sm' }) {
+  return disabled ? (
+    <Badge variant="status" size={size} status="deactivated">
+      Revoked
+    </Badge>
+  ) : (
+    <Badge variant="status" size={size} status="active">
+      Active
+    </Badge>
+  );
+}
+
+/** "+ Register client" — the page's primary action, as a dialog like Users' Invite and Groups' New group. */
+function RegisterClientDialog({
+  onRegistered,
+}: {
+  onRegistered: (created: { client_id: string; client_secret?: string }) => void;
+}) {
   const toast = useToast();
-  const searchParams = useSearchParams();
-  const selectedClientId = searchParams.get('client');
-  const [clients, setClients] = useState<OAuthClientRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
   const [redirectUris, setRedirectUris] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleCreate(): Promise<void> {
+    if (redirectUris.length === 0) {
+      setError('At least one redirect URI is required.');
+      return;
+    }
+    setCreating(true);
+    setError(null);
+    try {
+      const created = await authFetch<{ client_id: string; client_secret?: string }>(
+        '/oauth2/register',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            client_name: name || undefined,
+            redirect_uris: redirectUris,
+            scope: DEFAULT_SCOPES,
+            type: 'web',
+          }),
+        },
+      );
+      setName('');
+      setRedirectUris([]);
+      setOpen(false);
+      toast.show({ title: 'Client registered', category: 'success' });
+      onRegistered(created);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not register the client.');
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  return (
+    <>
+      <Button type="button" variant="secondary" size="sm" onClick={() => setOpen(true)}>
+        + Register client
+      </Button>
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        size="sm"
+        title="Register external client"
+        footer={
+          <Button type="submit" form="register-client-form" disabled={creating}>
+            {creating ? 'Registering…' : 'Register client'}
+          </Button>
+        }
+      >
+        <form
+          id="register-client-form"
+          className={styles.inviteForm}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleCreate();
+          }}
+        >
+          {error && (
+            <p className={styles.errorText} role="status">
+              {error}
+            </p>
+          )}
+          <FormField label="Display name" id="oauth-client-name" hint="Shown on the consent screen">
+            {(field) => <Input {...field} value={name} onChange={(e) => setName(e.target.value)} />}
+          </FormField>
+          <FormField
+            label="Redirect URIs"
+            id="oauth-client-redirects"
+            hint="Exact match required at authorization time — no prefix or wildcard"
+          >
+            {(field) => (
+              <TagInput
+                {...field}
+                value={redirectUris}
+                onChange={setRedirectUris}
+                placeholder="https://your-app.example/auth/callback"
+              />
+            )}
+          </FormField>
+        </form>
+      </Dialog>
+    </>
+  );
+}
+
+export function OAuthClientsClient({ selectedClientId }: { selectedClientId: string | null }) {
+  const toast = useToast();
+  const [clients, setClients] = useState<OAuthClientRow[]>([]);
+  const [loading, setLoading] = useState(true);
   const [revealed, setRevealed] = useState<RevealedSecret | null>(null);
   const [confirm, setConfirm] = useState<PendingConfirm>(null);
   const [confirmPending, setConfirmPending] = useState(false);
@@ -99,47 +205,9 @@ export function OAuthClientsClient() {
     void refresh();
   }, [refresh]);
 
-  async function handleCreate(): Promise<void> {
-    if (redirectUris.length === 0) {
-      toast.show({ title: 'At least one redirect URI is required', category: 'error' });
-      return;
-    }
-    setCreating(true);
-    try {
-      const created = await authFetch<{ client_id: string; client_secret?: string }>(
-        '/oauth2/create-client',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            client_name: name || undefined,
-            redirect_uris: redirectUris,
-            scope: DEFAULT_SCOPES,
-            type: 'web',
-          }),
-        },
-      );
-      if (created.client_secret) {
-        setRevealed({ clientId: created.client_id, clientSecret: created.client_secret });
-      }
-      setName('');
-      setRedirectUris([]);
-      toast.show({ title: 'Client registered', category: 'success' });
-      await refresh();
-    } catch (error) {
-      toast.show({
-        title: 'Could not register client',
-        message: error instanceof Error ? error.message : undefined,
-        category: 'error',
-      });
-    } finally {
-      setCreating(false);
-    }
-  }
-
   /**
    * Rotate and revoke are both one-way (the old secret stops working; a
-   * revoked client is deleted), so each confirms first — the buttons used
-   * to fire immediately.
+   * revoked client is deleted), so each confirms first.
    */
   function askRotate(client: OAuthClientRow): void {
     setConfirm({
@@ -206,57 +274,61 @@ export function OAuthClientsClient() {
   }
 
   return (
-    <div className={styles.providerConfigStack}>
+    <div>
+      <ConsolePageHeader
+        title="External clients"
+        count={
+          loading ? undefined : `${clients.length} ${clients.length === 1 ? 'client' : 'clients'}`
+        }
+        action={
+          <RegisterClientDialog
+            onRegistered={(created) => {
+              if (created.client_secret) {
+                setRevealed({ clientId: created.client_id, clientSecret: created.client_secret });
+              }
+              void refresh();
+            }}
+          />
+        }
+        description="Let a standalone app on its own domain — not an app installed on this instance — offer “log in with Sovereign”. Client secrets are shown exactly once and stored hashed; they cannot be recovered later, only rotated."
+      />
+
       {revealed && (
-        <div role="alert" className={styles.providerConfigCard}>
-          <p className={styles.helpText}>
-            <strong>Client secret for {revealed.clientId}</strong> — shown once, copy it now. It
+        <div className={styles.successBox} role="alert">
+          <p>
+            Client secret for <strong>{revealed.clientId}</strong> — shown once, copy it now. It
             cannot be displayed again; if it&rsquo;s lost, rotate the secret instead.
           </p>
-          <code className={styles.codeInline}>{revealed.clientSecret}</code>
-          <div className={styles.providerConfigActions}>
-            <Button variant="secondary" size="sm" onClick={() => setRevealed(null)}>
-              Done, I&rsquo;ve copied it
-            </Button>
-          </div>
+          <p className={styles.tokenNote}>
+            <code className={styles.token}>{revealed.clientSecret}</code>{' '}
+            <CopyIdButton value={revealed.clientSecret} label="Copy client secret" />
+          </p>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className={styles.selfStart}
+            onClick={() => setRevealed(null)}
+          >
+            Done, I&rsquo;ve copied it
+          </Button>
         </div>
       )}
 
-      <div className={styles.providerConfigForm}>
-        <FormField label="Display name" id="oauth-client-name" hint="Shown on the consent screen">
-          {(field) => <Input {...field} value={name} onChange={(e) => setName(e.target.value)} />}
-        </FormField>
-        <FormField
-          label="Redirect URIs"
-          id="oauth-client-redirects"
-          hint="Exact match required at authorization time — no prefix or wildcard"
-        >
-          {(field) => (
-            <TagInput
-              {...field}
-              value={redirectUris}
-              onChange={setRedirectUris}
-              placeholder="https://your-app.example/auth/callback"
-            />
-          )}
-        </FormField>
-        <Button onClick={() => void handleCreate()} disabled={creating}>
-          {creating ? 'Registering…' : 'Register client'}
-        </Button>
-      </div>
-
-      <div className={styles.providerConfigCard}>
-        {loading ? (
-          <p className={styles.helpText}>Loading…</p>
-        ) : clients.length === 0 ? (
-          <p className={styles.helpText}>No external clients registered yet.</p>
-        ) : (
-          clients.map((client) => {
+      {loading ? (
+        <p className={styles.textMuted}>Loading…</p>
+      ) : clients.length === 0 ? (
+        <p className={styles.emptyTableMsg}>
+          No external clients registered yet. Register one to let an outside app sign users in.
+        </p>
+      ) : (
+        <ul className={[styles.cards, styles.cardsCapped].join(' ')}>
+          {clients.map((client) => {
             const isSelected = client.client_id === selectedClientId;
             return (
-              <div
+              <li
                 key={client.client_id}
-                className={[styles.providerConfigCard, isSelected ? styles.cardSelected : '']
+                className={[styles.card, isSelected ? styles.cardSelected : '']
                   .filter(Boolean)
                   .join(' ')}
               >
@@ -265,37 +337,30 @@ export function OAuthClientsClient() {
                   className={styles.cardLink}
                   aria-current={isSelected ? 'true' : undefined}
                 >
-                  <div className={styles.cardTitleRow}>
-                    <p className={styles.helpText}>
-                      <strong>{client.client_name ?? 'Unnamed client'}</strong>{' '}
-                      {client.disabled ? (
-                        <Badge variant="status" size="xs" status="deactivated">
-                          Revoked
-                        </Badge>
-                      ) : (
-                        <Badge variant="status" size="xs" status="active">
-                          Active
-                        </Badge>
-                      )}
-                    </p>
+                  <span className={styles.cardTitleRow}>
+                    <span className={styles.cardTitle}>
+                      {client.client_name ?? 'Unnamed client'}
+                    </span>
                     <Icon
                       name="chevron-right"
                       size="sm"
                       aria-hidden
                       className={[styles.textMuted, styles.cardChevron].join(' ')}
                     />
-                  </div>
-                  <p className={styles.helpText}>Client ID: {client.client_id}</p>
-                  <p className={styles.helpText}>
-                    Redirect URIs: {client.redirect_uris.join(', ')}
-                  </p>
+                  </span>
+                  <span className={styles.cardDesc}>{client.redirect_uris.join(', ')}</span>
+                  <span className={styles.userId} title={client.client_id}>
+                    {client.client_id}
+                  </span>
+                  <span className={styles.detailBadges}>
+                    <ClientStatusBadge disabled={client.disabled} size="xs" />
+                  </span>
                 </Link>
                 {/* Mobile-only fallback — `.cardManageMobile` is `display:
-                    contents` below the desktop breakpoint (see
-                    console.module.css) and `display: none` above it, since
-                    mobile has no detail column to select into. */}
+                    contents` below the desktop breakpoint and `display: none`
+                    above it, since mobile has no detail column to select into. */}
                 <span className={styles.cardManageMobile}>
-                  <div className={styles.providerConfigActions}>
+                  <span className={styles.rowActions}>
                     <Button variant="secondary" size="sm" onClick={() => askRotate(client)}>
                       Rotate secret
                     </Button>
@@ -307,13 +372,13 @@ export function OAuthClientsClient() {
                     >
                       Revoke
                     </Button>
-                  </div>
+                  </span>
                 </span>
-              </div>
+              </li>
             );
-          })
-        )}
-      </div>
+          })}
+        </ul>
+      )}
 
       {selectedClient && (
         <ConsoleDetailSlot detailKey={selectedClient.client_id} closeHref={closeHref}>

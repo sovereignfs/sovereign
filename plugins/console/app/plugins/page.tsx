@@ -7,6 +7,7 @@ import { getPluginCatalogAction } from './actions';
 import { PluginsTable, type PluginRow, type PluginStatus } from './PluginsTable';
 import { PluginDetailPane } from './PluginDetailPane';
 import { ConsoleDetailSlot } from '../_components/ConsoleDetailSlot';
+import { ConsolePageHeader } from '../_components/ConsolePageHeader';
 import styles from '../console.module.css';
 import { renderFetchSignal } from '../_lib/fetch-timeout';
 
@@ -126,6 +127,11 @@ export default async function PluginsPage({
 
   return (
     <div className={styles.sections}>
+      <ConsolePageHeader
+        title="Apps"
+        count={`${rows.length} ${rows.length === 1 ? 'app' : 'apps'}`}
+        description="Every app composed into this instance. Select a row to manage who can open it."
+      />
       <PluginsTable
         rows={rows}
         defaultShowExamples={examplesEnabled}

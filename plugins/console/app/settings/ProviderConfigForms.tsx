@@ -1,11 +1,12 @@
 'use client';
 
-import { useActionState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button, FormField, Input, useToast } from '@sovereignfs/ui';
+import { useActionState, useState } from 'react';
+import { Badge, Button, ConfirmDialog, FormField, Input } from '@sovereignfs/ui';
+import { ActionFeedback } from '../_components/ActionFeedback';
+import { CopyIdButton } from '../_components/CopyIdButton';
+import { useSaveResult } from '../_lib/use-save-result';
 import styles from '../console.module.css';
 import {
-  type ActionResult,
   deleteProviderConfigAction,
   saveProviderConfigAction,
   testProviderConfigAction,
@@ -39,24 +40,27 @@ export interface ProviderConfigRow {
   missingRequired: readonly string[];
 }
 
-function Feedback({ result }: { result: ActionResult | null }) {
-  if (!result || result.ok) return null;
-  return (
-    <p className={styles.feedbackError} role="status" aria-live="polite">
-      {result.error}
-    </p>
-  );
-}
-
-function useActionToast(result: ActionResult | null) {
-  const router = useRouter();
-  const toast = useToast();
-  useEffect(() => {
-    if (result?.ok) {
-      toast.show({ title: result.message, category: 'success' });
-      router.refresh();
-    }
-  }, [result, router, toast]);
+function ProviderStatusBadge({ status }: { status: ProviderConfigRow['status'] }) {
+  switch (status) {
+    case 'configured':
+      return (
+        <Badge variant="status" size="sm" status="active">
+          Configured
+        </Badge>
+      );
+    case 'error':
+      return (
+        <Badge variant="status" size="sm" status="failed">
+          Error
+        </Badge>
+      );
+    case 'missing':
+      return (
+        <Badge variant="status" size="sm" status="neutral">
+          Not configured
+        </Badge>
+      );
+  }
 }
 
 function ProviderConfigCard({ provider }: { provider: ProviderConfigRow }) {
@@ -66,37 +70,34 @@ function ProviderConfigCard({ provider }: { provider: ProviderConfigRow }) {
     deleteProviderConfigAction,
     null,
   );
-  useActionToast(saveState);
-  useActionToast(testState);
-  useActionToast(deleteState);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  useSaveResult(saveState);
+  useSaveResult(testState);
+  useSaveResult(deleteState);
 
   return (
     <div className={styles.providerConfigCard}>
       <div className={styles.providerConfigHeader}>
         <div>
-          <h3 className={styles.providerConfigTitle}>{provider.label}</h3>
+          <h4 className={styles.providerConfigTitle}>{provider.label}</h4>
           <p className={styles.helpText}>
             {provider.pluginName} <code className={styles.codeInline}>{provider.pluginId}</code>
           </p>
         </div>
-        <span className={styles.providerConfigStatus}>{provider.status}</span>
+        <ProviderStatusBadge status={provider.status} />
       </div>
 
       <form action={saveAction} className={styles.providerConfigForm}>
         <input type="hidden" name="pluginId" value={provider.pluginId} />
         <input type="hidden" name="provider" value={provider.provider} />
         {provider.callbackUrl && (
-          <FormField label="Callback URL" id={`${provider.pluginId}-${provider.provider}-callback`}>
-            {(field) => (
-              <Input
-                {...field}
-                name="callbackUrl"
-                type="url"
-                defaultValue={provider.callbackUrl ?? ''}
-                readOnly
-              />
-            )}
-          </FormField>
+          <div className={styles.fieldStack}>
+            <span className={styles.helpText}>Callback URL — register this with the provider:</span>
+            <span className={styles.userIdRow}>
+              <code className={styles.codeInline}>{provider.callbackUrl}</code>
+              <CopyIdButton value={provider.callbackUrl} label="Copy callback URL" />
+            </span>
+          </div>
         )}
 
         {provider.publicFields.map((field) => (
@@ -131,7 +132,7 @@ function ProviderConfigCard({ provider }: { provider: ProviderConfigRow }) {
                 {...input}
                 name={`secret:${field.key}`}
                 type="password"
-                placeholder={provider.hasSecretValues ? 'Stored' : ''}
+                placeholder={provider.hasSecretValues ? 'Stored — leave blank to keep' : ''}
                 autoComplete="new-password"
               />
             )}
@@ -142,52 +143,76 @@ function ProviderConfigCard({ provider }: { provider: ProviderConfigRow }) {
           <p className={styles.helpText}>Scopes: {provider.scopes.join(', ')}</p>
         )}
         {provider.missingRequired.length > 0 && (
-          <p className={styles.feedbackError}>
+          <p className={styles.feedbackError} role="status">
             Missing required fields: {provider.missingRequired.join(', ')}
           </p>
         )}
-        {provider.lastError && <p className={styles.feedbackError}>{provider.lastError}</p>}
-        <Feedback result={saveState} />
-        <div className={styles.providerConfigActions}>
+        {provider.lastError && (
+          <p className={styles.feedbackError} role="status">
+            {provider.lastError}
+          </p>
+        )}
+        <ActionFeedback result={saveState} />
+        <div className={styles.rowActions}>
           <Button type="submit" size="sm" disabled={savePending}>
-            {savePending ? 'Saving...' : 'Save'}
+            {savePending ? 'Saving…' : 'Save'}
           </Button>
         </div>
       </form>
 
-      <div className={styles.providerConfigActions}>
-        <form action={testAction}>
-          <input type="hidden" name="id" value={provider.id ?? ''} />
+      <div className={styles.fieldStack}>
+        <div className={styles.rowActions}>
+          <form action={testAction}>
+            <input type="hidden" name="id" value={provider.id ?? ''} />
+            <Button
+              type="submit"
+              size="sm"
+              variant="secondary"
+              disabled={testPending || !provider.id}
+            >
+              {testPending ? 'Testing…' : 'Test connection'}
+            </Button>
+          </form>
           <Button
-            type="submit"
-            size="sm"
-            variant="secondary"
-            disabled={testPending || !provider.id}
-          >
-            {testPending ? 'Testing...' : 'Test'}
-          </Button>
-          <Feedback result={testState} />
-        </form>
-        <form action={deleteAction}>
-          <input type="hidden" name="id" value={provider.id ?? ''} />
-          <Button
-            type="submit"
+            type="button"
             size="sm"
             variant="destructive"
             disabled={deletePending || !provider.id}
+            onClick={() => setConfirmRemove(true)}
           >
-            {deletePending ? 'Removing...' : 'Remove'}
+            {deletePending ? 'Removing…' : 'Remove'}
           </Button>
-          <Feedback result={deleteState} />
-        </form>
+        </div>
+        <ActionFeedback result={testState} />
+        <ActionFeedback result={deleteState} />
       </div>
+
+      <form action={deleteAction} id={`remove-provider-${provider.pluginId}-${provider.provider}`}>
+        <input type="hidden" name="id" value={provider.id ?? ''} />
+      </form>
+      <ConfirmDialog
+        open={confirmRemove}
+        onClose={() => setConfirmRemove(false)}
+        title={`Remove ${provider.label} configuration?`}
+        message="The saved values (including any secrets) are deleted from this instance. The app falls back to environment variables, or stops working if none are set."
+        confirmLabel="Remove"
+        destructive
+        onConfirm={() => {
+          setConfirmRemove(false);
+          (
+            document.getElementById(
+              `remove-provider-${provider.pluginId}-${provider.provider}`,
+            ) as HTMLFormElement | null
+          )?.requestSubmit();
+        }}
+      />
     </div>
   );
 }
 
 export function ProviderConfigsSection({ providers }: { providers: ProviderConfigRow[] }) {
   if (providers.length === 0) {
-    return <p className={styles.helpText}>No installed apps declare configurable providers.</p>;
+    return <p className={styles.textMuted}>No installed apps declare configurable providers.</p>;
   }
   return (
     <div className={styles.providerConfigGrid}>

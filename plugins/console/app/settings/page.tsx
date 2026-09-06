@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { sdk } from '@sovereignfs/sdk';
+import { Badge } from '@sovereignfs/ui';
+import { ConsolePageHeader } from '../_components/ConsolePageHeader';
 import styles from '../console.module.css';
 import { ProviderConfigsSection, type ProviderConfigRow } from './ProviderConfigForms';
 import { AtRestEncryptionOverview, type AtRestEncryptionView } from './AtRestEncryptionOverview';
@@ -80,6 +82,50 @@ function settled<T>(result: PromiseSettledResult<T>, fallback: T): T {
   return result.status === 'fulfilled' ? result.value : fallback;
 }
 
+function ConnectionStatusBadge({ status }: { status: ExternalConnection['status'] }) {
+  switch (status) {
+    case 'connected':
+      return (
+        <Badge variant="status" size="sm" status="active">
+          Connected
+        </Badge>
+      );
+    case 'needs_reauth':
+      return (
+        <Badge variant="status" size="sm" status="pending">
+          Needs re-authorisation
+        </Badge>
+      );
+    case 'paused':
+      return (
+        <Badge variant="status" size="sm" status="neutral">
+          Paused
+        </Badge>
+      );
+    case 'disconnected':
+      return (
+        <Badge variant="status" size="sm" status="deactivated">
+          Disconnected
+        </Badge>
+      );
+    case 'error':
+      return (
+        <Badge variant="status" size="sm" status="failed">
+          Error
+        </Badge>
+      );
+  }
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className={styles.overviewSection}>
+      <h3 className={styles.overviewSectionTitle}>{title}</h3>
+      {children}
+    </div>
+  );
+}
+
 export default async function SettingsPage() {
   const [settingsResult, pluginsResult] = await Promise.allSettled([
     adminGet<Settings>('/api/admin/settings'),
@@ -102,112 +148,90 @@ export default async function SettingsPage() {
   const rootInstalled = rootCandidates.some((p) => p.id === settings.rootPluginId);
 
   return (
-    <div className={styles.sections}>
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Tenant</h2>
-        <TenantForm initialName={settings.tenantName} />
-      </section>
+    <div>
+      <ConsolePageHeader
+        title="Settings"
+        description="Instance-wide configuration: registration, the root app, email, push, retention and encryption status."
+      />
 
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Registration</h2>
+      <Section title="Instance name">
+        <TenantForm initialName={settings.tenantName} />
+      </Section>
+
+      <Section title="Registration">
         <InviteOnlyForm initialValue={settings.inviteOnly} />
-      </section>
+      </Section>
 
       {settings.hasExamplePlugins && (
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Example apps</h2>
+        <Section title="Example apps">
           <ExampleAppsForm initialValue={settings.examplesEnabled} />
-        </section>
+        </Section>
       )}
 
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Root app</h2>
+      <Section title="Root app">
         <RootPluginForm
           candidates={rootCandidates.map((p) => ({ id: p.id, name: p.name }))}
           currentId={settings.rootPluginId}
           currentInstalled={rootInstalled}
         />
         <p className={styles.helpText}>
-          Current setting: <code className={styles.codeInline}>{settings.rootPluginId}</code>
+          Currently serving <code className={styles.codeInline}>{settings.rootPluginId}</code> at{' '}
+          <code className={styles.codeInline}>/</code>.
         </p>
-      </section>
+      </Section>
 
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>At-rest encryption</h2>
+      <Section title="At-rest encryption">
         <AtRestEncryptionOverview view={settings.atRestEncryption} />
-        <h3 className={styles.sectionTitle}>Field encryption</h3>
         <FieldEncryptionStatus view={settings.fieldEncryption} />
-      </section>
+      </Section>
 
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>External connections</h2>
-        {connections.length === 0 && (
-          <p className={styles.helpText}>No app-owned external connections are registered.</p>
+      <Section title="External connections">
+        {connections.length === 0 ? (
+          <p className={styles.textMuted}>No app-owned external connections are registered.</p>
+        ) : (
+          <ul className={styles.compactList}>
+            {connections.map((conn) => (
+              <li key={conn.id} className={styles.compactRow}>
+                <span className={styles.compactRowLabel}>
+                  <span className={styles.compactRowTitle}>
+                    {conn.label} · {conn.provider}
+                  </span>
+                  <span className={styles.compactRowSubtitle}>
+                    <code className={styles.codeInline}>{conn.pluginId}</code> · {conn.scope}
+                    {conn.userId ? ` · ${conn.userId}` : ''} · updated{' '}
+                    {new Date(conn.updatedAt * 1000).toLocaleString()}
+                  </span>
+                </span>
+                <ConnectionStatusBadge status={conn.status} />
+              </li>
+            ))}
+          </ul>
         )}
-        {connections.length > 0 && (
-          <div className={styles.tableCard}>
-            <div className={styles.tableWrapper}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Label</th>
-                    <th>App</th>
-                    <th>Provider</th>
-                    <th>Scope</th>
-                    <th>User</th>
-                    <th>Status</th>
-                    <th>Updated</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {connections.map((conn) => (
-                    <tr key={conn.id}>
-                      <td>{conn.label}</td>
-                      <td>
-                        <code className={styles.codeInline}>{conn.pluginId}</code>
-                      </td>
-                      <td>{conn.provider}</td>
-                      <td>{conn.scope}</td>
-                      <td>{conn.userId ?? '-'}</td>
-                      <td>{conn.status}</td>
-                      <td>{new Date(conn.updatedAt * 1000).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </section>
+      </Section>
 
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>External provider configuration</h2>
+      <Section title="External provider configuration">
         <ProviderConfigsSection providers={providerConfigs} />
-      </section>
+      </Section>
 
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Email delivery (SMTP)</h2>
+      <Section title="Email delivery (SMTP)">
         <SmtpSettingsForm smtp={settings.smtp} canEdit={canConfigureSecrets} />
-      </section>
+      </Section>
 
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Email templates</h2>
-        <p className={styles.helpText}>
+      <Section title="Email templates">
+        <p className={styles.lede}>
           Override the subject and body copy for transactional email, per locale. Branding (sender
-          name, logo) is set on the <Link href="/console/identity">Instance identity</Link> page.
+          name, logo) is set on the <Link href="/console/identity">Identity</Link> page.
         </p>
         <EmailTemplatesForm />
-      </section>
+      </Section>
 
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Native mobile push relay</h2>
+      <Section title="Native mobile push relay">
         <PushRelaySettingsForm pushRelay={settings.pushRelay} />
-      </section>
+      </Section>
 
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Data retention</h2>
+      <Section title="Data retention">
         <RetentionSettingsForm retention={settings.retention} />
-      </section>
+      </Section>
     </div>
   );
 }

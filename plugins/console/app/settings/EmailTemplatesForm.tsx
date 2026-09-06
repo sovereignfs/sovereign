@@ -1,11 +1,11 @@
 'use client';
 
 import { useActionState, useEffect, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button, FormField, Input, Select, Textarea, useToast } from '@sovereignfs/ui';
+import { Button, FormField, Input, Select, Textarea } from '@sovereignfs/ui';
+import { ActionFeedback } from '../_components/ActionFeedback';
+import { useSaveResult } from '../_lib/use-save-result';
 import styles from '../console.module.css';
 import {
-  type ActionResult,
   getEmailTemplateCopyAction,
   saveEmailTemplateCopyAction,
   testSendEmailTemplateAction,
@@ -59,26 +59,6 @@ const FIELDS_BY_TEMPLATE: Record<EmailTemplateId, Array<{ key: string; label: st
   ],
 };
 
-function Feedback({ result }: { result: ActionResult | null }) {
-  if (!result || result.ok) return null;
-  return (
-    <p className={styles.feedbackError} role="status" aria-live="polite">
-      {result.error}
-    </p>
-  );
-}
-
-function useActionToast(result: ActionResult | null) {
-  const router = useRouter();
-  const toast = useToast();
-  useEffect(() => {
-    if (result?.ok) {
-      toast.show({ title: result.message, category: 'success' });
-      router.refresh();
-    }
-  }, [result, router, toast]);
-}
-
 export function EmailTemplatesForm() {
   const [templateId, setTemplateId] = useState<EmailTemplateId>('passwordReset');
   const [locale, setLocale] = useState('en');
@@ -88,8 +68,8 @@ export function EmailTemplatesForm() {
 
   const [saveState, saveAction, savePending] = useActionState(saveEmailTemplateCopyAction, null);
   const [testState, testAction, testPending] = useActionState(testSendEmailTemplateAction, null);
-  useActionToast(saveState);
-  useActionToast(testState);
+  useSaveResult(saveState);
+  useSaveResult(testState);
 
   useEffect(() => {
     startLoading(async () => {
@@ -108,8 +88,8 @@ export function EmailTemplatesForm() {
   const previewUrl = `/api/admin/email-templates/preview?templateId=${encodeURIComponent(templateId)}&locale=${encodeURIComponent(locale)}`;
 
   return (
-    <div className={styles.providerConfigCard}>
-      <div className={styles.providerConfigForm}>
+    <div className={styles.fieldStack}>
+      <div className={styles.settingsForm}>
         <FormField label="Template" id="email-template-select">
           {(field) => (
             <Select
@@ -147,9 +127,9 @@ export function EmailTemplatesForm() {
       </div>
 
       {loading ? (
-        <p className={styles.helpText}>Loading current copy…</p>
+        <p className={styles.textMuted}>Loading current copy…</p>
       ) : (
-        <form action={saveAction} className={styles.providerConfigForm}>
+        <form action={saveAction} className={styles.settingsForm}>
           <input type="hidden" name="templateId" value={templateId} />
           <input type="hidden" name="locale" value={locale} />
           {fields.map((f) =>
@@ -177,38 +157,33 @@ export function EmailTemplatesForm() {
             Use <code className={styles.codeInline}>{'{{brandName}}'}</code> to insert the
             instance&apos;s email sender name (set on the Identity page).
           </p>
-          <Feedback result={saveState} />
-          <div className={styles.providerConfigActions}>
-            <Button type="submit" size="sm" disabled={savePending}>
-              {savePending ? 'Saving...' : 'Save'}
-            </Button>
-          </div>
+          <ActionFeedback result={saveState} />
+          <Button type="submit" size="sm" disabled={savePending}>
+            {savePending ? 'Saving…' : 'Save'}
+          </Button>
         </form>
       )}
 
-      <div>
-        <p className={styles.helpText}>Preview (reflects the last saved copy):</p>
+      <div className={styles.fieldStack}>
+        <span className={styles.helpText}>Preview (reflects the last saved copy):</span>
         <iframe
           key={previewKey}
           src={previewUrl}
           title="Email preview"
           sandbox=""
-          style={{
-            width: '100%',
-            height: 500,
-            border: '1px solid var(--sv-color-border)',
-            borderRadius: 'var(--sv-radius-md)',
-          }}
+          className={styles.emailPreviewFrame}
         />
       </div>
 
-      <form action={testAction}>
+      <form action={testAction} className={styles.fieldStack}>
         <input type="hidden" name="templateId" value={templateId} />
         <input type="hidden" name="locale" value={locale} />
-        <Button type="submit" size="sm" variant="secondary" disabled={testPending}>
-          {testPending ? 'Sending...' : 'Send test email to myself'}
-        </Button>
-        <Feedback result={testState} />
+        <div className={styles.rowActions}>
+          <Button type="submit" size="sm" variant="secondary" disabled={testPending}>
+            {testPending ? 'Sending…' : 'Send test email to myself'}
+          </Button>
+        </div>
+        <ActionFeedback result={testState} />
       </form>
     </div>
   );

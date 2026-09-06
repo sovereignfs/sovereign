@@ -41,6 +41,13 @@ updates:
         update-types: ['version-update:semver-major']
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
+      # better-sqlite3-multiple-ciphers 13 dropped the type declarations v12
+      # shipped (packages/db typecheck + dts build fail). It is a native addon
+      # whose only consumers are the one-time legacy migration readers and the
+      # backup CLI — low value, real ABI risk; take it deliberately (2026-09-06
+      # triage, #643).
+      - dependency-name: 'better-sqlite3-multiple-ciphers'
+        update-types: ['version-update:semver-major']
     groups:
       # better-auth minors change persisted schema and the signed session
       # cookie-cache format the runtime middleware verifies offline (1.6→1.7
@@ -50,6 +57,15 @@ updates:
         patterns:
           - 'better-auth'
           - '@better-auth/*'
+      # Next.js patches change framework behavior the SDK depends on — 15.5.25
+      # changed what `headers()` does outside a request scope, which the
+      # sdk.storage/sdk.env/sdk.db background-invocation fallbacks catch —
+      # so a Next bump gets its own PR and its own verification, never the
+      # routine batch (2026-09-06 triage, #642).
+      next:
+        patterns:
+          - 'next'
+          - '@next/*'
       # Batch routine patch/minor bumps into fewer PRs; a major bump always
       # gets its own PR regardless of grouping, since it may be breaking.
       minor-and-patch:
@@ -59,6 +75,8 @@ updates:
         exclude-patterns:
           - 'better-auth'
           - '@better-auth/*'
+          - 'next'
+          - '@next/*'
 
   # Workflow action versions (actions/checkout@vN, etc.) — separate ecosystem,
   # same weekly cadence.

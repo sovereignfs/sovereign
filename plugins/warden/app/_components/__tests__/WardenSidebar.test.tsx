@@ -235,12 +235,10 @@ describe('WardenSidebar — collapse control', () => {
   });
 
   it('renders a collapse button that hides the sidebar when inside the shell', () => {
-    // The shell starts collapsed and reads the stored preference in an
-    // effect; `'0'` is the "user expanded it before" value.
-    window.localStorage.setItem('warden:sidebarCollapsed', '0');
     render(
       <ToastProvider>
         <WardenLayoutShell
+          initialCollapsed={false}
           sidebar={<WardenSidebar pinnedSessions={[]} recentSessions={[]} orderedSessionIds={[]} />}
         >
           <p>Main</p>

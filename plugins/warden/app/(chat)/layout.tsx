@@ -1,5 +1,7 @@
 import { Suspense } from 'react';
 import type { ReactNode } from 'react';
+import { cookies } from 'next/headers';
+import { isSidebarCollapsed, SIDEBAR_COOKIE_NAME } from '../_lib/sidebar-preference';
 import { WardenLayoutShell } from '../_components/WardenLayoutShell';
 import { WardenSidebar } from '../_components/WardenSidebar';
 import { WardenSidebarLoader } from '../_components/WardenSidebarLoader';
@@ -19,7 +21,8 @@ import styles from '../warden.module.css';
  * A layout is preserved across navigations between the routes it wraps, so
  * now only the chat column swaps and the sidebar never even re-renders.
  *
- * **This layout awaits nothing.** A `loading.tsx` only ever wraps the page
+ * **This layout awaits nothing that does I/O.** (`cookies()` below reads the
+ * already-parsed request — no round trip.) A `loading.tsx` only ever wraps the page
  * *below* its own segment's layout, so any `await` here blocks the whole
  * route — shell, sidebar and spinner alike — from painting at all. That is
  * exactly what happened when this layout resolved the session list and a
@@ -38,10 +41,17 @@ import styles from '../warden.module.css';
  * resolved here; `WardenSidebar` derives it client-side from the URL via
  * the shared `resolveActiveSessionId` rule.
  */
-export default function WardenChatLayout({ children }: { children: ReactNode }) {
+export default async function WardenChatLayout({ children }: { children: ReactNode }) {
+  // The sidebar's collapsed/expanded preference, so the first paint is
+  // already in the right state instead of jumping after hydration — see
+  // `sidebar-preference.ts`.
+  const jar = await cookies();
+  const initialCollapsed = isSidebarCollapsed(jar.get(SIDEBAR_COOKIE_NAME)?.value);
+
   return (
     <div className={styles.page} data-plugin-fullbleed>
       <WardenLayoutShell
+        initialCollapsed={initialCollapsed}
         sidebar={
           <Suspense
             fallback={

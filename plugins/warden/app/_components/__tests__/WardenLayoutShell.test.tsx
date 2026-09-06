@@ -3,8 +3,20 @@ import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { WardenLayoutShell, useWardenShell } from '../WardenLayoutShell';
+import { LEGACY_SIDEBAR_STORAGE_KEY, SIDEBAR_COOKIE_NAME } from '../../_lib/sidebar-preference';
 
-const COLLAPSE_STORAGE_KEY = 'warden:sidebarCollapsed';
+function cookieValue(): string | undefined {
+  return document.cookie
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${SIDEBAR_COOKIE_NAME}=`))
+    ?.slice(SIDEBAR_COOKIE_NAME.length + 1);
+}
+
+function clearCookie() {
+  document.cookie = `${SIDEBAR_COOKIE_NAME}=; Path=/warden; Max-Age=0`;
+  document.cookie = `${SIDEBAR_COOKIE_NAME}=; Max-Age=0`;
+}
 
 /**
  * Stands in for `WardenSidebar`, which is the real consumer of the collapse
@@ -24,15 +36,20 @@ function TestSidebar() {
 
 beforeEach(() => {
   window.localStorage.clear();
+  clearCookie();
+  // jsdom's location is `http://localhost/`, whose path is not `/warden`, so
+  // a `Path=/warden` cookie would never be sent back — write with the
+  // document's own path instead so the round trip can be observed.
+  window.history.replaceState(null, '', '/warden');
 });
 
 afterEach(() => {
   cleanup();
 });
 
-function renderShell() {
+function renderShell(initialCollapsed?: boolean) {
   return render(
-    <WardenLayoutShell sidebar={<TestSidebar />}>
+    <WardenLayoutShell sidebar={<TestSidebar />} initialCollapsed={initialCollapsed}>
       <p>Main content</p>
     </WardenLayoutShell>,
   );
@@ -68,14 +85,26 @@ describe('WardenLayoutShell', () => {
     expect(screen.getByRole('button', { name: 'Collapse from sidebar' })).toBeDefined();
   });
 
-  it('persists the expanded state to localStorage and restores it on remount', () => {
-    const { unmount } = renderShell();
-    fireEvent.click(screen.getByRole('button', { name: 'Show sessions sidebar' }));
-    expect(window.localStorage.getItem(COLLAPSE_STORAGE_KEY)).toBe('0');
-    unmount();
-
+  it('persists the expanded state to the preference cookie', () => {
     renderShell();
+    fireEvent.click(screen.getByRole('button', { name: 'Show sessions sidebar' }));
+    expect(cookieValue()).toBe('0');
+  });
+
+  it('renders expanded on the first paint when the server read the cookie', () => {
+    // No effect-driven flip: the server layout hands the stored preference in,
+    // so a user who keeps the sidebar open never sees the full-width flash.
+    renderShell(false);
     expect(querySidebar()).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'Show sessions sidebar' })).toBeNull();
+  });
+
+  it('migrates a legacy localStorage preference into the cookie once', () => {
+    window.localStorage.setItem(LEGACY_SIDEBAR_STORAGE_KEY, '0');
+    renderShell(true);
+    expect(querySidebar()).not.toBeNull();
+    expect(cookieValue()).toBe('0');
+    expect(window.localStorage.getItem(LEGACY_SIDEBAR_STORAGE_KEY)).toBeNull();
   });
 
   it('collapsing from within the sidebar hides it again and restores the main-column toggle', () => {
@@ -84,7 +113,7 @@ describe('WardenLayoutShell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Collapse from sidebar' }));
 
     expect(querySidebar()).toBeNull();
-    expect(window.localStorage.getItem(COLLAPSE_STORAGE_KEY)).toBe('1');
+    expect(cookieValue()).toBe('1');
     expect(screen.getByRole('button', { name: 'Show sessions sidebar' })).toBeDefined();
   });
 

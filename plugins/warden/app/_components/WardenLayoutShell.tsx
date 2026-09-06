@@ -5,9 +5,8 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Button, Icon, ThreeColumnLayout } from '@sovereignfs/ui';
 import { NEW_CHAT_PATHNAME } from '../_lib/active-session';
+import { LEGACY_SIDEBAR_STORAGE_KEY, sidebarCookieString } from '../_lib/sidebar-preference';
 import styles from './warden-layout-shell.module.css';
-
-const COLLAPSE_STORAGE_KEY = 'warden:sidebarCollapsed';
 
 interface WardenShellContextValue {
   collapsed: boolean;
@@ -31,13 +30,14 @@ export function useWardenShell(): WardenShellContextValue | null {
 /**
  * Wraps Warden's chat page in a collapsible two-column layout (RFC 0063
  * §10, epic task 22.10): `sidebar` (session list) + `children` (the chat
- * itself). Collapsed state persists to `localStorage` — initialized to
- * `true` (hidden by default; a first-time visitor gets the full-width chat,
- * not a sidebar they didn't ask for) and read for real in `useEffect`, never
- * in the `useState` initializer or render, per this repo's hydration-mismatch
- * rule for client components reading browser globals. An explicit `'0'`
- * (the user expanded it before) is the only thing that overrides the
- * collapsed default.
+ * itself). Collapsed state persists in a cookie (`sidebar-preference.ts`)
+ * that the `(chat)` layout reads server-side and passes in as
+ * `initialCollapsed`, so the first paint is already in the right state. It
+ * used to live in `localStorage`, read in a `useEffect` after hydration —
+ * which meant every full load for a user with the sidebar open first drew
+ * the chat full-width and then jumped to make room. No browser global is
+ * read during render (this repo's hydration-mismatch rule); the one-time
+ * migration of a legacy `localStorage` value runs in an effect.
  *
  * The collapse toggle relocates with visibility: collapsed, it lives in the
  * main column (the only place left to put it, since there's no sidebar to
@@ -64,20 +64,43 @@ export function useWardenShell(): WardenShellContextValue | null {
 export function WardenLayoutShell({
   sidebar,
   children,
+  initialCollapsed = true,
 }: {
   sidebar: ReactNode;
   children: ReactNode;
+  /** Read from the preference cookie by the server layout. Defaults to
+   *  collapsed for a visitor with no stored preference. */
+  initialCollapsed?: boolean;
 }) {
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(initialCollapsed);
 
+  function persist(next: boolean) {
+    document.cookie = sidebarCookieString(next, window.location.protocol === 'https:');
+  }
+
+  // One-time migration: a user who expanded the sidebar before the
+  // preference moved into a cookie has `'0'` in localStorage and no cookie
+  // yet. Honour it once, write the cookie, and drop the old key so this
+  // never runs again for them.
   useEffect(() => {
-    setCollapsed(window.localStorage.getItem(COLLAPSE_STORAGE_KEY) !== '0');
-  }, []);
+    let legacy: string | null = null;
+    try {
+      legacy = window.localStorage.getItem(LEGACY_SIDEBAR_STORAGE_KEY);
+    } catch {
+      return;
+    }
+    if (legacy === null) return;
+    window.localStorage.removeItem(LEGACY_SIDEBAR_STORAGE_KEY);
+    if (legacy === '0' && initialCollapsed) {
+      setCollapsed(false);
+      persist(false);
+    }
+  }, [initialCollapsed]);
 
   function toggle() {
     setCollapsed((previous) => {
       const next = !previous;
-      window.localStorage.setItem(COLLAPSE_STORAGE_KEY, next ? '1' : '0');
+      persist(next);
       return next;
     });
   }

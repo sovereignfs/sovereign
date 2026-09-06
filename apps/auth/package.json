@@ -14,7 +14,7 @@
     "@better-auth/passkey": "~1.6.30",
     "@libsql/client": "^0.15.0",
     "@libsql/kysely-libsql": "^0.4.1",
-    "@next/env": "^16.2.12",
+    "@next/env": "^16.3.4",
     "@sovereignfs/mailer": "workspace:*",
     "@sovereignfs/ui": "workspace:*",
     "better-auth": "~1.6.30",

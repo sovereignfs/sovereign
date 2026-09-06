@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   backupTagFor,
   fetchBackupBlob,
+  gitChildEnv,
   listBackupTags,
   parseBackupTag,
   pushBackupToGit,
@@ -23,10 +24,26 @@ import {
 let workDir: string;
 let bareRepoPath: string;
 
+/**
+ * Every git this file spawns goes through the same environment scrub the
+ * module under test uses. Without it, a `GIT_DIR` inherited from a git hook
+ * (a `pre-push` hook in a linked worktree exports one) makes `git init --bare
+ * <tmp>` re-initialize the *real* repository as bare and every later command
+ * here operate on it — which is exactly how this suite once committed its
+ * fixtures onto the branch being pushed. See `GIT_REPOSITORY_ENV_VARS`.
+ */
+function execGit(args: string[]): Buffer;
+function execGit(args: string[], options: { encoding: 'utf8' }): string;
+function execGit(args: string[], options?: { encoding: 'utf8' }): string | Buffer {
+  return options
+    ? execFileSync('git', args, { encoding: options.encoding, env: gitChildEnv() })
+    : execFileSync('git', args, { env: gitChildEnv() });
+}
+
 beforeEach(() => {
   workDir = mkdtempSync(join(tmpdir(), 'sv-git-backup-test-'));
   bareRepoPath = join(workDir, 'remote.git');
-  execFileSync('git', ['init', '--bare', '--quiet', bareRepoPath]);
+  execGit(['init', '--bare', '--quiet', bareRepoPath]);
 });
 
 afterEach(() => {
@@ -34,12 +51,12 @@ afterEach(() => {
 });
 
 function tagsInBareRepo(): string[] {
-  const out = execFileSync('git', ['-C', bareRepoPath, 'tag', '--list'], { encoding: 'utf8' });
+  const out = execGit(['-C', bareRepoPath, 'tag', '--list'], { encoding: 'utf8' });
   return out.split('\n').filter(Boolean);
 }
 
 function catFileFromTag(tag: string, path: string): string {
-  return execFileSync('git', ['-C', bareRepoPath, 'show', `${tag}:${path}`], {
+  return execGit(['-C', bareRepoPath, 'show', `${tag}:${path}`], {
     encoding: 'utf8',
   });
 }
@@ -70,25 +87,18 @@ describe('pushBackupToGit', () => {
     expect(tagsInBareRepo()).toEqual([result.tag]);
 
     // Orphan: the pushed commit has no parents.
-    const parents = execFileSync(
-      'git',
-      ['-C', bareRepoPath, 'log', '--format=%P', '-n', '1', result.tag],
-      { encoding: 'utf8' },
-    ).trim();
+    const parents = execGit(['-C', bareRepoPath, 'log', '--format=%P', '-n', '1', result.tag], {
+      encoding: 'utf8',
+    }).trim();
     expect(parents).toBe('');
 
-    const commitSha = execFileSync('git', ['-C', bareRepoPath, 'rev-list', '-n', '1', result.tag], {
+    const commitSha = execGit(['-C', bareRepoPath, 'rev-list', '-n', '1', result.tag], {
       encoding: 'utf8',
     }).trim();
     expect(commitSha).toBe(result.commitSha);
 
     // The payload lands byte-for-byte, and the manifest is real, readable JSON.
-    const payloadOut = execFileSync('git', [
-      '-C',
-      bareRepoPath,
-      'show',
-      `${result.tag}:backup.age`,
-    ]);
+    const payloadOut = execGit(['-C', bareRepoPath, 'show', `${result.tag}:backup.age`]);
     expect(Buffer.from(payloadOut).equals(payload)).toBe(true);
     const manifest = JSON.parse(catFileFromTag(result.tag, 'manifest.json')) as {
       platformVersion: string;
@@ -208,8 +218,8 @@ describe('listBackupTags', () => {
   it('silently skips a tag that does not match the sv-backup shape', async () => {
     const workRepo = mkdtempSync(join(tmpdir(), 'sv-git-seed-'));
     try {
-      execFileSync('git', ['clone', '--quiet', bareRepoPath, workRepo]);
-      execFileSync('git', [
+      execGit(['clone', '--quiet', bareRepoPath, workRepo]);
+      execGit([
         '-C',
         workRepo,
         '-c',
@@ -223,8 +233,8 @@ describe('listBackupTags', () => {
         '-m',
         'seed',
       ]);
-      execFileSync('git', ['-C', workRepo, 'tag', 'not-a-backup-tag']);
-      execFileSync('git', ['-C', workRepo, 'push', '--quiet', 'origin', '--tags']);
+      execGit(['-C', workRepo, 'tag', 'not-a-backup-tag']);
+      execGit(['-C', workRepo, 'push', '--quiet', 'origin', '--tags']);
     } finally {
       rmSync(workRepo, { recursive: true, force: true });
     }
@@ -289,3 +299,60 @@ function readTmpEntries(): string[] {
     return [];
   }
 }
+
+describe('spawned git never inherits a repository from the environment', () => {
+  it('ignores an inherited GIT_DIR and lands the backup in its own temp repository', async () => {
+    // What a `pre-push` hook run from a linked worktree looks like: git
+    // exports GIT_DIR (and only that) to the hook process. Pre-fix, `git
+    // init` in pushBackupToGit's temp dir re-initialized *this* repository
+    // instead, and the orphan commit + tag were created here — the bare
+    // remote still received the tag, so the assertions on it alone passed.
+    const hostage = mkdtempSync(join(tmpdir(), 'sv-git-hostage-'));
+    execGit(['init', '--quiet', '--initial-branch', 'main', hostage]);
+    const saved = process.env.GIT_DIR;
+    process.env.GIT_DIR = join(hostage, '.git');
+    try {
+      const now = new Date('2026-09-06T08:00:00.000Z');
+      const result = await pushBackupToGit(
+        { repoUrl: bareRepoPath, branch: 'backups', authType: 'https-token', credential: 't' },
+        Buffer.from('payload'),
+        'backup.age',
+        { createdAt: now.getTime(), platformVersion: '0.131.2', scope: 'instance' },
+        '0.131.2',
+        now,
+      );
+      expect(tagsInBareRepo()).toEqual([result.tag]);
+
+      // The repository named by GIT_DIR is untouched: no commits, no tags,
+      // and it was not re-initialized as bare.
+      const count = execGit(['-C', hostage, 'rev-list', '--all', '--count'], { encoding: 'utf8' });
+      expect(count.trim()).toBe('0');
+      expect(execGit(['-C', hostage, 'tag', '--list'], { encoding: 'utf8' }).trim()).toBe('');
+      expect(execGit(['-C', hostage, 'config', 'core.bare'], { encoding: 'utf8' }).trim()).toBe(
+        'false',
+      );
+    } finally {
+      if (saved === undefined) delete process.env.GIT_DIR;
+      else process.env.GIT_DIR = saved;
+      rmSync(hostage, { recursive: true, force: true });
+    }
+  });
+
+  it('gitChildEnv strips every repository-location variable and keeps the rest', () => {
+    process.env.GIT_DIR = '/nowhere/.git';
+    process.env.GIT_WORK_TREE = '/nowhere';
+    process.env.GIT_INDEX_FILE = '/nowhere/index';
+    try {
+      const env = gitChildEnv({ GIT_ASKPASS: '/tmp/askpass' });
+      expect(env.GIT_DIR).toBeUndefined();
+      expect(env.GIT_WORK_TREE).toBeUndefined();
+      expect(env.GIT_INDEX_FILE).toBeUndefined();
+      expect(env.GIT_ASKPASS).toBe('/tmp/askpass');
+      expect(env.PATH).toBe(process.env.PATH);
+    } finally {
+      delete process.env.GIT_DIR;
+      delete process.env.GIT_WORK_TREE;
+      delete process.env.GIT_INDEX_FILE;
+    }
+  });
+});

@@ -267,6 +267,9 @@ each: `docs/architecture-rules.md`.
   Registration never reads the platform DB.
 - **Never interpolate a request-derived value into a shell command** — use
   `execFileSync` with an argv array; resolve against a server-side allowlist.
+  A spawned `git` never inherits `GIT_DIR`/`GIT_WORK_TREE` — build its env
+  with `gitChildEnv()` (git exports `GIT_DIR` to hooks in a linked worktree;
+  the test suite once committed fixtures onto the branch being pushed).
   Git credentials for spawned `git` go through env (`GIT_ASKPASS`,
   `GIT_SSH_COMMAND` with a `0600` temp identity, removed in `finally`), never argv.
 - **Service-to-service trust reuses `apps/relay`'s signed HMAC-SHA256 token**
@@ -488,7 +491,7 @@ pnpm sv <cmd>           # CLI (seed, backup, restore, plugin add/remove, …)
 
 ## Status
 
-Current platform version: **`0.131.1`**. `ROADMAP.md` is the canonical task
+Current platform version: **`0.131.2`**. `ROADMAP.md` is the canonical task
 queue and completion record; per-release narrative through `0.130.2` is
 archived in `docs/task-history.md`.
 

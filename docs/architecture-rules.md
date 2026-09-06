@@ -1150,6 +1150,21 @@ full story is one grep away.
   the existing fiber in place — `defaultValue`-seeded inputs stay frozen on the
   first selection. Thread a plain string key prop through props/context and
   apply it as `key` on a `Fragment` the client creates itself. `0.114.2`.
+- **A spawned `git` never inherits a repository from the environment.** Git
+  exports `GIT_DIR` (and can export `GIT_WORK_TREE`, `GIT_INDEX_FILE`, …) to
+  the processes it spawns — hooks above all: a `pre-push` hook run from a
+  linked worktree gets `GIT_DIR=<main>/.git/worktrees/<name>`. Code that
+  addresses a repository by `cwd` on a fresh temp directory — the backup
+  push in `runtime/src/git-backup.ts`, the pinned-ref clone in
+  `scripts/install-plugins.ts` — then silently operates on the _inherited_
+  repository: `git init` re-initializes it, `add`/`commit`/`tag` land there
+  with the temp dir as the work tree. Found the hard way: the test suite, run
+  by the pre-push hook from a worktree, committed its backup fixtures onto the
+  branch being pushed and flipped the shared config to `core.bare = true`.
+  Build the child environment with `gitChildEnv()` (strips
+  `GIT_REPOSITORY_ENV_VARS`), in tests too — the regression test in
+  `git-backup.test.ts` sets `GIT_DIR` to a throwaway repo and asserts it
+  stays empty.
 - **Credentials for a spawned `git` go through the environment.** `GIT_ASKPASS`
   script for HTTPS tokens, `GIT_SSH_COMMAND` with an `IdentityFile` written to
   a `0600` temp file and removed in `finally` for SSH keys — never argv, never

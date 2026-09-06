@@ -3,6 +3,20 @@
 All notable changes to `@sovereignfs/create-plugin` are documented here.
 The package follows [Semantic Versioning](https://semver.org).
 
+## 0.2.2
+
+- The scaffolded `package.json` pins `typescript` to `^6.0.0` instead of
+  `latest` — npm's `latest` is now the 7.x Go-hosted compiler, which
+  typescript-eslint does not support and which turns TypeScript 6.0's
+  deprecations into hard errors. Matches the platform (TypeScript 6.0).
+- `sv plugin new` (the in-repo copy of this skeleton, `bin/helpers.ts`) no
+  longer emits `compilerOptions.baseUrl` either; 0.2.1 fixed only the
+  `npm create` template. A test now pins both.
+- The skeleton now ships `css-modules.d.ts` (the ambient `*.module.css`
+  declaration the example plugins carry) and a `typecheck` script, so a
+  freshly scaffolded plugin's own `tsc --noEmit` passes instead of failing on
+  every CSS Module import.
+
 ## 0.1.3
 
 - The scaffolded page now wraps its content in `@sovereignfs/ui`'s

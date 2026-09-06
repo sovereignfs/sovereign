@@ -46,7 +46,8 @@ npm create @sovereignfs/plugin
 
 Interactive: asks for plugin ID, display name, description, and route prefix.
 Creates a directory in the current folder with the same skeleton, but using
-`latest` npm references for all dependencies. Commit the directory, push to
+`latest` npm references for all dependencies except `typescript`, which is
+pinned to the 6.x line the platform uses (npm's `latest` is the 7.x compiler). Commit the directory, push to
 GitHub, then install it in your Sovereign instance via `sv plugin add`.
 
 ### 3. GitHub template repository

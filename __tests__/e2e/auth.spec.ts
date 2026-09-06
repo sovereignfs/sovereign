@@ -28,7 +28,10 @@ test.describe('Auth — golden paths', () => {
     // submitting (see above), so waitForURL(RUNTIME/) would resolve instantly
     // without confirming sign-in actually completed. Wait for the
     // authenticated shell to render instead.
-    await page.getByRole('button', { name: 'Account' }).first().waitFor({ timeout: 15_000 });
+    await page
+      .getByRole('button', { name: 'Account', exact: true })
+      .first()
+      .waitFor({ timeout: 15_000 });
     await expect(page).toHaveURL(`${RUNTIME}/`);
   });
 
@@ -51,7 +54,7 @@ test.describe('Auth — golden paths', () => {
     const page = await ctx.newPage();
     await page.goto(`${RUNTIME}/`);
     // Open the avatar menu.
-    await page.getByRole('button', { name: 'Account' }).first().focus();
+    await page.getByRole('button', { name: 'Account', exact: true }).first().focus();
     await page.keyboard.press('Enter');
     // Click the Log out form submit button.
     await page.click('button[role="menuitem"]:has-text("Sign out")');

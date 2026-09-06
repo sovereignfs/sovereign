@@ -28,7 +28,7 @@ test.describe('Platform shell navigation — golden paths', () => {
 
   test('avatar menu opens and can be dismissed with Escape', async ({ adminPage: page }) => {
     await page.goto('/');
-    const trigger = page.getByRole('button', { name: 'Account' }).first();
+    const trigger = page.getByRole('button', { name: 'Account', exact: true }).first();
     await trigger.focus();
     await page.keyboard.press('Enter');
     // Menu items must be visible after opening.

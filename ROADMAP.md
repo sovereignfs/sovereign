@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.131.0 · **Last updated:** 2026-09-06
+**Version:** 0.131.1 · **Last updated:** 2026-09-06
 
 _(This header tracks the root `package.json` version as of the date above — a
 freshness marker for the document as a whole, not the version of the most

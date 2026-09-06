@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import nodemailer, { type Transporter } from 'nodemailer';
-import { createMailer } from '../mailer';
+import { createMailer, SMTP_TIMEOUTS_MS } from '../mailer';
 
 vi.mock('nodemailer', () => ({
   default: { createTransport: vi.fn() },
@@ -66,7 +66,7 @@ describe('createMailer', () => {
 });
 
 describe('createMailer — dev Mailpit fallback', () => {
-  it('connects to localhost:1025 in non-production when SMTP_HOST is not set', () => {
+  it('connects to 127.0.0.1:1025 in non-production when SMTP_HOST is not set', () => {
     // Delete SMTP_HOST so the ?? fallback path is reached (empty string is not null/undefined).
     const saved = process.env.SMTP_HOST;
     delete process.env.SMTP_HOST;
@@ -78,7 +78,9 @@ describe('createMailer — dev Mailpit fallback', () => {
       const mailer = createMailer();
       expect(mailer.configured).toBe(true);
       expect(createTransport).toHaveBeenCalledWith(
-        expect.objectContaining({ host: 'localhost', port: 1025 }),
+        // An IP literal, never `localhost`: nodemailer resolves hostnames via
+        // real DNS queries, and `localhost` stalled ~6s on first send.
+        expect.objectContaining({ host: '127.0.0.1', port: 1025 }),
       );
     } finally {
       if (saved !== undefined) process.env.SMTP_HOST = saved;
@@ -116,5 +118,18 @@ describe('createMailer — dev Mailpit fallback', () => {
       if (saved !== undefined) process.env.SMTP_HOST = saved;
       warn.mockRestore();
     }
+  });
+});
+
+describe('createMailer — transport timeouts', () => {
+  it('bounds connect/greeting/socket waits instead of taking nodemailer defaults', () => {
+    vi.stubEnv('SMTP_HOST', 'smtp.example.com');
+    createTransport.mockReturnValue({
+      sendMail: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Transporter);
+
+    createMailer();
+    expect(createTransport).toHaveBeenCalledWith(expect.objectContaining(SMTP_TIMEOUTS_MS));
+    expect(SMTP_TIMEOUTS_MS.connectionTimeout).toBeLessThan(120_000);
   });
 });

@@ -37,8 +37,6 @@ updates:
         versions: ['>=1.7.0 <1.7.3']
       - dependency-name: 'typescript'
         update-types: ['version-update:semver-major']
-      - dependency-name: 'next'
-        update-types: ['version-update:semver-major']
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
       # better-sqlite3-multiple-ciphers 13 dropped the type declarations v12

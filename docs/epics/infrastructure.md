@@ -993,7 +993,7 @@ a decision, written up as an RFC — not working platform code.
 
 ---
 
-#### 📋 0.27 — Next.js 16 upgrade (Turbopack vs `@ducanh2912/next-pwa`)
+#### ✅ 0.27 — Next.js 16 upgrade (Turbopack vs `@ducanh2912/next-pwa`)
 
 **Goal:** Upgrade both Next.js apps from 15.5 to 16. Dependabot's bump (#346,
 closed) fails the build because Next 16 defaults to Turbopack and
@@ -1027,6 +1027,29 @@ the PWA toolchain, not a version bump.
   `runtime/src/__tests__/` passes)
 - Lighthouse installability unchanged
 
+**Status (September 2026): shipped — root 0.131.0, `runtime` 0.100.0,
+`apps/auth` 2.4.0.** Decision: replace next-pwa, don't keep webpack. It was
+last released in 2024, is webpack-only, and its `Function.prototype.toString()`
+serialization of `runtimeCaching` had already caused two production bugs;
+`next build --webpack` is the deprecation track Next asks projects to leave.
+The worker is now `runtime/worker/index.ts` + `routes.ts` on Serwist, bundled
+by `runtime/scripts/build-sw.ts` (tsup → `@serwist/build` `injectManifest`)
+after `next build` — bundler-agnostic, so every app builds with Turbopack.
+`pages` is a real `NetworkOnly` now, `offline-shells` and `fallbacks.document`
+(`/offline`, precached with the build id as revision) are preserved, the push
+handler is unchanged, and `ServiceWorkerRegistration.tsx` replaces next-pwa's
+injected registration (unregistering stale workers in dev). Findings worth
+keeping: **Turbopack does not resolve a composed plugin's bare imports through
+the production symlink** — `plugins/warden`'s `unpdf` was only ever reachable
+because webpack realpath'd the file; it is declared in `runtime/package.json`
+now, and `scripts/generate-registry.ts` / CLAUDE.md record the rule. The
+`middleware` → `proxy` deprecation is deliberately not taken (0.29). Next 16's
+tracer prints nine "dynamic filesystem access" warnings for the runtime's
+`readFileSync`/`writeFileSync` call sites; the standalone output was inspected
+and contains only `runtime/` and traced `node_modules`, not the workspace.
+Lighthouse was not re-run; installability inputs (manifest, `/sw.js` with a
+fetch handler, precached `/offline`) were verified on the built worker.
+
 ---
 
 #### 📋 0.28 — TypeScript 6 migration
@@ -1055,6 +1078,40 @@ once leaking in via an unpinned peer range; the catalog pin exists for this.
 
 - `pnpm typecheck`, `pnpm build`, Storybook build all green
 - Published packages' emitted types unchanged, or the bump documented
+
+---
+
+#### 📋 0.29 — Migrate `middleware.ts` to Next's `proxy` convention
+
+**Goal:** Next 16 deprecated the `middleware` file convention in favour of
+`proxy` (one warning per `next build` today; removal expected in a later
+major). `proxy` runs on the Node.js runtime only — the Edge runtime is not
+supported there — so this is a runtime-model change for the session gate and
+CSP source of every request, not a rename: `runtime/middleware.ts` and
+`apps/auth/middleware.ts` were written to the Edge constraints
+(`docs/architecture-rules.md`: no Node built-ins, no `ioredis`, no DB writes)
+and their regression suites assume them.
+
+**Deliverables:**
+
+- Decide what the Node runtime is allowed to change: keep the Edge discipline
+  as a convention (smallest diff, same latency profile), or take advantage of
+  Node (e.g. drop the offline cookie-cache fallback in favour of a direct
+  session lookup) — either way, written down in `docs/architecture-rules.md`
+- Rename both files and the exported function; update `skipMiddlewareUrlNormalize`
+  if used; re-verify the 303 login redirect, `applyCsp` on every return path,
+  `form-action` including the auth origin, and the matcher exemptions
+  (`runtime/src/__tests__/middleware-regression.test.ts`)
+- Docker: confirm the standalone server still boots with no Edge bundle
+
+**Dependencies:** 0.27
+
+**SRS reference:** SRS §3.5 (auth), RFC 0008 (CSP)
+
+**Review checklist:**
+
+- `next build` prints no `middleware` deprecation warning on either app
+- Middleware/proxy regression suites green; `pnpm test:e2e` green
 
 ---
 

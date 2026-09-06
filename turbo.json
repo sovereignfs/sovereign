@@ -16,7 +16,7 @@
     },
     "@sovereignfs/runtime#build": {
       "dependsOn": ["generate", "^build"],
-      "outputs": [".next/**", "!.next/cache/**"]
+      "outputs": [".next/**", "!.next/cache/**", "public/sw.js"]
     },
     "lint": {
       "dependsOn": ["^build"]

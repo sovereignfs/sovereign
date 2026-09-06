@@ -625,17 +625,14 @@ export const config = {
   // GET is served early as a public exception inside the middleware body,
   // POST/DELETE fall through to the normal authenticated flow.
   //
-  // Every service-worker artifact must be listed here, not just `sw.js`:
-  // `sw.js` pulls its siblings in with `importScripts()`, and a redirected
-  // `importScripts()` is a spec-mandated hard failure that aborts the *whole*
-  // SW install — so one un-allowlisted chunk means a logged-out visitor gets
+  // The service worker is a single self-contained script (`sw.js`, built by
+  // `runtime/scripts/build-sw.ts` — Serwist, the route table and the RFC 0016
+  // Web Push handler all bundled in), so it is the one artefact to exempt. It
+  // must stay exempt: a redirected worker-script fetch is a spec-mandated hard
+  // failure that aborts the whole install, so a logged-out visitor would get
   // no service worker at all (no precached login page, no offline fallback),
-  // not merely a missing feature. The current set is `sw.js`, the Workbox
-  // runtime (`workbox-<hash>.js`), the document fallback
-  // (`fallback-<hash>.js`), and the custom worker chunk built from
-  // `runtime/worker/index.ts` (`worker-<hash>.js` — @ducanh2912/next-pwa's
-  // `customWorkerSrc` output, the Web Push handler from RFC 0016). If a build
-  // starts emitting another `public/` service-worker chunk, add its prefix
+  // not merely a missing feature. If the build ever starts emitting a second
+  // `public/` worker chunk (an `importScripts()` sibling), add its prefix
   // here in the same change.
   matcher: [
     // Exclude: auth pages, privacy/tos pages, admin API (self-authenticated),
@@ -657,6 +654,6 @@ export const config = {
     // route's own token check never ran) until this line was added — a real,
     // shipped gap from epic task 8.16, affecting both the Account (8.18) and
     // Console (8.17) download buttons.
-    '/((?!login|register|forgot-password|reset-password|privacy|tos|offline|api/auth|api/admin|api/health|api/manifest|api/storage|api/backup-jobs|manifest.json|sw.js|workbox-|worker-|fallback-|icons/|plugin-icons/|_next/static|_next/image|favicon.ico).*)',
+    '/((?!login|register|forgot-password|reset-password|privacy|tos|offline|api/auth|api/admin|api/health|api/manifest|api/storage|api/backup-jobs|manifest.json|sw.js|icons/|plugin-icons/|_next/static|_next/image|favicon.ico).*)',
   ],
 };

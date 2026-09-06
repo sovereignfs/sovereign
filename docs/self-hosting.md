@@ -1388,7 +1388,8 @@ sends are logged as `push: send failed` with the push service's status code.
 3. When a notification is sent (via `sdk.notifications.send` or the admin
    broadcast), the runtime fan-outs a Web Push message to every active
    subscription for that user, respecting their muted-category preferences.
-4. The service worker (`runtime/worker/index.ts`, bundled by next-pwa) receives
+4. The service worker (`runtime/worker/index.ts`, bundled into `public/sw.js` at
+   build) receives
    the `push` event and shows an OS-level notification via
    `self.registration.showNotification`. Clicking the notification opens or
    focuses the app.

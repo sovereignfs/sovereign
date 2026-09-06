@@ -14,15 +14,20 @@
  *     `next dev` (verified against Next 15.5.19; this is not an old/fixed
  *     limitation). `scripts/dev.ts` runs this in `--watch` mode so edits under
  *     `plugins/` re-copy and trigger HMR.
- *   - Production uses a symlink instead of a copy specifically so a composed
- *     plugin's imports resolve through *its own* `node_modules` (correct pnpm
- *     per-package isolation) rather than requiring every dependency a bundled
- *     plugin happens to use to also be hand-declared in `runtime/package.json`
- *     — a copy severs the file from its originating package, which is what
- *     broke the first production build that bundled a plugin with
- *     dependencies `runtime` didn't already have (`@dnd-kit/*`, `rrule` for
- *     Tasks). `next build`'s webpack does follow the symlink correctly; only
- *     `next dev`'s route discovery doesn't.
+ *   - Production uses a symlink so a composed file keeps its identity as part
+ *     of its originating package (a copy severs it). Under webpack (Next ≤ 15)
+ *     that also made a plugin's imports resolve through *its own*
+ *     `node_modules`, which is why the first production build that bundled
+ *     `@dnd-kit/*`/`rrule` for Tasks worked without hand-declaring them.
+ *     **Turbopack (Next 16) does not follow the symlink for module
+ *     resolution** — a composed plugin's bare imports resolve from the
+ *     runtime's own scope, exactly as they do from a dev copy. So every
+ *     external dependency a composed plugin uses must be resolvable from
+ *     `runtime/`: RFC 0057's hoisting (`sv plugin add`, `install-plugins.ts`,
+ *     the `.local` sync) does this for installed plugins, and a platform
+ *     plugin under `plugins/` declares its deps in `runtime/package.json` by
+ *     hand (`@dnd-kit/*`, `qrcode`, `fflate`, `unpdf`, …). A missing one fails
+ *     `next build` with `Module not found` at the composed path.
  *   - TypeScript's own module resolution does not follow the symlink to find
  *     a plugin's `node_modules` either (confirmed: `preserveSymlinks` doesn't
  *     change this) — so `runtime/tsconfig.json` excludes composed plugin

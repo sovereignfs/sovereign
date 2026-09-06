@@ -64,7 +64,7 @@ catalog:
   # SQLCipher-capable fork of better-sqlite3 (RFC 0071) — API-compatible
   # drop-in, same major/version line as better-sqlite3. Used by packages/db,
   # apps/auth, and scripts/ wherever a SQLite file is opened directly.
-  better-sqlite3-multiple-ciphers: ^12.11.1
+  better-sqlite3-multiple-ciphers: ^13.0.3
   # Drag-reorder sensor/sortable primitives — shared by packages/ui (optional
   # peer, task 9.26) and plugins/account (direct dependency).
   '@dnd-kit/core': ^6.3.1

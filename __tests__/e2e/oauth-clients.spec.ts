@@ -6,6 +6,10 @@ test.describe('Console external OAuth clients — golden paths', () => {
   }) => {
     await page.goto('/console/oauth-clients');
 
+    // Registration lives behind the page's primary action dialog now (the
+    // same shape as Users' Invite and Groups' New group), not an inline form.
+    await page.getByRole('button', { name: '+ Register client' }).click();
+
     const clientName = `e2e-test-client-${Date.now()}`;
     await page.getByLabel('Display name').fill(clientName);
     await page.getByLabel('Redirect URIs').fill('https://example.test/callback');
@@ -29,6 +33,12 @@ test.describe('Console external OAuth clients — golden paths', () => {
     // this viewport width.
     await page.getByRole('link', { name: new RegExp(clientName) }).click();
     await page.getByRole('button', { name: 'Revoke' }).click();
+    // Revoking is one-way, so it confirms first — the confirm lives in a
+    // native <dialog> named after its title.
+    await page
+      .getByRole('dialog', { name: 'Revoke client' })
+      .getByRole('button', { name: 'Revoke' })
+      .click();
 
     // Revoking is a real DELETE against the auth server, then a refetch of
     // the client list — give it a moment before asserting. Confirmed via a

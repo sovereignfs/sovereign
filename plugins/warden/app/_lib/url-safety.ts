@@ -162,7 +162,8 @@ export async function assertSafeProviderBaseUrl(rawUrl: string): Promise<SafePro
   ) {
     throw new UnsafeProviderUrlError('This base URL is not reachable as a model provider.');
   }
-  const [pinned] = addresses;
+  const pinned = addresses[0];
+  if (!pinned) throw new UnsafeProviderUrlError("The base URL's host could not be resolved.");
   return {
     url,
     pinnedAddress: pinned.address,

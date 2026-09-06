@@ -84,7 +84,10 @@ export async function processAttachment(file: File): Promise<ProcessAttachmentRe
     try {
       const pdf = await getDocumentProxy(new Uint8Array(await file.arrayBuffer()));
       const result = await extractText(pdf, { mergePages: true });
-      extracted = typeof result.text === 'string' ? result.text : result.text.join('\n');
+      // `mergePages: true` types `text` as a string; guard the array shape
+      // anyway rather than trust one library version's typing.
+      const text: unknown = result.text;
+      extracted = Array.isArray(text) ? text.join('\n') : String(text ?? '');
     } catch {
       return {
         ok: false,

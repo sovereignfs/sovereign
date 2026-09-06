@@ -19,8 +19,15 @@ export interface ProviderPreset {
 
 export const CUSTOM_PRESET_ID = 'custom';
 
+/** The form's starting selection — the most common hosted aggregator. */
+export const DEFAULT_PRESET: ProviderPreset = {
+  id: 'openrouter',
+  label: 'OpenRouter',
+  baseUrl: 'https://openrouter.ai/api/v1',
+};
+
 export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
-  { id: 'openrouter', label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1' },
+  DEFAULT_PRESET,
   { id: 'openai', label: 'OpenAI', baseUrl: 'https://api.openai.com/v1' },
   { id: 'groq', label: 'Groq', baseUrl: 'https://api.groq.com/openai/v1' },
   { id: 'mistral', label: 'Mistral', baseUrl: 'https://api.mistral.ai/v1' },

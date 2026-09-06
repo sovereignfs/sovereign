@@ -304,7 +304,7 @@ export function WardenSidebar({
           variant="static"
           density="compact"
           aria-label="Warden navigation"
-          renderLink={(item, linkProps) => (
+          renderLink={(_item, linkProps) => (
             <Link
               href={linkProps.href}
               className={linkProps.className}

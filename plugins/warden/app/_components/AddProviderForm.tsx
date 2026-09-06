@@ -3,7 +3,12 @@
 import { useActionState, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { Button, Card, FormField, Input, Select, useToast } from '@sovereignfs/ui';
-import { CUSTOM_PRESET_ID, findPreset, PROVIDER_PRESETS } from '../_lib/provider-presets';
+import {
+  CUSTOM_PRESET_ID,
+  DEFAULT_PRESET,
+  findPreset,
+  PROVIDER_PRESETS,
+} from '../_lib/provider-presets';
 import type { ActionResult } from '../actions';
 import { createProviderAction } from '../actions';
 import styles from './providers.module.css';
@@ -48,9 +53,9 @@ export function AddProviderForm({ onAdded }: { onAdded: () => void }) {
     createProviderAction,
     null,
   );
-  const [presetId, setPresetId] = useState(PROVIDER_PRESETS[0].id);
-  const [label, setLabel] = useState(PROVIDER_PRESETS[0].label);
-  const [baseUrl, setBaseUrl] = useState(PROVIDER_PRESETS[0].baseUrl);
+  const [presetId, setPresetId] = useState(DEFAULT_PRESET.id);
+  const [label, setLabel] = useState(DEFAULT_PRESET.label);
+  const [baseUrl, setBaseUrl] = useState(DEFAULT_PRESET.baseUrl);
   const [apiKey, setApiKey] = useState('');
   const toast = useToast();
   const handledStateRef = useRef<ActionResult | null>(null);
@@ -73,9 +78,9 @@ export function AddProviderForm({ onAdded }: { onAdded: () => void }) {
     if (state?.ok && state !== handledStateRef.current) {
       handledStateRef.current = state;
       toast.show({ title: state.message, category: state.tone ?? 'success' });
-      setPresetId(PROVIDER_PRESETS[0].id);
-      setLabel(PROVIDER_PRESETS[0].label);
-      setBaseUrl(PROVIDER_PRESETS[0].baseUrl);
+      setPresetId(DEFAULT_PRESET.id);
+      setLabel(DEFAULT_PRESET.label);
+      setBaseUrl(DEFAULT_PRESET.baseUrl);
       setApiKey('');
       onAdded();
     }

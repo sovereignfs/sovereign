@@ -119,6 +119,19 @@ See the [Runtime version map](#runtime-version-map) and [v1.0.0 release checklis
 
 Notes call out any required configuration changes, schema changes, or action required.
 
+### v0.100.1 → v0.101.0 (root 0.133.0, `apps/auth` 2.5.0)
+
+- **`middleware.ts` → `proxy.ts` on both apps** (Next 16's renamed convention;
+  the codemod-equivalent rename plus the exported function). `next build` no
+  longer prints the `middleware` deprecation warning. Behaviour is unchanged:
+  same matcher, same 303 login redirect, same per-request CSP, same trust-header
+  stripping and injection. **The proxy now executes on the Node.js runtime**
+  (Next does not support the Edge runtime for `proxy`); by decision it keeps
+  the Edge discipline it was written to — no Node built-ins, no DB access —
+  so nothing about deployment changes: the standalone image runs the same
+  `server.js`, and a reverse proxy in front needs no new rules. No operator
+  action.
+
 ### Root 0.131.2 → 0.132.0 (no `runtime` version bump; `@sovereignfs/create-plugin` patch)
 
 - **TypeScript 5.9 → 6.0** (pnpm catalog). No operator action; no change to

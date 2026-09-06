@@ -1,5 +1,5 @@
 /**
- * General-purpose, IP-keyed request-flood protection for `runtime/middleware.ts`
+ * General-purpose, IP-keyed request-flood protection for `runtime/proxy.ts`
  * — every path the middleware matcher covers (session-gated pages/API, the
  * anonymous public `/api/<slug>/*` namespace, and manifest-declared public
  * plugin page routes) had no abuse-prevention layer of its own before this;
@@ -11,7 +11,7 @@
  *
  * Same fixed-window bucket shape as `directory.ts`/`plugin-mailer.ts`, applied
  * per client IP instead of per user/plugin. In-memory and per-process: this
- * runs inside `middleware.ts`, which executes in the Edge runtime — for a
+ * runs inside `proxy.ts`, which keeps the Edge discipline — for a
  * self-hosted `next start` deployment (this platform's only deployment model;
  * see `docs/self-hosting.md`) that Edge sandbox lives inside the same
  * long-lived Node process for the life of the container, so module state
@@ -29,7 +29,7 @@ const DEFAULT_WINDOW_MS = 60_000;
 const DEFAULT_MAX_REQUESTS = 300;
 
 /** How often a call opportunistically sweeps expired entries — not a timer;
- *  the Edge runtime this module executes in has no background interval
+ *  the proxy keeps no background interval (Edge discipline; nothing
  *  available the way scheduler.ts/jobs.ts/backup-worker.ts do. */
 const EVICTION_INTERVAL_MS = 5 * 60_000;
 

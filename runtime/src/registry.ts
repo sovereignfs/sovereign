@@ -54,13 +54,13 @@ export function getHardDisabledPluginIds(plugins: SovereignManifest[] = registry
  * offline-capable entry point. Both tiers get the same precaching treatment
  * here; they differ in storage and encryption, not in how the shell document
  * itself is cached. Consumed by `next.config.ts` to scope the service
- * worker's neutral-shell cache to just these routes, and by `middleware.ts`
+ * worker's neutral-shell cache to just these routes, and by `proxy.ts`
  * to mark matching requests `x-sovereign-offline-route` for the neutral-shell
  * SSR discipline `runtime/app/(platform)/layout.tsx` enforces; every other
  * route falls to `NetworkOnly` and the generic `/offline` page.
  *
  * `/` is included whenever Launcher (`DEFAULT_ROOT_PLUGIN_ID`) is itself
- * offline-first, since `middleware.ts` rewrites `/` to the resolved root
+ * offline-first, since `proxy.ts` rewrites `/` to the resolved root
  * plugin's route in place (SRS PLT-14) — in the default configuration that
  * is Launcher, so `/` and `/launcher` render the identical, already-neutral
  * document. **Known limitation:** an instance whose admin has configured a

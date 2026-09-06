@@ -8,7 +8,7 @@
  * an optional `(focus=<pluginId>)` suffix to the *same* token —
  * `Sovereign-Shell/mobile-ios 1.0.0 (focus=fs.sovereign.tally)` — rather
  * than inventing a second User-Agent grammar, since it is the same signal
- * at the same injection point. `runtime/middleware.ts` calls
+ * at the same injection point. `runtime/proxy.ts` calls
  * {@link resolveSurface} once per request and injects the result as
  * `x-sovereign-surface` / `x-sovereign-shell-version` /
  * `x-sovereign-focus-plugin` headers, stripping any inbound value first so a

@@ -15,7 +15,7 @@ function safeEqual(a: string, b: string): boolean {
  * on success. Callers must return the response immediately if non-null.
  *
  * The bearer token is the sole authorization boundary for the entire
- * `/api/admin/*` surface — middleware.ts's matcher deliberately excludes
+ * `/api/admin/*` surface — proxy.ts's matcher deliberately excludes
  * this path, so it also gets none of checkGlobalRateLimit's per-IP flood
  * protection. A dedicated limiter here counts only failed comparisons
  * (never a successful one, so legitimate Console traffic is never

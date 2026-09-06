@@ -20,7 +20,7 @@ export type FocusRouteDecision = { kind: 'allow' } | { kind: 'redirect'; routePr
 /**
  * Paths reachable from *any* focused app regardless of which plugin is
  * focused, beyond the focused plugin's own `routePrefix`. Each entry per
- * RFC 0082 §3's table — the entries handled by `middleware.ts`'s matcher
+ * RFC 0082 §3's table — the entries handled by `proxy.ts`'s matcher
  * exclusion instead (`/login`, `/register`, `/forgot-password`,
  * `/reset-password`, `/offline`, PWA/static assets) are not listed here,
  * since this function never runs on them: middleware itself never executes

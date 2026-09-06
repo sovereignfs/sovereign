@@ -2,7 +2,7 @@
  * Middleware response helpers: applying the per-request CSP, forwarding
  * Set-Cookie headers and the dev-mode marker, stripping caller-supplied
  * platform-trust headers before any forward, and building the login/paywall
- * redirects. Extracted from `runtime/middleware.ts` (Task 2.17) — behavior
+ * redirects. Extracted from `runtime/proxy.ts` (Task 2.17) — behavior
  * unchanged, purely a relocation plus turning request-scoped closures into
  * explicit parameters.
  */
@@ -78,7 +78,7 @@ export function withDevMode(response: NextResponse, devModeActive: boolean): Nex
  * of the splash — even though /login itself carries every
  * apple-touch-startup-image link correctly. Rewriting instead of redirecting
  * returns the real /login document (200, full <head>) at the same URL, same
- * as the authenticated root-plugin rewrite in `runtime/middleware.ts`. GET
+ * as the authenticated root-plugin rewrite in `runtime/proxy.ts`. GET
  * only: a rewrite preserves the request method, and /login only handles GET.
  *
  * An `installable` plugin's own bare `routePrefix` needs exactly the same

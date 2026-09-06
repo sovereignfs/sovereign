@@ -783,7 +783,7 @@ session exists and omitted otherwise; a **disabled** plugin still 404s.
 decision, independent of this flag.
 
 Note: like `publicRoutes`, an RFC 0065 access-policy restriction does **not**
-apply here — the public-route fast path in `runtime/middleware.ts` only
+apply here — the public-route fast path in `runtime/proxy.ts` only
 checks disabled-plugin status. Restricting a `public: true` plugin has no
 effect on its reachability; to fully lock one down, disable it instead.
 

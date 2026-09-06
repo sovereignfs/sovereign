@@ -23,7 +23,7 @@ async function loginAndSave(
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
   // Unauthenticated GET / is rewritten (not redirected) to the login document
-  // so the URL stays "/" — see runtime/middleware.ts's iOS PWA splash rewrite.
+  // so the URL stays "/" — see runtime/proxy.ts's iOS PWA splash rewrite.
   await page.goto(`${RUNTIME}/`);
   await page.waitForSelector('#login-email');
   await page.fill('#login-email', email);

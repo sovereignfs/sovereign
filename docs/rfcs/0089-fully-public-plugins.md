@@ -50,7 +50,7 @@ say "this plugin has no auth requirement, period."
   404, `adminOnly` without `console:access` → 403, paywall → redirect, else
   ok — but it is only consulted by the _authenticated_ gate branch in
   `runtime/middleware.ts`. The separate public-route fast path
-  ([runtime/middleware.ts:283-360](../../runtime/middleware.ts), reached when
+  ([runtime/proxy.ts:283-360](../../runtime/proxy.ts), reached when
   `matchedPublicPluginRouteId` matches) returns before that branch and only
   checks disabled-plugin status and, for a session-present or monetized
   request, paywall status — it never consults RFC 0065 restriction. A public

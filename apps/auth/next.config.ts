@@ -7,7 +7,7 @@ import type { NextConfig } from 'next';
 loadEnvConfig(resolve(process.cwd(), '../..'), process.env.NODE_ENV !== 'production');
 
 // Static security response headers (RFC 0008 Tier 0); mirrors the runtime. The
-// per-request CSP is set in middleware.ts. HSTS is production-only.
+// per-request CSP is set in proxy.ts. HSTS is production-only.
 const isProd = process.env.NODE_ENV === 'production';
 const securityHeaders = [
   { key: 'X-Frame-Options', value: 'DENY' },

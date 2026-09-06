@@ -2,7 +2,7 @@
  * Middleware session verification: local signed cookie-cache verification
  * (SRS AUTH-05, no network call), the auth-server `/api/verify` fallback
  * (AUTH-06), and a single `verifySession()` entry point combining both.
- * Extracted from `runtime/middleware.ts` (Task 2.17) — behavior unchanged,
+ * Extracted from `runtime/proxy.ts` (Task 2.17) — behavior unchanged,
  * purely a relocation.
  */
 import { getCookieCache } from 'better-auth/cookies';

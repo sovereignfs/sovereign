@@ -41,7 +41,7 @@ repository docs.
 
 ## 2. Middleware Decomposition
 
-**Goal:** keep `runtime/middleware.ts` behavior identical while reducing the
+**Goal:** keep `runtime/proxy.ts` behavior identical while reducing the
 risk of future auth, routing, CSP, paywall, and root-plugin changes.
 
 **Technical work:**
@@ -59,7 +59,7 @@ risk of future auth, routing, CSP, paywall, and root-plugin changes.
   - disabled-plugin lookup.
   - entitlement and paywall lookup.
   - admin-only, disabled, and paywalled route decisions.
-- Keep the exported `middleware()` function as a readable orchestration layer.
+- Keep the exported `proxy()` function as a readable orchestration layer.
 - Preserve existing fail-open and fail-closed semantics exactly:
   - auth verification fails closed.
   - disabled-plugin and paywall status fetches fail open.
@@ -80,7 +80,7 @@ risk of future auth, routing, CSP, paywall, and root-plugin changes.
 - Middleware behavior is unchanged from the user's perspective.
 - Extracted helpers have focused unit tests where practical.
 - E2E tests cover the high-risk middleware branches.
-- `runtime/middleware.ts` reads as orchestration rather than implementation.
+- `runtime/proxy.ts` reads as orchestration rather than implementation.
 
 **Priority:** high.
 

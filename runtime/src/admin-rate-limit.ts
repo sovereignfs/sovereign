@@ -1,7 +1,7 @@
 /**
  * Dedicated per-IP rate limiter for the `SOVEREIGN_ADMIN_KEY` bearer-token
  * check (`admin-guard.ts`'s `checkAdminKey()`) — the sole authorization
- * boundary for the entire `/api/admin/*` surface. `middleware.ts`'s matcher
+ * boundary for the entire `/api/admin/*` surface. `proxy.ts`'s matcher
  * deliberately excludes this path (self-authenticated by design), so it
  * gets none of `checkGlobalRateLimit`'s per-IP flood protection either.
  *

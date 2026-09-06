@@ -21,7 +21,7 @@ export function LoginForm({
   /**
    * Read server-side by `page.tsx` and passed down explicitly — **not**
    * read via `useSearchParams()` here, deliberately. This page can be
-   * reached by `middleware.ts` **rewriting** an unauthenticated GET to it
+   * reached by `proxy.ts` **rewriting** an unauthenticated GET to it
    * (bare `/`, or an `installable` plugin's bare routePrefix, RFC 0081)
    * rather than redirecting, and a rewrite never changes the browser's
    * visible address bar — a client hook reading `window.location` would see

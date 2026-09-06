@@ -4,7 +4,7 @@
  * — plugin migrations, boot-compat, notification broker init, scheduler start.
  * Four swapped-argument logger calls sat there emitting garbled JSON with a
  * green CI. `apps/auth/tsconfig.json` had the mirror-image gap for its own
- * `middleware.ts`.
+ * `proxy.ts`.
  *
  * A Next.js app's top-level entry files are not reachable from `app/**`, so
  * nothing else drags them into the program: if the include list forgets one, it
@@ -69,8 +69,8 @@ describe('the specific files that regressed', () => {
     expect(includeList('runtime')).toContain('instrumentation.ts');
   });
 
-  it('typechecks apps/auth/middleware.ts', () => {
-    expect(topLevelEntryFiles('apps/auth')).toContain('middleware.ts');
-    expect(includeList('apps/auth')).toContain('middleware.ts');
+  it('typechecks apps/auth/proxy.ts', () => {
+    expect(topLevelEntryFiles('apps/auth')).toContain('proxy.ts');
+    expect(includeList('apps/auth')).toContain('proxy.ts');
   });
 });

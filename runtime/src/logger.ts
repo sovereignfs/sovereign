@@ -3,8 +3,9 @@
  * stdout/stderr; nothing is sent off-box, preserving the no-telemetry
  * guarantee (docs/security.md). Set LOG_LEVEL=debug for verbose output.
  *
- * Edge runtime note: this module uses process.stdout/stderr and is therefore
- * Node.js-only. Do not import it from middleware.ts (Edge runtime).
+ * Runtime note: this module uses process.stdout/stderr. Do not import it from
+ * proxy.ts — the proxy keeps the Edge discipline (no Node built-ins) even
+ * though Next 16 runs it on Node.js; see docs/architecture-rules.md.
  */
 
 type Level = 'error' | 'warn' | 'info' | 'debug';

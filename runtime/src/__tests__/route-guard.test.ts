@@ -503,9 +503,9 @@ describe('matchedPublicHandoffRoute (RFC 0053)', () => {
 });
 
 // decidePluginRoute is the general-purpose route decision function, used
-// directly by the *authenticated* gate in middleware.ts. The public-route
+// directly by the *authenticated* gate in proxy.ts. The public-route
 // fast path (matchedPublicPluginRouteId's callers) takes a separate branch
-// in middleware.ts that only checks disabled-plugin status, not restriction —
+// in proxy.ts that only checks disabled-plugin status, not restriction —
 // see the "fully public plugins" describe block in middleware-regression.test.ts
 // for what actually happens on a real request. These tests cover
 // decidePluginRoute's own precedence in isolation, independent of which

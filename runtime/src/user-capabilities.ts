@@ -5,7 +5,7 @@
  * stay a pure synchronous function of `role` so Edge middleware can resolve it
  * offline from the signed session cookie without a DB round-trip. This module
  * does the opposite: it hits the platform DB, so it must never be imported
- * from `middleware.ts` or any other Edge-runtime code path.
+ * from `proxy.ts` or any other proxy-bundle code path.
  *
  * Edge/cookie-cache propagation of per-user grants is intentionally deferred —
  * see RFC 0070's adoption notes. The capabilities gated by this resolver

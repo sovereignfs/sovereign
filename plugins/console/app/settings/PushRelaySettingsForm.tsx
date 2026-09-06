@@ -1,35 +1,16 @@
 'use client';
 
-import { useActionState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button, FormField, Input, useToast } from '@sovereignfs/ui';
+import { useActionState, useState } from 'react';
+import { Button, Checkbox, FormField, Input } from '@sovereignfs/ui';
+import { ActionFeedback } from '../_components/ActionFeedback';
+import { useSaveResult } from '../_lib/use-save-result';
 import styles from '../console.module.css';
-import { type ActionResult, updatePushRelayAction } from './actions';
+import { updatePushRelayAction } from './actions';
 
 export interface PushRelaySettingsView {
   url: string | null;
   defaultUrl: string;
   disabled: boolean;
-}
-
-function Feedback({ result }: { result: ActionResult | null }) {
-  if (!result || result.ok) return null;
-  return (
-    <p className={styles.feedbackError} role="status" aria-live="polite">
-      {result.error}
-    </p>
-  );
-}
-
-function useActionToast(result: ActionResult | null) {
-  const router = useRouter();
-  const toast = useToast();
-  useEffect(() => {
-    if (result?.ok) {
-      toast.show({ title: result.message, category: 'success' });
-      router.refresh();
-    }
-  }, [result, router, toast]);
 }
 
 /**
@@ -40,17 +21,17 @@ function useActionToast(result: ActionResult | null) {
  */
 export function PushRelaySettingsForm({ pushRelay }: { pushRelay: PushRelaySettingsView }) {
   const [state, action, pending] = useActionState(updatePushRelayAction, null);
-  useActionToast(state);
+  const [disabled, setDisabled] = useState(pushRelay.disabled);
+  useSaveResult(state);
 
   return (
-    <div className={styles.providerConfigCard}>
+    <div className={styles.fieldStack}>
       <p className={styles.helpText}>
-        Native mobile push notifications (RFC 0087) route through a shared, sovereignfs-operated
-        relay by default — it never sees notification content, only an already-encrypted blob. Leave
-        the URL blank to use the default; self-hosting your own relay is a documented escape hatch,
-        not required.
+        Native mobile push notifications route through a shared relay by default — it never sees
+        notification content, only an already-encrypted blob. Leave the URL blank to use the
+        default; self-hosting your own relay is optional.
       </p>
-      <form action={action} className={styles.providerConfigForm}>
+      <form action={action} className={styles.settingsForm}>
         <FormField label="Relay URL" id="push-relay-url" hint={`Default: ${pushRelay.defaultUrl}`}>
           {(field) => (
             <Input
@@ -62,22 +43,23 @@ export function PushRelaySettingsForm({ pushRelay }: { pushRelay: PushRelaySetti
             />
           )}
         </FormField>
-        <label className={styles.checkboxRow}>
-          <input type="checkbox" name="pushRelayDisabled" defaultChecked={pushRelay.disabled} />
-          <span>
-            Disable native push entirely
-            <span className={styles.helpText}>
-              No push device tokens are registered while this is on. Web Push and every other
-              notification channel are unaffected.
-            </span>
+        <div className={styles.checkboxList}>
+          <Checkbox
+            id="push-relay-disabled"
+            label="Turn native push off entirely"
+            checked={disabled}
+            onChange={setDisabled}
+          />
+          {disabled && <input type="hidden" name="pushRelayDisabled" value="on" />}
+          <span className={styles.helpText}>
+            No push device tokens are registered while this is on. Web Push and every other
+            notification channel are unaffected.
           </span>
-        </label>
-        <Feedback result={state} />
-        <div className={styles.providerConfigActions}>
-          <Button type="submit" size="sm" disabled={pending}>
-            {pending ? 'Saving...' : 'Save'}
-          </Button>
         </div>
+        <ActionFeedback result={state} />
+        <Button type="submit" size="sm" disabled={pending}>
+          {pending ? 'Saving…' : 'Save'}
+        </Button>
       </form>
     </div>
   );

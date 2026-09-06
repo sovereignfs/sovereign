@@ -1,4 +1,4 @@
-import { StatusBadge } from '@sovereignfs/ui';
+import { Badge } from '@sovereignfs/ui';
 import styles from '../console.module.css';
 
 /**
@@ -39,17 +39,27 @@ export function FieldEncryptionStatus({ view }: { view: FieldEncryptionView }) {
                 {cls}
               </code>
             ))}{' '}
-            — key {view.kekConfigured ? 'configured' : 'MISSING'}. Existing data is only converted
-            by <code className={styles.codeInline}>sv db encrypt-fields</code>, never automatically.
+            — key{' '}
+            {view.kekConfigured ? (
+              <Badge variant="status" size="xs" status="active">
+                configured
+              </Badge>
+            ) : (
+              <Badge variant="status" size="xs" status="failed">
+                missing
+              </Badge>
+            )}
+            . Existing data is only converted by{' '}
+            <code className={styles.codeInline}>sv db encrypt-fields</code>, never automatically.
           </p>
 
           {view.openRotations.length > 0 && (
             <div className={styles.helpText}>
-              <StatusBadge status="warning">
+              <Badge variant="status" size="sm" status="pending">
                 {view.openRotations.length === 1
                   ? '1 key rotation in progress'
                   : `${view.openRotations.length} key rotations in progress`}
-              </StatusBadge>
+              </Badge>
               <ul>
                 {view.openRotations.map((rotation) => (
                   <li key={`${rotation.pluginId}:${rotation.class}`}>

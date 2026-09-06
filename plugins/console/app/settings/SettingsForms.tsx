@@ -1,20 +1,20 @@
 'use client';
 
 import { useState, useActionState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Button,
+  Checkbox,
   FileDropzone,
   FormField,
   Icon,
   Input,
   Label,
   Select,
-  useToast,
 } from '@sovereignfs/ui';
+import { ActionFeedback } from '../_components/ActionFeedback';
+import { useSaveResult } from '../_lib/use-save-result';
 import styles from '../console.module.css';
 import {
-  type ActionResult,
   updateTenantNameAction,
   updateInviteOnlyAction,
   updateExampleAppsAction,
@@ -60,34 +60,6 @@ function ImageDropzone({
   );
 }
 
-// Success is surfaced as a toast (see useSaveResult); only errors render inline,
-// next to the form that produced them.
-function Feedback({ result }: { result: ActionResult | null }) {
-  if (!result || result.ok) return null;
-  return (
-    <p className={styles.feedbackError} role="status" aria-live="polite">
-      {result.error}
-    </p>
-  );
-}
-
-/**
- * On a successful settings action: show a success toast and refresh the current
- * route's server components. The refresh is what makes changes visible without a
- * manual reload — the Console renders as an overlay, so saving does not otherwise
- * re-render the launcher/sidebar behind it (e.g. showing/hiding example plugins).
- */
-function useSaveResult(result: ActionResult | null) {
-  const toast = useToast();
-  const router = useRouter();
-  useEffect(() => {
-    if (result?.ok) {
-      toast.show({ title: result.message, category: 'success' });
-      router.refresh();
-    }
-  }, [result, toast, router]);
-}
-
 export function TenantForm({ initialName }: { initialName: string }) {
   const [state, action, pending] = useActionState(updateTenantNameAction, null);
   useSaveResult(state);
@@ -96,7 +68,7 @@ export function TenantForm({ initialName }: { initialName: string }) {
       <FormField label="Instance name" id="tenantName" required>
         {(field) => <Input {...field} name="tenantName" type="text" defaultValue={initialName} />}
       </FormField>
-      <Feedback result={state} />
+      <ActionFeedback result={state} />
       <Button type="submit" size="sm" disabled={pending}>
         {pending ? 'Saving…' : 'Save name'}
       </Button>
@@ -106,20 +78,23 @@ export function TenantForm({ initialName }: { initialName: string }) {
 
 export function InviteOnlyForm({ initialValue }: { initialValue: boolean }) {
   const [state, action, pending] = useActionState(updateInviteOnlyAction, null);
+  const [inviteOnly, setInviteOnly] = useState(initialValue);
   useSaveResult(state);
   return (
     <form action={action} className={styles.settingsForm}>
-      <label className={styles.checkboxRow}>
-        <input type="checkbox" name="inviteOnly" defaultChecked={initialValue} />
-        <span>
-          Invite-only registration
-          <span className={styles.helpText}>
-            When enabled, only invited email addresses can register. The first user is always
-            exempt.
-          </span>
+      <div className={styles.checkboxList}>
+        <Checkbox
+          id="settings-invite-only"
+          label="Invite-only registration"
+          checked={inviteOnly}
+          onChange={setInviteOnly}
+        />
+        {inviteOnly && <input type="hidden" name="inviteOnly" value="on" />}
+        <span className={styles.helpText}>
+          When on, only invited email addresses can register. The first user is always exempt.
         </span>
-      </label>
-      <Feedback result={state} />
+      </div>
+      <ActionFeedback result={state} />
       <Button type="submit" size="sm" disabled={pending}>
         {pending ? 'Saving…' : 'Save registration policy'}
       </Button>
@@ -129,21 +104,25 @@ export function InviteOnlyForm({ initialValue }: { initialValue: boolean }) {
 
 export function ExampleAppsForm({ initialValue }: { initialValue: boolean }) {
   const [state, action, pending] = useActionState(updateExampleAppsAction, null);
+  const [enabled, setEnabled] = useState(initialValue);
   useSaveResult(state);
   return (
     <form action={action} className={styles.settingsForm}>
-      <label className={styles.checkboxRow}>
-        <input type="checkbox" name="examplesEnabled" defaultChecked={initialValue} />
-        <span>
-          Show example apps
-          <span className={styles.helpText}>
-            The bundled reference/demo apps ship hidden by default. Enable to show them in the
-            launcher and sidebar. You can still enable or disable individual example apps from the
-            Apps page.
-          </span>
+      <div className={styles.checkboxList}>
+        <Checkbox
+          id="settings-examples-enabled"
+          label="Show example apps"
+          checked={enabled}
+          onChange={setEnabled}
+        />
+        {enabled && <input type="hidden" name="examplesEnabled" value="on" />}
+        <span className={styles.helpText}>
+          The bundled reference apps ship hidden by default. Turn this on to show them in the
+          launcher and sidebar; individual example apps can still be enabled or disabled from the
+          Apps page.
         </span>
-      </label>
-      <Feedback result={state} />
+      </div>
+      <ActionFeedback result={state} />
       <Button type="submit" size="sm" disabled={pending}>
         {pending ? 'Saving…' : 'Save example apps'}
       </Button>
@@ -197,7 +176,7 @@ export function RootPluginForm({
           )
         }
       </FormField>
-      <Feedback result={state} />
+      <ActionFeedback result={state} />
       {candidates.length > 0 && (
         <Button type="submit" size="sm" disabled={pending}>
           {pending ? 'Saving…' : 'Save root app'}
@@ -404,7 +383,7 @@ export function InstanceForm({ initialValues }: { initialValues: InstanceValues 
         )}
       </FormField>
 
-      <Feedback result={state} />
+      <ActionFeedback result={state} />
       <Button type="submit" size="sm" disabled={pending}>
         {pending ? 'Saving…' : 'Save instance identity'}
       </Button>
@@ -428,7 +407,7 @@ export function LogoUploadForm({ dark }: { dark: boolean }) {
           disabled={pending}
         />
       </div>
-      <Feedback result={state} />
+      <ActionFeedback result={state} />
       <Button type="submit" size="sm" variant="secondary" disabled={pending}>
         {pending ? 'Uploading…' : 'Upload'}
       </Button>
@@ -450,7 +429,7 @@ export function FaviconUploadForm() {
           disabled={pending}
         />
       </div>
-      <Feedback result={state} />
+      <ActionFeedback result={state} />
       <Button type="submit" size="sm" variant="secondary" disabled={pending}>
         {pending ? 'Uploading…' : 'Upload'}
       </Button>

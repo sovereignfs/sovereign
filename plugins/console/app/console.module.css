@@ -957,19 +957,6 @@ svg.cardChevron {
   max-width: 440px;
 }
 
-.checkboxRow {
-  display: flex;
-  gap: var(--sv-space-3);
-  align-items: flex-start;
-  font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-primary);
-  cursor: pointer;
-}
-
-.checkboxRow input {
-  margin-top: var(--sv-space-1);
-}
-
 /* A vertical stack of `Checkbox` rows inside a `FormField` (invite form's
    "Grant access to" list). */
 .checkboxList {
@@ -1148,15 +1135,6 @@ svg.cardChevron {
   color: var(--sv-color-text-primary);
 }
 
-.providerConfigStatus {
-  padding: 2px var(--sv-space-2);
-  border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-sm);
-  color: var(--sv-color-text-muted);
-  font-size: var(--sv-font-size-xs);
-  white-space: nowrap;
-}
-
 .providerConfigForm {
   display: flex;
   flex-direction: column;
@@ -1171,6 +1149,15 @@ svg.cardChevron {
   flex-direction: column;
   gap: var(--sv-space-4);
   max-width: 560px;
+}
+
+/* Settings › Email templates preview `<iframe>` — sized like a card. */
+.emailPreviewFrame {
+  width: 100%;
+  height: 500px;
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  background-color: var(--sv-color-surface);
 }
 
 .providerConfigActions {

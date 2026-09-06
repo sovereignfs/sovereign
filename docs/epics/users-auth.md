@@ -1359,7 +1359,7 @@ replaces it.
 
 ---
 
-#### 📋 1.26 — better-auth 1.7 upgrade with session-cookie verification
+#### 🚧 1.26 — better-auth 1.7 upgrade with session-cookie verification
 
 **Goal:** Move `apps/auth` from better-auth 1.6.x to 1.7.x deliberately.
 Dependabot's grouped bump (#623, closed) surfaced two real breaks: the
@@ -1392,6 +1392,59 @@ session verification)
 - `session-verify.test.ts` and `builtin-oauth-clients.sqld.test.ts` pass
 - A 1.6-format cookie fixture still decodes
 - `docs/upgrade.md` notes the version and whether sessions survive
+
+**Parked (2026-09-06, root `0.130.3`) — do not resume before better-auth
+1.7.3 is published.** The upgrade was attempted in full against 1.7.2 and
+deliberately not shipped. What was learned, so the next attempt starts here:
+
+- **Sessions survive 1.6 → 1.7.** The compact cookie-cache wire format is
+  unchanged; 1.7's `getCookieCache` only adds payload validation against
+  better-auth's own session/user record schemas (plus a required
+  `updatedAt`) that every real 1.6 cookie already satisfies. The old test
+  failed on 1.7 only because its hand-forged fixture was a partial record no
+  server ever wrote. Two genuine artifacts now guard this permanently —
+  `runtime/src/__tests__/fixtures/session-data-cookie-{1.6.25,1.7.2}.json`,
+  each captured from a real `betterAuth()` instance of that version and
+  decoded under a clock pinned to capture time.
+- **`oauthClient`:** 1.7 replaced the 1.6 `public` + `type` columns with
+  `applicationType`. `apps/auth/src/builtin-oauth-clients.ts`'s raw INSERT
+  must move to it (write `'native'` to `applicationType`; the migrator keeps
+  the two legacy columns, nullable, on an upgraded store). Done and reverted
+  here — re-apply when resuming.
+- **The blocker:** 1.7.0–1.7.2 add a required `account.issuer` column and key
+  credential sign-in on `issuer === 'local:credential'`. better-auth's
+  migrator refuses to add a required, default-less column to a populated
+  table (`UnsafeMigrationError`, `get-migration.mjs`), so `runAuthMigrations()`
+  throws at auth boot on every instance that has a single account — an
+  upgrade that takes production down. better-auth's own 1.7 upgrade guide
+  ("Account identity keeps the provider key") says 1.7.3 removes the column
+  again and gives operators SQL to drop it. Shipping 1.7.2 would have meant
+  hand-writing a backfill for a column the next patch deletes.
+- **Shipped instead:** all four importers moved to 1.6.30 (latest 1.6.x),
+  the fixtures above, the full-record forge in `session-verify.test.ts`, and
+  a `dependabot.yml` ignore for `>=1.7.0 <1.7.3` on all three packages.
+- **Re-entry checklist for 1.7.3+:** confirm `account` has no `issuer`
+  requirement in the shipped schema; bump the trio; re-apply the
+  `applicationType` seed change plus the sqld "upgraded-in-place store" test
+  case (legacy nullable `public`/`type` columns present); run the sqld suite
+  against a **throwaway** namespace (see the hazard below); live sign-in on a
+  populated store; `docs/upgrade.md` note; drop the Dependabot ignore.
+- **Live on 1.6.30 (the shipped state):** the auth server boots against the
+  existing dev store and runs its migrator; sign-in as a seeded user
+  succeeds; gated pages (Home, Account → Profile/Security) render with the
+  user's data while every `/api/verify` request in the auth log is a 401 —
+  i.e. none carried the session cookie, so page loads were served by the
+  middleware's offline cookie-cache path, never the fallback; the
+  authoritative `get-session?disableCookieCache=true` read returns 200.
+  Dev-environment note: better-auth's `jwt()` plugin decrypts the `jwks`
+  private key with `AUTH_SECRET`, so a store shared between clones with
+  different secrets 500s on `get-session` until the (ephemeral) `jwks` row is
+  cleared and regenerated.
+- **Hazard found in passing:** `builtin-oauth-clients.sqld.test.ts`'s
+  `beforeAll` drops `oauthClient`/`account`/`session`/`verification` in the
+  fixed `sovereign_auth` namespace. Pointing `TEST_SQLD_URL` at a developer's
+  `sovereign-sqld-dev` container wipes that store's credentials (it did,
+  here). Follow-up: give the suite a dedicated namespace.
 
 ---
 

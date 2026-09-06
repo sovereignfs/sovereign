@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.130.2 · **Last updated:** 2026-09-06
+**Version:** 0.130.3 · **Last updated:** 2026-09-06
 
 _(This header tracks the root `package.json` version as of the date above — a
 freshness marker for the document as a whole, not the version of the most
@@ -40,9 +40,9 @@ open architectural questions.
 | 0.3.10  | Runtime scaffold                                         | ✅     | [2.1](docs/epics/platform-shell.md#-21--runtime-scaffold)                                      |
 | 0.3.11  | Generate script                                          | ✅     | [2.2](docs/epics/platform-shell.md#-22--generate-script)                                       |
 | 0.3.12  | Docker Compose for local dev                             | ✅     | [0.6](docs/epics/infrastructure.md#-06--docker-compose-for-local-dev)                          |
-| —       | better-auth 1.7 upgrade with session-cookie verification | 📋     | [1.26](docs/epics/users-auth.md#-126--better-auth-17-upgrade-with-session-cookie-verification) |
 | —       | Next.js 16 upgrade (Turbopack vs next-pwa)               | 📋     | [0.27](docs/epics/infrastructure.md#-027--nextjs-16-upgrade-turbopack-vs-ducanh2912next-pwa)   |
 | —       | TypeScript 6 migration                                   | 📋     | [0.28](docs/epics/infrastructure.md#-028--typescript-6-migration)                              |
+| —       | better-auth 1.7 upgrade with session-cookie verification | 🚧     | [1.26](docs/epics/users-auth.md#-126--better-auth-17-upgrade-with-session-cookie-verification) |
 
 ---
 

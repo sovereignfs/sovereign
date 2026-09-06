@@ -1193,6 +1193,23 @@ full story is one grep away.
   `node:util`'s `parseArgs` with `multiple` never set, so a repeated flag
   silently keeps the last value. Read `rawArgs` for a flag that may repeat
   (`--exclude-plugin`). `0.128.0`.
+- **A better-auth version bump is verified against a populated auth store,
+  never only a fresh one, and never merged from a grouped Dependabot PR.**
+  better-auth's migrator (`dist/db/get-migration.mjs`) refuses to add a
+  required column with no default to a table that has rows — it throws
+  `UnsafeMigrationError`, which `apps/auth/src/migrate.ts`'s
+  `runAuthMigrations()` propagates, so the auth server fails to boot on every
+  real instance while a fresh CI database passes. better-auth 1.7.0–1.7.2 did
+  exactly this with a required `account.issuer` column (and keyed credential
+  sign-in on `issuer === 'local:credential'`), then 1.7.3 removed it again per
+  better-auth's own 1.7 upgrade guide; `dependabot.yml` ignores that window
+  and the three packages have their own Dependabot group. Two genuine
+  `session_data` cookies captured from real 1.6.25 and 1.7.2 instances
+  (`runtime/src/__tests__/fixtures/`) are permanent regression fixtures for
+  the compact cookie-cache format `runtime/middleware.ts` verifies offline —
+  a hand-forged partial record is not a valid fixture (1.7 validates the
+  payload against better-auth's own record schemas and rejects it). Epic task
+  1.26 holds the re-entry checklist.
 - **Test hygiene learned the hard way:** await every async operation a test
   starts (an un-awaited jsdom `FileReader` completion lands as an unhandled
   exception after the test returns and fails the whole run, `0.94.14`); scope

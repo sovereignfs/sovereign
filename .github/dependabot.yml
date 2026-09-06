@@ -24,6 +24,17 @@ updates:
     #   @types/node — tracks the root `engines` major (24), not the newest
     #                Node release
     ignore:
+      # better-auth 1.7.0–1.7.2 add a required `account.issuer` column that the
+      # migrator refuses to add to any populated table (UnsafeMigrationError at
+      # auth boot), and better-auth's own 1.7 upgrade guide says 1.7.3 removes
+      # it again and tells operators to drop it by hand. Skip the window; the
+      # bot may propose 1.7.3+ (epic task 1.26 holds the re-entry checklist).
+      - dependency-name: 'better-auth'
+        versions: ['>=1.7.0 <1.7.3']
+      - dependency-name: '@better-auth/passkey'
+        versions: ['>=1.7.0 <1.7.3']
+      - dependency-name: '@better-auth/oauth-provider'
+        versions: ['>=1.7.0 <1.7.3']
       - dependency-name: 'typescript'
         update-types: ['version-update:semver-major']
       - dependency-name: 'next'

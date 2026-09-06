@@ -9,7 +9,7 @@
     "next-env.d.ts",
     "next.config.ts",
     "instrumentation.ts",
-    "middleware.ts",
+    "proxy.ts",
     "src/**/*.ts",
     "scripts/**/*.ts",
     "app/**/*.ts",

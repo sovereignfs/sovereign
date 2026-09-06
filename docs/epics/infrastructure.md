@@ -1096,7 +1096,7 @@ bridge and manifest diffed byte-identical against a TypeScript 5.9 build of
 
 ---
 
-#### 📋 0.29 — Migrate `middleware.ts` to Next's `proxy` convention
+#### ✅ 0.29 — Migrate `middleware.ts` to Next's `proxy` convention
 
 **Goal:** Next 16 deprecated the `middleware` file convention in favour of
 `proxy` (one warning per `next build` today; removal expected in a later
@@ -1127,6 +1127,19 @@ and their regression suites assume them.
 
 - `next build` prints no `middleware` deprecation warning on either app
 - Middleware/proxy regression suites green; `pnpm test:e2e` green
+
+**Status (September 2026): shipped — root 0.133.0, `runtime` 0.101.0,
+`apps/auth` 2.5.0.** Decision: keep the Edge discipline as a convention
+(recorded in `docs/architecture-rules.md`). `runtime/middleware.ts` →
+`runtime/proxy.ts` (`proxy()`), `apps/auth/middleware.ts` → `apps/auth/proxy.ts`,
+`runtime/src/middleware/` → `runtime/src/proxy/`, the regression suite renamed
+to `proxy-regression.test.ts`; tsconfig `include` entries, the
+`tsconfig-coverage` test, CLAUDE.md, the security-check skill and every
+file-name reference in code comments and docs updated. No
+`skipMiddlewareUrlNormalize` was in use. Verified: no deprecation warning on
+either build, both regression suites green, e2e green, and the runtime's
+standalone `server.js` booted and answered a gated `/` with the 303 and a
+nonce CSP (no Edge bundle exists in the output).
 
 ---
 

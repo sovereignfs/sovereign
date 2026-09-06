@@ -6,7 +6,7 @@
  * or non-OK response yields the empty/no-restriction result) — these are
  * admin conveniences layered on top of, not a replacement for, the
  * adminOnly/paywall route decisions in `runtime/src/route-guard.ts`, which
- * consume these sets. Extracted from `runtime/middleware.ts` (Task 2.17) —
+ * consume these sets. Extracted from `runtime/proxy.ts` (Task 2.17) —
  * behavior unchanged at that point, purely a relocation.
  *
  * Task 2.18 added the short-lived in-process caches below for
@@ -41,7 +41,8 @@ export const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? process.
 let disabledPluginIdsCache: TtlCacheEntry<Set<string>> | null = null;
 
 /**
- * Middleware runs on the Edge runtime, which cannot open the SQLite database.
+ * The proxy keeps the Edge discipline (no DB access — see runtime/proxy.ts),
+ * so it cannot open the database itself.
  * Plugin enabled/disabled state is fetched from the runtime's own
  * /api/admin/plugins/disabled route (Node runtime, excluded from this
  * middleware's matcher) — same round-trip pattern as the auth /api/verify
@@ -52,7 +53,7 @@ let disabledPluginIdsCache: TtlCacheEntry<Set<string>> | null = null;
  * Cached in-process for `CACHE_TTL_MS` (global, not per-user — every request
  * shares one cache entry, matching the global scope of "which plugins are
  * disabled"). No explicit invalidation on the admin toggle mutation: that
- * mutation runs in the Node runtime, this cache lives in the Edge runtime's
+ * mutation runs in the Node runtime, this cache lives in the proxy bundle's
  * module state, and coupling the two would mean importing middleware-only
  * internals into an unrelated admin route handler — fragile, and would
  * silently stop working the moment Edge middleware runs as an actually

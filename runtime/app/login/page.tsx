@@ -25,7 +25,7 @@ export default async function LoginPage({
 
   // Read server-side rather than leaving this to LoginForm's own
   // `useSearchParams()` call. That distinction matters specifically for
-  // `middleware.ts`'s unauthenticated-GET **rewrite** to this page (bare `/`,
+  // `proxy.ts`'s unauthenticated-GET **rewrite** to this page (bare `/`,
   // and an `installable` plugin's bare routePrefix, RFC 0081): a rewrite
   // never changes the browser's visible address bar, so a *client* hook
   // reading `window.location` sees no query string at all — verified live,

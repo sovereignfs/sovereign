@@ -427,8 +427,8 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   headers (`X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
   `Referrer-Policy`, `Permissions-Policy`, and **HSTS production-only**). The
   **Content-Security-Policy is strict and nonce-based**, set per-request in
-  middleware (`runtime/middleware.ts` extends the session middleware;
-  `apps/auth/middleware.ts` is dedicated) — every middleware return path must run
+  middleware (`runtime/proxy.ts` extends the session middleware;
+  `apps/auth/proxy.ts` is dedicated) — every middleware return path must run
   through `applyCsp`, and the rendered-path request headers carry the nonce so
   Next nonces its own inline scripts. CSP builders live in `runtime/src/security.ts`
   and the duplicated `apps/auth/src/security.ts` (the apps share no code). The
@@ -501,7 +501,7 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   user already sees on that plugin's sidebar icon or Launcher tile. No
   per-user data, no DB write. **The `manifest[].icons` array's own URLs need
   the identical exemption, on a different matcher entry** —
-  `runtime/middleware.ts`'s matcher must exclude `plugin-icons/` alongside
+  `runtime/proxy.ts`'s matcher must exclude `plugin-icons/` alongside
   `icons/`, or a manifest icon fetch 303-redirects instead of returning an
   image. This is not merely inconsistent; most browsers don't follow a
   redirect when fetching a manifest icon for an installability check, so a
@@ -662,13 +662,13 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   decisions. Anything that must not be reachable is gated by session,
   capability, or plugin permission, never by surface or focus. RFC 0082's
   route lock (`runtime/src/route-lock.ts`'s `decideFocusRoute()`, wired into
-  `runtime/middleware.ts`) is a UX and product-scoping mechanism on top of
+  `runtime/proxy.ts`) is a UX and product-scoping mechanism on top of
   the focus signal, not a security boundary: an out-of-focus path redirects
   to the focused plugin's root rather than being denied, and a forged focus
   target (or an edited User-Agent) reaches exactly the routes the caller's
   session/capability/plugin-permission gates already allow — those gates
   run entirely independently of the lock, before and after it.
-  `runtime/middleware.ts` strips any inbound `x-sovereign-surface` /
+  `runtime/proxy.ts` strips any inbound `x-sovereign-surface` /
   `x-sovereign-shell-version` / `x-sovereign-focus-plugin` header before
   injecting its own (all parsed from the shell's single
   `Sovereign-Shell/<mobile|desktop>-<platform> <version> (focus=<pluginId>)`
@@ -876,7 +876,7 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   actual `app/api/**` directory tree, not just the doc comment describing it.
   **A second, distinct bug was later found in this same route (epic task
   8.17 live verification):** the route's own doc comment claimed a
-  `runtime/middleware.ts` matcher exemption "by design" — modeling itself on
+  `runtime/proxy.ts` matcher exemption "by design" — modeling itself on
   `api/storage`'s already-correct exemption — but `api/backup-jobs` was
   never actually added to the matcher's negative-lookahead list. A request
   carrying a genuinely valid, unexpired signed token still 303-redirected to
@@ -886,7 +886,7 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   against a real Postgres-backed job (200, correct bytes, decrypts with the
   real passphrase). The lesson generalizes: a route's own doc comment
   claiming a middleware exemption is not proof it was actually applied —
-  check the real `matcher` array in `runtime/middleware.ts` directly before
+  check the real `matcher` array in `runtime/proxy.ts` directly before
   trusting it. Fixed by adding `api/backup-jobs` to that array — safe here
   specifically because, like `api/storage`, no other route shares this
   prefix (unlike `api/instance` above, which is deliberately kept _inside_
@@ -1090,7 +1090,7 @@ search_path`/session GUCs meant to persist across statements, temp
   compares the `SOVEREIGN_ADMIN_KEY` bearer token with `crypto.timingSafeEqual`
   on length-checked buffers, never plain `!==`.** This is the sole
   authorization boundary for the entire `/api/admin/*` surface on both
-  services — `runtime/middleware.ts`'s matcher deliberately excludes this
+  services — `runtime/proxy.ts`'s matcher deliberately excludes this
   path (self-authenticated by design), so a plain string comparison is also
   a timing side-channel with nothing else standing in front of it. A
   dedicated per-IP rate limiter (`admin-rate-limit.ts`, one instance per
@@ -1128,7 +1128,17 @@ full story is one grep away.
   a user's data silently fails to come back. Every first-party plugin that
   declares both permissions implements both handlers symmetrically. Found in
   `0.130.2` (Warden had declared `data:import` since epic 22.5 with no handler).
-- **`runtime/middleware.ts` runs on Next.js's Edge runtime.** It cannot load
+- **`runtime/proxy.ts` is Next's `proxy` convention (the renamed `middleware`,
+  Next 16) and runs on the Node.js runtime — the Edge runtime is not supported
+  there. Decision (epic task 0.29): it keeps the Edge discipline as a
+  convention** — no Node built-ins, no `ioredis`, no DB access, sessions
+  verified from the signed cookie cache with `/api/verify` as the only
+  network fallback. Reasons: the gate stays portable to an edge/CDN deployment
+  (Next's own guidance for proxies), the offline verify path stays the hot
+  path with no per-request DB round trip, and the regression suite
+  (`runtime/src/__tests__/proxy-regression.test.ts`) assumes exactly these
+  constraints. Relaxing any of them is a deliberate change with its own task,
+  not a convenience. The historical rule follows. It cannot load
   `ioredis` (needs Node `net`/`tls`) or any Node built-in, and it avoids DB
   writes for the same reason. Moving it to Node.js Middleware is a
   platform-wide change with its own blast radius (paused task 2.29, RFC 0086
@@ -1229,7 +1239,7 @@ full story is one grep away.
   and the three packages have their own Dependabot group. Two genuine
   `session_data` cookies captured from real 1.6.25 and 1.7.2 instances
   (`runtime/src/__tests__/fixtures/`) are permanent regression fixtures for
-  the compact cookie-cache format `runtime/middleware.ts` verifies offline —
+  the compact cookie-cache format `runtime/proxy.ts` verifies offline —
   a hand-forged partial record is not a valid fixture (1.7 validates the
   payload against better-auth's own record schemas and rejects it). Epic task
   1.26 holds the re-entry checklist.

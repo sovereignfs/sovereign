@@ -227,15 +227,17 @@ each: `docs/architecture-rules.md`.
   path reads `SOVEREIGN_DB_ENCRYPTION_KEY`. Only `sv db migrate-to-postgres`
   keeps the primitives, to read a legacy encrypted source.
 
-### Auth, security, middleware
+### Auth, security, proxy
 
 - **No secrets with defaults:** `AUTH_SECRET`, `SOVEREIGN_AUTH_SECRET`, etc.
   throw on startup if unset.
-- **Middleware `/login` redirect is `303`, never `307`** (307 turns a POST into
+- **The proxy's `/login` redirect is `303`, never `307`** (307 turns a POST into
   `POST /login` → 405), targeting `SOVEREIGN_AUTH_PUBLIC_URL`, never the
-  internal `SOVEREIGN_AUTH_URL`. Run `applyCsp` on every middleware return path.
-- **`runtime/middleware.ts` runs on the Edge runtime** — no Node built-ins, no
-  `ioredis`, no DB writes.
+  internal `SOVEREIGN_AUTH_URL`. Run `applyCsp` on every proxy return path.
+- **`runtime/proxy.ts` (Next's renamed middleware) runs on Node.js since Next
+  16 but keeps the Edge discipline** — no Node built-ins, no `ioredis`, no DB
+  access — so the gate stays portable and the offline cookie-cache verify
+  stays the hot path (`docs/architecture-rules.md`).
 - **Never `'unsafe-inline'` in `script-src`** (nonce-based CSP; the pre-paint
   theme script uses `THEME_SCRIPT_CSP_HASH`). **`form-action` must include the
   auth origin** or the cross-origin logout POST is silently blocked.
@@ -244,12 +246,12 @@ each: `docs/architecture-rules.md`.
   function is a public POST endpoint regardless of the page's `adminOnly` gate.
   A read-only action a lesser role's page legitimately renders must not demand
   a mutation capability (it crashes the page for that role).
-- **`/api/admin/*` authenticates with `checkAdminKey()` only** — middleware
+- **`/api/admin/*` authenticates with `checkAdminKey()` only** — the proxy
   skips this path, so `x-sovereign-user-*` headers there are caller-supplied;
   never read them. `checkAdminKey()` uses `timingSafeEqual` on length-checked
   buffers, backed by a per-IP failed-attempt limiter (`admin-rate-limit.ts`).
 - **A signed-download route's token lives in its own `[token]` path segment**,
-  and its middleware exemption must actually be in the `matcher` array — a doc
+  and its proxy exemption must actually be in the `matcher` array — a doc
   comment claiming one is not proof (both bugs shipped in the backup route).
 - **Server-to-server calls to better-auth send `Origin` = `SOVEREIGN_AUTH_URL`**
   or the CSRF check returns 403.
@@ -401,7 +403,7 @@ packages/
   sdk/              plugin↔platform contract — published
   bridge/           device bridge (RFC 0083) — published
   create-plugin/    `npm create @sovereignfs/plugin` scaffolder — published
-runtime/            Sovereign Core (Next.js shell, middleware, registry, SDK host)
+runtime/            Sovereign Core (Next.js shell, proxy, registry, SDK host)
   generated/        built from manifests — never hand-edit, gitignored
 plugins/{console,launcher,account}/   platform plugins
 example-plugins/    reference plugins, composed only when SOVEREIGN_EXAMPLES_ENABLED
@@ -441,7 +443,7 @@ pnpm sv <cmd>           # CLI (seed, backup, restore, plugin add/remove, …)
 - **`pnpm dev` needs Docker running** — `scripts/ensure-sqld.ts` starts a
   persistent `sovereign-sqld-dev` container, deliberately separate from
   `docker-compose.yml`'s `sovereign-sqld`.
-- **Middleware verifies sessions offline** via better-auth's signed cookie cache
+- **The proxy verifies sessions offline** via better-auth's signed cookie cache
   (300s, key = `SOVEREIGN_AUTH_SECRET ?? AUTH_SECRET`), falling back to
   `GET /api/verify`; forward its `Set-Cookie` on a miss. The runtime service
   needs `AUTH_SECRET` in every compose file.
@@ -495,7 +497,7 @@ pnpm sv <cmd>           # CLI (seed, backup, restore, plugin add/remove, …)
 
 ## Status
 
-Current platform version: **`0.132.0`**. `ROADMAP.md` is the canonical task
+Current platform version: **`0.133.0`**. `ROADMAP.md` is the canonical task
 queue and completion record; per-release narrative through `0.130.2` is
 archived in `docs/task-history.md`.
 

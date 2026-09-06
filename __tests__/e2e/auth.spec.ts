@@ -11,7 +11,7 @@ const ADMIN_STATE = path.join(__dirname, '../../.auth/admin.json');
 test.describe('Auth — golden paths', () => {
   test('unauthenticated visit shows the login page at /', async ({ page }) => {
     // Unauthenticated GET / is rewritten (not redirected) to the login
-    // document — the URL stays "/" (see runtime/middleware.ts's iOS PWA
+    // document — the URL stays "/" (see runtime/proxy.ts's iOS PWA
     // splash rewrite; also covered directly by a middleware unit test).
     await page.goto(`${RUNTIME}/`);
     await page.waitForSelector('#login-email');

@@ -11,7 +11,7 @@ interface Props {
 
 /**
  * Nudge page for the `minVerificationLevel` plugin route gate (RFC 0035
- * §5.8/§5.9, epic task 1.9). `runtime/middleware.ts` redirects here (303)
+ * §5.8/§5.9, epic task 1.9). `runtime/proxy.ts` redirects here (303)
  * when `decidePluginRoute` returns `'verification-required'`. Message and
  * available self-service action vary by which level is needed — Level 3 has
  * none by design (RFC §5.9: "no self-service path exists").

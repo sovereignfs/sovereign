@@ -6,7 +6,7 @@ import type { NextConfig } from 'next';
 loadEnvConfig(resolve(process.cwd(), '..'), process.env.NODE_ENV !== 'production');
 
 // Static security response headers (RFC 0008 Tier 0). The Content-Security-Policy
-// is set per-request in middleware.ts (it needs a fresh nonce), so it is not
+// is set per-request in proxy.ts (it needs a fresh nonce), so it is not
 // here. HSTS is production-only — it must never be sent over plain-http dev.
 const isProd = process.env.NODE_ENV === 'production';
 const securityHeaders = [

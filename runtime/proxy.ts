@@ -15,14 +15,14 @@ import {
   strippedRequestHeaders,
   withCookies as withCookiesOnResponse,
   withDevMode as withDevModeOnResponse,
-} from '@/src/middleware/response';
+} from '@/src/proxy/response';
 import {
   fetchDisabledPluginIds,
   fetchPaywalledPluginIds,
   fetchRestrictedPluginIds,
   fetchRootPluginPrefix,
-} from '@/src/middleware/plugin-gate';
-import { AUTH_URL, verifySession } from '@/src/middleware/session';
+} from '@/src/proxy/plugin-gate';
+import { AUTH_URL, verifySession } from '@/src/proxy/session';
 import { getInstalledPlugins, getOfflineRoutePrefixes } from '@/src/registry';
 import {
   decidePluginRoute,
@@ -47,7 +47,7 @@ import { applySurfaceHeaders, resolveSurface } from '@/src/surface';
  * path, gated by `request.headers.get('x-sovereign-user-role')` in the route
  * handler. That header is trustworthy only because middleware strips any
  * caller-supplied copy and re-injects it from a verified session (see
- * `SOVEREIGN_TRUST_HEADERS` in `@/src/middleware/response`) — a guarantee that holds solely for paths
+ * `SOVEREIGN_TRUST_HEADERS` in `@/src/proxy/response`) — a guarantee that holds solely for paths
  * the middleware actually runs on. This path was previously excluded from
  * the matcher entirely (GET *and* POST/DELETE), which meant middleware never
  * ran and the header check trusted a caller-supplied value outright: `curl
@@ -78,6 +78,13 @@ function authPublicOrigin(): string | undefined {
 }
 
 /**
+ * Next's `proxy` file convention (the renamed `middleware`, Next 16): runs on
+ * the Node.js runtime in front of every matched request. It keeps the Edge
+ * discipline it was written to as a convention — no Node built-ins, no
+ * `ioredis`, no DB access — so the gate stays portable to an edge/CDN
+ * deployment and every session check stays the offline cookie-cache path
+ * (`@/src/proxy/session`). See `docs/architecture-rules.md`.
+ *
  * Session gate + plugin route protection. Verifies the session locally from the
  * signed cookie cache and falls back to the auth server's /api/verify (SRS
  * AUTH-05/06). On success the verified user is injected as request headers for
@@ -86,13 +93,13 @@ function authPublicOrigin(): string | undefined {
  * capability (RFC 0021) — users without it get 403 (SRS §3.4, PLT-03). Routes under a
  * disabled plugin's prefix return 404 (SRS CON-07, PLT-04).
  */
-export async function middleware(request: NextRequest): Promise<NextResponse> {
+export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
   // Per-request CSP nonce (RFC 0008 Tier 0). Next reads the nonce from the
   // request's Content-Security-Policy header and applies it to its own inline
   // scripts; the root layout reads `x-nonce` for the pre-paint theme script.
-  // `applyCsp` stamps the policy on every response leaving this middleware.
+  // `applyCsp` stamps the policy on every response leaving this proxy.
   const nonce = generateNonce();
   const csp = buildContentSecurityPolicy(nonce, {
     isProd: process.env.NODE_ENV === 'production',
@@ -353,7 +360,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   // Both local cookie-cache verification and the auth-server fallback are
   // tried by `verifySession`; a null result here fails closed (unlike the
   // public-route and handoff branches above, which proceed anonymously) —
-  // see `buildLoginRedirect`'s own doc comment in `@/src/middleware/response`
+  // see `buildLoginRedirect`'s own doc comment in `@/src/proxy/response`
   // for why this is a rewrite (not a redirect) for `/` and an `installable`
   // plugin's own bare `routePrefix`, and a 303 (not 307) redirect otherwise.
   const gateResult = await verifySession(request);

@@ -16,7 +16,7 @@ rules. Fast and scoped — runs after implementation, before the PR draft.
 `sv-task-complete` triggers it when the diff touches any of:
 
 - `apps/auth/` — auth server, session config, CSRF, rate limiting
-- `runtime/middleware.ts` — redirects, session verification, CSP, matcher
+- `runtime/proxy.ts` (Next's renamed middleware) — redirects, session verification, CSP, matcher
 - `runtime/app/api/` — API routes, especially `api/admin/*` and signed-download routes
 - `plugins/*/app/**/actions.ts` — server actions (public POST endpoints)
 - `packages/sdk/`, `packages/manifest/` — permission and capability surface
@@ -45,7 +45,7 @@ Run it manually any time with `sv-security-check`.
    | Timing-safe key compare         | Any admin/token compare uses `timingSafeEqual` on length-checked buffers, never `===`.                                                                         |
    | Middleware redirect 303         | `NextResponse.redirect` to login is `303`, not `307`, and targets `SOVEREIGN_AUTH_PUBLIC_URL`.                                                                 |
    | Middleware matcher              | A route that self-authorizes (signed token) is actually in the matcher's exclusion list; a doc comment is not proof. No `api/instance`-style prefix collision. |
-   | Edge runtime                    | `runtime/middleware.ts` gains no Node built-ins, `ioredis`, or DB writes.                                                                                      |
+   | Edge discipline                 | `runtime/proxy.ts` gains no Node built-ins, `ioredis`, or DB access (it runs on Node since Next 16, by convention still Edge-clean).                           |
    | `applyCsp` on every return      | Every middleware `return` is wrapped.                                                                                                                          |
    | CSP `script-src`                | No `'unsafe-inline'`; nonce/hash model intact.                                                                                                                 |
    | CSP `form-action`               | Includes the auth origin.                                                                                                                                      |

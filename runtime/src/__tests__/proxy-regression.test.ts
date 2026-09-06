@@ -1,7 +1,7 @@
 import type { SovereignManifest } from '@sovereignfs/manifest';
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetPluginGateCacheForTests } from '../middleware/plugin-gate';
+import { resetPluginGateCacheForTests } from '../proxy/plugin-gate';
 import { resetGlobalRateLimitForTests } from '../rate-limit';
 import type { VerifiedSession } from '../session-verify';
 
@@ -40,7 +40,7 @@ vi.mock('@/src/surface', async () => import('../surface'));
 
 vi.mock('@/src/session-verify', async () => import('../session-verify'));
 
-const { middleware, config } = await import('../../middleware');
+const { proxy, config } = await import('../../proxy');
 
 const consolePlugin = {
   id: 'fs.sovereign.console',
@@ -284,7 +284,7 @@ describe('runtime middleware regressions', () => {
   it('fails closed by redirecting unauthenticated POST requests to /login with 303', async () => {
     fetchState.session = null;
 
-    const response = await middleware(request('/launcher/settings', { method: 'POST' }));
+    const response = await proxy(request('/launcher/settings', { method: 'POST' }));
 
     expect(response.status).toBe(303);
     expect(response.headers.get('location')).toBe(
@@ -296,7 +296,7 @@ describe('runtime middleware regressions', () => {
   it('carries the original path as returnUrl on the /login redirect', async () => {
     fetchState.session = null;
 
-    const response = await middleware(request('/launcher/settings?tab=general'));
+    const response = await proxy(request('/launcher/settings?tab=general'));
 
     expect(response.status).toBe(303);
     expect(response.headers.get('location')).toBe(
@@ -308,7 +308,7 @@ describe('runtime middleware regressions', () => {
     it('rewrites (not redirects) an unauthenticated GET to /login for an installable plugin', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/tally'));
+      const response = await proxy(request('/tally'));
 
       expect(response.status).toBe(200);
       expect(middlewareRewrite(response)).toBe('http://runtime.test/login?returnUrl=%2Ftally');
@@ -317,7 +317,7 @@ describe('runtime middleware regressions', () => {
     it('sets returnUrl on the rewrite target so post-login returns into the app, not "/"', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/tally'));
+      const response = await proxy(request('/tally'));
 
       const rewriteTarget = new URL(middlewareRewrite(response) ?? '');
       expect(rewriteTarget.pathname).toBe('/login');
@@ -327,7 +327,7 @@ describe('runtime middleware regressions', () => {
     it('does not rewrite a nested path under an installable plugin — falls through to the normal 303 redirect', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/tally/groups/42'));
+      const response = await proxy(request('/tally/groups/42'));
 
       expect(response.status).toBe(303);
       expect(response.headers.get('location')).toBe(
@@ -338,7 +338,7 @@ describe('runtime middleware regressions', () => {
     it('does not rewrite a non-installable plugin — falls through to the normal 303 redirect', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/launcher'));
+      const response = await proxy(request('/launcher'));
 
       expect(response.status).toBe(303);
       expect(response.headers.get('location')).toBe(
@@ -349,7 +349,7 @@ describe('runtime middleware regressions', () => {
     it('leaves the existing "/" rewrite behavior unchanged — still no returnUrl', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/'));
+      const response = await proxy(request('/'));
 
       expect(response.status).toBe(200);
       expect(middlewareRewrite(response)).toBe('http://runtime.test/login');
@@ -358,7 +358,7 @@ describe('runtime middleware regressions', () => {
     it('only rewrites GET — an unauthenticated POST to the plugin route still 303s', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/tally', { method: 'POST' }));
+      const response = await proxy(request('/tally', { method: 'POST' }));
 
       expect(response.status).toBe(303);
       expect(response.headers.get('location')).toBe('http://runtime.test/login?returnUrl=%2Ftally');
@@ -368,7 +368,7 @@ describe('runtime middleware regressions', () => {
   it('redirects non-admin Console page access to /forbidden with 303', async () => {
     fetchState.session = session('platform:user');
 
-    const response = await middleware(request('/console/users'));
+    const response = await proxy(request('/console/users'));
 
     expect(response.status).toBe(303);
     expect(response.headers.get('location')).toBe('http://runtime.test/forbidden');
@@ -377,7 +377,7 @@ describe('runtime middleware regressions', () => {
   it('returns raw 403 for a non-admin request to an API-shaped adminOnly plugin', async () => {
     fetchState.session = session('platform:user');
 
-    const response = await middleware(request('/api/admin/console-tools/users'));
+    const response = await proxy(request('/api/admin/console-tools/users'));
 
     expect(response.status).toBe(403);
     expect(await response.text()).toBe('Forbidden');
@@ -387,42 +387,40 @@ describe('runtime middleware regressions', () => {
     const mobileUA = { 'user-agent': 'Sovereign-Shell/mobile-ios 1.0.0' };
 
     it('redirects a mobile-only plugin to /unavailable-surface from an ordinary browser', async () => {
-      const response = await middleware(request('/scanner'));
+      const response = await proxy(request('/scanner'));
 
       expect(response.status).toBe(303);
       expect(response.headers.get('location')).toBe('http://runtime.test/unavailable-surface');
     });
 
     it('allows the plugin through on its declared surface', async () => {
-      const response = await middleware(request('/scanner', { headers: mobileUA }));
+      const response = await proxy(request('/scanner', { headers: mobileUA }));
 
       expect(response.status).toBe(200);
     });
 
     it('returns raw 404 for an API-shaped surface-restricted route off-surface', async () => {
-      const response = await middleware(request('/api/admin/scanner-tools/scan'));
+      const response = await proxy(request('/api/admin/scanner-tools/scan'));
 
       expect(response.status).toBe(404);
       expect(await response.text()).toBe('Not Found');
     });
 
     it('allows the API-shaped route through on its declared surface', async () => {
-      const response = await middleware(
-        request('/api/admin/scanner-tools/scan', { headers: mobileUA }),
-      );
+      const response = await proxy(request('/api/admin/scanner-tools/scan', { headers: mobileUA }));
 
       expect(response.status).toBe(200);
     });
 
     it('does not affect a plugin declaring no surfaces field', async () => {
-      const response = await middleware(request('/launcher'));
+      const response = await proxy(request('/launcher'));
       expect(response.status).toBe(200);
     });
 
     it('disabled wins over surface unavailability — 404, not the unavailable-surface redirect', async () => {
       fetchState.disabledIds = [mobileOnlyPlugin.id];
 
-      const response = await middleware(request('/scanner'));
+      const response = await proxy(request('/scanner'));
 
       expect(response.status).toBe(200);
       expect(middlewareRewrite(response)).toBe('http://runtime.test/__not-found');
@@ -432,7 +430,7 @@ describe('runtime middleware regressions', () => {
   it('rewrites disabled plugin page routes to /__not-found', async () => {
     fetchState.disabledIds = [launcherPlugin.id];
 
-    const response = await middleware(request('/launcher'));
+    const response = await proxy(request('/launcher'));
 
     expect(response.status).toBe(200);
     expect(middlewareRewrite(response)).toBe('http://runtime.test/__not-found');
@@ -441,7 +439,7 @@ describe('runtime middleware regressions', () => {
   it('returns raw 404 for a disabled API-shaped plugin route', async () => {
     fetchState.disabledIds = [apiShapedPlugin.id];
 
-    const response = await middleware(request('/api/plugins/example/run'));
+    const response = await proxy(request('/api/plugins/example/run'));
 
     expect(response.status).toBe(404);
     expect(await response.text()).toBe('Not Found');
@@ -450,7 +448,7 @@ describe('runtime middleware regressions', () => {
   it('rewrites access-policy-restricted plugin page routes to /__not-found (RFC 0065)', async () => {
     fetchState.restrictedIds = [launcherPlugin.id];
 
-    const response = await middleware(request('/launcher'));
+    const response = await proxy(request('/launcher'));
 
     expect(response.status).toBe(200);
     expect(middlewareRewrite(response)).toBe('http://runtime.test/__not-found');
@@ -460,7 +458,7 @@ describe('runtime middleware regressions', () => {
     fetchState.restrictedIds = [consolePlugin.id];
     fetchState.session = session('platform:admin');
 
-    const response = await middleware(request('/console'));
+    const response = await proxy(request('/console'));
 
     expect(response.status).toBe(200);
     expect(middlewareRewrite(response)).toBe('http://runtime.test/__not-found');
@@ -469,7 +467,7 @@ describe('runtime middleware regressions', () => {
   it('redirects paywalled plugin page routes to the plugin paywall', async () => {
     fetchState.paywalledIds = [paidPlugin.id];
 
-    const response = await middleware(request('/paid/reports'));
+    const response = await proxy(request('/paid/reports'));
 
     expect(response.status).toBe(303);
     expect(response.headers.get('location')).toBe('http://runtime.test/paywall/fs.example.paid');
@@ -478,7 +476,7 @@ describe('runtime middleware regressions', () => {
   it('returns 402 for paywalled plugin API-shaped routes', async () => {
     fetchState.paywalledIds = [apiShapedPlugin.id];
 
-    const response = await middleware(request('/api/plugins/example/run'));
+    const response = await proxy(request('/api/plugins/example/run'));
 
     expect(response.status).toBe(402);
     expect(await response.text()).toBe('Payment Required');
@@ -487,7 +485,7 @@ describe('runtime middleware regressions', () => {
   describe('minVerificationLevel plugin gate (RFC 0035 §5.8, epic task 1.9)', () => {
     it('redirects an under-leveled user to the verification-required nudge page', async () => {
       // Default session() is verificationLevel: 0; the plugin requires 1.
-      const response = await middleware(request('/verified-only/dashboard'));
+      const response = await proxy(request('/verified-only/dashboard'));
 
       expect(response.status).toBe(303);
       expect(response.headers.get('location')).toBe(
@@ -501,14 +499,14 @@ describe('runtime middleware regressions', () => {
         user: { ...session().user, verificationLevel: 1 },
       };
 
-      const response = await middleware(request('/verified-only/dashboard'));
+      const response = await proxy(request('/verified-only/dashboard'));
 
       expect(response.status).toBe(200);
       expect(response.headers.get('location')).toBeNull();
     });
 
     it('returns 403 with a verification_required JSON body for gated API-shaped routes', async () => {
-      const response = await middleware(request('/api/plugins/verified-api/run'));
+      const response = await proxy(request('/api/plugins/verified-api/run'));
 
       expect(response.status).toBe(403);
       expect(await response.json()).toEqual({ error: 'verification_required', requiredLevel: 2 });
@@ -518,7 +516,7 @@ describe('runtime middleware regressions', () => {
   it('rewrites unauthenticated GET / to /login instead of redirecting (iOS PWA splash)', async () => {
     fetchState.session = null;
 
-    const response = await middleware(request('/'));
+    const response = await proxy(request('/'));
 
     expect(response.status).toBe(200);
     expect(response.headers.get('location')).toBeNull();
@@ -528,7 +526,7 @@ describe('runtime middleware regressions', () => {
   it('still redirects unauthenticated non-GET / with 303, not a method-preserving rewrite', async () => {
     fetchState.session = null;
 
-    const response = await middleware(request('/', { method: 'POST' }));
+    const response = await proxy(request('/', { method: 'POST' }));
 
     expect(response.status).toBe(303);
     expect(response.headers.get('location')).toBe('http://runtime.test/login');
@@ -537,7 +535,7 @@ describe('runtime middleware regressions', () => {
   it('rewrites / to the configured root plugin after authentication', async () => {
     fetchState.rootPrefix = '/launcher';
 
-    const response = await middleware(request('/'));
+    const response = await proxy(request('/'));
 
     expect(response.status).toBe(200);
     expect(middlewareRewrite(response)).toBe('http://runtime.test/launcher');
@@ -546,7 +544,7 @@ describe('runtime middleware regressions', () => {
   it('delegates public /api/* requests before auth verification', async () => {
     fetchState.session = null;
 
-    const response = await middleware(request('/api/blog/posts/1?draft=1'));
+    const response = await proxy(request('/api/blog/posts/1?draft=1'));
 
     expect(response.status).toBe(200);
     expect(middlewareRewrite(response)).toBe(
@@ -560,7 +558,7 @@ describe('runtime middleware regressions', () => {
     fetchState.paywalledIds = new Error('paywall fetch unavailable');
     fetchState.restrictedIds = new Error('access fetch unavailable');
 
-    const response = await middleware(request('/launcher'));
+    const response = await proxy(request('/launcher'));
 
     expect(response.status).toBe(200);
     expect(response.headers.get('location')).toBeNull();
@@ -570,7 +568,7 @@ describe('runtime middleware regressions', () => {
   it('falls through / when root-plugin lookup fails', async () => {
     fetchState.rootPrefix = new Error('root plugin lookup unavailable');
 
-    const response = await middleware(request('/'));
+    const response = await proxy(request('/'));
 
     expect(response.status).toBe(200);
     expect(middlewareRewrite(response)).toBeNull();
@@ -580,7 +578,7 @@ describe('runtime middleware regressions', () => {
     fetchState.rootPrefix = '/launcher';
     fetchState.session = session('platform:admin');
 
-    await middleware(request('/'));
+    await proxy(request('/'));
 
     const rootCall = fetchState.calls.find((c) => c.includes('/api/admin/root-plugin'));
     expect(rootCall).toContain('userId=user-1');
@@ -589,7 +587,7 @@ describe('runtime middleware regressions', () => {
 
   describe('x-sovereign-surface (RFC 0080)', () => {
     it('resolves the native shell surface for an authenticated request', async () => {
-      const response = await middleware(
+      const response = await proxy(
         request('/launcher', { headers: { 'user-agent': 'Sovereign-Shell/mobile-ios 1.0.0' } }),
       );
 
@@ -598,7 +596,7 @@ describe('runtime middleware regressions', () => {
     });
 
     it('resolves browser and strips a forged inbound header for an ordinary request', async () => {
-      const response = await middleware(
+      const response = await proxy(
         request('/launcher', { headers: { 'x-sovereign-surface': 'desktop' } }),
       );
 
@@ -607,7 +605,7 @@ describe('runtime middleware regressions', () => {
     });
 
     it('resolves the surface for a public plugin route request', async () => {
-      const response = await middleware(
+      const response = await proxy(
         request('/blog/p/hello', {
           headers: { 'user-agent': 'Sovereign-Shell/desktop-macos 2.0.0' },
         }),
@@ -620,7 +618,7 @@ describe('runtime middleware regressions', () => {
     it('resolves the surface for a public /api/* namespace request', async () => {
       fetchState.session = null;
 
-      const response = await middleware(
+      const response = await proxy(
         request('/api/blog/posts/1', {
           headers: { 'user-agent': 'Sovereign-Shell/mobile-android 3.1.0' },
         }),
@@ -636,25 +634,25 @@ describe('runtime middleware regressions', () => {
 
   describe('offline route flag (RFC 0074, RFC 0078)', () => {
     it("flags a request to an offline-enabled plugin's bare routePrefix", async () => {
-      const response = await middleware(request('/shopper'));
+      const response = await proxy(request('/shopper'));
 
       expect(response.headers.get('x-middleware-request-x-sovereign-offline-route')).toBe('1');
     });
 
     it('does not flag a sub-route on the same plugin — only the bare routePrefix is offline-capable', async () => {
-      const response = await middleware(request('/shopper/lists/abc'));
+      const response = await proxy(request('/shopper/lists/abc'));
 
       expect(response.headers.get('x-middleware-request-x-sovereign-offline-route')).toBeNull();
     });
 
     it('does not flag a request to a plugin with offline not declared', async () => {
-      const response = await middleware(request('/paid'));
+      const response = await proxy(request('/paid'));
 
       expect(response.headers.get('x-middleware-request-x-sovereign-offline-route')).toBeNull();
     });
 
     it('does not flag bare "/" — it renders the normal per-user SSR shell', async () => {
-      const response = await middleware(request('/'));
+      const response = await proxy(request('/'));
 
       expect(response.headers.get('x-middleware-request-x-sovereign-offline-route')).toBeNull();
     });
@@ -662,28 +660,28 @@ describe('runtime middleware regressions', () => {
 
   describe('mobile chrome flags (RFC 0075)', () => {
     it('flags both header and footer hidden for a plugin declaring both false', async () => {
-      const response = await middleware(request('/canvas'));
+      const response = await proxy(request('/canvas'));
 
       expect(response.headers.get('x-middleware-request-x-sovereign-mobile-header')).toBe('0');
       expect(response.headers.get('x-middleware-request-x-sovereign-mobile-footer')).toBe('0');
     });
 
     it('flags a nested route under the plugin prefix the same way', async () => {
-      const response = await middleware(request('/canvas/doc/1'));
+      const response = await proxy(request('/canvas/doc/1'));
 
       expect(response.headers.get('x-middleware-request-x-sovereign-mobile-header')).toBe('0');
       expect(response.headers.get('x-middleware-request-x-sovereign-mobile-footer')).toBe('0');
     });
 
     it('does not flag a plugin with no shellConfig override', async () => {
-      const response = await middleware(request('/launcher'));
+      const response = await proxy(request('/launcher'));
 
       expect(response.headers.get('x-middleware-request-x-sovereign-mobile-header')).toBeNull();
       expect(response.headers.get('x-middleware-request-x-sovereign-mobile-footer')).toBeNull();
     });
 
     it('does not flag bare "/" ', async () => {
-      const response = await middleware(request('/'));
+      const response = await proxy(request('/'));
 
       expect(response.headers.get('x-middleware-request-x-sovereign-mobile-header')).toBeNull();
       expect(response.headers.get('x-middleware-request-x-sovereign-mobile-footer')).toBeNull();
@@ -694,7 +692,7 @@ describe('runtime middleware regressions', () => {
     it('allows unauthenticated access to a manifest-declared public route', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/blog/p/some-slug'));
+      const response = await proxy(request('/blog/p/some-slug'));
 
       expect(response.status).toBe(200);
       expect(response.headers.get('location')).toBeNull();
@@ -704,7 +702,7 @@ describe('runtime middleware regressions', () => {
     it('still redirects to /login for an undeclared page under the same plugin', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/blog/drafts'));
+      const response = await proxy(request('/blog/drafts'));
 
       expect(response.status).toBe(303);
       expect(response.headers.get('location')).toBe(
@@ -716,7 +714,7 @@ describe('runtime middleware regressions', () => {
       fetchState.session = null;
       fetchState.disabledIds = [publicRoutePlugin.id];
 
-      const response = await middleware(request('/blog/p/some-slug'));
+      const response = await proxy(request('/blog/p/some-slug'));
 
       expect(response.status).toBe(404);
       expect(await response.text()).toBe('Not Found');
@@ -725,7 +723,7 @@ describe('runtime middleware regressions', () => {
     it('injects session headers when a valid session exists for a public route', async () => {
       fetchState.session = session('platform:user');
 
-      const response = await middleware(request('/blog/p/some-slug'));
+      const response = await proxy(request('/blog/p/some-slug'));
 
       expect(response.status).toBe(200);
       expect(response.headers.get('x-middleware-request-x-sovereign-user-id')).toBe('user-1');
@@ -737,7 +735,7 @@ describe('runtime middleware regressions', () => {
     it('blocks anonymous access to a monetized plugin’s public route by default', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/paid-blog/p/some-slug'));
+      const response = await proxy(request('/paid-blog/p/some-slug'));
 
       expect(response.status).toBe(303);
       expect(response.headers.get('location')).toBe(
@@ -749,7 +747,7 @@ describe('runtime middleware regressions', () => {
       fetchState.session = session();
       fetchState.paywalledIds = [paidPublicRoutePlugin.id];
 
-      const response = await middleware(request('/paid-blog/p/some-slug'));
+      const response = await proxy(request('/paid-blog/p/some-slug'));
 
       expect(response.status).toBe(303);
       expect(response.headers.get('location')).toBe(
@@ -761,7 +759,7 @@ describe('runtime middleware regressions', () => {
       fetchState.session = session();
       fetchState.paywalledIds = [];
 
-      const response = await middleware(request('/paid-blog/p/some-slug'));
+      const response = await proxy(request('/paid-blog/p/some-slug'));
 
       expect(response.status).toBe(200);
       expect(response.headers.get('location')).toBeNull();
@@ -772,7 +770,7 @@ describe('runtime middleware regressions', () => {
     it('allows an unauthenticated POST to a declared webhook path', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/provider/webhooks/deliver', { method: 'POST' }));
+      const response = await proxy(request('/provider/webhooks/deliver', { method: 'POST' }));
 
       expect(response.status).toBe(200);
       expect(response.headers.get('x-middleware-request-x-sovereign-plugin-id')).toBe(
@@ -783,7 +781,7 @@ describe('runtime middleware regressions', () => {
     it('injects no user identity header, even with a valid session cookie', async () => {
       fetchState.session = session('platform:owner');
 
-      const response = await middleware(request('/provider/webhooks/deliver', { method: 'POST' }));
+      const response = await proxy(request('/provider/webhooks/deliver', { method: 'POST' }));
 
       expect(response.status).toBe(200);
       expect(response.headers.get('x-middleware-request-x-sovereign-user-id')).toBeNull();
@@ -793,7 +791,7 @@ describe('runtime middleware regressions', () => {
     it('still redirects to /login for an undeclared path under the same plugin', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/provider/other-path'));
+      const response = await proxy(request('/provider/other-path'));
 
       expect(response.status).toBe(303);
       expect(response.headers.get('location')).toBe(
@@ -805,7 +803,7 @@ describe('runtime middleware regressions', () => {
       fetchState.session = null;
       fetchState.disabledIds = [webhookPlugin.id];
 
-      const response = await middleware(request('/provider/webhooks/deliver', { method: 'POST' }));
+      const response = await proxy(request('/provider/webhooks/deliver', { method: 'POST' }));
 
       expect(response.status).toBe(404);
       expect(await response.text()).toBe('Not Found');
@@ -814,7 +812,7 @@ describe('runtime middleware regressions', () => {
     it('returns 404 (not 405) for a method not declared on the webhook', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/provider/webhooks/deliver', { method: 'GET' }));
+      const response = await proxy(request('/provider/webhooks/deliver', { method: 'GET' }));
 
       expect(response.status).toBe(404);
       expect(await response.text()).toBe('Not Found');
@@ -823,7 +821,7 @@ describe('runtime middleware regressions', () => {
     it('allows GET on a webhook that declares GET (verification challenge)', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/provider/webhooks/verify', { method: 'GET' }));
+      const response = await proxy(request('/provider/webhooks/verify', { method: 'GET' }));
 
       expect(response.status).toBe(200);
     });
@@ -831,7 +829,7 @@ describe('runtime middleware regressions', () => {
     it('returns 413 when Content-Length exceeds the declared maxBodyBytes', async () => {
       fetchState.session = null;
 
-      const response = await middleware(
+      const response = await proxy(
         request('/provider/webhooks/deliver', {
           method: 'POST',
           headers: { 'content-length': '2000' },
@@ -845,7 +843,7 @@ describe('runtime middleware regressions', () => {
     it('allows a body within the declared maxBodyBytes', async () => {
       fetchState.session = null;
 
-      const response = await middleware(
+      const response = await proxy(
         request('/provider/webhooks/deliver', {
           method: 'POST',
           headers: { 'content-length': '500' },
@@ -858,7 +856,7 @@ describe('runtime middleware regressions', () => {
     it('passes through when Content-Length is absent (chunked body — plugin handler is the backstop)', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/provider/webhooks/deliver', { method: 'POST' }));
+      const response = await proxy(request('/provider/webhooks/deliver', { method: 'POST' }));
 
       expect(response.status).toBe(200);
     });
@@ -868,7 +866,7 @@ describe('runtime middleware regressions', () => {
     it('allows an unauthenticated GET to a declared public receiver path', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/checkout/cart'));
+      const response = await proxy(request('/checkout/cart'));
 
       expect(response.status).toBe(200);
       expect(response.headers.get('x-middleware-request-x-sovereign-plugin-id')).toBe(
@@ -880,7 +878,7 @@ describe('runtime middleware regressions', () => {
     it('still forwards user identity when a valid session is present', async () => {
       fetchState.session = session('platform:owner');
 
-      const response = await middleware(request('/checkout/cart'));
+      const response = await proxy(request('/checkout/cart'));
 
       expect(response.status).toBe(200);
       expect(response.headers.get('x-middleware-request-x-sovereign-user-id')).toBe('user-1');
@@ -890,7 +888,7 @@ describe('runtime middleware regressions', () => {
       fetchState.session = null;
       fetchState.disabledIds = [handoffPlugin.id];
 
-      const response = await middleware(request('/checkout/cart'));
+      const response = await proxy(request('/checkout/cart'));
 
       expect(response.status).toBe(404);
       expect(await response.text()).toBe('Not Found');
@@ -899,7 +897,7 @@ describe('runtime middleware regressions', () => {
     it('redirects to /login for a receiver not declared public, with no session', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/checkout/internal'));
+      const response = await proxy(request('/checkout/internal'));
 
       expect(response.status).toBe(303);
       expect(response.headers.get('location')).toBe(
@@ -910,7 +908,7 @@ describe('runtime middleware regressions', () => {
     it('still redirects to /login for an undeclared path under the same plugin, with no session', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/checkout/other-path'));
+      const response = await proxy(request('/checkout/other-path'));
 
       expect(response.status).toBe(303);
     });
@@ -920,7 +918,7 @@ describe('runtime middleware regressions', () => {
     it('allows unauthenticated access to the bare routePrefix', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/status'));
+      const response = await proxy(request('/status'));
 
       expect(response.status).toBe(200);
       expect(response.headers.get('location')).toBeNull();
@@ -930,7 +928,7 @@ describe('runtime middleware regressions', () => {
     it('allows unauthenticated access to every nested path under the plugin', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/status/incidents/42'));
+      const response = await proxy(request('/status/incidents/42'));
 
       expect(response.status).toBe(200);
       expect(response.headers.get('location')).toBeNull();
@@ -940,13 +938,13 @@ describe('runtime middleware regressions', () => {
       fetchState.session = null;
       fetchState.disabledIds = [fullyPublicPlugin.id];
 
-      const response = await middleware(request('/status'));
+      const response = await proxy(request('/status'));
 
       expect(response.status).toBe(404);
       expect(await response.text()).toBe('Not Found');
     });
 
-    // The RFC 0042/0089 public-route fast path in middleware.ts only checks
+    // The RFC 0042/0089 public-route fast path in proxy.ts only checks
     // disabledIds, never restrictedIds — RFC 0065 access policy is not
     // consulted here, same as it already isn't for `publicRoutes`. This is a
     // pre-existing property of the shared fast path, not something this task
@@ -955,7 +953,7 @@ describe('runtime middleware regressions', () => {
       fetchState.session = null;
       fetchState.restrictedIds = [fullyPublicPlugin.id];
 
-      const response = await middleware(request('/status'));
+      const response = await proxy(request('/status'));
 
       expect(response.status).toBe(200);
       expect(response.headers.get('location')).toBeNull();
@@ -964,7 +962,7 @@ describe('runtime middleware regressions', () => {
     it('injects session headers when a valid session exists', async () => {
       fetchState.session = session('platform:user');
 
-      const response = await middleware(request('/status'));
+      const response = await proxy(request('/status'));
 
       expect(response.status).toBe(200);
       expect(response.headers.get('x-middleware-request-x-sovereign-user-id')).toBe('user-1');
@@ -986,7 +984,7 @@ describe('runtime middleware regressions', () => {
     it('strips a forged header on the public /api/* rewrite (no session, no plugin auth of its own)', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/api/blog/posts/1', { headers: forgedHeaders }));
+      const response = await proxy(request('/api/blog/posts/1', { headers: forgedHeaders }));
 
       expect(response.status).toBe(200);
       expect(middlewareRewrite(response)).toBe(
@@ -1000,7 +998,7 @@ describe('runtime middleware regressions', () => {
     it('strips a forged header on an anonymous manifest-declared public route', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/blog/p/some-slug', { headers: forgedHeaders }));
+      const response = await proxy(request('/blog/p/some-slug', { headers: forgedHeaders }));
 
       expect(response.status).toBe(200);
       expect(response.headers.get('x-middleware-request-x-sovereign-user-id')).toBeNull();
@@ -1017,7 +1015,7 @@ describe('runtime middleware regressions', () => {
     it('replaces (does not merge with) a forged header on an authenticated public route with a session', async () => {
       fetchState.session = session('platform:user');
 
-      const response = await middleware(
+      const response = await proxy(
         request('/blog/p/some-slug', {
           headers: { ...forgedHeaders, 'x-sovereign-user-role': 'platform:owner' },
         }),
@@ -1034,7 +1032,7 @@ describe('runtime middleware regressions', () => {
       // `/account` isn't under any installed plugin's routePrefix, so the
       // normal gate's `if (currentPlugin) headers.set(...)` never runs —
       // a bare clone would let the forged value through untouched.
-      const response = await middleware(
+      const response = await proxy(
         request('/account', { headers: { 'x-sovereign-plugin-id': 'com.attacker.evil' } }),
       );
 
@@ -1043,7 +1041,7 @@ describe('runtime middleware regressions', () => {
     });
 
     it('replaces a forged x-sovereign-user-name with the real session value', async () => {
-      const response = await middleware(
+      const response = await proxy(
         request('/launcher', { headers: { 'x-sovereign-user-name': 'Forged Name' } }),
       );
 
@@ -1052,7 +1050,7 @@ describe('runtime middleware regressions', () => {
     });
 
     it('strips a forged x-sovereign-user-image on an authenticated route (session has none)', async () => {
-      const response = await middleware(
+      const response = await proxy(
         request('/launcher', {
           headers: { 'x-sovereign-user-image': 'https://attacker.test/avatar.png' },
         }),
@@ -1075,7 +1073,7 @@ describe('runtime middleware regressions', () => {
     // cookie returned 400 "no file provided", not 403 — proving the header
     // survived and the auth check passed). Fixed by keeping the path inside
     // the matcher and only carving out public GET (PUBLIC_INSTANCE_GET_PATHS
-    // in middleware.ts), so POST/DELETE fall through to the same
+    // in proxy.ts), so POST/DELETE fall through to the same
     // session-verification-then-header-injection flow every other
     // authenticated route gets.
     it.each(['/api/instance', '/api/instance/logo', '/api/instance/favicon'])(
@@ -1083,7 +1081,7 @@ describe('runtime middleware regressions', () => {
       async (path) => {
         fetchState.session = null;
 
-        const response = await middleware(request(path));
+        const response = await proxy(request(path));
 
         expect(response.status).toBe(200);
         expect(response.headers.get('location')).toBeNull();
@@ -1093,7 +1091,7 @@ describe('runtime middleware regressions', () => {
     it('serves HEAD /api/instance/logo with no session', async () => {
       fetchState.session = null;
 
-      const response = await middleware(request('/api/instance/logo', { method: 'HEAD' }));
+      const response = await proxy(request('/api/instance/logo', { method: 'HEAD' }));
 
       expect(response.status).toBe(200);
     });
@@ -1103,7 +1101,7 @@ describe('runtime middleware regressions', () => {
       async (method) => {
         fetchState.session = null;
 
-        const response = await middleware(
+        const response = await proxy(
           request('/api/instance/logo', {
             method,
             headers: { 'x-sovereign-user-role': 'platform:owner' },
@@ -1123,7 +1121,7 @@ describe('runtime middleware regressions', () => {
     it('replaces a forged owner header with the real, lower-privileged session role on POST /api/instance/favicon', async () => {
       fetchState.session = session('platform:user');
 
-      const response = await middleware(
+      const response = await proxy(
         request('/api/instance/favicon', {
           method: 'POST',
           headers: { 'x-sovereign-user-role': 'platform:owner' },
@@ -1141,8 +1139,8 @@ describe('runtime middleware regressions', () => {
     it('allows requests under the configured max', async () => {
       process.env.SOVEREIGN_RATE_LIMIT_MAX_REQUESTS = '2';
 
-      const first = await middleware(request('/launcher'));
-      const second = await middleware(request('/launcher'));
+      const first = await proxy(request('/launcher'));
+      const second = await proxy(request('/launcher'));
 
       expect(first.status).toBe(200);
       expect(second.status).toBe(200);
@@ -1151,8 +1149,8 @@ describe('runtime middleware regressions', () => {
     it('returns 429 with Retry-After and the CSP header once the per-IP max is exceeded', async () => {
       process.env.SOVEREIGN_RATE_LIMIT_MAX_REQUESTS = '1';
 
-      const first = await middleware(request('/launcher'));
-      const second = await middleware(request('/launcher'));
+      const first = await proxy(request('/launcher'));
+      const second = await proxy(request('/launcher'));
 
       expect(first.status).toBe(200);
       expect(second.status).toBe(429);
@@ -1165,9 +1163,9 @@ describe('runtime middleware regressions', () => {
       process.env.SOVEREIGN_RATE_LIMIT_MAX_REQUESTS = '1';
       fetchState.calls = [];
 
-      await middleware(request('/launcher'));
+      await proxy(request('/launcher'));
       fetchState.calls = [];
-      const limited = await middleware(request('/launcher'));
+      const limited = await proxy(request('/launcher'));
 
       expect(limited.status).toBe(429);
       expect(fetchState.calls).toHaveLength(0);
@@ -1176,10 +1174,10 @@ describe('runtime middleware regressions', () => {
     it('tracks separate IPs independently via the last X-Forwarded-For hop', async () => {
       process.env.SOVEREIGN_RATE_LIMIT_MAX_REQUESTS = '1';
 
-      const first = await middleware(
+      const first = await proxy(
         request('/launcher', { headers: { 'x-forwarded-for': '1.2.3.4' } }),
       );
-      const second = await middleware(
+      const second = await proxy(
         request('/launcher', { headers: { 'x-forwarded-for': '5.6.7.8' } }),
       );
 
@@ -1191,8 +1189,8 @@ describe('runtime middleware regressions', () => {
       process.env.SOVEREIGN_RATE_LIMIT_MAX_REQUESTS = '1';
       process.env.SOVEREIGN_RATE_LIMIT_DISABLED = '1';
 
-      const first = await middleware(request('/launcher'));
-      const second = await middleware(request('/launcher'));
+      const first = await proxy(request('/launcher'));
+      const second = await proxy(request('/launcher'));
 
       expect(first.status).toBe(200);
       expect(second.status).toBe(200);
@@ -1205,26 +1203,26 @@ describe('runtime middleware regressions', () => {
     };
 
     it('routes byte-for-byte unchanged with no focus signal', async () => {
-      const withoutFocus = await middleware(request('/console'));
+      const withoutFocus = await proxy(request('/console'));
       expect(withoutFocus.status).toBe(200);
     });
 
     it('allows the focused plugin itself through to its normal routing decision', async () => {
-      const response = await middleware(request('/paid', { headers: focusedOnPaid }));
+      const response = await proxy(request('/paid', { headers: focusedOnPaid }));
       // Reaches the normal session-gated flow (200, no active paywall
       // configured in fetchState) rather than being redirected by the lock.
       expect(response.status).toBe(200);
     });
 
     it('redirects an out-of-focus page to the focused plugin root with 303', async () => {
-      const response = await middleware(request('/console', { headers: focusedOnPaid }));
+      const response = await proxy(request('/console', { headers: focusedOnPaid }));
 
       expect(response.status).toBe(303);
       expect(response.headers.get('location')).toBe('http://runtime.test/paid');
     });
 
     it('redirects "/" to the focused plugin root when the focused plugin is not the configured root', async () => {
-      const response = await middleware(request('/', { headers: focusedOnPaid }));
+      const response = await proxy(request('/', { headers: focusedOnPaid }));
 
       expect(response.status).toBe(303);
       expect(response.headers.get('location')).toBe('http://runtime.test/paid');
@@ -1232,27 +1230,25 @@ describe('runtime middleware regressions', () => {
 
     it('does not consult the root-plugin API when the focus lock already redirected', async () => {
       fetchState.calls = [];
-      await middleware(request('/', { headers: focusedOnPaid }));
+      await proxy(request('/', { headers: focusedOnPaid }));
       expect(fetchState.calls.some((url) => url.includes('/api/admin/root-plugin'))).toBe(false);
     });
 
     it.each(['/account', '/account/preferences', '/paywall/fs.example.paid'])(
       'allows %s through regardless of focus',
       async (path) => {
-        const response = await middleware(request(path, { headers: focusedOnPaid }));
+        const response = await proxy(request(path, { headers: focusedOnPaid }));
         expect(response.status).not.toBe(303);
       },
     );
 
     it('does not redirect an API request even when out of focus', async () => {
-      const response = await middleware(
-        request('/api/plugins/example', { headers: focusedOnPaid }),
-      );
+      const response = await proxy(request('/api/plugins/example', { headers: focusedOnPaid }));
       expect(response.status).not.toBe(303);
     });
 
     it('fails open (no redirect) when the focused plugin ID matches no installed plugin', async () => {
-      const response = await middleware(
+      const response = await proxy(
         request('/console', {
           headers: {
             'user-agent': 'Sovereign-Shell/mobile-ios 1.0.0 (focus=fs.example.uninstalled)',
@@ -1266,7 +1262,7 @@ describe('runtime middleware regressions', () => {
       // The focus decision reads the User-Agent (via resolveSurface), not any
       // inbound header — a caller cannot lock (or unlock) routing merely by
       // setting the header directly, only by controlling the real UA.
-      const response = await middleware(
+      const response = await proxy(
         request('/console', { headers: { 'x-sovereign-focus-plugin': 'fs.example.paid' } }),
       );
       expect(response.status).toBe(200);
@@ -1277,7 +1273,7 @@ describe('runtime middleware regressions', () => {
       // adminOnly Console: the lock redirects to /paid (out of focus) rather
       // than ever reaching — let alone granting — Console's own adminOnly gate.
       fetchState.session = session('platform:user');
-      const response = await middleware(request('/console', { headers: focusedOnPaid }));
+      const response = await proxy(request('/console', { headers: focusedOnPaid }));
       expect(response.status).toBe(303);
       expect(response.headers.get('location')).toBe('http://runtime.test/paid');
     });
@@ -1298,14 +1294,14 @@ describe('runtime middleware regressions', () => {
 
     it('a normal platform page not under any plugin prefix makes zero self-fetches', async () => {
       fetchState.calls = [];
-      const response = await middleware(request('/account'));
+      const response = await proxy(request('/account'));
       expect(response.status).toBe(200);
       expect(selfFetchCalls()).toEqual([]);
     });
 
     it('a plugin route makes 3 concurrent self-fetches: disabled, paywalled, restricted', async () => {
       fetchState.calls = [];
-      const response = await middleware(request('/launcher'));
+      const response = await proxy(request('/launcher'));
       expect(response.status).toBe(200);
       const calls = selfFetchCalls();
       expect(calls).toHaveLength(3);
@@ -1316,7 +1312,7 @@ describe('runtime middleware regressions', () => {
 
     it('root "/" makes exactly 1 self-fetch: root-plugin resolution', async () => {
       fetchState.calls = [];
-      const response = await middleware(request('/'));
+      const response = await proxy(request('/'));
       expect(response.status).toBe(200);
       const calls = selfFetchCalls();
       expect(calls).toHaveLength(1);
@@ -1325,7 +1321,7 @@ describe('runtime middleware regressions', () => {
 
     it('public /api/* makes exactly 1 self-fetch: disabled-plugin lookup, before session verification', async () => {
       fetchState.calls = [];
-      const response = await middleware(request('/api/blog/posts/1'));
+      const response = await proxy(request('/api/blog/posts/1'));
       expect(response.status).toBe(200);
       const calls = selfFetchCalls();
       expect(calls).toHaveLength(1);
@@ -1337,12 +1333,12 @@ describe('runtime middleware regressions', () => {
 
 describe('middleware matcher', () => {
   // The matcher is a negative-lookahead allowlist, so a path listed inside it
-  // is excluded from Next's routing to `middleware()` entirely — the function
+  // is excluded from Next's routing to `proxy()` entirely — the function
   // above is never invoked for it, regardless of what its own logic would do.
   // This is precisely why the `/api/instance` bug (see the
   // "/api/instance branding" describe block above) and the missing
   // `worker-` prefix (below) could not have been caught by a test that calls
-  // `middleware()` directly: every other test in this file bypasses Next's
+  // `proxy()` directly: every other test in this file bypasses Next's
   // matcher-based routing by construction, so a regression at the matcher
   // level is invisible to them. This block is the only place that exercises
   // the matcher pattern itself. Next.js compiles the entry with
@@ -1366,7 +1362,7 @@ describe('middleware matcher', () => {
   });
 
   // Regression: `/api/instance` was excluded from the matcher entirely
-  // (like `sw.js`/`manifest.json`), so `middleware()` never ran on it —
+  // (like `sw.js`/`manifest.json`), so `proxy()` never ran on it —
   // including its POST/DELETE. `/api/instance/logo` and
   // `/api/instance/favicon` authorize those methods solely on a
   // `x-sovereign-user-role` header that is only trustworthy because
@@ -1377,7 +1373,7 @@ describe('middleware matcher', () => {
   // provided" (proving the forged header reached the handler and passed),
   // not the 403 an unprivileged/missing role produces. The fix keeps the
   // path inside the matcher and carves out only public GET inside
-  // `middleware()` itself (`PUBLIC_INSTANCE_GET_PATHS`).
+  // `proxy()` itself (`PUBLIC_INSTANCE_GET_PATHS`).
   it.each(['/api/instance', '/api/instance/logo', '/api/instance/favicon'])(
     'does not exclude %s from the session gate (matcher must match it)',
     (pathname) => {

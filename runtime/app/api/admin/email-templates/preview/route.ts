@@ -4,7 +4,7 @@ import type { EmailTemplateId } from '@sovereignfs/db';
 import { hasCapability } from '@/src/capabilities';
 import { getPlatformDb } from '@/src/db';
 import { renderEmailForUrl, SAMPLE_EMAIL_URLS } from '@/src/email-templates';
-import { verifySession } from '@/src/middleware/session';
+import { verifySession } from '@/src/proxy/session';
 
 const TEMPLATE_IDS: readonly EmailTemplateId[] = ['passwordReset', 'invite'];
 

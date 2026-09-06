@@ -14,7 +14,7 @@ import { instanceAssetPath, instanceContentType } from '@/src/instance';
  * public/favicon.ico — Next.js rejects a public file and an app route
  * sharing one path (a build-time "conflicting public file and page file"
  * error), and this route needs `/favicon.ico` for itself.
- * Excluded from the middleware session gate (runtime/middleware.ts matcher).
+ * Excluded from the middleware session gate (runtime/proxy.ts matcher).
  *
  * `force-dynamic` is required: Next.js treats the `favicon.ico` path as its
  * built-in icon-generation convention and defaults it to static, build-time

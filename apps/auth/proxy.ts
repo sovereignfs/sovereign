@@ -10,7 +10,7 @@ import { buildContentSecurityPolicy, generateNonce } from '@/src/security';
  * options, etc.) come from `next.config.ts`. API routes are excluded by the
  * matcher — they return JSON and get only the static headers.
  */
-export function middleware(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest): NextResponse {
   const nonce = generateNonce();
   const csp = buildContentSecurityPolicy(nonce, {
     isProd: process.env.NODE_ENV === 'production',

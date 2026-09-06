@@ -33,6 +33,20 @@ export default defineConfig({
       // runtime/app/(platform)/(plugins)/, which vitest's include patterns
       // deliberately never run.
       '@': fileURLToPath(new URL('./runtime', import.meta.url)),
+      // Every `next/*` import (`next/headers`, `next/navigation`,
+      // `next/cache`, …) resolves to the runtime's copy of Next, mirroring
+      // what Next's own webpack config does in a real build (it aliases
+      // `next` to the running package). Without this, a pnpm lockfile that
+      // splits `next` into several peer-suffix variants — which a routine
+      // Dependabot re-resolution did (#642) — gives runtime test files and
+      // `packages/sdk` under test two *different* physical `next/headers`
+      // modules: `vi.mock('next/headers')` patches the test file's copy, the
+      // SDK's real `headers()` runs outside any request scope, throws
+      // Next's E251, and every background-invocation fallback test fails
+      // with "expected 'platform-db-marker' to be 'plugin-db-marker'". A
+      // single-variant lockfile passes by accident; this alias makes the
+      // mock target the same module by construction.
+      next: fileURLToPath(new URL('./runtime/node_modules/next', import.meta.url)),
     },
   },
   test: {

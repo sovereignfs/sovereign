@@ -362,6 +362,10 @@ on vouch routes), Task 1.7 (session-verify pattern to extend with the new field)
 - The manifest field is `minVerificationLevel` (camelCase, per leg 1's own
   correction), not `min_verification_level`.
 - `AUTH_REQUIRE_MFA` (shipped inert in leg 1) stays unwired — nothing in this
+  task's own deliverables names a concrete enforcement point for it. _Retired
+  2026-09-06 (root 0.130.6): the gate it was meant to soften shipped
+  always-hard, so the flag had no role; removed, see RFC 0035 changelog 0.4._
+  (Original note follows.) Nothing in this
   task's own deliverables names a concrete enforcement point for it. Not an
   oversight: inventing one wasn't asked for.
 - The nudge is a dedicated page

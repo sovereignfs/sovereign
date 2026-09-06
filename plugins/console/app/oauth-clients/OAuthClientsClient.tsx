@@ -96,15 +96,23 @@ function RegisterClientDialog({
     setCreating(true);
     setError(null);
     try {
+      // '/oauth2/register' is RFC 7591 dynamic client registration, which
+      // apps/auth's oauth-provider config deliberately disables
+      // (`allowDynamicClientRegistration: false` — "no self-service
+      // registration", RFC 0072) — it 403s unconditionally, for every
+      // caller, before even checking a session. The admin-authenticated
+      // create path is a distinct endpoint, '/oauth2/create-client', gated
+      // by the same `clientPrivileges` check rotate/revoke already use, and
+      // its body field is `application_type`, not `type`.
       const created = await authFetch<{ client_id: string; client_secret?: string }>(
-        '/oauth2/register',
+        '/oauth2/create-client',
         {
           method: 'POST',
           body: JSON.stringify({
             client_name: name || undefined,
             redirect_uris: redirectUris,
             scope: DEFAULT_SCOPES,
-            type: 'web',
+            application_type: 'web',
           }),
         },
       );

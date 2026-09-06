@@ -14,7 +14,7 @@ test.describe('Console external OAuth clients — golden paths', () => {
     await page.getByLabel('Display name').fill(clientName);
     await page.getByLabel('Redirect URIs').fill('https://example.test/callback');
     await page.getByLabel('Redirect URIs').press('Enter');
-    await page.getByRole('button', { name: 'Register client' }).click();
+    await page.getByRole('button', { name: 'Register client', exact: true }).click();
 
     // Secret is shown exactly once, immediately after creation. Next.js's own
     // route announcer also has role="alert" (empty), so scope past it.

@@ -43,8 +43,13 @@ test.describe('Email verification — disabled (AUTH_REQUIRE_EMAIL_VERIFICATION=
     // this with waitForURL: registration completes on the runtime and navigates
     // to `/` there, so `${RUNTIME}/**` already matches before submitting and
     // would resolve instantly without proving anything (same hazard auth.spec.ts
-    // documents for login). Wait for the authenticated shell to render instead.
-    await page.getByRole('button', { name: 'Account' }).first().waitFor({ timeout: 15_000 });
+    // documents for login). Wait for the authenticated shell to render instead —
+    // `exact`, because a substring match also hits this very form's disabled
+    // "Creating account…" submit button and resolves before anything happened.
+    await page
+      .getByRole('button', { name: 'Account', exact: true })
+      .first()
+      .waitFor({ timeout: 15_000 });
     await expect(page).toHaveURL(`${RUNTIME}/`);
   });
 

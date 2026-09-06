@@ -162,7 +162,7 @@ We use [Mailpit](https://github.com/axllent/mailpit) — a tiny SMTP server with
 a web inbox — to capture outbound email locally.
 
 **In `pnpm dev` (native), no configuration is needed.** When `SMTP_HOST` is
-unset, the mailer automatically falls back to `localhost:1025` in non-production
+unset, the mailer automatically falls back to `127.0.0.1:1025` in non-production
 environments. Start Mailpit and emails appear in its inbox immediately:
 
 ```bash

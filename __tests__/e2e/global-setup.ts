@@ -36,7 +36,10 @@ async function loginAndSave(
   // sign-in request and its Set-Cookie, and storageState below would capture
   // an unauthenticated (cookie-less) context. Wait for the authenticated
   // shell to actually render instead.
-  await page.getByRole('button', { name: 'Account' }).first().waitFor({ timeout: 15_000 });
+  await page
+    .getByRole('button', { name: 'Account', exact: true })
+    .first()
+    .waitFor({ timeout: 15_000 });
   // storageState captures runtime cookies after the proxied login flow. Tests
   // pre-injecting this state are fully authenticated.
   await ctx.storageState({ path: outPath });

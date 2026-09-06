@@ -30,19 +30,34 @@ export interface MarkdownProps {
 let inlineKey = 0;
 
 /** Schemes allowed in a rendered `[text](url)` link's `href`. Anything else —
- *  most importantly `javascript:` — is neutralized (rendered as plain text
- *  instead of a clickable anchor) rather than reaching the DOM: `content`
- *  here can be LLM-generated (Warden's chat replies), so a prompt-injected
- *  document or a compromised model is a realistic way for an attacker-chosen
- *  URL to end up in this position. Browsers ignore tabs/newlines when
- *  parsing a URL's scheme, so those are stripped before the check to close
- *  that bypass. */
+ *  most importantly `javascript:` — is rejected: `content` here can be
+ *  LLM-generated (Warden's chat replies), so a prompt-injected document or a
+ *  compromised model is a realistic way for an attacker-chosen URL to end up
+ *  in this position. */
 const SAFE_HREF_SCHEMES = new Set(['http', 'https', 'mailto', 'tel']);
 
 function isSafeHref(href: string): boolean {
-  const normalized = href.replace(/[\t\n\r]/g, '').trimStart();
-  const scheme = /^([a-zA-Z][a-zA-Z\d+.-]*):/.exec(normalized)?.[1];
+  const scheme = /^([a-zA-Z][a-zA-Z\d+.-]*):/.exec(href)?.[1];
   return scheme === undefined || SAFE_HREF_SCHEMES.has(scheme.toLowerCase());
+}
+
+/** Returns a link's `href` value ready to render, or `null` to reject it.
+ *  Rejecting is what keeps an unsafe URL out of the DOM; `encodeURI` on top
+ *  is the contextual output-encoding this class of finding calls for. The
+ *  sink below reads this function's *return value*, never the raw `href` —
+ *  a boolean guard around the original string still leaves the tainted
+ *  value itself flowing into `href`. Browsers ignore tabs/newlines when
+ *  parsing a URL's scheme, so those are stripped first to close a
+ *  `jav\tascript:`-style bypass; `encodeURI` throws on a lone unpaired
+ *  surrogate, hence the try/catch. */
+function sanitizeHref(href: string): string | null {
+  const normalized = href.replace(/[\t\n\r]/g, '').trim();
+  if (!normalized || !isSafeHref(normalized)) return null;
+  try {
+    return encodeURI(normalized);
+  } catch {
+    return null;
+  }
 }
 
 /** Parses **bold**, *italic*, `code`, and [text](url) within a line of text. */
@@ -62,9 +77,10 @@ function parseInline(text: string): ReactNode[] {
     const [full, linkText, linkHref, boldText, italicText, codeText] = match;
     const key = `md-inline-${inlineKey++}`;
     if (linkHref !== undefined) {
+      const safeHref = sanitizeHref(linkHref);
       nodes.push(
-        isSafeHref(linkHref) ? (
-          <a key={key} href={linkHref}>
+        safeHref !== null ? (
+          <a key={key} href={safeHref}>
             {linkText}
           </a>
         ) : (

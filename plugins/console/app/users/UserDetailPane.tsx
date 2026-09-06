@@ -1,18 +1,18 @@
 'use client';
 
-import Link from 'next/link';
-import { Badge, Icon } from '@sovereignfs/ui';
+import { Badge } from '@sovereignfs/ui';
 import { RoleSelect } from './RoleSelect';
 import { UserCapabilitiesFields } from './UserCapabilitiesFields';
 import {
   DeactivateButton,
   DeleteButton,
+  ReactivateButton,
   ResetMfaButton,
   RevokeVouchButton,
   VouchButton,
 } from './UserActionButtons';
-import { toggleActiveAction } from './actions';
-import { CopyIdButton } from '../_components/CopyIdButton';
+import { DetailIdRow, DetailPaneHeader, DetailSection } from '../_components/DetailPaneHeader';
+import { MemberStatusBadge, RoleBadge } from '../_components/badges';
 import styles from '../console.module.css';
 
 interface MemberRow {
@@ -60,44 +60,23 @@ export function UserDetailPane({
   const isOwner = member.role === 'platform:owner';
   const actionsLocked = isOwner || !canManageUsers;
   const userId = member.id;
+  const displayName = member.name ?? member.email;
 
   return (
     <div className={styles.detailPane}>
-      <div className={styles.detailHeader}>
-        <div className={styles.detailHeading}>
-          <span className={styles.detailTitleLabel}>{member.name ?? '—'}</span>
-          <span className={styles.detailSubtitle}>{member.email}</span>
-        </div>
-        <Link
-          replace
-          href={closeHref}
-          className={styles.iconBtn}
-          aria-label="Close user detail"
-          title="Close"
-        >
-          <Icon name="x" size="sm" aria-hidden />
-        </Link>
-      </div>
+      <DetailPaneHeader
+        title={member.name ?? '—'}
+        subtitle={member.email}
+        closeHref={closeHref}
+        closeLabel="Close user detail"
+      />
 
-      {userId && (
-        <span className={styles.userIdRow}>
-          <span className={styles.userId} title={userId}>
-            {userId}
-          </span>
-          <CopyIdButton value={userId} label="Copy user ID" />
-        </span>
-      )}
+      {userId && <DetailIdRow value={userId} label="Copy user ID" />}
 
       <span className={styles.detailMeta}>Last login: {formatLastLogin(member.lastLoginAt)}</span>
 
       <div className={styles.detailBadges}>
-        <Badge variant="status" size="sm" status={member.status}>
-          {member.status === 'active'
-            ? 'Active'
-            : member.status === 'deactivated'
-              ? 'Deactivated'
-              : 'Invited'}
-        </Badge>
+        <MemberStatusBadge status={member.status} />
         {member.isTestUser && (
           <Badge variant="mono" size="sm">
             Test
@@ -105,28 +84,15 @@ export function UserDetailPane({
         )}
       </div>
 
-      <div className={styles.detailSection}>
-        <h3 className={styles.detailSectionTitle}>Role</h3>
-        {isOwner ? (
-          <span className={styles.detailRoleBadge}>
-            <Badge variant="role" size="sm">
-              Owner
-            </Badge>
-          </span>
-        ) : canAssignRoles && userId ? (
+      <DetailSection title="Role">
+        {!isOwner && canAssignRoles && userId ? (
           <RoleSelect userId={userId} role={member.role ?? 'platform:user'} />
         ) : (
           <span className={styles.detailRoleBadge}>
-            <Badge variant="role" size="sm">
-              {member.role === 'platform:admin'
-                ? 'Admin'
-                : member.role === 'platform:auditor'
-                  ? 'Auditor'
-                  : 'User'}
-            </Badge>
+            <RoleBadge role={member.role} />
           </span>
         )}
-      </div>
+      </DetailSection>
 
       {isOwner ? (
         <p className={styles.adminOnlyNote}>The platform owner is protected from these actions.</p>
@@ -134,43 +100,30 @@ export function UserDetailPane({
         userId &&
         canManageUsers && (
           <>
-            <div className={styles.detailSection}>
-              <h3 className={styles.detailSectionTitle}>Capabilities</h3>
-              <p className={styles.helpText}>
-                Grant one additional capability this user&apos;s role preset doesn&apos;t include.
-                This does not change their role.
-              </p>
+            <DetailSection
+              title="Capabilities"
+              description="Grant one additional capability this user's role preset doesn't include. This does not change their role."
+            >
               <UserCapabilitiesFields userId={userId} />
-            </div>
+            </DetailSection>
 
             {!actionsLocked && (
-              <div className={styles.detailSection}>
-                <h3 className={styles.detailSectionTitle}>Actions</h3>
+              <DetailSection title="Actions">
                 <div className={styles.rowActions}>
                   {member.status === 'active' ? (
-                    <DeactivateButton userId={userId} name={member.name ?? member.email} />
+                    <DeactivateButton userId={userId} name={displayName} />
                   ) : (
-                    <form action={toggleActiveAction}>
-                      <input type="hidden" name="userId" value={userId} />
-                      <input type="hidden" name="active" value="true" />
-                      <button
-                        type="submit"
-                        className={styles.iconBtnReactivate}
-                        title="Reactivate user"
-                      >
-                        <Icon name="check" size="sm" aria-hidden />
-                      </button>
-                    </form>
+                    <ReactivateButton userId={userId} name={displayName} />
                   )}
-                  <ResetMfaButton userId={userId} name={member.name ?? member.email} />
+                  <ResetMfaButton userId={userId} name={displayName} />
                   {member.verificationLevel === 3 ? (
-                    <RevokeVouchButton userId={userId} name={member.name ?? member.email} />
+                    <RevokeVouchButton userId={userId} name={displayName} />
                   ) : (
-                    <VouchButton userId={userId} name={member.name ?? member.email} />
+                    <VouchButton userId={userId} name={displayName} />
                   )}
-                  <DeleteButton userId={userId} name={member.name ?? member.email} />
+                  <DeleteButton userId={userId} name={displayName} />
                 </div>
-              </div>
+              </DetailSection>
             )}
           </>
         )

@@ -8,6 +8,9 @@ import type { GrantableCapability } from '@/src/capabilities';
 import { CHROME_PLUGIN_IDS } from '@/src/launcher-plugins';
 import { getInstalledPlugins } from '@/src/registry';
 import { deleteUser } from '@/src/user-deletion';
+import { ACTION_OK, apiErrorMessage, guarded, type ActionResult } from '../_lib/action-result';
+import { adminFetch } from '../_lib/admin-fetch';
+import { requireCapability } from '../_lib/authz';
 
 /** Plugin options for the invite multi-select (RFC 0065 Task 1.17), excluding chrome plugins that every user already has access to. */
 export interface InvitablePluginOption {
@@ -22,10 +25,6 @@ export async function listInvitablePluginOptions(): Promise<InvitablePluginOptio
     .map((p) => ({ id: p.id, name: p.name }));
 }
 
-const AUTH_URL =
-  process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
-const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
-
 const ASSIGNABLE_ROLES = ['platform:admin', 'platform:auditor', 'platform:user'] as const;
 type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
 
@@ -37,36 +36,9 @@ async function actorId(): Promise<string | null> {
   return (await headers()).get('x-sovereign-user-id');
 }
 
-async function adminFetch(path: string, init?: RequestInit): Promise<Response> {
-  const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
-  return fetch(`${AUTH_URL}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${adminKey}`,
-      ...(init?.headers as Record<string, string>),
-    },
-  });
-}
-
-/**
- * Capability grants live in the platform DB (runtime), not the auth server.
- * This is a fresh server-to-server request, not a passthrough of the
- * browser's request — middleware never sees it, so `x-sovereign-user-id`
- * must be forwarded explicitly or the target route's actor-attribution check
- * 401s even though the caller is a fully authenticated admin.
- */
-async function selfAdminFetch(path: string, init?: RequestInit): Promise<Response> {
-  const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
-  return fetch(`${SELF_URL}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${adminKey}`,
-      'x-sovereign-user-id': (await actorId()) ?? '',
-      ...(init?.headers as Record<string, string>),
-    },
-  });
+/** The user directory lives on the auth server; everything else here is the runtime's own API. */
+function authApi(path: string, init?: RequestInit): Promise<Response> {
+  return adminFetch(path, { ...init, api: 'auth' });
 }
 
 async function sendAdminEmail(input: {
@@ -79,18 +51,9 @@ async function sendAdminEmail(input: {
   html: string;
   metadata?: Record<string, string | number | boolean | null>;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
-  const res = await fetch(`${SELF_URL}/api/admin/email`, {
+  const res = await adminFetch('/api/admin/email', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${adminKey}`,
-    },
-    body: JSON.stringify({
-      deliveryClass: 'administrative',
-      source: 'console',
-      ...input,
-    }),
+    body: JSON.stringify({ deliveryClass: 'administrative', source: 'console', ...input }),
   });
   const data = (await res.json().catch(() => null)) as {
     status?: 'skipped' | 'sent' | 'failed';
@@ -101,264 +64,276 @@ async function sendAdminEmail(input: {
   return { ok: false, error: data?.errorCode ?? data?.error ?? `email ${res.status}` };
 }
 
-export async function changeRoleAction(formData: FormData): Promise<void> {
-  const session = await sdk.auth.requireSession();
-  if (!sdk.auth.hasCapability(session, 'role:assign')) {
-    throw new Error('Insufficient privileges to assign roles.');
-  }
-  const userId = formData.get('userId') as string;
-  const role = formData.get('role');
-  // Console assigns the three delegable roles only — never `platform:owner`
-  // (there is exactly one owner; promoting a second one would make it
-  // un-demotable through this same API) and never an arbitrary string (the
-  // auth server used to write whatever arrived here verbatim).
-  if (!isAssignableRole(role)) {
-    throw new Error('Role must be one of: admin, auditor, user.');
-  }
-  const res = await adminFetch(`/api/admin/users/${userId}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ role }),
+/**
+ * Every mutation below returns an `ActionResult` instead of throwing — see
+ * `_lib/action-result.ts` for why (a thrown server action used to replace
+ * the whole Console column with `error.tsx` and a masked message). The
+ * capability preamble throws a `CapabilityError`; `guarded()` turns that,
+ * and any other throw, into `{ ok: false }`.
+ */
+export async function changeRoleAction(formData: FormData): Promise<ActionResult> {
+  return guarded(async () => {
+    const session = await requireCapability('role:assign');
+    const userId = formData.get('userId') as string;
+    const role = formData.get('role');
+    // Console assigns the three delegable roles only — never `platform:owner`
+    // (there is exactly one owner; promoting a second one would make it
+    // un-demotable through this same API) and never an arbitrary string (the
+    // auth server used to write whatever arrived here verbatim).
+    if (!isAssignableRole(role)) {
+      return { ok: false, error: 'Role must be one of: admin, auditor, user.' };
+    }
+    const res = await authApi(`/api/admin/users/${encodeURIComponent(userId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    });
+    if (!res.ok) return { ok: false, error: await apiErrorMessage(res, 'Failed to change role') };
+    const updated = (await res.json()) as { id: string; email: string; role: string };
+    void sendAdminEmail({
+      templateId: 'console.role_changed',
+      toUserId: updated.id,
+      toEmail: updated.email,
+      actorUserId: session.user.id,
+      subject: 'Your Sovereign role changed',
+      text: `Your Sovereign role changed to ${role}.`,
+      html: `<p>Your Sovereign role changed to <strong>${role}</strong>.</p>`,
+      metadata: { role },
+    });
+    void logActivity({
+      actorId: await actorId(),
+      actorType: 'user',
+      action: 'user.role_changed',
+      subjectUserId: userId,
+      targetType: 'user',
+      targetId: userId,
+      visibility: 'user',
+      summary: `Role changed to ${role}`,
+      metadata: { role },
+    });
+    revalidatePath('/console/users');
+    return ACTION_OK;
   });
-  if (!res.ok) throw new Error(`Failed to change role: ${res.status}`);
-  const updated = (await res.json()) as { id: string; email: string; role: string };
-  void sendAdminEmail({
-    templateId: 'console.role_changed',
-    toUserId: updated.id,
-    toEmail: updated.email,
-    actorUserId: session.user.id,
-    subject: 'Your Sovereign role changed',
-    text: `Your Sovereign role changed to ${role}.`,
-    html: `<p>Your Sovereign role changed to <strong>${role}</strong>.</p>`,
-    metadata: { role },
-  });
-  void logActivity({
-    actorId: await actorId(),
-    actorType: 'user',
-    action: 'user.role_changed',
-    subjectUserId: userId,
-    targetType: 'user',
-    targetId: userId,
-    visibility: 'user',
-    summary: `Role changed to ${role}`,
-    metadata: { role },
-  });
-  revalidatePath('/console/users');
 }
 
-export async function toggleActiveAction(formData: FormData): Promise<void> {
-  const session = await sdk.auth.requireSession();
-  if (!sdk.auth.hasCapability(session, 'user:manage')) {
-    throw new Error('Insufficient privileges to manage users.');
-  }
-  const userId = formData.get('userId') as string;
-  const active = formData.get('active') === 'true';
-  // Deactivating yourself is a lockout, not a status change — the cookie
-  // cache keeps the session alive for a few minutes, then nobody can get
-  // back in until another admin intervenes.
-  if (userId === session.user.id) {
-    throw new Error('You cannot change the status of your own account.');
-  }
-  const res = await adminFetch(`/api/admin/users/${userId}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ active }),
+export async function toggleActiveAction(formData: FormData): Promise<ActionResult> {
+  return guarded(async () => {
+    const session = await requireCapability('user:manage');
+    const userId = formData.get('userId') as string;
+    const active = formData.get('active') === 'true';
+    // Deactivating yourself is a lockout, not a status change — the cookie
+    // cache keeps the session alive for a few minutes, then nobody can get
+    // back in until another admin intervenes.
+    if (userId === session.user.id) {
+      return { ok: false, error: 'You cannot change the status of your own account.' };
+    }
+    const res = await authApi(`/api/admin/users/${encodeURIComponent(userId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ active }),
+    });
+    if (!res.ok) {
+      return { ok: false, error: await apiErrorMessage(res, 'Failed to update user status') };
+    }
+    const updated = (await res.json()) as { id: string; email: string };
+    void sendAdminEmail({
+      templateId: active ? 'console.account_reactivated' : 'console.account_deactivated',
+      toUserId: updated.id,
+      toEmail: updated.email,
+      actorUserId: session.user.id,
+      subject: active
+        ? 'Your Sovereign account was reactivated'
+        : 'Your Sovereign account was deactivated',
+      text: active
+        ? 'Your Sovereign account was reactivated.'
+        : 'Your Sovereign account was deactivated. Contact your instance operator if this was unexpected.',
+      html: active
+        ? '<p>Your Sovereign account was reactivated.</p>'
+        : '<p>Your Sovereign account was deactivated. Contact your instance operator if this was unexpected.</p>',
+      metadata: { active },
+    });
+    void logActivity({
+      actorId: await actorId(),
+      actorType: 'user',
+      action: active ? 'user.reactivated' : 'user.deactivated',
+      subjectUserId: userId,
+      targetType: 'user',
+      targetId: userId,
+      visibility: 'user',
+      summary: active ? 'User reactivated' : 'User deactivated',
+    });
+    revalidatePath('/console/users');
+    return { ok: true, message: active ? 'User reactivated.' : 'User deactivated.' };
   });
-  if (!res.ok) throw new Error(`Failed to update user status: ${res.status}`);
-  const updated = (await res.json()) as { id: string; email: string };
-  void sendAdminEmail({
-    templateId: active ? 'console.account_reactivated' : 'console.account_deactivated',
-    toUserId: updated.id,
-    toEmail: updated.email,
-    actorUserId: session.user.id,
-    subject: active
-      ? 'Your Sovereign account was reactivated'
-      : 'Your Sovereign account was deactivated',
-    text: active
-      ? 'Your Sovereign account was reactivated.'
-      : 'Your Sovereign account was deactivated. Contact your instance operator if this was unexpected.',
-    html: active
-      ? '<p>Your Sovereign account was reactivated.</p>'
-      : '<p>Your Sovereign account was deactivated. Contact your instance operator if this was unexpected.</p>',
-    metadata: { active },
-  });
-  void logActivity({
-    actorId: await actorId(),
-    actorType: 'user',
-    action: active ? 'user.reactivated' : 'user.deactivated',
-    subjectUserId: userId,
-    targetType: 'user',
-    targetId: userId,
-    visibility: 'user',
-    summary: active ? 'User reactivated' : 'User deactivated',
-  });
-  revalidatePath('/console/users');
 }
 
-export async function resetMfaAction(formData: FormData): Promise<void> {
-  const session = await sdk.auth.requireSession();
-  if (!sdk.auth.hasCapability(session, 'user:manage')) {
-    throw new Error('Insufficient privileges to manage users.');
-  }
-  const userId = formData.get('userId') as string;
-  const res = await adminFetch(`/api/admin/users/${userId}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ resetMfa: true }),
+export async function resetMfaAction(formData: FormData): Promise<ActionResult> {
+  return guarded(async () => {
+    await requireCapability('user:manage');
+    const userId = formData.get('userId') as string;
+    const res = await authApi(`/api/admin/users/${encodeURIComponent(userId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ resetMfa: true }),
+    });
+    if (!res.ok) return { ok: false, error: await apiErrorMessage(res, 'Failed to reset MFA') };
+    const updated = (await res.json()) as { id: string; email: string };
+    void sendAdminEmail({
+      templateId: 'console.mfa_reset',
+      toUserId: updated.id,
+      toEmail: updated.email,
+      actorUserId: await actorId(),
+      subject: 'Your Sovereign MFA was reset',
+      text: 'An administrator reset MFA on your Sovereign account.',
+      html: '<p>An administrator reset MFA on your Sovereign account.</p>',
+    });
+    void logActivity({
+      actorId: await actorId(),
+      actorType: 'user',
+      action: 'user.mfa_reset',
+      subjectUserId: userId,
+      targetType: 'user',
+      targetId: userId,
+      visibility: 'user',
+      summary: 'MFA reset by admin',
+    });
+    revalidatePath('/console/users');
+    return { ok: true, message: 'MFA reset.' };
   });
-  if (!res.ok) throw new Error(`Failed to reset MFA: ${res.status}`);
-  const updated = (await res.json()) as { id: string; email: string };
-  void sendAdminEmail({
-    templateId: 'console.mfa_reset',
-    toUserId: updated.id,
-    toEmail: updated.email,
-    actorUserId: await actorId(),
-    subject: 'Your Sovereign MFA was reset',
-    text: 'An administrator reset MFA on your Sovereign account.',
-    html: '<p>An administrator reset MFA on your Sovereign account.</p>',
-  });
-  void logActivity({
-    actorId: await actorId(),
-    actorType: 'user',
-    action: 'user.mfa_reset',
-    subjectUserId: userId,
-    targetType: 'user',
-    targetId: userId,
-    visibility: 'user',
-    summary: 'MFA reset by admin',
-  });
-  revalidatePath('/console/users');
 }
 
-export async function vouchAction(formData: FormData): Promise<void> {
-  const session = await sdk.auth.requireSession();
-  if (!sdk.auth.hasCapability(session, 'user:manage')) {
-    throw new Error('Insufficient privileges to manage users.');
-  }
-  const userId = formData.get('userId') as string;
-  const res = await adminFetch(`/api/admin/users/${userId}/vouch`, {
-    method: 'POST',
-    body: JSON.stringify({ vouchedBy: session.user.id }),
+export async function vouchAction(formData: FormData): Promise<ActionResult> {
+  return guarded(async () => {
+    const session = await requireCapability('user:manage');
+    const userId = formData.get('userId') as string;
+    const res = await authApi(`/api/admin/users/${encodeURIComponent(userId)}/vouch`, {
+      method: 'POST',
+      body: JSON.stringify({ vouchedBy: session.user.id }),
+    });
+    if (!res.ok)
+      return { ok: false, error: await apiErrorMessage(res, 'Failed to vouch for user') };
+    const updated = (await res.json()) as { id: string; email: string };
+    void sendAdminEmail({
+      templateId: 'console.vouched',
+      toUserId: updated.id,
+      toEmail: updated.email,
+      actorUserId: session.user.id,
+      subject: 'You were vouched for on Sovereign',
+      text: 'An administrator vouched for your account, granting it full trust.',
+      html: '<p>An administrator vouched for your account, granting it full trust.</p>',
+    });
+    void logActivity({
+      actorId: await actorId(),
+      actorType: 'user',
+      action: 'user.vouched',
+      subjectUserId: userId,
+      targetType: 'user',
+      targetId: userId,
+      visibility: 'user',
+      summary: 'Vouched by admin (verification level 3)',
+    });
+    revalidatePath('/console/users');
+    return { ok: true, message: 'Vouched.' };
   });
-  if (!res.ok) throw new Error(`Failed to vouch for user: ${res.status}`);
-  const updated = (await res.json()) as { id: string; email: string };
-  void sendAdminEmail({
-    templateId: 'console.vouched',
-    toUserId: updated.id,
-    toEmail: updated.email,
-    actorUserId: session.user.id,
-    subject: 'You were vouched for on Sovereign',
-    text: 'An administrator vouched for your account, granting it full trust.',
-    html: '<p>An administrator vouched for your account, granting it full trust.</p>',
-  });
-  void logActivity({
-    actorId: await actorId(),
-    actorType: 'user',
-    action: 'user.vouched',
-    subjectUserId: userId,
-    targetType: 'user',
-    targetId: userId,
-    visibility: 'user',
-    summary: 'Vouched by admin (verification level 3)',
-  });
-  revalidatePath('/console/users');
 }
 
-export async function revokeVouchAction(formData: FormData): Promise<void> {
-  const session = await sdk.auth.requireSession();
-  if (!sdk.auth.hasCapability(session, 'user:manage')) {
-    throw new Error('Insufficient privileges to manage users.');
-  }
-  const userId = formData.get('userId') as string;
-  const res = await adminFetch(`/api/admin/users/${userId}/vouch`, {
-    method: 'DELETE',
-    body: JSON.stringify({ vouchedBy: session.user.id }),
+export async function revokeVouchAction(formData: FormData): Promise<ActionResult> {
+  return guarded(async () => {
+    const session = await requireCapability('user:manage');
+    const userId = formData.get('userId') as string;
+    const res = await authApi(`/api/admin/users/${encodeURIComponent(userId)}/vouch`, {
+      method: 'DELETE',
+      body: JSON.stringify({ vouchedBy: session.user.id }),
+    });
+    if (!res.ok) return { ok: false, error: await apiErrorMessage(res, 'Failed to revoke vouch') };
+    const updated = (await res.json()) as { id: string; email: string };
+    void sendAdminEmail({
+      templateId: 'console.vouch_revoked',
+      toUserId: updated.id,
+      toEmail: updated.email,
+      actorUserId: session.user.id,
+      subject: 'Your Sovereign vouch status was revoked',
+      text: 'An administrator revoked the vouch on your account.',
+      html: '<p>An administrator revoked the vouch on your account.</p>',
+    });
+    void logActivity({
+      actorId: await actorId(),
+      actorType: 'user',
+      action: 'user.vouch_revoked',
+      subjectUserId: userId,
+      targetType: 'user',
+      targetId: userId,
+      visibility: 'user',
+      summary: 'Vouch revoked by admin (verification level 2)',
+    });
+    revalidatePath('/console/users');
+    return { ok: true, message: 'Vouch revoked.' };
   });
-  if (!res.ok) throw new Error(`Failed to revoke vouch: ${res.status}`);
-  const updated = (await res.json()) as { id: string; email: string };
-  void sendAdminEmail({
-    templateId: 'console.vouch_revoked',
-    toUserId: updated.id,
-    toEmail: updated.email,
-    actorUserId: session.user.id,
-    subject: 'Your Sovereign vouch status was revoked',
-    text: 'An administrator revoked the vouch on your account.',
-    html: '<p>An administrator revoked the vouch on your account.</p>',
-  });
-  void logActivity({
-    actorId: await actorId(),
-    actorType: 'user',
-    action: 'user.vouch_revoked',
-    subjectUserId: userId,
-    targetType: 'user',
-    targetId: userId,
-    visibility: 'user',
-    summary: 'Vouch revoked by admin (verification level 2)',
-  });
-  revalidatePath('/console/users');
 }
 
-export async function deleteUserAction(formData: FormData): Promise<void> {
-  const session = await sdk.auth.requireSession();
-  if (!sdk.auth.hasCapability(session, 'user:manage')) {
-    throw new Error('Insufficient privileges to manage users.');
-  }
+export async function deleteUserAction(formData: FormData): Promise<ActionResult> {
+  return guarded(async () => {
+    const session = await requireCapability('user:manage');
+    const userId = formData.get('userId') as string;
+    const actor = await actorId();
 
-  const userId = formData.get('userId') as string;
-  const actor = await actorId();
+    if (userId === session.user.id) {
+      return { ok: false, error: 'You cannot delete your own account from Console.' };
+    }
 
-  if (userId === session.user.id) {
-    throw new Error('You cannot delete your own account from Console.');
-  }
+    // Guard: platform:owner cannot be deleted. This must fail *closed* — the
+    // platform-side sweep (`deleteUser`) drops the user's plugin rows, storage
+    // and avatar before the auth server gets to refuse the owner, so proceeding
+    // on a failed directory lookup would wipe the owner's data while leaving
+    // the account itself in place.
+    const usersRes = await authApi('/api/admin/users');
+    if (!usersRes.ok) {
+      return {
+        ok: false,
+        error: `Could not verify the account before deleting it (${usersRes.status}).`,
+      };
+    }
+    const members = (await usersRes.json()) as Array<{ id: string | null; role: string | null }>;
+    const target = members.find((m) => m.id === userId);
+    if (target?.role === 'platform:owner') {
+      return { ok: false, error: 'The platform owner account cannot be deleted.' };
+    }
 
-  // Guard: platform:owner cannot be deleted. This must fail *closed* — the
-  // platform-side sweep (`deleteUser`) drops the user's plugin rows, storage
-  // and avatar before the auth server gets to refuse the owner, so proceeding
-  // on a failed directory lookup would wipe the owner's data while leaving
-  // the account itself in place.
-  const usersRes = await adminFetch('/api/admin/users');
-  if (!usersRes.ok) {
-    throw new Error(`Could not verify the account before deleting it (${usersRes.status}).`);
-  }
-  const members = (await usersRes.json()) as Array<{ id: string | null; role: string | null }>;
-  const target = members.find((m) => m.id === userId);
-  if (target?.role === 'platform:owner') {
-    throw new Error('The platform owner account cannot be deleted.');
-  }
+    void logActivity({
+      actorId: actor,
+      actorType: 'user',
+      action: 'account.deleted',
+      subjectUserId: userId,
+      targetType: 'user',
+      targetId: userId,
+      visibility: 'admin',
+      summary: 'Admin deleted user account and all data',
+      metadata: { userId },
+    });
 
-  void logActivity({
-    actorId: actor,
-    actorType: 'user',
-    action: 'account.deleted',
-    subjectUserId: userId,
-    targetType: 'user',
-    targetId: userId,
-    visibility: 'admin',
-    summary: 'Admin deleted user account and all data',
-    metadata: { userId },
+    await deleteUser(userId, 'default');
+
+    revalidatePath('/console/users');
+    return { ok: true, message: 'User deleted.' };
   });
-
-  await deleteUser(userId, 'default');
-
-  revalidatePath('/console/users');
 }
 
-export async function cancelInviteAction(formData: FormData): Promise<void> {
-  const session = await sdk.auth.requireSession();
-  if (!sdk.auth.hasCapability(session, 'user:manage')) {
-    throw new Error('Insufficient privileges to manage users.');
-  }
-  const email = formData.get('email') as string;
-  const res = await adminFetch(`/api/admin/invites?email=${encodeURIComponent(email)}`, {
-    method: 'DELETE',
+export async function cancelInviteAction(formData: FormData): Promise<ActionResult> {
+  return guarded(async () => {
+    await requireCapability('user:manage');
+    const email = formData.get('email') as string;
+    const res = await authApi(`/api/admin/invites?email=${encodeURIComponent(email)}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) return { ok: false, error: await apiErrorMessage(res, 'Failed to cancel invite') };
+    void logActivity({
+      actorId: await actorId(),
+      actorType: 'user',
+      action: 'user.invite_cancelled',
+      visibility: 'admin',
+      summary: `Invite cancelled for ${email}`,
+      metadata: { email },
+    });
+    revalidatePath('/console/users');
+    return { ok: true, message: 'Invite cancelled.' };
   });
-  if (!res.ok) throw new Error(`Failed to cancel invite: ${res.status}`);
-  void logActivity({
-    actorId: await actorId(),
-    actorType: 'user',
-    action: 'user.invite_cancelled',
-    visibility: 'admin',
-    summary: `Invite cancelled for ${email}`,
-    metadata: { email },
-  });
-  revalidatePath('/console/users');
 }
 
 export type InviteState =
@@ -375,13 +350,19 @@ export async function sendInviteAction(
   }
 
   const email = (formData.get('email') as string | null)?.trim();
-  const expiresInDaysRaw = formData.get('expiresInDays') as string | null;
+  const expiresInDaysRaw = (formData.get('expiresInDays') as string | null)?.trim();
   const expiresInDays = expiresInDaysRaw ? Number(expiresInDaysRaw) : undefined;
   const plugins = formData.getAll('plugins') as string[];
 
   if (!email) return { success: false, error: 'Email is required.' };
+  if (
+    expiresInDays !== undefined &&
+    (!Number.isInteger(expiresInDays) || expiresInDays < 1 || expiresInDays > 365)
+  ) {
+    return { success: false, error: 'Expiry must be a whole number of days between 1 and 365.' };
+  }
 
-  const res = await adminFetch('/api/admin/invites', {
+  const res = await authApi('/api/admin/invites', {
     method: 'POST',
     body: JSON.stringify({
       email,
@@ -404,8 +385,9 @@ export async function sendInviteAction(
   // Branded rendering (RFC 0031) happens server-side in the runtime, not
   // here — the SDK boundary rule blocks this plugin from importing
   // @sovereignfs/mailer/@sovereignfs/db directly.
-  const emailRes = await selfAdminFetch('/api/admin/email-templates/send', {
+  const emailRes = await adminFetch('/api/admin/email-templates/send', {
     method: 'POST',
+    actor: true,
     body: JSON.stringify({
       templateId: 'invite',
       toEmail: email,
@@ -451,46 +433,46 @@ export async function sendInviteAction(
 // import them directly from `@/src/capabilities` instead.
 
 export async function listUserCapabilitiesAction(userId: string): Promise<GrantableCapability[]> {
-  const session = await sdk.auth.requireSession();
-  if (!sdk.auth.hasCapability(session, 'user:manage')) {
-    throw new Error('Insufficient privileges to view capabilities.');
-  }
-  const res = await selfAdminFetch(`/api/admin/users/${encodeURIComponent(userId)}/capabilities`);
+  await requireCapability('user:manage', 'Insufficient privileges to view capabilities.');
+  const res = await adminFetch(`/api/admin/users/${encodeURIComponent(userId)}/capabilities`, {
+    actor: true,
+  });
   if (!res.ok) return [];
   const grants = (await res.json()) as { capability: GrantableCapability }[];
   return grants.map((g) => g.capability);
 }
 
-export async function grantCapabilityAction(formData: FormData): Promise<void> {
-  const session = await sdk.auth.requireSession();
-  if (!sdk.auth.hasCapability(session, 'user:manage')) {
-    throw new Error('Insufficient privileges to grant capabilities.');
-  }
-  const userId = formData.get('userId') as string;
-  const capability = formData.get('capability') as string;
-
-  const res = await selfAdminFetch(`/api/admin/users/${encodeURIComponent(userId)}/capabilities`, {
-    method: 'POST',
-    body: JSON.stringify({ capability }),
+export async function grantCapabilityAction(formData: FormData): Promise<ActionResult> {
+  return guarded(async () => {
+    await requireCapability('user:manage', 'Insufficient privileges to grant capabilities.');
+    const userId = formData.get('userId') as string;
+    const capability = formData.get('capability') as string;
+    const res = await adminFetch(`/api/admin/users/${encodeURIComponent(userId)}/capabilities`, {
+      method: 'POST',
+      actor: true,
+      body: JSON.stringify({ capability }),
+    });
+    if (!res.ok) {
+      return { ok: false, error: await apiErrorMessage(res, 'Failed to grant capability') };
+    }
+    revalidatePath('/console/users');
+    return ACTION_OK;
   });
-  if (!res.ok) throw new Error(`Failed to grant capability: ${res.status}`);
-
-  revalidatePath('/console/users');
 }
 
-export async function revokeCapabilityAction(formData: FormData): Promise<void> {
-  const session = await sdk.auth.requireSession();
-  if (!sdk.auth.hasCapability(session, 'user:manage')) {
-    throw new Error('Insufficient privileges to revoke capabilities.');
-  }
-  const userId = formData.get('userId') as string;
-  const capability = formData.get('capability') as string;
-
-  const res = await selfAdminFetch(
-    `/api/admin/users/${encodeURIComponent(userId)}/capabilities/${encodeURIComponent(capability)}`,
-    { method: 'DELETE' },
-  );
-  if (!res.ok) throw new Error(`Failed to revoke capability: ${res.status}`);
-
-  revalidatePath('/console/users');
+export async function revokeCapabilityAction(formData: FormData): Promise<ActionResult> {
+  return guarded(async () => {
+    await requireCapability('user:manage', 'Insufficient privileges to revoke capabilities.');
+    const userId = formData.get('userId') as string;
+    const capability = formData.get('capability') as string;
+    const res = await adminFetch(
+      `/api/admin/users/${encodeURIComponent(userId)}/capabilities/${encodeURIComponent(capability)}`,
+      { method: 'DELETE', actor: true },
+    );
+    if (!res.ok) {
+      return { ok: false, error: await apiErrorMessage(res, 'Failed to revoke capability') };
+    }
+    revalidatePath('/console/users');
+    return ACTION_OK;
+  });
 }

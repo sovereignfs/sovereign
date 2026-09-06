@@ -25,17 +25,17 @@ export function RoleSelect({ userId, role }: { userId: string; role: string }) {
     formData.set('role', newRole);
 
     startTransition(async () => {
-      try {
-        await changeRoleAction(formData);
+      const result = await changeRoleAction(formData);
+      if (result.ok) {
         const label = ROLE_OPTIONS.find((o) => o.value === newRole)?.label ?? newRole;
         toast.show({
           title: 'Role updated',
           message: `Role changed to ${label}.`,
           category: 'success',
         });
-      } catch {
+      } else {
         setCurrentRole(prevRole);
-        toast.show({ title: 'Failed to update role', category: 'error' });
+        toast.show({ title: 'Failed to update role', message: result.error, category: 'error' });
       }
     });
   }

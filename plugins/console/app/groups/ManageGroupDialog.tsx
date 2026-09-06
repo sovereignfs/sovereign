@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button, Dialog } from '@sovereignfs/ui';
 import { GroupDetailFields } from './GroupDetailFields';
+import styles from '../console.module.css';
 
 interface GroupSummary {
   id: string;
@@ -23,18 +24,15 @@ export function ManageGroupDialog({ group }: { group: GroupSummary }) {
 
   return (
     <>
-      {/* alignSelf: this button is a direct child of the Groups list's
-          `.card` (a flex column with the shared default `align-items:
-          stretch`), which would otherwise stretch it to the card's full
-          width — `.card` is also used for plain text tiles elsewhere
-          (Console home, Health), so the fix is scoped to this button
-          rather than changing that shared class. */}
+      {/* `.cardManageButton`: this button is a direct child of the Groups
+          list's `.card` (a flex column, `align-items: stretch`), which would
+          otherwise stretch it to the card's full width. */}
       <Button
         type="button"
         variant="secondary"
         size="sm"
+        className={styles.cardManageButton}
         onClick={() => setOpen(true)}
-        style={{ alignSelf: 'flex-start', marginTop: 'auto' }}
       >
         Manage
       </Button>

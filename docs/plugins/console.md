@@ -173,8 +173,15 @@ plugins/console/
 │   ├── _lib/
 │   │   ├── sections.ts      # CONSOLE_SECTIONS — single source of truth for the sidebar and mobile drill-down nav
 │   │   ├── detail-pane.tsx  # ConsoleDetailPaneProvider/useConsoleDetailPane — shared 3rd-column mechanism (tasks 13.18–13.21)
-│   │   └── health.ts        # system health summary (CON-09)
-│   ├── _components/         # ActivitySearch, ConsoleDetailSlot, CopyIdButton — shared across sections
+│   │   ├── health.ts        # system health summary (CON-09)
+│   │   ├── authz.ts         # requireCapability — the session + capability preamble every mutation shares
+│   │   ├── action-result.ts # ActionResult + guarded() — mutations return results, never throw to the client
+│   │   ├── admin-fetch.ts   # adminFetch — server-to-server call to the runtime/auth admin APIs
+│   │   ├── use-action.ts    # useActionRunner — run an action from a click with pending state + toasts
+│   │   ├── fetch-timeout.ts # renderFetchSignal — bounded fetches for every page loader
+│   │   └── pagination.ts    # parsePageParam
+│   ├── _components/         # ConsolePageHeader, DetailPaneHeader/DetailIdRow/DetailSection, ConsolePagination,
+│   │                        # badges, ActionFeedback, ActivitySearch, ConsoleDetailSlot, CopyIdButton
 │   ├── users/               # list, invite, role change, capabilities, detail pane (CON-02–05, task 13.18)
 │   ├── groups/              # user-group CRUD + member management, detail pane (task 13.19)
 │   ├── plugins/             # unified filterable app table, access policy, detail pane (CON-06/07/13/14, task 13.20)

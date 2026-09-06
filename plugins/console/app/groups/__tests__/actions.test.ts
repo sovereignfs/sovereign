@@ -65,14 +65,10 @@ afterEach(() => {
 });
 
 /**
- * All 7 exported actions in groups/actions.ts route through one shared
- * requireGroupManageCapability() guard, which unconditionally throws
- * (not a { success: false } return) when hasCapability returns false —
- * including createGroupAction/addGroupMemberAction, which otherwise use a
- * GroupActionState success/failure return convention for their own
- * domain-specific validation ("Name is required.", etc.). The guard's own
- * throw is never caught inside those two actions, so it propagates out
- * uniformly across all 7 actions.
+ * All 7 exported actions in groups/actions.ts share `requireCapability`.
+ * The `ActionResult`-returning mutations (update/delete/removeMember) wrap
+ * it in `guarded()`, so a refusal comes back as `{ ok: false }`; the
+ * `GroupActionState` actions and the read helpers still let it throw.
  */
 describe('groups/actions.ts — capability gating (shared requireGroupManageCapability guard)', () => {
   it('createGroupAction rejects without user:manage', async () => {
@@ -89,9 +85,9 @@ describe('groups/actions.ts — capability gating (shared requireGroupManageCapa
     hasCapability.mockReturnValue(false);
     vi.stubGlobal('fetch', vi.fn());
 
-    await expect(updateGroupAction(formData({ id: 'group-1', name: 'Renamed' }))).rejects.toThrow(
-      'Insufficient privileges to manage groups.',
-    );
+    await expect(
+      updateGroupAction(null, formData({ id: 'group-1', name: 'Renamed' })),
+    ).resolves.toEqual({ ok: false, error: 'Insufficient privileges to manage groups.' });
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -99,9 +95,10 @@ describe('groups/actions.ts — capability gating (shared requireGroupManageCapa
     hasCapability.mockReturnValue(false);
     vi.stubGlobal('fetch', vi.fn());
 
-    await expect(deleteGroupAction(formData({ id: 'group-1' }))).rejects.toThrow(
-      'Insufficient privileges to manage groups.',
-    );
+    await expect(deleteGroupAction(formData({ id: 'group-1' }))).resolves.toEqual({
+      ok: false,
+      error: 'Insufficient privileges to manage groups.',
+    });
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -142,7 +139,7 @@ describe('groups/actions.ts — capability gating (shared requireGroupManageCapa
 
     await expect(
       removeGroupMemberAction(formData({ groupId: 'group-1', userId: 'user-2' })),
-    ).rejects.toThrow('Insufficient privileges to manage groups.');
+    ).resolves.toEqual({ ok: false, error: 'Insufficient privileges to manage groups.' });
     expect(fetch).not.toHaveBeenCalled();
   });
 });
@@ -172,7 +169,9 @@ describe('groups/actions.ts — happy paths', () => {
     const fetchMock = mockAdminFetch({ 'PATCH /api/admin/groups/group-1': { status: 200 } });
     vi.stubGlobal('fetch', fetchMock);
 
-    await updateGroupAction(formData({ id: 'group-1', name: 'Renamed' }));
+    await expect(
+      updateGroupAction(null, formData({ id: 'group-1', name: 'Renamed' })),
+    ).resolves.toEqual({ ok: true, message: 'Group saved.' });
 
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('/api/admin/groups/group-1'),
@@ -180,14 +179,59 @@ describe('groups/actions.ts — happy paths', () => {
     );
   });
 
+  it('updateGroupAction requires a name and reports an API failure as a result', async () => {
+    vi.stubGlobal('fetch', vi.fn());
+    await expect(updateGroupAction(null, formData({ id: 'group-1', name: ' ' }))).resolves.toEqual({
+      ok: false,
+      error: 'Name is required.',
+    });
+    expect(fetch).not.toHaveBeenCalled();
+
+    vi.stubGlobal(
+      'fetch',
+      mockAdminFetch({
+        'PATCH /api/admin/groups/group-1': { status: 400, body: { error: 'slug taken' } },
+      }),
+    );
+    await expect(
+      updateGroupAction(null, formData({ id: 'group-1', name: 'Renamed' })),
+    ).resolves.toEqual({ ok: false, error: 'slug taken' });
+  });
+
   it('deleteGroupAction deletes a group', async () => {
     const fetchMock = mockAdminFetch({ 'DELETE /api/admin/groups/group-1': { status: 200 } });
     vi.stubGlobal('fetch', fetchMock);
 
-    await deleteGroupAction(formData({ id: 'group-1' }));
+    await expect(deleteGroupAction(formData({ id: 'group-1' }))).resolves.toEqual({
+      ok: true,
+      message: 'Group deleted.',
+    });
 
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('/api/admin/groups/group-1'),
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+  });
+
+  it('deleteGroupAction reports a policy-referenced group as blocked, and forces on request', async () => {
+    const fetchMock = mockAdminFetch({
+      'DELETE /api/admin/groups/group-1': {
+        status: 409,
+        body: { error: 'group is referenced by one or more plugin access policies' },
+      },
+      'DELETE /api/admin/groups/group-1?force=true': { status: 200 },
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const blocked = await deleteGroupAction(formData({ id: 'group-1' }));
+    expect(blocked).toMatchObject({ ok: false, blocked: true });
+
+    await expect(deleteGroupAction(formData({ id: 'group-1', force: 'true' }))).resolves.toEqual({
+      ok: true,
+      message: 'Group deleted.',
+    });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      expect.stringContaining('/api/admin/groups/group-1?force=true'),
       expect.objectContaining({ method: 'DELETE' }),
     );
   });
@@ -260,7 +304,9 @@ describe('groups/actions.ts — happy paths', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    await removeGroupMemberAction(formData({ groupId: 'group-1', userId: 'user-2' }));
+    await expect(
+      removeGroupMemberAction(formData({ groupId: 'group-1', userId: 'user-2' })),
+    ).resolves.toEqual({ ok: true });
 
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('/api/admin/groups/group-1/members/user-2'),

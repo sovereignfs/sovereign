@@ -1,33 +1,15 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { headers } from 'next/headers';
 import { sdk, type DirectoryUser } from '@sovereignfs/sdk';
 import { CHROME_PLUGIN_IDS } from '@/src/launcher-plugins';
+import { ACTION_OK, apiErrorMessage, guarded, type ActionResult } from '../_lib/action-result';
+import { adminFetch as sharedAdminFetch } from '../_lib/admin-fetch';
+import { requireCapability } from '../_lib/authz';
 
-// Self-fetch address for the runtime's own admin API. Native dev may run on
-// RUNTIME_PORT; otherwise the runtime defaults to localhost:3000.
-const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
-
-/**
- * This is a fresh server-to-server request, not a passthrough of the
- * browser's request — middleware never sees it, so `x-sovereign-user-id`
- * must be forwarded explicitly or actor-attribution checks on the target
- * route (e.g. the plugin access grant endpoints) 401 even though the caller
- * is a fully authenticated admin.
- */
-async function adminFetch(path: string, init?: RequestInit): Promise<Response> {
-  const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
-  const actorId = (await headers()).get('x-sovereign-user-id') ?? '';
-  return fetch(`${SELF_URL}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${adminKey}`,
-      'x-sovereign-user-id': actorId,
-      ...(init?.headers as Record<string, string>),
-    },
-  });
+/** Plugin access routes attribute grants to the acting admin (`x-sovereign-user-id`). */
+function adminFetch(path: string, init?: RequestInit): Promise<Response> {
+  return sharedAdminFetch(path, { ...init, actor: true });
 }
 
 /**
@@ -43,10 +25,7 @@ async function adminFetch(path: string, init?: RequestInit): Promise<Response> {
  * route through here.
  */
 async function requirePluginManage(): Promise<void> {
-  const session = await sdk.auth.requireSession();
-  if (!sdk.auth.hasCapability(session, 'plugin:manage')) {
-    throw new Error('Insufficient privileges to manage apps.');
-  }
+  await requireCapability('plugin:manage');
 }
 
 export type PluginToggleActionState = { success: true } | { success: false; error: string };
@@ -226,18 +205,23 @@ export async function listGroupOptions(): Promise<GroupOption[]> {
 
 export type PluginAccessActionState = { success: true } | { success: false; error: string };
 
-export async function setPluginAccessPolicyAction(formData: FormData): Promise<void> {
-  await requirePluginManage();
-  const pluginId = formData.get('pluginId') as string;
-  const accessPolicy = formData.get('accessPolicy') as string;
-  const selfService = formData.get('selfService') === 'true';
+export async function setPluginAccessPolicyAction(formData: FormData): Promise<ActionResult> {
+  return guarded(async () => {
+    await requirePluginManage();
+    const pluginId = formData.get('pluginId') as string;
+    const accessPolicy = formData.get('accessPolicy') as string;
+    const selfService = formData.get('selfService') === 'true';
 
-  const res = await adminFetch(`/api/admin/plugins/${encodeURIComponent(pluginId)}/access`, {
-    method: 'PATCH',
-    body: JSON.stringify({ accessPolicy, selfService }),
+    const res = await adminFetch(`/api/admin/plugins/${encodeURIComponent(pluginId)}/access`, {
+      method: 'PATCH',
+      body: JSON.stringify({ accessPolicy, selfService }),
+    });
+    if (!res.ok) {
+      return { ok: false, error: await apiErrorMessage(res, 'Failed to update access policy') };
+    }
+    revalidatePath('/console/plugins');
+    return ACTION_OK;
   });
-  if (!res.ok) throw new Error(`Failed to update access policy: ${res.status}`);
-  revalidatePath('/console/plugins');
 }
 
 export async function grantPluginAccessUserAction(
@@ -261,17 +245,20 @@ export async function grantPluginAccessUserAction(
   return { success: true };
 }
 
-export async function revokePluginAccessUserAction(formData: FormData): Promise<void> {
-  await requirePluginManage();
-  const pluginId = formData.get('pluginId') as string;
-  const userId = formData.get('userId') as string;
+export async function revokePluginAccessUserAction(formData: FormData): Promise<ActionResult> {
+  return guarded(async () => {
+    await requirePluginManage();
+    const pluginId = formData.get('pluginId') as string;
+    const userId = formData.get('userId') as string;
 
-  const res = await adminFetch(
-    `/api/admin/plugins/${encodeURIComponent(pluginId)}/access/users/${encodeURIComponent(userId)}`,
-    { method: 'DELETE' },
-  );
-  if (!res.ok) throw new Error(`Failed to revoke access: ${res.status}`);
-  revalidatePath('/console/plugins');
+    const res = await adminFetch(
+      `/api/admin/plugins/${encodeURIComponent(pluginId)}/access/users/${encodeURIComponent(userId)}`,
+      { method: 'DELETE' },
+    );
+    if (!res.ok) return { ok: false, error: await apiErrorMessage(res, 'Failed to revoke access') };
+    revalidatePath('/console/plugins');
+    return ACTION_OK;
+  });
 }
 
 export async function grantPluginAccessGroupAction(
@@ -295,15 +282,18 @@ export async function grantPluginAccessGroupAction(
   return { success: true };
 }
 
-export async function revokePluginAccessGroupAction(formData: FormData): Promise<void> {
-  await requirePluginManage();
-  const pluginId = formData.get('pluginId') as string;
-  const groupId = formData.get('groupId') as string;
+export async function revokePluginAccessGroupAction(formData: FormData): Promise<ActionResult> {
+  return guarded(async () => {
+    await requirePluginManage();
+    const pluginId = formData.get('pluginId') as string;
+    const groupId = formData.get('groupId') as string;
 
-  const res = await adminFetch(
-    `/api/admin/plugins/${encodeURIComponent(pluginId)}/access/groups/${encodeURIComponent(groupId)}`,
-    { method: 'DELETE' },
-  );
-  if (!res.ok) throw new Error(`Failed to revoke access: ${res.status}`);
-  revalidatePath('/console/plugins');
+    const res = await adminFetch(
+      `/api/admin/plugins/${encodeURIComponent(pluginId)}/access/groups/${encodeURIComponent(groupId)}`,
+      { method: 'DELETE' },
+    );
+    if (!res.ok) return { ok: false, error: await apiErrorMessage(res, 'Failed to revoke access') };
+    revalidatePath('/console/plugins');
+    return ACTION_OK;
+  });
 }

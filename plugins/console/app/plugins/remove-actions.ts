@@ -4,30 +4,14 @@ import { execFileSync } from 'child_process';
 import { existsSync } from 'fs';
 import path from 'path';
 import { revalidatePath } from 'next/cache';
-import { headers } from 'next/headers';
 import { sdk } from '@sovereignfs/sdk';
+import type { ActionResult } from '../_lib/action-result';
+import { adminFetch as sharedAdminFetch } from '../_lib/admin-fetch';
 
-export type ActionResult = { ok: true; message: string } | { ok: false; error: string };
+export type { ActionResult } from '../_lib/action-result';
 
-const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
-
-/**
- * Server-to-server fetch to runtime's own admin API. A fresh outbound request,
- * not a passthrough of the browser's — middleware never sees it, so
- * `x-sovereign-user-id` must be forwarded explicitly.
- */
-async function adminFetch(path: string, init?: RequestInit): Promise<Response> {
-  const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
-  const actorId = (await headers()).get('x-sovereign-user-id') ?? '';
-  return fetch(`${SELF_URL}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${adminKey}`,
-      'x-sovereign-user-id': actorId,
-      ...(init?.headers as Record<string, string>),
-    },
-  });
+function adminFetch(path: string, init?: RequestInit): Promise<Response> {
+  return sharedAdminFetch(path, { ...init, actor: true });
 }
 
 /** Walk up from cwd to find the monorepo root (contains pnpm-workspace.yaml). */

@@ -1,9 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useActionState } from 'react';
-import { Button, FormField, Input, Select } from '@sovereignfs/ui';
+import { useActionState, useCallback, useEffect, useRef, useState } from 'react';
+import { Button, Checkbox, FormField, Input, Select, useToast } from '@sovereignfs/ui';
 import type { DirectoryUser } from '@sovereignfs/sdk';
+import { DetailSection } from '../_components/DetailPaneHeader';
+import type { ActionResult } from '../_lib/action-result';
+import { useActionRunner } from '../_lib/use-action';
 import {
   getPluginAccessState,
   grantPluginAccessGroupAction,
@@ -125,7 +127,7 @@ function UserPicker({ pluginId, onChanged }: { pluginId: string; onChanged: () =
         hint="Search by name or email"
       >
         {(field) => (
-          <div style={{ position: 'relative' }}>
+          <div>
             <Input
               {...field}
               value={selected ? (selected.name ?? selected.email) : query}
@@ -137,13 +139,12 @@ function UserPicker({ pluginId, onChanged }: { pluginId: string; onChanged: () =
               autoComplete="off"
             />
             {results.length > 0 && !selected ? (
-              <ul className={styles.cards} style={{ gridTemplateColumns: '1fr', marginTop: 4 }}>
+              <ul className={[styles.compactList, styles.compactListBelowInput].join(' ')}>
                 {results.map((user) => (
-                  <li key={user.id}>
+                  <li key={user.id} className={styles.compactRow}>
                     <button
                       type="button"
-                      className={styles.card}
-                      style={{ padding: 'var(--sv-space-2) var(--sv-space-3)', cursor: 'pointer' }}
+                      className={styles.compactRowButton}
                       onClick={() => {
                         setSelected(user);
                         setResults([]);
@@ -159,11 +160,51 @@ function UserPicker({ pluginId, onChanged }: { pluginId: string; onChanged: () =
           </div>
         )}
       </FormField>
-      {state && !state.success && <p className={styles.errorText}>{state.error}</p>}
+      {state && !state.success && (
+        <p className={styles.errorText} role="status">
+          {state.error}
+        </p>
+      )}
       <Button type="submit" size="sm" disabled={!selected || pending}>
         {pending ? 'Granting…' : 'Grant access'}
       </Button>
     </form>
+  );
+}
+
+/** One granted user/group row with its Revoke — errors toast, success refreshes the list. */
+function GrantRow({
+  title,
+  subtitle,
+  revoke,
+  onChanged,
+}: {
+  title: string;
+  subtitle?: string;
+  revoke: () => Promise<ActionResult>;
+  onChanged: () => void;
+}) {
+  const [run, pending] = useActionRunner();
+  return (
+    <li className={styles.compactRow}>
+      <span className={styles.compactRowLabel}>
+        <span className={styles.compactRowTitle}>{title}</span>
+        {subtitle && <span className={styles.compactRowSubtitle}>{subtitle}</span>}
+      </span>
+      <Button
+        type="button"
+        variant="destructive"
+        size="sm"
+        disabled={pending}
+        onClick={() => {
+          void run(revoke).then((result) => {
+            if (result.ok) onChanged();
+          });
+        }}
+      >
+        {pending ? 'Revoking…' : 'Revoke'}
+      </Button>
+    </li>
   );
 }
 
@@ -180,35 +221,20 @@ function UserGrantList({
     return <p className={styles.textMuted}>No users granted yet.</p>;
   }
   return (
-    <ul className={styles.cards} style={{ gridTemplateColumns: '1fr', gap: 'var(--sv-space-2)' }}>
+    <ul className={styles.compactList}>
       {users.map((user) => (
-        <li
+        <GrantRow
           key={user.userId}
-          className={styles.card}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: 'var(--sv-space-3)',
+          title={user.name ?? user.email}
+          subtitle={user.name ? user.email : undefined}
+          onChanged={onChanged}
+          revoke={() => {
+            const fd = new FormData();
+            fd.set('pluginId', pluginId);
+            fd.set('userId', user.userId);
+            return revokePluginAccessUserAction(fd);
           }}
-        >
-          <span>
-            {user.name ?? user.email}
-            {user.name && <span className={styles.textMuted}> ({user.email})</span>}
-          </span>
-          <form
-            action={async (formData) => {
-              await revokePluginAccessUserAction(formData);
-              onChanged();
-            }}
-          >
-            <input type="hidden" name="pluginId" value={pluginId} />
-            <input type="hidden" name="userId" value={user.userId} />
-            <button type="submit" className={styles.iconBtnDanger} title="Revoke">
-              Revoke
-            </button>
-          </form>
-        </li>
+        />
       ))}
     </ul>
   );
@@ -266,7 +292,11 @@ function GroupPicker({
           </Select>
         )}
       </FormField>
-      {state && !state.success && <p className={styles.errorText}>{state.error}</p>}
+      {state && !state.success && (
+        <p className={styles.errorText} role="status">
+          {state.error}
+        </p>
+      )}
       <Button type="submit" size="sm" disabled={!selectedGroupId || pending}>
         {pending ? 'Granting…' : 'Grant access'}
       </Button>
@@ -287,32 +317,19 @@ function GroupGrantList({
     return <p className={styles.textMuted}>No groups granted yet.</p>;
   }
   return (
-    <ul className={styles.cards} style={{ gridTemplateColumns: '1fr', gap: 'var(--sv-space-2)' }}>
+    <ul className={styles.compactList}>
       {groups.map((group) => (
-        <li
+        <GrantRow
           key={group.groupId}
-          className={styles.card}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: 'var(--sv-space-3)',
+          title={group.name}
+          onChanged={onChanged}
+          revoke={() => {
+            const fd = new FormData();
+            fd.set('pluginId', pluginId);
+            fd.set('groupId', group.groupId);
+            return revokePluginAccessGroupAction(fd);
           }}
-        >
-          <span>{group.name}</span>
-          <form
-            action={async (formData) => {
-              await revokePluginAccessGroupAction(formData);
-              onChanged();
-            }}
-          >
-            <input type="hidden" name="pluginId" value={pluginId} />
-            <input type="hidden" name="groupId" value={group.groupId} />
-            <button type="submit" className={styles.iconBtnDanger} title="Revoke">
-              Revoke
-            </button>
-          </form>
-        </li>
+        />
       ))}
     </ul>
   );
@@ -341,6 +358,7 @@ export function PluginAccessFields({
   const [groups, setGroups] = useState<ResolvedPluginAccessGroup[] | null>(null);
   const [groupOptions, setGroupOptions] = useState<GroupOption[]>([]);
   const [saving, setSaving] = useState(false);
+  const toast = useToast();
 
   const refresh = useCallback(() => {
     getPluginAccessState(pluginId).then((state) => {
@@ -369,9 +387,19 @@ export function PluginAccessFields({
       fd.set('pluginId', pluginId);
       fd.set('accessPolicy', nextPolicy);
       fd.set('selfService', String(nextSelfService));
-      await setPluginAccessPolicyAction(fd);
-      setPolicy(nextPolicy);
-      setSelfService(nextSelfService);
+      const result = await setPluginAccessPolicyAction(fd);
+      if (result.ok) {
+        setPolicy(nextPolicy);
+        setSelfService(nextSelfService);
+        toast.show({ title: 'Access policy saved', category: 'success' });
+      } else {
+        // The select/checkbox stay on the previous (still-saved) value.
+        toast.show({
+          title: 'Could not save access policy',
+          message: result.error,
+          category: 'error',
+        });
+      }
     } finally {
       setSaving(false);
     }
@@ -384,31 +412,25 @@ export function PluginAccessFields({
     (showUserPicker && users?.length === 0) || (showGroupPicker && groups?.length === 0);
 
   return (
-    <div className={styles.settingsSections}>
-      <section className={styles.settingsSection}>
-        <h3 className={styles.sectionTitle}>Permissions</h3>
+    <div className={styles.detailFieldsStack}>
+      <DetailSection title="Permissions">
         {permissions.length === 0 ? (
           <p className={styles.textMuted}>This app declares no special permissions.</p>
         ) : (
-          <ul
-            className={styles.cards}
-            style={{ gridTemplateColumns: '1fr', gap: 'var(--sv-space-1)' }}
-          >
+          <ul className={styles.compactList}>
             {permissions.map((permission) => (
-              <li key={permission} className={styles.help}>
-                {permissionLabel(permission)}
+              <li key={permission} className={styles.compactRow}>
+                <span className={styles.compactRowSubtitle}>{permissionLabel(permission)}</span>
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </DetailSection>
 
-      <section className={styles.settingsSection}>
-        <h3 className={styles.sectionTitle}>Policy</h3>
-        <p className={styles.help}>
-          Managing an app here does not automatically grant you app access — Console management and
-          app access are separate.
-        </p>
+      <DetailSection
+        title="Policy"
+        description="Managing an app here does not automatically grant you app access — Console management and app access are separate."
+      >
         <FormField label="Who can open this app" id={`plugin-access-policy-${pluginId}`}>
           {() => (
             <Select
@@ -426,59 +448,54 @@ export function PluginAccessFields({
           )}
         </FormField>
         {policy === 'disabled' && (
-          <p className={styles.help}>
+          <p className={styles.helpText}>
             Disabled is the strongest state — no one can open this app, even admins/owners or a
             user/group already granted access. It remains installed and manageable.
           </p>
         )}
         {showSelfService && (
-          <FormField label="" id={`plugin-access-self-service-${pluginId}`}>
-            {() => (
-              <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--sv-space-2)' }}>
-                <input
-                  type="checkbox"
-                  checked={selfService}
-                  disabled={saving}
-                  onChange={(e) => savePolicy(policy, e.target.checked)}
-                />
-                <span>
-                  Allow eligible users to self-service enable/disable this app (requires the{' '}
-                  <code>plugins:self-manage</code> capability)
-                </span>
-              </label>
-            )}
-          </FormField>
+          <Checkbox
+            id={`plugin-access-self-service-${pluginId}`}
+            label="Let eligible users turn this app on or off for themselves"
+            checked={selfService}
+            disabled={saving}
+            onChange={(checked) => void savePolicy(policy, checked)}
+          />
+        )}
+        {showSelfService && (
+          <p className={styles.helpText}>
+            Applies to users who hold the self-service capability (grant it from a user&apos;s
+            detail pane under Users).
+          </p>
         )}
         {emptyGrantWarning && (
-          <p className={styles.errorText}>
+          <p className={styles.errorText} role="status">
             No {showUserPicker ? 'users' : 'groups'} are granted yet — nobody can open this app
             until you grant at least one.
           </p>
         )}
-      </section>
+      </DetailSection>
 
       {showUserPicker && (
-        <section className={styles.settingsSection}>
-          <h3 className={styles.sectionTitle}>Selected users</h3>
+        <DetailSection title="Selected users">
           {users === null ? (
             <p className={styles.textMuted}>Loading…</p>
           ) : (
             <UserGrantList pluginId={pluginId} users={users} onChanged={refresh} />
           )}
           <UserPicker pluginId={pluginId} onChanged={refresh} />
-        </section>
+        </DetailSection>
       )}
 
       {showGroupPicker && (
-        <section className={styles.settingsSection}>
-          <h3 className={styles.sectionTitle}>Selected groups</h3>
+        <DetailSection title="Selected groups">
           {groups === null ? (
             <p className={styles.textMuted}>Loading…</p>
           ) : (
             <GroupGrantList pluginId={pluginId} groups={groups} onChanged={refresh} />
           )}
           <GroupPicker pluginId={pluginId} groupOptions={groupOptions} onChanged={refresh} />
-        </section>
+        </DetailSection>
       )}
     </div>
   );

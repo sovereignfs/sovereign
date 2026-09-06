@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import { Badge, ConfirmDialog, Icon, Menu, type MenuEntry, useToast } from '@sovereignfs/ui';
+import type { ActionResult } from '../_lib/action-result';
+import { MemberStatusBadge, roleLabel } from '../_components/badges';
 import {
   cancelInviteAction,
   changeRoleAction,
@@ -35,13 +37,6 @@ type ConfirmType =
   | 'delete'
   | 'cancel-invite'
   | null;
-
-function roleName(role: string | null) {
-  if (role === 'platform:owner') return 'Owner';
-  if (role === 'platform:admin') return 'Admin';
-  if (role === 'platform:auditor') return 'Auditor';
-  return 'User';
-}
 
 const ASSIGNABLE_ROLES = [
   { value: 'platform:admin', label: 'Admin' },
@@ -82,23 +77,24 @@ export function UserCard({
       const fd = new FormData();
       fd.set('userId', userId);
       fd.set('role', newRole);
-      try {
-        await changeRoleAction(fd);
+      const result = await changeRoleAction(fd);
+      if (result.ok) {
         const label = ASSIGNABLE_ROLES.find((r) => r.value === newRole)?.label ?? newRole;
         toast.show({ title: 'Role updated', message: `Changed to ${label}.`, category: 'success' });
-      } catch {
+      } else {
         setCurrentRole(prev);
-        toast.show({ title: 'Failed to update role', category: 'error' });
+        toast.show({ title: 'Failed to update role', message: result.error, category: 'error' });
       }
     });
   }
 
-  function runAction(action: () => Promise<void>) {
+  function runAction(action: () => Promise<ActionResult>) {
     startTransition(async () => {
-      try {
-        await action();
-      } catch {
-        toast.show({ title: 'Action failed', category: 'error' });
+      const result = await action();
+      if (result.ok) {
+        if (result.message) toast.show({ title: result.message, category: 'success' });
+      } else {
+        toast.show({ title: 'Action failed', message: result.error, category: 'error' });
       }
     });
   }
@@ -152,14 +148,8 @@ export function UserCard({
         <span className={styles.userCardName}>{member.name ?? '—'}</span>
         <span className={styles.userCardEmail}>{member.email}</span>
         <div className={styles.userCardBadges}>
-          <Badge variant="role">{roleName(currentRole)}</Badge>
-          <Badge variant="status" status={member.status}>
-            {member.status === 'active'
-              ? 'Active'
-              : member.status === 'deactivated'
-                ? 'Deactivated'
-                : 'Invited'}
-          </Badge>
+          <Badge variant="role">{roleLabel(currentRole)}</Badge>
+          <MemberStatusBadge status={member.status} size="md" />
           {member.isTestUser && <Badge variant="mono">Test</Badge>}
         </div>
       </div>

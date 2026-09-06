@@ -5,6 +5,7 @@ import { ManageGroupDialog } from './ManageGroupDialog';
 import { CreateGroupDialog } from './CreateGroupDialog';
 import { GroupDetailPane } from './GroupDetailPane';
 import { ConsoleDetailSlot } from '../_components/ConsoleDetailSlot';
+import { ConsolePageHeader } from '../_components/ConsolePageHeader';
 import styles from '../console.module.css';
 import { renderFetchSignal } from '../_lib/fetch-timeout';
 
@@ -61,30 +62,17 @@ export default async function GroupsPage({
 
   return (
     <div>
-      <div className={[styles.pageHeader, styles.pageHeaderTight].join(' ')}>
-        <h2 className={styles.overviewSectionTitle}>Groups</h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sv-space-3)' }}>
-          <span className={styles.memberCount}>{groups.length} groups</span>
-          {canManageGroups && <CreateGroupDialog />}
-        </div>
-      </div>
-
-      <p className={styles.lede}>
-        Groups are reusable audiences for app access policies and future operator workflows — not
-        app-scoped roles.
-      </p>
+      <ConsolePageHeader
+        title="Groups"
+        count={`${groups.length} ${groups.length === 1 ? 'group' : 'groups'}`}
+        action={canManageGroups ? <CreateGroupDialog /> : undefined}
+        description="Groups are reusable audiences for app access policies and future operator workflows — not app-scoped roles."
+      />
 
       {groups.length === 0 ? (
         <p className={styles.emptyTableMsg}>No groups yet. Create one to get started.</p>
       ) : (
-        <ul
-          className={styles.cards}
-          // A capped max track width (instead of the shared 1fr) so a
-          // handful of groups don't stretch to fill the entire row width —
-          // unlike Console home/Health's `.cards` usage, this list is
-          // typically short (a handful of groups per instance).
-          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 320px))' }}
-        >
+        <ul className={[styles.cards, styles.cardsCapped].join(' ')}>
           {groups.map((group) => {
             const isSelected = group.id === selectedGroup?.id;
             return (
@@ -95,7 +83,11 @@ export default async function GroupsPage({
                   .join(' ')}
               >
                 {canManageGroups ? (
-                  <Link href={`?group=${group.id}`} className={styles.cardLink}>
+                  <Link
+                    href={`?group=${group.id}`}
+                    className={styles.cardLink}
+                    aria-current={isSelected ? 'true' : undefined}
+                  >
                     <span className={styles.cardTitleRow}>
                       <span className={styles.cardTitle}>{group.name}</span>
                       <Icon

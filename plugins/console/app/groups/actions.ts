@@ -1,36 +1,16 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { headers } from 'next/headers';
 import { sdk, type DirectoryUser } from '@sovereignfs/sdk';
+import { ACTION_OK, apiErrorMessage, guarded, type ActionResult } from '../_lib/action-result';
+import { adminFetch } from '../_lib/admin-fetch';
+import { requireCapability } from '../_lib/authz';
 
-const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
+const MANAGE_GROUPS = 'Insufficient privileges to manage groups.';
 
-/**
- * Server-to-server fetch to runtime's own admin API. This is a fresh outbound
- * request, not a passthrough of the browser's request — middleware never sees
- * it, so `x-sovereign-user-id` must be forwarded explicitly or the target
- * route's actor-attribution check (e.g. POST /api/admin/groups) 401s even
- * though the caller is a fully authenticated admin.
- */
-async function adminFetch(path: string, init?: RequestInit): Promise<Response> {
-  const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
-  const actorId = (await headers()).get('x-sovereign-user-id') ?? '';
-  return fetch(`${SELF_URL}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${adminKey}`,
-      'x-sovereign-user-id': actorId,
-      ...(init?.headers as Record<string, string>),
-    },
-  });
-}
-
-function requireGroupManageCapability(session: Awaited<ReturnType<typeof sdk.auth.getSession>>) {
-  if (!sdk.auth.hasCapability(session, 'user:manage')) {
-    throw new Error('Insufficient privileges to manage groups.');
-  }
+/** Group routes attribute writes to the acting admin (`x-sovereign-user-id`). */
+function groupsApi(path: string, init?: RequestInit): Promise<Response> {
+  return adminFetch(path, { ...init, actor: true });
 }
 
 export type GroupActionState = { success: true } | { success: false; error: string };
@@ -39,60 +19,75 @@ export async function createGroupAction(
   _prev: GroupActionState | null,
   formData: FormData,
 ): Promise<GroupActionState> {
-  const session = await sdk.auth.requireSession();
-  requireGroupManageCapability(session);
+  await requireCapability('user:manage', MANAGE_GROUPS);
 
   const name = (formData.get('name') as string | null)?.trim();
   const description = (formData.get('description') as string | null)?.trim() || undefined;
   if (!name) return { success: false, error: 'Name is required.' };
 
-  const res = await adminFetch('/api/admin/groups', {
+  const res = await groupsApi('/api/admin/groups', {
     method: 'POST',
     body: JSON.stringify({ name, description }),
   });
   if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as { error?: string } | null;
-    return { success: false, error: body?.error ?? `Failed to create group: ${res.status}` };
+    return { success: false, error: await apiErrorMessage(res, 'Failed to create group') };
   }
 
   revalidatePath('/console/groups');
   return { success: true };
 }
 
-export async function updateGroupAction(formData: FormData): Promise<void> {
-  const session = await sdk.auth.requireSession();
-  requireGroupManageCapability(session);
+/** `useActionState`-shaped: the Details form shows pending + inline error. */
+export async function updateGroupAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return guarded(async () => {
+    await requireCapability('user:manage', MANAGE_GROUPS);
+    const id = formData.get('id') as string;
+    const name = (formData.get('name') as string | null)?.trim();
+    const description = (formData.get('description') as string | null)?.trim() || null;
+    if (!name) return { ok: false, error: 'Name is required.' };
 
-  const id = formData.get('id') as string;
-  const name = (formData.get('name') as string | null)?.trim();
-  const description = (formData.get('description') as string | null)?.trim() || null;
+    const res = await groupsApi(`/api/admin/groups/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name, description }),
+    });
+    if (!res.ok) return { ok: false, error: await apiErrorMessage(res, 'Failed to update group') };
 
-  const res = await adminFetch(`/api/admin/groups/${encodeURIComponent(id)}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ ...(name ? { name } : {}), description }),
+    revalidatePath('/console/groups');
+    return { ok: true, message: 'Group saved.' };
   });
-  if (!res.ok) throw new Error(`Failed to update group: ${res.status}`);
-
-  revalidatePath('/console/groups');
 }
 
-export async function deleteGroupAction(formData: FormData): Promise<void> {
-  const session = await sdk.auth.requireSession();
-  requireGroupManageCapability(session);
+/**
+ * A group still referenced by an app access policy is refused (409) unless
+ * `force` — surfaced as `blocked: true` so the confirm dialog can offer
+ * "Delete anyway" instead of a dead end.
+ */
+export async function deleteGroupAction(formData: FormData): Promise<ActionResult> {
+  return guarded(async () => {
+    await requireCapability('user:manage', MANAGE_GROUPS);
+    const id = formData.get('id') as string;
+    const force = formData.get('force') === 'true';
 
-  const id = formData.get('id') as string;
-  const force = formData.get('force') === 'true';
+    const res = await groupsApi(
+      `/api/admin/groups/${encodeURIComponent(id)}${force ? '?force=true' : ''}`,
+      { method: 'DELETE' },
+    );
+    if (res.status === 409) {
+      return {
+        ok: false,
+        blocked: true,
+        error:
+          'This group is used by an app access policy. Deleting it removes the group from that policy.',
+      };
+    }
+    if (!res.ok) return { ok: false, error: await apiErrorMessage(res, 'Failed to delete group') };
 
-  const res = await adminFetch(
-    `/api/admin/groups/${encodeURIComponent(id)}${force ? '?force=true' : ''}`,
-    { method: 'DELETE' },
-  );
-  if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as { error?: string } | null;
-    throw new Error(body?.error ?? `Failed to delete group: ${res.status}`);
-  }
-
-  revalidatePath('/console/groups');
+    revalidatePath('/console/groups');
+    return { ok: true, message: 'Group deleted.' };
+  });
 }
 
 export interface ResolvedGroupMember {
@@ -103,12 +98,11 @@ export interface ResolvedGroupMember {
   addedAt: number;
 }
 
-/** Group membership joined with display-safe directory info, for the manage dialog. */
+/** Group membership joined with display-safe directory info, for the detail pane. */
 export async function listResolvedGroupMembers(groupId: string): Promise<ResolvedGroupMember[]> {
-  const session = await sdk.auth.requireSession();
-  requireGroupManageCapability(session);
+  await requireCapability('user:manage', MANAGE_GROUPS);
 
-  const res = await adminFetch(`/api/admin/groups/${encodeURIComponent(groupId)}/members`);
+  const res = await groupsApi(`/api/admin/groups/${encodeURIComponent(groupId)}/members`);
   if (!res.ok) return [];
   const members = (await res.json()) as { userId: string; addedAt: number }[];
   if (members.length === 0) return [];
@@ -125,8 +119,7 @@ export async function listResolvedGroupMembers(groupId: string): Promise<Resolve
 }
 
 export async function searchGroupDirectoryUsers(query: string): Promise<DirectoryUser[]> {
-  const session = await sdk.auth.requireSession();
-  requireGroupManageCapability(session);
+  await requireCapability('user:manage', MANAGE_GROUPS);
   const trimmed = query.trim();
   if (trimmed.length < 2) return [];
   return sdk.directory.searchUsers({ query: trimmed, limit: 8 });
@@ -136,38 +129,37 @@ export async function addGroupMemberAction(
   _prev: GroupActionState | null,
   formData: FormData,
 ): Promise<GroupActionState> {
-  const session = await sdk.auth.requireSession();
-  requireGroupManageCapability(session);
+  await requireCapability('user:manage', MANAGE_GROUPS);
 
   const groupId = formData.get('groupId') as string;
   const userId = formData.get('userId') as string;
   if (!userId) return { success: false, error: 'Pick a person from the search results.' };
 
-  const res = await adminFetch(`/api/admin/groups/${encodeURIComponent(groupId)}/members`, {
+  const res = await groupsApi(`/api/admin/groups/${encodeURIComponent(groupId)}/members`, {
     method: 'POST',
     body: JSON.stringify({ userId }),
   });
   if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as { error?: string } | null;
-    return { success: false, error: body?.error ?? `Failed to add member: ${res.status}` };
+    return { success: false, error: await apiErrorMessage(res, 'Failed to add member') };
   }
 
   revalidatePath('/console/groups');
   return { success: true };
 }
 
-export async function removeGroupMemberAction(formData: FormData): Promise<void> {
-  const session = await sdk.auth.requireSession();
-  requireGroupManageCapability(session);
+export async function removeGroupMemberAction(formData: FormData): Promise<ActionResult> {
+  return guarded(async () => {
+    await requireCapability('user:manage', MANAGE_GROUPS);
+    const groupId = formData.get('groupId') as string;
+    const userId = formData.get('userId') as string;
 
-  const groupId = formData.get('groupId') as string;
-  const userId = formData.get('userId') as string;
+    const res = await groupsApi(
+      `/api/admin/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(userId)}`,
+      { method: 'DELETE' },
+    );
+    if (!res.ok) return { ok: false, error: await apiErrorMessage(res, 'Failed to remove member') };
 
-  const res = await adminFetch(
-    `/api/admin/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(userId)}`,
-    { method: 'DELETE' },
-  );
-  if (!res.ok) throw new Error(`Failed to remove member: ${res.status}`);
-
-  revalidatePath('/console/groups');
+    revalidatePath('/console/groups');
+    return ACTION_OK;
+  });
 }

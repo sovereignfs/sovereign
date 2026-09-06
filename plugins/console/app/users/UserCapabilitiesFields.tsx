@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Button } from '@sovereignfs/ui';
+import { Button, Icon, Tooltip } from '@sovereignfs/ui';
 import { GRANTABLE_CAPABILITIES, type GrantableCapability } from '@/src/capabilities';
+import { useActionRunner } from '../_lib/use-action';
 import styles from '../console.module.css';
 import {
   grantCapabilityAction,
@@ -29,6 +30,7 @@ const DESCRIPTIONS: Record<GrantableCapability, string> = {
 export function UserCapabilitiesFields({ userId }: { userId: string }) {
   const [grants, setGrants] = useState<GrantableCapability[] | null>(null);
   const [pending, setPending] = useState<GrantableCapability | null>(null);
+  const [run] = useActionRunner();
 
   const refresh = useCallback(() => {
     listUserCapabilitiesAction(userId)
@@ -46,12 +48,10 @@ export function UserCapabilitiesFields({ userId }: { userId: string }) {
       const fd = new FormData();
       fd.set('userId', userId);
       fd.set('capability', cap);
-      if (granted) {
-        await revokeCapabilityAction(fd);
-      } else {
-        await grantCapabilityAction(fd);
-      }
-      refresh();
+      const result = await run(() =>
+        granted ? revokeCapabilityAction(fd) : grantCapabilityAction(fd),
+      );
+      if (result.ok) refresh();
     } finally {
       setPending(null);
     }
@@ -69,7 +69,17 @@ export function UserCapabilitiesFields({ userId }: { userId: string }) {
           <li key={cap} className={styles.compactRow}>
             <span className={styles.capabilityLabel}>
               <span className={styles.capabilityLabelTitle}>{LABELS[cap]}</span>
-              <span className={styles.capabilityInfoIcon} title={DESCRIPTIONS[cap]}></span>
+              {/* A real, focusable trigger — the description used to live in
+                  an empty span's `title`, unreachable by keyboard or touch. */}
+              <Tooltip content={DESCRIPTIONS[cap]}>
+                <button
+                  type="button"
+                  className={styles.capabilityInfoIcon}
+                  aria-label={`About ${LABELS[cap]}`}
+                >
+                  <Icon name="info" size="sm" aria-hidden />
+                </button>
+              </Tooltip>
             </span>
             <Button
               type="button"
@@ -78,7 +88,7 @@ export function UserCapabilitiesFields({ userId }: { userId: string }) {
               disabled={pending === cap}
               onClick={() => toggle(cap, granted)}
             >
-              {granted ? 'Revoke' : 'Grant'}
+              {pending === cap ? '…' : granted ? 'Revoke' : 'Grant'}
             </Button>
           </li>
         );

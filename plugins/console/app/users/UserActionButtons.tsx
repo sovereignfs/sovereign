@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { ConfirmDialog } from '@sovereignfs/ui';
+import { useState } from 'react';
+import { ConfirmDialog, Icon, type IconName } from '@sovereignfs/ui';
 import {
   toggleActiveAction,
   resetMfaAction,
@@ -10,285 +10,201 @@ import {
   deleteUserAction,
   cancelInviteAction,
 } from './actions';
+import type { ActionResult } from '../_lib/action-result';
+import { useActionRunner } from '../_lib/use-action';
 import styles from '../console.module.css';
 
-export function DeactivateButton({ userId, name }: { userId: string; name: string }) {
+type Tone = 'default' | 'success' | 'danger';
+
+const TONE_CLASS: Record<Tone, string> = {
+  default: styles.iconBtn,
+  success: styles.iconBtnReactivate,
+  danger: styles.iconBtnDanger,
+};
+
+/**
+ * One icon-only user action behind a `ConfirmDialog`. The action runs via
+ * `useActionRunner`, so a failure keeps the dialog open with the action's
+ * own error (and a toast) instead of throwing the whole column into
+ * `error.tsx`. Every trigger carries an `aria-label` — these were `title`-only
+ * hand-drawn SVGs, invisible to assistive tech.
+ */
+function ConfirmedIconAction({
+  icon,
+  label,
+  tone = 'default',
+  title,
+  message,
+  confirmLabel,
+  pendingLabel,
+  destructive,
+  successTitle,
+  run,
+}: {
+  icon: IconName;
+  label: string;
+  tone?: Tone;
+  title: string;
+  message: string;
+  confirmLabel: string;
+  pendingLabel: string;
+  destructive?: boolean;
+  successTitle: string;
+  run: () => Promise<ActionResult>;
+}) {
   const [open, setOpen] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [runAction, pending] = useActionRunner();
 
   return (
     <>
       <button
         type="button"
-        className={styles.iconBtn}
-        title="Deactivate user"
-        onClick={() => setOpen(true)}
+        className={TONE_CLASS[tone]}
+        aria-label={label}
+        title={label}
+        onClick={() => {
+          setError(null);
+          setOpen(true);
+        }}
       >
-        <svg
-          width="15"
-          height="15"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-        </svg>
+        <Icon name={icon} size="sm" aria-hidden />
       </button>
       <ConfirmDialog
         open={open}
         onClose={() => setOpen(false)}
-        title="Deactivate user"
-        message={`Deactivate ${name || userId}? They will not be able to sign in until reactivated.`}
-        confirmLabel="Deactivate"
-        destructive
+        title={title}
+        message={message}
+        confirmLabel={pending ? pendingLabel : confirmLabel}
+        destructive={destructive}
+        pending={pending}
+        error={error}
         onConfirm={() => {
-          setOpen(false);
-          formRef.current?.requestSubmit();
+          void runAction(run, { successTitle }).then((result) => {
+            if (result.ok) setOpen(false);
+            else setError(result.error);
+          });
         }}
       />
-      <form ref={formRef} action={toggleActiveAction} style={{ display: 'none' }}>
-        <input type="hidden" name="userId" value={userId} />
-        <input type="hidden" name="active" value="false" />
-      </form>
     </>
+  );
+}
+
+function withFields(fields: Record<string, string>): FormData {
+  const fd = new FormData();
+  for (const [key, value] of Object.entries(fields)) fd.set(key, value);
+  return fd;
+}
+
+export function DeactivateButton({ userId, name }: { userId: string; name: string }) {
+  return (
+    <ConfirmedIconAction
+      icon="ban"
+      label="Deactivate user"
+      title="Deactivate user"
+      message={`Deactivate ${name || userId}? They will not be able to sign in until reactivated.`}
+      confirmLabel="Deactivate"
+      pendingLabel="Deactivating…"
+      destructive
+      successTitle="User deactivated"
+      run={() => toggleActiveAction(withFields({ userId, active: 'false' }))}
+    />
+  );
+}
+
+export function ReactivateButton({ userId, name }: { userId: string; name: string }) {
+  return (
+    <ConfirmedIconAction
+      icon="check"
+      label="Reactivate user"
+      tone="success"
+      title="Reactivate user"
+      message={`Reactivate ${name || userId}? They will be able to sign in again.`}
+      confirmLabel="Reactivate"
+      pendingLabel="Reactivating…"
+      successTitle="User reactivated"
+      run={() => toggleActiveAction(withFields({ userId, active: 'true' }))}
+    />
   );
 }
 
 export function DeleteButton({ userId, name }: { userId: string; name: string }) {
-  const [open, setOpen] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
-
   return (
-    <>
-      <button
-        type="button"
-        className={styles.iconBtnDanger}
-        title="Delete user"
-        onClick={() => setOpen(true)}
-      >
-        <svg
-          width="15"
-          height="15"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <polyline points="3 6 5 6 21 6" />
-          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-          <path d="M10 11v6M14 11v6" />
-          <path d="M9 6V4h6v2" />
-        </svg>
-      </button>
-      <ConfirmDialog
-        open={open}
-        onClose={() => setOpen(false)}
-        title={`Delete user: ${name || userId}?`}
-        message="This will permanently remove all their data from this instance, including their profile, activity history, app data, and files. This cannot be undone."
-        confirmLabel="Delete permanently"
-        destructive
-        onConfirm={() => {
-          setOpen(false);
-          formRef.current?.requestSubmit();
-        }}
-      />
-      <form ref={formRef} action={deleteUserAction} style={{ display: 'none' }}>
-        <input type="hidden" name="userId" value={userId} />
-      </form>
-    </>
+    <ConfirmedIconAction
+      icon="user-x"
+      label="Delete user"
+      tone="danger"
+      title={`Delete user: ${name || userId}?`}
+      message="This will permanently remove all their data from this instance, including their profile, activity history, app data, and files. This cannot be undone."
+      confirmLabel="Delete permanently"
+      pendingLabel="Deleting…"
+      destructive
+      successTitle="User deleted"
+      run={() => deleteUserAction(withFields({ userId }))}
+    />
   );
 }
 
 export function ResetMfaButton({ userId, name }: { userId: string; name: string }) {
-  const [open, setOpen] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
-
   return (
-    <>
-      <button
-        type="button"
-        className={styles.iconBtn}
-        title="Reset MFA — removes all TOTP secrets and passkeys"
-        onClick={() => setOpen(true)}
-      >
-        <svg
-          width="15"
-          height="15"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-        </svg>
-      </button>
-      <ConfirmDialog
-        open={open}
-        onClose={() => setOpen(false)}
-        title="Reset MFA"
-        message={`Remove all MFA methods for ${name || userId}? They will be able to sign in with only their password.`}
-        confirmLabel="Reset MFA"
-        destructive
-        onConfirm={() => {
-          setOpen(false);
-          formRef.current?.requestSubmit();
-        }}
-      />
-      <form ref={formRef} action={resetMfaAction} style={{ display: 'none' }}>
-        <input type="hidden" name="userId" value={userId} />
-      </form>
-    </>
+    <ConfirmedIconAction
+      icon="shield-off"
+      label="Reset MFA"
+      title="Reset MFA"
+      message={`Remove all MFA methods (TOTP secrets and passkeys) for ${name || userId}? They will be able to sign in with only their password.`}
+      confirmLabel="Reset MFA"
+      pendingLabel="Resetting…"
+      destructive
+      successTitle="MFA reset"
+      run={() => resetMfaAction(withFields({ userId }))}
+    />
   );
 }
 
 export function VouchButton({ userId, name }: { userId: string; name: string }) {
-  const [open, setOpen] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
-
   return (
-    <>
-      <button
-        type="button"
-        className={styles.iconBtn}
-        title="Vouch — grants verification level 3 (admin_vouched)"
-        onClick={() => setOpen(true)}
-      >
-        <svg
-          width="15"
-          height="15"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M9 12l2 2 4-4" />
-          <circle cx="12" cy="12" r="10" />
-        </svg>
-      </button>
-      <ConfirmDialog
-        open={open}
-        onClose={() => setOpen(false)}
-        title="Vouch for user"
-        message={`Vouch for ${name || userId}? This grants full trust (verification level 3).`}
-        confirmLabel="Vouch"
-        onConfirm={() => {
-          setOpen(false);
-          formRef.current?.requestSubmit();
-        }}
-      />
-      <form ref={formRef} action={vouchAction} style={{ display: 'none' }}>
-        <input type="hidden" name="userId" value={userId} />
-      </form>
-    </>
+    <ConfirmedIconAction
+      icon="circle-check"
+      label="Vouch for user"
+      title="Vouch for user"
+      message={`Vouch for ${name || userId}? This grants full trust (verification level 3).`}
+      confirmLabel="Vouch"
+      pendingLabel="Vouching…"
+      successTitle="Vouched"
+      run={() => vouchAction(withFields({ userId }))}
+    />
   );
 }
 
 export function RevokeVouchButton({ userId, name }: { userId: string; name: string }) {
-  const [open, setOpen] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
-
   return (
-    <>
-      <button
-        type="button"
-        className={styles.iconBtn}
-        title="Revoke vouch — drops back to verification level 2"
-        onClick={() => setOpen(true)}
-      >
-        <svg
-          width="15"
-          height="15"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <line x1="9" y1="9" x2="15" y2="15" />
-          <line x1="15" y1="9" x2="9" y2="15" />
-        </svg>
-      </button>
-      <ConfirmDialog
-        open={open}
-        onClose={() => setOpen(false)}
-        title="Revoke vouch"
-        message={`Revoke the vouch for ${name || userId}? Their verification level drops to 2.`}
-        confirmLabel="Revoke vouch"
-        destructive
-        onConfirm={() => {
-          setOpen(false);
-          formRef.current?.requestSubmit();
-        }}
-      />
-      <form ref={formRef} action={revokeVouchAction} style={{ display: 'none' }}>
-        <input type="hidden" name="userId" value={userId} />
-      </form>
-    </>
+    <ConfirmedIconAction
+      icon="circle-x"
+      label="Revoke vouch"
+      title="Revoke vouch"
+      message={`Revoke the vouch for ${name || userId}? Their verification level drops to 2.`}
+      confirmLabel="Revoke vouch"
+      pendingLabel="Revoking…"
+      destructive
+      successTitle="Vouch revoked"
+      run={() => revokeVouchAction(withFields({ userId }))}
+    />
   );
 }
 
 export function CancelInviteButton({ email }: { email: string }) {
-  const [open, setOpen] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
-
   return (
-    <>
-      <button
-        type="button"
-        className={styles.iconBtnDanger}
-        title="Cancel invite"
-        onClick={() => setOpen(true)}
-      >
-        <svg
-          width="15"
-          height="15"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <polyline points="3 6 5 6 21 6" />
-          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-          <path d="M10 11v6M14 11v6" />
-          <path d="M9 6V4h6v2" />
-        </svg>
-      </button>
-      <ConfirmDialog
-        open={open}
-        onClose={() => setOpen(false)}
-        title="Cancel invite"
-        message={`Cancel the pending invite for ${email}? They will no longer be able to use this invite link.`}
-        confirmLabel="Cancel invite"
-        destructive
-        onConfirm={() => {
-          setOpen(false);
-          formRef.current?.requestSubmit();
-        }}
-      />
-      <form ref={formRef} action={cancelInviteAction} style={{ display: 'none' }}>
-        <input type="hidden" name="email" value={email} />
-      </form>
-    </>
+    <ConfirmedIconAction
+      icon="trash-2"
+      label="Cancel invite"
+      tone="danger"
+      title="Cancel invite"
+      message={`Cancel the pending invite for ${email}? They will no longer be able to use this invite link.`}
+      confirmLabel="Cancel invite"
+      pendingLabel="Cancelling…"
+      destructive
+      successTitle="Invite cancelled"
+      run={() => cancelInviteAction(withFields({ email }))}
+    />
   );
 }

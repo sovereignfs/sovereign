@@ -1,35 +1,16 @@
 'use client';
 
-import { useActionState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button, FormField, Input, useToast } from '@sovereignfs/ui';
+import { useActionState } from 'react';
+import { Button, FormField, Input } from '@sovereignfs/ui';
+import { ActionFeedback } from '../_components/ActionFeedback';
+import { useSaveResult } from '../_lib/use-save-result';
 import styles from '../console.module.css';
-import { type ActionResult, updateRetentionAction } from './actions';
+import { updateRetentionAction } from './actions';
 
 export interface RetentionSettingsView {
   /** null = no window configured = never pruned. */
   deliveryLogsDays: number | null;
   activityLogDays: number | null;
-}
-
-function Feedback({ result }: { result: ActionResult | null }) {
-  if (!result || result.ok) return null;
-  return (
-    <p className={styles.feedbackError} role="status" aria-live="polite">
-      {result.error}
-    </p>
-  );
-}
-
-function useActionToast(result: ActionResult | null) {
-  const router = useRouter();
-  const toast = useToast();
-  useEffect(() => {
-    if (result?.ok) {
-      toast.show({ title: result.message, category: 'success' });
-      router.refresh();
-    }
-  }, [result, router, toast]);
 }
 
 /**
@@ -42,15 +23,15 @@ function useActionToast(result: ActionResult | null) {
  */
 export function RetentionSettingsForm({ retention }: { retention: RetentionSettingsView }) {
   const [state, action, pending] = useActionState(updateRetentionAction, null);
-  useActionToast(state);
+  useSaveResult(state);
 
   return (
-    <div className={styles.providerConfigCard}>
+    <div className={styles.fieldStack}>
       <p className={styles.helpText}>
         Neither window is set by default — nothing is deleted until you configure one. A background
         job checks every few hours and removes rows older than the window you set here.
       </p>
-      <form action={action} className={styles.providerConfigForm}>
+      <form action={action} className={styles.settingsForm}>
         <FormField
           label="Delivery & access log retention (days)"
           id="retention-delivery-logs-days"
@@ -85,12 +66,10 @@ export function RetentionSettingsForm({ retention }: { retention: RetentionSetti
             />
           )}
         </FormField>
-        <Feedback result={state} />
-        <div className={styles.providerConfigActions}>
-          <Button type="submit" size="sm" disabled={pending}>
-            {pending ? 'Saving...' : 'Save'}
-          </Button>
-        </div>
+        <ActionFeedback result={state} />
+        <Button type="submit" size="sm" disabled={pending}>
+          {pending ? 'Saving…' : 'Save'}
+        </Button>
       </form>
     </div>
   );

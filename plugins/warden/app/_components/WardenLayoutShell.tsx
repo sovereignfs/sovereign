@@ -1,13 +1,32 @@
 'use client';
 
-import { cloneElement, isValidElement, useEffect, useState } from 'react';
-import type { ReactElement, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Button, Icon, ThreeColumnLayout } from '@sovereignfs/ui';
 import { NEW_CHAT_PATHNAME } from '../_lib/active-session';
 import styles from './warden-layout-shell.module.css';
 
 const COLLAPSE_STORAGE_KEY = 'warden:sidebarCollapsed';
+
+interface WardenShellContextValue {
+  collapsed: boolean;
+  toggleCollapse: () => void;
+}
+
+const WardenShellContext = createContext<WardenShellContextValue | null>(null);
+
+/**
+ * The shell's collapse state and toggle, for whatever renders inside the
+ * sidebar slot. A context rather than a prop injected with `cloneElement`:
+ * the layout now wraps the sidebar in a `<Suspense>` so its session list
+ * can stream in after the shell has painted, and `cloneElement` on a
+ * Suspense element would hand the prop to Suspense, not to the sidebar.
+ * Returns `null` outside the shell (unit tests render the sidebar alone).
+ */
+export function useWardenShell(): WardenShellContextValue | null {
+  return useContext(WardenShellContext);
+}
 
 /**
  * Wraps Warden's chat page in a collapsible two-column layout (RFC 0063
@@ -22,11 +41,11 @@ const COLLAPSE_STORAGE_KEY = 'warden:sidebarCollapsed';
  *
  * The collapse toggle relocates with visibility: collapsed, it lives in the
  * main column (the only place left to put it, since there's no sidebar to
- * hold it); expanded, it's injected into `sidebar` itself via `cloneElement`
- * (`onToggleCollapse`) so the button that hides the sidebar lives inside the
- * thing it hides, matching the requested Claude-style placement — collapsing
- * must never also hide the only way to bring it back, which is exactly what
- * the main-column fallback guarantees for the collapsed case.
+ * hold it); expanded, the sidebar renders its own via `useWardenShell()` so
+ * the button that hides the sidebar lives inside the thing it hides,
+ * matching the requested Claude-style placement — collapsing must never
+ * also hide the only way to bring it back, which is exactly what the
+ * main-column fallback guarantees for the collapsed case.
  *
  * Collapsing swaps nothing structural: the same `ThreeColumnLayout` wraps
  * the same `.mainColumn`/`.content` in both states, with the sidebar column
@@ -63,45 +82,42 @@ export function WardenLayoutShell({
     });
   }
 
-  const sidebarWithToggle = isValidElement(sidebar)
-    ? cloneElement(sidebar as ReactElement<{ onToggleCollapse?: () => void }>, {
-        onToggleCollapse: toggle,
-      })
-    : sidebar;
-
   return (
-    <ThreeColumnLayout sidebarWidth={280} sidebarHidden={collapsed} className={styles.layout}>
-      {sidebarWithToggle}
-      <div className={styles.mainColumn}>
-        {/* Only rendered while collapsed — expanded, the sidebar holds its
-            own copy of this control (injected above). Kept as a conditional
-            sibling in a fixed slot so `.content` never changes position,
-            and absolutely positioned so it never shrinks `.content`'s box. */}
-        {collapsed && (
-          <div className={styles.toggleBar}>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              aria-label="Show sessions sidebar"
-              onClick={toggle}
-            >
-              <Icon name="panel-left" size="sm" aria-hidden />
-            </Button>
-            {/* "New chat" is the sidebar's first row, so it disappears with
-                the sidebar. Surfacing it here keeps the one action a
-                collapsed user is most likely to want reachable without
-                reopening the sidebar first — and it goes away again the
-                moment the sidebar (which already has it) comes back. */}
-            <Link href={NEW_CHAT_PATHNAME} aria-label="New chat" title="New chat">
-              <Button type="button" variant="ghost" size="sm" aria-hidden tabIndex={-1}>
-                <Icon name="plus" size="sm" aria-hidden />
+    <WardenShellContext.Provider value={{ collapsed, toggleCollapse: toggle }}>
+      <ThreeColumnLayout sidebarWidth={280} sidebarHidden={collapsed} className={styles.layout}>
+        {sidebar}
+        <div className={styles.mainColumn}>
+          {/* Only rendered while collapsed — expanded, the sidebar holds its
+              own copy of this control (via `useWardenShell`). Kept as a
+              conditional sibling in a fixed slot so `.content` never changes
+              position, and absolutely positioned so it never shrinks
+              `.content`'s box. */}
+          {collapsed && (
+            <div className={styles.toggleBar}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                aria-label="Show sessions sidebar"
+                onClick={toggle}
+              >
+                <Icon name="panel-left" size="sm" aria-hidden />
               </Button>
-            </Link>
-          </div>
-        )}
-        <div className={styles.content}>{children}</div>
-      </div>
-    </ThreeColumnLayout>
+              {/* "New chat" is the sidebar's first row, so it disappears with
+                  the sidebar. Surfacing it here keeps the one action a
+                  collapsed user is most likely to want reachable without
+                  reopening the sidebar first — and it goes away again the
+                  moment the sidebar (which already has it) comes back. */}
+              <Link href={NEW_CHAT_PATHNAME} aria-label="New chat" title="New chat">
+                <Button type="button" variant="ghost" size="sm" aria-hidden tabIndex={-1}>
+                  <Icon name="plus" size="sm" aria-hidden />
+                </Button>
+              </Link>
+            </div>
+          )}
+          <div className={styles.content}>{children}</div>
+        </div>
+      </ThreeColumnLayout>
+    </WardenShellContext.Provider>
   );
 }

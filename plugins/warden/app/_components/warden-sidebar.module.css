@@ -201,3 +201,12 @@ button.rowMenuTrigger:active:not(:disabled) {
     background: var(--sv-color-surface-sunken);
   }
 }
+
+/* Streaming fallback for the session list (`WardenSidebar`'s `loading`
+   prop) — the chrome above and below is already on screen; this just holds
+   the list's place until `WardenSidebarLoader` resolves. */
+.loadingRow {
+  display: flex;
+  justify-content: center;
+  padding: var(--sv-space-4) var(--sv-space-2);
+}

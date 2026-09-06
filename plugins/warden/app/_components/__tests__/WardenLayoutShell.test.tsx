@@ -2,23 +2,22 @@
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { WardenLayoutShell } from '../WardenLayoutShell';
+import { WardenLayoutShell, useWardenShell } from '../WardenLayoutShell';
 
 const COLLAPSE_STORAGE_KEY = 'warden:sidebarCollapsed';
 
 /**
- * Stands in for `WardenSidebar`, which is the real consumer of the
- * `onToggleCollapse` prop `WardenLayoutShell` injects via `cloneElement` —
- * a plain host element (e.g. a bare `<nav>`) can't render a button from a
- * prop it doesn't know about, so this fixture renders one itself, the same
- * way `WardenSidebar` renders its own collapse button when the prop is
- * present.
+ * Stands in for `WardenSidebar`, which is the real consumer of the collapse
+ * toggle `WardenLayoutShell` exposes through `useWardenShell()` — this
+ * fixture renders a button for it the same way `WardenSidebar` renders its
+ * own collapse button when rendered inside the shell.
  */
-function TestSidebar({ onToggleCollapse }: { onToggleCollapse?: () => void }) {
+function TestSidebar() {
+  const shell = useWardenShell();
   return (
     <nav>
       Sidebar content
-      {onToggleCollapse && <button onClick={onToggleCollapse}>Collapse from sidebar</button>}
+      {shell && <button onClick={shell.toggleCollapse}>Collapse from sidebar</button>}
     </nav>
   );
 }

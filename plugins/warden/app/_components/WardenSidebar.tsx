@@ -9,6 +9,7 @@ import {
   Icon,
   Menu,
   NavList,
+  Spinner,
   useCommitOnEnterOrBlur,
   useToast,
 } from '@sovereignfs/ui';
@@ -26,7 +27,7 @@ import {
   PROVIDERS_PATHNAME,
   resolveActiveSessionId,
 } from '../_lib/active-session';
-import type { DiscoveredModel } from '../_lib/model-discovery';
+import { useWardenShell } from './WardenLayoutShell';
 import { WardenSettingsDialog } from './WardenSettingsDialog';
 import styles from './warden-sidebar.module.css';
 
@@ -48,32 +49,33 @@ import styles from './warden-sidebar.module.css';
  * `resolveActiveSessionId` rule to the same ordered list, so the two still
  * can never disagree about which session is "open".
  *
- * `onToggleCollapse` is optional and supplied by `WardenLayoutShell` via
- * `cloneElement` (it owns the collapse state, this component doesn't) — when
+ * The collapse toggle comes from `WardenLayoutShell` via `useWardenShell()`
+ * (it owns the collapse state, this component doesn't) — when the shell is
  * present, a collapse button renders at the top of the sidebar itself, since
  * the button should live inside the sidebar while it's visible and move back
  * to the main column only once collapsing hides the sidebar entirely.
+ *
+ * `loading` is the layout's streaming fallback: the static chrome (primary
+ * nav, Settings) paints immediately with a spinner where the session list
+ * will land, so opening Warden never waits on a database read before the
+ * shell is on screen. The real list replaces it once `WardenSidebarLoader`
+ * resolves — same chrome either side, so the swap is seamless.
  */
 export function WardenSidebar({
   pinnedSessions,
   recentSessions,
   orderedSessionIds,
-  settingsModels,
-  settingsDefaultModelKey,
-  onToggleCollapse,
+  loading = false,
 }: {
   pinnedSessions: SessionView[];
   recentSessions: SessionView[];
   /** Every session id in `listSessions()` order — needed to apply the same
    *  "no `?session=` falls back to the most recent" rule the server uses. */
   orderedSessionIds: string[];
-  /** Data for the General settings dialog this sidebar opens. Resolved in
-   *  the layout rather than fetched on open — it's a couple of cheap reads
-   *  plus an already-memoised discovery pass. */
-  settingsModels: DiscoveredModel[];
-  settingsDefaultModelKey: string | null;
-  onToggleCollapse?: () => void;
+  loading?: boolean;
 }) {
+  const shell = useWardenShell();
+  const onToggleCollapse = shell?.toggleCollapse;
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -297,20 +299,27 @@ export function WardenSidebar({
       </div>
 
       <div className={styles.scrollArea}>
+        {loading && (
+          <div className={styles.loadingRow}>
+            <Spinner label="Loading chats…" />
+          </div>
+        )}
         {pinnedSessions.length > 0 && (
           <div className={styles.group}>
             <p className={styles.groupLabel}>Pinned</p>
             {pinnedSessions.map(renderRow)}
           </div>
         )}
-        <div className={styles.group}>
-          {pinnedSessions.length > 0 && <p className={styles.groupLabel}>Recent</p>}
-          {recentSessions.length === 0 && pinnedSessions.length === 0 ? (
-            <p className={styles.emptyText}>No sessions yet — start one above.</p>
-          ) : (
-            recentSessions.map(renderRow)
-          )}
-        </div>
+        {!loading && (
+          <div className={styles.group}>
+            {pinnedSessions.length > 0 && <p className={styles.groupLabel}>Recent</p>}
+            {recentSessions.length === 0 && pinnedSessions.length === 0 ? (
+              <p className={styles.emptyText}>No chats yet — start one above.</p>
+            ) : (
+              recentSessions.map(renderRow)
+            )}
+          </div>
+        )}
       </div>
 
       <div className={styles.footer}>
@@ -320,12 +329,7 @@ export function WardenSidebar({
         </button>
       </div>
 
-      <WardenSettingsDialog
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        visibleModels={settingsModels}
-        defaultModelKey={settingsDefaultModelKey}
-      />
+      <WardenSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       <ConfirmDialog
         open={confirmDeleteId !== null}

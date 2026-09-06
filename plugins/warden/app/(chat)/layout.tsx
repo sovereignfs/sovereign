@@ -1,16 +1,14 @@
+import { Suspense } from 'react';
 import type { ReactNode } from 'react';
-import { sdk } from '@sovereignfs/sdk';
-import { SIDEBAR_RECENT_LIMIT, listSessions } from '../_lib/sessions';
-import { discoverModels } from '../_lib/model-discovery';
-import { isModelVisible, listVisibilityOverrides } from '../_lib/model-visibility';
-import { getDefaultModelKey } from '../_lib/user-settings';
 import { WardenLayoutShell } from '../_components/WardenLayoutShell';
 import { WardenSidebar } from '../_components/WardenSidebar';
+import { WardenSidebarLoader } from '../_components/WardenSidebarLoader';
 import styles from '../warden.module.css';
 
 /**
  * Owns the chat shell — the collapsible sidebar and the column the chat
- * renders into — for `/warden` and `/warden/new` alike.
+ * renders into — for `/warden`, `/warden/new`, `/warden/providers` and
+ * `/warden/models` alike.
  *
  * This deliberately lives in a layout rather than in the pages themselves.
  * When the shell was part of the page, moving between `/warden` and
@@ -21,48 +19,42 @@ import styles from '../warden.module.css';
  * A layout is preserved across navigations between the routes it wraps, so
  * now only the chat column swaps and the sidebar never even re-renders.
  *
- * Scoped to a `(chat)` route group (no effect on the URL) so `/warden/
- * settings` — a sibling of this group, not a child — keeps its own
- * `PageContainer` layout and does not inherit the chat shell.
+ * **This layout awaits nothing.** A `loading.tsx` only ever wraps the page
+ * *below* its own segment's layout, so any `await` here blocks the whole
+ * route — shell, sidebar and spinner alike — from painting at all. That is
+ * exactly what happened when this layout resolved the session list and a
+ * live model-discovery pass inline: clicking the Warden icon showed nothing
+ * for as long as the slowest configured provider took to answer (up to 8s),
+ * and the earlier root-level `loading.tsx` fix had quietly stopped applying.
+ * The sidebar's data lives in `WardenSidebarLoader` behind its own
+ * `<Suspense>`, with the static chrome as the fallback, so the first flush
+ * carries the shell and the session list streams in behind it.
+ *
+ * Scoped to a `(chat)` route group (no effect on the URL) so a sibling
+ * route outside the group would keep its own `PageContainer` layout and not
+ * inherit the chat shell.
  *
  * Layouts receive no `searchParams`, so which row is highlighted can't be
  * resolved here; `WardenSidebar` derives it client-side from the URL via
  * the shared `resolveActiveSessionId` rule.
  */
-export default async function WardenChatLayout({ children }: { children: ReactNode }) {
-  const session = await sdk.auth.requireSession();
-  // The General settings dialog opens from the sidebar, so its (small,
-  // cheap) data is resolved here alongside the session list.
-  // `discoverModels()` is memoised for 30s, so this shares the page's own
-  // discovery pass rather than triggering a second one.
-  const [allSessions, discovery, visibilityOverrides, defaultModelKey] = await Promise.all([
-    listSessions(session.user.id, session.user.tenantId),
-    discoverModels(),
-    listVisibilityOverrides(session.user.id, session.user.tenantId),
-    getDefaultModelKey(session.user.id, session.user.tenantId),
-  ]);
-  const visibleModels = discovery.models.filter((model) =>
-    isModelVisible(model.key, visibilityOverrides),
-  );
-
-  const pinnedSessions = allSessions
-    .filter((s) => s.pinnedAt !== null)
-    .sort((a, b) => (b.pinnedAt ?? 0) - (a.pinnedAt ?? 0));
-  const recentSessions = allSessions
-    .filter((s) => s.pinnedAt === null)
-    .slice(0, SIDEBAR_RECENT_LIMIT);
-
+export default function WardenChatLayout({ children }: { children: ReactNode }) {
   return (
     <div className={styles.page} data-plugin-fullbleed>
       <WardenLayoutShell
         sidebar={
-          <WardenSidebar
-            pinnedSessions={pinnedSessions}
-            recentSessions={recentSessions}
-            orderedSessionIds={allSessions.map((s) => s.id)}
-            settingsModels={visibleModels}
-            settingsDefaultModelKey={defaultModelKey}
-          />
+          <Suspense
+            fallback={
+              <WardenSidebar
+                pinnedSessions={[]}
+                recentSessions={[]}
+                orderedSessionIds={[]}
+                loading
+              />
+            }
+          >
+            <WardenSidebarLoader />
+          </Suspense>
         }
       >
         {children}

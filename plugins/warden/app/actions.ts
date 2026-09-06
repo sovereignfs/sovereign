@@ -1,10 +1,15 @@
 'use server';
 
 import { NotAuthenticatedError, sdk } from '@sovereignfs/sdk';
-import { invalidateDiscoveryCacheForUser } from './_lib/model-discovery';
+import { discoverModels, invalidateDiscoveryCacheForUser } from './_lib/model-discovery';
+import type { DiscoveredModel } from './_lib/model-discovery';
 import { createProvider, deleteProvider, updateProvider } from './_lib/providers';
 import { MAX_RETENTION_DAYS, MIN_RETENTION_DAYS } from './_lib/limits';
-import { setModelVisibility } from './_lib/model-visibility';
+import {
+  isModelVisible,
+  listVisibilityOverrides,
+  setModelVisibility,
+} from './_lib/model-visibility';
 import {
   deleteInactiveSessions,
   deleteSession,
@@ -14,7 +19,7 @@ import {
   SessionPinLimitError,
   unpinSession,
 } from './_lib/sessions';
-import { setDefaultModelKey } from './_lib/user-settings';
+import { getDefaultModelKey, setDefaultModelKey } from './_lib/user-settings';
 import { UnsafeProviderUrlError } from './_lib/url-safety';
 
 /**
@@ -23,18 +28,56 @@ import { UnsafeProviderUrlError } from './_lib/url-safety';
  * they return a discriminated result the caller renders inline via
  * `useActionState`, keeping the user's input intact.
  *
- * Reads (`listProviders`/`discoverModels`) have no action wrapper here on
- * purpose — the providers page is a Server Component that calls `_lib`
- * directly, and every mutation below triggers a `router.refresh()` from the
- * client to get fresh server-rendered data, so a client-callable read action
- * would be unused surface, not a convenience. The one exception is
- * `refreshModelDiscoveryAction` below: `discoverModels()` now caches its
- * result for a short TTL (`model-discovery.ts`), so a plain
- * `router.refresh()` from a "Recheck" button would just replay the cached
- * result instead of actually re-checking — that action's only job is
- * dropping the cache first so the refresh that follows runs live.
+ * Page-level reads (`listProviders`/`discoverModels`) have no action wrapper
+ * here on purpose — the providers page is a Server Component that calls
+ * `_lib` directly, and every mutation below triggers a `router.refresh()`
+ * from the client to get fresh server-rendered data, so a client-callable
+ * read action would be unused surface, not a convenience. Two exceptions:
+ *
+ * - `refreshModelDiscoveryAction`: `discoverModels()` caches its result for
+ *   a short TTL (`model-discovery.ts`), so a plain `router.refresh()` from a
+ *   "Recheck" button would just replay the cached result instead of
+ *   actually re-checking — that action's only job is dropping the cache
+ *   first so the refresh that follows runs live.
+ * - `loadGeneralSettingsAction`: the Settings dialog opens from the sidebar,
+ *   which renders from a layout. Handing it its data as layout props meant
+ *   the layout had to await a live discovery pass before the sidebar could
+ *   paint, and the list went stale as soon as the user changed model
+ *   visibility (a layout is not re-run on navigation within it). Loading on
+ *   open is the only shape that is both instant to paint and never stale.
  */
 export type ActionResult = { ok: true; message: string } | { ok: false; error: string };
+
+export interface GeneralSettingsData {
+  visibleModels: DiscoveredModel[];
+  defaultModelKey: string | null;
+}
+
+export type GeneralSettingsResult =
+  { ok: true; data: GeneralSettingsData } | { ok: false; error: string };
+
+/** Everything the Settings dialog's General section renders — the user's
+ *  visible models (for the default-model picker) and their current default.
+ *  Read-only; see the file comment for why this one read is an action. */
+export async function loadGeneralSettingsAction(): Promise<GeneralSettingsResult> {
+  try {
+    const session = await requireSession();
+    const [discovery, visibilityOverrides, defaultModelKey] = await Promise.all([
+      discoverModels(),
+      listVisibilityOverrides(session.user.id, session.user.tenantId),
+      getDefaultModelKey(session.user.id, session.user.tenantId),
+    ]);
+    const visibleModels = discovery.models.filter((model) =>
+      isModelVisible(model.key, visibilityOverrides),
+    );
+    return { ok: true, data: { visibleModels, defaultModelKey } };
+  } catch (error) {
+    return {
+      ok: false,
+      error: messageFor(error, 'Could not load settings.', 'loadGeneralSettingsAction'),
+    };
+  }
+}
 
 /**
  * Every action in this file manages the *current user's own* providers only

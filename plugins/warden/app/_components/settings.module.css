@@ -74,3 +74,18 @@
   width: 100%;
   max-width: 24rem;
 }
+
+/*
+ * The dialog's data loads on open (see `WardenSettingsDialog`), so it needs
+ * a place for the spinner and for a failed load's message + retry that
+ * holds roughly the height the content will take — keeps the dialog from
+ * snapping from a sliver to full size when the data lands.
+ */
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sv-space-3);
+  min-height: 12rem;
+}

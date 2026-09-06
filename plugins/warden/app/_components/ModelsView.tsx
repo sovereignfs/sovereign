@@ -2,9 +2,9 @@
 
 import { useCallback, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, EmptyState, Icon, StatusBadge } from '@sovereignfs/ui';
+import { Button, EmptyState, Icon, StatusBadge, useToast } from '@sovereignfs/ui';
 import type { StatusBadgeStatus } from '@sovereignfs/ui';
-import { refreshModelDiscoveryAction } from '../actions';
+import { refreshModelDiscoveryAction, setModelVisibilityBulkAction } from '../actions';
 import type { DiscoveredModel, ModelDiscoveryResult } from '../_lib/model-discovery';
 import { isModelVisible } from '../_lib/model-visibility-policy';
 import { ModelToggleRow } from './ModelToggleRow';
@@ -87,7 +87,9 @@ export function ModelsView({
   visibilityOverrides: string[];
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [isRefreshing, startTransition] = useTransition();
+  const [bulkPendingGroup, setBulkPendingGroup] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const overrides = new Set(visibilityOverrides);
 
@@ -97,6 +99,21 @@ export function ModelsView({
       router.refresh();
     });
   }, [router]);
+
+  /** "Show all" / "Hide all" for one provider's catalog — one round trip,
+   *  then a refresh so every row re-seeds its own optimistic state. */
+  function setGroupVisibility(group: ModelGroup, visible: boolean) {
+    setBulkPendingGroup(group.id);
+    startTransition(async () => {
+      const result = await setModelVisibilityBulkAction(
+        group.models.map((model) => model.key),
+        visible,
+      );
+      if (!result.ok) toast.show({ title: result.error, category: 'error' });
+      setBulkPendingGroup(null);
+      router.refresh();
+    });
+  }
 
   const groups = buildGroups(discovery);
 
@@ -156,6 +173,35 @@ export function ModelsView({
               <h2 className={styles.groupTitle}>{group.label}</h2>
               {group.badge && (
                 <StatusBadge status={group.badge.status}>{group.badge.label}</StatusBadge>
+              )}
+              {/* Per-provider bulk toggles: flipping a 400-model catalog one
+                  switch at a time is not a real option, and "everything
+                  from this provider" is the common intent either way. Acts
+                  on the whole group, not the current search's subset — the
+                  label says "all" and should mean it. */}
+              {group.models.length > 1 && (
+                <div className={styles.groupActions}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={bulkPendingGroup !== null}
+                    aria-label={`Show all ${group.label} models`}
+                    onClick={() => setGroupVisibility(group, true)}
+                  >
+                    Show all
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={bulkPendingGroup !== null}
+                    aria-label={`Hide all ${group.label} models`}
+                    onClick={() => setGroupVisibility(group, false)}
+                  >
+                    Hide all
+                  </Button>
+                </div>
               )}
             </div>
             {group.models.length === 0 ? (

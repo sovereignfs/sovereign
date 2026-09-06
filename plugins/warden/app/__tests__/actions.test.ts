@@ -24,8 +24,18 @@ vi.mock('../_lib/providers', () => ({
 }));
 
 const setModelVisibility = vi.fn();
+const setModelVisibilityMany = vi.fn();
 vi.mock('../_lib/model-visibility', () => ({
   setModelVisibility: (...args: unknown[]) => setModelVisibility(...args),
+  setModelVisibilityMany: (...args: unknown[]) => setModelVisibilityMany(...args),
+}));
+
+const probeProviderModels = vi.fn();
+const invalidateDiscoveryCacheForUser = vi.fn();
+vi.mock('../_lib/model-discovery', () => ({
+  discoverModels: vi.fn(),
+  invalidateDiscoveryCacheForUser: (...args: unknown[]) => invalidateDiscoveryCacheForUser(...args),
+  probeProviderModels: (...args: unknown[]) => probeProviderModels(...args),
 }));
 
 class SessionNotFoundError extends Error {
@@ -41,12 +51,14 @@ class SessionPinLimitError extends Error {
   }
 }
 
+const clearMessages = vi.fn();
 const deleteInactiveSessions = vi.fn();
 const deleteSession = vi.fn();
 const pinSession = vi.fn();
 const renameSession = vi.fn();
 const unpinSession = vi.fn();
 vi.mock('../_lib/sessions', () => ({
+  clearMessages: (...args: unknown[]) => clearMessages(...args),
   deleteInactiveSessions: (...args: unknown[]) => deleteInactiveSessions(...args),
   deleteSession: (...args: unknown[]) => deleteSession(...args),
   pinSession: (...args: unknown[]) => pinSession(...args),
@@ -65,6 +77,7 @@ class UnsafeProviderUrlError extends Error {}
 vi.mock('../_lib/url-safety', () => ({ UnsafeProviderUrlError }));
 
 const {
+  clearSessionMessagesAction,
   createProviderAction,
   deleteInactiveSessionsAction,
   deleteProviderAction,
@@ -73,6 +86,7 @@ const {
   renameSessionAction,
   setDefaultModelAction,
   setModelVisibilityAction,
+  setModelVisibilityBulkAction,
   unpinSessionAction,
   updateProviderAction,
 } = await import('../actions');
@@ -84,6 +98,7 @@ function formData(entries: Record<string, string>): FormData {
 }
 
 beforeEach(() => {
+  probeProviderModels.mockResolvedValue({ ok: true, modelIds: ['a', 'b'] });
   vi.clearAllMocks();
   requireSession.mockResolvedValue({ user: { id: 'user-1', tenantId: 'tenant-1' } });
 });
@@ -127,7 +142,43 @@ describe('createProviderAction', () => {
       baseUrl: 'https://openrouter.ai/api/v1',
       apiKey: 'sk-1',
     });
-    expect(result).toEqual({ ok: true, message: 'OpenRouter was added.' });
+    expect(result).toEqual({ ok: true, message: 'OpenRouter was added — 2 models available.' });
+  });
+
+  it('refuses to save a provider whose key is rejected, keeping the form intact', async () => {
+    probeProviderModels.mockResolvedValue({
+      ok: false,
+      authFailed: true,
+      message: 'This provider rejected the API key.',
+    });
+    const result = await createProviderAction(
+      null,
+      formData({ label: 'X', baseUrl: 'https://x.example.com/v1', apiKey: 'bad' }),
+    );
+    expect(result).toEqual({
+      ok: false,
+      error: 'This provider rejected the API key. Check the key and try again.',
+    });
+    expect(createProvider).not.toHaveBeenCalled();
+  });
+
+  it('saves an unreachable provider anyway, but says so as a warning', async () => {
+    probeProviderModels.mockResolvedValue({
+      ok: false,
+      authFailed: false,
+      message: 'This provider is unreachable.',
+    });
+    createProvider.mockResolvedValue({ id: 'conn-1' });
+    const result = await createProviderAction(
+      null,
+      formData({ label: 'Home server', baseUrl: 'http://192.168.1.20:11434/v1', apiKey: 'none' }),
+    );
+    expect(createProvider).toHaveBeenCalled();
+    expect(result).toEqual({
+      ok: true,
+      tone: 'warning',
+      message: 'Home server was added, but it can’t be reached right now — check the base URL.',
+    });
   });
 
   it('surfaces an unsafe-URL rejection as the exact user-facing message', async () => {
@@ -435,5 +486,47 @@ describe('deleteInactiveSessionsAction — input validation', () => {
 
     expect(result.ok).toBe(true);
     expect(deleteInactiveSessions).toHaveBeenCalledWith('user-1', 'tenant-1', value);
+  });
+});
+
+describe('setModelVisibilityBulkAction', () => {
+  it('shows a whole group, scoped to the calling user', async () => {
+    const result = await setModelVisibilityBulkAction(['conn-1:a', 'conn-1:b'], true);
+    expect(setModelVisibilityMany).toHaveBeenCalledWith(
+      'user-1',
+      'tenant-1',
+      ['conn-1:a', 'conn-1:b'],
+      true,
+    );
+    expect(result).toEqual({ ok: true, message: '2 models shown in chat.' });
+  });
+
+  it('rejects a malformed key list without touching visibility', async () => {
+    expect(await setModelVisibilityBulkAction('conn-1:a', true)).toEqual({
+      ok: false,
+      error: 'Could not update these models.',
+    });
+    expect(await setModelVisibilityBulkAction([1, 2], false)).toEqual({
+      ok: false,
+      error: 'Could not update these models.',
+    });
+    expect(setModelVisibilityMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('clearSessionMessagesAction', () => {
+  it('clears the session for the calling user', async () => {
+    clearMessages.mockResolvedValue(undefined);
+    const result = await clearSessionMessagesAction('s-1');
+    expect(clearMessages).toHaveBeenCalledWith('user-1', 'tenant-1', 's-1');
+    expect(result).toEqual({ ok: true, message: 'Conversation cleared.' });
+  });
+
+  it("surfaces a foreign session id as the session's own not-found message", async () => {
+    clearMessages.mockRejectedValue(new SessionNotFoundError());
+    expect(await clearSessionMessagesAction('nope')).toEqual({
+      ok: false,
+      error: 'Session not found.',
+    });
   });
 });

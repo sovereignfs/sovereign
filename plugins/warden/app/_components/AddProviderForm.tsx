@@ -2,7 +2,8 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
-import { Button, Card, FormField, Input, useToast } from '@sovereignfs/ui';
+import { Button, Card, FormField, Input, Select, useToast } from '@sovereignfs/ui';
+import { CUSTOM_PRESET_ID, findPreset, PROVIDER_PRESETS } from '../_lib/provider-presets';
 import type { ActionResult } from '../actions';
 import { createProviderAction } from '../actions';
 import styles from './providers.module.css';
@@ -47,18 +48,34 @@ export function AddProviderForm({ onAdded }: { onAdded: () => void }) {
     createProviderAction,
     null,
   );
-  const [label, setLabel] = useState('');
-  const [baseUrl, setBaseUrl] = useState('');
+  const [presetId, setPresetId] = useState(PROVIDER_PRESETS[0].id);
+  const [label, setLabel] = useState(PROVIDER_PRESETS[0].label);
+  const [baseUrl, setBaseUrl] = useState(PROVIDER_PRESETS[0].baseUrl);
   const [apiKey, setApiKey] = useState('');
   const toast = useToast();
   const handledStateRef = useRef<ActionResult | null>(null);
+  const preset = findPreset(presetId);
+
+  /** Picking a preset fills name and URL, but never over the top of
+   *  something the user typed themselves: a field only changes if it still
+   *  holds the previous preset's value (or is empty). */
+  function handlePresetChange(nextId: string) {
+    const previous = findPreset(presetId);
+    const next = findPreset(nextId);
+    setPresetId(nextId);
+    if (!next) return;
+    if (!label || label === previous?.label)
+      setLabel(next.id === CUSTOM_PRESET_ID ? '' : next.label);
+    if (!baseUrl || baseUrl === previous?.baseUrl) setBaseUrl(next.baseUrl);
+  }
 
   useEffect(() => {
     if (state?.ok && state !== handledStateRef.current) {
       handledStateRef.current = state;
-      toast.show({ title: state.message, category: 'success' });
-      setLabel('');
-      setBaseUrl('');
+      toast.show({ title: state.message, category: state.tone ?? 'success' });
+      setPresetId(PROVIDER_PRESETS[0].id);
+      setLabel(PROVIDER_PRESETS[0].label);
+      setBaseUrl(PROVIDER_PRESETS[0].baseUrl);
       setApiKey('');
       onAdded();
     }
@@ -68,6 +85,28 @@ export function AddProviderForm({ onAdded }: { onAdded: () => void }) {
     <Card padding="md" className={styles.providerCard}>
       <p className={styles.providerLabel}>Add a provider</p>
       <form action={formAction} className={styles.form}>
+        <FormField
+          label="Provider"
+          id="add-preset"
+          hint="Fills in the name and address for common services. Pick Custom for anything else."
+        >
+          {(field) => (
+            <Select
+              {...field}
+              value={presetId}
+              disabled={pending}
+              onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                handlePresetChange(event.target.value)
+              }
+            >
+              {PROVIDER_PRESETS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          )}
+        </FormField>
         <FormField label="Name" id="add-label" hint='e.g. "OpenRouter" or "Home server"'>
           {(field) => (
             <Input
@@ -84,7 +123,10 @@ export function AddProviderForm({ onAdded }: { onAdded: () => void }) {
         <FormField
           label="Base URL"
           id="add-baseUrl"
-          hint="The endpoint's OpenAI-compatible API base, e.g. https://openrouter.ai/api/v1"
+          hint={
+            preset?.baseUrlHint ??
+            "The endpoint's OpenAI-compatible API base, e.g. https://openrouter.ai/api/v1"
+          }
         >
           {(field) => (
             <Input

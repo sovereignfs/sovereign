@@ -1,13 +1,15 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ToastProvider } from '@sovereignfs/ui';
 import type { ModelDiscoveryResult } from '../../_lib/model-discovery';
 import { ModelsView } from '../ModelsView';
 
 const setModelVisibilityAction = vi.fn();
+const setModelVisibilityBulkAction = vi.fn();
 vi.mock('../../actions', () => ({
   setModelVisibilityAction: (...args: unknown[]) => setModelVisibilityAction(...args),
+  setModelVisibilityBulkAction: (...args: unknown[]) => setModelVisibilityBulkAction(...args),
 }));
 
 const push = vi.fn();
@@ -221,5 +223,48 @@ describe('ModelsView — search', () => {
       target: { value: 'LLAMA' },
     });
     expect(screen.getByText('llama-3')).toBeDefined();
+  });
+});
+
+describe('ModelsView — bulk show/hide', () => {
+  it('offers Show all / Hide all per provider group and sends every key in the group', async () => {
+    setModelVisibilityBulkAction.mockResolvedValue({
+      ok: true,
+      message: '2 models shown in chat.',
+    });
+    renderView(
+      discovery({
+        providers: [{ ...openRouterProvider, modelCount: 2 }],
+        models: [
+          { key: 'conn-1:gpt-4o-mini', label: 'OpenRouter — gpt-4o-mini' },
+          { key: 'conn-1:gpt-4o', label: 'OpenRouter — gpt-4o' },
+        ],
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Show all OpenRouter models' }));
+    await waitFor(() =>
+      expect(setModelVisibilityBulkAction).toHaveBeenCalledWith(
+        ['conn-1:gpt-4o-mini', 'conn-1:gpt-4o'],
+        true,
+      ),
+    );
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole('button', { name: 'Hide all OpenRouter models' }));
+    await waitFor(() =>
+      expect(setModelVisibilityBulkAction).toHaveBeenCalledWith(
+        ['conn-1:gpt-4o-mini', 'conn-1:gpt-4o'],
+        false,
+      ),
+    );
+  });
+
+  it('does not offer bulk controls for a single-model group', () => {
+    renderView(
+      discovery({
+        providers: [openRouterProvider],
+        models: [{ key: 'conn-1:gpt-4o', label: 'OpenRouter — gpt-4o' }],
+      }),
+    );
+    expect(screen.queryByRole('button', { name: /Show all/ })).toBeNull();
   });
 });

@@ -1,7 +1,11 @@
 'use server';
 
 import { NotAuthenticatedError, sdk } from '@sovereignfs/sdk';
-import { discoverModels, invalidateDiscoveryCacheForUser } from './_lib/model-discovery';
+import {
+  discoverModels,
+  invalidateDiscoveryCacheForUser,
+  probeProviderModels,
+} from './_lib/model-discovery';
 import type { DiscoveredModel } from './_lib/model-discovery';
 import { createProvider, deleteProvider, updateProvider } from './_lib/providers';
 import { MAX_RETENTION_DAYS, MIN_RETENTION_DAYS } from './_lib/limits';
@@ -9,8 +13,10 @@ import {
   isModelVisible,
   listVisibilityOverrides,
   setModelVisibility,
+  setModelVisibilityMany,
 } from './_lib/model-visibility';
 import {
+  clearMessages,
   deleteInactiveSessions,
   deleteSession,
   pinSession,
@@ -46,7 +52,16 @@ import { UnsafeProviderUrlError } from './_lib/url-safety';
  *   visibility (a layout is not re-run on navigation within it). Loading on
  *   open is the only shape that is both instant to paint and never stale.
  */
-export type ActionResult = { ok: true; message: string } | { ok: false; error: string };
+export type ActionResult =
+  | {
+      ok: true;
+      message: string;
+      /** `'warning'` when the action succeeded but with a caveat the user
+       *  should read (a provider saved but not currently reachable) — the
+       *  caller shows it as a warning toast rather than a success one. */
+      tone?: 'success' | 'warning';
+    }
+  | { ok: false; error: string };
 
 export interface GeneralSettingsData {
   visibleModels: DiscoveredModel[];
@@ -129,9 +144,33 @@ export async function createProviderAction(
     if (!label) return { ok: false, error: 'Give this provider a name.' };
     if (!baseUrl) return { ok: false, error: 'A base URL is required.' };
     if (!apiKey) return { ok: false, error: 'An API key is required.' };
+    // Check the connection before saving (RFC 0063's open "test connection"
+    // question). A rejected key is a mistake the user can only fix right
+    // here, so it is refused with their input intact; a host that cannot be
+    // reached may just be down (or a home server that is off), so it is
+    // saved anyway and the caveat is said out loud rather than a clean
+    // "was added" that the Providers page then contradicts.
+    const probe = await probeProviderModels(baseUrl, apiKey);
+    if (!probe.ok && probe.authFailed) {
+      return {
+        ok: false,
+        error: 'This provider rejected the API key. Check the key and try again.',
+      };
+    }
     await createProvider({ label, baseUrl, apiKey });
     invalidateDiscoveryCacheForUser(session.user.id);
-    return { ok: true, message: `${label} was added.` };
+    if (!probe.ok) {
+      return {
+        ok: true,
+        tone: 'warning',
+        message: `${label} was added, but it can’t be reached right now — check the base URL.`,
+      };
+    }
+    const count = probe.modelIds.length;
+    return {
+      ok: true,
+      message: `${label} was added — ${count} model${count === 1 ? '' : 's'} available.`,
+    };
   } catch (error) {
     return {
       ok: false,
@@ -213,6 +252,45 @@ export async function setModelVisibilityAction(
     return {
       ok: false,
       error: messageFor(error, 'Could not update this model.', 'setModelVisibilityAction'),
+    };
+  }
+}
+
+/** A single provider's catalog can run to several hundred models; this is
+ *  a generous ceiling above that, not a tight one. */
+const MAX_BULK_VISIBILITY_KEYS = 2000;
+
+/**
+ * "Show all" / "Hide all" for one provider group on the Models page. Same
+ * scoping as `setModelVisibilityAction`; the keys come from the client, so
+ * they are bounded and type-checked here — a public POST endpoint, like
+ * every action in this file.
+ */
+export async function setModelVisibilityBulkAction(
+  modelKeys: unknown,
+  visible: boolean,
+): Promise<ActionResult> {
+  try {
+    const session = await sdk.auth.requireSession();
+    if (
+      !Array.isArray(modelKeys) ||
+      modelKeys.length > MAX_BULK_VISIBILITY_KEYS ||
+      !modelKeys.every((key) => typeof key === 'string' && key.length > 0 && key.length <= 512)
+    ) {
+      return { ok: false, error: 'Could not update these models.' };
+    }
+    await setModelVisibilityMany(session.user.id, session.user.tenantId, modelKeys, visible);
+    const count = modelKeys.length;
+    return {
+      ok: true,
+      message: visible
+        ? `${count} model${count === 1 ? '' : 's'} shown in chat.`
+        : `${count} model${count === 1 ? '' : 's'} hidden from chat.`,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: messageFor(error, 'Could not update these models.', 'setModelVisibilityBulkAction'),
     };
   }
 }
@@ -361,6 +439,21 @@ export async function deleteSessionAction(sessionId: string): Promise<ActionResu
     return {
       ok: false,
       error: messageFor(error, 'Could not delete this session.', 'deleteSessionAction'),
+    };
+  }
+}
+
+/** "Clear conversation" (`ChatView`'s top bar) — every message goes, the
+ *  session itself (title, pin, place in the sidebar) stays. */
+export async function clearSessionMessagesAction(sessionId: string): Promise<ActionResult> {
+  try {
+    const session = await sdk.auth.requireSession();
+    await clearMessages(session.user.id, session.user.tenantId, sessionId);
+    return { ok: true, message: 'Conversation cleared.' };
+  } catch (error) {
+    return {
+      ok: false,
+      error: messageFor(error, 'Could not clear this conversation.', 'clearSessionMessagesAction'),
     };
   }
 }

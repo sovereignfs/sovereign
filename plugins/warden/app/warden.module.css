@@ -50,6 +50,10 @@
   top: 0;
   right: 0;
   z-index: 1;
+  display: flex;
+  align-items: center;
+  /* No gap — icon buttons carry their own padding (same reasoning as the
+     shell's `.toggleBar`). */
   padding: var(--sv-space-2) var(--sv-space-2) 0;
 }
 

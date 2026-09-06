@@ -251,6 +251,37 @@ describe('WardenSidebar — collapse control', () => {
   });
 });
 
+describe('WardenSidebar — many chats', () => {
+  const many = Array.from({ length: 14 }, (_, i) =>
+    session({ id: `r-${i}`, title: `Chat number ${i}`, lastActiveAt: 100 - i }),
+  );
+
+  it('folds the Recent group past the limit behind "Show more", and unfolds on click', () => {
+    renderSidebar({ recentSessions: many, orderedSessionIds: many.map((s) => s.id) });
+    expect(screen.getByRole('link', { name: 'Chat number 9' })).toBeDefined();
+    expect(screen.queryByRole('link', { name: 'Chat number 10' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Show 4 more' }));
+    expect(screen.getByRole('link', { name: 'Chat number 13' })).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Show fewer' }));
+    expect(screen.queryByRole('link', { name: 'Chat number 13' })).toBeNull();
+  });
+
+  it('searches across every chat, including the folded ones, and says when nothing matches', () => {
+    renderSidebar({ recentSessions: many, orderedSessionIds: many.map((s) => s.id) });
+    const search = screen.getByPlaceholderText('Search chats…');
+    fireEvent.change(search, { target: { value: 'number 12' } });
+    expect(screen.getByRole('link', { name: 'Chat number 12' })).toBeDefined();
+    expect(screen.queryByRole('link', { name: 'Chat number 1' })).toBeNull();
+    fireEvent.change(search, { target: { value: 'zzz' } });
+    expect(screen.getByText('No chats match “zzz”.')).toBeDefined();
+  });
+
+  it('shows no search box while the list is short enough to scan', () => {
+    renderSidebar({ recentSessions: many.slice(0, 3) });
+    expect(screen.queryByPlaceholderText('Search chats…')).toBeNull();
+  });
+});
+
 describe('WardenSidebar — rename', () => {
   it('replaces the row with an input pre-filled with the current title, commits on Enter', async () => {
     renameSessionAction.mockResolvedValue({ ok: true, message: 'Renamed.' });

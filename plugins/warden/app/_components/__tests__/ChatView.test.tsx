@@ -11,6 +11,11 @@ vi.mock('next/navigation', () => ({
 
 const replaceState = vi.fn();
 
+const clearSessionMessagesAction = vi.fn();
+vi.mock('../../actions', () => ({
+  clearSessionMessagesAction: (...args: unknown[]) => clearSessionMessagesAction(...args),
+}));
+
 // `ChatView` reads the design system's breakpoint (`useIsMobile`) to decide
 // what Enter does; jsdom has no `matchMedia`. Desktop by default, `true`
 // for the one test that exercises the touch-keyboard behaviour.
@@ -30,12 +35,27 @@ function installMatchMedia() {
   );
 }
 
+// jsdom has no HTMLDialogElement.showModal()/close(); the "Clear
+// conversation" ConfirmDialog is always mounted (closed), and closing on
+// mount calls `close()`. Same polyfill as ConfirmDialog's own tests.
+function installDialogPolyfill() {
+  HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+    this.setAttribute('open', '');
+  };
+  HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
+    if (!this.hasAttribute('open')) return;
+    this.removeAttribute('open');
+    this.dispatchEvent(new Event('close'));
+  };
+}
+
 beforeEach(() => {
   replace.mockClear();
   refresh.mockClear();
   replaceState.mockClear();
   mobileViewport = false;
   installMatchMedia();
+  installDialogPolyfill();
   vi.spyOn(window.history, 'replaceState').mockImplementation(replaceState);
 });
 
@@ -1111,5 +1131,35 @@ describe('ChatView — reply controls', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
     await screen.findByText('ok');
+  });
+});
+
+describe('ChatView — clear conversation', () => {
+  it('asks first, then clears the persisted thread on screen and on the server', async () => {
+    clearSessionMessagesAction.mockResolvedValue({ ok: true, message: 'Conversation cleared.' });
+    renderChatView({
+      initialSessionId: 'session-1',
+      initialMessages: [
+        { id: 'm1', role: 'user', content: 'q', providerId: null, model: 'local', createdAt: 1 },
+        {
+          id: 'm2',
+          role: 'assistant',
+          content: 'a',
+          providerId: null,
+          model: 'local',
+          createdAt: 2,
+        },
+      ],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Clear this conversation' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    await waitFor(() => expect(clearSessionMessagesAction).toHaveBeenCalledWith('session-1'));
+    await waitFor(() => expect(screen.queryByText('q')).toBeNull());
+    expect(screen.getByText('Ask Warden anything')).toBeDefined();
+  });
+
+  it('is not offered on an empty thread', () => {
+    renderChatView();
+    expect(screen.queryByRole('button', { name: 'Clear this conversation' })).toBeNull();
   });
 });

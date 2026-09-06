@@ -20,7 +20,7 @@ import {
   renameSessionAction,
   unpinSessionAction,
 } from '../actions';
-import type { SessionView } from '../_lib/sessions';
+import { SIDEBAR_RECENT_LIMIT, type SessionView } from '../_lib/sessions';
 import {
   MODELS_PATHNAME,
   NEW_CHAT_PATHNAME,
@@ -96,7 +96,24 @@ export function WardenSidebar({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletePending, setDeletePending] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showAllRecent, setShowAllRecent] = useState(false);
+  const [query, setQuery] = useState('');
   const renameInputRef = useRef<HTMLInputElement>(null);
+
+  // Beyond the first `SIDEBAR_RECENT_LIMIT` the Recent group folds, with a
+  // "Show more" and — once there is enough to lose something in — a search
+  // across every chat, pinned or not. A hard cutoff (the previous behaviour)
+  // made the eleventh chat unreachable except by pinning it first.
+  const totalSessions = pinnedSessions.length + recentSessions.length;
+  const searchable = totalSessions > SIDEBAR_RECENT_LIMIT;
+  const trimmedQuery = query.trim().toLowerCase();
+  const matchesQuery = (session: SessionView) =>
+    (session.title ?? 'New chat').toLowerCase().includes(trimmedQuery);
+  const visiblePinned = trimmedQuery ? pinnedSessions.filter(matchesQuery) : pinnedSessions;
+  const matchingRecent = trimmedQuery ? recentSessions.filter(matchesQuery) : recentSessions;
+  const folded = !trimmedQuery && !showAllRecent && matchingRecent.length > SIDEBAR_RECENT_LIMIT;
+  const visibleRecent = folded ? matchingRecent.slice(0, SIDEBAR_RECENT_LIMIT) : matchingRecent;
+  const hiddenRecentCount = matchingRecent.length - visibleRecent.length;
 
   useEffect(() => {
     if (renamingId) renameInputRef.current?.focus();
@@ -305,19 +322,51 @@ export function WardenSidebar({
             <Spinner label="Loading chats…" />
           </div>
         )}
-        {pinnedSessions.length > 0 && (
+        {searchable && (
+          <label className={styles.searchBar} aria-label="Search chats">
+            <Icon name="search" size="sm" aria-hidden className={styles.searchIcon} />
+            <input
+              type="search"
+              placeholder="Search chats…"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className={styles.searchInput}
+            />
+          </label>
+        )}
+        {visiblePinned.length > 0 && (
           <div className={styles.group}>
             <p className={styles.groupLabel}>Pinned</p>
-            {pinnedSessions.map(renderRow)}
+            {visiblePinned.map(renderRow)}
           </div>
         )}
         {!loading && (
           <div className={styles.group}>
-            {pinnedSessions.length > 0 && <p className={styles.groupLabel}>Recent</p>}
-            {recentSessions.length === 0 && pinnedSessions.length === 0 ? (
+            {visiblePinned.length > 0 && <p className={styles.groupLabel}>Recent</p>}
+            {totalSessions === 0 ? (
               <p className={styles.emptyText}>No chats yet — start one above.</p>
+            ) : trimmedQuery && visiblePinned.length === 0 && visibleRecent.length === 0 ? (
+              <p className={styles.emptyText}>No chats match &ldquo;{query.trim()}&rdquo;.</p>
             ) : (
-              recentSessions.map(renderRow)
+              visibleRecent.map(renderRow)
+            )}
+            {hiddenRecentCount > 0 && (
+              <button
+                type="button"
+                className={styles.showMore}
+                onClick={() => setShowAllRecent(true)}
+              >
+                Show {hiddenRecentCount} more
+              </button>
+            )}
+            {!trimmedQuery && showAllRecent && recentSessions.length > SIDEBAR_RECENT_LIMIT && (
+              <button
+                type="button"
+                className={styles.showMore}
+                onClick={() => setShowAllRecent(false)}
+              >
+                Show fewer
+              </button>
             )}
           </div>
         )}

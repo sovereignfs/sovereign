@@ -31,8 +31,10 @@ async function db(): Promise<Db> {
 export const MAX_PINNED_SESSIONS = 5;
 
 /** How many unpinned sessions `WardenSidebar`'s "Recent" group shows
- *  (RFC 0063 §10) — older ones remain reachable only via retention cleanup
- *  or pinning, never deleted just for falling outside this window. */
+ *  before folding the rest behind "Show more" (RFC 0063 §10 left the
+ *  cutoff's shape open; a hard cutoff made the 11th chat unreachable). The
+ *  sidebar also searches across every session once there are more than
+ *  this many. Nothing is ever deleted for falling outside this window. */
 export const SIDEBAR_RECENT_LIMIT = 10;
 
 const TITLE_MAX_CHARS = 60;
@@ -482,9 +484,8 @@ export async function replaceMessage(
   return toMessageView({ ...row, ...patch });
 }
 
-/** Deletes every message in a session — kept for parity with the original
- *  single-conversation `clearMessages()`, scoped to one session now. Not
- *  currently wired to any UI. */
+/** Deletes every message in a session, keeping the session (and its title
+ *  and pin) — the chat's "Clear conversation" action. Ownership-checked. */
 export async function clearMessages(
   userId: string,
   _tenantId: string,

@@ -210,3 +210,59 @@ button.rowMenuTrigger:active:not(:disabled) {
   justify-content: center;
   padding: var(--sv-space-4) var(--sv-space-2);
 }
+
+/* Search over every chat — only rendered once there are more chats than
+   the Recent group shows at once. Mirrors the Models page's search bar. */
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  padding: var(--sv-space-1) var(--sv-space-2);
+  border: var(--sv-border-width-hairline) solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface);
+  color: var(--sv-color-text-muted);
+}
+
+.searchBar:focus-within {
+  border-color: var(--sv-color-accent);
+  box-shadow: 0 0 0 2px var(--sv-color-focus-ring);
+}
+
+.searchIcon {
+  flex-shrink: 0;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  outline: none;
+  font: inherit;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-primary);
+}
+
+/* "Show N more" / "Show fewer" — a row-shaped text button at the foot of
+   the Recent group, styled like a row so it reads as part of the list. */
+.showMore {
+  display: block;
+  width: 100%;
+  border: none;
+  background: none;
+  border-radius: var(--sv-radius-md);
+  padding: var(--sv-space-1) var(--sv-space-2);
+  font: inherit;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+  text-align: left;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .showMore:hover {
+    background: var(--sv-color-surface-sunken);
+    color: var(--sv-color-text-primary);
+  }
+}

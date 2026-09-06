@@ -106,10 +106,21 @@ interface OpenAiModelListResponse {
   data?: Array<{ id?: unknown }>;
 }
 
-type ProviderFetchResult =
+export type ProviderProbeResult =
   { ok: true; modelIds: string[] } | { ok: false; authFailed: boolean; message: string };
 
-async function fetchProviderModels(baseUrl: string, apiKey: string): Promise<ProviderFetchResult> {
+/**
+ * One live `GET /models` against a provider with the given key — the same
+ * call a discovery pass makes per provider, exported so "Add a provider"
+ * can check a connection *before* saving it (RFC 0063's open "test
+ * connection UX" question, resolved as: a rejected key is refused outright,
+ * an unreachable host is saved with a warning — see `createProviderAction`).
+ * Never throws; every failure is a result.
+ */
+export async function probeProviderModels(
+  baseUrl: string,
+  apiKey: string,
+): Promise<ProviderProbeResult> {
   let safe: SafeProviderUrl;
   try {
     // Re-validated here, not just at save time. The actual request below
@@ -212,7 +223,7 @@ async function runDiscovery(): Promise<ModelDiscoveryResult> {
         };
       }
 
-      const result = await fetchProviderModels(provider.baseUrl, apiKey);
+      const result = await probeProviderModels(provider.baseUrl, apiKey);
       if (!result.ok) {
         await markProviderError(provider.id, result.message, result.authFailed ? 401 : undefined);
         return {

@@ -1,5 +1,5 @@
 import { sdk } from '@sovereignfs/sdk';
-import { SIDEBAR_RECENT_LIMIT, listSessions } from '../_lib/sessions';
+import { listSessions } from '../_lib/sessions';
 import { WardenSidebar } from './WardenSidebar';
 
 /**
@@ -25,9 +25,10 @@ export async function WardenSidebarLoader() {
   const pinnedSessions = allSessions
     .filter((s) => s.pinnedAt !== null)
     .sort((a, b) => (b.pinnedAt ?? 0) - (a.pinnedAt ?? 0));
-  const recentSessions = allSessions
-    .filter((s) => s.pinnedAt === null)
-    .slice(0, SIDEBAR_RECENT_LIMIT);
+  // Every unpinned session, not the first `SIDEBAR_RECENT_LIMIT`: the
+  // sidebar applies that limit itself and offers "Show more" and search
+  // over the rest, so an older chat is always reachable from here.
+  const recentSessions = allSessions.filter((s) => s.pinnedAt === null);
 
   return (
     <WardenSidebar

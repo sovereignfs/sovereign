@@ -11,7 +11,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  */
 interface Predicate {
   columnName: string;
-  value: unknown;
+  value?: unknown;
+  /** `inArray` — matches any of these. */
+  values?: unknown[];
 }
 
 interface OverrideRow {
@@ -39,11 +41,18 @@ vi.mock('drizzle-orm', async (importOriginal) => {
       value,
     }),
     and: (...predicates: Predicate[]): Predicate[] => predicates,
+    inArray: (column: { name: string }, values: unknown[]): Predicate => ({
+      columnName: toCamelCase(column.name),
+      values,
+    }),
   };
 });
 
 function matches(row: OverrideRow, predicates: Predicate[]): boolean {
-  return predicates.every((p) => (row as Record<string, unknown>)[p.columnName] === p.value);
+  return predicates.every((p) => {
+    const actual = (row as Record<string, unknown>)[p.columnName];
+    return p.values ? p.values.includes(actual) : actual === p.value;
+  });
 }
 
 const fakeDb = {
@@ -71,8 +80,8 @@ const fakeDb = {
   },
   insert(_table: Table) {
     return {
-      values: async (row: OverrideRow) => {
-        rows.push(row);
+      values: async (row: OverrideRow | OverrideRow[]) => {
+        rows.push(...(Array.isArray(row) ? row : [row]));
       },
     };
   },
@@ -89,8 +98,13 @@ vi.mock('@sovereignfs/sdk', () => ({
   sdk: { db: { getClient: vi.fn(async () => fakeDb) } },
 }));
 
-const { isModelVisible, isVisibleByDefault, listVisibilityOverrides, setModelVisibility } =
-  await import('../model-visibility');
+const {
+  isModelVisible,
+  isVisibleByDefault,
+  listVisibilityOverrides,
+  setModelVisibility,
+  setModelVisibilityMany,
+} = await import('../model-visibility');
 
 beforeEach(() => {
   rows = [];
@@ -167,5 +181,32 @@ describe('setModelVisibility', () => {
     await setModelVisibility('user-1', 'tenant-1', 'conn-1:gpt-4o', false);
     expect(await listVisibilityOverrides('user-1', 'tenant-1')).toEqual(new Set());
     expect(await listVisibilityOverrides('user-2', 'tenant-1')).toEqual(new Set(['conn-1:gpt-4o']));
+  });
+});
+
+describe('setModelVisibilityMany', () => {
+  it('shows a provider group with one bulk insert, skipping keys already shown', async () => {
+    await setModelVisibility('user-1', 'tenant-1', 'conn-1:a', true);
+    await setModelVisibilityMany('user-1', 'tenant-1', ['conn-1:a', 'conn-1:b', 'conn-1:c'], true);
+    const overrides = await listVisibilityOverrides('user-1', 'tenant-1');
+    expect([...overrides].sort()).toEqual(['conn-1:a', 'conn-1:b', 'conn-1:c']);
+    // Still exceptions-only: exactly one row per shown provider model.
+    expect(rows).toHaveLength(3);
+  });
+
+  it('hides a provider group by deleting its override rows, leaving other providers alone', async () => {
+    await setModelVisibilityMany('user-1', 'tenant-1', ['conn-1:a', 'conn-1:b', 'conn-2:z'], true);
+    await setModelVisibilityMany('user-1', 'tenant-1', ['conn-1:a', 'conn-1:b'], false);
+    const overrides = await listVisibilityOverrides('user-1', 'tenant-1');
+    expect([...overrides]).toEqual(['conn-2:z']);
+  });
+
+  it('treats the local model by its own default: hiding it inserts, showing it deletes', async () => {
+    await setModelVisibilityMany('user-1', 'tenant-1', ['local'], false);
+    expect(isModelVisible('local', await listVisibilityOverrides('user-1', 'tenant-1'))).toBe(
+      false,
+    );
+    await setModelVisibilityMany('user-1', 'tenant-1', ['local'], true);
+    expect(rows).toHaveLength(0);
   });
 });

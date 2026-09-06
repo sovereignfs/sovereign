@@ -112,3 +112,53 @@ describe('AddProviderForm', () => {
     );
   });
 });
+
+describe('AddProviderForm — presets', () => {
+  it('starts on the first preset with its name and URL filled in', () => {
+    render(
+      <ToastProvider>
+        <AddProviderForm onAdded={vi.fn()} />
+      </ToastProvider>,
+    );
+    expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('OpenRouter');
+    expect((screen.getByLabelText('Base URL') as HTMLInputElement).value).toBe(
+      'https://openrouter.ai/api/v1',
+    );
+  });
+
+  it('switching preset refills untouched fields but never overwrites a typed value', () => {
+    render(
+      <ToastProvider>
+        <AddProviderForm onAdded={vi.fn()} />
+      </ToastProvider>,
+    );
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'My key' } });
+    fireEvent.change(screen.getByLabelText('Provider'), { target: { value: 'openai' } });
+    // The name was the user's own; the URL still matched the old preset.
+    expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('My key');
+    expect((screen.getByLabelText('Base URL') as HTMLInputElement).value).toBe(
+      'https://api.openai.com/v1',
+    );
+    // A self-hosted preset leaves the URL blank and explains the shape.
+    fireEvent.change(screen.getByLabelText('Provider'), { target: { value: 'ollama' } });
+    expect((screen.getByLabelText('Base URL') as HTMLInputElement).value).toBe('');
+    expect(screen.getByText(/the machine running Ollama/)).toBeDefined();
+  });
+
+  it('shows a warning toast, not a success one, for a saved-but-unreachable provider', async () => {
+    createProviderAction.mockResolvedValue({
+      ok: true,
+      tone: 'warning',
+      message: 'X was added, but it can’t be reached right now — check the base URL.',
+    });
+    const onAdded = vi.fn();
+    render(
+      <ToastProvider>
+        <AddProviderForm onAdded={onAdded} />
+      </ToastProvider>,
+    );
+    fillAndSubmit();
+    await waitFor(() => expect(onAdded).toHaveBeenCalledTimes(1));
+    expect(screen.getByText(/can’t be reached right now/)).toBeDefined();
+  });
+});

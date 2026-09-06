@@ -104,3 +104,11 @@
   color: var(--sv-color-text-primary);
   word-break: break-all;
 }
+
+/* Bulk show/hide for one provider group, pushed to the header's far edge. */
+.groupActions {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-1);
+  margin-left: auto;
+}

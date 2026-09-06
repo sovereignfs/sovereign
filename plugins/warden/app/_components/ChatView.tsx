@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Button,
+  ConfirmDialog,
   EmptyState,
   Icon,
   Markdown,
@@ -24,6 +25,7 @@ import {
   MAX_ATTACHMENT_BYTES,
 } from '../_lib/limits';
 import type { ReplyMode } from '../_lib/reply-modes';
+import { clearSessionMessagesAction } from '../actions';
 import { ModelPickerPopover, type ModelProviderInfo } from './ModelPickerPopover';
 import styles from '../warden.module.css';
 
@@ -249,6 +251,8 @@ export function ChatView({
   const [attachment, setAttachment] = useState<File | null>(null);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [clearPending, setClearPending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Looked up by id rather than held in a ref: `Textarea` owns its own ref
   // for `autoGrow` and does not merge an external one — same approach
@@ -628,6 +632,40 @@ export function ChatView({
     }
   }
 
+  /**
+   * "Clear conversation": every message goes, the session (title, pin,
+   * sidebar row) stays. Lives here rather than in the sidebar's row menu
+   * because this component seeds its turns from props once, on mount — a
+   * clear triggered elsewhere plus a `router.refresh()` would leave the old
+   * turns on screen. Here it can empty the on-screen thread directly.
+   * Incognito's scratch context is client-only, so clearing it needs no
+   * server call at all.
+   */
+  function clearConversation() {
+    if (incognito) {
+      setIncognitoTurns([]);
+      setConfirmClear(false);
+      return;
+    }
+    if (!sessionId) {
+      setConfirmClear(false);
+      return;
+    }
+    setClearPending(true);
+    void clearSessionMessagesAction(sessionId).then((result) => {
+      setClearPending(false);
+      setConfirmClear(false);
+      if (!result.ok) {
+        setBanner(result.error);
+        return;
+      }
+      setPersistedTurns([]);
+      setEditDraft(null);
+      setInput('');
+      setBanner(null);
+    });
+  }
+
   function submit() {
     void run(editDraft ? 'edit' : 'send');
   }
@@ -859,6 +897,20 @@ export function ChatView({
           rendered, so toggling incognito never reflows the chat column or
           disturbs the centered empty state. */}
       <div className={styles.chatTopBar}>
+        {!isEmpty && (
+          <Tooltip content="Clear this conversation">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-label="Clear this conversation"
+              disabled={isStreaming}
+              onClick={() => setConfirmClear(true)}
+            >
+              <Icon name="trash-2" size="sm" aria-hidden />
+            </Button>
+          </Tooltip>
+        )}
         <Tooltip content={incognito ? 'Turn off incognito' : 'Turn on incognito'}>
           <Button
             type="button"
@@ -951,6 +1003,20 @@ export function ChatView({
         )}
         {composer}
       </div>
+      <ConfirmDialog
+        open={confirmClear}
+        onClose={() => setConfirmClear(false)}
+        title="Clear this conversation?"
+        message={
+          incognito
+            ? 'Every message in this incognito chat is discarded.'
+            : 'Every message is deleted permanently. The chat itself stays in your sidebar, with its title and pin.'
+        }
+        confirmLabel={clearPending ? 'Clearing…' : 'Clear'}
+        destructive
+        pending={clearPending}
+        onConfirm={clearConversation}
+      />
     </div>
   );
 }

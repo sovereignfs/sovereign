@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { sdk } from '@sovereignfs/sdk';
 import { wardenModelVisibilityOverrides } from '../_db/schema';
@@ -97,4 +97,56 @@ export async function setModelVisibility(
     modelKey,
     createdAt: Date.now(),
   });
+}
+
+/**
+ * `setModelVisibility` for a whole provider's catalog at once — the Models
+ * page's per-group "Show all" / "Hide all". One read of the user's existing
+ * overrides, then at most one bulk insert and one bulk delete, rather than
+ * a select-and-write per key: a single provider's catalog can run to
+ * several hundred models. Same exceptions-only invariant as the single
+ * version — a key ending up at its computed default has no row.
+ */
+export async function setModelVisibilityMany(
+  userId: string,
+  tenantId: string,
+  modelKeys: string[],
+  visible: boolean,
+): Promise<void> {
+  if (modelKeys.length === 0) return;
+  const database = await db();
+  const unique = [...new Set(modelKeys)];
+  const existing = await listVisibilityOverrides(userId, tenantId);
+
+  // A row means "flipped away from the default": keys whose requested
+  // state differs from their default need a row; the rest must have none.
+  const needsRow = unique.filter((key) => visible !== isVisibleByDefault(key));
+  const needsNoRow = unique.filter((key) => visible === isVisibleByDefault(key));
+
+  const toInsert = needsRow.filter((key) => !existing.has(key));
+  const toDelete = needsNoRow.filter((key) => existing.has(key));
+
+  if (toDelete.length > 0) {
+    await database
+      .delete(wardenModelVisibilityOverrides)
+      .where(
+        and(
+          eq(wardenModelVisibilityOverrides.userId, userId),
+          eq(wardenModelVisibilityOverrides.tenantId, tenantId),
+          inArray(wardenModelVisibilityOverrides.modelKey, toDelete),
+        ),
+      );
+  }
+  if (toInsert.length > 0) {
+    const now = Date.now();
+    await database.insert(wardenModelVisibilityOverrides).values(
+      toInsert.map((modelKey) => ({
+        id: crypto.randomUUID(),
+        tenantId,
+        userId,
+        modelKey,
+        createdAt: now,
+      })),
+    );
+  }
 }

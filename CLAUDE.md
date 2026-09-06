@@ -500,7 +500,7 @@ pnpm sv <cmd>           # CLI (seed, backup, restore, plugin add/remove, …)
 
 ## Status
 
-Current platform version: **`0.133.2`**. `ROADMAP.md` is the canonical task
+Current platform version: **`0.139.0`**. `ROADMAP.md` is the canonical task
 queue and completion record; per-release narrative through `0.130.2` is
 archived in `docs/task-history.md`.
 

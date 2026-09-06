@@ -1034,6 +1034,71 @@ tasks 22.8-22.11.
 - [x] `/warden/providers` and `/warden/models` render with the sidebar intact
       and a correct active row; `/warden/settings` is gone
 
+#### ✅ 22.13 — Warden launch performance, streaming correctness and UX pass
+
+**Goal:** Fix why opening Warden showed nothing for seconds, close the
+streaming defects a review of the shipped plugin found, and pick up the UX
+gaps RFC 0063 had left as open questions. A follow-through pass over tasks
+22.8-22.12, not a new phase.
+
+**Deliverables:**
+
+- **The shell streams.** `(chat)/layout.tsx` awaited the session list and a
+  live model-discovery pass before rendering anything, and a `loading.tsx`
+  only wraps the page below its own segment's layout — so the spinner
+  could not paint until the slowest configured provider had answered (up
+  to 8s). The layout now awaits nothing; the sidebar's data streams in
+  behind its own `<Suspense>`, the Settings dialog loads its model list on
+  open (also fixing a stale list after toggling models), and the root
+  `loading.tsx` removed by task 22.12 is back as the safety net.
+- **Discovery is deduped and served stale-while-revalidate.** Concurrent
+  callers share one in-flight pass per user; an expired cache entry is
+  served immediately while a refresh runs in the background, up to a
+  5-minute ceiling. The provider URL guard's DNS lookup is bounded to 5s.
+- **The first reply of a new chat is no longer lost.** `router.replace()`
+  mid-stream swapped the page segment and remounted `ChatView`, whose
+  unmount effect aborted the fetch. The URL is now updated via
+  `history.replaceState`, the sidebar refresh is deferred to stream end,
+  and the server withholds the stream's `done` frame until the reply is
+  persisted, so that refresh can never read the thread before the reply
+  has landed. An existing session preselects the model it last used.
+- **Stop stops.** Cancellation reaches the provider request and persists
+  exactly the text the user saw, rather than letting the model finish
+  (and bill) in the background and persisting the full reply.
+- **Sidebar state renders correctly on first paint** via a cookie the
+  layout reads server-side, replacing a post-hydration `localStorage` flip.
+- **Reply controls.** A reply cut off at the output cap is flagged (a
+  `truncated` frame from `finish_reason` or the harness token count) with a
+  Continue action that extends it in place; Regenerate overwrites the last
+  reply only once the new one has streamed; Edit lifts the last user
+  message into the composer. Replies show which model answered and when.
+  Output cap 2048 tokens, input cap 12000 characters.
+- **Composer and mobile.** The textarea grows with its text; on a mobile
+  viewport Enter inserts a newline. Below the breakpoint the sidebar opens
+  as a `Sheet` instead of a 280px column.
+- **RFC 0063 open questions resolved:** adding a provider checks the
+  connection first (a rejected key is refused, an unreachable host is saved
+  with a warning), with presets for common services; the sidebar folds past
+  ten chats behind "Show more" with search over every chat; per-provider
+  Show all / Hide all on the Models page; provider rows show when they were
+  last checked; "Clear conversation" is wired from the chat's top bar.
+
+**Review checklist:**
+
+- [x] The `(chat)` layout performs no I/O; the shell paints before the
+      session list or discovery resolve
+- [x] Concurrent `discoverModels()` callers run one live pass; an expired
+      entry within the stale ceiling is served without blocking
+- [x] The first send from `/warden/new` keeps the streamed reply on screen
+      and the sidebar gains the new chat after the stream ends
+- [x] Stop cancels the upstream request and persists the partial reply
+- [x] A reply that hits the output cap shows the cut-off note; Continue
+      extends the same message row
+- [x] Regenerate leaves the original untouched on a failed attempt
+- [x] Adding a provider with a rejected key is refused with the form intact
+- [x] All 425 Warden unit tests pass; `pnpm --filter runtime build`
+      compiles the composed routes
+
 ## Review checklist (epic-level)
 
 - Model/engine decisions are based on Task 22.1's real benchmark, not

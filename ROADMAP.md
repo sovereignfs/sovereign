@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.133.2 · **Last updated:** 2026-09-06
+**Version:** 0.139.0 · **Last updated:** 2026-09-06
 
 _(This header tracks the root `package.json` version as of the date above — a
 freshness marker for the document as a whole, not the version of the most
@@ -390,6 +390,7 @@ doc — but not yet assigned a roadmap slot. Promoted to a phase table once prio
 | 0.118.0 | Vertical section nav for Account, re-scoped from RFC 0085                                                                                                                                 | ✅     | [14.5](docs/epics/plugin-accounts.md#-145--vertical-section-nav-for-account-re-scoped-from-rfc-0085)                                                                                                                                                                                                                                                                |
 | 0.119.0 | Mobile drill-down nav for Account, picks up RFC 0085's deferred mobile scope                                                                                                              | ✅     | [14.6](docs/epics/plugin-accounts.md#-146--mobile-drill-down-nav-for-account-picks-up-rfc-0085s-deferred-mobile-scope)                                                                                                                                                                                                                                              |
 | 0.125.0 | Warden correctness, accessibility and navigation pass (session switching, incognito, streaming, markdown; Providers/Models back into the chat shell)                                      | ✅     | [22.12](docs/epics/core-assistant.md#-2212--warden-correctness-accessibility-and-navigation-pass)                                                                                                                                                                                                                                                                   |
+| 0.139.0 | Warden launch performance, streaming correctness and UX pass (streaming shell, discovery dedup, first-reply/Stop fixes, reply controls, mobile sidebar, provider presets)                 | ✅     | [22.13](docs/epics/core-assistant.md#-2213--warden-launch-performance-streaming-correctness-and-ux-pass)                                                                                                                                                                                                                                                            |
 
 ---
 

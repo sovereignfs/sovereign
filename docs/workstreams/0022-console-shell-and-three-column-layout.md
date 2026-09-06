@@ -192,7 +192,7 @@ once, e.g. `plugins/console/app/_lib/sections.ts`, imported by both
   (`/console/entitlements`), External clients (`/console/oauth-clients`)
 - **Configuration** — Settings (`/console/settings`), Identity
   (`/console/identity`)
-- **Monitoring** — Health (`/console/health`), Activity (`/console/activity`)
+- **Monitoring** — Health (since folded into Overview at `/console`), Activity (`/console/activity`)
 - **Communication** — Broadcast (`/console/broadcast`)
 
 _`plugins/console/manifest.json`:_ `"shell": "default"`; remove

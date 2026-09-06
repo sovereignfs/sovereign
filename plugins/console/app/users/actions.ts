@@ -26,6 +26,13 @@ const AUTH_URL =
   process.env.SOVEREIGN_AUTH_URL ?? `http://localhost:${process.env.AUTH_PORT ?? '3001'}`;
 const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
 
+const ASSIGNABLE_ROLES = ['platform:admin', 'platform:auditor', 'platform:user'] as const;
+type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
+
+function isAssignableRole(value: unknown): value is AssignableRole {
+  return typeof value === 'string' && (ASSIGNABLE_ROLES as readonly string[]).includes(value);
+}
+
 async function actorId(): Promise<string | null> {
   return (await headers()).get('x-sovereign-user-id');
 }
@@ -100,8 +107,14 @@ export async function changeRoleAction(formData: FormData): Promise<void> {
     throw new Error('Insufficient privileges to assign roles.');
   }
   const userId = formData.get('userId') as string;
-  const role = formData.get('role') as
-    'platform:owner' | 'platform:admin' | 'platform:auditor' | 'platform:user';
+  const role = formData.get('role');
+  // Console assigns the three delegable roles only — never `platform:owner`
+  // (there is exactly one owner; promoting a second one would make it
+  // un-demotable through this same API) and never an arbitrary string (the
+  // auth server used to write whatever arrived here verbatim).
+  if (!isAssignableRole(role)) {
+    throw new Error('Role must be one of: admin, auditor, user.');
+  }
   const res = await adminFetch(`/api/admin/users/${userId}`, {
     method: 'PATCH',
     body: JSON.stringify({ role }),

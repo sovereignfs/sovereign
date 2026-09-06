@@ -221,7 +221,9 @@ function MobileIndex({ stats, attention }: OverviewClientProps) {
       </div>
 
       <NavList
-        groups={CONSOLE_SECTIONS}
+        // This index *is* the Overview page — listing "Overview" here would
+        // be a link to the page you're already on.
+        groups={CONSOLE_SECTIONS.filter((group) => group.id !== 'overview')}
         variant="drilldown"
         aria-label="Console sections"
         renderLink={(item, linkProps) => (

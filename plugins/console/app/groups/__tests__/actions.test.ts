@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const requireSession = vi.fn();
 const hasCapability = vi.fn();
@@ -57,6 +57,13 @@ beforeEach(() => {
   hasCapability.mockReturnValue(true);
 });
 
+/** Every test that stubs `fetch` used to unstub it by hand on its last line —
+ *  a failing assertion skipped the unstub and leaked the stub into the next
+ *  test. Centralised here so it runs even when an assertion throws. */
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 /**
  * All 7 exported actions in groups/actions.ts route through one shared
  * requireGroupManageCapability() guard, which unconditionally throws
@@ -76,7 +83,6 @@ describe('groups/actions.ts — capability gating (shared requireGroupManageCapa
       'Insufficient privileges to manage groups.',
     );
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('updateGroupAction rejects without user:manage', async () => {
@@ -87,7 +93,6 @@ describe('groups/actions.ts — capability gating (shared requireGroupManageCapa
       'Insufficient privileges to manage groups.',
     );
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('deleteGroupAction rejects without user:manage', async () => {
@@ -98,7 +103,6 @@ describe('groups/actions.ts — capability gating (shared requireGroupManageCapa
       'Insufficient privileges to manage groups.',
     );
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('listResolvedGroupMembers rejects without user:manage', async () => {
@@ -109,7 +113,6 @@ describe('groups/actions.ts — capability gating (shared requireGroupManageCapa
       'Insufficient privileges to manage groups.',
     );
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('searchGroupDirectoryUsers rejects without user:manage, checking the exact capability string', async () => {
@@ -121,7 +124,6 @@ describe('groups/actions.ts — capability gating (shared requireGroupManageCapa
     );
     expect(hasCapability).toHaveBeenCalledWith(expect.anything(), 'user:manage');
     expect(searchUsers).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('addGroupMemberAction rejects without user:manage', async () => {
@@ -132,7 +134,6 @@ describe('groups/actions.ts — capability gating (shared requireGroupManageCapa
       addGroupMemberAction(null, formData({ groupId: 'group-1', userId: 'user-2' })),
     ).rejects.toThrow('Insufficient privileges to manage groups.');
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('removeGroupMemberAction rejects without user:manage', async () => {
@@ -143,7 +144,6 @@ describe('groups/actions.ts — capability gating (shared requireGroupManageCapa
       removeGroupMemberAction(formData({ groupId: 'group-1', userId: 'user-2' })),
     ).rejects.toThrow('Insufficient privileges to manage groups.');
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 });
 
@@ -157,7 +157,6 @@ describe('groups/actions.ts — happy paths', () => {
     const result = await createGroupAction(null, formData({ name: 'Team A', description: 'desc' }));
 
     expect(result).toEqual({ success: true });
-    vi.unstubAllGlobals();
   });
 
   it('createGroupAction rejects a missing name without calling the admin API', async () => {
@@ -167,7 +166,6 @@ describe('groups/actions.ts — happy paths', () => {
 
     expect(result).toEqual({ success: false, error: 'Name is required.' });
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('updateGroupAction updates a group', async () => {
@@ -180,7 +178,6 @@ describe('groups/actions.ts — happy paths', () => {
       expect.stringContaining('/api/admin/groups/group-1'),
       expect.objectContaining({ method: 'PATCH' }),
     );
-    vi.unstubAllGlobals();
   });
 
   it('deleteGroupAction deletes a group', async () => {
@@ -193,7 +190,6 @@ describe('groups/actions.ts — happy paths', () => {
       expect.stringContaining('/api/admin/groups/group-1'),
       expect.objectContaining({ method: 'DELETE' }),
     );
-    vi.unstubAllGlobals();
   });
 
   it('listResolvedGroupMembers joins membership with directory info', async () => {
@@ -226,7 +222,6 @@ describe('groups/actions.ts — happy paths', () => {
         image: 'https://example.test/bob.png',
       },
     ]);
-    vi.unstubAllGlobals();
   });
 
   it('searchGroupDirectoryUsers returns matches for an authorized session', async () => {
@@ -257,7 +252,6 @@ describe('groups/actions.ts — happy paths', () => {
     );
 
     expect(result).toEqual({ success: true });
-    vi.unstubAllGlobals();
   });
 
   it('removeGroupMemberAction removes a member', async () => {
@@ -272,6 +266,5 @@ describe('groups/actions.ts — happy paths', () => {
       expect.stringContaining('/api/admin/groups/group-1/members/user-2'),
       expect.objectContaining({ method: 'DELETE' }),
     );
-    vi.unstubAllGlobals();
   });
 });

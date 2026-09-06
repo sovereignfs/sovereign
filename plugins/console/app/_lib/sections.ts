@@ -15,7 +15,7 @@ export interface ConsoleSectionGroup {
 }
 
 /**
- * The 10 Console sections, grouped for both the desktop sidebar
+ * The 12 Console sections, grouped for both the desktop sidebar
  * (`NavList variant="static"`) and the mobile drill-down index
  * (`NavList variant="drilldown"`) — one source of truth for both. Health was
  * folded into Overview (`page.tsx`) rather than kept as its own section.

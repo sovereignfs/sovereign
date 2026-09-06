@@ -3,6 +3,7 @@ import { Alert, Badge } from '@sovereignfs/ui';
 import { ActivitySearch } from '../_components/ActivitySearch';
 import styles from '../console.module.css';
 import { renderFetchSignal } from '../_lib/fetch-timeout';
+import { parsePageParam } from '../_lib/pagination';
 
 const PAGE_SIZE = 8;
 const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
@@ -101,7 +102,7 @@ export default async function ActivityPage({
   searchParams: Promise<{ page?: string; q?: string }>;
 }) {
   const { page: pageParam, q = '' } = await searchParams;
-  const page = Math.max(1, Number(pageParam ?? '1'));
+  const page = parsePageParam(pageParam);
   const offset = (page - 1) * PAGE_SIZE;
 
   const { events, total, error } = await getActivity(offset, q || undefined);

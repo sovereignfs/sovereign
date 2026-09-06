@@ -21,10 +21,12 @@ vi.mock('@sovereignfs/sdk', () => ({
 const { removePluginAction } = await import('../remove-actions');
 
 /** Stand in for GET /api/admin/plugins — the installed-plugin allowlist. */
-function mockInstalled(ids: string[]) {
+function mockInstalled(ids: string[], removable = true) {
   vi.stubGlobal(
     'fetch',
-    vi.fn(() => Promise.resolve(new Response(JSON.stringify(ids.map((id) => ({ id })))))),
+    vi.fn(() =>
+      Promise.resolve(new Response(JSON.stringify(ids.map((id) => ({ id, removable }))))),
+    ),
   );
 }
 
@@ -55,6 +57,15 @@ describe('removePluginAction authorization', () => {
 describe('removePluginAction argument handling', () => {
   it('rejects an id that is not installed, without spawning anything', async () => {
     const result = await removePluginAction('not-installed');
+
+    expect(result).toEqual({ ok: false, error: 'Unknown app.' });
+    expect(execFileSync).not.toHaveBeenCalled();
+  });
+
+  it('rejects an installed plugin the route marks non-removable (first-party, .local, or no source dir)', async () => {
+    mockInstalled(['tasks'], false);
+
+    const result = await removePluginAction('tasks');
 
     expect(result).toEqual({ ok: false, error: 'Unknown app.' });
     expect(execFileSync).not.toHaveBeenCalled();

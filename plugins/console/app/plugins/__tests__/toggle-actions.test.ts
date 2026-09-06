@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const requireSession = vi.fn();
 const hasCapability = vi.fn();
@@ -31,6 +31,13 @@ beforeEach(() => {
   hasCapability.mockReturnValue(true);
 });
 
+/** Every test that stubs `fetch` used to unstub it by hand on its last line —
+ *  a failing assertion skipped the unstub and leaked the stub into the next
+ *  test. Centralised here so it runs even when an assertion throws. */
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 describe('togglePluginAction — enable/disable', () => {
   it('refuses a session without plugin:manage, without calling the admin API', async () => {
     hasCapability.mockReturnValue(false);
@@ -40,7 +47,6 @@ describe('togglePluginAction — enable/disable', () => {
       togglePluginAction(null, formData({ pluginId: 'tasks', enabled: 'false' })),
     ).rejects.toThrow('Insufficient privileges to manage apps.');
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('checks plugin:manage specifically', async () => {
@@ -52,7 +58,6 @@ describe('togglePluginAction — enable/disable', () => {
     await togglePluginAction(null, formData({ pluginId: 'tasks', enabled: 'false' }));
 
     expect(hasCapability).toHaveBeenCalledWith(expect.anything(), 'plugin:manage');
-    vi.unstubAllGlobals();
   });
 
   it('PATCHes the target plugin to disabled', async () => {
@@ -65,7 +70,6 @@ describe('togglePluginAction — enable/disable', () => {
       expect.stringContaining('/api/admin/plugins/tasks'),
       expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ enabled: false }) }),
     );
-    vi.unstubAllGlobals();
   });
 
   it('PATCHes the target plugin to enabled', async () => {
@@ -78,7 +82,6 @@ describe('togglePluginAction — enable/disable', () => {
       expect.stringContaining('/api/admin/plugins/tasks'),
       expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ enabled: true }) }),
     );
-    vi.unstubAllGlobals();
   });
 
   it('refuses to toggle a platform chrome app (Console cannot disable itself)', async () => {
@@ -93,7 +96,6 @@ describe('togglePluginAction — enable/disable', () => {
       error: 'This app is part of the platform shell and is always on.',
     });
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('returns a failure result on a non-ok response rather than silently succeeding', async () => {
@@ -105,6 +107,5 @@ describe('togglePluginAction — enable/disable', () => {
     await expect(
       togglePluginAction(null, formData({ pluginId: 'tasks', enabled: 'false' })),
     ).resolves.toEqual({ success: false, error: 'Failed to toggle plugin: 500' });
-    vi.unstubAllGlobals();
   });
 });

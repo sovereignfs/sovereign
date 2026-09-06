@@ -26,6 +26,7 @@ interface RawPluginRow {
   enabled: boolean;
   compatibilityError: string | null;
   compatibilityWarnings: string[];
+  removable: boolean;
 }
 
 async function getPlugins(): Promise<RawPluginRow[]> {

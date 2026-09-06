@@ -52,8 +52,11 @@ function workspaceRoot(): string {
 async function resolveInstalledPluginId(candidate: string): Promise<string | null> {
   const res = await adminFetch('/api/admin/plugins');
   if (!res.ok) return null;
-  const installed = (await res.json()) as { id: string }[];
-  return installed.find((p) => p.id === candidate)?.id ?? null;
+  const installed = (await res.json()) as { id: string; removable?: boolean }[];
+  // `removable` is the route's own verdict (the plugin was installed under
+  // `plugins/<id>` by `sv plugin add`, not first-party or a `.local` clone) —
+  // Console hides Remove for the rest, but an action is reachable directly.
+  return installed.find((p) => p.id === candidate && p.removable === true)?.id ?? null;
 }
 
 export async function removePluginAction(pluginId: string): Promise<ActionResult> {

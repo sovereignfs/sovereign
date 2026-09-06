@@ -83,8 +83,8 @@ export function RemovePluginButton({
         title="Remove app"
         message={
           <>
-            Remove <strong>{pluginName}</strong>? Its files will be deleted from the server. This
-            cannot be undone without reinstalling.
+            Remove <strong>{pluginName}</strong>? Its files and its own database will be deleted
+            from the server. This cannot be undone without reinstalling.
           </>
         }
         confirmLabel={isPending ? 'Removing…' : 'Remove'}

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const requireSession = vi.fn();
 const hasCapability = vi.fn();
@@ -46,6 +46,13 @@ beforeEach(() => {
   hasCapability.mockReturnValue(true);
 });
 
+/** Every test that stubs `fetch` used to unstub it by hand on its last line —
+ *  a failing assertion skipped the unstub and leaked the stub into the next
+ *  test. Centralised here so it runs even when an assertion throws. */
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 describe('triggerInstanceBackupAction', () => {
   it('refuses a session without instance:backup, without calling fetch', async () => {
     hasCapability.mockReturnValue(false);
@@ -61,7 +68,6 @@ describe('triggerInstanceBackupAction', () => {
       error: 'Insufficient privileges to back up this instance.',
     });
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('rejects an empty passphrase before ever calling fetch', async () => {
@@ -71,7 +77,6 @@ describe('triggerInstanceBackupAction', () => {
 
     expect(result).toEqual({ ok: false, error: 'A passphrase is required.' });
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('posts passphrase, excludePlugins, and pushToGit, returning the enqueued jobId', async () => {
@@ -101,7 +106,6 @@ describe('triggerInstanceBackupAction', () => {
         }),
       }),
     );
-    vi.unstubAllGlobals();
   });
 
   it('defaults pushToGit to false and excludePlugins to an empty array when neither is present', async () => {
@@ -122,7 +126,6 @@ describe('triggerInstanceBackupAction', () => {
         }),
       }),
     );
-    vi.unstubAllGlobals();
   });
 
   it('surfaces a non-OK response as a failure', async () => {
@@ -142,7 +145,6 @@ describe('triggerInstanceBackupAction', () => {
     );
 
     expect(result).toEqual({ ok: false, error: 'A passphrase is required.' });
-    vi.unstubAllGlobals();
   });
 
   it('reports a network failure without throwing', async () => {
@@ -157,7 +159,6 @@ describe('triggerInstanceBackupAction', () => {
     );
 
     expect(result).toEqual({ ok: false, error: 'Failed to reach the runtime API.' });
-    vi.unstubAllGlobals();
   });
 });
 
@@ -170,7 +171,6 @@ describe('getInstanceBackupJobStatusAction', () => {
       'Insufficient privileges to back up this instance.',
     );
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('returns the parsed status for an authorized session', async () => {
@@ -191,7 +191,6 @@ describe('getInstanceBackupJobStatusAction', () => {
     const result = await getInstanceBackupJobStatusAction('job-1');
 
     expect(result).toEqual(status);
-    vi.unstubAllGlobals();
   });
 
   it("throws on a non-OK response, matching the client poll loop's own try/catch-and-retry expectation", async () => {
@@ -200,6 +199,5 @@ describe('getInstanceBackupJobStatusAction', () => {
     await expect(getInstanceBackupJobStatusAction('job-1')).rejects.toThrow(
       'Failed to fetch backup job status: 404',
     );
-    vi.unstubAllGlobals();
   });
 });

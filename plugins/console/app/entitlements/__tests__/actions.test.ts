@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const requireSession = vi.fn();
 const hasCapability = vi.fn();
@@ -26,6 +26,13 @@ beforeEach(() => {
   hasCapability.mockReturnValue(true);
 });
 
+/** Every test that stubs `fetch` used to unstub it by hand on its last line —
+ *  a failing assertion skipped the unstub and leaked the stub into the next
+ *  test. Centralised here so it runs even when an assertion throws. */
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 /**
  * Each of this file's 3 exported actions inlines its own
  * hasCapability(session, 'role:assign') check independently — no shared
@@ -48,7 +55,6 @@ describe('entitlements/actions.ts — capability gating (independent per-action 
       error: 'Unauthorized — only platform owners can save license keys.',
     });
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('deleteLicenseKeyAction refuses a session without role:assign', async () => {
@@ -62,7 +68,6 @@ describe('entitlements/actions.ts — capability gating (independent per-action 
       error: 'Unauthorized — only platform owners can remove license keys.',
     });
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('grantLicenseAction refuses a session without role:assign, checking the exact capability string', async () => {
@@ -77,7 +82,6 @@ describe('entitlements/actions.ts — capability gating (independent per-action 
     });
     expect(hasCapability).toHaveBeenCalledWith(expect.anything(), 'role:assign');
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 });
 
@@ -101,7 +105,6 @@ describe('entitlements/actions.ts — happy paths', () => {
         }),
       }),
     );
-    vi.unstubAllGlobals();
   });
 
   it('deleteLicenseKeyAction removes a key for an authorized session', async () => {
@@ -115,7 +118,6 @@ describe('entitlements/actions.ts — happy paths', () => {
       expect.stringContaining('/api/admin/license-keys?pluginId=fs.example.plugin'),
       expect.objectContaining({ method: 'DELETE' }),
     );
-    vi.unstubAllGlobals();
   });
 
   it('grantLicenseAction grants a license for an authorized session', async () => {
@@ -136,7 +138,6 @@ describe('entitlements/actions.ts — happy paths', () => {
         }),
       }),
     );
-    vi.unstubAllGlobals();
   });
 });
 
@@ -147,7 +148,6 @@ describe('entitlements/actions.ts — non-OK response handling', () => {
     const result = await saveLicenseKeyAction('fs.example.plugin', 'bad-key');
 
     expect(result).toEqual({ ok: false, error: 'malformed private key' });
-    vi.unstubAllGlobals();
   });
 
   it('deleteLicenseKeyAction falls back to a generic API error message with no error field', async () => {
@@ -156,7 +156,6 @@ describe('entitlements/actions.ts — non-OK response handling', () => {
     const result = await deleteLicenseKeyAction('fs.example.plugin');
 
     expect(result).toEqual({ ok: false, error: 'API error 500.' });
-    vi.unstubAllGlobals();
   });
 
   it('grantLicenseAction surfaces the API error field on a non-OK response', async () => {
@@ -165,7 +164,6 @@ describe('entitlements/actions.ts — non-OK response handling', () => {
     const result = await grantLicenseAction('token-1', 'user-2', 'fs.example.plugin');
 
     expect(result).toEqual({ ok: false, error: 'license already granted' });
-    vi.unstubAllGlobals();
   });
 });
 
@@ -179,7 +177,6 @@ describe('entitlements/actions.ts — network failure handling (distinct from a 
     const result = await saveLicenseKeyAction('fs.example.plugin', 'private-key');
 
     expect(result).toEqual({ ok: false, error: 'Failed to reach the runtime API.' });
-    vi.unstubAllGlobals();
   });
 
   it('deleteLicenseKeyAction reports unreachable when fetch itself rejects', async () => {
@@ -191,7 +188,6 @@ describe('entitlements/actions.ts — network failure handling (distinct from a 
     const result = await deleteLicenseKeyAction('fs.example.plugin');
 
     expect(result).toEqual({ ok: false, error: 'Failed to reach the runtime API.' });
-    vi.unstubAllGlobals();
   });
 
   it('grantLicenseAction reports unreachable when fetch itself rejects', async () => {
@@ -203,6 +199,5 @@ describe('entitlements/actions.ts — network failure handling (distinct from a 
     const result = await grantLicenseAction('token-1', 'user-2', 'fs.example.plugin');
 
     expect(result).toEqual({ ok: false, error: 'Failed to reach the runtime API.' });
-    vi.unstubAllGlobals();
   });
 });

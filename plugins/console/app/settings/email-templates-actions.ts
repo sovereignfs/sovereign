@@ -9,6 +9,18 @@ const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
 
 export type EmailTemplateId = 'passwordReset' | 'invite';
 
+const EMAIL_TEMPLATE_IDS: readonly EmailTemplateId[] = ['passwordReset', 'invite'];
+/** BCP 47-ish: `en`, `en-GB`, `pt-BR`. Anything else never reaches the API. */
+const LOCALE_RE = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/;
+
+function isEmailTemplateId(value: unknown): value is EmailTemplateId {
+  return typeof value === 'string' && (EMAIL_TEMPLATE_IDS as readonly string[]).includes(value);
+}
+
+function isLocale(value: unknown): value is string {
+  return typeof value === 'string' && LOCALE_RE.test(value);
+}
+
 async function adminFetch(path: string, init?: RequestInit): Promise<Response> {
   const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
   return fetch(`${SELF_URL}${path}`, {
@@ -29,9 +41,11 @@ export async function getEmailTemplateCopyAction(
   if (!sdk.auth.hasCapability(session, 'instance:configure')) {
     return { ok: false, error: 'Insufficient privileges to view email templates.' };
   }
-  const res = await adminFetch(
-    `/api/admin/email-templates?templateId=${templateId}&locale=${locale}`,
-  );
+  if (!isEmailTemplateId(templateId) || !isLocale(locale)) {
+    return { ok: false, error: 'Unknown email template or locale.' };
+  }
+  const query = new URLSearchParams({ templateId, locale });
+  const res = await adminFetch(`/api/admin/email-templates?${query.toString()}`);
   if (!res.ok) return { ok: false, error: `Failed to load copy: ${res.status}` };
   const data = (await res.json()) as { copy: Record<string, string> };
   return { ok: true, copy: data.copy };
@@ -51,9 +65,12 @@ export async function saveEmailTemplateCopyAction(
   if (!sdk.auth.hasCapability(session, 'instance:configure')) {
     return { ok: false, error: 'Insufficient privileges to change email templates.' };
   }
-  const templateId = formData.get('templateId') as EmailTemplateId | null;
-  const locale = formData.get('locale') as string | null;
+  const templateId = formData.get('templateId');
+  const locale = formData.get('locale');
   if (!templateId || !locale) return { ok: false, error: 'templateId and locale are required.' };
+  if (!isEmailTemplateId(templateId) || !isLocale(locale)) {
+    return { ok: false, error: 'Unknown email template or locale.' };
+  }
 
   const fields = Array.from(formData.keys()).filter(
     (key) => key !== 'templateId' && key !== 'locale',
@@ -80,9 +97,12 @@ export async function testSendEmailTemplateAction(
   if (!sdk.auth.hasCapability(session, 'instance:configure')) {
     return { ok: false, error: 'Insufficient privileges to send a test email.' };
   }
-  const templateId = formData.get('templateId') as EmailTemplateId | null;
-  const locale = formData.get('locale') as string | null;
+  const templateId = formData.get('templateId');
+  const locale = formData.get('locale');
   if (!templateId || !locale) return { ok: false, error: 'templateId and locale are required.' };
+  if (!isEmailTemplateId(templateId) || !isLocale(locale)) {
+    return { ok: false, error: 'Unknown email template or locale.' };
+  }
 
   const res = await adminFetch('/api/admin/email-templates/test', {
     method: 'POST',

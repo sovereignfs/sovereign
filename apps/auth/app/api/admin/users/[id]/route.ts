@@ -8,6 +8,13 @@ interface PatchBody {
   resetMfa?: boolean;
 }
 
+const PLATFORM_ROLES = new Set([
+  'platform:owner',
+  'platform:admin',
+  'platform:auditor',
+  'platform:user',
+]);
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -17,6 +24,18 @@ export async function PATCH(
 
   const { id } = await params;
   const body = (await request.json()) as PatchBody;
+
+  // `role` used to be written verbatim — any string an admin-key caller sent
+  // became the user's role. Only the four platform roles are valid.
+  if ('role' in body && !PLATFORM_ROLES.has(body.role as string)) {
+    return NextResponse.json(
+      {
+        error:
+          'role must be one of platform:owner, platform:admin, platform:auditor, platform:user',
+      },
+      { status: 400 },
+    );
+  }
 
   // Owner protection (RFC 0021): the platform:owner role cannot be changed,
   // and the owner account cannot be deactivated. Prevents accidental lockout.

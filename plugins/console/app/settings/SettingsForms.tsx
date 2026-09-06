@@ -2,7 +2,16 @@
 
 import { useState, useActionState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, FormField, Input, Select, useToast } from '@sovereignfs/ui';
+import {
+  Button,
+  FileDropzone,
+  FormField,
+  Icon,
+  Input,
+  Label,
+  Select,
+  useToast,
+} from '@sovereignfs/ui';
 import styles from '../console.module.css';
 import {
   type ActionResult,
@@ -15,68 +24,39 @@ import {
   uploadFaviconAction,
 } from './actions';
 
-function UploadIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="17 8 12 3 7 8" />
-      <line x1="12" y1="3" x2="12" y2="15" />
-    </svg>
-  );
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function ImageIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <circle cx="8.5" cy="8.5" r="1.5" />
-      <polyline points="21 15 16 10 5 21" />
-    </svg>
-  );
-}
-
-function FileDropZone({
-  id,
-  name,
+/**
+ * DS `FileDropzone` with the picked file's name and size reflected in the
+ * label — replaces a hand-rolled dashed drop zone with its own inline SVGs.
+ */
+function ImageDropzone({
   accept,
   hint,
+  ariaLabel,
+  disabled,
 }: {
-  id: string;
-  name: string;
   accept: string;
   hint: string;
+  ariaLabel: string;
+  disabled?: boolean;
 }) {
+  const [file, setFile] = useState<File | null>(null);
   return (
-    <label htmlFor={id} className={styles.fileDropZone}>
-      <input id={id} name={name} type="file" accept={accept} className={styles.fileInputHidden} />
-      <span className={styles.fileDropIcon}>
-        <ImageIcon />
-      </span>
-      <span className={styles.fileDropText}>
-        <span className={styles.fileDropLabel}>Choose a file</span>
-        <span className={styles.fileDropHint}>{hint}</span>
-      </span>
-    </label>
+    <FileDropzone
+      name="file"
+      accept={accept}
+      icon={<Icon name="upload" size="lg" aria-hidden />}
+      label={file ? file.name : 'Choose a file or drop it here'}
+      hint={file ? formatFileSize(file.size) : hint}
+      onFileSelect={setFile}
+      ariaLabel={ariaLabel}
+      disabled={disabled}
+    />
   );
 }
 
@@ -259,8 +239,19 @@ export function InstanceForm({ initialValues }: { initialValues: InstanceValues 
   const [state, action, pending] = useActionState(updateInstanceAction, null);
   useSaveResult(state);
   const [primaryColor, setPrimaryColor] = useState(initialValues.instancePrimary ?? '');
+  // The native colour input needs a literal hex for its swatch; when no
+  // colour is set yet, mirror the instance's current accent token rather
+  // than a hardcoded value (read in an effect — never a browser global in
+  // the initializer).
+  const [accentDefault, setAccentDefault] = useState('#000000');
+  useEffect(() => {
+    const accent = getComputedStyle(document.documentElement)
+      .getPropertyValue('--sv-color-accent')
+      .trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(accent)) setAccentDefault(accent);
+  }, []);
 
-  const swatchValue = primaryColor.match(/^#[0-9a-fA-F]{6}$/) ? primaryColor : '#18181b';
+  const swatchValue = primaryColor.match(/^#[0-9a-fA-F]{6}$/) ? primaryColor : accentDefault;
 
   return (
     <form action={action} className={styles.settingsForm}>
@@ -294,8 +285,7 @@ export function InstanceForm({ initialValues }: { initialValues: InstanceValues 
               value={swatchValue}
               onChange={(e) => setPrimaryColor(e.target.value)}
               className={styles.colorSwatch}
-              aria-label="Colour picker"
-              tabIndex={-1}
+              aria-label="Pick a primary colour"
             />
             <Input
               {...field}
@@ -429,26 +419,18 @@ export function LogoUploadForm({ dark }: { dark: boolean }) {
   return (
     <form action={action} className={styles.settingsForm}>
       <input type="hidden" name="dark" value={dark ? '1' : '0'} />
-      <div className={styles.fieldGroup}>
-        <span className={styles.label}>
-          Logo <span className={styles.labelMeta}>({dark ? 'dark theme' : 'light theme'})</span>
-        </span>
-        <FileDropZone
-          id={fileId}
-          name="file"
+      <div className={styles.fieldStack}>
+        <Label htmlFor={fileId}>{dark ? 'Logo (dark theme)' : 'Logo (light theme)'}</Label>
+        <ImageDropzone
           accept="image/png,image/svg+xml,image/jpeg,image/webp"
           hint="PNG, SVG, JPEG, or WebP · max 2 MB"
+          ariaLabel={dark ? 'Dark theme logo file' : 'Light theme logo file'}
+          disabled={pending}
         />
       </div>
       <Feedback result={state} />
       <Button type="submit" size="sm" variant="secondary" disabled={pending}>
-        {pending ? (
-          'Uploading…'
-        ) : (
-          <>
-            <UploadIcon /> Upload
-          </>
-        )}
+        {pending ? 'Uploading…' : 'Upload'}
       </Button>
     </form>
   );
@@ -459,24 +441,18 @@ export function FaviconUploadForm() {
   useSaveResult(state);
   return (
     <form action={action} className={styles.settingsForm}>
-      <div className={styles.fieldGroup}>
-        <span className={styles.label}>Favicon</span>
-        <FileDropZone
-          id="faviconFile"
-          name="file"
+      <div className={styles.fieldStack}>
+        <Label htmlFor="faviconFile">Favicon</Label>
+        <ImageDropzone
           accept="image/png,image/svg+xml,image/x-icon,image/webp"
           hint="PNG, SVG, ICO, or WebP · max 2 MB"
+          ariaLabel="Favicon file"
+          disabled={pending}
         />
       </div>
       <Feedback result={state} />
       <Button type="submit" size="sm" variant="secondary" disabled={pending}>
-        {pending ? (
-          'Uploading…'
-        ) : (
-          <>
-            <UploadIcon /> Upload
-          </>
-        )}
+        {pending ? 'Uploading…' : 'Upload'}
       </Button>
     </form>
   );

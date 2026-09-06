@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Checkbox, FormField, Input, Textarea } from '@sovereignfs/ui';
+import { Button, Checkbox, FormField, Input, Textarea, useToast } from '@sovereignfs/ui';
+import type { DirectoryUser } from '@sovereignfs/sdk';
+import { ConsolePageHeader } from '../_components/ConsolePageHeader';
+import { RecipientPicker } from '../_components/RecipientPicker';
 import styles from '../console.module.css';
-import messagesStyles from './messages.module.css';
 
 interface SendResult {
   ok?: boolean;
@@ -15,42 +17,37 @@ interface SendResult {
 /**
  * Console's admin message compose (RFC 0048 §5) — same shape as
  * `broadcast/page.tsx`: subject/body fields, a `notify` toggle, and
- * recipients as either a pasted user-ID list or "all active users". Calls
+ * recipients as either picked people or "all active users". Calls
  * `sendAdminMessage()` via `/api/inbox/admin-messages`, which — unlike
  * broadcast — audits every send (`logActivity`).
  */
 export default function ConsoleMessagesPage() {
+  const toast = useToast();
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
-  const [recipientIds, setRecipientIds] = useState('');
+  const [recipients, setRecipients] = useState<DirectoryUser[]>([]);
   const [allActiveUsers, setAllActiveUsers] = useState(false);
   const [notify, setNotify] = useState(true);
   const [sendEmail, setSendEmail] = useState(false);
   const [sending, setSending] = useState(false);
-  const [result, setResult] = useState<SendResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const send = async () => {
+  async function send(): Promise<void> {
     if (!subject.trim()) {
-      setResult({ error: 'Subject is required.' });
+      setError('Subject is required.');
       return;
     }
     if (!body.trim()) {
-      setResult({ error: 'Message is required.' });
+      setError('Message is required.');
       return;
     }
-    const ids = recipientIds
-      .split(/[\s,]+/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (!allActiveUsers && ids.length === 0) {
-      setResult({
-        error: 'At least one recipient user ID is required, or check "Send to all active users".',
-      });
+    if (!allActiveUsers && recipients.length === 0) {
+      setError('Pick at least one recipient, or choose “Send to all active users”.');
       return;
     }
 
     setSending(true);
-    setResult(null);
+    setError(null);
     try {
       const res = await fetch('/api/inbox/admin-messages', {
         method: 'POST',
@@ -61,35 +58,49 @@ export default function ConsoleMessagesPage() {
           body: body.trim(),
           notify,
           sendEmail,
-          ...(allActiveUsers ? { allActiveUsers: true } : { recipientUserIds: ids }),
+          ...(allActiveUsers
+            ? { allActiveUsers: true }
+            : { recipientUserIds: recipients.map((r) => r.id) }),
         }),
       });
       const data = (await res.json()) as SendResult;
-      setResult(data);
       if (data.ok) {
+        const sent = data.sentTo?.length ?? 0;
+        const skipped = data.skipped?.length ?? 0;
+        toast.show({
+          title: `Message sent to ${sent} ${sent === 1 ? 'person' : 'people'}.`,
+          message: skipped > 0 ? `${skipped} could not be delivered.` : undefined,
+          category: 'success',
+        });
         setSubject('');
         setBody('');
-        setRecipientIds('');
+        setRecipients([]);
         setAllActiveUsers(false);
         setSendEmail(false);
+      } else {
+        setError(data.error ?? 'The message could not be sent.');
       }
     } catch {
-      setResult({ error: 'Network error — please try again.' });
+      setError('Network error — please try again.');
     } finally {
       setSending(false);
     }
-  };
+  }
 
   return (
     <div>
-      <div className={styles.pageHeader}>
-        <h2 className={styles.pageTitle}>Send Message</h2>
-      </div>
-      <p className={messagesStyles.description}>
-        Send a durable message to selected users or every active user. Recipients see it in their
-        Inbox, and, unless unchecked, get a notification too.
-      </p>
-      <div className={messagesStyles.form}>
+      <ConsolePageHeader
+        title="Messages"
+        description="Send a message to selected people or to every active user. Recipients see it in their Inbox and, unless you turn it off, get a notification too."
+      />
+
+      <form
+        className={styles.composeForm}
+        onSubmit={(event) => {
+          event.preventDefault();
+          void send();
+        }}
+      >
         <FormField label="Subject" id="message-subject" required>
           {(field) => (
             <Input
@@ -98,6 +109,7 @@ export default function ConsoleMessagesPage() {
               onChange={(e) => setSubject(e.target.value)}
               placeholder="e.g. Scheduled maintenance tonight"
               disabled={sending}
+              required
             />
           )}
         </FormField>
@@ -110,65 +122,47 @@ export default function ConsoleMessagesPage() {
               placeholder="Message body…"
               rows={5}
               disabled={sending}
+              required
             />
           )}
         </FormField>
-        <Checkbox
-          id="message-notify"
-          checked={notify}
-          onChange={() => setNotify((v) => !v)}
-          disabled={sending}
-          label="Also create a notification alert"
-        />
+
         <Checkbox
           id="message-all-active"
           checked={allActiveUsers}
-          onChange={() => setAllActiveUsers((v) => !v)}
+          onChange={setAllActiveUsers}
           disabled={sending}
           label="Send to all active users"
+        />
+        {!allActiveUsers && (
+          <RecipientPicker value={recipients} onChange={setRecipients} disabled={sending} />
+        )}
+
+        <Checkbox
+          id="message-notify"
+          checked={notify}
+          onChange={setNotify}
+          disabled={sending}
+          label="Also send a notification"
         />
         <Checkbox
           id="message-send-email"
           checked={sendEmail}
-          onChange={() => setSendEmail((v) => !v)}
+          onChange={setSendEmail}
           disabled={sending}
-          label="Also send email (only to users who allow communication email)"
+          label="Also send an email (only to people who allow communication email)"
         />
-        {!allActiveUsers && (
-          <FormField
-            label="Recipient user IDs"
-            id="message-recipients"
-            hint="Paste one or more user IDs, separated by commas or newlines. Find IDs on the Users page."
-          >
-            {(field) => (
-              <Textarea
-                {...field}
-                value={recipientIds}
-                onChange={(e) => setRecipientIds(e.target.value)}
-                placeholder="user-id-1, user-id-2, …"
-                rows={3}
-                disabled={sending}
-              />
-            )}
-          </FormField>
+
+        {error && (
+          <p className={styles.feedbackError} role="status" aria-live="polite">
+            {error}
+          </p>
         )}
 
-        {result && (
-          <div className={result.ok ? messagesStyles.success : messagesStyles.error} role="status">
-            {result.ok
-              ? `Sent to ${String(result.sentTo?.length ?? 0)} recipient${(result.sentTo?.length ?? 0) !== 1 ? 's' : ''}.${
-                  result.skipped?.length
-                    ? ` ${String(result.skipped.length)} skipped (not found).`
-                    : ''
-                }`
-              : (result.error ?? 'An error occurred.')}
-          </div>
-        )}
-
-        <Button onClick={() => void send()} disabled={sending}>
+        <Button type="submit" disabled={sending}>
           {sending ? 'Sending…' : 'Send message'}
         </Button>
-      </div>
+      </form>
     </div>
   );
 }

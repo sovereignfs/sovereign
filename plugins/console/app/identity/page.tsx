@@ -1,3 +1,4 @@
+import { ConsolePageHeader } from '../_components/ConsolePageHeader';
 import styles from '../console.module.css';
 import {
   InstanceForm,
@@ -40,25 +41,27 @@ export default async function IdentityPage() {
   const instance = await loadInstance();
 
   return (
-    <div className={styles.sections}>
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Instance identity</h2>
-        <p className={styles.help}>
-          Customise the name, logo, accent colour, and corner radius shown across the platform.
-        </p>
-        <InstanceForm initialValues={instance} />
-      </section>
+    <div>
+      <ConsolePageHeader
+        title="Identity"
+        description="The name, logo, accent colour, corner radius and theme shown across this instance."
+      />
 
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Upload assets</h2>
-        <p className={styles.help}>
-          Upload image files to serve via <code className={styles.codeInline}>/api/instance/</code>.
-          Stored in <code className={styles.codeInline}>data/instance/</code>.
+      <div className={styles.overviewSection}>
+        <h3 className={styles.overviewSectionTitle}>Instance identity</h3>
+        <InstanceForm initialValues={instance} />
+      </div>
+
+      <div className={styles.overviewSection}>
+        <h3 className={styles.overviewSectionTitle}>Upload assets</h3>
+        <p className={styles.lede}>
+          Upload image files to serve from <code className={styles.codeInline}>/api/instance/</code>
+          . Stored in <code className={styles.codeInline}>data/instance/</code> on the server.
         </p>
         <LogoUploadForm dark={false} />
         <LogoUploadForm dark={true} />
         <FaviconUploadForm />
-      </section>
+      </div>
     </div>
   );
 }

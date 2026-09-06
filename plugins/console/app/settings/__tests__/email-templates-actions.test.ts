@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const requireSession = vi.fn();
 const hasCapability = vi.fn();
@@ -42,6 +42,13 @@ beforeEach(() => {
   hasCapability.mockReturnValue(true);
 });
 
+/** Every test that stubs `fetch` used to unstub it by hand on its last line —
+ *  a failing assertion skipped the unstub and leaked the stub into the next
+ *  test. Centralised here so it runs even when an assertion throws. */
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 /**
  * Regression coverage for the same class of gap Task 13.5 found and fixed
  * elsewhere in this file family (users/actions.ts, settings/actions.ts) but
@@ -71,7 +78,6 @@ describe('email-templates-actions — admin-only behavior (regression)', () => {
       error: 'Insufficient privileges to view email templates.',
     });
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('getEmailTemplateCopyAction returns the copy for an authorized session', async () => {
@@ -88,7 +94,46 @@ describe('email-templates-actions — admin-only behavior (regression)', () => {
     const result = await getEmailTemplateCopyAction('invite', 'en');
 
     expect(result).toEqual({ ok: true, copy: { subject: 'You are invited' } });
-    vi.unstubAllGlobals();
+  });
+
+  it('getEmailTemplateCopyAction rejects an unknown template id or malformed locale before calling the API', async () => {
+    vi.stubGlobal('fetch', vi.fn());
+
+    await expect(getEmailTemplateCopyAction('welcome' as never, 'en')).resolves.toEqual({
+      ok: false,
+      error: 'Unknown email template or locale.',
+    });
+    await expect(
+      getEmailTemplateCopyAction('invite', 'en&templateId=passwordReset'),
+    ).resolves.toEqual({ ok: false, error: 'Unknown email template or locale.' });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('getEmailTemplateCopyAction URL-encodes the query it sends', async () => {
+    const fetchMock = mockAdminFetch({
+      'GET /api/admin/email-templates?templateId=invite&locale=pt-BR': {
+        status: 200,
+        body: { copy: {} },
+      },
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(getEmailTemplateCopyAction('invite', 'pt-BR')).resolves.toEqual({
+      ok: true,
+      copy: {},
+    });
+  });
+
+  it('saveEmailTemplateCopyAction rejects an unknown template id without calling the API', async () => {
+    vi.stubGlobal('fetch', vi.fn());
+
+    await expect(
+      saveEmailTemplateCopyAction(
+        null,
+        formData({ templateId: 'welcome', locale: 'en', subject: 'x' }),
+      ),
+    ).resolves.toEqual({ ok: false, error: 'Unknown email template or locale.' });
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it('getEmailTemplateCopyAction surfaces a non-OK response as a failure', async () => {
@@ -102,7 +147,6 @@ describe('email-templates-actions — admin-only behavior (regression)', () => {
     const result = await getEmailTemplateCopyAction('invite', 'en');
 
     expect(result).toEqual({ ok: false, error: 'Failed to load copy: 500' });
-    vi.unstubAllGlobals();
   });
 
   it('saveEmailTemplateCopyAction refuses a session without instance:configure', async () => {
@@ -119,7 +163,6 @@ describe('email-templates-actions — admin-only behavior (regression)', () => {
       error: 'Insufficient privileges to change email templates.',
     });
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('saveEmailTemplateCopyAction PATCHes once per changed field', async () => {
@@ -157,7 +200,6 @@ describe('email-templates-actions — admin-only behavior (regression)', () => {
         }),
       }),
     );
-    vi.unstubAllGlobals();
   });
 
   it("saveEmailTemplateCopyAction short-circuits on the first field that fails, surfacing that field's own error", async () => {
@@ -187,7 +229,6 @@ describe('email-templates-actions — admin-only behavior (regression)', () => {
 
     expect(result).toEqual({ ok: false, error: 'value too long' });
     expect(fetchMock).toHaveBeenCalledTimes(2); // stopped after the 2nd (failing) field
-    vi.unstubAllGlobals();
   });
 
   it('testSendEmailTemplateAction refuses a session without instance:configure', async () => {
@@ -204,7 +245,6 @@ describe('email-templates-actions — admin-only behavior (regression)', () => {
       error: 'Insufficient privileges to send a test email.',
     });
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('testSendEmailTemplateAction sends a test email for an authorized session', async () => {
@@ -221,7 +261,6 @@ describe('email-templates-actions — admin-only behavior (regression)', () => {
     );
 
     expect(result).toEqual({ ok: true, message: 'Test email sent to admin@example.test.' });
-    vi.unstubAllGlobals();
   });
 
   it('testSendEmailTemplateAction reports SMTP as unconfigured when the send is skipped', async () => {
@@ -238,7 +277,6 @@ describe('email-templates-actions — admin-only behavior (regression)', () => {
     );
 
     expect(result).toEqual({ ok: false, error: 'SMTP is not configured — nothing was sent.' });
-    vi.unstubAllGlobals();
   });
 
   it('testSendEmailTemplateAction surfaces the API errorCode for a failed send', async () => {
@@ -258,7 +296,6 @@ describe('email-templates-actions — admin-only behavior (regression)', () => {
     );
 
     expect(result).toEqual({ ok: false, error: 'smtp_auth_failed' });
-    vi.unstubAllGlobals();
   });
 
   it('testSendEmailTemplateAction falls back to the HTTP status when the response is non-OK with no body', async () => {
@@ -273,6 +310,5 @@ describe('email-templates-actions — admin-only behavior (regression)', () => {
     );
 
     expect(result).toEqual({ ok: false, error: 'Test send failed: 502' });
-    vi.unstubAllGlobals();
   });
 });

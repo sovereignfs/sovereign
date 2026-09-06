@@ -1091,7 +1091,7 @@ Sovereign classifies outbound email by delivery class:
   email." This preference has no effect on any of the three delivery classes above — mandatory
   authentication/security/administrative email is never user-mutable.
 
-Console → Health reports sanitized email diagnostics: whether SMTP is configured, the last delivery
+Console → Overview (System health) reports sanitized email diagnostics: whether SMTP is configured, the last delivery
 status and timestamp, the last failure code, and the number of failures in the last 24 hours. The
 delivery log stores non-secret metadata only. It does not store message bodies, reset tokens, invite
 tokens, or raw recipient email addresses.

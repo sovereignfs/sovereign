@@ -1,12 +1,31 @@
 import { NextResponse } from 'next/server';
-import { DEFAULT_TENANT_ID, enqueueBackupJob, listBackupJobs } from '@sovereignfs/db';
+import {
+  DEFAULT_TENANT_ID,
+  enqueueBackupJob,
+  listBackupJobs,
+  resolveDialect,
+} from '@sovereignfs/db';
 import { checkAdminKey } from '@/src/admin-guard';
 import { backupArchivePathForJob, backupJobDownloadUrl } from '@/src/backup-download';
 import { storeBackupPassphrase } from '@/src/backup-passphrase-store';
 import { resolveInstanceGitPushConfig } from '@/src/backup-run';
+import { backupWorkerEnabled } from '@/src/backup-worker';
 import { getPlatformDb } from '@/src/db';
 import { getInstalledPlugins } from '@/src/registry';
 import { manifestDatabaseIsolation } from '@sovereignfs/manifest';
+
+/**
+ * `sv backup`'s SQLite (sqld) path is not implemented (see `backup-run.ts`
+ * and research 0017) — a job on a SQLite instance can only fail. Surfaced
+ * here so Console can say so up front instead of enqueueing a doomed job.
+ */
+function dialectSupportsInstanceBackup(): boolean {
+  try {
+    return resolveDialect().dialect === 'postgres';
+  } catch {
+    return false;
+  }
+}
 
 /**
  * GET /api/admin/backup-jobs — Console's instance backup page (epic task
@@ -46,6 +65,11 @@ export async function GET(request: Request): Promise<Response> {
     jobs,
     excludablePlugins,
     gitPushAvailable: resolveInstanceGitPushConfig() !== null,
+    // Both must hold for a trigger to do anything: the worker is opt-in
+    // (`SOVEREIGN_BACKUP_WORKER_ENABLED`), so on a default install a job
+    // would sit `queued` forever with Console polling it indefinitely.
+    workerEnabled: backupWorkerEnabled(),
+    dialectSupported: dialectSupportsInstanceBackup(),
   });
 }
 
@@ -76,9 +100,35 @@ export async function POST(request: Request): Promise<Response> {
     : undefined;
   const pushToGit = body?.pushToGit === true;
 
+  if (!dialectSupportsInstanceBackup()) {
+    return NextResponse.json(
+      { error: 'Instance backups are only available on Postgres-backed instances.' },
+      { status: 400 },
+    );
+  }
+  if (!backupWorkerEnabled()) {
+    return NextResponse.json(
+      {
+        error:
+          'The backup worker is not enabled on this instance (SOVEREIGN_BACKUP_WORKER_ENABLED).',
+      },
+      { status: 503 },
+    );
+  }
+
+  const pdb = await getPlatformDb();
+  // One instance backup at a time — a second click while the first is still
+  // queued/running used to enqueue a duplicate full-instance job.
+  const recent = await listBackupJobs(pdb, { scope: 'instance', tenantId: DEFAULT_TENANT_ID });
+  if (recent.some((job) => job.status === 'queued' || job.status === 'running')) {
+    return NextResponse.json(
+      { error: 'A backup is already in progress. Wait for it to finish before starting another.' },
+      { status: 409 },
+    );
+  }
+
   const id = crypto.randomUUID();
   const archivePath = backupArchivePathForJob(id, 'instance');
-  const pdb = await getPlatformDb();
 
   await enqueueBackupJob(pdb, {
     id,

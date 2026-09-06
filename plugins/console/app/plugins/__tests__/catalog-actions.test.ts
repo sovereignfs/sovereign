@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const requireSession = vi.fn();
 const hasCapability = vi.fn();
@@ -24,6 +24,13 @@ beforeEach(() => {
   requireSession.mockResolvedValue({ user: { id: 'auditor-1' } });
 });
 
+/** Every test that stubs `fetch` used to unstub it by hand on its last line —
+ *  a failing assertion skipped the unstub and leaked the stub into the next
+ *  test. Centralised here so it runs even when an assertion throws. */
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 describe('getPluginCatalogAction — read-only catalog fetch', () => {
   it('succeeds for a session without plugin:manage — Overview must load for every Console role', async () => {
     hasCapability.mockReturnValue(false);
@@ -40,7 +47,6 @@ describe('getPluginCatalogAction — read-only catalog fetch', () => {
 
     await expect(getPluginCatalogAction()).resolves.toEqual([{ id: 'tasks', active: true }]);
     expect(hasCapability).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('requires a session — an unauthenticated caller still fails', async () => {
@@ -49,7 +55,6 @@ describe('getPluginCatalogAction — read-only catalog fetch', () => {
 
     await expect(getPluginCatalogAction()).rejects.toThrow('no session');
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('returns an empty array on a non-ok response rather than throwing', async () => {
@@ -59,6 +64,5 @@ describe('getPluginCatalogAction — read-only catalog fetch', () => {
     );
 
     await expect(getPluginCatalogAction()).resolves.toEqual([]);
-    vi.unstubAllGlobals();
   });
 });

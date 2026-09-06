@@ -8,6 +8,7 @@ import { InviteDialog } from './invite/InviteDialog';
 import { ConsoleDetailSlot } from '../_components/ConsoleDetailSlot';
 import styles from '../console.module.css';
 import { renderFetchSignal } from '../_lib/fetch-timeout';
+import { parsePageParam } from '../_lib/pagination';
 
 const PAGE_SIZE = 20;
 
@@ -75,7 +76,7 @@ export default async function UsersPage({
   searchParams: Promise<{ page?: string; user?: string }>;
 }) {
   const { page: pageParam, user: selectedUserId } = await searchParams;
-  const page = Math.max(1, Number(pageParam ?? '1'));
+  const page = parsePageParam(pageParam);
 
   const [allMembers, session] = await Promise.all([getMembers(), sdk.auth.getSession()]);
 

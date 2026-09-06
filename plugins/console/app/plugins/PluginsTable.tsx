@@ -35,6 +35,8 @@ export interface PluginRow {
   /** Chrome plugins (Account/Console/Launcher) never show Access — access policy is a permanent no-op for them. */
   isChrome: boolean;
   openableByViewer: boolean;
+  /** Installed via `sv plugin add` on a checkout where removal can actually run (see the admin plugins route). */
+  removable: boolean;
 }
 
 const STATUS_FILTERS: { value: 'all' | PluginStatus; label: string }[] = [
@@ -181,7 +183,7 @@ function useToggle() {
 }
 
 function DesktopRow({ row, justActivated, onActivated, onDismissActivated, selected }: RowProps) {
-  const isPlatformType = row.type === 'platform';
+  const canRemove = row.removable;
   const { activating, error, handleActivate } = useActivate(row, onActivated);
   const { action: toggleAction, pending: togglePending, error: toggleError } = useToggle();
   const selectable = isSelectable(row);
@@ -253,7 +255,7 @@ function DesktopRow({ row, justActivated, onActivated, onDismissActivated, selec
             <Button type="button" size="sm" disabled={activating} onClick={handleActivate}>
               {activating ? 'Activating…' : 'Activate'}
             </Button>
-            {!isPlatformType && <RemovePluginButton pluginId={row.id} pluginName={row.name} />}
+            {canRemove && <RemovePluginButton pluginId={row.id} pluginName={row.name} />}
             {error && <p className={styles.errorText}>{error}</p>}
           </div>
         ) : (
@@ -329,7 +331,7 @@ function DesktopRow({ row, justActivated, onActivated, onDismissActivated, selec
               </span>
             )}
 
-            {!isPlatformType && <RemovePluginButton pluginId={row.id} pluginName={row.name} />}
+            {canRemove && <RemovePluginButton pluginId={row.id} pluginName={row.name} />}
             {toggleError && <p className={styles.errorText}>{toggleError}</p>}
           </div>
         )}
@@ -339,7 +341,7 @@ function DesktopRow({ row, justActivated, onActivated, onDismissActivated, selec
 }
 
 function MobileCard({ row, justActivated, onActivated, onDismissActivated }: RowProps) {
-  const isPlatformType = row.type === 'platform';
+  const canRemove = row.removable;
   const { activating, error, handleActivate } = useActivate(row, onActivated);
   const { action: toggleAction, pending: togglePending, error: toggleError } = useToggle();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -348,7 +350,7 @@ function MobileCard({ row, justActivated, onActivated, onDismissActivated }: Row
 
   const menuItems: MenuEntry[] = [
     ...(!row.isChrome ? [{ label: 'Access', onSelect: () => setAccessOpen(true) }] : []),
-    ...(!isPlatformType
+    ...(canRemove
       ? [
           ...(!row.isChrome ? [{ type: 'separator' as const }] : []),
           { label: 'Remove', destructive: true, onSelect: () => setRemoveOpen(true) },
@@ -399,7 +401,7 @@ function MobileCard({ row, justActivated, onActivated, onDismissActivated }: Row
           <Button type="button" size="sm" disabled={activating} onClick={handleActivate}>
             {activating ? 'Activating…' : 'Activate'}
           </Button>
-          {!isPlatformType && (
+          {canRemove && (
             <RemovePluginButton
               pluginId={row.id}
               pluginName={row.name}
@@ -472,7 +474,7 @@ function MobileCard({ row, justActivated, onActivated, onDismissActivated }: Row
               onOpenChange={setAccessOpen}
             />
           )}
-          {!isPlatformType && (
+          {canRemove && (
             <RemovePluginButton
               pluginId={row.id}
               pluginName={row.name}

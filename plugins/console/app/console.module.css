@@ -410,48 +410,6 @@ svg.cardChevron {
   gap: var(--sv-space-1);
 }
 
-/* ── Role pills ─────────────────────────────────────────────────────────── */
-
-.rolePills {
-  display: inline-flex;
-  gap: 0;
-  padding: 2px;
-  border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-sm);
-  background-color: var(--sv-color-surface-sunken);
-}
-
-.rolePill {
-  padding: 2px var(--sv-space-2);
-  border: 1px solid transparent;
-  border-radius: calc(var(--sv-radius-sm) - 2px);
-  background-color: transparent;
-  color: var(--sv-color-text-muted);
-  font-size: var(--sv-font-size-xs);
-  font-weight: var(--sv-font-weight-medium);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.rolePill:hover {
-  color: var(--sv-color-text-primary);
-}
-
-.rolePillActive {
-  padding: 2px var(--sv-space-2);
-  border: 1px solid var(--sv-color-border-strong);
-  border-radius: calc(var(--sv-radius-sm) - 2px);
-  background-color: var(--sv-color-surface);
-  color: var(--sv-color-text-primary);
-  font-size: var(--sv-font-size-xs);
-  font-weight: var(--sv-font-weight-semibold);
-  cursor: default;
-  white-space: nowrap;
-  pointer-events: none;
-  /* override browser disabled opacity — active pill should look prominent */
-  opacity: 1;
-}
-
 /* ── Icon-only action buttons (Task 13.6) ───────────────────────────────────
    .iconBtn/.iconBtnReactivate/.iconBtnDanger are one 30×30 bordered
    icon-only control with three tones (default/success/danger), consolidated
@@ -619,12 +577,6 @@ svg.cardChevron {
   color: var(--sv-color-text-muted);
   white-space: nowrap;
   cursor: pointer;
-}
-
-.activityWhen {
-  font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-primary);
-  white-space: nowrap;
 }
 
 .activityActor {
@@ -867,15 +819,6 @@ svg.cardChevron {
   background-color: var(--sv-color-surface-sunken);
 }
 
-.feedbackSuccess {
-  font-size: var(--sv-font-size-sm);
-  padding: var(--sv-space-2) var(--sv-space-3);
-  border-radius: var(--sv-radius-md);
-  border: 1px solid var(--sv-color-success-border);
-  background-color: var(--sv-color-success-surface);
-  color: var(--sv-color-success-text);
-}
-
 .feedbackError {
   display: flex;
   align-items: center;
@@ -973,13 +916,6 @@ svg.cardChevron {
   font-size: var(--sv-font-size-sm);
   font-weight: var(--sv-font-weight-semibold);
   color: var(--sv-color-text-primary);
-}
-
-/* Example plugins section heading: title above its description. */
-.exampleBulkHeading {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sv-space-2);
 }
 
 .help {
@@ -1270,16 +1206,6 @@ svg.cardChevron {
   border-radius: var(--sv-radius-sm);
   background: none;
   cursor: pointer;
-}
-
-/* ── Pagination ─────────────────────────────────────────────────────────── */
-
-.pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sv-space-4);
-  padding: var(--sv-space-5) 0;
 }
 
 .paginationLink {
@@ -1670,27 +1596,6 @@ svg.cardChevron {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   flex-shrink: 0;
-}
-
-/* ── Invite button (ghost, compact) ─────────────────────────────────────── */
-
-.inviteButton {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sv-space-1);
-  padding: var(--sv-space-2) var(--sv-space-3);
-  border: 1px solid var(--sv-color-border-strong);
-  border-radius: var(--sv-radius-md);
-  background: transparent;
-  color: var(--sv-color-text-primary);
-  font-size: var(--sv-font-size-sm);
-  font-weight: var(--sv-font-weight-medium);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.inviteButton:hover {
-  background: var(--sv-color-surface-sunken);
 }
 
 .inviteDialogBody {

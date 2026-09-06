@@ -1,5 +1,5 @@
 import { sdk } from '@sovereignfs/sdk';
-import { EmptyState } from '@sovereignfs/ui';
+import { Alert, EmptyState } from '@sovereignfs/ui';
 import { BackupJobList, type BackupJobView } from './BackupJobList';
 import { BackupTriggerForm } from './BackupTriggerForm';
 import styles from '../console.module.css';
@@ -11,6 +11,27 @@ interface BackupJobsResponse {
   jobs: BackupJobView[];
   excludablePlugins: { id: string; name: string }[];
   gitPushAvailable: boolean;
+  workerEnabled: boolean;
+  dialectSupported: boolean;
+}
+
+const UNAVAILABLE: BackupJobsResponse = {
+  jobs: [],
+  excludablePlugins: [],
+  gitPushAvailable: false,
+  workerEnabled: false,
+  dialectSupported: false,
+};
+
+/** Why a backup cannot be started right now, or null when it can. */
+function unavailableReason(data: BackupJobsResponse): string | null {
+  if (!data.dialectSupported) {
+    return 'Instance backups are available on Postgres-backed instances only. Backing up a SQLite instance is not supported yet.';
+  }
+  if (!data.workerEnabled) {
+    return 'The backup worker is switched off on this instance, so a backup started here would never run. Set SOVEREIGN_BACKUP_WORKER_ENABLED=1 in the server environment and restart to enable it.';
+  }
+  return null;
 }
 
 async function loadBackupJobs(): Promise<BackupJobsResponse> {
@@ -21,10 +42,10 @@ async function loadBackupJobs(): Promise<BackupJobsResponse> {
       cache: 'no-store',
       signal: renderFetchSignal(),
     });
-    if (!res.ok) return { jobs: [], excludablePlugins: [], gitPushAvailable: false };
+    if (!res.ok) return UNAVAILABLE;
     return (await res.json()) as BackupJobsResponse;
   } catch {
-    return { jobs: [], excludablePlugins: [], gitPushAvailable: false };
+    return UNAVAILABLE;
   }
 }
 
@@ -41,21 +62,26 @@ export default async function BackupsPage() {
     );
   }
 
-  const { jobs, excludablePlugins, gitPushAvailable } = await loadBackupJobs();
+  const data = await loadBackupJobs();
+  const { jobs, excludablePlugins, gitPushAvailable } = data;
+  const unavailable = unavailableReason(data);
 
   return (
     <div className={styles.sections}>
       <section className={styles.section}>
         <h2>Back up this instance</h2>
         <p className={styles.helpText}>
-          Snapshots every platform, auth, and plugin table into a single passphrase-encrypted
-          archive. Restoring is not yet available from Console — see <code>sv restore</code> on the
-          server.
+          Snapshots every platform, auth, and app table into a single passphrase-encrypted archive.
+          Restoring is not yet available from Console — see <code>sv restore</code> on the server.
         </p>
-        <BackupTriggerForm
-          excludablePlugins={excludablePlugins}
-          gitPushAvailable={gitPushAvailable}
-        />
+        {unavailable ? (
+          <Alert variant="warning">{unavailable}</Alert>
+        ) : (
+          <BackupTriggerForm
+            excludablePlugins={excludablePlugins}
+            gitPushAvailable={gitPushAvailable}
+          />
+        )}
       </section>
 
       <section className={styles.section}>

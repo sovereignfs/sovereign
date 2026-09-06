@@ -18,13 +18,15 @@ export function ExternalClientsStat() {
 
   useEffect(() => {
     let cancelled = false;
+    // A non-OK response (an auditor gets 403 here) or a network failure is
+    // "unknown", rendered as "—" — not a confident "0 clients".
     fetch('/api/auth/oauth2/get-clients', { headers: { 'Content-Type': 'application/json' } })
       .then((res) => (res.ok ? res.json() : null))
       .then((rows: unknown) => {
-        if (!cancelled) setCount(Array.isArray(rows) ? rows.length : 0);
+        if (!cancelled) setCount(Array.isArray(rows) ? rows.length : null);
       })
       .catch(() => {
-        if (!cancelled) setCount(0);
+        if (!cancelled) setCount(null);
       });
     return () => {
       cancelled = true;

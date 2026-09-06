@@ -107,7 +107,7 @@ export function BackupJobList({ initialJobs }: { initialJobs: BackupJobView[] })
   }
 
   return (
-    <ul className={styles.list}>
+    <ul className={styles.cards}>
       {jobs.map((job) => (
         <li key={job.id} className={styles.card}>
           <div>

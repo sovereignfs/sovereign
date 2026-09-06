@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const requireSession = vi.fn();
 const hasCapability = vi.fn();
@@ -79,6 +79,13 @@ beforeEach(() => {
   hasCapability.mockReturnValue(true);
 });
 
+/** Every test that stubs `fetch` used to unstub it by hand on its last line —
+ *  a failing assertion skipped the unstub and leaked the stub into the next
+ *  test. Centralised here so it runs even when an assertion throws. */
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 describe('sendInviteAction — invite creation flow', () => {
   it('refuses a session without user:manage', async () => {
     hasCapability.mockReturnValue(false);
@@ -91,7 +98,6 @@ describe('sendInviteAction — invite creation flow', () => {
       error: 'Insufficient privileges to manage users.',
     });
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('rejects a missing email without calling the admin API', async () => {
@@ -101,7 +107,6 @@ describe('sendInviteAction — invite creation flow', () => {
 
     expect(result).toEqual({ success: false, error: 'Email is required.' });
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('creates the invite and reports success even when the notification email fails', async () => {
@@ -122,7 +127,6 @@ describe('sendInviteAction — invite creation flow', () => {
       expect.objectContaining({ success: true, token: 'tok-123', email: 'new@example.test' }),
     );
     if (result.success) expect(result.emailWarning).toBeDefined();
-    vi.unstubAllGlobals();
   });
 
   it('surfaces a failure to create the invite itself', async () => {
@@ -131,7 +135,6 @@ describe('sendInviteAction — invite creation flow', () => {
     const result = await sendInviteAction(null, formData({ email: 'new@example.test' }));
 
     expect(result).toEqual({ success: false, error: 'Failed to create invite: 500' });
-    vi.unstubAllGlobals();
   });
 });
 
@@ -144,7 +147,6 @@ describe('cancelInviteAction — invite creation flow (cancellation)', () => {
       'Insufficient privileges to manage users.',
     );
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('cancels the invite by email for an authorized admin', async () => {
@@ -159,7 +161,6 @@ describe('cancelInviteAction — invite creation flow (cancellation)', () => {
       expect.stringContaining('/api/admin/invites?email=x%40example.test'),
       expect.objectContaining({ method: 'DELETE' }),
     );
-    vi.unstubAllGlobals();
   });
 });
 
@@ -172,7 +173,6 @@ describe('changeRoleAction — role update guardrails', () => {
       changeRoleAction(formData({ userId: 'user-2', role: 'platform:admin' })),
     ).rejects.toThrow('Insufficient privileges to assign roles.');
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('checks role:assign specifically, not a weaker capability', async () => {
@@ -189,16 +189,34 @@ describe('changeRoleAction — role update guardrails', () => {
     await changeRoleAction(formData({ userId: 'user-2', role: 'platform:admin' }));
 
     expect(hasCapability).toHaveBeenCalledWith(expect.anything(), 'role:assign');
-    vi.unstubAllGlobals();
   });
 
   it('throws on a failed role change rather than silently succeeding', async () => {
     vi.stubGlobal('fetch', mockAdminFetch({ 'PATCH /api/admin/users/user-2': { status: 403 } }));
 
     await expect(
-      changeRoleAction(formData({ userId: 'user-2', role: 'platform:owner' })),
+      changeRoleAction(formData({ userId: 'user-2', role: 'platform:admin' })),
     ).rejects.toThrow('Failed to change role: 403');
-    vi.unstubAllGlobals();
+  });
+
+  it('refuses a role outside the assignable set without calling the API', async () => {
+    // Regression: the value was cast and written verbatim by the auth server,
+    // so a role:assign holder could store any string as a role.
+    vi.stubGlobal('fetch', vi.fn());
+
+    await expect(
+      changeRoleAction(formData({ userId: 'user-2', role: 'platform:superuser' })),
+    ).rejects.toThrow('Role must be one of: admin, auditor, user.');
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('never assigns platform:owner from Console', async () => {
+    vi.stubGlobal('fetch', vi.fn());
+
+    await expect(
+      changeRoleAction(formData({ userId: 'user-2', role: 'platform:owner' })),
+    ).rejects.toThrow('Role must be one of: admin, auditor, user.');
+    expect(fetch).not.toHaveBeenCalled();
   });
 });
 
@@ -211,7 +229,6 @@ describe('toggleActiveAction — admin-only behavior for a sensitive route', () 
       toggleActiveAction(formData({ userId: 'user-2', active: 'false' })),
     ).rejects.toThrow('Insufficient privileges to manage users.');
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('deactivates an authorized target user', async () => {
@@ -229,7 +246,6 @@ describe('toggleActiveAction — admin-only behavior for a sensitive route', () 
       expect.stringContaining('/api/admin/users/user-2'),
       expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ active: false }) }),
     );
-    vi.unstubAllGlobals();
   });
 
   it("refuses to change the acting admin's own account status (self-lockout guard)", async () => {
@@ -239,7 +255,6 @@ describe('toggleActiveAction — admin-only behavior for a sensitive route', () 
       toggleActiveAction(formData({ userId: 'admin-1', active: 'false' })),
     ).rejects.toThrow('You cannot change the status of your own account.');
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 });
 
@@ -268,7 +283,6 @@ describe('resetMfaAction — admin-only behavior (regression)', () => {
       'Insufficient privileges to manage users.',
     );
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('checks user:manage specifically', async () => {
@@ -285,7 +299,6 @@ describe('resetMfaAction — admin-only behavior (regression)', () => {
     await resetMfaAction(formData({ userId: 'user-2' }));
 
     expect(hasCapability).toHaveBeenCalledWith(expect.anything(), 'user:manage');
-    vi.unstubAllGlobals();
   });
 });
 
@@ -305,7 +318,6 @@ describe('deleteUserAction — role guardrail (owner cannot be deleted)', () => 
       'The platform owner account cannot be deleted.',
     );
     expect(deleteUser).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('deletes an authorized target user who is not the owner', async () => {
@@ -323,7 +335,6 @@ describe('deleteUserAction — role guardrail (owner cannot be deleted)', () => 
     await deleteUserAction(formData({ userId: 'user-2' }));
 
     expect(deleteUser).toHaveBeenCalledWith('user-2', 'default');
-    vi.unstubAllGlobals();
   });
 
   it('refuses a session without user:manage, without querying users or deleting', async () => {
@@ -335,7 +346,6 @@ describe('deleteUserAction — role guardrail (owner cannot be deleted)', () => 
     );
     expect(fetch).not.toHaveBeenCalled();
     expect(deleteUser).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('fails closed when the directory lookup is not OK, instead of deleting unverified', async () => {
@@ -352,7 +362,6 @@ describe('deleteUserAction — role guardrail (owner cannot be deleted)', () => 
     );
     expect(deleteUser).not.toHaveBeenCalled();
     expect(logActivity).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it("refuses to delete the acting admin's own account, without querying the directory", async () => {
@@ -363,7 +372,6 @@ describe('deleteUserAction — role guardrail (owner cannot be deleted)', () => 
     );
     expect(fetch).not.toHaveBeenCalled();
     expect(deleteUser).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 });
 
@@ -376,7 +384,6 @@ describe('vouchAction — trust escalation', () => {
       'Insufficient privileges to manage users.',
     );
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('vouches for an authorized target user', async () => {
@@ -394,7 +401,6 @@ describe('vouchAction — trust escalation', () => {
       expect.stringContaining('/api/admin/users/user-2/vouch'),
       expect.objectContaining({ method: 'POST' }),
     );
-    vi.unstubAllGlobals();
   });
 });
 
@@ -407,7 +413,6 @@ describe('revokeVouchAction — trust de-escalation', () => {
       'Insufficient privileges to manage users.',
     );
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('revokes the vouch for an authorized target user', async () => {
@@ -425,7 +430,6 @@ describe('revokeVouchAction — trust de-escalation', () => {
       expect.stringContaining('/api/admin/users/user-2/vouch'),
       expect.objectContaining({ method: 'DELETE' }),
     );
-    vi.unstubAllGlobals();
   });
 });
 
@@ -438,7 +442,6 @@ describe('grantCapabilityAction — per-user capability grants (RFC 0070)', () =
       grantCapabilityAction(formData({ userId: 'user-2', capability: 'user:manage' })),
     ).rejects.toThrow('Insufficient privileges to grant capabilities.');
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('grants a capability to an authorized target user', async () => {
@@ -456,7 +459,6 @@ describe('grantCapabilityAction — per-user capability grants (RFC 0070)', () =
         body: JSON.stringify({ capability: 'user:manage' }),
       }),
     );
-    vi.unstubAllGlobals();
   });
 });
 
@@ -469,7 +471,6 @@ describe('revokeCapabilityAction — per-user capability grants (RFC 0070)', () 
       revokeCapabilityAction(formData({ userId: 'user-2', capability: 'user:manage' })),
     ).rejects.toThrow('Insufficient privileges to revoke capabilities.');
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('revokes a capability from an authorized target user', async () => {
@@ -484,7 +485,6 @@ describe('revokeCapabilityAction — per-user capability grants (RFC 0070)', () 
       expect.stringContaining('/api/admin/users/user-2/capabilities/user%3Amanage'),
       expect.objectContaining({ method: 'DELETE' }),
     );
-    vi.unstubAllGlobals();
   });
 });
 
@@ -509,7 +509,6 @@ describe('listUserCapabilitiesAction — admin-only behavior (regression)', () =
       'Insufficient privileges to view capabilities.',
     );
     expect(fetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 
   it('maps the API response to a flat capability list for an authorized session', async () => {
@@ -526,7 +525,6 @@ describe('listUserCapabilitiesAction — admin-only behavior (regression)', () =
     const result = await listUserCapabilitiesAction('user-2');
 
     expect(result).toEqual(['user:manage', 'role:assign']);
-    vi.unstubAllGlobals();
   });
 });
 

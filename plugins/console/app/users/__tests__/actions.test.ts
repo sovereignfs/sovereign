@@ -231,6 +231,16 @@ describe('toggleActiveAction — admin-only behavior for a sensitive route', () 
     );
     vi.unstubAllGlobals();
   });
+
+  it("refuses to change the acting admin's own account status (self-lockout guard)", async () => {
+    vi.stubGlobal('fetch', vi.fn());
+
+    await expect(
+      toggleActiveAction(formData({ userId: 'admin-1', active: 'false' })),
+    ).rejects.toThrow('You cannot change the status of your own account.');
+    expect(fetch).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
 });
 
 /**
@@ -322,6 +332,34 @@ describe('deleteUserAction — role guardrail (owner cannot be deleted)', () => 
 
     await expect(deleteUserAction(formData({ userId: 'user-2' }))).rejects.toThrow(
       'Insufficient privileges to manage users.',
+    );
+    expect(fetch).not.toHaveBeenCalled();
+    expect(deleteUser).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('fails closed when the directory lookup is not OK, instead of deleting unverified', async () => {
+    // Regression: the owner check used to run only `if (usersRes.ok)`, so a
+    // transient auth-server error let the platform-side sweep wipe the
+    // owner's data before the auth server's own refusal.
+    vi.stubGlobal(
+      'fetch',
+      mockAdminFetch({ 'GET /api/admin/users': { status: 503, body: { error: 'down' } } }),
+    );
+
+    await expect(deleteUserAction(formData({ userId: 'owner-1' }))).rejects.toThrow(
+      'Could not verify the account before deleting it (503).',
+    );
+    expect(deleteUser).not.toHaveBeenCalled();
+    expect(logActivity).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it("refuses to delete the acting admin's own account, without querying the directory", async () => {
+    vi.stubGlobal('fetch', vi.fn());
+
+    await expect(deleteUserAction(formData({ userId: 'admin-1' }))).rejects.toThrow(
+      'You cannot delete your own account from Console.',
     );
     expect(fetch).not.toHaveBeenCalled();
     expect(deleteUser).not.toHaveBeenCalled();

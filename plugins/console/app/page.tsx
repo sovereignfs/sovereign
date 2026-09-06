@@ -3,6 +3,7 @@ import { getExamplesEnabledFlag } from '@/src/plugin-status';
 import { buildPluginRows } from './plugins/page';
 import { getHealth } from './_lib/health';
 import { OverviewClient, type AttentionItem, type OverviewStats } from './OverviewClient';
+import { renderFetchSignal } from './_lib/fetch-timeout';
 
 const RUNTIME_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
 const AUTH_URL =
@@ -27,6 +28,7 @@ async function getUsers(): Promise<MemberRow[]> {
     const res = await fetch(`${AUTH_URL}/api/admin/users`, {
       headers: { Authorization: `Bearer ${adminKey}` },
       cache: 'no-store',
+      signal: renderFetchSignal(),
     });
     if (!res.ok) return [];
     return (await res.json()) as MemberRow[];
@@ -41,6 +43,7 @@ async function getGroups(): Promise<GroupRow[]> {
     const res = await fetch(`${RUNTIME_URL}/api/admin/groups`, {
       headers: { Authorization: `Bearer ${adminKey}` },
       cache: 'no-store',
+      signal: renderFetchSignal(),
     });
     if (!res.ok) return [];
     return (await res.json()) as GroupRow[];
@@ -55,6 +58,7 @@ async function getEntitlements(): Promise<EntitlementRow[]> {
     const res = await fetch(`${RUNTIME_URL}/api/admin/entitlements`, {
       headers: { Authorization: `Bearer ${adminKey}` },
       cache: 'no-store',
+      signal: renderFetchSignal(),
     });
     if (!res.ok) return [];
     const body = (await res.json()) as { entitlements: EntitlementRow[] };

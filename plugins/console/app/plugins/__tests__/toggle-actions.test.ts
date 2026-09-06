@@ -81,6 +81,21 @@ describe('togglePluginAction — enable/disable', () => {
     vi.unstubAllGlobals();
   });
 
+  it('refuses to toggle a platform chrome app (Console cannot disable itself)', async () => {
+    // Regression: the proxy 404s a disabled plugin's whole prefix, so
+    // disabling `fs.sovereign.console` from Console locked every admin out.
+    vi.stubGlobal('fetch', vi.fn());
+
+    await expect(
+      togglePluginAction(null, formData({ pluginId: 'fs.sovereign.console', enabled: 'false' })),
+    ).resolves.toEqual({
+      success: false,
+      error: 'This app is part of the platform shell and is always on.',
+    });
+    expect(fetch).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
   it('returns a failure result on a non-ok response rather than silently succeeding', async () => {
     vi.stubGlobal(
       'fetch',

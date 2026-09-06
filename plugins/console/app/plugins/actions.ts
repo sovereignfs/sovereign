@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 import { sdk, type DirectoryUser } from '@sovereignfs/sdk';
+import { CHROME_PLUGIN_IDS } from '@/src/launcher-plugins';
 
 // Self-fetch address for the runtime's own admin API. Native dev may run on
 // RUNTIME_PORT; otherwise the runtime defaults to localhost:3000.
@@ -57,6 +58,13 @@ export async function togglePluginAction(
   await requirePluginManage();
   const pluginId = formData.get('pluginId') as string;
   const enabled = formData.get('enabled') === 'true';
+  // Chrome plugins (Console itself, Launcher, Account, Inbox) are the shell —
+  // the proxy 404s a disabled plugin's whole prefix, so disabling Console
+  // from Console locked every admin out with no UI path back. The runtime
+  // route refuses too; this keeps the refusal an inline result, not a 403.
+  if (CHROME_PLUGIN_IDS.has(pluginId)) {
+    return { success: false, error: 'This app is part of the platform shell and is always on.' };
+  }
   const res = await adminFetch(`/api/admin/plugins/${encodeURIComponent(pluginId)}`, {
     method: 'PATCH',
     body: JSON.stringify({ enabled }),

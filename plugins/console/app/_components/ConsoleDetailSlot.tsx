@@ -16,11 +16,14 @@ import { useConsoleDetailPane } from '../_lib/detail-pane';
  */
 export function ConsoleDetailSlot({
   detailKey,
+  closeHref,
   children,
 }: {
   detailKey: string;
+  /** Same value the pane's own close link uses — see `useConsoleDetailPane`. */
+  closeHref: string;
   children: ReactNode;
 }) {
-  useConsoleDetailPane(children, detailKey);
+  useConsoleDetailPane(children, detailKey, closeHref);
   return null;
 }

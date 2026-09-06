@@ -2,8 +2,9 @@
 
 import { Fragment, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
+  Dialog,
   Icon,
   NavList,
   OfflineGate,
@@ -13,16 +14,19 @@ import {
   useIsMobile,
 } from '@sovereignfs/ui';
 import { CONSOLE_SECTIONS, activeConsoleSectionId } from './_lib/sections';
-import { ConsoleDetailPaneProvider } from './_lib/detail-pane';
+import { ConsoleDetailPaneProvider, type DetailPaneEntry } from './_lib/detail-pane';
 import styles from './console.module.css';
 
 /**
  * Below this width (but still above the mobile breakpoint, 768px — see
  * `ResponsiveSurface`'s default), a 3rd detail column has nowhere to go
- * alongside the 240px nav sidebar and the page's own content — collapse to
- * sidebar + content only rather than squeezing all three. Mirrors
- * `sovereign-tasks`' `DesktopTasksShell.DETAIL_COLLAPSE_BREAKPOINT_PX`
- * precedent exactly.
+ * alongside the 240px nav sidebar and the page's own content — so the
+ * registered pane renders as a `Dialog` over the content instead of a
+ * column. It must still render *somewhere*: the pages' mobile fallbacks
+ * (`.cardManageMobile`, `.userCardList`) are CSS-hidden above 768px, so
+ * simply dropping the pane here left the 769–899px band with no way to edit
+ * a user, group, app or external client at all. Breakpoint mirrors
+ * `sovereign-tasks`' `DesktopTasksShell.DETAIL_COLLAPSE_BREAKPOINT_PX`.
  */
 const DETAIL_COLLAPSE_BREAKPOINT_PX = 900;
 
@@ -47,9 +51,10 @@ const DETAIL_COLLAPSE_BREAKPOINT_PX = 900;
  */
 export default function ConsoleLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const activeId = activeConsoleSectionId(pathname);
   const isOverview = pathname === '/console';
-  const [detailPane, setDetailPane] = useState<{ node: ReactNode; detailKey: string } | null>(null);
+  const [detailPane, setDetailPane] = useState<DetailPaneEntry | null>(null);
   const isNarrowDesktop = useIsMobile(DETAIL_COLLAPSE_BREAKPOINT_PX);
 
   const sidebarGroups = CONSOLE_SECTIONS.map((group) => ({
@@ -101,6 +106,22 @@ export default function ConsoleLayout({ children }: { children: ReactNode }) {
               <Fragment key={detailPane.detailKey}>{detailPane.node}</Fragment>
             )}
           </ThreeColumnLayout>
+          {isNarrowDesktop && (
+            // Narrow desktop: same pane, as an overlay. The pane's own close
+            // link already navigates to `closeHref`; Esc/scrim do the same
+            // via the router so the page's selection param is cleared and
+            // the slot unregisters (which is what closes this Dialog).
+            <Dialog
+              open={detailPane !== null}
+              onClose={() => {
+                if (detailPane) router.replace(detailPane.closeHref);
+              }}
+              size="md"
+              aria-label="Details"
+            >
+              {detailPane && <Fragment key={detailPane.detailKey}>{detailPane.node}</Fragment>}
+            </Dialog>
+          )}
         </div>
       }
       mobile={

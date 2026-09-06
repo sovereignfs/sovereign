@@ -3,6 +3,7 @@ import { getInstalledPlugins } from '@/src/registry';
 import { EntitlementsSection, type EntitlementRow } from './EntitlementsSection';
 import { LicenseGenerator, type GeneratorPlugin, type GeneratorUser } from './LicenseGenerator';
 import styles from '../console.module.css';
+import { renderFetchSignal } from '../_lib/fetch-timeout';
 
 interface MemberRow {
   id: string | null;
@@ -21,6 +22,7 @@ async function loadEntitlements(): Promise<EntitlementRow[]> {
     const res = await fetch(`${RUNTIME_URL}/api/admin/entitlements`, {
       headers: { authorization: `Bearer ${adminKey}` },
       cache: 'no-store',
+      signal: renderFetchSignal(),
     });
     if (!res.ok) return [];
     const data = (await res.json()) as { entitlements: EntitlementRow[] };
@@ -39,6 +41,7 @@ async function loadStoredKeys(): Promise<{
     const res = await fetch(`${RUNTIME_URL}/api/admin/license-keys`, {
       headers: { Authorization: `Bearer ${adminKey}` },
       cache: 'no-store',
+      signal: renderFetchSignal(),
     });
     if (!res.ok) return { keys: {}, publicKeys: {} };
     const data = (await res.json()) as {
@@ -57,6 +60,7 @@ async function loadUsers(): Promise<MemberRow[]> {
     const res = await fetch(`${AUTH_URL}/api/admin/users`, {
       headers: { Authorization: `Bearer ${adminKey}` },
       cache: 'no-store',
+      signal: renderFetchSignal(),
     });
     if (!res.ok) return [];
     return (await res.json()) as MemberRow[];

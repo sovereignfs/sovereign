@@ -3,6 +3,7 @@ import { setPluginEnabled } from '@sovereignfs/db';
 import { checkAdminKey } from '@/src/admin-guard';
 import { logActivity } from '@/src/activity';
 import { getPlatformDb } from '@/src/db';
+import { CHROME_PLUGIN_IDS } from '@/src/launcher-plugins';
 import { getInstalledPlugins } from '@/src/registry';
 
 interface RouteParams {
@@ -22,6 +23,15 @@ export async function PATCH(request: Request, { params }: RouteParams): Promise<
   const body = (await request.json()) as { enabled?: boolean };
   if (typeof body.enabled !== 'boolean') {
     return NextResponse.json({ error: 'enabled (boolean) is required' }, { status: 400 });
+  }
+  // The shell itself is never toggleable: a disabled plugin's prefix 404s in
+  // the proxy (SRS CON-07), so disabling Console/Launcher/Account/Inbox would
+  // lock every user out with no way back except the DB.
+  if (CHROME_PLUGIN_IDS.has(id)) {
+    return NextResponse.json(
+      { error: 'platform chrome plugins are always enabled and cannot be toggled' },
+      { status: 403 },
+    );
   }
 
   await setPluginEnabled(await getPlatformDb(), id, body.enabled);

@@ -262,7 +262,7 @@ export function OAuthClientsClient() {
       </div>
 
       {selectedClient && (
-        <ConsoleDetailSlot detailKey={selectedClient.client_id}>
+        <ConsoleDetailSlot detailKey={selectedClient.client_id} closeHref={closeHref}>
           <OAuthClientDetailPane
             client={selectedClient}
             closeHref={closeHref}

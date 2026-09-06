@@ -6,6 +6,7 @@ import { CreateGroupDialog } from './CreateGroupDialog';
 import { GroupDetailPane } from './GroupDetailPane';
 import { ConsoleDetailSlot } from '../_components/ConsoleDetailSlot';
 import styles from '../console.module.css';
+import { renderFetchSignal } from '../_lib/fetch-timeout';
 
 interface GroupRow {
   id: string;
@@ -27,6 +28,7 @@ async function getGroups(): Promise<GroupRow[]> {
     const res = await fetch(`${selfUrl}/api/admin/groups`, {
       headers: { Authorization: `Bearer ${adminKey}` },
       cache: 'no-store',
+      signal: renderFetchSignal(),
     });
     if (!res.ok) {
       console.error(`[groups] fetch failed: ${res.status}`);
@@ -141,7 +143,7 @@ export default async function GroupsPage({
         // `useConsoleDetailPane`'s doc comment for why that silently doesn't
         // work here (a real, found-live bug: it looked like it should force
         // a remount and didn't).
-        <ConsoleDetailSlot detailKey={selectedGroup.id}>
+        <ConsoleDetailSlot detailKey={selectedGroup.id} closeHref={closeHref}>
           <GroupDetailPane group={selectedGroup} closeHref={closeHref} />
         </ConsoleDetailSlot>
       )}

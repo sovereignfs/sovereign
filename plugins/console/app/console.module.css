@@ -896,6 +896,14 @@ svg.cardChevron {
 
 /* ── Utility ────────────────────────────────────────────────────────────── */
 
+.loadingState {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+  padding: var(--sv-space-8) 0;
+  font-size: var(--sv-font-size-sm);
+}
+
 .textMuted {
   color: var(--sv-color-text-muted);
 }

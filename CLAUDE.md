@@ -453,8 +453,11 @@ pnpm sv <cmd>           # CLI (seed, backup, restore, plugin add/remove, …)
   resolve them through `scripts/dev-ports.mjs`, never hardcode 3000/3001 in
   tooling or e2e specs.
 - **Warden and `sdk.secrets` need `SOVEREIGN_VAULT_KEY` in `.env`**
-  (`openssl rand -base64 32`). A row encrypted under a lost key throws
-  `Unsupported state or unable to authenticate data` on every page load.
+  (`openssl rand -base64 32`). A row encrypted under a lost key (or two
+  clones sharing `sovereign-sqld-dev` with different keys) throws
+  `SecretUndecryptableError` from `runtime/src/secrets.ts` — match it by
+  `name` and degrade per-row, as Warden's discovery does; never let it
+  reject a whole `Promise.all`.
 - Local setup, Mailpit, Compose details: `CONTRIBUTING.md`.
 
 ## Environment notes
@@ -497,7 +500,7 @@ pnpm sv <cmd>           # CLI (seed, backup, restore, plugin add/remove, …)
 
 ## Status
 
-Current platform version: **`0.133.0`**. `ROADMAP.md` is the canonical task
+Current platform version: **`0.133.2`**. `ROADMAP.md` is the canonical task
 queue and completion record; per-release narrative through `0.130.2` is
 archived in `docs/task-history.md`.
 

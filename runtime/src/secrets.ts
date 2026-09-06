@@ -12,6 +12,26 @@ export class VaultConfigurationError extends Error {
   }
 }
 
+/**
+ * A stored secret exists but cannot be decrypted under the current
+ * `SOVEREIGN_VAULT_KEY` — AES-GCM's authentication tag did not verify. In
+ * practice: the key was rotated or lost, or two checkouts share one database
+ * (e.g. the `sovereign-sqld-dev` container) with different `.env` keys. The
+ * only fix is to re-enter the value, so callers that own a user-facing
+ * surface should degrade to that message instead of crashing. Distinguished
+ * by `name` (not only `instanceof`) so a plugin, which may not import
+ * `runtime/src`, can still recognise it across the SDK boundary.
+ */
+export class SecretUndecryptableError extends Error {
+  constructor(options?: { cause?: unknown }) {
+    super(
+      `Stored secret cannot be decrypted under the current ${KEY_ENV} (key changed or lost?).`,
+      options,
+    );
+    this.name = 'SecretUndecryptableError';
+  }
+}
+
 function decodeKey(raw: string): Buffer | null {
   const trimmed = raw.trim();
   if (/^[0-9a-fA-F]{64}$/.test(trimmed)) return Buffer.from(trimmed, 'hex');
@@ -87,10 +107,17 @@ export function decryptSecretValue(
   );
   decipher.setAAD(aadFor(context));
   decipher.setAuthTag(Buffer.from(tagRaw, 'base64url'));
-  return Buffer.concat([
-    decipher.update(Buffer.from(ciphertextRaw, 'base64url')),
-    decipher.final(),
-  ]).toString('utf8');
+  const plaintext = decipher.update(Buffer.from(ciphertextRaw, 'base64url'));
+  let final: Buffer;
+  try {
+    // `final()` is where AES-GCM verifies the auth tag; a wrong key (or wrong
+    // AAD) surfaces here as Node's opaque
+    // "Unsupported state or unable to authenticate data".
+    final = decipher.final();
+  } catch (error) {
+    throw new SecretUndecryptableError({ cause: error });
+  }
+  return Buffer.concat([plaintext, final]).toString('utf8');
 }
 
 function parseMetadata(raw: string | null): Record<string, unknown> | null {

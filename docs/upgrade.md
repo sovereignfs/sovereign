@@ -119,6 +119,37 @@ See the [Runtime version map](#runtime-version-map) and [v1.0.0 release checklis
 
 Notes call out any required configuration changes, schema changes, or action required.
 
+### v0.99.1 → v0.100.0 (root 0.131.0, `apps/auth` 2.4.0, `apps/relay` 0.4.0, `apps/harness` 0.2.0)
+
+- **Next.js 15.5 → 16.3** on every app (pnpm catalog). Both `next dev` and
+  `next build` now use Turbopack; nothing in the runtime or auth app needs
+  the `--webpack` escape hatch. Node 24 (already required) satisfies Next
+  16's `>=20.9` floor, so no host/Docker change is needed.
+- **The service worker toolchain changed.** `@ducanh2912/next-pwa` (a
+  webpack plugin, last released in 2024) is gone; the runtime's worker
+  (`runtime/worker/index.ts` + `routes.ts`) is now built on
+  [Serwist](https://serwist.pages.dev) by `runtime/scripts/build-sw.ts`,
+  which `pnpm --filter @sovereignfs/runtime build` runs after `next build`.
+  It emits one self-contained `runtime/public/sw.js` (the `workbox-*.js`,
+  `fallback-*.js` and `worker-*.js` siblings no longer exist). **No operator
+  action:** the published image runs the same build command, and a browser
+  that still holds the old worker replaces it on its next visit (the new
+  one calls `skipWaiting` + `clientsClaim`, and cleans up the old Workbox
+  caches). Custom reverse-proxy rules that special-cased `/workbox-*.js`,
+  `/fallback-*.js` or `/worker-*.js` can be dropped; `/sw.js`, `/offline` and
+  `/manifest.json` still need to be reachable without a session.
+- **Caching guarantee unchanged, mechanism tightened.** Per-user pages are
+  served by Serwist's `NetworkOnly` (there is no cache for them at all, where
+  next-pwa's build schema forced a `NetworkFirst` that refused writes);
+  manifest-declared offline shells are still `StaleWhileRevalidate`; failed
+  navigations still fall back to the precached `/offline`.
+- **Deprecation carried, not resolved:** Next 16 deprecates the `middleware`
+  file convention in favour of `proxy`, which runs on the Node.js runtime
+  only. Sovereign's middleware deliberately runs on the Edge runtime (it is
+  the session gate and CSP source for every request), so it stays
+  `middleware.ts` for now — `next build` prints one deprecation warning.
+  Tracked as epic task 0.29.
+
 ### Root 0.130.3 → 0.130.4 (no `runtime` version bump)
 
 - **Next.js 15.5.22 → 15.5.25 and vitest 4.1.10 → 4.1.11** (pnpm catalog /

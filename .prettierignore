@@ -11,9 +11,6 @@ runtime/app/(platform)/(plugins)
 runtime/app/(minimal)
 runtime/generated
 runtime/public/sw.js
-runtime/public/workbox-*.js
-runtime/public/fallback-*.js
-runtime/public/worker-*.js
 # Storybook generated config and static output
 packages/ui/.storybook
 packages/ui/storybook-static

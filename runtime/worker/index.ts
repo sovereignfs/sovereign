@@ -1,24 +1,43 @@
 /// <reference lib="webworker" />
 /**
- * Custom service worker additions, bundled into the generated Workbox SW by
- * @ducanh2912/next-pwa:
+ * The runtime's service worker (PLT-09, SRS §3.11). Bundled by
+ * `runtime/scripts/build-sw.ts` after `next build` into `public/sw.js`, with
+ * the precache manifest injected at `self.__SW_MANIFEST`; registered by
+ * `app/_components/ServiceWorkerRegistration.tsx`. Disabled in development
+ * (nothing builds it, and the registration component unregisters any stale
+ * one) so it never interferes with HMR.
  *
- * - Web Push (RFC 0016) — `push` / `notificationclick` below.
- * - Manifest-declared offline route detection (research 0012) — see
- *   `./offline-session`, imported for its side effect of installing the
- *   `__sovereignIsOfflineRoute` global the generated worker's
- *   `runtimeCaching` matchers call. Those matchers are stringified into
- *   `sw.js` by workbox-build and so cannot import anything themselves; this
- *   file can, and is `importScripts`-ed ahead of any `fetch` event.
- *
- * ESLint and Prettier ignore this file (it runs in the SW context, not the
- * Next.js context) — add to .eslintignore / .prettierignore if needed.
+ * - Precaching + routing: Serwist (`./routes.ts` holds the route table and
+ *   the reasoning behind each entry).
+ * - Web Push (RFC 0016): the `push` / `notificationclick` handlers below.
  */
 
-import './offline-session';
+import { Serwist, type PrecacheEntry, type SerwistGlobalConfig } from 'serwist';
+import { isDocumentRequest, runtimeCaching } from './routes';
 
-// SW-global scope.
+declare global {
+  interface WorkerGlobalScope extends SerwistGlobalConfig {
+    __SW_MANIFEST: (PrecacheEntry | string)[] | undefined;
+  }
+}
+
 declare const self: ServiceWorkerGlobalScope;
+
+const serwist = new Serwist({
+  precacheEntries: self.__SW_MANIFEST,
+  precacheOptions: { cleanupOutdatedCaches: true, concurrency: 10 },
+  skipWaiting: true,
+  clientsClaim: true,
+  navigationPreload: false,
+  disableDevLogs: true,
+  runtimeCaching,
+  // `/offline` is precached (`build-sw.ts` adds it to the manifest with the
+  // build id as its revision) and stands in for any document request whose
+  // strategy fails — offline, or past the gated-page network timeout.
+  fallbacks: { entries: [{ url: '/offline', matcher: isDocumentRequest }] },
+});
+
+serwist.addEventListeners();
 
 interface PushPayload {
   title: string;

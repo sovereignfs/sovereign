@@ -176,6 +176,10 @@ each: `docs/architecture-rules.md`.
 - **Never commit a third-party plugin's deps to `runtime/package.json` or
   `plugin-deps.json`.** Hoisting (RFC 0057) runs per checkout via
   `sv plugin add`, `scripts/install-plugins.ts`, and `pnpm dev`'s `.local` sync.
+  A platform plugin under `plugins/` declares its own external deps in
+  `runtime/package.json` by hand — Turbopack resolves a composed plugin's
+  imports from the runtime's scope, never through the production symlink
+  (webpack did; `unpdf` shipped missing that way).
 - **`bin/backup-restore.ts` / `bin/sv-backup-cli.ts` never import `runtime/src`**
   — they bundle dependency-free into `runtime/dist-cli/` for the `runner` image
   (`bin/tsup.config.ts` `noExternal`, pure-JS deps only).
@@ -271,10 +275,10 @@ each: `docs/architecture-rules.md`.
   use a manual index scan.
 - **`bypassPluginVisibilityInDev()` checks `NODE_ENV === 'development'` exactly**,
   never `!== 'production'` — widening it disables gating under test.
-- **The service worker never stores a per-user page.** The `pages` entry is
-  `NetworkFirst` in name only (workbox-build rejects `networkTimeoutSeconds`
-  on `NetworkOnly`) with a `cacheWillUpdate` that returns `null`; keep it that
-  way and bound latency with `networkTimeoutSeconds` + `fallbacks.document`.
+- **The service worker never stores a per-user page.** The gated-page route
+  in `runtime/worker/routes.ts` is `NetworkOnly` (no cache exists for it),
+  bounded by `networkTimeoutSeconds` with the precached `/offline` as the
+  Serwist fallback; only manifest-declared neutral shells are ever cached.
 
 ### Runtime, boot, Docker
 
@@ -373,13 +377,13 @@ SRS §3.19 (desktop). `packages/bridge` (RFC 0083) is the shared device bridge.
 
 ## Tech stack
 
-Next.js 15 (App Router) · TypeScript · Turborepo + pnpm workspaces ·
+Next.js 16 (App Router, Turbopack) · TypeScript · Turborepo + pnpm workspaces ·
 better-auth (`apps/auth`) · Drizzle ORM (SQLite/Postgres) · nodemailer SMTP
 (`packages/mailer`) · CSS Modules + CSS custom properties (`packages/ui`) ·
 `tsup` (ESM only) · Vitest + Testing Library / jsdom (tests in per-dir
 `__tests__/`; root `__tests__/{integration,e2e,visual}/` for later tiers) ·
 Zod (manifest validation) · `citty` + `consola` (`bin/sv` CLI) ·
-`@ducanh2912/next-pwa` · Docker Compose.
+Serwist (service worker, built by `runtime/scripts/build-sw.ts`) · Docker Compose.
 
 ## Monorepo layout
 
@@ -484,7 +488,7 @@ pnpm sv <cmd>           # CLI (seed, backup, restore, plugin add/remove, …)
 
 ## Status
 
-Current platform version: **`0.130.6`**. `ROADMAP.md` is the canonical task
+Current platform version: **`0.131.0`**. `ROADMAP.md` is the canonical task
 queue and completion record; per-release narrative through `0.130.2` is
 archived in `docs/task-history.md`.
 

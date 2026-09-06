@@ -479,14 +479,19 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   `SwipableMobileCarousel`/`SwipableMobileCarouselSlideBody` already account
   for this (see that component's CSS) — a new vertically-scrolling slide body
   should not need to touch `touch-action` at all.
-- **The runtime is an installable PWA** (`@ducanh2912/next-pwa`, PLT-09). The
-  web manifest (`runtime/public/manifest.json`) and PNG icons
-  (`runtime/public/icons/`) are committed **source**; the service worker
-  (`sw.js`, `workbox-*.js`, `fallback-*.js`) is **generated into
-  `runtime/public/` at build** and is gitignored + ignored by ESLint and
-  Prettier — never commit or lint it. The SW is **disabled in dev** (so it
-  never interferes with HMR), so installability/Lighthouse only apply to a
-  production build (`next build`). The PWA assets and the `/offline` fallback
+- **The runtime is an installable PWA** (PLT-09). The web manifest
+  (`runtime/public/manifest.json`) and PNG icons (`runtime/public/icons/`)
+  are committed **source**; the service worker (`runtime/worker/index.ts` +
+  `routes.ts`, on Serwist) is **bundled into `runtime/public/sw.js` by
+  `runtime/scripts/build-sw.ts` after `next build`** — one self-contained
+  script, gitignored + ignored by ESLint and Prettier; never commit or lint
+  it. The build step is bundler-agnostic (it globs `.next/static` for the
+  precache manifest), which is what let the runtime drop the webpack-only
+  `@ducanh2912/next-pwa` and build with Turbopack under Next 16. The SW is
+  **disabled in dev** (nothing builds it, and
+  `app/_components/ServiceWorkerRegistration.tsx` unregisters a stale one so
+  it never interferes with HMR), so installability/Lighthouse only apply to
+  a production build (`pnpm --filter @sovereignfs/runtime build`). The PWA assets and the `/offline` fallback
   are excluded from the middleware session gate (they must load without a
   session). A plugin declaring `installable: true` (RFC 0081) gets its own
   manifest at `/api/manifest/[pluginId]`, nested under the already-reserved,
@@ -526,14 +531,17 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   content to another. This is the guarantee; the mechanism below is how it is
   currently met, and may change as long as the guarantee does not.
 
-  **How it is met today:** the `pages` entry in `runtime/next.config.ts`
-  (real per-user SSR — Console, Account, any plugin without an `offline` tier)
-  never stores a response — try the network, and on any failure fall straight
-  to the generic `/offline` page. (The handler reads `NetworkFirst`, not
-  `NetworkOnly`, only because workbox-build rejects `networkTimeoutSeconds`
-  on any other handler; its `cacheWillUpdate` plugin returns `null`, so
-  nothing is ever written and the effect is `NetworkOnly`.) There is no cached document to
-  ever replay to the wrong user, because none exists. Manifest-declared
+  **How it is met today:** the gated-page route in `runtime/worker/routes.ts`
+  (`isGatedPageNavigation`: every same-origin navigation that isn't an API
+  route or a declared offline shell — Console, Account, any plugin without an
+  `offline` tier) is handled by Serwist's `NetworkOnly`, a strategy with no
+  cache to read or write, bounded by `networkTimeoutSeconds`; on any failure
+  the fallback plugin serves the precached `/offline` page. There is no cached
+  document to ever replay to the wrong user, because none exists. (Under
+  next-pwa this was a `NetworkFirst` whose `cacheWillUpdate` returned `null`,
+  because workbox-build's config schema rejected `networkTimeoutSeconds` on
+  `NetworkOnly`; the route table is real bundled code now, so the strategy
+  can say what it means.) Manifest-declared
   offline routes (`offline: 'offline-first' | 'device-only'`, research 0012)
   are the one exception, cached via the separate `offline-shells` entry — safe
   because that document is required to be a **user-neutral shell** (enforced

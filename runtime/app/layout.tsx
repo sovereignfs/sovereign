@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import type { Metadata, Viewport } from 'next';
 import { Hanken_Grotesk, JetBrains_Mono } from 'next/font/google';
 import { appleSplashScreens } from '@/src/apple-splash';
+import { ServiceWorkerRegistration } from './_components/ServiceWorkerRegistration';
 import { themeScript } from '@/src/theme-script';
 
 const sans = Hanken_Grotesk({
@@ -25,7 +26,8 @@ export const metadata: Metadata = {
   description: 'Your self-hosted workspace.',
   // Installable PWA (SRS §3.11, PLT-09). The dynamic manifest route returns
   // the correct brand name from the DB; the static public/manifest.json is
-  // kept for @ducanh2912/next-pwa build-time tooling only.
+  // the committed baseline (precached by the service worker, pinned by
+  // src/__tests__/pwa-manifest.test.ts).
   manifest: '/api/manifest',
   appleWebApp: {
     capable: true,
@@ -82,6 +84,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
       <body>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <ServiceWorkerRegistration />
         {children}
       </body>
     </html>

@@ -1385,21 +1385,15 @@ describe('middleware matcher', () => {
     },
   );
 
-  // Regression: `worker-<hash>.js` (@ducanh2912/next-pwa's `customWorkerSrc`
-  // output, the RFC 0016 Web Push handler) was missing from the allowlist, so
-  // an unauthenticated request for it 303'd to /login. `sw.js` reaches it via
-  // `importScripts()`, and a redirected `importScripts()` must fail per spec —
-  // which aborts the entire service-worker install, not just push. A logged-out
+  // Regression (from the next-pwa era, when the worker was several chunks):
+  // a worker chunk missing from the allowlist 303'd to /login, and a
+  // redirected worker-script fetch must fail per spec — which aborts the
+  // entire service-worker install, not just the one feature. A logged-out
   // visitor therefore never got a service worker at all, so neither the login
-  // page nor the /offline fallback was ever precached.
-  it.each([
-    '/sw.js',
-    '/worker-fcda3e92b7d22339.js',
-    '/worker-abc123.js',
-    '/workbox-4e0e1e1c.js',
-    '/fallback-ce627215c0e4a9af.js',
-  ])('does not gate the service-worker artifact %s', (pathname) => {
-    expect(matches(pathname)).toBe(false);
+  // page nor the /offline fallback was ever precached. The worker is a single
+  // `sw.js` now (runtime/scripts/build-sw.ts); it must stay exempt.
+  it('does not gate the service-worker script /sw.js', () => {
+    expect(matches('/sw.js')).toBe(false);
   });
 
   it('does not gate the other session-free PWA and auth assets', () => {

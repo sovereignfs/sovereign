@@ -41,10 +41,10 @@ const nextConfig: NextConfig = {
   // in the full node_modules the build ran with. Crashes
   // apps/auth/instrumentation.ts's eager `runAuthMigrations()` at boot with
   // `Cannot find module '@libsql/linux-arm64-musl'` (or the -gnu/-x64
-  // sibling) despite the webpack alias below already stopping Webpack from
-  // trying to bundle this chain — that alias only prevents a *build-time
-  // parse failure* for statically-traceable import paths; it does nothing
-  // for this dynamic, tracer-invisible one. Force-include every platform
+  // sibling) — the bundler never touches this chain (Turbopack externalizes
+  // the native loader; webpack needed an alias to avoid a build-time parse
+  // failure), so the tracer is the only thing that can find these files, and
+  // it can't see this dynamic require. Force-include every platform
   // variant pnpm-workspace.yaml's `supportedArchitectures` now installs.
   outputFileTracingIncludes: {
     '/**': [
@@ -52,21 +52,14 @@ const nextConfig: NextConfig = {
       '../../node_modules/.pnpm/@libsql+darwin-*/node_modules/@libsql/darwin-*/**',
     ],
   },
-  webpack: (config) => {
-    // Drop the native `libsql` package from the server graph (mirrors
-    // runtime/next.config.ts's identical `better-sqlite3` alias). Both
-    // `@libsql/client` (used directly for sqld, RFC 0091) and
-    // `@libsql/kysely-libsql` (its own internally-pinned, older
-    // `@libsql/client`) statically import `libsql` — a native platform
-    // binding — but only ever construct it for `file:`-scheme URLs. This app
-    // only ever connects to sqld over `http(s):` (`getAuthDatabase`,
-    // `getAuthDb` in src/db.ts), so that path is never taken. Without this
-    // alias, Webpack tries to bundle the native addon chain (`libsql` →
-    // `@neon-rs/load` → the platform-specific `@libsql/<target>` binary +
-    // its README) and fails to parse the non-JS files it pulls in.
-    config.resolve.alias = { ...config.resolve.alias, libsql: false };
-    return config;
-  },
+  // Turbopack (Next 16's default). The webpack-era `resolve.alias` that
+  // stubbed out `libsql` (the native addon chain `@libsql/client` and
+  // `@libsql/kysely-libsql` import statically but only construct for
+  // `file:` URLs — this app only connects to sqld over http(s), RFC 0091) is
+  // not needed: Turbopack externalizes the native loader cleanly instead of
+  // parsing the `.node` binaries and READMEs it pulls in. Mirrors
+  // runtime/next.config.ts. The `outputFileTracingIncludes` above is still
+  // required — that is the standalone file tracer, not the bundler.
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

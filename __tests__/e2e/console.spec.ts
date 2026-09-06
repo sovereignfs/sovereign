@@ -38,7 +38,7 @@ test.describe('Console plugin — golden paths', () => {
 
   test('entitlements page renders', async ({ adminPage: page }) => {
     await page.goto('/console/entitlements');
-    await expect(page.getByRole('heading', { name: 'Entitlements' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Entitlements', exact: true })).toBeVisible();
   });
 
   test('broadcast page renders', async ({ adminPage: page }) => {

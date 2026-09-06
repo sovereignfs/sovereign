@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Button, Input, Select, Textarea } from '@sovereignfs/ui';
+import { Alert, Badge, Button, FormField, Input, Select, Textarea } from '@sovereignfs/ui';
 import { deleteLicenseKeyAction, grantLicenseAction, saveLicenseKeyAction } from './actions';
-import styles from './entitlements.module.css';
+import { CopyIdButton } from '../_components/CopyIdButton';
+import styles from '../console.module.css';
 
 const SESSION_KEY = 'sv_gen_privkey';
 
@@ -34,6 +35,9 @@ interface Props {
   storedPublicKeys: Record<string, string>;
 }
 
+type KeySource = 'instance' | 'session' | 'none' | 'manual';
+type Outcome = { ok: boolean; message: string } | null;
+
 function toBase64Url(bytes: Uint8Array): string {
   let b = '';
   for (const byte of bytes) b += String.fromCharCode(byte);
@@ -50,48 +54,55 @@ function resolveStoredKey(pluginId: string, storedKeys: Record<string, string>) 
   return { key: '', source: 'none' as const };
 }
 
+function OutcomeText({ outcome }: { outcome: Outcome }) {
+  if (!outcome) return null;
+  return (
+    <p className={outcome.ok ? styles.feedbackSuccess : styles.feedbackError} role="status">
+      {outcome.message}
+    </p>
+  );
+}
+
+/**
+ * Signs a license token client-side with Ed25519 — the private key never
+ * leaves the browser. Same logic as before this component was rebuilt on
+ * the design system; only the markup, copy and feedback changed.
+ */
 export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys }: Props) {
   const [pluginId, setPluginId] = useState(plugins[0]?.id ?? '');
   const [privateKey, setPrivateKey] = useState('');
-  const [keySource, setKeySource] = useState<'instance' | 'session' | 'none' | 'manual'>('none');
+  const [keySource, setKeySource] = useState<KeySource>('none');
   const [subscriber, setSubscriber] = useState('');
   const [tierId, setTierId] = useState('');
   const [expiry, setExpiry] = useState('');
 
-  // Token generation state
   const [generating, setGenerating] = useState(false);
   const [token, setToken] = useState('');
   const [genError, setGenError] = useState('');
-  const [copied, setCopied] = useState(false);
 
-  // Grant-to-user state
   const [grantUserId, setGrantUserId] = useState('');
   const [granting, setGranting] = useState(false);
-  const [grantResult, setGrantResult] = useState('');
-  const [grantOk, setGrantOk] = useState(false);
+  const [grantOutcome, setGrantOutcome] = useState<Outcome>(null);
 
-  // Instance key save/remove state
   const [savingKey, setSavingKey] = useState(false);
-  const [keyActionResult, setKeyActionResult] = useState('');
-  const [keyActionOk, setKeyActionOk] = useState(false);
+  const [keyOutcome, setKeyOutcome] = useState<Outcome>(null);
 
-  // Keypair generation state
   const [generatingKeypair, setGeneratingKeypair] = useState(false);
   const [generatedPubKey, setGeneratedPubKey] = useState('');
   const [showKeygen, setShowKeygen] = useState(false);
-  const [pubKeyCopied, setPubKeyCopied] = useState(false);
 
   const isFirstRender = useRef(true);
 
-  // On mount: restore key for the initial plugin from instance storage or sessionStorage.
-  // Empty deps is intentional — storedKeys and plugins are stable server-rendered props;
-  // reading them here (rather than in state initialisers) avoids SSR/browser mismatch.
+  // On mount: restore the key for the initial plugin from instance storage or
+  // sessionStorage. Read here (never in a state initializer) so the server
+  // and first client render agree.
   useEffect(() => {
     const { key, source } = resolveStoredKey(plugins[0]?.id ?? '', storedKeys);
     if (key) {
       setPrivateKey(key);
       setKeySource(source);
     }
+    // Mount-only by design: plugins/storedKeys are stable server-rendered props.
   }, []);
 
   const selectedPlugin = plugins.find((p) => p.id === pluginId);
@@ -99,21 +110,14 @@ export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys 
   function resetToken() {
     setToken('');
     setGenError('');
-    setGrantResult('');
-    setGrantOk(false);
+    setGrantOutcome(null);
   }
 
-  function resetKeyActionResult() {
-    setKeyActionResult('');
-    setKeyActionOk(false);
-  }
-
-  function fillPrivateKey(val: string, source: typeof keySource) {
+  function fillPrivateKey(val: string, source: KeySource) {
     setPrivateKey(val);
     setKeySource(source);
     resetToken();
-    resetKeyActionResult();
-    // Mirror to sessionStorage so it survives page navigations in this tab.
+    setKeyOutcome(null);
     const trimmed = val.trim();
     if (trimmed && source !== 'instance') {
       sessionStorage.setItem(SESSION_KEY, trimmed);
@@ -128,8 +132,7 @@ export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys 
     setShowKeygen(false);
     setGeneratedPubKey('');
     resetToken();
-    resetKeyActionResult();
-    // Skip on first render (handled by mount effect above).
+    setKeyOutcome(null);
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
@@ -139,55 +142,53 @@ export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys 
     setKeySource(key ? source : 'none');
   }
 
-  function handlePrivKeyChange(val: string) {
-    fillPrivateKey(val, 'manual');
-  }
-
   function clearSessionKey() {
     sessionStorage.removeItem(SESSION_KEY);
     setPrivateKey('');
     setKeySource('none');
     resetToken();
-    resetKeyActionResult();
+    setKeyOutcome(null);
   }
 
   async function saveKeyToInstance() {
     if (!privateKey.trim()) return;
     setSavingKey(true);
-    resetKeyActionResult();
+    setKeyOutcome(null);
     try {
-      // Pass the generated public key when available so the verifier can use it
-      // without requiring a manifest update (supports key rotation post-deploy).
+      // Pass the generated public key when available so the verifier can use
+      // it without a manifest update (supports key rotation post-deploy).
       const result = await saveLicenseKeyAction(
         pluginId,
         privateKey.trim(),
         generatedPubKey || undefined,
       );
-      setKeyActionOk(result.ok);
-      setKeyActionResult(result.ok ? 'Saved to instance.' : (result.error ?? 'Unknown error.'));
+      setKeyOutcome({
+        ok: result.ok,
+        message: result.ok ? 'Key saved to this instance.' : (result.error ?? 'Unknown error.'),
+      });
       if (result.ok) setKeySource('instance');
     } catch {
-      setKeyActionResult('Network error saving key.');
-      setKeyActionOk(false);
+      setKeyOutcome({ ok: false, message: 'Network error saving the key.' });
     } finally {
       setSavingKey(false);
     }
   }
 
   async function removeFromInstance() {
-    resetKeyActionResult();
+    setKeyOutcome(null);
     try {
       const result = await deleteLicenseKeyAction(pluginId);
-      setKeyActionOk(result.ok);
-      setKeyActionResult(result.ok ? 'Removed from instance.' : (result.error ?? 'Unknown error.'));
+      setKeyOutcome({
+        ok: result.ok,
+        message: result.ok ? 'Key removed from this instance.' : (result.error ?? 'Unknown error.'),
+      });
       if (result.ok) {
         setPrivateKey('');
         setKeySource('none');
         sessionStorage.removeItem(SESSION_KEY);
       }
     } catch {
-      setKeyActionResult('Network error removing key.');
-      setKeyActionOk(false);
+      setKeyOutcome({ ok: false, message: 'Network error removing the key.' });
     }
   }
 
@@ -200,24 +201,15 @@ export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys 
         crypto.subtle.exportKey('jwk', pair.privateKey) as Promise<JsonWebKey>,
         crypto.subtle.exportKey('jwk', pair.publicKey) as Promise<JsonWebKey>,
       ]);
-      const d = privJwk.d ?? '';
-      const x = pubJwk.x ?? '';
-      setGeneratedPubKey(x);
+      setGeneratedPubKey(pubJwk.x ?? '');
       setShowKeygen(true);
-      // Auto-fill the private key — treat as 'manual' so it can be saved to instance.
-      fillPrivateKey(d, 'manual');
+      // Auto-fill the private key — treated as 'manual' so it can be saved to the instance.
+      fillPrivateKey(privJwk.d ?? '', 'manual');
     } catch (err: unknown) {
-      setGenError(err instanceof Error ? err.message : 'Failed to generate keypair.');
+      setGenError(err instanceof Error ? err.message : 'Failed to generate a keypair.');
     } finally {
       setGeneratingKeypair(false);
     }
-  }
-
-  async function copyPubKey() {
-    if (!generatedPubKey) return;
-    await navigator.clipboard.writeText(generatedPubKey);
-    setPubKeyCopied(true);
-    setTimeout(() => setPubKeyCopied(false), 2000);
   }
 
   async function generate() {
@@ -241,9 +233,8 @@ export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys 
     setGenerating(true);
     try {
       const privD = privateKey.trim();
-      // Use the generated public key when a fresh keypair was produced in this session —
-      // it forms a valid pair with the auto-filled private key. Fall back to the manifest
-      // key when no in-browser generation happened (operator pasted an existing key).
+      // A keypair generated in this session forms a valid pair with the
+      // auto-filled private key; otherwise the manifest's public key applies.
       const pubX = generatedPubKey || selectedPlugin.publicKey;
       const now = Math.floor(Date.now() / 1000);
       const payloadObj: Record<string, unknown> = {
@@ -254,9 +245,7 @@ export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys 
       if (expiry) payloadObj.expiresAt = Math.floor(new Date(expiry).getTime() / 1000);
       if (tierId) payloadObj.tier = tierId;
 
-      // Encode the JSON payload as base64url.
       const payloadB64 = toBase64Url(new TextEncoder().encode(JSON.stringify(payloadObj)));
-
       // The signature covers the UTF-8 bytes of the base64url string itself —
       // matching what runtime/src/license.ts verifies with Buffer.from(payloadB64).
       const sigInput = new TextEncoder().encode(payloadB64);
@@ -276,31 +265,25 @@ export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys 
       const msg = err instanceof Error ? err.message : '';
       setGenError(
         msg ||
-          'Failed to sign token. Verify the private key is a valid Ed25519 d value (base64url).',
+          'Failed to sign the token. Check that the private key is a valid Ed25519 d value (base64url).',
       );
     } finally {
       setGenerating(false);
     }
   }
 
-  async function copyToken() {
-    if (!token) return;
-    await navigator.clipboard.writeText(token);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
   async function grantToUser() {
     if (!token || !grantUserId || !pluginId) return;
-    setGrantResult('');
-    setGrantOk(false);
+    setGrantOutcome(null);
     setGranting(true);
     try {
       const result = await grantLicenseAction(token, grantUserId, pluginId);
-      setGrantOk(result.ok);
-      setGrantResult(result.ok ? 'Entitlement saved.' : (result.error ?? 'Unknown error.'));
+      setGrantOutcome({
+        ok: result.ok,
+        message: result.ok ? 'Entitlement saved.' : (result.error ?? 'Unknown error.'),
+      });
     } catch {
-      setGrantResult('Network error saving entitlement.');
+      setGrantOutcome({ ok: false, message: 'Network error saving the entitlement.' });
     } finally {
       setGranting(false);
     }
@@ -309,24 +292,30 @@ export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys 
   if (plugins.length === 0) return null;
 
   const canSaveToInstance = privateKey.trim() !== '' && keySource !== 'instance';
+  const keypairPending =
+    generatedPubKey &&
+    selectedPlugin &&
+    generatedPubKey !== selectedPlugin.publicKey &&
+    generatedPubKey !== storedPublicKeys[pluginId];
 
   return (
-    <div aria-label="Generate license token">
-      <h2 className={styles.generatorTitle}>Generate license token</h2>
-      <p className={styles.generatorHint}>
-        Signs a token client-side using Ed25519 — your private key never leaves the browser.
-        Requires Chrome&nbsp;113+, Firefox&nbsp;130+, or Safari&nbsp;17+.
+    <div className={styles.fieldStack} aria-label="Generate license token">
+      <p className={styles.lede}>
+        Signs a token in your browser with Ed25519 — the private key never leaves it. Needs Chrome
+        113+, Firefox 130+ or Safari 17+.
       </p>
 
-      <div className={styles.generatorBody}>
-        <div className={styles.generatorForm}>
-          {/* Plugin selector */}
-          <div className={styles.generatorRow}>
-            <label htmlFor="gen-plugin" className={styles.generatorLabel}>
-              App
-            </label>
+      <form
+        className={styles.settingsForm}
+        onSubmit={(event) => {
+          event.preventDefault();
+          void generate();
+        }}
+      >
+        <FormField label="App" id="gen-plugin">
+          {(field) => (
             <Select
-              id="gen-plugin"
+              {...field}
               value={pluginId}
               onChange={(e) => handlePluginChange(e.target.value)}
             >
@@ -336,193 +325,156 @@ export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys 
                 </option>
               ))}
             </Select>
-          </div>
-
-          {/* Keypair generator trigger */}
-          <div className={styles.keygenTriggerRow}>
-            <button
-              type="button"
-              className={styles.keygenTriggerBtn}
-              onClick={() => void generateKeypair()}
-              disabled={generatingKeypair}
-            >
-              <svg
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <polyline points="16 3 21 3 21 8" />
-                <line x1="4" y1="20" x2="21" y2="3" />
-                <polyline points="21 16 21 21 16 21" />
-                <line x1="15" y1="15" x2="21" y2="21" />
-              </svg>
-              {generatingKeypair ? 'Generating…' : 'Generate new keypair'}
-            </button>
-            <span className={styles.generatorMeta}>
-              Creates a fresh Ed25519 pair and auto-fills the private key above.
-            </span>
-          </div>
-
-          {/* Generated public key panel */}
-          {showKeygen && generatedPubKey && (
-            <div className={styles.keygenPanel}>
-              <div className={styles.keygenPanelHeader}>
-                <p className={styles.keygenPanelTitle}>New keypair generated</p>
-                <button
-                  type="button"
-                  className={styles.generatorToggle}
-                  onClick={() => setShowKeygen(false)}
-                  aria-label="Dismiss keypair panel"
-                >
-                  ✕
-                </button>
-              </div>
-              <div className={styles.generatorRow}>
-                <div className={styles.generatorLabelRow}>
-                  <label className={styles.generatorLabel}>
-                    Public key{' '}
-                    <span className={styles.generatorMeta}>
-                      (add to manifest.json → monetization.license.publicKey)
-                    </span>
-                  </label>
-                  <button
-                    type="button"
-                    className={styles.generatorToggle}
-                    onClick={() => void copyPubKey()}
-                  >
-                    {pubKeyCopied ? 'Copied!' : 'Copy'}
-                  </button>
-                </div>
-                <Textarea
-                  readOnly
-                  className={styles.generatorMono}
-                  value={generatedPubKey}
-                  rows={2}
-                  aria-label="Generated public key"
-                  onClick={(e) => (e.target as HTMLTextAreaElement).select()}
-                />
-              </div>
-              <p className={styles.keygenNote}>
-                The private key has been auto-filled below. Click <strong>Save to instance</strong>{' '}
-                to store it in the platform database so it auto-fills on any device.
-              </p>
-            </div>
           )}
+        </FormField>
 
-          {/* Private key input */}
-          <div className={styles.generatorRow}>
-            <div className={styles.generatorLabelRow}>
-              <label htmlFor="gen-privkey" className={styles.generatorLabel}>
-                Private key{' '}
-                <span className={styles.generatorMeta}>
-                  (d value from JWK — public key is taken from the manifest)
-                </span>
-              </label>
-              <div className={styles.keyBadges}>
-                {keySource === 'instance' && (
-                  <>
-                    <span className={styles.keyStoredBadge}>Stored on instance</span>
-                    <button
-                      type="button"
-                      className={styles.clearKeyBtn}
-                      onClick={() => void removeFromInstance()}
-                    >
-                      Remove
-                    </button>
-                  </>
-                )}
-                {keySource === 'session' && (
-                  <>
-                    <span className={styles.keySavedNote}>Saved for this session</span>
-                    <button type="button" className={styles.clearKeyBtn} onClick={clearSessionKey}>
-                      Clear
-                    </button>
-                  </>
-                )}
-                {canSaveToInstance && (
-                  <button
-                    type="button"
-                    className={styles.saveKeyBtn}
-                    onClick={() => void saveKeyToInstance()}
-                    disabled={savingKey}
-                  >
-                    {savingKey ? 'Saving…' : 'Save to instance'}
-                  </button>
-                )}
-              </div>
-            </div>
+        <div className={styles.rowActions}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => void generateKeypair()}
+            disabled={generatingKeypair}
+          >
+            {generatingKeypair ? 'Generating…' : 'Generate new keypair'}
+          </Button>
+          <span className={styles.helpText}>
+            Creates a fresh Ed25519 pair and fills in the private key below.
+          </span>
+        </div>
+
+        {showKeygen && generatedPubKey && (
+          <div className={styles.successBox} role="status">
+            <p>
+              <strong>New keypair generated.</strong> Add the public key to the app&apos;s{' '}
+              <code className={styles.codeInline}>
+                manifest.json → monetization.license.publicKey
+              </code>
+              , or save both keys to this instance so tokens verify without a manifest change.
+            </p>
+            <p className={styles.tokenNote}>
+              <code className={styles.token}>{generatedPubKey}</code>{' '}
+              <CopyIdButton value={generatedPubKey} label="Copy public key" />
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className={styles.selfStart}
+              onClick={() => setShowKeygen(false)}
+            >
+              Dismiss
+            </Button>
+          </div>
+        )}
+
+        <FormField
+          label="Private key"
+          id="gen-privkey"
+          hint="The d value from the JWK, base64url. The public key comes from the manifest unless you generated a pair above."
+        >
+          {(field) => (
             <Textarea
-              id="gen-privkey"
-              className={styles.generatorMono}
+              {...field}
               value={privateKey}
-              onChange={(e) => handlePrivKeyChange(e.target.value)}
+              onChange={(e) => fillPrivateKey(e.target.value, 'manual')}
               rows={2}
               autoComplete="off"
               spellCheck={false}
-              placeholder="Base64url d value, e.g. TjwqILr7pqij4iX5fyAwRtgggduXDJD2hBBu_4OgpKU"
+              placeholder="e.g. TjwqILr7pqij4iX5fyAwRtgggduXDJD2hBBu_4OgpKU"
             />
-            {keyActionResult && (
-              <p
-                className={keyActionOk ? styles.generatorSuccess : styles.generatorError}
-                role="alert"
+          )}
+        </FormField>
+        <div className={styles.rowActions}>
+          {keySource === 'instance' && (
+            <>
+              <Badge variant="status" size="sm" status="active">
+                Stored on this instance
+              </Badge>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => void removeFromInstance()}
               >
-                {keyActionResult}
-              </p>
-            )}
-          </div>
+                Remove from instance
+              </Button>
+            </>
+          )}
+          {keySource === 'session' && (
+            <>
+              <Badge variant="status" size="sm" status="pending">
+                Kept for this session
+              </Badge>
+              <Button type="button" variant="secondary" size="sm" onClick={clearSessionKey}>
+                Clear
+              </Button>
+            </>
+          )}
+          {canSaveToInstance && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void saveKeyToInstance()}
+              disabled={savingKey}
+            >
+              {savingKey ? 'Saving…' : 'Save to instance'}
+            </Button>
+          )}
+        </div>
+        <OutcomeText outcome={keyOutcome} />
 
-          {/* Subscriber */}
-          <div className={styles.generatorRow}>
-            <label htmlFor="gen-sub" className={styles.generatorLabel}>
-              Subscriber
-            </label>
+        <FormField
+          label="Subscriber"
+          id="gen-sub"
+          hint="Email address or instance domain."
+          required
+        >
+          {(field) => (
             <Input
-              id="gen-sub"
+              {...field}
               type="text"
               value={subscriber}
               onChange={(e) => {
                 setSubscriber(e.target.value);
                 resetToken();
               }}
-              placeholder="Email or instance domain"
+              required
             />
-          </div>
+          )}
+        </FormField>
 
-          {selectedPlugin && selectedPlugin.tiers.length > 0 && (
-            <div className={styles.generatorRow}>
-              <label htmlFor="gen-tier" className={styles.generatorLabel}>
-                Tier <span className={styles.generatorMeta}>(optional)</span>
-              </label>
+        {selectedPlugin && selectedPlugin.tiers.length > 0 && (
+          <FormField label="Tier (optional)" id="gen-tier">
+            {(field) => (
               <Select
-                id="gen-tier"
+                {...field}
                 value={tierId}
                 onChange={(e) => {
                   setTierId(e.target.value);
                   resetToken();
                 }}
               >
-                <option value="">— no specific tier —</option>
+                <option value="">No specific tier</option>
                 {selectedPlugin.tiers.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
                   </option>
                 ))}
               </Select>
-            </div>
-          )}
+            )}
+          </FormField>
+        )}
 
-          <div className={styles.generatorRow}>
-            <label htmlFor="gen-expiry" className={styles.generatorLabel}>
-              Expiry <span className={styles.generatorMeta}>(leave blank for perpetual)</span>
-            </label>
+        <FormField
+          label="Expiry (optional)"
+          id="gen-expiry"
+          hint="Leave blank for a perpetual license."
+        >
+          {(field) => (
             <Input
-              id="gen-expiry"
+              {...field}
               type="date"
               value={expiry}
               onChange={(e) => {
@@ -530,94 +482,50 @@ export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys 
                 resetToken();
               }}
             />
-          </div>
-
-          {generatedPubKey &&
-            selectedPlugin &&
-            generatedPubKey !== selectedPlugin.publicKey &&
-            generatedPubKey !== storedPublicKeys[pluginId] && (
-              <div className={styles.generatorWarn} role="status">
-                <p className={styles.generatorWarnText}>
-                  ⚠️ New keypair not yet active — click <strong>Save to instance</strong> to store
-                  both keys. Tokens will verify without any manifest update.
-                </p>
-                {!showKeygen && (
-                  <div className={styles.generatorWarnKey}>
-                    <span className={styles.generatorLabel}>Public key (for your records)</span>
-                    <div className={styles.generatorLabelRow}>
-                      <Textarea
-                        readOnly
-                        className={styles.generatorMono}
-                        value={generatedPubKey}
-                        rows={2}
-                        aria-label="Generated public key"
-                        onClick={(e) => (e.target as HTMLTextAreaElement).select()}
-                      />
-                      <button
-                        type="button"
-                        className={styles.generatorToggle}
-                        onClick={() => {
-                          void navigator.clipboard.writeText(generatedPubKey);
-                          setPubKeyCopied(true);
-                          setTimeout(() => setPubKeyCopied(false), 2000);
-                        }}
-                      >
-                        {pubKeyCopied ? 'Copied!' : 'Copy'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-          {genError && (
-            <p className={styles.generatorError} role="alert">
-              {genError}
-            </p>
           )}
+        </FormField>
 
-          <Button type="button" onClick={() => void generate()} disabled={generating}>
-            {generating ? 'Signing…' : 'Generate token'}
-          </Button>
-        </div>
+        {keypairPending && (
+          <Alert variant="warning">
+            The new keypair is not active yet — choose <strong>Save to instance</strong> to store
+            both keys. Tokens then verify without a manifest update.
+          </Alert>
+        )}
 
-        {token && (
-          <div className={styles.generatorResult}>
-            <div className={styles.generatorResultHeader}>
-              <p className={styles.generatorResultLabel}>Signed token</p>
-              <button
-                type="button"
-                className={styles.generatorToggle}
-                onClick={() => void copyToken()}
-              >
-                {copied ? 'Copied!' : 'Copy'}
-              </button>
-            </div>
-            <Textarea
-              readOnly
-              className={styles.generatorMono}
-              value={token}
-              rows={4}
-              aria-label="Generated license token"
-              onClick={(e) => (e.target as HTMLTextAreaElement).select()}
-            />
+        {genError && (
+          <p className={styles.feedbackError} role="status">
+            {genError}
+          </p>
+        )}
 
-            {users.length > 0 && (
-              <div className={styles.grantRow}>
-                <label htmlFor="gen-grant-user" className={styles.generatorLabel}>
-                  Grant directly to user
-                </label>
-                <div className={styles.grantControls}>
+        <Button type="submit" disabled={generating}>
+          {generating ? 'Signing…' : 'Generate token'}
+        </Button>
+      </form>
+
+      {token && (
+        <div className={styles.successBox} role="status">
+          <p>
+            <strong>Signed token</strong> — copy it for the subscriber, or grant it directly below.
+          </p>
+          <p className={styles.tokenNote}>
+            <code className={styles.token}>{token}</code>{' '}
+            <CopyIdButton value={token} label="Copy license token" />
+          </p>
+
+          {users.length > 0 && (
+            <div className={styles.fieldStack}>
+              <FormField label="Grant directly to a person" id="gen-grant-user">
+                {(field) => (
                   <Select
-                    id="gen-grant-user"
+                    {...field}
                     value={grantUserId}
                     onChange={(e) => {
                       setGrantUserId(e.target.value);
-                      setGrantResult('');
-                      setGrantOk(false);
+                      setGrantOutcome(null);
                     }}
                   >
-                    <option value="">— select user —</option>
+                    <option value="">Choose a person…</option>
                     {users.map((u) => (
                       <option key={u.id} value={u.id}>
                         {u.email}
@@ -625,27 +533,23 @@ export function LicenseGenerator({ plugins, users, storedKeys, storedPublicKeys 
                       </option>
                     ))}
                   </Select>
-                  <Button
-                    type="button"
-                    onClick={() => void grantToUser()}
-                    disabled={granting || !grantUserId}
-                  >
-                    {granting ? 'Saving…' : 'Save entitlement'}
-                  </Button>
-                </div>
-                {grantResult && (
-                  <p
-                    className={grantOk ? styles.generatorSuccess : styles.generatorError}
-                    role="alert"
-                  >
-                    {grantResult}
-                  </p>
                 )}
+              </FormField>
+              <div className={styles.rowActions}>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => void grantToUser()}
+                  disabled={granting || !grantUserId}
+                >
+                  {granting ? 'Saving…' : 'Save entitlement'}
+                </Button>
               </div>
-            )}
-          </div>
-        )}
-      </div>
+              <OutcomeText outcome={grantOutcome} />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

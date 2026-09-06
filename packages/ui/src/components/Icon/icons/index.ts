@@ -96,6 +96,9 @@ import { ShoppingBasketIcon } from './shopping-basket';
 import { PanelLeftIcon } from './panel-left';
 import { PinIcon } from './pin';
 import { CreditCardIcon } from './credit-card';
+import { BanIcon } from './ban';
+import { ShieldOffIcon } from './shield-off';
+import { UserXIcon } from './user-x';
 
 export type IconName =
   | 'house'
@@ -193,7 +196,10 @@ export type IconName =
   | 'shopping-basket'
   | 'panel-left'
   | 'pin'
-  | 'credit-card';
+  | 'credit-card'
+  | 'ban'
+  | 'shield-off'
+  | 'user-x';
 
 export type IconComponent = (props: SVGProps<SVGSVGElement>) => ReactElement;
 
@@ -294,6 +300,9 @@ export const ICONS: Record<IconName, IconComponent> = {
   'panel-left': PanelLeftIcon,
   pin: PinIcon,
   'credit-card': CreditCardIcon,
+  ban: BanIcon,
+  'shield-off': ShieldOffIcon,
+  'user-x': UserXIcon,
 };
 
 export { HouseIcon } from './house';
@@ -392,3 +401,6 @@ export { ShoppingBasketIcon } from './shopping-basket';
 export { PanelLeftIcon } from './panel-left';
 export { PinIcon } from './pin';
 export { CreditCardIcon } from './credit-card';
+export { BanIcon } from './ban';
+export { ShieldOffIcon } from './shield-off';
+export { UserXIcon } from './user-x';

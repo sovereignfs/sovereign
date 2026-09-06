@@ -251,6 +251,12 @@ each: `docs/architecture-rules.md`.
   or the CSRF check returns 403.
 - **`session.freshAge: 0`** in `apps/auth/src/auth.ts` — don't re-enable without
   a re-auth flow (regression test asserts this).
+- **A better-auth bump is verified against a populated store, never only a
+  fresh one** — its migrator refuses to add a required column to a table with
+  rows (`UnsafeMigrationError` at auth boot). 1.7.0–1.7.2 are skipped for
+  exactly this (`account.issuer`, reverted upstream in 1.7.3); the genuine
+  cookie fixtures in `session-verify.test.ts` guard the offline-verified
+  cookie format.
 - **Profile self-mutations clear both `session_data` cookie variants**
   (`better-auth.session_data`, `__Secure-better-auth.session_data`, `maxAge: 0`).
 - **Invite-only is dual-written; the auth-server copy is authoritative.**
@@ -472,7 +478,7 @@ pnpm sv <cmd>           # CLI (seed, backup, restore, plugin add/remove, …)
 
 ## Status
 
-Current platform version: **`0.130.2`**. `ROADMAP.md` is the canonical task
+Current platform version: **`0.130.3`**. `ROADMAP.md` is the canonical task
 queue and completion record; per-release narrative through `0.130.2` is
 archived in `docs/task-history.md`.
 

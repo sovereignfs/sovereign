@@ -1,6 +1,6 @@
 {
   "name": "sovereign",
-  "version": "0.130.2",
+  "version": "0.130.3",
   "private": true,
   "type": "module",
   "description": "Sovereign — a modular, self-hostable workspace runtime.",
@@ -69,7 +69,7 @@
     "@types/node": "catalog:",
     "@types/semver": "catalog:",
     "age-encryption": "catalog:",
-    "better-auth": "^1.6.25",
+    "better-auth": "~1.6.30",
     "better-sqlite3-multiple-ciphers": "catalog:",
     "citty": "^0.2.2",
     "consola": "^3.4.2",

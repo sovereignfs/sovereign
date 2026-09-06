@@ -1,5 +1,5 @@
 import { sdk } from '@sovereignfs/sdk';
-import styles from '../console.module.css';
+import { EmptyState } from '@sovereignfs/ui';
 import { OAuthClientsClient } from './OAuthClientsClient';
 
 /**
@@ -16,28 +16,27 @@ import { OAuthClientsClient } from './OAuthClientsClient';
  * hook (apps/auth/src/auth.ts) re-checks the caller's role server-side on
  * every request — this page's gate is a UX convenience, not the security
  * boundary.
+ *
+ * The selection (`?client=`) is read here, like Users/Groups, and handed to
+ * the client component that owns the (browser-session-fetched) list.
  */
-export default async function OAuthClientsPage() {
+export default async function OAuthClientsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ client?: string }>;
+}) {
+  const { client: selectedClientId } = await searchParams;
   const session = await sdk.auth.getSession();
   const canManage = sdk.auth.hasCapability(session, 'instance:configure');
 
-  return (
-    <div className={styles.sections}>
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>External OAuth clients</h2>
-        <p className={styles.help}>
-          Let a standalone app on its own domain — not an app installed on this Sovereign instance —
-          offer &ldquo;log in with Sovereign&rdquo; against this instance. Client secrets are shown
-          exactly once and stored hashed; they cannot be recovered later, only rotated.
-        </p>
-        {canManage ? (
-          <OAuthClientsClient />
-        ) : (
-          <p className={styles.help}>
-            You need admin access to register or manage external OAuth clients.
-          </p>
-        )}
-      </section>
-    </div>
-  );
+  if (!canManage) {
+    return (
+      <EmptyState
+        heading="Admin access required"
+        description="Only an instance owner or admin can register or manage external clients."
+      />
+    );
+  }
+
+  return <OAuthClientsClient selectedClientId={selectedClientId ?? null} />;
 }

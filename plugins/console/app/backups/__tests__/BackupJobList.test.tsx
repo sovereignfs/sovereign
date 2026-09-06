@@ -61,7 +61,7 @@ describe('BackupJobList', () => {
     expect(screen.getByText('No backups yet')).toBeTruthy();
   });
 
-  it('shows a download button for a complete job', () => {
+  it('shows a download link for a complete job', () => {
     render(
       <BackupJobList
         initialJobs={[
@@ -73,12 +73,13 @@ describe('BackupJobList', () => {
         ]}
       />,
     );
-    expect(screen.getByRole('button', { name: 'Download' })).toBeTruthy();
+    const link = screen.getByRole('link', { name: 'Download' }) as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toBe('/api/backup-jobs/job-1/download/tok');
   });
 
-  it('shows no download button for a job that is not complete', () => {
+  it('shows no download link for a job that is not complete', () => {
     render(<BackupJobList initialJobs={[job({ status: 'running' })]} />);
-    expect(screen.queryByRole('button', { name: 'Download' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Download' })).toBeNull();
   });
 
   it('polls an in-flight job and reflects a transition to complete', async () => {
@@ -103,7 +104,7 @@ describe('BackupJobList', () => {
     await waitFor(() => expect(getInstanceBackupJobStatusAction).toHaveBeenCalledTimes(1));
 
     await vi.advanceTimersByTimeAsync(3000);
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Download' })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Download' })).toBeTruthy());
     expect(getInstanceBackupJobStatusAction).toHaveBeenCalledTimes(2);
   });
 
@@ -141,6 +142,6 @@ describe('BackupJobList', () => {
 
     // Two distinct job rows now render — the list re-adopted the new prop's
     // second entry rather than staying frozen on the single job it mounted with.
-    expect(screen.getAllByText('queued')).toHaveLength(2);
+    expect(screen.getAllByText('Queued')).toHaveLength(2);
   });
 });

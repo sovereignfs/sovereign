@@ -2,7 +2,21 @@
 
 import Link from 'next/link';
 import { useActionState, useMemo, useState } from 'react';
-import { Badge, Button, FormField, Icon, Menu, Select, type MenuEntry } from '@sovereignfs/ui';
+import {
+  Badge,
+  Button,
+  Checkbox,
+  FormField,
+  Icon,
+  Menu,
+  type MenuEntry,
+  SegmentedControl,
+  Select,
+  Tooltip,
+  useToast,
+} from '@sovereignfs/ui';
+import { SearchBar } from '../_components/SearchBar';
+import { AppEnabledBadge } from '../_components/badges';
 import {
   activatePluginAction,
   setPluginAccessPolicyAction,
@@ -80,12 +94,7 @@ function StatusBadge({ status }: { status: PluginStatus }) {
       </Badge>
     );
   }
-  if (status === 'enabled') return <Badge variant="role">Enabled</Badge>;
-  return (
-    <Badge variant="status" status="deactivated">
-      Disabled
-    </Badge>
-  );
+  return <AppEnabledBadge enabled={status === 'enabled'} />;
 }
 
 /** Shown in place of a row/card's normal actions right after activation, until the admin picks an initial policy or dismisses. */
@@ -101,6 +110,7 @@ function ActivatedPolicyPrompt({
   const [policy, setPolicy] = useState<PluginAccessPolicyValue>('disabled');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const toast = useToast();
 
   async function save(nextPolicy: PluginAccessPolicyValue) {
     setSaving(true);
@@ -109,18 +119,24 @@ function ActivatedPolicyPrompt({
       fd.set('pluginId', pluginId);
       fd.set('accessPolicy', nextPolicy);
       fd.set('selfService', 'false');
-      await setPluginAccessPolicyAction(fd);
-      setPolicy(nextPolicy);
-      setSaved(true);
+      const result = await setPluginAccessPolicyAction(fd);
+      if (result.ok) {
+        setPolicy(nextPolicy);
+        setSaved(true);
+      } else {
+        toast.show({
+          title: 'Could not save access policy',
+          message: result.error,
+          category: 'error',
+        });
+      }
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div
-      style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sv-space-2)', minWidth: 220 }}
-    >
+    <div className={styles.activatedPrompt}>
       <p className={styles.textMuted}>
         <strong>{pluginName}</strong> is now active but disabled — nobody can open it yet.
       </p>
@@ -281,38 +297,12 @@ function DesktopRow({ row, justActivated, onActivated, onDismissActivated, selec
                   type="submit"
                   disabled={togglePending}
                   className={row.status === 'enabled' ? styles.iconBtn : styles.iconBtnReactivate}
+                  aria-label={
+                    row.status === 'enabled' ? `Disable ${row.name}` : `Enable ${row.name}`
+                  }
                   title={row.status === 'enabled' ? 'Disable app' : 'Enable app'}
                 >
-                  {row.status === 'enabled' ? (
-                    <svg
-                      width="15"
-                      height="15"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-                    </svg>
-                  ) : (
-                    <svg
-                      width="15"
-                      height="15"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  )}
+                  <Icon name={row.status === 'enabled' ? 'ban' : 'check'} size="sm" aria-hidden />
                 </button>
               </form>
             )}
@@ -322,17 +312,25 @@ function DesktopRow({ row, justActivated, onActivated, onDismissActivated, selec
             )}
 
             {row.openableByViewer ? (
-              <a href={row.routePrefix} className={styles.iconBtn} title="Open">
+              <a
+                href={row.routePrefix}
+                className={styles.iconBtn}
+                aria-label={`Open ${row.name}`}
+                title="Open"
+              >
                 <Icon name="external-link" size="sm" aria-hidden />
               </a>
             ) : (
-              <span
-                className={styles.iconBtn}
-                style={{ opacity: 0.5, cursor: 'not-allowed' }}
-                title="Open — restricted by this app's access policy"
-              >
-                <Icon name="external-link" size="sm" aria-hidden />
-              </span>
+              <Tooltip content="You can't open this app under its current access policy.">
+                <button
+                  type="button"
+                  className={styles.iconBtnDisabled}
+                  aria-disabled="true"
+                  aria-label={`Open ${row.name} (not allowed by its access policy)`}
+                >
+                  <Icon name="external-link" size="sm" aria-hidden />
+                </button>
+              </Tooltip>
             )}
 
             {canRemove && <RemovePluginButton pluginId={row.id} pluginName={row.name} />}
@@ -427,9 +425,9 @@ function MobileCard({ row, justActivated, onActivated, onDismissActivated }: Row
                 name="enabled"
                 value={row.status === 'enabled' ? 'false' : 'true'}
               />
-              <button type="submit" disabled={togglePending} className={styles.pluginCardBtnToggle}>
+              <Button type="submit" variant="secondary" size="sm" disabled={togglePending}>
                 {togglePending ? '…' : row.status === 'enabled' ? 'Disable' : 'Enable'}
-              </button>
+              </Button>
             </form>
           )}
 
@@ -439,14 +437,17 @@ function MobileCard({ row, justActivated, onActivated, onDismissActivated }: Row
               Open
             </a>
           ) : (
-            <span
-              className={styles.pluginCardBtnToggle}
-              style={{ opacity: 0.5, cursor: 'not-allowed' }}
-              title="You are not currently allowed to open this app under its access policy."
-            >
-              <Icon name="external-link" size="sm" aria-hidden />
-              Open
-            </span>
+            <Tooltip content="You can't open this app under its current access policy.">
+              <button
+                type="button"
+                className={styles.pluginCardBtnToggle}
+                aria-disabled="true"
+                disabled
+              >
+                <Icon name="external-link" size="sm" aria-hidden />
+                Open
+              </button>
+            </Tooltip>
           )}
 
           {menuItems.length > 0 && (
@@ -514,42 +515,28 @@ function FilterBar({
 }) {
   return (
     <div className={styles.pluginFilterBar}>
-      <div className={styles.activitySearchBar}>
-        <Icon name="search" size="sm" aria-hidden />
-        <input
-          type="search"
-          placeholder="Search apps…"
-          value={query}
-          onChange={(e) => onQuery(e.target.value)}
-          className={styles.activitySearchInput}
-          aria-label="Search apps"
-        />
-        <span className={styles.activitySearchCount}>
-          {shown} of {total}
-        </span>
-      </div>
+      <SearchBar
+        value={query}
+        onChange={(e) => onQuery(e.target.value)}
+        placeholder="Search apps…"
+        aria-label="Search apps"
+        count={`${shown} of ${total}`}
+      />
 
-      <div className={styles.pluginStatusPills}>
-        {STATUS_FILTERS.map((f) => (
-          <button
-            key={f.value}
-            type="button"
-            className={status === f.value ? styles.pluginStatusPillActive : styles.pluginStatusPill}
-            onClick={() => onStatus(f.value)}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        size="sm"
+        aria-label="Filter apps by status"
+        value={status}
+        onChange={onStatus}
+        options={STATUS_FILTERS}
+      />
 
-      <label className={styles.pluginExampleToggle}>
-        <input
-          type="checkbox"
-          checked={showExamples}
-          onChange={(e) => onShowExamples(e.target.checked)}
-        />
-        <span>Show examples</span>
-      </label>
+      <Checkbox
+        id="plugins-show-examples"
+        label="Show examples"
+        checked={showExamples}
+        onChange={onShowExamples}
+      />
     </div>
   );
 }
@@ -626,8 +613,6 @@ export function PluginsTable({
 
   return (
     <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Apps</h2>
-
       <FilterBar
         query={query}
         onQuery={setQuery}
@@ -640,7 +625,7 @@ export function PluginsTable({
       />
 
       {filtered.length === 0 ? (
-        <p className={styles.textMuted}>No apps match your filters.</p>
+        <p className={styles.emptyTableMsg}>No apps match your filters.</p>
       ) : (
         <>
           <div className={styles.tableCard}>

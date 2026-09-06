@@ -1,5 +1,6 @@
 import { Alert, Badge } from '@sovereignfs/ui';
 import { ActivitySearch } from '../_components/ActivitySearch';
+import { ConsolePageHeader } from '../_components/ConsolePageHeader';
 import { ConsolePagination } from '../_components/ConsolePagination';
 import styles from '../console.module.css';
 import { renderFetchSignal } from '../_lib/fetch-timeout';
@@ -80,7 +81,9 @@ function ActivityCard({ event }: { event: ActivityEvent }) {
     <div className={styles.activityCard}>
       <div className={styles.activityCardTop}>
         <code className={styles.activityCardEvent}>{event.action}</code>
-        <Badge variant="role">{event.visibility}</Badge>
+        <Badge variant="mono" size="xs">
+          {event.visibility}
+        </Badge>
       </div>
       <div className={styles.activityCardMeta}>
         <time dateTime={new Date(event.createdAt * 1000).toISOString()}>{when}</time>
@@ -113,17 +116,20 @@ export default async function ActivityPage({
 
   return (
     <div>
+      <ConsolePageHeader
+        title="Activity"
+        description="Every administrative and user-visible event on this instance, newest first."
+      />
+
       <ActivitySearch total={total} initialQ={q} />
 
       {error && <Alert variant="error">{error}</Alert>}
 
       {events.length === 0 ? (
         error ? null : (
-          <div className={styles.tableCard}>
-            <p className={styles.emptyTableMsg}>
-              {q ? 'No activity matches your search.' : 'No activity recorded yet.'}
-            </p>
-          </div>
+          <p className={styles.emptyTableMsg}>
+            {q ? 'No activity matches your search.' : 'No activity recorded yet.'}
+          </p>
         )
       ) : (
         <>
@@ -163,7 +169,9 @@ export default async function ActivityPage({
                         <span className={styles.activitySummary}>{event.summary ?? '—'}</span>
                       </td>
                       <td className={styles.td}>
-                        <Badge variant="role">{event.visibility}</Badge>
+                        <Badge variant="mono" size="sm">
+                          {event.visibility}
+                        </Badge>
                       </td>
                     </tr>
                   ))}

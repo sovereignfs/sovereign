@@ -44,6 +44,7 @@ export function PluginAccessDialog({
           type="button"
           className={styles.iconBtn}
           onClick={() => setOpen(true)}
+          aria-label={`Access for ${pluginName}`}
           title={`Access for "${pluginName}"`}
         >
           <Icon name="shield" size="sm" aria-hidden />

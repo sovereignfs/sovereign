@@ -1,3 +1,5 @@
+import { renderFetchSignal } from './fetch-timeout';
+
 export interface HealthReport {
   platformVersion: string;
   database: { dialect: string; status: 'ok' | 'error'; sizeBytes: number | null };
@@ -59,6 +61,7 @@ export async function getHealth(): Promise<HealthReport> {
     const res = await fetch(`${selfUrl}/api/admin/health`, {
       headers: { Authorization: `Bearer ${adminKey}` },
       cache: 'no-store',
+      signal: renderFetchSignal(),
     });
     if (!res.ok) {
       console.error(`[health] fetch failed: ${res.status}`);

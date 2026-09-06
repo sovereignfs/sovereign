@@ -5,6 +5,7 @@ import {
   FaviconUploadForm,
   type InstanceValues,
 } from '../settings/SettingsForms';
+import { renderFetchSignal } from '../_lib/fetch-timeout';
 
 const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
 
@@ -26,6 +27,7 @@ async function loadInstance(): Promise<InstanceValues> {
     const res = await fetch(`${SELF_URL}/api/admin/instance-config`, {
       headers: { Authorization: `Bearer ${adminKey}` },
       cache: 'no-store',
+      signal: renderFetchSignal(),
     });
     if (!res.ok) return DEFAULT_INSTANCE;
     return (await res.json()) as InstanceValues;

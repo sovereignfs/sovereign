@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Alert, Badge } from '@sovereignfs/ui';
 import { ActivitySearch } from '../_components/ActivitySearch';
 import styles from '../console.module.css';
+import { renderFetchSignal } from '../_lib/fetch-timeout';
 
 const PAGE_SIZE = 8;
 const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
@@ -36,6 +37,7 @@ async function getActivity(offset: number, q?: string): Promise<ActivityResponse
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${adminKey}` },
       cache: 'no-store',
+      signal: renderFetchSignal(),
     });
     if (!res.ok) {
       console.error(`[activity] fetch failed: ${res.status}`);

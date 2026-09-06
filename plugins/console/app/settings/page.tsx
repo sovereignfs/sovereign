@@ -9,6 +9,7 @@ import { RetentionSettingsForm, type RetentionSettingsView } from './RetentionSe
 import { TenantForm, InviteOnlyForm, ExampleAppsForm, RootPluginForm } from './SettingsForms';
 import { SmtpSettingsForm, type SmtpSettingsView } from './SmtpSettingsForm';
 import { EmailTemplatesForm } from './EmailTemplatesForm';
+import { renderFetchSignal } from '../_lib/fetch-timeout';
 
 const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
 
@@ -51,6 +52,7 @@ async function adminGet<T>(path: string): Promise<T> {
   const res = await fetch(`${SELF_URL}${path}`, {
     headers: { Authorization: `Bearer ${adminKey}` },
     cache: 'no-store',
+    signal: renderFetchSignal(),
   });
   if (!res.ok) throw new Error(`Failed to fetch ${path}: ${res.status}`);
   return res.json() as Promise<T>;

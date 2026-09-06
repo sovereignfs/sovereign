@@ -7,6 +7,7 @@ import { UserDetailPane } from './UserDetailPane';
 import { InviteDialog } from './invite/InviteDialog';
 import { ConsoleDetailSlot } from '../_components/ConsoleDetailSlot';
 import styles from '../console.module.css';
+import { renderFetchSignal } from '../_lib/fetch-timeout';
 
 const PAGE_SIZE = 20;
 
@@ -31,6 +32,7 @@ async function getMembers(): Promise<MemberRow[]> {
     const res = await fetch(`${authUrl}/api/admin/users`, {
       headers: { Authorization: `Bearer ${adminKey}` },
       cache: 'no-store',
+      signal: renderFetchSignal(),
     });
     if (!res.ok) {
       console.error(`[users] fetch failed: ${res.status}`);
@@ -249,7 +251,7 @@ export default async function UsersPage({
         // itself — see `useConsoleDetailPane`'s doc comment for why that
         // silently doesn't work here (a real, found-live bug: it looked
         // like it should force a remount and didn't).
-        <ConsoleDetailSlot detailKey={selectedMember.id}>
+        <ConsoleDetailSlot detailKey={selectedMember.id} closeHref={closeHref}>
           <UserDetailPane
             member={selectedMember}
             canAssignRoles={canAssignRoles}

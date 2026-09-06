@@ -8,6 +8,7 @@ import { PluginsTable, type PluginRow, type PluginStatus } from './PluginsTable'
 import { PluginDetailPane } from './PluginDetailPane';
 import { ConsoleDetailSlot } from '../_components/ConsoleDetailSlot';
 import styles from '../console.module.css';
+import { renderFetchSignal } from '../_lib/fetch-timeout';
 
 interface RawPluginRow {
   id: string;
@@ -34,6 +35,7 @@ async function getPlugins(): Promise<RawPluginRow[]> {
     const res = await fetch(`${selfUrl}/api/admin/plugins`, {
       headers: { Authorization: `Bearer ${adminKey}` },
       cache: 'no-store',
+      signal: renderFetchSignal(),
     });
     if (!res.ok) {
       console.error(`[plugins] fetch failed: ${res.status}`);
@@ -133,7 +135,7 @@ export default async function PluginsPage({
         // on `PluginDetailPane` itself would silently not force a remount
         // here, since this content crosses the Server→Client boundary via
         // `ConsoleDetailSlot`.
-        <ConsoleDetailSlot detailKey={selectedRow.id}>
+        <ConsoleDetailSlot detailKey={selectedRow.id} closeHref={closeHref}>
           <PluginDetailPane row={selectedRow} closeHref={closeHref} />
         </ConsoleDetailSlot>
       )}

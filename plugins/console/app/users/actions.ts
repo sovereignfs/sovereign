@@ -139,6 +139,12 @@ export async function toggleActiveAction(formData: FormData): Promise<void> {
   }
   const userId = formData.get('userId') as string;
   const active = formData.get('active') === 'true';
+  // Deactivating yourself is a lockout, not a status change — the cookie
+  // cache keeps the session alive for a few minutes, then nobody can get
+  // back in until another admin intervenes.
+  if (userId === session.user.id) {
+    throw new Error('You cannot change the status of your own account.');
+  }
   const res = await adminFetch(`/api/admin/users/${userId}`, {
     method: 'PATCH',
     body: JSON.stringify({ active }),
@@ -285,14 +291,23 @@ export async function deleteUserAction(formData: FormData): Promise<void> {
   const userId = formData.get('userId') as string;
   const actor = await actorId();
 
-  // Guard: platform:owner cannot be deleted.
+  if (userId === session.user.id) {
+    throw new Error('You cannot delete your own account from Console.');
+  }
+
+  // Guard: platform:owner cannot be deleted. This must fail *closed* — the
+  // platform-side sweep (`deleteUser`) drops the user's plugin rows, storage
+  // and avatar before the auth server gets to refuse the owner, so proceeding
+  // on a failed directory lookup would wipe the owner's data while leaving
+  // the account itself in place.
   const usersRes = await adminFetch('/api/admin/users');
-  if (usersRes.ok) {
-    const members = (await usersRes.json()) as Array<{ id: string | null; role: string | null }>;
-    const target = members.find((m) => m.id === userId);
-    if (target?.role === 'platform:owner') {
-      throw new Error('The platform owner account cannot be deleted.');
-    }
+  if (!usersRes.ok) {
+    throw new Error(`Could not verify the account before deleting it (${usersRes.status}).`);
+  }
+  const members = (await usersRes.json()) as Array<{ id: string | null; role: string | null }>;
+  const target = members.find((m) => m.id === userId);
+  if (target?.role === 'platform:owner') {
+    throw new Error('The platform owner account cannot be deleted.');
   }
 
   void logActivity({

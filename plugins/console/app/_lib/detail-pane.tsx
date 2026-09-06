@@ -2,11 +2,16 @@
 
 import { createContext, useContext, useEffect, type ReactNode } from 'react';
 
-interface DetailPaneEntry {
+export interface DetailPaneEntry {
   node: ReactNode;
   /** See `useConsoleDetailPane`'s doc comment for why this can't just be a
    * `key` prop on `node` itself. */
   detailKey: string;
+  /** Where "close" navigates (drops the page's selection param). Needed by
+   * `ConsoleLayout` itself on narrow desktops, where the pane renders as a
+   * `Dialog` whose Esc/scrim dismissal has to clear the selection the same
+   * way the pane's own close link does. */
+  closeHref: string;
 }
 
 // undefined (the default, outside any Provider) means "no ConsoleLayout
@@ -59,11 +64,15 @@ export const ConsoleDetailPaneProvider = ConsoleDetailPaneContext.Provider;
  * entirely client-side — a key set by the same component that renders the
  * keyed position always works, RSC-crossed content inside it included.
  */
-export function useConsoleDetailPane(node: ReactNode | null, detailKey: string | null): void {
+export function useConsoleDetailPane(
+  node: ReactNode | null,
+  detailKey: string | null,
+  closeHref: string,
+): void {
   const setDetailPane = useContext(ConsoleDetailPaneContext);
   useEffect(() => {
     if (!setDetailPane) return;
-    setDetailPane(node !== null && detailKey !== null ? { node, detailKey } : null);
+    setDetailPane(node !== null && detailKey !== null ? { node, detailKey, closeHref } : null);
     return () => setDetailPane(null);
-  }, [setDetailPane, node, detailKey]);
+  }, [setDetailPane, node, detailKey, closeHref]);
 }

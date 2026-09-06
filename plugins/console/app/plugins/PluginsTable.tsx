@@ -258,51 +258,58 @@ function DesktopRow({ row, justActivated, onActivated, onDismissActivated, selec
           </div>
         ) : (
           <div className={styles.rowActions}>
-            <form action={toggleAction} style={{ display: 'inline-flex' }}>
-              <input type="hidden" name="pluginId" value={row.id} />
-              <input
-                type="hidden"
-                name="enabled"
-                value={row.status === 'enabled' ? 'false' : 'true'}
-              />
-              <button
-                type="submit"
-                disabled={togglePending}
-                className={row.status === 'enabled' ? styles.iconBtn : styles.iconBtnReactivate}
-                title={row.status === 'enabled' ? 'Disable app' : 'Enable app'}
-              >
-                {row.status === 'enabled' ? (
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-                  </svg>
-                ) : (
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                )}
-              </button>
-            </form>
+            {row.isChrome ? (
+              // Part of the shell: the proxy 404s a disabled plugin's prefix,
+              // so disabling Console from Console locked everyone out. The
+              // action and runtime route refuse chrome ids too.
+              <span className={styles.adminOnlyNote}>Always on</span>
+            ) : (
+              <form action={toggleAction} style={{ display: 'inline-flex' }}>
+                <input type="hidden" name="pluginId" value={row.id} />
+                <input
+                  type="hidden"
+                  name="enabled"
+                  value={row.status === 'enabled' ? 'false' : 'true'}
+                />
+                <button
+                  type="submit"
+                  disabled={togglePending}
+                  className={row.status === 'enabled' ? styles.iconBtn : styles.iconBtnReactivate}
+                  title={row.status === 'enabled' ? 'Disable app' : 'Enable app'}
+                >
+                  {row.status === 'enabled' ? (
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+                    </svg>
+                  ) : (
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </button>
+              </form>
+            )}
 
             {selectable && (
               <Icon name="chevron-right" size="sm" aria-hidden className={styles.textMuted} />
@@ -404,17 +411,21 @@ function MobileCard({ row, justActivated, onActivated, onDismissActivated }: Row
         </div>
       ) : (
         <div className={styles.pluginCardActions}>
-          <form action={toggleAction}>
-            <input type="hidden" name="pluginId" value={row.id} />
-            <input
-              type="hidden"
-              name="enabled"
-              value={row.status === 'enabled' ? 'false' : 'true'}
-            />
-            <button type="submit" disabled={togglePending} className={styles.pluginCardBtnToggle}>
-              {togglePending ? '…' : row.status === 'enabled' ? 'Disable' : 'Enable'}
-            </button>
-          </form>
+          {row.isChrome ? (
+            <span className={styles.adminOnlyNote}>Always on</span>
+          ) : (
+            <form action={toggleAction}>
+              <input type="hidden" name="pluginId" value={row.id} />
+              <input
+                type="hidden"
+                name="enabled"
+                value={row.status === 'enabled' ? 'false' : 'true'}
+              />
+              <button type="submit" disabled={togglePending} className={styles.pluginCardBtnToggle}>
+                {togglePending ? '…' : row.status === 'enabled' ? 'Disable' : 'Enable'}
+              </button>
+            </form>
+          )}
 
           {row.openableByViewer ? (
             <a href={row.routePrefix} className={styles.pluginCardBtnToggle}>

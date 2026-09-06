@@ -3,6 +3,7 @@ import { EmptyState } from '@sovereignfs/ui';
 import { BackupJobList, type BackupJobView } from './BackupJobList';
 import { BackupTriggerForm } from './BackupTriggerForm';
 import styles from '../console.module.css';
+import { renderFetchSignal } from '../_lib/fetch-timeout';
 
 const RUNTIME_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
 
@@ -18,6 +19,7 @@ async function loadBackupJobs(): Promise<BackupJobsResponse> {
     const res = await fetch(`${RUNTIME_URL}/api/admin/backup-jobs`, {
       headers: { Authorization: `Bearer ${adminKey}` },
       cache: 'no-store',
+      signal: renderFetchSignal(),
     });
     if (!res.ok) return { jobs: [], excludablePlugins: [], gitPushAvailable: false };
     return (await res.json()) as BackupJobsResponse;

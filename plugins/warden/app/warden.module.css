@@ -289,3 +289,49 @@
   margin: 0;
   color: var(--sv-color-text-muted);
 }
+
+/*
+ * `Message`'s `actions` slot is a caption-sized flex row; these sit in it.
+ * The meta line (model · time) leads, then the per-turn buttons.
+ */
+.turnMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sv-space-1);
+  margin-right: var(--sv-space-1);
+  color: var(--sv-color-text-muted);
+  white-space: nowrap;
+}
+
+/* A reply the model cut off at its output cap: the note and its Continue
+   action live together so the fix sits next to the problem. `flex-wrap` on
+   the slot itself is left to `Message`; this just keeps the pair intact. */
+.truncatedNote {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  color: var(--sv-color-text-muted);
+}
+
+/* Standing reminder inside the composer while the last message is lifted
+   out for editing — the thread visibly lost two turns, so say why, and put
+   the way back right there. */
+.editBar {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+}
+
+.editBarText {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The composer grows with its text (`autoGrow`) up to here, then scrolls —
+   a message should never push the conversation off the top of the column. */
+.composerTextarea.composerTextarea {
+  max-height: 40vh;
+  overflow-y: auto;
+}

@@ -160,4 +160,45 @@ describe('requestProviderChat', () => {
     });
     expect(result).toEqual({ kind: 'error', message: 'model not found' });
   });
+  it('emits a truncated frame when the provider stops for length (max_tokens hit)', async () => {
+    pinnedFetch.mockResolvedValue(
+      new Response(
+        upstreamStream([
+          sseChunk('cut'),
+          `data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: 'length' }] })}\n\n`,
+        ]),
+        { status: 200 },
+      ),
+    );
+    const result = await requestProviderChat({
+      baseUrl: 'https://openrouter.ai/api/v1',
+      apiKey: 'sk-1',
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: 'hi' }],
+    });
+    if (result.kind !== 'stream') throw new Error('expected stream');
+    const text = await drain(result.response);
+    expect(text).toContain('"type":"truncated"');
+    expect(text.indexOf('"type":"truncated"')).toBeLessThan(text.indexOf('"type":"done"'));
+  });
+
+  it('a normal stop reason emits no truncated frame', async () => {
+    pinnedFetch.mockResolvedValue(
+      new Response(
+        upstreamStream([
+          sseChunk('done'),
+          `data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: 'stop' }] })}\n\n`,
+        ]),
+        { status: 200 },
+      ),
+    );
+    const result = await requestProviderChat({
+      baseUrl: 'https://openrouter.ai/api/v1',
+      apiKey: 'sk-1',
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: 'hi' }],
+    });
+    if (result.kind !== 'stream') throw new Error('expected stream');
+    expect(await drain(result.response)).not.toContain('"type":"truncated"');
+  });
 });

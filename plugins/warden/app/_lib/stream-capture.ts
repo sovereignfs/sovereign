@@ -14,9 +14,20 @@ export interface CaptureOptions {
    * the time the browser sees `done`, whatever this persisted is durable.
    */
   onComplete: (result: CaptureResult) => Promise<void> | void;
+  /**
+   * The `max_tokens` the request was made with. `apps/harness` reports how
+   * many tokens it produced on its `done` frame (`completionTokens`) but has
+   * no finish reason; a count at or above the cap means the reply was cut
+   * off, and a `truncated` frame is emitted ahead of `done` so the client
+   * can say so. The external-provider path emits its own `truncated` frame
+   * from `finish_reason` (`provider-chat.ts`), and its `done` carries no
+   * count, so this is a no-op there.
+   */
+  outputTokenCap?: number;
 }
 
 const DONE_FRAME = 'data: {"type":"done"}\n\n';
+const TRUNCATED_FRAME = 'data: {"type":"truncated"}\n\n';
 
 /**
  * Persisting an assistant reply means the server must know the full text
@@ -63,6 +74,7 @@ export function captureAndPersist(response: Response, options: CaptureOptions): 
   let errorMessage: string | null = null;
   let completed = false;
   let cancelled = false;
+  let truncatedByCap = false;
 
   function complete(): Promise<void> | void {
     if (completed) return;
@@ -75,7 +87,7 @@ export function captureAndPersist(response: Response, options: CaptureOptions): 
   function captureLine(line: string): boolean {
     const trimmed = line.trim();
     if (!trimmed.startsWith('data:')) return true;
-    let frame: { type?: string; text?: string; message?: string };
+    let frame: { type?: string; text?: string; message?: string; completionTokens?: unknown };
     try {
       frame = JSON.parse(trimmed.slice('data:'.length).trim());
     } catch {
@@ -84,7 +96,16 @@ export function captureAndPersist(response: Response, options: CaptureOptions): 
     if (frame.type === 'token' && frame.text) text += frame.text;
     else if (frame.type === 'error')
       errorMessage = frame.message ?? 'The response was interrupted.';
-    else if (frame.type === 'done') return false;
+    else if (frame.type === 'done') {
+      if (
+        options.outputTokenCap !== undefined &&
+        typeof frame.completionTokens === 'number' &&
+        frame.completionTokens >= options.outputTokenCap
+      ) {
+        truncatedByCap = true;
+      }
+      return false;
+    }
     return true;
   }
 
@@ -121,6 +142,7 @@ export function captureAndPersist(response: Response, options: CaptureOptions): 
           } catch (error) {
             console.error('[warden] failed to finalize a streamed reply:', error);
           }
+          if (truncatedByCap) controller.enqueue(encoder.encode(TRUNCATED_FRAME));
           controller.enqueue(encoder.encode(DONE_FRAME));
           controller.close();
           return;

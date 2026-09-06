@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent, KeyboardEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -13,6 +13,7 @@ import {
   MessageScroller,
   Textarea,
   Tooltip,
+  useIsMobile,
 } from '@sovereignfs/ui';
 import type { DiscoveredModel } from '../_lib/model-discovery';
 import type { MessageView } from '../_lib/sessions';
@@ -22,24 +23,96 @@ import {
   describeImageForHistory,
   MAX_ATTACHMENT_BYTES,
 } from '../_lib/limits';
+import type { ReplyMode } from '../_lib/reply-modes';
 import { ModelPickerPopover, type ModelProviderInfo } from './ModelPickerPopover';
 import styles from '../warden.module.css';
 
 interface ChatTurn {
   role: 'user' | 'assistant';
   content: string;
+  /** Epoch ms. Optional only for turns that pre-date this field. */
+  createdAt?: number;
+  /** Assistant turns only: the model that produced this reply, as shown
+   *  under the bubble. `undefined` for a user turn. */
+  modelLabel?: string;
+  /** The model stopped at its output cap — this reply is cut off, not
+   *  finished. Cleared once a `continue` has extended it to a real end. */
+  truncated?: boolean;
 }
 
 interface ChatFrame {
-  type: 'token' | 'done' | 'error';
+  type: 'token' | 'done' | 'error' | 'truncated';
   text?: string;
   message?: string;
 }
 
 type ViewState = { kind: 'idle' } | { kind: 'streaming' } | { kind: 'blocked'; reason: string };
 
+/** The turns "Edit" lifted out of the thread, held so Cancel can put them
+ *  back exactly as they were. */
+interface EditDraft {
+  removed: ChatTurn[];
+}
+
+/** What a message row stores as `model` is the bare model id (`gpt-4o`)
+ *  or the literal `'local'`; this is the short label shown under a reply. */
+function modelLabelForMessage(message: MessageView): string {
+  return message.providerId ? message.model : 'Local model';
+}
+
+function modelLabelForKey(models: DiscoveredModel[], key: string): string {
+  if (key === 'local') return 'Local model';
+  const separatorIndex = key.indexOf(':');
+  if (separatorIndex !== -1) return key.slice(separatorIndex + 1);
+  return models.find((model) => model.key === key)?.label ?? key;
+}
+
 function toChatTurn(message: MessageView): ChatTurn {
-  return { role: message.role, content: message.content };
+  return {
+    role: message.role,
+    content: message.content,
+    createdAt: message.createdAt,
+    modelLabel: message.role === 'assistant' ? modelLabelForMessage(message) : undefined,
+  };
+}
+
+/** Wire shape: the server only ever wants role + content. */
+function toWireMessages(turns: ChatTurn[]): Array<{ role: ChatTurn['role']; content: string }> {
+  return turns.map((turn) => ({ role: turn.role, content: turn.content }));
+}
+
+/** `HH:MM` for today, `d Mon, HH:MM` otherwise — in the viewer's locale. */
+function formatTurnTime(createdAt: number): string {
+  const date = new Date(createdAt);
+  const now = new Date();
+  const sameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+  const time = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  if (sameDay) return time;
+  return `${date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}, ${time}`;
+}
+
+/**
+ * The muted line under a bubble: which model answered, and when. The time
+ * is locale/timezone formatted, so the server's rendering can differ from
+ * the browser's — `suppressHydrationWarning` on the one element whose text
+ * is allowed to differ, rather than deferring the whole line to an effect.
+ */
+function TurnMeta({ turn }: { turn: ChatTurn }) {
+  if (turn.createdAt === undefined && !turn.modelLabel) return null;
+  return (
+    <span className={styles.turnMeta}>
+      {turn.modelLabel && <span>{turn.modelLabel}</span>}
+      {turn.modelLabel && turn.createdAt !== undefined && <span aria-hidden> · </span>}
+      {turn.createdAt !== undefined && (
+        <time dateTime={new Date(turn.createdAt).toISOString()} suppressHydrationWarning>
+          {formatTurnTime(turn.createdAt)}
+        </time>
+      )}
+    </span>
+  );
 }
 
 /**
@@ -104,11 +177,19 @@ function CopyMessageButton({ content }: { content: string }) {
  * while incognito is on, rather than teaching the incognito wire shape
  * to carry a file too.
  *
+ * Every request goes through `run(mode)` (`reply-modes.ts`): a plain send,
+ * a `continue` for a reply cut off at the output cap (streams into the
+ * existing bubble), a `regenerate` of the last reply (the old one stays on
+ * screen and on disk until the new one has fully arrived), or an `edit` of
+ * the last user message (lifted into the composer; Cancel puts it back).
+ * In incognito the client owns the transcript, so it trims it itself for
+ * regenerate/edit and sends the result as an ordinary send.
+ *
  * The composer is centered in the main column for a session with no
  * messages yet, and docks to the bottom the instant the first message is
  * sent (RFC 0063 §12) — keyed off the same `turns.length === 0` condition
  * the empty state already used, not new position-tracking logic, since
- * `send()` already appends the user's turn optimistically and
+ * `run()` already appends the user's turn optimistically and
  * synchronously before the network request starts.
  *
  * Explicitly no tool call, task handoff, or voice input anywhere in this
@@ -145,6 +226,12 @@ export function ChatView({
   allModelsHidden?: boolean;
 }) {
   const router = useRouter();
+  // On a phone the on-screen keyboard's Enter is how you make a new line;
+  // Send is a button right there. On a desktop keyboard Enter sends and
+  // Shift+Enter breaks the line, as every chat client does. Viewport width
+  // stands in for "has a soft keyboard" — the design system's canonical
+  // breakpoint, not a plugin-local pointer heuristic.
+  const isMobile = useIsMobile();
   // Persisted-mode only — incognito never references a session (RFC 0063
   // §6/§10). Updated from the response's `x-warden-session-id` header the
   // first time a brand-new session is lazily created on send.
@@ -161,7 +248,12 @@ export function ChatView({
   const [banner, setBanner] = useState<string | null>(null);
   const [attachment, setAttachment] = useState<File | null>(null);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Looked up by id rather than held in a ref: `Textarea` owns its own ref
+  // for `autoGrow` and does not merge an external one — same approach
+  // `ModelPickerPopover` takes to hand focus back to its trigger.
+  const composerId = useId();
   /** The in-flight request, so the user can stop a long reply — and so
    *  navigating away doesn't leave a stream running against an unmounted
    *  component. */
@@ -180,10 +272,18 @@ export function ChatView({
     if (next) setIncognitoTurns([]); // always a fresh scratch context, never a resumed one
     setIncognito(next);
     setBanner(null);
+    // An edit in progress belongs to the thread being left; drop it rather
+    // than carrying a persisted-mode draft into the scratch context (or
+    // vice versa). The turns it lifted out stay lifted on that side — the
+    // user asked to change them — and the composer is cleared with it.
+    if (editDraft) {
+      setEditDraft(null);
+      setInput('');
+    }
     // Attachments are unavailable in incognito (the attach control is
     // disabled below), but the control only blocks *starting* a new
     // attachment — one staged before the toggle would otherwise survive it,
-    // and `send()` routes any request carrying a file down the multipart
+    // and `run()` routes any request carrying a file down the multipart
     // path, which is the persisted one. That combination silently wrote the
     // message *and* the full extracted document text to the database while
     // the UI promised nothing was being saved.
@@ -223,28 +323,91 @@ export function ChatView({
     setAttachment(file);
   }
 
-  async function send() {
-    const content = input.trim();
-    if ((!content && !attachment) || !modelKey || state.kind === 'streaming') return;
-    if (!content) return; // a caption is required for every send, attachment or not
+  /** Lifts the last user message (and its reply, if any) out of the thread
+   *  and into the composer. Nothing is sent or deleted until Send. */
+  function startEdit() {
+    if (state.kind === 'streaming' || editDraft) return;
+    const last = turns[turns.length - 1];
+    const secondLast = turns[turns.length - 2];
+    const removed =
+      last?.role === 'user'
+        ? [last]
+        : last?.role === 'assistant' && secondLast?.role === 'user'
+          ? [secondLast, last]
+          : [];
+    const userTurn = removed[0];
+    if (!userTurn) return;
+    setTurns((prev) => prev.slice(0, prev.length - removed.length));
+    setEditDraft({ removed });
+    setInput(userTurn.content);
+    setBanner(null);
+    document.getElementById(composerId)?.focus();
+  }
 
-    const hadPriorConversation = turns.length > 0;
+  function cancelEdit() {
+    if (!editDraft) return;
+    setTurns((prev) => [...prev, ...editDraft.removed]);
+    setEditDraft(null);
+    setInput('');
+  }
+
+  async function run(requestedMode: ReplyMode) {
+    if (!modelKey || state.kind === 'streaming') return;
+    // Incognito's transcript is client-owned: regenerate/edit become a
+    // trimmed transcript sent as an ordinary send (the trim for `edit`
+    // already happened in `startEdit`), and only `continue` needs the server
+    // to do something different.
+    const mode: ReplyMode = incognito && requestedMode !== 'continue' ? 'send' : requestedMode;
+    const addsUserTurn = requestedMode === 'send' || requestedMode === 'edit';
+    const content = input.trim();
+    if (addsUserTurn && !content) return; // a caption is required for every send, attachment or not
+
+    let baseTurns = turns;
+    // Regenerate: the old reply leaves the screen now, but is kept so a
+    // failed attempt can put it straight back — the server likewise only
+    // overwrites it once the new reply has fully streamed.
+    let removedReply: ChatTurn | null = null;
+    if (requestedMode === 'regenerate') {
+      const last = baseTurns[baseTurns.length - 1];
+      if (last?.role !== 'assistant') return;
+      removedReply = last;
+      baseTurns = baseTurns.slice(0, -1);
+    }
+    if (requestedMode === 'continue' && baseTurns[baseTurns.length - 1]?.role !== 'assistant') {
+      return;
+    }
+
+    const hadPriorConversation = baseTurns.length > 0;
     const optimisticContent = attachment
       ? attachment.type.startsWith('image/')
         ? describeImageForHistory(content, attachment.name)
         : describeDocumentPlaceholder(content, attachment.name)
       : content;
-    const nextTurns = [...turns, { role: 'user' as const, content: optimisticContent }];
+    const nextTurns = addsUserTurn
+      ? [...baseTurns, { role: 'user' as const, content: optimisticContent, createdAt: Date.now() }]
+      : baseTurns;
+    // `continue` streams into the existing last bubble rather than opening a
+    // new pending one — the continuation *is* the rest of that reply.
+    const streamIntoLast = requestedMode === 'continue';
+    const continuedBase = streamIntoLast ? (baseTurns[baseTurns.length - 1]?.content ?? '') : '';
+
     setTurns(nextTurns);
-    setInput('');
+    if (addsUserTurn) {
+      setInput('');
+      setEditDraft(null);
+    }
     setBanner(null);
-    setPendingText('');
+    if (!streamIntoLast) setPendingText('');
     setState({ kind: 'streaming' });
-    const sentAttachment = attachment;
-    clearAttachment();
+    const sentAttachment = addsUserTurn ? attachment : null;
+    if (addsUserTurn) clearAttachment();
 
     const controller = new AbortController();
     abortRef.current = controller;
+
+    function restoreOnFailure() {
+      if (removedReply) setTurns((prev) => [...prev, removedReply as ChatTurn]);
+    }
 
     let response: Response;
     try {
@@ -254,6 +417,7 @@ export function ChatView({
         if (sessionId) formData.append('sessionId', sessionId);
         formData.append('content', content);
         formData.append('file', sentAttachment);
+        if (mode !== 'send') formData.append('mode', mode);
         // Defense in depth behind `handleIncognitoToggle`'s `clearAttachment()`:
         // if an attachment ever reaches this branch while incognito is on, the
         // route's own guard rejects it rather than silently persisting it.
@@ -268,8 +432,18 @@ export function ChatView({
         });
       } else {
         const requestBody = incognito
-          ? { modelKey, incognito: true, messages: nextTurns }
-          : { modelKey, sessionId, content };
+          ? {
+              modelKey,
+              incognito: true,
+              messages: toWireMessages(nextTurns),
+              ...(mode === 'continue' ? { mode } : {}),
+            }
+          : {
+              modelKey,
+              sessionId,
+              ...(mode !== 'send' ? { mode } : {}),
+              ...(addsUserTurn ? { content } : {}),
+            };
         response = await fetch('/warden/api/chat', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
@@ -279,6 +453,7 @@ export function ChatView({
       }
     } catch {
       setPendingText(null);
+      restoreOnFailure();
       // A cancel is the user getting what they asked for, not a failure —
       // no banner, and never the blocking "Warden is unavailable" state.
       if (controller.signal.aborted) {
@@ -292,6 +467,7 @@ export function ChatView({
     if (response.status !== 200) {
       const body: { message?: string } = await response.json().catch(() => ({}));
       setPendingText(null);
+      restoreOnFailure();
       failRequest(hadPriorConversation, body.message ?? 'Warden is unavailable right now.');
       return;
     }
@@ -323,6 +499,7 @@ export function ChatView({
     const reader = response.body?.getReader();
     if (!reader) {
       setPendingText(null);
+      restoreOnFailure();
       failRequest(hadPriorConversation, 'Warden sent an empty response.');
       return;
     }
@@ -331,11 +508,25 @@ export function ChatView({
     let buffer = '';
     let text = '';
     let streamError: string | null = null;
+    let truncated = false;
+    const replyModelLabel = modelLabelForKey(models, modelKey);
+
+    function showStreamed(streamed: string) {
+      if (streamIntoLast) {
+        setTurns((prev) => {
+          const last = prev[prev.length - 1];
+          if (!last || last.role !== 'assistant') return prev;
+          return [...prev.slice(0, -1), { ...last, content: continuedBase + streamed }];
+        });
+      } else {
+        setPendingText(streamed);
+      }
+    }
 
     // `reader.read()` rejects on a dropped connection, a server crash
     // mid-stream, a proxy timeout, or the provider-side request deadline
-    // destroying the socket. Without this the rejection escaped `send()` —
-    // which every caller invokes as `void send()` — so it surfaced as an
+    // destroying the socket. Without this the rejection escaped `run()` —
+    // which every caller invokes as `void run()` — so it surfaced as an
     // unhandled rejection and, far worse, skipped the state reset below:
     // `state.kind` stayed `'streaming'` forever, leaving the composer,
     // Send button and attach control permanently disabled with a ghost
@@ -359,9 +550,11 @@ export function ChatView({
           }
           if (frame.type === 'token' && frame.text) {
             text += frame.text;
-            setPendingText(text);
+            showStreamed(text);
           } else if (frame.type === 'error') {
             streamError = frame.message ?? 'The response was interrupted.';
+          } else if (frame.type === 'truncated') {
+            truncated = true;
           }
         }
       }
@@ -377,8 +570,33 @@ export function ChatView({
       // partial answer beats silently dropping it — but it is always
       // accompanied by the banner below, so it is never mistaken for a
       // complete reply.
-      if (text) {
-        setTurns((prev) => [...prev, { role: 'assistant', content: text }]);
+      if (streamIntoLast) {
+        setTurns((prev) => {
+          const last = prev[prev.length - 1];
+          if (!last || last.role !== 'assistant') return prev;
+          return [
+            ...prev.slice(0, -1),
+            // A continuation that itself got cut off stays flagged; one that
+            // ran to a real end clears the flag. A continuation that produced
+            // nothing leaves the reply as it was, still flagged.
+            { ...last, content: continuedBase + text, truncated: text ? truncated : true },
+          ];
+        });
+      } else if (text) {
+        setTurns((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: text,
+            createdAt: Date.now(),
+            modelLabel: replyModelLabel,
+            truncated,
+          },
+        ]);
+      } else if (removedReply) {
+        // Regenerate produced nothing (an error, or Stop before the first
+        // token) — the server has not touched the original, so neither do we.
+        restoreOnFailure();
       }
       if (streamError) {
         setBanner(
@@ -410,15 +628,23 @@ export function ChatView({
     }
   }
 
+  function submit() {
+    void run(editDraft ? 'edit' : 'send');
+  }
+
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    void send();
+    submit();
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (event.key === 'Enter' && !event.shiftKey && !isMobile) {
       event.preventDefault();
-      void send();
+      submit();
+    }
+    if (event.key === 'Escape' && editDraft) {
+      event.preventDefault();
+      cancelEdit();
     }
   }
 
@@ -440,10 +666,92 @@ export function ChatView({
   }
 
   const isEmpty = turns.length === 0;
+  const isStreaming = state.kind === 'streaming';
   const modelPlaceholder = allModelsHidden ? 'No models shown' : 'No model reachable';
+  const lastIndex = turns.length - 1;
+  // Edit is offered on the last user message only (see `reply-modes.ts`),
+  // and only while there is nothing lifted out already.
+  const editableIndex =
+    editDraft || isStreaming
+      ? -1
+      : turns[lastIndex]?.role === 'user'
+        ? lastIndex
+        : turns[lastIndex]?.role === 'assistant' && turns[lastIndex - 1]?.role === 'user'
+          ? lastIndex - 1
+          : -1;
+
+  function actionsFor(turn: ChatTurn, index: number) {
+    const isLast = index === lastIndex;
+    if (turn.role === 'assistant') {
+      return (
+        <>
+          <TurnMeta turn={turn} />
+          <CopyMessageButton content={turn.content} />
+          {isLast && !isStreaming && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-label="Regenerate this reply"
+              onClick={() => void run('regenerate')}
+            >
+              <Icon name="refresh-cw" size="sm" aria-hidden />
+              Regenerate
+            </Button>
+          )}
+          {isLast && turn.truncated && (
+            <span className={styles.truncatedNote} role="status">
+              <Icon name="alert-triangle" size="sm" aria-hidden />
+              <span>Cut off at the model&rsquo;s length limit.</span>
+              {!isStreaming && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  aria-label="Continue this reply"
+                  onClick={() => void run('continue')}
+                >
+                  Continue
+                </Button>
+              )}
+            </span>
+          )}
+        </>
+      );
+    }
+    if (turn.createdAt === undefined && index !== editableIndex) return undefined;
+    return (
+      <>
+        <TurnMeta turn={turn} />
+        {index === editableIndex && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-label="Edit this message"
+            onClick={startEdit}
+          >
+            <Icon name="pencil" size="sm" aria-hidden />
+            Edit
+          </Button>
+        )}
+      </>
+    );
+  }
 
   const composer = (
     <form className={styles.composer} onSubmit={handleSubmit}>
+      {editDraft && (
+        <div className={styles.editBar} role="status">
+          <Icon name="pencil" size="sm" aria-hidden />
+          <span className={styles.editBarText}>
+            Editing your last message — sending replaces it and its reply.
+          </span>
+          <Button type="button" variant="ghost" size="sm" onClick={cancelEdit}>
+            Cancel
+          </Button>
+        </div>
+      )}
       {attachment && (
         <div className={styles.attachmentChip}>
           <Icon name="file-text" size="sm" aria-hidden />
@@ -464,12 +772,17 @@ export function ChatView({
         </p>
       )}
       <Textarea
+        id={composerId}
         value={input}
         onChange={(event) => setInput(event.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Message Warden…"
-        rows={2}
-        disabled={state.kind === 'streaming'}
+        // One line to start and grows with the text (capped in CSS, then
+        // scrolls) — a fixed two rows was either wasted space or a
+        // letterbox onto a long message, depending on what was typed.
+        rows={1}
+        autoGrow
+        disabled={isStreaming}
         aria-label="Message Warden"
         className={styles.composerTextarea}
       />
@@ -488,7 +801,7 @@ export function ChatView({
             variant="ghost"
             size="sm"
             aria-label="Attach a file"
-            disabled={incognito || state.kind === 'streaming'}
+            disabled={incognito || isStreaming}
             title={incognito ? 'Attachments are not available in incognito mode' : undefined}
             onClick={() => fileInputRef.current?.click()}
           >
@@ -508,7 +821,7 @@ export function ChatView({
               beside it — the two are never usable at the same time, and a
               long reply with no way to stop it is the more common
               frustration than a slow Send button. */}
-          {state.kind === 'streaming' ? (
+          {isStreaming ? (
             <Button
               type="button"
               variant="secondary"
@@ -610,15 +923,7 @@ export function ChatView({
                   than alongside the text. */}
               <div className={styles.messageColumn}>
                 {turns.map((turn, index) => (
-                  <Message
-                    key={index}
-                    sender={turn.role}
-                    actions={
-                      turn.role === 'assistant' ? (
-                        <CopyMessageButton content={turn.content} />
-                      ) : undefined
-                    }
-                  >
+                  <Message key={index} sender={turn.role} actions={actionsFor(turn, index)}>
                     {/*
                   Assistant replies are markdown — every model emits it, and
                   rendering them as plain text put literal `**bold**`,

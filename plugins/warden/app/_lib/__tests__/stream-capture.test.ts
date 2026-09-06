@@ -189,4 +189,33 @@ describe('captureAndPersist', () => {
     const response = captureAndPersist(original, { onComplete: () => {} });
     expect(response.status).toBe(200);
   });
+  it('emits a truncated frame when the done frame reports the output cap was hit', async () => {
+    const original = sseResponse([
+      { type: 'token', text: 'cut off' },
+      { type: 'done', completionTokens: 100 },
+    ]);
+    const response = captureAndPersist(original, { onComplete: () => {}, outputTokenCap: 100 });
+    const text = await drain(response);
+    expect(text).toContain('"type":"truncated"');
+    expect(text.indexOf('"type":"truncated"')).toBeLessThan(text.indexOf('"type":"done"'));
+  });
+
+  it('emits no truncated frame below the cap, or when no cap is given', async () => {
+    const under = captureAndPersist(
+      sseResponse([
+        { type: 'token', text: 'ok' },
+        { type: 'done', completionTokens: 5 },
+      ]),
+      { onComplete: () => {}, outputTokenCap: 100 },
+    );
+    expect(await drain(under)).not.toContain('"type":"truncated"');
+    const uncapped = captureAndPersist(
+      sseResponse([
+        { type: 'token', text: 'ok' },
+        { type: 'done', completionTokens: 100 },
+      ]),
+      { onComplete: () => {} },
+    );
+    expect(await drain(uncapped)).not.toContain('"type":"truncated"');
+  });
 });

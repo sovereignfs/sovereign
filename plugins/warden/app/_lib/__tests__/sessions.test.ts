@@ -161,6 +161,7 @@ const {
   deleteInactiveSessions,
   deleteMessage,
   deleteSession,
+  extendMessage,
   getMostRecentSession,
   getRecentMessagesForContext,
   listMessages,
@@ -168,6 +169,8 @@ const {
   MAX_PINNED_SESSIONS,
   pinSession,
   renameSession,
+  replaceMessage,
+  MessageNotFoundError,
   SessionNotFoundError,
   SessionPinLimitError,
   unpinSession,
@@ -622,5 +625,72 @@ describe('renameSession — title length', () => {
 
     expect((await renameSession('user-1', 'tenant-1', session.id, '  a   b  ')).title).toBe('a b');
     expect((await renameSession('user-1', 'tenant-1', session.id, '   ')).title).toBeNull();
+  });
+});
+
+describe('extendMessage / replaceMessage', () => {
+  async function seeded() {
+    const session = await createSession('user-1', 'tenant-1');
+    await appendMessage('user-1', 'tenant-1', session.id, {
+      role: 'user',
+      content: 'question',
+      providerId: null,
+      model: 'local',
+    });
+    const reply = await appendMessage('user-1', 'tenant-1', session.id, {
+      role: 'assistant',
+      content: 'first ha',
+      providerId: null,
+      model: 'local',
+    });
+    return { session, reply };
+  }
+
+  it('extendMessage appends with no separator — a continuation picks up mid-word', async () => {
+    const { session, reply } = await seeded();
+    const extended = await extendMessage(
+      'user-1',
+      'tenant-1',
+      session.id,
+      reply.id,
+      'lf, then rest',
+    );
+    expect(extended.content).toBe('first half, then rest');
+    const stored = await listMessages('user-1', 'tenant-1', session.id);
+    expect(stored[1].content).toBe('first half, then rest');
+    expect(stored).toHaveLength(2);
+  });
+
+  it('replaceMessage overwrites content, model and createdAt in place, keeping the id', async () => {
+    const { session, reply } = await seeded();
+    const replaced = await replaceMessage('user-1', 'tenant-1', session.id, reply.id, {
+      content: 'a better answer',
+      providerId: 'conn-1',
+      model: 'gpt-4o',
+    });
+    expect(replaced.id).toBe(reply.id);
+    expect(replaced.createdAt).toBeGreaterThanOrEqual(reply.createdAt);
+    const stored = await listMessages('user-1', 'tenant-1', session.id);
+    expect(stored).toHaveLength(2);
+    expect(stored[1]).toMatchObject({
+      id: reply.id,
+      content: 'a better answer',
+      providerId: 'conn-1',
+      model: 'gpt-4o',
+    });
+  });
+
+  it('both refuse another user’s session and an unknown message id', async () => {
+    const { session, reply } = await seeded();
+    await expect(
+      extendMessage('user-2', 'tenant-1', session.id, reply.id, 'x'),
+    ).rejects.toBeInstanceOf(SessionNotFoundError);
+    await expect(
+      replaceMessage('user-1', 'tenant-1', session.id, 'nope', {
+        content: 'x',
+        providerId: null,
+        model: 'local',
+      }),
+    ).rejects.toBeInstanceOf(MessageNotFoundError);
   });
 });

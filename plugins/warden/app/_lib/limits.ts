@@ -16,8 +16,15 @@
  * infrastructure — a meaningfully lower-severity case that isn't worth the
  * added complexity of a per-user semaphore in this phase.
  */
-export const MAX_INPUT_CHARS = 4000;
-export const MAX_OUTPUT_TOKENS = 1024;
+/** Raised from 4000: a pasted stack trace or a page of notes is an ordinary
+ *  chat message, and the previous cap rejected it with no way around it
+ *  short of attaching a file. */
+export const MAX_INPUT_CHARS = 12_000;
+/** Raised from 1024, which cut off most code answers and any structured
+ *  reply mid-list. A reply that still hits this cap is flagged to the user
+ *  (`stream-capture.ts`/`provider-chat.ts` emit a `truncated` frame) and can
+ *  be continued (`reply-modes.ts`) rather than silently presented as whole. */
+export const MAX_OUTPUT_TOKENS = 2048;
 export const MAX_RECENT_TURNS = 20;
 export const REQUEST_TIMEOUT_MS = 120_000;
 

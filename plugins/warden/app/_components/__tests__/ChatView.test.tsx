@@ -11,10 +11,31 @@ vi.mock('next/navigation', () => ({
 
 const replaceState = vi.fn();
 
+// `ChatView` reads the design system's breakpoint (`useIsMobile`) to decide
+// what Enter does; jsdom has no `matchMedia`. Desktop by default, `true`
+// for the one test that exercises the touch-keyboard behaviour.
+let mobileViewport = false;
+function installMatchMedia() {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn().mockImplementation((query: string) => ({
+      matches: mobileViewport,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  );
+}
+
 beforeEach(() => {
   replace.mockClear();
   refresh.mockClear();
   replaceState.mockClear();
+  mobileViewport = false;
+  installMatchMedia();
   vi.spyOn(window.history, 'replaceState').mockImplementation(replaceState);
 });
 
@@ -838,5 +859,257 @@ describe('ChatView — markdown rendering', () => {
         .getByRole('button', { name: "Incognito — don't save this conversation" })
         .getAttribute('aria-pressed'),
     ).toBe('true');
+  });
+});
+
+describe('ChatView — reply controls', () => {
+  function pressEnter() {
+    fireEvent.keyDown(screen.getByLabelText('Message Warden'), { key: 'Enter' });
+  }
+
+  it('shows the model and time under a reply, and only a time under a user turn', () => {
+    renderChatView({
+      initialSessionId: 'session-1',
+      initialMessages: [
+        {
+          id: 'm1',
+          role: 'user',
+          content: 'hello',
+          providerId: null,
+          model: 'local',
+          createdAt: Date.UTC(2026, 8, 6, 9, 5),
+        },
+        {
+          id: 'm2',
+          role: 'assistant',
+          content: 'hi there',
+          providerId: 'conn-1',
+          model: 'gpt-4o-mini',
+          createdAt: Date.UTC(2026, 8, 6, 9, 6),
+        },
+      ],
+    });
+    expect(screen.getByText('gpt-4o-mini')).toBeDefined();
+    // Two turns, two <time> elements.
+    expect(document.querySelectorAll('time')).toHaveLength(2);
+  });
+
+  it('regenerate: removes the last reply, sends mode: regenerate, and shows the new one', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(sseResponse([{ type: 'token', text: 'second try' }, { type: 'done' }]));
+    vi.stubGlobal('fetch', fetchMock);
+    renderChatView({
+      initialSessionId: 'session-1',
+      initialMessages: [
+        { id: 'm1', role: 'user', content: 'q', providerId: null, model: 'local', createdAt: 1 },
+        {
+          id: 'm2',
+          role: 'assistant',
+          content: 'first try',
+          providerId: null,
+          model: 'local',
+          createdAt: 2,
+        },
+      ],
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Regenerate this reply' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      modelKey: 'local',
+      sessionId: 'session-1',
+      mode: 'regenerate',
+    });
+    await waitFor(() => expect(screen.getByText('second try')).toBeDefined());
+    expect(screen.queryByText('first try')).toBeNull();
+  });
+
+  it('regenerate: a failed attempt puts the original reply back', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ message: 'down' }), {
+          status: 503,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    );
+    renderChatView({
+      initialSessionId: 'session-1',
+      initialMessages: [
+        { id: 'm1', role: 'user', content: 'q', providerId: null, model: 'local', createdAt: 1 },
+        {
+          id: 'm2',
+          role: 'assistant',
+          content: 'first try',
+          providerId: null,
+          model: 'local',
+          createdAt: 2,
+        },
+      ],
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Regenerate this reply' }));
+
+    await screen.findByRole('alert');
+    expect(screen.getByText('first try')).toBeDefined();
+  });
+
+  it('flags a cut-off reply and continues it into the same bubble', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        sseResponse([
+          { type: 'token', text: 'The list is: one,' },
+          { type: 'truncated' },
+          { type: 'done' },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        sseResponse([{ type: 'token', text: ' two, three.' }, { type: 'done' }]),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+    renderChatView({ initialSessionId: 'session-1' });
+
+    sendMessage('list them');
+    const note = await screen.findByText('Cut off at the model’s length limit.');
+    expect(note).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continue this reply' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({
+      modelKey: 'local',
+      sessionId: 'session-1',
+      mode: 'continue',
+    });
+
+    await waitFor(() => expect(screen.getByText('The list is: one, two, three.')).toBeDefined());
+    // One assistant bubble, not two — and the note is gone now that it ended properly.
+    expect(screen.getAllByRole('button', { name: 'Regenerate this reply' })).toHaveLength(1);
+    expect(screen.queryByText('Cut off at the model’s length limit.')).toBeNull();
+  });
+
+  it('edit: lifts the last message into the composer and sends mode: edit', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(sseResponse([{ type: 'token', text: 'better reply' }, { type: 'done' }]));
+    vi.stubGlobal('fetch', fetchMock);
+    renderChatView({
+      initialSessionId: 'session-1',
+      initialMessages: [
+        {
+          id: 'm1',
+          role: 'user',
+          content: 'orig question',
+          providerId: null,
+          model: 'local',
+          createdAt: 1,
+        },
+        {
+          id: 'm2',
+          role: 'assistant',
+          content: 'orig reply',
+          providerId: null,
+          model: 'local',
+          createdAt: 2,
+        },
+      ],
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit this message' }));
+
+    const input = screen.getByLabelText('Message Warden') as HTMLTextAreaElement;
+    expect(input.value).toBe('orig question');
+    // Both turns are lifted out while editing, with a way back.
+    expect(screen.queryByText('orig reply')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDefined();
+
+    fireEvent.change(input, { target: { value: 'edited question' } });
+    pressEnter();
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      modelKey: 'local',
+      sessionId: 'session-1',
+      mode: 'edit',
+      content: 'edited question',
+    });
+    await waitFor(() => expect(screen.getByText('better reply')).toBeDefined());
+    expect(screen.getByText('edited question')).toBeDefined();
+    expect(screen.queryByText('orig question')).toBeNull();
+  });
+
+  it('edit: Cancel restores both turns untouched', () => {
+    renderChatView({
+      initialSessionId: 'session-1',
+      initialMessages: [
+        {
+          id: 'm1',
+          role: 'user',
+          content: 'orig question',
+          providerId: null,
+          model: 'local',
+          createdAt: 1,
+        },
+        {
+          id: 'm2',
+          role: 'assistant',
+          content: 'orig reply',
+          providerId: null,
+          model: 'local',
+          createdAt: 2,
+        },
+      ],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Edit this message' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByText('orig question')).toBeDefined();
+    expect(screen.getByText('orig reply')).toBeDefined();
+    expect((screen.getByLabelText('Message Warden') as HTMLTextAreaElement).value).toBe('');
+  });
+
+  it('incognito: regenerate trims the scratch transcript and resends it as a plain send', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(sseResponse([{ type: 'token', text: 'first' }, { type: 'done' }]))
+      .mockResolvedValueOnce(sseResponse([{ type: 'token', text: 'second' }, { type: 'done' }]));
+    vi.stubGlobal('fetch', fetchMock);
+    renderChatView();
+    fireEvent.click(
+      screen.getByRole('button', { name: "Incognito — don't save this conversation" }),
+    );
+    sendMessage('hi');
+    await screen.findByText('first');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Regenerate this reply' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({
+      modelKey: 'local',
+      incognito: true,
+      messages: [{ role: 'user', content: 'hi' }],
+    });
+    await screen.findByText('second');
+  });
+
+  it('Enter inserts a newline on a mobile viewport instead of sending', async () => {
+    mobileViewport = true;
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    renderChatView();
+    const input = screen.getByLabelText('Message Warden');
+    fireEvent.change(input, { target: { value: 'line one' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    // Give any (wrong) send a tick to fire.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetchMock).not.toHaveBeenCalled();
+    // The button still sends.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(sseResponse([{ type: 'token', text: 'ok' }, { type: 'done' }])),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    await screen.findByText('ok');
   });
 });

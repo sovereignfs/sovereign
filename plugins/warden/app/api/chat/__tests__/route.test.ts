@@ -10,6 +10,8 @@ const getRecentMessagesForContext = vi.fn();
 const createSession = vi.fn();
 const deleteSession = vi.fn();
 const deleteMessage = vi.fn();
+const extendMessage = vi.fn();
+const replaceMessage = vi.fn();
 
 class SessionNotFoundError extends Error {
   constructor() {
@@ -45,6 +47,8 @@ vi.mock('../../../_lib/sessions', () => ({
   createSession: (...args: unknown[]) => createSession(...args),
   deleteSession: (...args: unknown[]) => deleteSession(...args),
   deleteMessage: (...args: unknown[]) => deleteMessage(...args),
+  extendMessage: (...args: unknown[]) => extendMessage(...args),
+  replaceMessage: (...args: unknown[]) => replaceMessage(...args),
   SessionNotFoundError,
 }));
 
@@ -122,6 +126,8 @@ beforeEach(() => {
   appendMessage.mockResolvedValue(undefined);
   deleteSession.mockResolvedValue(undefined);
   deleteMessage.mockResolvedValue(undefined);
+  extendMessage.mockResolvedValue(undefined);
+  replaceMessage.mockResolvedValue(undefined);
   createSession.mockResolvedValue({
     id: 'session-new',
     title: null,
@@ -163,7 +169,7 @@ describe('POST /warden/api/chat — auth and validation', () => {
   });
 
   it('returns 400 when the message exceeds the input length limit', async () => {
-    const res = await POST(chatRequest({ modelKey: 'local', content: 'x'.repeat(5000) }));
+    const res = await POST(chatRequest({ modelKey: 'local', content: 'x'.repeat(13_000) }));
     expect(res.status).toBe(400);
   });
 
@@ -341,6 +347,201 @@ describe('POST /warden/api/chat — client cancellation', () => {
 
     expect(appendMessage).toHaveBeenCalledTimes(1);
     expect(deleteMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-1', 'msg-user');
+  });
+});
+
+describe('POST /warden/api/chat — reply modes', () => {
+  const thread = [
+    {
+      id: 'm-user',
+      role: 'user',
+      content: 'explain tee()',
+      providerId: null,
+      model: 'local',
+      createdAt: 1,
+    },
+    {
+      id: 'm-reply',
+      role: 'assistant',
+      content: 'tee() splits a',
+      providerId: null,
+      model: 'local',
+      createdAt: 2,
+    },
+  ];
+
+  it('continue: replays the thread plus the continue instruction and extends the last reply in place', async () => {
+    getRecentMessagesForContext.mockResolvedValue(thread);
+    requestHarnessChat.mockResolvedValue(
+      streamResult([{ type: 'token', text: ' stream in two.' }, { type: 'done' }]),
+    );
+
+    const res = await POST(
+      chatRequest({ modelKey: 'local', sessionId: 'session-1', mode: 'continue' }),
+    );
+    await drain(res);
+
+    const sent = requestHarnessChat.mock.calls[0][0];
+    expect(sent.slice(0, 2)).toEqual([
+      { role: 'user', content: 'explain tee()' },
+      { role: 'assistant', content: 'tee() splits a' },
+    ]);
+    expect(sent[2].role).toBe('user');
+    expect(sent[2].content).toContain('Continue your previous reply');
+    // No new user turn, no new assistant row — the existing reply grows.
+    expect(appendMessage).not.toHaveBeenCalled();
+    expect(extendMessage).toHaveBeenCalledWith(
+      'user-1',
+      'tenant-1',
+      'session-1',
+      'm-reply',
+      ' stream in two.',
+    );
+  });
+
+  it('continue: rejects when the thread does not end on a reply', async () => {
+    getRecentMessagesForContext.mockResolvedValue([thread[0]]);
+    const res = await POST(
+      chatRequest({ modelKey: 'local', sessionId: 'session-1', mode: 'continue' }),
+    );
+    expect(res.status).toBe(400);
+    expect(requestHarnessChat).not.toHaveBeenCalled();
+  });
+
+  it('regenerate: resends the thread without the last reply and overwrites it on completion', async () => {
+    getRecentMessagesForContext.mockResolvedValue(thread);
+    requestHarnessChat.mockResolvedValue(
+      streamResult([{ type: 'token', text: 'A fresh answer.' }, { type: 'done' }]),
+    );
+
+    const res = await POST(
+      chatRequest({ modelKey: 'local', sessionId: 'session-1', mode: 'regenerate' }),
+    );
+    await drain(res);
+
+    expect(requestHarnessChat.mock.calls[0][0]).toEqual([
+      { role: 'user', content: 'explain tee()' },
+    ]);
+    expect(appendMessage).not.toHaveBeenCalled();
+    expect(replaceMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-1', 'm-reply', {
+      content: 'A fresh answer.',
+      providerId: null,
+      model: 'local',
+    });
+  });
+
+  it('regenerate: a failed model call leaves the original reply untouched', async () => {
+    getRecentMessagesForContext.mockResolvedValue(thread);
+    requestHarnessChat.mockResolvedValue({ kind: 'unavailable', message: 'down' });
+
+    const res = await POST(
+      chatRequest({ modelKey: 'local', sessionId: 'session-1', mode: 'regenerate' }),
+    );
+    expect(res.status).toBe(503);
+    expect(replaceMessage).not.toHaveBeenCalled();
+    expect(deleteMessage).not.toHaveBeenCalled();
+  });
+
+  it('edit: removes the last user turn and its reply, then sends the new text as a normal message', async () => {
+    getRecentMessagesForContext.mockResolvedValue([
+      {
+        id: 'm-0',
+        role: 'user',
+        content: 'earlier',
+        providerId: null,
+        model: 'local',
+        createdAt: 0,
+      },
+      {
+        id: 'm-0r',
+        role: 'assistant',
+        content: 'earlier reply',
+        providerId: null,
+        model: 'local',
+        createdAt: 0,
+      },
+      ...thread,
+    ]);
+    requestHarnessChat.mockResolvedValue(
+      streamResult([{ type: 'token', text: 'new reply' }, { type: 'done' }]),
+    );
+
+    const res = await POST(
+      chatRequest({
+        modelKey: 'local',
+        sessionId: 'session-1',
+        mode: 'edit',
+        content: 'explain tee() briefly',
+      }),
+    );
+    await drain(res);
+
+    expect(deleteMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-1', 'm-reply');
+    expect(deleteMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-1', 'm-user');
+    expect(requestHarnessChat.mock.calls[0][0]).toEqual([
+      { role: 'user', content: 'earlier' },
+      { role: 'assistant', content: 'earlier reply' },
+      { role: 'user', content: 'explain tee() briefly' },
+    ]);
+    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-1', {
+      role: 'user',
+      content: 'explain tee() briefly',
+      providerId: null,
+      model: 'local',
+    });
+    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-1', {
+      role: 'assistant',
+      content: 'new reply',
+      providerId: null,
+      model: 'local',
+    });
+  });
+
+  it('rejects an unknown mode, and any non-send mode without a session', async () => {
+    expect(
+      (await POST(chatRequest({ modelKey: 'local', sessionId: 's', mode: 'rewind' }))).status,
+    ).toBe(400);
+    expect((await POST(chatRequest({ modelKey: 'local', mode: 'continue' }))).status).toBe(400);
+    expect(requestHarnessChat).not.toHaveBeenCalled();
+  });
+
+  it('incognito continue: appends the instruction to the client transcript, persists nothing', async () => {
+    requestHarnessChat.mockResolvedValue(
+      streamResult([{ type: 'token', text: 'x' }, { type: 'done' }]),
+    );
+    const messages = [
+      { role: 'user', content: 'hi' },
+      { role: 'assistant', content: 'partial' },
+    ];
+    const res = await POST(
+      chatRequest({ modelKey: 'local', incognito: true, messages, mode: 'continue' }),
+    );
+    await drain(res);
+    const sent = requestHarnessChat.mock.calls[0][0];
+    expect(sent).toHaveLength(3);
+    expect(sent[2].content).toContain('Continue your previous reply');
+    expect(appendMessage).not.toHaveBeenCalled();
+    expect(extendMessage).not.toHaveBeenCalled();
+  });
+
+  it('surfaces the local model hitting its output cap as a truncated frame', async () => {
+    requestHarnessChat.mockResolvedValue(
+      streamResult([
+        { type: 'token', text: 'cut' },
+        { type: 'done', completionTokens: 2048 },
+      ]),
+    );
+    const res = await POST(chatRequest({ modelKey: 'local', content: 'hello' }));
+    const reader = readerOf(res);
+    const decoder = new TextDecoder();
+    let text = '';
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      text += decoder.decode(value, { stream: true });
+    }
+    expect(text).toContain('"type":"truncated"');
+    expect(text.trim().endsWith('data: {"type":"done"}')).toBe(true);
   });
 });
 
@@ -666,7 +867,7 @@ describe('POST /warden/api/chat — file attachments', () => {
       attachment: {
         kind: 'document',
         filename: 'huge.txt',
-        extractedText: 'x'.repeat(19_000), // well past MAX_INPUT_CHARS (4000) on its own
+        extractedText: 'x'.repeat(19_000), // well past MAX_INPUT_CHARS (12000) on its own
         truncated: false,
       },
     });

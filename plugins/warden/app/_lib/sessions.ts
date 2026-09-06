@@ -51,6 +51,13 @@ export class SessionPinLimitError extends Error {
   }
 }
 
+export class MessageNotFoundError extends Error {
+  constructor() {
+    super('Message not found.');
+    this.name = 'MessageNotFoundError';
+  }
+}
+
 export interface SessionView {
   id: string;
   title: string | null;
@@ -391,6 +398,88 @@ export async function deleteMessage(
   await database
     .delete(wardenMessages)
     .where(and(eq(wardenMessages.id, messageId), eq(wardenMessages.sessionId, sessionId)));
+}
+
+async function getOwnMessage(
+  database: Db,
+  userId: string,
+  sessionId: string,
+  messageId: string,
+): Promise<WardenMessageRow> {
+  const existing = await getOwnSession(database, userId, sessionId);
+  if (!existing) throw new SessionNotFoundError();
+  const rows = await database
+    .select()
+    .from(wardenMessages)
+    .where(and(eq(wardenMessages.id, messageId), eq(wardenMessages.sessionId, sessionId)))
+    .limit(1);
+  const row = rows[0];
+  if (!row) throw new MessageNotFoundError();
+  return row;
+}
+
+/**
+ * Appends `extraText` onto an existing message's content — the "Continue"
+ * action (`reply-modes.ts`) for a reply the model cut short. The
+ * continuation joins the original with no separator: models pick up
+ * mid-sentence, often mid-word, and inserting anything would corrupt the
+ * text exactly where it was cut. Bumps the session's `lastActiveAt` like any
+ * other exchange. Ownership-checked through the session.
+ */
+export async function extendMessage(
+  userId: string,
+  _tenantId: string,
+  sessionId: string,
+  messageId: string,
+  extraText: string,
+): Promise<MessageView> {
+  const database = await db();
+  const row = await getOwnMessage(database, userId, sessionId, messageId);
+  const content = row.content + extraText;
+  await database
+    .update(wardenMessages)
+    .set({ content })
+    .where(and(eq(wardenMessages.id, messageId), eq(wardenMessages.sessionId, sessionId)));
+  await database
+    .update(wardenSessions)
+    .set({ lastActiveAt: Date.now() })
+    .where(eq(wardenSessions.id, sessionId));
+  return toMessageView({ ...row, content });
+}
+
+/**
+ * Overwrites a message in place — the "Regenerate" action
+ * (`reply-modes.ts`). Keeps the row's id but stamps a fresh `createdAt`
+ * (it is a new reply, and the display time should say so) and records
+ * which model actually produced it, which may differ from the original.
+ * Called only once the replacement has fully streamed, so a failed
+ * regeneration leaves the original reply untouched.
+ */
+export async function replaceMessage(
+  userId: string,
+  _tenantId: string,
+  sessionId: string,
+  messageId: string,
+  input: { content: string; providerId: string | null; model: string },
+): Promise<MessageView> {
+  const database = await db();
+  const row = await getOwnMessage(database, userId, sessionId, messageId);
+  const now = Date.now();
+  const patch = {
+    content: input.content,
+    providerId: input.providerId,
+    model: input.model,
+    createdAt: now,
+  };
+  await database
+    .update(wardenMessages)
+    .set(patch)
+    .where(and(eq(wardenMessages.id, messageId), eq(wardenMessages.sessionId, sessionId)));
+  await database
+    .update(wardenSessions)
+    .set({ lastActiveAt: now })
+    .where(eq(wardenSessions.id, sessionId));
+  return toMessageView({ ...row, ...patch });
 }
 
 /** Deletes every message in a session — kept for parity with the original

@@ -14,7 +14,7 @@ export type ProviderChatResult =
   | { kind: 'error'; message: string };
 
 interface OpenAiStreamChunk {
-  choices?: Array<{ delta?: { content?: string } }>;
+  choices?: Array<{ delta?: { content?: string }; finish_reason?: string | null }>;
 }
 
 /**
@@ -55,8 +55,16 @@ function toWardenFrames(upstream: ReadableStream<Uint8Array>): ReadableStream<Ui
             } catch {
               continue;
             }
-            const text = parsed.choices?.[0]?.delta?.content;
+            const choice = parsed.choices?.[0];
+            const text = choice?.delta?.content;
             if (text) controller.enqueue(frame({ type: 'token', text }));
+            // The provider hit the request's `max_tokens` — the reply is
+            // cut off, not finished. Surfaced as its own frame so the client
+            // can say so (and offer to continue) instead of presenting a
+            // truncated answer as whole.
+            if (choice?.finish_reason === 'length') {
+              controller.enqueue(frame({ type: 'truncated' }));
+            }
           }
         }
         if (!cancelled) controller.enqueue(frame({ type: 'done' }));

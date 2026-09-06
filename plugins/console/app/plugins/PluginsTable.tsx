@@ -192,7 +192,11 @@ function DesktopRow({ row, justActivated, onActivated, onDismissActivated, selec
     <tr className={[styles.tr, selected ? styles.trSelected : ''].filter(Boolean).join(' ')}>
       <td className={styles.td}>
         {selectable ? (
-          <Link href={`?plugin=${row.id}`} className={styles.userCellLink}>
+          <Link
+            href={`?plugin=${row.id}`}
+            className={styles.userCellLink}
+            aria-current={selected ? 'true' : undefined}
+          >
             <span className={styles.userName}>{row.name}</span>
             {row.description && <span className={styles.userEmail}>{row.description}</span>}
             <span className={styles.userId}>{row.id}</span>

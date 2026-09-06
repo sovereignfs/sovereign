@@ -6,6 +6,9 @@ import { UserCard } from './UserCard';
 import { UserDetailPane } from './UserDetailPane';
 import { InviteDialog } from './invite/InviteDialog';
 import { ConsoleDetailSlot } from '../_components/ConsoleDetailSlot';
+import { ConsolePageHeader } from '../_components/ConsolePageHeader';
+import { ConsolePagination } from '../_components/ConsolePagination';
+import { MemberStatusBadge, RoleBadge } from '../_components/badges';
 import styles from '../console.module.css';
 import { renderFetchSignal } from '../_lib/fetch-timeout';
 import { parsePageParam } from '../_lib/pagination';
@@ -46,30 +49,6 @@ async function getMembers(): Promise<MemberRow[]> {
   }
 }
 
-function StatusBadge({ status }: { status: MemberRow['status'] }) {
-  return (
-    <Badge variant="status" size="sm" status={status}>
-      {status === 'active' ? 'Active' : status === 'deactivated' ? 'Deactivated' : 'Invited'}
-    </Badge>
-  );
-}
-
-function RoleBadge({ role }: { role: string | null }) {
-  const label =
-    role === 'platform:owner'
-      ? 'Owner'
-      : role === 'platform:admin'
-        ? 'Admin'
-        : role === 'platform:auditor'
-          ? 'Auditor'
-          : 'User';
-  return (
-    <Badge variant="role" size="sm">
-      {label}
-    </Badge>
-  );
-}
-
 export default async function UsersPage({
   searchParams,
 }: {
@@ -101,13 +80,11 @@ export default async function UsersPage({
 
   return (
     <div>
-      <div className={styles.pageHeader}>
-        <h2 className={styles.overviewSectionTitle}>Users</h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sv-space-3)' }}>
-          <span className={styles.memberCount}>{total} members</span>
-          {canManageUsers && <InviteDialog />}
-        </div>
-      </div>
+      <ConsolePageHeader
+        title="Users"
+        count={`${total} ${total === 1 ? 'member' : 'members'}`}
+        action={canManageUsers ? <InviteDialog /> : undefined}
+      />
 
       <div className={styles.tableCard}>
         <div className={styles.tableWrapper}>
@@ -137,6 +114,7 @@ export default async function UsersPage({
                           <Link
                             href={`?page=${safePage}&user=${member.id}`}
                             className={styles.userCellLink}
+                            aria-current={isSelected ? 'true' : undefined}
                           >
                             <span className={styles.userName}>{member.name ?? '—'}</span>
                             <span className={styles.userEmail}>{member.email}</span>
@@ -156,7 +134,7 @@ export default async function UsersPage({
 
                     <td className={styles.td}>
                       <span className={styles.badgeGroup}>
-                        <StatusBadge status={member.status} />
+                        <MemberStatusBadge status={member.status} />
                         {member.isTestUser && (
                           <Badge variant="mono" size="sm">
                             Test
@@ -219,30 +197,14 @@ export default async function UsersPage({
         ))}
       </div>
 
-      <div className={styles.usersPagination}>
-        <span className={styles.paginationInfo}>
-          Showing {rangeStart}–{rangeEnd} of {total}
-        </span>
-        <div className={styles.paginationControls}>
-          {safePage > 1 ? (
-            <Link replace href={`?page=${safePage - 1}`} className={styles.paginationLink}>
-              ← Prev
-            </Link>
-          ) : (
-            <span className={styles.paginationDisabled}>← Prev</span>
-          )}
-          <span className={styles.paginationInfo}>
-            {safePage} / {totalPages}
-          </span>
-          {safePage < totalPages ? (
-            <Link replace href={`?page=${safePage + 1}`} className={styles.paginationLink}>
-              Next →
-            </Link>
-          ) : (
-            <span className={styles.paginationDisabled}>Next →</span>
-          )}
-        </div>
-      </div>
+      <ConsolePagination
+        page={safePage}
+        totalPages={totalPages}
+        rangeStart={total === 0 ? 0 : rangeStart}
+        rangeEnd={rangeEnd}
+        total={total}
+        hrefFor={(p) => `?page=${p}`}
+      />
 
       {selectedMember && (
         // `detailKey` forces a full remount on every selection change —

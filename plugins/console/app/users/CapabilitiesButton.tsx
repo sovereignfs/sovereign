@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Dialog } from '@sovereignfs/ui';
+import { Dialog, Icon } from '@sovereignfs/ui';
 import styles from '../console.module.css';
 import { UserCapabilitiesFields } from './UserCapabilitiesFields';
 
@@ -18,22 +18,11 @@ export function CapabilitiesButton({ userId, name }: { userId: string; name: str
       <button
         type="button"
         className={styles.iconBtn}
+        aria-label={`Manage capabilities for ${name}`}
         title="Manage capabilities"
         onClick={() => setOpen(true)}
       >
-        <svg
-          width="15"
-          height="15"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M12 2l3 6 6 1-4.5 4.5L18 20l-6-3-6 3 1.5-6.5L3 9l6-1z" />
-        </svg>
+        <Icon name="sliders-horizontal" size="sm" aria-hidden />
       </button>
 
       <Dialog

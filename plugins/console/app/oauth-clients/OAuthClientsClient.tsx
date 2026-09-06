@@ -3,7 +3,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Button, FormField, Icon, Input, TagInput, StatusBadge, useToast } from '@sovereignfs/ui';
+import {
+  Badge,
+  Button,
+  ConfirmDialog,
+  FormField,
+  Icon,
+  Input,
+  TagInput,
+  useToast,
+} from '@sovereignfs/ui';
 import { OAuthClientDetailPane } from './OAuthClientDetailPane';
 import { ConsoleDetailSlot } from '../_components/ConsoleDetailSlot';
 import styles from '../console.module.css';
@@ -23,6 +32,9 @@ interface RevealedSecret {
 }
 
 const DEFAULT_SCOPES = 'openid email profile';
+
+/** Which irreversible action is awaiting confirmation, and for which client. */
+type PendingConfirm = { kind: 'rotate' | 'revoke'; clientId: string; clientName: string } | null;
 
 async function authFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api/auth${path}`, {
@@ -59,6 +71,8 @@ export function OAuthClientsClient() {
   const [name, setName] = useState('');
   const [redirectUris, setRedirectUris] = useState<string[]>([]);
   const [revealed, setRevealed] = useState<RevealedSecret | null>(null);
+  const [confirm, setConfirm] = useState<PendingConfirm>(null);
+  const [confirmPending, setConfirmPending] = useState(false);
 
   const selectedClient = selectedClientId
     ? (clients.find((c) => c.client_id === selectedClientId) ?? null)
@@ -119,6 +133,39 @@ export function OAuthClientsClient() {
       });
     } finally {
       setCreating(false);
+    }
+  }
+
+  /**
+   * Rotate and revoke are both one-way (the old secret stops working; a
+   * revoked client is deleted), so each confirms first — the buttons used
+   * to fire immediately.
+   */
+  function askRotate(client: OAuthClientRow): void {
+    setConfirm({
+      kind: 'rotate',
+      clientId: client.client_id,
+      clientName: client.client_name ?? client.client_id,
+    });
+  }
+
+  function askRevoke(client: OAuthClientRow): void {
+    setConfirm({
+      kind: 'revoke',
+      clientId: client.client_id,
+      clientName: client.client_name ?? client.client_id,
+    });
+  }
+
+  async function runConfirmed(): Promise<void> {
+    if (!confirm) return;
+    setConfirmPending(true);
+    try {
+      if (confirm.kind === 'rotate') await handleRotate(confirm.clientId);
+      else await handleRevoke(confirm.clientId);
+    } finally {
+      setConfirmPending(false);
+      setConfirm(null);
     }
   }
 
@@ -213,13 +260,23 @@ export function OAuthClientsClient() {
                   .filter(Boolean)
                   .join(' ')}
               >
-                <Link href={`?client=${client.client_id}`} className={styles.cardLink}>
+                <Link
+                  href={`?client=${client.client_id}`}
+                  className={styles.cardLink}
+                  aria-current={isSelected ? 'true' : undefined}
+                >
                   <div className={styles.cardTitleRow}>
                     <p className={styles.helpText}>
-                      <strong>{client.client_name ?? '(unnamed)'}</strong>{' '}
-                      <StatusBadge status={client.disabled ? 'error' : 'synced'}>
-                        {client.disabled ? 'revoked' : 'active'}
-                      </StatusBadge>
+                      <strong>{client.client_name ?? 'Unnamed client'}</strong>{' '}
+                      {client.disabled ? (
+                        <Badge variant="status" size="xs" status="deactivated">
+                          Revoked
+                        </Badge>
+                      ) : (
+                        <Badge variant="status" size="xs" status="active">
+                          Active
+                        </Badge>
+                      )}
                     </p>
                     <Icon
                       name="chevron-right"
@@ -239,17 +296,14 @@ export function OAuthClientsClient() {
                     mobile has no detail column to select into. */}
                 <span className={styles.cardManageMobile}>
                   <div className={styles.providerConfigActions}>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => void handleRotate(client.client_id)}
-                    >
+                    <Button variant="secondary" size="sm" onClick={() => askRotate(client)}>
                       Rotate secret
                     </Button>
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => void handleRevoke(client.client_id)}
+                      disabled={client.disabled}
+                      onClick={() => askRevoke(client)}
                     >
                       Revoke
                     </Button>
@@ -266,11 +320,42 @@ export function OAuthClientsClient() {
           <OAuthClientDetailPane
             client={selectedClient}
             closeHref={closeHref}
-            onRotate={() => void handleRotate(selectedClient.client_id)}
-            onRevoke={() => void handleRevoke(selectedClient.client_id)}
+            onRotate={() => askRotate(selectedClient)}
+            onRevoke={() => askRevoke(selectedClient)}
           />
         </ConsoleDetailSlot>
       )}
+
+      <ConfirmDialog
+        open={confirm !== null}
+        onClose={() => setConfirm(null)}
+        title={confirm?.kind === 'revoke' ? 'Revoke client' : 'Rotate client secret'}
+        message={
+          confirm?.kind === 'revoke' ? (
+            <>
+              Revoke <strong>{confirm.clientName}</strong>? Sign-ins through this client stop
+              working immediately. This cannot be undone.
+            </>
+          ) : (
+            <>
+              Rotate the secret for <strong>{confirm?.clientName}</strong>? The current secret stops
+              working immediately; the new one is shown once, so update the app right away.
+            </>
+          )
+        }
+        confirmLabel={
+          confirmPending
+            ? confirm?.kind === 'revoke'
+              ? 'Revoking…'
+              : 'Rotating…'
+            : confirm?.kind === 'revoke'
+              ? 'Revoke'
+              : 'Rotate secret'
+        }
+        destructive={confirm?.kind === 'revoke'}
+        pending={confirmPending}
+        onConfirm={() => void runConfirmed()}
+      />
     </div>
   );
 }

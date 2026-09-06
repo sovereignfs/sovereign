@@ -143,9 +143,10 @@ describe('cancelInviteAction — invite creation flow (cancellation)', () => {
     hasCapability.mockReturnValue(false);
     vi.stubGlobal('fetch', vi.fn());
 
-    await expect(cancelInviteAction(formData({ email: 'x@example.test' }))).rejects.toThrow(
-      'Insufficient privileges to manage users.',
-    );
+    await expect(cancelInviteAction(formData({ email: 'x@example.test' }))).resolves.toEqual({
+      ok: false,
+      error: 'Insufficient privileges to manage users.',
+    });
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -171,7 +172,7 @@ describe('changeRoleAction — role update guardrails', () => {
 
     await expect(
       changeRoleAction(formData({ userId: 'user-2', role: 'platform:admin' })),
-    ).rejects.toThrow('Insufficient privileges to assign roles.');
+    ).resolves.toEqual({ ok: false, error: 'Insufficient privileges to assign roles.' });
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -191,12 +192,12 @@ describe('changeRoleAction — role update guardrails', () => {
     expect(hasCapability).toHaveBeenCalledWith(expect.anything(), 'role:assign');
   });
 
-  it('throws on a failed role change rather than silently succeeding', async () => {
+  it('reports a failed role change as a result rather than silently succeeding', async () => {
     vi.stubGlobal('fetch', mockAdminFetch({ 'PATCH /api/admin/users/user-2': { status: 403 } }));
 
     await expect(
       changeRoleAction(formData({ userId: 'user-2', role: 'platform:admin' })),
-    ).rejects.toThrow('Failed to change role: 403');
+    ).resolves.toEqual({ ok: false, error: 'Failed to change role: 403' });
   });
 
   it('refuses a role outside the assignable set without calling the API', async () => {
@@ -206,7 +207,7 @@ describe('changeRoleAction — role update guardrails', () => {
 
     await expect(
       changeRoleAction(formData({ userId: 'user-2', role: 'platform:superuser' })),
-    ).rejects.toThrow('Role must be one of: admin, auditor, user.');
+    ).resolves.toEqual({ ok: false, error: 'Role must be one of: admin, auditor, user.' });
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -215,7 +216,7 @@ describe('changeRoleAction — role update guardrails', () => {
 
     await expect(
       changeRoleAction(formData({ userId: 'user-2', role: 'platform:owner' })),
-    ).rejects.toThrow('Role must be one of: admin, auditor, user.');
+    ).resolves.toEqual({ ok: false, error: 'Role must be one of: admin, auditor, user.' });
     expect(fetch).not.toHaveBeenCalled();
   });
 });
@@ -227,7 +228,7 @@ describe('toggleActiveAction — admin-only behavior for a sensitive route', () 
 
     await expect(
       toggleActiveAction(formData({ userId: 'user-2', active: 'false' })),
-    ).rejects.toThrow('Insufficient privileges to manage users.');
+    ).resolves.toEqual({ ok: false, error: 'Insufficient privileges to manage users.' });
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -253,7 +254,7 @@ describe('toggleActiveAction — admin-only behavior for a sensitive route', () 
 
     await expect(
       toggleActiveAction(formData({ userId: 'admin-1', active: 'false' })),
-    ).rejects.toThrow('You cannot change the status of your own account.');
+    ).resolves.toEqual({ ok: false, error: 'You cannot change the status of your own account.' });
     expect(fetch).not.toHaveBeenCalled();
   });
 });
@@ -279,9 +280,10 @@ describe('resetMfaAction — admin-only behavior (regression)', () => {
     hasCapability.mockReturnValue(false);
     vi.stubGlobal('fetch', vi.fn());
 
-    await expect(resetMfaAction(formData({ userId: 'user-2' }))).rejects.toThrow(
-      'Insufficient privileges to manage users.',
-    );
+    await expect(resetMfaAction(formData({ userId: 'user-2' }))).resolves.toEqual({
+      ok: false,
+      error: 'Insufficient privileges to manage users.',
+    });
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -314,9 +316,10 @@ describe('deleteUserAction — role guardrail (owner cannot be deleted)', () => 
       }),
     );
 
-    await expect(deleteUserAction(formData({ userId: 'owner-1' }))).rejects.toThrow(
-      'The platform owner account cannot be deleted.',
-    );
+    await expect(deleteUserAction(formData({ userId: 'owner-1' }))).resolves.toEqual({
+      ok: false,
+      error: 'The platform owner account cannot be deleted.',
+    });
     expect(deleteUser).not.toHaveBeenCalled();
   });
 
@@ -341,9 +344,10 @@ describe('deleteUserAction — role guardrail (owner cannot be deleted)', () => 
     hasCapability.mockReturnValue(false);
     vi.stubGlobal('fetch', vi.fn());
 
-    await expect(deleteUserAction(formData({ userId: 'user-2' }))).rejects.toThrow(
-      'Insufficient privileges to manage users.',
-    );
+    await expect(deleteUserAction(formData({ userId: 'user-2' }))).resolves.toEqual({
+      ok: false,
+      error: 'Insufficient privileges to manage users.',
+    });
     expect(fetch).not.toHaveBeenCalled();
     expect(deleteUser).not.toHaveBeenCalled();
   });
@@ -357,9 +361,10 @@ describe('deleteUserAction — role guardrail (owner cannot be deleted)', () => 
       mockAdminFetch({ 'GET /api/admin/users': { status: 503, body: { error: 'down' } } }),
     );
 
-    await expect(deleteUserAction(formData({ userId: 'owner-1' }))).rejects.toThrow(
-      'Could not verify the account before deleting it (503).',
-    );
+    await expect(deleteUserAction(formData({ userId: 'owner-1' }))).resolves.toEqual({
+      ok: false,
+      error: 'Could not verify the account before deleting it (503).',
+    });
     expect(deleteUser).not.toHaveBeenCalled();
     expect(logActivity).not.toHaveBeenCalled();
   });
@@ -367,9 +372,10 @@ describe('deleteUserAction — role guardrail (owner cannot be deleted)', () => 
   it("refuses to delete the acting admin's own account, without querying the directory", async () => {
     vi.stubGlobal('fetch', vi.fn());
 
-    await expect(deleteUserAction(formData({ userId: 'admin-1' }))).rejects.toThrow(
-      'You cannot delete your own account from Console.',
-    );
+    await expect(deleteUserAction(formData({ userId: 'admin-1' }))).resolves.toEqual({
+      ok: false,
+      error: 'You cannot delete your own account from Console.',
+    });
     expect(fetch).not.toHaveBeenCalled();
     expect(deleteUser).not.toHaveBeenCalled();
   });
@@ -380,9 +386,10 @@ describe('vouchAction — trust escalation', () => {
     hasCapability.mockReturnValue(false);
     vi.stubGlobal('fetch', vi.fn());
 
-    await expect(vouchAction(formData({ userId: 'user-2' }))).rejects.toThrow(
-      'Insufficient privileges to manage users.',
-    );
+    await expect(vouchAction(formData({ userId: 'user-2' }))).resolves.toEqual({
+      ok: false,
+      error: 'Insufficient privileges to manage users.',
+    });
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -409,9 +416,10 @@ describe('revokeVouchAction — trust de-escalation', () => {
     hasCapability.mockReturnValue(false);
     vi.stubGlobal('fetch', vi.fn());
 
-    await expect(revokeVouchAction(formData({ userId: 'user-2' }))).rejects.toThrow(
-      'Insufficient privileges to manage users.',
-    );
+    await expect(revokeVouchAction(formData({ userId: 'user-2' }))).resolves.toEqual({
+      ok: false,
+      error: 'Insufficient privileges to manage users.',
+    });
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -440,7 +448,7 @@ describe('grantCapabilityAction — per-user capability grants (RFC 0070)', () =
 
     await expect(
       grantCapabilityAction(formData({ userId: 'user-2', capability: 'user:manage' })),
-    ).rejects.toThrow('Insufficient privileges to grant capabilities.');
+    ).resolves.toEqual({ ok: false, error: 'Insufficient privileges to grant capabilities.' });
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -469,7 +477,7 @@ describe('revokeCapabilityAction — per-user capability grants (RFC 0070)', () 
 
     await expect(
       revokeCapabilityAction(formData({ userId: 'user-2', capability: 'user:manage' })),
-    ).rejects.toThrow('Insufficient privileges to revoke capabilities.');
+    ).resolves.toEqual({ ok: false, error: 'Insufficient privileges to revoke capabilities.' });
     expect(fetch).not.toHaveBeenCalled();
   });
 

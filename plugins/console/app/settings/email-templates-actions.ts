@@ -2,10 +2,9 @@
 
 import { sdk } from '@sovereignfs/sdk';
 import type { ActionResult } from './actions';
+import { adminFetch } from '../_lib/admin-fetch';
 
 export type { ActionResult } from './actions';
-
-const SELF_URL = `http://localhost:${process.env.RUNTIME_PORT ?? '3000'}`;
 
 export type EmailTemplateId = 'passwordReset' | 'invite';
 
@@ -19,18 +18,6 @@ function isEmailTemplateId(value: unknown): value is EmailTemplateId {
 
 function isLocale(value: unknown): value is string {
   return typeof value === 'string' && LOCALE_RE.test(value);
-}
-
-async function adminFetch(path: string, init?: RequestInit): Promise<Response> {
-  const adminKey = process.env.SOVEREIGN_ADMIN_KEY ?? '';
-  return fetch(`${SELF_URL}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${adminKey}`,
-      ...(init?.headers as Record<string, string>),
-    },
-  });
 }
 
 export async function getEmailTemplateCopyAction(

@@ -92,6 +92,12 @@
   list-style: none;
 }
 
+/* Groups list: a capped max track width (instead of `.cards`' shared 1fr)
+   so a handful of groups don't stretch to fill the entire row. */
+.cardsCapped {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 320px));
+}
+
 .card {
   position: relative;
   display: flex;
@@ -236,6 +242,14 @@ svg.cardChevron {
    both classes are applied together. */
 .pageHeaderTight {
   margin-bottom: var(--sv-space-2);
+}
+
+/* Right-hand cluster of `.pageHeader`: the muted count + the primary
+   action (`ConsolePageHeader`). */
+.pageHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
 }
 
 .pageTitle {
@@ -456,8 +470,8 @@ svg.cardChevron {
 
 .iconBtnDanger {
   composes: iconBtnBase;
-  border-color: var(--sv-red-700);
-  color: var(--sv-red-700);
+  border-color: var(--sv-color-error-border);
+  color: var(--sv-color-error-text);
 }
 
 .iconBtnDanger:hover {
@@ -719,6 +733,18 @@ svg.cardChevron {
   align-self: flex-start;
 }
 
+/* A lone `Button` inside a stretching flex column (`.card`, `.detailSection`)
+   — opt it out of `align-items: stretch` the same way `.detailRoleBadge` does. */
+.selfStart {
+  align-self: flex-start;
+}
+
+/* Mobile Groups card's `Manage` trigger: bottom-aligned inside the card. */
+.cardManageButton {
+  align-self: flex-start;
+  margin-top: auto;
+}
+
 .detailSectionTitle {
   margin: 0;
   font-size: var(--sv-font-size-xs);
@@ -810,13 +836,17 @@ svg.cardChevron {
   word-break: break-all;
 }
 
+/* Inline error under a form — same tint as `.feedbackError` so an error
+   reads as one (it used to be a neutral sunken box indistinguishable from a
+   hint). Kept as its own class: `.inviteForm > .errorText` and callers
+   still reference it. */
 .errorText {
-  color: var(--sv-color-text-primary);
+  color: var(--sv-color-error-text);
   font-size: var(--sv-font-size-sm);
   padding: var(--sv-space-3) var(--sv-space-4);
-  border: 1px solid var(--sv-color-border);
+  border: 1px solid var(--sv-color-error-border);
   border-radius: var(--sv-radius-md);
-  background-color: var(--sv-color-surface-sunken);
+  background-color: var(--sv-color-error-surface);
 }
 
 .feedbackError {
@@ -945,7 +975,15 @@ svg.cardChevron {
 }
 
 .checkboxRow input {
-  margin-top: 3px;
+  margin-top: var(--sv-space-1);
+}
+
+/* A vertical stack of `Checkbox` rows inside a `FormField` (invite form's
+   "Grant access to" list). */
+.checkboxList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-1);
 }
 
 .helpText {
@@ -982,6 +1020,17 @@ svg.cardChevron {
   justify-content: space-between;
   gap: var(--sv-space-3);
   padding: var(--sv-space-2) var(--sv-space-3);
+}
+
+/* Suggestion list rendered directly under a search `Input` (group member
+   picker, app access user picker). */
+.compactListBelowInput {
+  margin-top: var(--sv-space-1);
+}
+
+/* Secondary text after a `.compactRowTitle`, e.g. "(ada@example.test)". */
+.compactRowMeta {
+  color: var(--sv-color-text-muted);
 }
 
 .compactRow:not(:last-child) {

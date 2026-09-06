@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { Alert, Badge } from '@sovereignfs/ui';
 import { ActivitySearch } from '../_components/ActivitySearch';
+import { ConsolePagination } from '../_components/ConsolePagination';
 import styles from '../console.module.css';
 import { renderFetchSignal } from '../_lib/fetch-timeout';
 import { parsePageParam } from '../_lib/pagination';
@@ -179,38 +179,14 @@ export default async function ActivityPage({
             ))}
           </div>
 
-          <div className={styles.usersPagination}>
-            <span className={styles.paginationInfo}>
-              Showing {rangeStart}–{rangeEnd} of {total}
-            </span>
-            <div className={styles.paginationControls}>
-              {safePage > 1 ? (
-                <Link
-                  replace
-                  href={`?page=${safePage - 1}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
-                  className={styles.paginationLink}
-                >
-                  Previous
-                </Link>
-              ) : (
-                <span className={styles.paginationDisabled}>Previous</span>
-              )}
-              <span className={styles.paginationInfo}>
-                {safePage} / {totalPages}
-              </span>
-              {safePage < totalPages ? (
-                <Link
-                  replace
-                  href={`?page=${safePage + 1}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
-                  className={styles.paginationLink}
-                >
-                  Next
-                </Link>
-              ) : (
-                <span className={styles.paginationDisabled}>Next</span>
-              )}
-            </div>
-          </div>
+          <ConsolePagination
+            page={safePage}
+            totalPages={totalPages}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            total={total}
+            hrefFor={(p) => `?page=${p}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+          />
         </>
       )}
     </div>

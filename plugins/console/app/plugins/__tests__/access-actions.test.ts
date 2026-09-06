@@ -112,12 +112,24 @@ describe('plugin access actions — refuse without plugin:manage, before any adm
     ],
   ];
 
+  // The three `ActionResult` mutations return the refusal; the reads and the
+  // `useActionState`-shaped grants still throw it.
+  const RESOLVING = new Set([
+    'setPluginAccessPolicyAction',
+    'revokePluginAccessUserAction',
+    'revokePluginAccessGroupAction',
+  ]);
+
   for (const [name, call] of cases) {
-    it(`${name} rejects and never calls fetch`, async () => {
+    it(`${name} refuses and never calls fetch`, async () => {
       hasCapability.mockReturnValue(false);
       const fetchMock = mockAdminFetch({});
 
-      await expect(call()).rejects.toThrow(DENIED);
+      if (RESOLVING.has(name)) {
+        await expect(call()).resolves.toEqual({ ok: false, error: DENIED });
+      } else {
+        await expect(call()).rejects.toThrow(DENIED);
+      }
       expect(fetchMock).not.toHaveBeenCalled();
       expect(hasCapability).toHaveBeenCalledWith(expect.anything(), 'plugin:manage');
     });
@@ -251,11 +263,11 @@ describe('access policy mutations', () => {
     );
   });
 
-  it('setPluginAccessPolicyAction throws on a non-OK response', async () => {
+  it('setPluginAccessPolicyAction reports a non-OK response as a result', async () => {
     mockAdminFetch({ [`PATCH ${ACCESS}`]: { status: 400 } });
     await expect(
       setPluginAccessPolicyAction(formData({ pluginId: 'tasks', accessPolicy: 'bogus' })),
-    ).rejects.toThrow('Failed to update access policy: 400');
+    ).resolves.toEqual({ ok: false, error: 'Failed to update access policy: 400' });
   });
 
   it('grantPluginAccessUserAction requires a picked user before calling the API', async () => {
@@ -278,7 +290,7 @@ describe('access policy mutations', () => {
     ).resolves.toEqual({ success: false, error: 'no such user' });
   });
 
-  it('revokePluginAccessUserAction DELETEs the grant and throws on failure', async () => {
+  it('revokePluginAccessUserAction DELETEs the grant and reports failure as a result', async () => {
     const fetchMock = mockAdminFetch({ [`DELETE ${ACCESS}/users/u-1`]: { status: 200 } });
     await revokePluginAccessUserAction(formData({ pluginId: 'tasks', userId: 'u-1' }));
     expect(fetchMock).toHaveBeenCalledWith(
@@ -289,7 +301,7 @@ describe('access policy mutations', () => {
     mockAdminFetch({ [`DELETE ${ACCESS}/users/u-1`]: { status: 500 } });
     await expect(
       revokePluginAccessUserAction(formData({ pluginId: 'tasks', userId: 'u-1' })),
-    ).rejects.toThrow('Failed to revoke access: 500');
+    ).resolves.toEqual({ ok: false, error: 'Failed to revoke access: 500' });
   });
 
   it('grantPluginAccessGroupAction requires a group and POSTs the grant', async () => {
@@ -304,15 +316,15 @@ describe('access policy mutations', () => {
     ).resolves.toEqual({ success: true });
   });
 
-  it('revokePluginAccessGroupAction DELETEs the grant and throws on failure', async () => {
+  it('revokePluginAccessGroupAction DELETEs the grant and reports failure as a result', async () => {
     mockAdminFetch({ [`DELETE ${ACCESS}/groups/g-1`]: { status: 200 } });
     await expect(
       revokePluginAccessGroupAction(formData({ pluginId: 'tasks', groupId: 'g-1' })),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ ok: true });
 
     mockAdminFetch({ [`DELETE ${ACCESS}/groups/g-1`]: { status: 500 } });
     await expect(
       revokePluginAccessGroupAction(formData({ pluginId: 'tasks', groupId: 'g-1' })),
-    ).rejects.toThrow('Failed to revoke access: 500');
+    ).resolves.toEqual({ ok: false, error: 'Failed to revoke access: 500' });
   });
 });

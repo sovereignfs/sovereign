@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useEffect, useState } from 'react';
-import { Button, FormField, Input } from '@sovereignfs/ui';
+import { Button, Checkbox, FormField, Input } from '@sovereignfs/ui';
 import {
   listInvitablePluginOptions,
   sendInviteAction,
@@ -15,6 +15,7 @@ type State = InviteState | null;
 export function InviteForm({ onSuccess }: { onSuccess?: () => void }) {
   const [state, formAction, pending] = useActionState<State, FormData>(sendInviteAction, null);
   const [pluginOptions, setPluginOptions] = useState<InvitablePluginOption[]>([]);
+  const [selectedPlugins, setSelectedPlugins] = useState<string[]>([]);
 
   useEffect(() => {
     listInvitablePluginOptions()
@@ -47,7 +48,11 @@ export function InviteForm({ onSuccess }: { onSuccess?: () => void }) {
 
   return (
     <form action={formAction} className={styles.inviteForm}>
-      {state && !state.success && <p className={styles.errorText}>{state.error}</p>}
+      {state && !state.success && (
+        <p className={styles.errorText} role="status">
+          {state.error}
+        </p>
+      )}
 
       <FormField label="Email address" id="invite-email" required>
         {(field) => (
@@ -70,15 +75,22 @@ export function InviteForm({ onSuccess }: { onSuccess?: () => void }) {
       {pluginOptions.length > 0 && (
         <FormField label="Grant access to (optional)" id="invite-plugins">
           {() => (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sv-space-1)' }}>
+            <div className={styles.checkboxList}>
               {pluginOptions.map((p) => (
-                <label
+                <Checkbox
                   key={p.id}
-                  style={{ display: 'flex', alignItems: 'center', gap: 'var(--sv-space-2)' }}
-                >
-                  <input type="checkbox" name="plugins" value={p.id} />
-                  <span>{p.name}</span>
-                </label>
+                  id={`invite-plugin-${p.id}`}
+                  label={p.name}
+                  checked={selectedPlugins.includes(p.id)}
+                  onChange={(checked) =>
+                    setSelectedPlugins((prev) =>
+                      checked ? [...prev, p.id] : prev.filter((id) => id !== p.id),
+                    )
+                  }
+                />
+              ))}
+              {selectedPlugins.map((id) => (
+                <input key={id} type="hidden" name="plugins" value={id} />
               ))}
             </div>
           )}

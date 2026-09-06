@@ -130,6 +130,11 @@ export const ICON_LIST = [
   // Profile/Security/Preferences/Notifications/Data/Activity already covered
   // by 'user'/'shield'/'sliders-horizontal'/'bell'/'lock'/'activity' above.
   'credit-card',
+  // Console user actions (detail pane + mobile card): deactivate / reset MFA /
+  // delete — previously hand-drawn inline SVGs with no accessible name.
+  'ban',
+  'shield-off',
+  'user-x',
 ] as const;
 
 export type IconName = (typeof ICON_LIST)[number];

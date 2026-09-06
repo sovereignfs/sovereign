@@ -150,7 +150,6 @@ async function main(): Promise<void> {
     JSON.stringify(
       {
         extends: '@sovereignfs/tsconfig/nextjs.json',
-        compilerOptions: { baseUrl: '.' },
         include: ['app/**/*.ts', 'app/**/*.tsx', 'db/**/*.ts'],
       },
       null,

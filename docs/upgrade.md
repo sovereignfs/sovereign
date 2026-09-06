@@ -119,6 +119,20 @@ See the [Runtime version map](#runtime-version-map) and [v1.0.0 release checklis
 
 Notes call out any required configuration changes, schema changes, or action required.
 
+### Root 0.131.2 → 0.132.0 (no `runtime` version bump; `@sovereignfs/create-plugin` patch)
+
+- **TypeScript 5.9 → 6.0** (pnpm catalog). No operator action; no change to
+  any published package's emitted types (`@sovereignfs/sdk`, `ui`, `bridge`,
+  `manifest` `.d.ts` output diffed byte-identical before/after, NFR-04). For
+  plugin developers on the shared `@sovereignfs/tsconfig`: the base now sets
+  `"types": ["node"]` (TypeScript 6 no longer auto-includes every `@types/*`
+  package), and `baseUrl` — deprecated in 6.0, removed in 7.0 — is gone from
+  every tsconfig and from the `create-plugin` scaffold; `paths` needs none.
+  A plugin repo that still sets `baseUrl` gets TS5101 on TypeScript 6 —
+  delete the line. tsup's dts step injects its own `baseUrl` (tsup 8.5.1
+  predates TypeScript 6), so each package's `tsup.config.ts` scopes
+  `ignoreDeprecations: "6.0"` to that pass only.
+
 ### v0.99.1 → v0.100.0 (root 0.131.0, `apps/auth` 2.4.0, `apps/relay` 0.4.0, `apps/harness` 0.2.0)
 
 - **Next.js 15.5 → 16.3** on every app (pnpm catalog). Both `next dev` and

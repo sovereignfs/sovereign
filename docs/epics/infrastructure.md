@@ -1052,7 +1052,7 @@ fetch handler, precached `/offline`) were verified on the built worker.
 
 ---
 
-#### 📋 0.28 — TypeScript 6 migration
+#### ✅ 0.28 — TypeScript 6 migration
 
 **Goal:** Move the catalog from `typescript ^5.9` to 6.x deliberately.
 Dependabot's bump (#305, closed) fails typecheck with `TS2591: Cannot find
@@ -1078,6 +1078,21 @@ once leaking in via an unpinned peer range; the catalog pin exists for this.
 
 - `pnpm typecheck`, `pnpm build`, Storybook build all green
 - Published packages' emitted types unchanged, or the bump documented
+
+**Status (September 2026): shipped — root 0.132.0.** Catalog `typescript
+^6.0.3` (6.0.x is the last JS-hosted line; 7.x is the Go port and
+typescript-eslint 8.69 supports `<6.1.0`). Two real changes and one
+workaround: `packages/tsconfig/base.json` sets `"types": ["node"]` (6.0's
+`types` default is `[]`, which is exactly the `TS2591: Cannot find name
+'process'` #305 hit in `create-plugin`); `baseUrl` (deprecated, TS5101, gone
+in 7.0) removed from all 16 tsconfigs that set it and from the
+`create-plugin` scaffold — `paths` resolves relative to the tsconfig without
+it; and tsup 8.5.1 hardcodes `baseUrl: compilerOptions.baseUrl || '.'` in its
+dts rollup step, so each package's `tsup.config.ts` scopes
+`ignoreDeprecations: '6.0'` to that pass only (every `tsc --noEmit` stays
+strict) — drop when tsup stops injecting it. Emitted `.d.ts` for sdk, ui,
+bridge and manifest diffed byte-identical against a TypeScript 5.9 build of
+`main`, so no NFR-04 bump. Dependabot's `typescript` major ignore removed.
 
 ---
 

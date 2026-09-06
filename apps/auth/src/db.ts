@@ -48,8 +48,28 @@ import { Pool } from 'pg';
 /** Schema (Postgres) / namespace (sqld) dedicated to the auth database — same
  * name on both dialects for consistency with the naming convention plugins
  * use (`plugin_<slug>` / `plugin_<slug>`), just a fixed name instead of a
- * slug since there's only ever one auth store. */
-const AUTH_STORE_NAME = 'sovereign_auth';
+ * slug since there's only ever one auth store.
+ *
+ * Test-only override: a live-store test suite must never share this fixed
+ * name with a developer's real dev store. `SOVEREIGN_AUTH_STORE_NAME` is
+ * honored only under `NODE_ENV === 'test'` (exact equality, like
+ * `bypassPluginVisibilityInDev` — never `!== 'production'`), so no
+ * deployment or `pnpm dev` session can be redirected by it. Found the hard
+ * way: `builtin-oauth-clients.sqld.test.ts` used to drop `account`/`session`/
+ * `verification`/`oauthClient` in `sovereign_auth` itself, and pointing
+ * `TEST_SQLD_URL` at `sovereign-sqld-dev` wiped every dev user's
+ * credentials. */
+const DEFAULT_AUTH_STORE_NAME = 'sovereign_auth';
+const AUTH_STORE_NAME =
+  process.env.NODE_ENV === 'test' && process.env.SOVEREIGN_AUTH_STORE_NAME
+    ? process.env.SOVEREIGN_AUTH_STORE_NAME
+    : DEFAULT_AUTH_STORE_NAME;
+
+/** The auth store's schema/namespace name currently in effect (tests use it
+ * to assert they are isolated from the real store). */
+export function authStoreName(): string {
+  return AUTH_STORE_NAME;
+}
 
 const require = createRequire(import.meta.url);
 
@@ -125,6 +145,34 @@ export async function provisionAuthStore(): Promise<void> {
   });
   if (res.ok || res.status === 400) return;
   throw new Error(`Failed to create sqld namespace "${AUTH_STORE_NAME}": ${res.status}`);
+}
+
+/**
+ * Tear down a throwaway auth store a test suite provisioned — the inverse of
+ * `provisionAuthStore()`. Refuses to touch the real store: only a name set
+ * via the test-only override above can be dropped, so a suite that forgot
+ * to set one gets a loud error rather than a wiped `sovereign_auth`.
+ */
+export async function dropAuthStore(): Promise<void> {
+  if (AUTH_STORE_NAME === DEFAULT_AUTH_STORE_NAME) {
+    throw new Error(
+      `dropAuthStore() refuses to drop the real "${DEFAULT_AUTH_STORE_NAME}" store — set SOVEREIGN_AUTH_STORE_NAME to a throwaway name under NODE_ENV=test first.`,
+    );
+  }
+  if (dbDialect() === 'postgres') {
+    const pool = new Pool({ connectionString: postgresUrl() });
+    try {
+      await pool.query(`DROP SCHEMA IF EXISTS "${AUTH_STORE_NAME}" CASCADE`);
+    } finally {
+      await pool.end();
+    }
+    return;
+  }
+  const res = await fetch(`${sqldAdminUrl()}/v1/namespaces/${AUTH_STORE_NAME}`, {
+    method: 'DELETE',
+  });
+  if (res.ok || res.status === 404) return;
+  throw new Error(`Failed to drop sqld namespace "${AUTH_STORE_NAME}": ${res.status}`);
 }
 
 function createAuthSqldClient(): Client {

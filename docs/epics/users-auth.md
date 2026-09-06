@@ -1444,7 +1444,10 @@ deliberately not shipped. What was learned, so the next attempt starts here:
   `beforeAll` drops `oauthClient`/`account`/`session`/`verification` in the
   fixed `sovereign_auth` namespace. Pointing `TEST_SQLD_URL` at a developer's
   `sovereign-sqld-dev` container wipes that store's credentials (it did,
-  here). Follow-up: give the suite a dedicated namespace.
+  here). Fixed the same day: the suite now provisions a throwaway
+  `sovereign_auth_test_<id>` namespace per run via the test-only
+  `SOVEREIGN_AUTH_STORE_NAME` override in `apps/auth/src/db.ts` and drops it
+  in `afterAll`; `dropAuthStore()` refuses to drop the real store.
 
 ---
 

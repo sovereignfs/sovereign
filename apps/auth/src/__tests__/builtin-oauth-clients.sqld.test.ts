@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 /**
  * RFC 0072 addendum, epic task 1.24. Runs real migrations against a live
@@ -29,15 +29,21 @@ describe.skipIf(!(SQLD_URL && SQLD_ADMIN_URL))('builtin OAuth clients (live sqld
     // file triggers it (runAuthMigrations, below), or a later assignment is
     // silently ignored for the rest of the file.
     process.env.AUTH_REQUIRE_EMAIL_VERIFICATION = 'false';
+    // A throwaway namespace per run, never the real `sovereign_auth` — this
+    // suite used to DROP TABLE its way to a clean slate inside the fixed
+    // store, which wiped a developer's dev credentials whenever
+    // TEST_SQLD_URL pointed at `sovereign-sqld-dev`. `../db` reads the
+    // override at import time, so it must be set before that import.
+    process.env.SOVEREIGN_AUTH_STORE_NAME = `sovereign_auth_test_${randomUUID().slice(0, 8)}`;
 
-    // Clean slate — this suite reuses the fixed `sovereign_auth` namespace
-    // (not a per-run unique one; auth's store name isn't parameterized,
-    // unlike a plugin's), so drop whatever a previous run left behind.
-    const { provisionAuthStore, authRun } = await import('../db');
+    const { provisionAuthStore, authStoreName } = await import('../db');
+    expect(authStoreName()).not.toBe('sovereign_auth');
     await provisionAuthStore();
-    for (const table of ['oauthClient', 'user', 'session', 'account', 'verification']) {
-      await authRun(`DROP TABLE IF EXISTS "${table}"`).catch(() => {});
-    }
+  });
+
+  afterAll(async () => {
+    const { dropAuthStore } = await import('../db');
+    await dropAuthStore();
   });
 
   describe('seedBuiltinOAuthClient', () => {

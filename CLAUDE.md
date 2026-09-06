@@ -461,6 +461,10 @@ pnpm sv <cmd>           # CLI (seed, backup, restore, plugin add/remove, …)
   dependency build scripts; `esbuild` and `better-sqlite3` are allowlisted in
   `pnpm-workspace.yaml` `allowBuilds`; `simple-git-hooks` is `false` there (the
   root `prepare` script installs hooks).
+- **TypeScript 6 conventions:** the shared base sets `types: ["node"]` (6.0
+  auto-includes no `@types/*`); never add `baseUrl` to a tsconfig (deprecated,
+  `paths` needs none); `tsup.config.ts` scopes `ignoreDeprecations: '6.0'` to
+  the dts pass only because tsup injects its own `baseUrl`.
 - **Shared dev tooling is pinned via the pnpm `catalog:`** — reference it as
   `"typescript": "catalog:"`, never a literal version; add new shared deps to
   the catalog first.
@@ -491,7 +495,7 @@ pnpm sv <cmd>           # CLI (seed, backup, restore, plugin add/remove, …)
 
 ## Status
 
-Current platform version: **`0.131.2`**. `ROADMAP.md` is the canonical task
+Current platform version: **`0.132.0`**. `ROADMAP.md` is the canonical task
 queue and completion record; per-release narrative through `0.130.2` is
 archived in `docs/task-history.md`.
 

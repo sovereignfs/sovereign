@@ -16,11 +16,9 @@ updates:
     # touches dependency ranges, never that field, so no extra config is
     # needed to protect it.
     # Majors that are deliberate migrations, not dependency bumps — each has
-    # an epic task and a reason a bot PR can't merge it (2026-09-06 triage):
-    #   typescript — catalog-pinned ^5.9; TS 6 changed @types/node pickup
-    #                (epic task 0.28)
-    #   next       — Next 16 defaults to Turbopack; @ducanh2912/next-pwa is a
-    #                webpack plugin (epic task 0.27)
+    # a reason a bot PR can't merge it (2026-09-06 triage; the Next 16 and
+    # TypeScript 6 migrations, epic tasks 0.27/0.28, have since shipped and
+    # their ignores are gone):
     #   @types/node — tracks the root `engines` major (24), not the newest
     #                Node release
     ignore:
@@ -35,8 +33,6 @@ updates:
         versions: ['>=1.7.0 <1.7.3']
       - dependency-name: '@better-auth/oauth-provider'
         versions: ['>=1.7.0 <1.7.3']
-      - dependency-name: 'typescript'
-        update-types: ['version-update:semver-major']
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
       # better-sqlite3-multiple-ciphers 13 dropped the type declarations v12

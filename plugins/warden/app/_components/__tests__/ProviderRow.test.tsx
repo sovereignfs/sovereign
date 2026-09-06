@@ -22,10 +22,14 @@ const provider = {
   lastCheckedAt: null,
 };
 
-function renderRow(onChanged = vi.fn()) {
+function renderRow(onChanged = vi.fn(), overrides: Partial<typeof provider> = {}) {
   return render(
     <ToastProvider>
-      <ProviderRow provider={provider} discovery={undefined} onChanged={onChanged} />
+      <ProviderRow
+        provider={{ ...provider, ...overrides }}
+        discovery={undefined}
+        onChanged={onChanged}
+      />
     </ToastProvider>,
   );
 }
@@ -122,5 +126,15 @@ describe('ProviderRow — edit', () => {
     await waitFor(() =>
       expect((screen.getByLabelText('Name') as HTMLInputElement).disabled).toBe(false),
     );
+  });
+});
+
+describe('ProviderRow — last checked', () => {
+  it('says when the provider was last checked, and nothing when it never was', () => {
+    renderRow();
+    expect(screen.queryByText(/Last checked/)).toBeNull();
+    cleanup();
+    renderRow(vi.fn(), { lastCheckedAt: Math.floor(Date.now() / 1000) - 3 * 60 });
+    expect(screen.getByText('Last checked 3 minutes ago')).toBeDefined();
   });
 });

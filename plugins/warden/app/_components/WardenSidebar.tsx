@@ -75,7 +75,8 @@ export function WardenSidebar({
   loading?: boolean;
 }) {
   const shell = useWardenShell();
-  const onToggleCollapse = shell?.toggleCollapse;
+  // Inside the mobile Sheet the overlay's own close button does this job.
+  const onToggleCollapse = shell && !shell.inOverlay ? shell.toggleCollapse : undefined;
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();

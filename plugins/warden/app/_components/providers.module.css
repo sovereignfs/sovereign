@@ -81,3 +81,19 @@
   background-color: var(--sv-color-error-surface);
   color: var(--sv-color-error-text);
 }
+
+/* Badge with its "last checked" line underneath, right-aligned as a unit
+   against the label/URL block on the left. */
+.providerStatus {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--sv-space-1);
+  flex-shrink: 0;
+}
+
+.providerChecked {
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+  white-space: nowrap;
+}

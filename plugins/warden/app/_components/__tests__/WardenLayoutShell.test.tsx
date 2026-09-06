@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { useState } from 'react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { WardenLayoutShell, useWardenShell } from '../WardenLayoutShell';
 import { LEGACY_SIDEBAR_STORAGE_KEY, SIDEBAR_COOKIE_NAME } from '../../_lib/sidebar-preference';
 
@@ -12,6 +12,29 @@ function cookieValue(): string | undefined {
     .find((part) => part.startsWith(`${SIDEBAR_COOKIE_NAME}=`))
     ?.slice(SIDEBAR_COOKIE_NAME.length + 1);
 }
+
+// The shell reads the design system's breakpoint (`useIsMobile`); jsdom has
+// no `matchMedia`. Desktop unless a test flips this before rendering.
+let mobileViewport = false;
+function installMatchMedia() {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn().mockImplementation((query: string) => ({
+      matches: mobileViewport,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  );
+}
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/warden',
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 function clearCookie() {
   document.cookie = `${SIDEBAR_COOKIE_NAME}=; Path=/warden; Max-Age=0`;
@@ -29,12 +52,16 @@ function TestSidebar() {
   return (
     <nav>
       Sidebar content
-      {shell && <button onClick={shell.toggleCollapse}>Collapse from sidebar</button>}
+      {shell && !shell.inOverlay && (
+        <button onClick={shell.toggleCollapse}>Collapse from sidebar</button>
+      )}
     </nav>
   );
 }
 
 beforeEach(() => {
+  mobileViewport = false;
+  installMatchMedia();
   window.localStorage.clear();
   clearCookie();
   // jsdom's location is `http://localhost/`, whose path is not `/warden`, so
@@ -45,6 +72,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
 });
 
 function renderShell(initialCollapsed?: boolean) {
@@ -169,5 +197,32 @@ describe('WardenLayoutShell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show sessions sidebar' }));
     // Would read "count: 0" again if the toggle remounted the subtree.
     expect(screen.getByRole('button', { name: 'count: 1' })).toBeDefined();
+  });
+  describe('below the mobile breakpoint', () => {
+    beforeEach(() => {
+      mobileViewport = true;
+    });
+
+    it('never shows the sidebar as a column, even when the desktop preference says expanded', () => {
+      renderShell(false);
+      expect(querySidebar()).toBeNull();
+      expect(screen.getByRole('button', { name: 'Show sessions sidebar' })).toBeDefined();
+    });
+
+    it('opens the sidebar content in a Sheet from the toggle, and closes it from the Sheet', async () => {
+      renderShell();
+      fireEvent.click(screen.getByRole('button', { name: 'Show sessions sidebar' }));
+      const sheet = screen.getByRole('dialog', { name: 'Chats' });
+      expect(sheet).toBeDefined();
+      expect(screen.getByText('Sidebar content')).toBeDefined();
+      // The sidebar's inline collapse control stands down inside the overlay.
+      expect(screen.queryByRole('button', { name: 'Collapse from sidebar' })).toBeNull();
+      // No desktop preference is written by the mobile toggle.
+      expect(cookieValue()).toBeUndefined();
+
+      fireEvent.keyDown(sheet, { key: 'Escape' });
+      // The Sheet stays mounted for its exit transition before unmounting.
+      await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Chats' })).toBeNull());
+    });
   });
 });

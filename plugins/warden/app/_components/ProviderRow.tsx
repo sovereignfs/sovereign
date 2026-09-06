@@ -16,6 +16,7 @@ import type { ActionResult } from '../actions';
 import { deleteProviderAction, updateProviderAction } from '../actions';
 import type { ProviderView } from '../_lib/providers';
 import type { ProviderDiscoveryStatus } from '../_lib/model-discovery';
+import { formatRelativeTime } from '../_lib/format-time';
 import styles from './providers.module.css';
 
 function Feedback({ result }: { result: ActionResult | null }) {
@@ -162,7 +163,19 @@ export function ProviderRow({
           <p className={styles.providerLabel}>{provider.label}</p>
           <p className={styles.providerMeta}>{provider.baseUrl}</p>
         </div>
-        <StatusBadge status={badge.status}>{badge.label}</StatusBadge>
+        <div className={styles.providerStatus}>
+          <StatusBadge status={badge.status}>{badge.label}</StatusBadge>
+          {/* `lastCheckedAt` has always been recorded; it was just never
+              shown, so "Connected" gave no hint whether that was verified a
+              minute or a month ago. Relative, so the server's and the
+              browser's clocks rendering slightly apart is harmless — the one
+              element allowed to differ carries `suppressHydrationWarning`. */}
+          {provider.lastCheckedAt !== null && (
+            <span className={styles.providerChecked} suppressHydrationWarning>
+              Last checked {formatRelativeTime(provider.lastCheckedAt * 1000)}
+            </span>
+          )}
+        </div>
       </div>
       <div className={styles.providerActions}>
         <Button size="sm" variant="secondary" onClick={startEditing}>

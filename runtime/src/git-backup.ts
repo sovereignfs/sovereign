@@ -57,13 +57,54 @@ function truncate(text: string): string {
     : text;
 }
 
+/**
+ * Environment variables through which git locates a repository *other than
+ * by the current directory* (`git help git`, "Environment Variables"). Git
+ * itself exports some of these to child processes it spawns — hooks in
+ * particular: a `pre-push` hook running from a linked worktree gets
+ * `GIT_DIR=<main>/.git/worktrees/<name>`. Any `git` this module spawns would
+ * inherit that, and every command below addresses its repository by explicit
+ * `cwd` on a fresh temp directory — so with `GIT_DIR` inherited, `git init`
+ * silently re-initializes the *inherited* repository, and `add`/`commit`/`tag`
+ * land there with the temp dir as the work tree. That is not hypothetical:
+ * the test suite, run by the pre-push hook from a worktree, committed backup
+ * fixtures onto the branch being pushed and flipped the shared config to
+ * `core.bare = true`. Stripped from every spawned git's environment.
+ */
+export const GIT_REPOSITORY_ENV_VARS = [
+  'GIT_DIR',
+  'GIT_WORK_TREE',
+  'GIT_INDEX_FILE',
+  'GIT_OBJECT_DIRECTORY',
+  'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+  'GIT_PREFIX',
+  'GIT_COMMON_DIR',
+  'GIT_NAMESPACE',
+] as const;
+
+/**
+ * The environment for a spawned `git`: the process environment minus
+ * `GIT_REPOSITORY_ENV_VARS`, plus `extra` (credential variables from
+ * `buildGitCredentialEnv`). Exported so the test suite's own git helpers can
+ * use the identical scrub.
+ */
+export function gitChildEnv(extra?: Record<string, string>): NodeJS.ProcessEnv {
+  const stripped: ReadonlySet<string> = new Set(GIT_REPOSITORY_ENV_VARS);
+  // A filtered copy is a plain string map; the cast restores ProcessEnv's
+  // declared shape (this repo augments it with a required NODE_ENV).
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(([name]) => !stripped.has(name)),
+  ) as NodeJS.ProcessEnv;
+  return extra ? { ...env, ...extra } : env;
+}
+
 function runGit(cwd: string, args: string[], env?: Record<string, string>): string {
   try {
     return execFileSync('git', args, {
       cwd,
       timeout: GIT_TIMEOUT_MS,
       encoding: 'utf8',
-      env: env ? { ...process.env, ...env } : process.env,
+      env: gitChildEnv(env),
     });
   } catch (err) {
     const e = err as { stderr?: string; message?: string; signal?: string | null };
@@ -81,7 +122,7 @@ function runGitBuffer(cwd: string, args: string[], env?: Record<string, string>)
     return execFileSync('git', args, {
       cwd,
       timeout: GIT_TIMEOUT_MS,
-      env: env ? { ...process.env, ...env } : process.env,
+      env: gitChildEnv(env),
     });
   } catch (err) {
     const e = err as { stderr?: Buffer; message?: string; signal?: string | null };

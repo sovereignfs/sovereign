@@ -266,8 +266,15 @@ function cloneInto(
 ): void {
   withGitCredentials(repository, token, (credArgs) => {
     // Never let a failed/prompt-requiring auth hang the process waiting for
-    // interactive input.
-    const env = { ...process.env, GIT_TERMINAL_PROMPT: '0' };
+    // interactive input. And never let git locate a repository through the
+    // environment: a hook-spawned run inherits GIT_DIR, under which the
+    // `git init dest` below would re-initialize *that* repository instead
+    // (see runtime/src/git-backup.ts's GIT_REPOSITORY_ENV_VARS).
+    const inherited = new Set(['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR']);
+    const env: NodeJS.ProcessEnv = {
+      ...Object.fromEntries(Object.entries(process.env).filter(([name]) => !inherited.has(name))),
+      GIT_TERMINAL_PROMPT: '0',
+    };
     if (ref === undefined) {
       execFileSync('git', [...credArgs, 'clone', '--depth', '1', repository, dest], {
         stdio: 'inherit',

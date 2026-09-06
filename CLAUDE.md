@@ -470,6 +470,12 @@ pnpm sv <cmd>           # CLI (seed, backup, restore, plugin add/remove, …)
   doesn't recurse; use a trailing `/*`.
 - **citty `defineCommand` args have no repeatable type** — read `rawArgs` for a
   flag that may repeat.
+- **`vitest.config.ts` aliases `next` to `runtime/node_modules/next`** (as
+  Next's own webpack config does in a real build) — never remove it. A pnpm
+  lockfile that splits `next` into peer-suffix variants gives runtime test
+  files and `packages/sdk` two different physical `next/headers`, so
+  `vi.mock('next/headers')` silently misses and every background-invocation
+  fallback test fails with Next's E251.
 - **Tests:** await every async operation a test starts (an un-awaited jsdom
   `FileReader` lands as an unhandled error after the test ends); scope a long
   timeout to the one slow test, not globally; a `.pg.test.ts` using an
@@ -478,7 +484,7 @@ pnpm sv <cmd>           # CLI (seed, backup, restore, plugin add/remove, …)
 
 ## Status
 
-Current platform version: **`0.130.3`**. `ROADMAP.md` is the canonical task
+Current platform version: **`0.130.4`**. `ROADMAP.md` is the canonical task
 queue and completion record; per-release narrative through `0.130.2` is
 archived in `docs/task-history.md`.
 

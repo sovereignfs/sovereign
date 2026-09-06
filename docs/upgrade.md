@@ -119,6 +119,14 @@ See the [Runtime version map](#runtime-version-map) and [v1.0.0 release checklis
 
 Notes call out any required configuration changes, schema changes, or action required.
 
+### Root 0.130.3 → 0.130.4 (no `runtime` version bump)
+
+- **Next.js 15.5.22 → 15.5.25 and vitest 4.1.10 → 4.1.11** (pnpm catalog /
+  root devDependency). No behavior change for operators, no action required.
+  The Dependabot batch carrying these (#642) failed CI on a vitest-only
+  module-duplication problem, fixed by aliasing `next` in `vitest.config.ts`
+  — see `docs/architecture-rules.md`.
+
 ### v0.99.0 → v0.99.1 (`apps/auth` 2.3.0 → 2.3.1, root 0.130.3)
 
 - **better-auth 1.6.25 → 1.6.30** (`better-auth`, `@better-auth/passkey`,

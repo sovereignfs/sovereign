@@ -1210,6 +1210,25 @@ full story is one grep away.
   a hand-forged partial record is not a valid fixture (1.7 validates the
   payload against better-auth's own record schemas and rejects it). Epic task
   1.26 holds the re-entry checklist.
+- **`vitest.config.ts` aliases every `next/*` import to `runtime/node_modules/next`,
+  and that alias is load-bearing.** In a real build Next's own webpack config
+  aliases `next` to the running package, so `packages/sdk`'s
+  `import { headers } from 'next/headers'` and the app share one module and
+  one request-scope `AsyncLocalStorage`. Vitest has no such alias by default:
+  each importer resolves `next` through its own `node_modules` symlink, and a
+  pnpm lockfile that has split `next` into several peer-suffix variants (the
+  routine Dependabot batch #642 did, on an `@types/node` 22-vs-26 suffix the
+  tree already carried) hands runtime test files one physical
+  `next/headers` and `packages/sdk` another. `vi.mock('next/headers')`
+  patches the test file's copy; the SDK's real `headers()` runs outside any
+  request scope, throws Next's E251, the `catch` treats it as "no request",
+  and every `sdk.db`/`sdk.storage`/`sdk.env` background-fallback test fails
+  with "expected 'platform-db-marker' to be 'plugin-db-marker'" — while a
+  single-variant lockfile passes by accident. Reproduced by rebuilding #642's
+  exact tree (base commit + diff, `pnpm install --frozen-lockfile`): 8 of 18
+  routing tests failed, all 18 passed with only the alias added. The alias
+  makes the mock target the same module by construction, regardless of how
+  the lockfile resolves.
 - **Test hygiene learned the hard way:** await every async operation a test
   starts (an un-awaited jsdom `FileReader` completion lands as an unhandled
   exception after the test returns and fails the whole run, `0.94.14`); scope

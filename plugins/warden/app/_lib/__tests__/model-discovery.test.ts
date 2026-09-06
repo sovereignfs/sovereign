@@ -292,4 +292,73 @@ describe('discoverModels caching', () => {
     expect(checkHarnessHealth).toHaveBeenCalledTimes(1);
     expect(pinnedFetch).toHaveBeenCalledTimes(1);
   });
+  it('shares one live pass between concurrent callers instead of running two', async () => {
+    checkHarnessHealth.mockResolvedValue({ kind: 'unreachable' });
+    listProviders.mockResolvedValue([provider]);
+    pinnedFetch.mockResolvedValue(jsonResponse({ data: [{ id: 'gpt-4o' }] }));
+
+    // The layout, the page and the Settings dialog can all ask within the
+    // same request — before this dedup each one that arrived before the
+    // first pass *finished* started its own full pass.
+    const [first, second, third] = await Promise.all([
+      discoverModels(),
+      discoverModels(),
+      discoverModels(),
+    ]);
+
+    expect(second).toEqual(first);
+    expect(third).toEqual(first);
+    expect(checkHarnessHealth).toHaveBeenCalledTimes(1);
+    expect(pinnedFetch).toHaveBeenCalledTimes(1);
+    expect(markProviderHealthy).toHaveBeenCalledTimes(1);
+  });
+
+  it('serves an expired-but-recent result immediately and refreshes in the background', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      checkHarnessHealth.mockResolvedValue({ kind: 'unreachable' });
+      listProviders.mockResolvedValue([provider]);
+      pinnedFetch.mockResolvedValue(jsonResponse({ data: [{ id: 'gpt-4o' }] }));
+
+      vi.setSystemTime(new Date('2026-09-06T10:00:00Z'));
+      const first = await discoverModels();
+
+      // Past the 30s TTL, well within the 5-minute stale ceiling. A new
+      // catalog is ready upstream, but the caller should not wait for it.
+      vi.setSystemTime(new Date('2026-09-06T10:01:00Z'));
+      pinnedFetch.mockResolvedValue(jsonResponse({ data: [{ id: 'gpt-4o' }, { id: 'o3' }] }));
+      const stale = await discoverModels();
+      expect(stale).toEqual(first);
+
+      // Let the background refresh settle, then the next call sees it.
+      await vi.waitFor(() => expect(pinnedFetch).toHaveBeenCalledTimes(2));
+      const fresh = await discoverModels();
+      expect(fresh.models.map((m) => m.key)).toEqual(['conn-1:gpt-4o', 'conn-1:o3']);
+      expect(pinnedFetch).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('blocks on a live pass once a result is older than the stale ceiling', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      checkHarnessHealth.mockResolvedValue({ kind: 'unreachable' });
+      listProviders.mockResolvedValue([provider]);
+      pinnedFetch.mockResolvedValue(jsonResponse({ data: [{ id: 'gpt-4o' }] }));
+
+      vi.setSystemTime(new Date('2026-09-06T10:00:00Z'));
+      await discoverModels();
+
+      vi.setSystemTime(new Date('2026-09-06T10:10:00Z'));
+      pinnedFetch.mockResolvedValue(jsonResponse({ data: [{ id: 'o3' }] }));
+      const result = await discoverModels();
+
+      // Old enough that a provider changed elsewhere could be missing —
+      // the caller waits for the fresh pass rather than seeing 10-minute-old data.
+      expect(result.models.map((m) => m.key)).toEqual(['conn-1:o3']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

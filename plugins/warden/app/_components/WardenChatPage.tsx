@@ -42,17 +42,21 @@ export async function WardenChatPage({
   forceNewChat?: boolean;
 }) {
   const session = await sdk.auth.requireSession();
-  const discovery = await discoverModels();
-  const hasAnyProviderConfigured = discovery.providers.length > 0;
-  const hasAnyModel = hasAnyProviderConfigured || discovery.local.available;
-
-  if (!hasAnyModel) return <SetupPrompt />;
-
-  const [allSessions, visibilityOverrides, defaultModelKey] = await Promise.all([
+  // Discovery is the slow one (live network on a cold cache); the three
+  // database reads run alongside it rather than queueing behind it. The
+  // reads are wasted when this lands on the first-run prompt below, which
+  // is one query each on an otherwise empty account — cheaper than making
+  // every ordinary page load wait for discovery before they can start.
+  const [discovery, allSessions, visibilityOverrides, defaultModelKey] = await Promise.all([
+    discoverModels(),
     listSessions(session.user.id, session.user.tenantId),
     listVisibilityOverrides(session.user.id, session.user.tenantId),
     getDefaultModelKey(session.user.id, session.user.tenantId),
   ]);
+  const hasAnyProviderConfigured = discovery.providers.length > 0;
+  const hasAnyModel = hasAnyProviderConfigured || discovery.local.available;
+
+  if (!hasAnyModel) return <SetupPrompt />;
   // Same rule the sidebar applies client-side — see `active-session.ts`.
   const activeSessionId = resolveActiveSessionId(
     allSessions.map((s) => s.id),

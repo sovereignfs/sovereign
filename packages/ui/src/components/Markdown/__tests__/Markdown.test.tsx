@@ -103,3 +103,42 @@ describe('Markdown — ordered lists and fenced code', () => {
     expect(container.querySelector('pre code')?.textContent).toBe('run me');
   });
 });
+
+describe('Markdown — link hrefs', () => {
+  it('renders an http(s) link as a real anchor', () => {
+    const { container } = render(<Markdown content={'[docs](https://example.com/docs)'} />);
+    const link = container.querySelector('a');
+    expect(link?.getAttribute('href')).toBe('https://example.com/docs');
+    expect(link?.textContent).toBe('docs');
+  });
+
+  it('renders a relative link as a real anchor', () => {
+    const { container } = render(<Markdown content={'[here](/warden/models)'} />);
+    expect(container.querySelector('a')?.getAttribute('href')).toBe('/warden/models');
+  });
+
+  it('renders a mailto: link as a real anchor', () => {
+    const { container } = render(<Markdown content={'[email](mailto:a@example.com)'} />);
+    expect(container.querySelector('a')?.getAttribute('href')).toBe('mailto:a@example.com');
+  });
+
+  it('neutralizes a javascript: URL instead of making it clickable', () => {
+    const { container } = render(
+      <Markdown content={'[click me](javascript:alert(document.cookie))'} />,
+    );
+    expect(container.querySelector('a')).toBeNull();
+    expect(container.textContent).toContain('click me');
+  });
+
+  it('neutralizes a javascript: URL disguised with an embedded tab', () => {
+    const { container } = render(<Markdown content={'[x](jav\tascript:alert(1))'} />);
+    expect(container.querySelector('a')).toBeNull();
+  });
+
+  it('neutralizes a data: URL', () => {
+    const { container } = render(
+      <Markdown content={'[x](data:text/html,<script>alert(1)</script>)'} />,
+    );
+    expect(container.querySelector('a')).toBeNull();
+  });
+});

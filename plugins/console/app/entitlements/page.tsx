@@ -2,6 +2,7 @@ import { sdk } from '@sovereignfs/sdk';
 import { getInstalledPlugins } from '@/src/registry';
 import { EntitlementsSection, type EntitlementRow } from './EntitlementsSection';
 import { LicenseGenerator, type GeneratorPlugin, type GeneratorUser } from './LicenseGenerator';
+import { ConsolePageHeader } from '../_components/ConsolePageHeader';
 import styles from '../console.module.css';
 import { renderFetchSignal } from '../_lib/fetch-timeout';
 
@@ -94,18 +95,29 @@ export default async function EntitlementsPage() {
   }
 
   return (
-    <div className={styles.sections}>
-      <EntitlementsSection rows={rows} isOwner={isOwner} />
+    <div>
+      <ConsolePageHeader
+        title="Entitlements"
+        count={`${rows.length} ${rows.length === 1 ? 'entitlement' : 'entitlements'}`}
+        description={
+          isOwner
+            ? 'Signed licenses for paid apps. Generate and grant licenses below, or people can import their own under Account → Billing.'
+            : 'Signed licenses for paid apps. People manage their own licenses under Account → Billing.'
+        }
+      />
+
+      <EntitlementsSection rows={rows} />
 
       {isOwner && generatorPlugins.length > 0 && (
-        <section className={styles.section}>
+        <div className={styles.overviewSection}>
+          <h3 className={styles.overviewSectionTitle}>Generate a license token</h3>
           <LicenseGenerator
             plugins={generatorPlugins}
             users={generatorUsers}
             storedKeys={storedKeys}
             storedPublicKeys={storedPublicKeys}
           />
-        </section>
+        </div>
       )}
     </div>
   );

@@ -1757,3 +1757,25 @@ svg.cardChevron {
     overflow: hidden;
   }
 }
+
+/* Inline success line for a client-side outcome (license generator). */
+.feedbackSuccess {
+  font-size: var(--sv-font-size-sm);
+  padding: var(--sv-space-2) var(--sv-space-3);
+  border-radius: var(--sv-radius-md);
+  border: 1px solid var(--sv-color-success-border);
+  background-color: var(--sv-color-success-surface);
+  color: var(--sv-color-success-text);
+}
+
+/* A list that stands in for a `.tableCard` on mobile (Entitlements) —
+   hidden wherever the table itself is shown. */
+.mobileOnlyList {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobileOnlyList {
+    display: flex;
+  }
+}

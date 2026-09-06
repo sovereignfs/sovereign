@@ -1,15 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Badge, SegmentedControl } from '@sovereignfs/ui';
+import { Badge, EmptyState, SegmentedControl } from '@sovereignfs/ui';
+import { CopyIdButton } from '../_components/CopyIdButton';
 import styles from '../console.module.css';
-import entStyles from './entitlements.module.css';
 
-type EntFilter = 'none' | 'entries';
+type EntFilter = 'all' | 'inactive';
 
 const FILTER_OPTIONS = [
-  { value: 'none' as const, label: 'None' },
-  { value: 'entries' as const, label: 'With entries' },
+  { value: 'all' as const, label: 'All' },
+  { value: 'inactive' as const, label: 'Inactive only' },
 ];
 
 export interface EntitlementRow {
@@ -23,131 +23,102 @@ export interface EntitlementRow {
   expiresAt: number | null;
 }
 
-function KeyIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="8" cy="8" r="5" />
-      <path d="M21 21l-9.35-9.35" />
-      <path d="M17 17l2 2" />
-      <path d="M14 14l2 2" />
-    </svg>
-  );
+function formatDate(ts: number): string {
+  return new Date(ts * 1000).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
-function EmptyState() {
-  return (
-    <div className={entStyles.emptyState}>
-      <div className={entStyles.emptyIcon}>
-        <KeyIcon />
-      </div>
-      <p className={entStyles.emptyTitle}>No entitlements configured</p>
-      <p className={entStyles.emptyDesc}>
-        Entitlements appear here when apps use the monetization manifest field.
-      </p>
-    </div>
-  );
+function statusLabel(row: EntitlementRow, active: boolean): string {
+  if (active) return 'Active';
+  if (row.status === 'cancelled') return 'Cancelled';
+  if (row.status === 'active') return 'Expired';
+  return row.status.charAt(0).toUpperCase() + row.status.slice(1);
 }
 
-export function EntitlementsSection({
-  rows,
-  isOwner,
-}: {
-  rows: EntitlementRow[];
-  isOwner: boolean;
-}) {
-  const [filter, setFilter] = useState<EntFilter>('entries');
+/**
+ * Entitlement list — the reference table on desktop and a compact list on
+ * mobile (the table card is CSS-hidden there; the list used to vanish
+ * entirely). Full user ids with a copy button replace the 8-character
+ * truncation with no way to get the value out.
+ */
+export function EntitlementsSection({ rows }: { rows: EntitlementRow[] }) {
+  const [filter, setFilter] = useState<EntFilter>('all');
 
   const now = Math.floor(Date.now() / 1000);
   const isActive = (row: EntitlementRow) =>
     row.status === 'active' && (row.expiresAt == null || row.expiresAt > now);
 
-  const filtered = filter === 'none' ? rows.filter((r) => !isActive(r)) : rows;
+  const filtered = filter === 'inactive' ? rows.filter((r) => !isActive(r)) : rows;
 
-  const formatDate = (ts: number) =>
-    new Date(ts * 1000).toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+  if (rows.length === 0) {
+    return (
+      <EmptyState
+        icon="shield"
+        heading="No entitlements yet"
+        description="Entitlements appear here once a paid app's license is imported or granted."
+      />
+    );
+  }
 
   return (
-    <section className={styles.section}>
-      <div className={entStyles.sectionHeaderRow}>
-        <div>
-          <h2 className={styles.sectionTitle}>App entitlements</h2>
-          <p className={styles.help}>
-            Signed licenses imported by users for paid apps.{' '}
-            {isOwner
-              ? 'Generate and grant licenses below, or users can import them via Account → Billing.'
-              : 'Users manage their own licenses via Account → Billing.'}
-          </p>
-        </div>
-        {rows.length > 0 && (
-          <SegmentedControl
-            value={filter}
-            onChange={setFilter}
-            options={FILTER_OPTIONS}
-            size="sm"
-            aria-label="Filter entitlements"
-          />
-        )}
-      </div>
+    <div className={styles.fieldStack}>
+      <SegmentedControl
+        value={filter}
+        onChange={setFilter}
+        options={FILTER_OPTIONS}
+        size="sm"
+        aria-label="Filter entitlements"
+      />
 
-      {rows.length === 0 ? (
-        <EmptyState />
+      {filtered.length === 0 ? (
+        <p className={styles.emptyTableMsg}>Every entitlement is currently active.</p>
       ) : (
-        <div className={styles.tableCard}>
-          <div className={styles.tableWrapper}>
-            <table className={styles.table} aria-label="Entitlements">
-              <thead>
-                <tr>
-                  <th className={styles.th}>App</th>
-                  <th className={styles.th}>User ID</th>
-                  <th className={styles.th}>Tier</th>
-                  <th className={styles.th}>Status</th>
-                  <th className={styles.th}>Source</th>
-                  <th className={styles.th}>Issued</th>
-                  <th className={styles.th}>Expires</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 ? (
+        <>
+          <div className={styles.tableCard}>
+            <div className={styles.tableWrapper}>
+              <table className={styles.table} aria-label="Entitlements">
+                <thead>
                   <tr>
-                    <td colSpan={7} className={entStyles.emptyRow}>
-                      No entries match this filter.
-                    </td>
+                    <th className={styles.th}>App</th>
+                    <th className={styles.th}>User</th>
+                    <th className={styles.th}>Tier</th>
+                    <th className={styles.th}>Status</th>
+                    <th className={styles.th}>Source</th>
+                    <th className={styles.th}>Issued</th>
+                    <th className={styles.th}>Expires</th>
                   </tr>
-                ) : (
-                  filtered.map((row) => {
+                </thead>
+                <tbody>
+                  {filtered.map((row) => {
                     const active = isActive(row);
                     return (
                       <tr key={row.id} className={styles.tr}>
                         <td className={styles.td}>
-                          <Badge variant="mono">{row.pluginId}</Badge>
+                          <Badge variant="mono" size="sm">
+                            {row.pluginId}
+                          </Badge>
                         </td>
                         <td className={styles.td}>
-                          <code className={entStyles.userId}>{row.userId.slice(0, 8)}…</code>
+                          <span className={styles.userIdRow}>
+                            <span className={styles.userId} title={row.userId}>
+                              {row.userId}
+                            </span>
+                            <CopyIdButton value={row.userId} label="Copy user ID" />
+                          </span>
                         </td>
                         <td className={styles.td}>
                           {row.tierId ?? <span className={styles.textMuted}>—</span>}
                         </td>
                         <td className={styles.td}>
-                          <Badge variant="status" status={active ? 'active' : 'deactivated'}>
-                            {active
-                              ? 'Active'
-                              : row.status === 'cancelled'
-                                ? 'Cancelled'
-                                : row.status}
+                          <Badge
+                            variant="status"
+                            size="sm"
+                            status={active ? 'active' : 'deactivated'}
+                          >
+                            {statusLabel(row, active)}
                           </Badge>
                         </td>
                         <td className={styles.td}>{row.source}</td>
@@ -156,18 +127,41 @@ export function EntitlementsSection({
                           {row.expiresAt ? (
                             formatDate(row.expiresAt)
                           ) : (
-                            <span className={styles.textMuted}>perpetual</span>
+                            <span className={styles.textMuted}>Never</span>
                           )}
                         </td>
                       </tr>
                     );
-                  })
-                )}
-              </tbody>
-            </table>
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+
+          <ul className={[styles.compactList, styles.mobileOnlyList].join(' ')}>
+            {filtered.map((row) => {
+              const active = isActive(row);
+              return (
+                <li key={row.id} className={styles.compactRow}>
+                  <span className={styles.compactRowLabel}>
+                    <span className={styles.compactRowTitle}>
+                      {row.pluginId}
+                      {row.tierId ? ` · ${row.tierId}` : ''}
+                    </span>
+                    <span className={styles.compactRowSubtitle}>
+                      {row.userId} · {row.source} · issued {formatDate(row.issuedAt)}
+                      {row.expiresAt ? ` · expires ${formatDate(row.expiresAt)}` : ''}
+                    </span>
+                  </span>
+                  <Badge variant="status" size="sm" status={active ? 'active' : 'deactivated'}>
+                    {statusLabel(row, active)}
+                  </Badge>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
-    </section>
+    </div>
   );
 }

@@ -16,7 +16,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@ducanh2912/next-pwa": "^10.2.9",
-    "@next/env": "^16.2.12",
+    "@next/env": "^16.3.4",
     "@sovereignfs/bridge": "workspace:*",
     "@sovereignfs/db": "workspace:*",
     "@sovereignfs/mailer": "workspace:*",
@@ -52,12 +52,12 @@
     "@sovereignfs/tsconfig": "workspace:*",
     "@testing-library/dom": "catalog:",
     "@testing-library/react": "catalog:",
-    "@types/pg": "^8.20.0",
+    "@types/pg": "^8.23.1",
     "@types/qrcode": "^1.5.6",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@types/web-push": "^3.6.4",
-    "pg": "^8.22.0",
+    "pg": "^8.23.0",
     "typescript": "catalog:"
   }
 }

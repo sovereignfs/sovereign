@@ -261,7 +261,10 @@ export function scaffoldPlugin(opts: PluginScaffoldOptions): string {
   const nextRef = useWorkspace ? 'catalog:' : 'latest';
   const reactRef = useWorkspace ? 'catalog:' : 'latest';
   const typesReactRef = useWorkspace ? 'catalog:' : 'latest';
-  const tsRef = useWorkspace ? 'catalog:' : 'latest';
+  // Not `latest`: npm's `latest` TypeScript is the 7.x Go-hosted compiler,
+  // which typescript-eslint doesn't support yet and which turns 6.0's
+  // deprecations into errors. The platform is on 6.0 (epic task 0.28).
+  const tsRef = useWorkspace ? 'catalog:' : '^6.0.0';
 
   mkdirSync(join(dir, 'app'), { recursive: true });
 
@@ -311,19 +314,29 @@ export function scaffoldPlugin(opts: PluginScaffoldOptions): string {
           '@types/react-dom': typesReactRef,
           typescript: tsRef,
         },
+        scripts: { typecheck: 'tsc --noEmit' },
       },
       null,
       2,
     ) + '\n',
   );
 
+  // CSS Modules ambient declaration — what the example plugins ship. Without
+  // it a plugin's own `tsc --noEmit` fails on every `*.module.css` import,
+  // its own and @sovereignfs/ui's (resolved from source inside the monorepo).
+  writeFileSync(
+    join(dir, 'css-modules.d.ts'),
+    `declare module '*.module.css' {\n  const classes: Readonly<Record<string, string>>;\n  export default classes;\n}\n`,
+  );
+
   writeFileSync(
     join(dir, 'tsconfig.json'),
     JSON.stringify(
       {
+        // No `baseUrl`: deprecated in TypeScript 6 (TS5101), removed in 7.0;
+        // `paths` (none here) resolve relative to this file without it.
         extends: '@sovereignfs/tsconfig/nextjs.json',
-        compilerOptions: { baseUrl: '.' },
-        include: ['app/**/*.ts', 'app/**/*.tsx', 'db/**/*.ts'],
+        include: ['css-modules.d.ts', 'app/**/*.ts', 'app/**/*.tsx', 'db/**/*.ts'],
       },
       null,
       2,

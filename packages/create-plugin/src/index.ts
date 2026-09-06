@@ -135,8 +135,11 @@ async function main(): Promise<void> {
           '@sovereignfs/tsconfig': 'latest',
           '@types/react': 'latest',
           '@types/react-dom': 'latest',
-          typescript: 'latest',
+          // Not `latest`: that is the 7.x Go-hosted compiler; the platform is
+          // on 6.0 (epic task 0.28) and typescript-eslint supports <6.1.
+          typescript: '^6.0.0',
         },
+        scripts: { typecheck: 'tsc --noEmit' },
       },
       null,
       2,
@@ -150,11 +153,20 @@ async function main(): Promise<void> {
     JSON.stringify(
       {
         extends: '@sovereignfs/tsconfig/nextjs.json',
-        include: ['app/**/*.ts', 'app/**/*.tsx', 'db/**/*.ts'],
+        include: ['css-modules.d.ts', 'app/**/*.ts', 'app/**/*.tsx', 'db/**/*.ts'],
       },
       null,
       2,
     ) + '\n',
+  );
+
+  // css-modules.d.ts — the ambient `*.module.css` declaration the example
+  // plugins ship; without it the plugin's own `tsc --noEmit` fails on every
+  // CSS Module import.
+  scaffoldFile(
+    dir,
+    'css-modules.d.ts',
+    `declare module '*.module.css' {\n  const classes: Readonly<Record<string, string>>;\n  export default classes;\n}\n`,
   );
 
   // icon.svg

@@ -1083,6 +1083,30 @@ gaps RFC 0063 had left as open questions. A follow-through pass over tasks
   Show all / Hide all on the Models page; provider rows show when they were
   last checked; "Clear conversation" is wired from the chat's top bar.
 
+**Found only by live verification** (driven end to end in a browser against
+a throwaway OpenAI-compatible server on the LAN, since the URL guard
+deliberately blocks loopback). Each of these passed the unit suite:
+
+- **The whole route 500'd.** `WardenSidebar` is a client component, and
+  importing a _value_ (rather than a type) from `sessions.ts` pulled that
+  server-only module — and transitively `next/headers` — into the browser
+  bundle. Vitest does not enforce the client/server boundary; only a real
+  request does. The constant moved to the zero-import `active-session.ts`.
+- **Stop dropped the reply and stranded the user's turn.**
+  `sdk.db.getClient()` resolves this plugin's isolated namespace from the
+  live request's headers, and a streaming response's `cancel` callback runs
+  outside that context — so every write there hit the wrong database ("no
+  such table: warden_sessions"). The route now resolves the client inside
+  the request and threads it into the writes that outlive it.
+- **"Show all"/"Hide all" looked inert.** The write succeeded, but
+  `ModelToggleRow` seeds its optimistic state in a `useState` initializer
+  and `router.refresh()` re-renders without remounting, so rows kept the
+  stale value until a reload.
+- **`Message`'s actions row overflowed on a phone.** With a caption plus
+  several actions it exceeded the column, putting a horizontal scrollbar on
+  the conversation and pushing the last action out of reach. Fixed in
+  `packages/ui` (patch bump), not worked around locally.
+
 **Review checklist:**
 
 - [x] The `(chat)` layout performs no I/O; the shell paints before the
@@ -1096,8 +1120,14 @@ gaps RFC 0063 had left as open questions. A follow-through pass over tasks
       extends the same message row
 - [x] Regenerate leaves the original untouched on a failed attempt
 - [x] Adding a provider with a rejected key is refused with the form intact
-- [x] All 425 Warden unit tests pass; `pnpm --filter runtime build`
-      compiles the composed routes
+- [x] All 427 Warden unit tests pass; the composed routes typecheck clean
+- [x] Verified live end to end in a browser: cold launch paints the shell in
+      ~250ms while a deliberately slow provider keeps the full page 6.2s;
+      first send from `/warden/new` keeps its reply and reloads identically;
+      Stop tears down the provider connection and persists exactly what was
+      shown; Continue extends the same message; Regenerate and Edit replace
+      in place; incognito leaves nothing on disk; the sidebar opens as a
+      Sheet at 375px and closes on selection
 
 ## Review checklist (epic-level)
 

@@ -2067,10 +2067,17 @@ export async function markPluginConnectionError(
   const existing = await getPluginConnection(pdb, id, context);
   if (!existing) return undefined;
   const now = Math.floor(Date.now() / 1000);
+  // `last_checked_at` is stamped here too, not only on a successful update.
+  // A check that ran and failed is still a check: leaving the column alone
+  // made the field mean "last *succeeded* at" while being named for
+  // something else, so a connection that used to work and now doesn't kept
+  // its old successful timestamp — surfacing in a plugin's UI as an error
+  // badge sitting next to a reassuring "last checked two minutes ago" that
+  // referred to a different, earlier, successful attempt.
   await dbRun(
     pdb,
     sql`UPDATE plugin_connections
-        SET status = ${status}, last_error = ${error}, updated_at = ${now}
+        SET status = ${status}, last_error = ${error}, last_checked_at = ${now}, updated_at = ${now}
         WHERE id = ${id}
           AND tenant_id = ${context.tenantId}
           AND plugin_id = ${context.pluginId}`,

@@ -40,6 +40,12 @@ export const ICON_LIST = [
   'hat-glasses',
   // Content / status
   'mail',
+  // Kanban: comment count on card tiles (a comment, not an email), card/board
+  // archive + restore, and due-date state on tiles.
+  'message-square',
+  'archive',
+  'archive-restore',
+  'clock',
   'bell',
   'inbox',
   'activity',

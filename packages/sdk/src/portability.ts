@@ -101,6 +101,16 @@ export interface DeletionContext {
 export interface DeletionResult {
   /** Number of rows (or objects) deleted. */
   deleted: number;
+  /**
+   * Rows kept but stripped of their attribution to the deleted user (RFC 0097).
+   *
+   * A row the departing user authored on *another* user's data belongs to that
+   * other user and must survive — so the handler nulls the attribution column
+   * instead of deleting the row. Count those here, never in `deleted`: a severed
+   * row still exists, and reporting it as deleted overstates the erasure an
+   * operator may later have to evidence.
+   */
+  anonymized?: number;
   /** Non-fatal errors encountered during cleanup. */
   errors?: string[];
 }
@@ -172,7 +182,16 @@ export const portability = {
     requireHost().portability.provideImport(pluginId, handler);
   },
 
-  /** Provider: register this plugin's deletion handler (RFC 0033). */
+  /**
+   * Provider: register this plugin's deletion handler (RFC 0033).
+   *
+   * The handler is responsible for three kinds of row, not two (RFC 0097):
+   * rows the departing user **owned** are deleted; rows **another user owns
+   * but the departing user is attributed on** (`added_by`, `assignee_id`, …)
+   * are kept with the attribution column set to `null` and counted in
+   * `anonymized`; everything else is left alone. Scope the severing `UPDATE`
+   * by `tenantId` exactly as you scope the `DELETE`s.
+   */
   async provideDelete(handler: DeletionHandler): Promise<void> {
     const pluginId = (await headers()).get('x-sovereign-plugin-id');
     if (!pluginId) {

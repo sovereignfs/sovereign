@@ -20,10 +20,27 @@ import type { WardenMessageRow, WardenSessionRow } from '../_db/schema';
 
 // The SDK returns an opaque, dialect-agnostic client; typed through this
 // plugin's own sqlite-core schema (works on either live dialect).
-type Db = BaseSQLiteDatabase<'async', unknown>;
+export type Db = BaseSQLiteDatabase<'async', unknown>;
 
 async function db(): Promise<Db> {
   return (await sdk.db.getClient()) as Db;
+}
+
+/**
+ * Resolves the plugin's own database client, for a caller that needs to keep
+ * writing *after* the request that started it has ended.
+ *
+ * `sdk.db.getClient()` reads `x-sovereign-plugin-id` from the live request to
+ * pick this plugin's isolated namespace. A streaming response's `cancel`
+ * callback (`stream-capture.ts`, when the user presses Stop or closes the
+ * tab) runs outside that context, so resolving lazily there silently
+ * selected the wrong database and every write failed with "no such table:
+ * warden_sessions" — the partial reply was dropped and the user's own turn
+ * stranded. Callers in that position resolve the client up front, while the
+ * request context still exists, and pass it to the functions below.
+ */
+export async function getPluginDbForBackgroundWork(): Promise<Db> {
+  return db();
 }
 
 /** Sessions pinned above this count are rejected outright at pin time
@@ -264,8 +281,9 @@ export async function deleteSession(
   userId: string,
   _tenantId: string,
   sessionId: string,
+  client?: Db,
 ): Promise<void> {
-  const database = await db();
+  const database = client ?? (await db());
   const existing = await getOwnSession(database, userId, sessionId);
   if (!existing) return;
   await database.delete(wardenMessages).where(eq(wardenMessages.sessionId, sessionId));
@@ -320,8 +338,11 @@ export async function appendMessage(
   _tenantId: string,
   sessionId: string,
   input: { role: 'user' | 'assistant'; content: string; providerId: string | null; model: string },
+  /** Pre-resolved client, for work that outlives its request — see
+   *  `getPluginDbForBackgroundWork`. */
+  client?: Db,
 ): Promise<MessageView> {
-  const database = await db();
+  const database = client ?? (await db());
   const existing = await getOwnSession(database, userId, sessionId);
   if (!existing) throw new SessionNotFoundError();
 
@@ -391,8 +412,9 @@ export async function deleteMessage(
   _tenantId: string,
   sessionId: string,
   messageId: string,
+  client?: Db,
 ): Promise<void> {
-  const database = await db();
+  const database = client ?? (await db());
   const existing = await getOwnSession(database, userId, sessionId);
   if (!existing) throw new SessionNotFoundError();
   await database
@@ -432,8 +454,9 @@ export async function extendMessage(
   sessionId: string,
   messageId: string,
   extraText: string,
+  client?: Db,
 ): Promise<MessageView> {
-  const database = await db();
+  const database = client ?? (await db());
   const row = await getOwnMessage(database, userId, sessionId, messageId);
   const content = row.content + extraText;
   await database
@@ -461,8 +484,9 @@ export async function replaceMessage(
   sessionId: string,
   messageId: string,
   input: { content: string; providerId: string | null; model: string },
+  client?: Db,
 ): Promise<MessageView> {
-  const database = await db();
+  const database = client ?? (await db());
   const row = await getOwnMessage(database, userId, sessionId, messageId);
   const now = Date.now();
   const patch = {

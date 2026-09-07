@@ -48,6 +48,9 @@ vi.mock('../../../_lib/sessions', () => ({
   deleteSession: (...args: unknown[]) => deleteSession(...args),
   deleteMessage: (...args: unknown[]) => deleteMessage(...args),
   extendMessage: (...args: unknown[]) => extendMessage(...args),
+  // The route resolves the plugin's DB client while the request context
+  // still exists, then hands it to every post-stream write.
+  getPluginDbForBackgroundWork: () => Promise.resolve(PERSIST_DB),
   replaceMessage: (...args: unknown[]) => replaceMessage(...args),
   SessionNotFoundError,
 }));
@@ -62,6 +65,10 @@ vi.mock('../../../_lib/attachments', async (importOriginal) => {
     processAttachment: (...args: unknown[]) => processAttachment(...args),
   };
 });
+
+/** What the mocked `getPluginDbForBackgroundWork` hands back — every
+ *  post-stream write must receive exactly this client. */
+const PERSIST_DB = { __fake: 'db' };
 
 const { POST } = await import('../route');
 
@@ -282,18 +289,20 @@ describe('POST /warden/api/chat — local routing', () => {
     await drain(res);
     await waitForBackgroundPersist();
 
-    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-new', {
-      role: 'user',
-      content: 'hello',
-      providerId: null,
-      model: 'local',
-    });
-    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-new', {
-      role: 'assistant',
-      content: 'Hi there',
-      providerId: null,
-      model: 'local',
-    });
+    expect(appendMessage).toHaveBeenCalledWith(
+      'user-1',
+      'tenant-1',
+      'session-new',
+      { role: 'user', content: 'hello', providerId: null, model: 'local' },
+      PERSIST_DB,
+    );
+    expect(appendMessage).toHaveBeenCalledWith(
+      'user-1',
+      'tenant-1',
+      'session-new',
+      { role: 'assistant', content: 'Hi there', providerId: null, model: 'local' },
+      PERSIST_DB,
+    );
   });
 });
 
@@ -323,12 +332,13 @@ describe('POST /warden/api/chat — client cancellation', () => {
     // The provider request is actually torn down, not left generating.
     expect(upstreamCancel).toHaveBeenCalled();
     await waitForBackgroundPersist();
-    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-1', {
-      role: 'assistant',
-      content: 'Partial ',
-      providerId: null,
-      model: 'local',
-    });
+    expect(appendMessage).toHaveBeenCalledWith(
+      'user-1',
+      'tenant-1',
+      'session-1',
+      { role: 'assistant', content: 'Partial ', providerId: null, model: 'local' },
+      PERSIST_DB,
+    );
   });
 
   it('cleans up the stranded user turn when the user stops before any token arrived', async () => {
@@ -346,7 +356,13 @@ describe('POST /warden/api/chat — client cancellation', () => {
     await waitForBackgroundPersist();
 
     expect(appendMessage).toHaveBeenCalledTimes(1);
-    expect(deleteMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-1', 'msg-user');
+    expect(deleteMessage).toHaveBeenCalledWith(
+      'user-1',
+      'tenant-1',
+      'session-1',
+      'msg-user',
+      PERSIST_DB,
+    );
   });
 });
 
@@ -396,6 +412,7 @@ describe('POST /warden/api/chat — reply modes', () => {
       'session-1',
       'm-reply',
       ' stream in two.',
+      PERSIST_DB,
     );
   });
 
@@ -423,11 +440,14 @@ describe('POST /warden/api/chat — reply modes', () => {
       { role: 'user', content: 'explain tee()' },
     ]);
     expect(appendMessage).not.toHaveBeenCalled();
-    expect(replaceMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-1', 'm-reply', {
-      content: 'A fresh answer.',
-      providerId: null,
-      model: 'local',
-    });
+    expect(replaceMessage).toHaveBeenCalledWith(
+      'user-1',
+      'tenant-1',
+      'session-1',
+      'm-reply',
+      { content: 'A fresh answer.', providerId: null, model: 'local' },
+      PERSIST_DB,
+    );
   });
 
   it('regenerate: a failed model call leaves the original reply untouched', async () => {
@@ -478,23 +498,27 @@ describe('POST /warden/api/chat — reply modes', () => {
 
     expect(deleteMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-1', 'm-reply');
     expect(deleteMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-1', 'm-user');
+    // The edit path deletes inside the request itself, so it needs no
+    // pre-resolved client — only the post-stream writes below do.
     expect(requestHarnessChat.mock.calls[0][0]).toEqual([
       { role: 'user', content: 'earlier' },
       { role: 'assistant', content: 'earlier reply' },
       { role: 'user', content: 'explain tee() briefly' },
     ]);
-    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-1', {
-      role: 'user',
-      content: 'explain tee() briefly',
-      providerId: null,
-      model: 'local',
-    });
-    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-1', {
-      role: 'assistant',
-      content: 'new reply',
-      providerId: null,
-      model: 'local',
-    });
+    expect(appendMessage).toHaveBeenCalledWith(
+      'user-1',
+      'tenant-1',
+      'session-1',
+      { role: 'user', content: 'explain tee() briefly', providerId: null, model: 'local' },
+      PERSIST_DB,
+    );
+    expect(appendMessage).toHaveBeenCalledWith(
+      'user-1',
+      'tenant-1',
+      'session-1',
+      { role: 'assistant', content: 'new reply', providerId: null, model: 'local' },
+      PERSIST_DB,
+    );
   });
 
   it('rejects an unknown mode, and any non-send mode without a session', async () => {
@@ -577,12 +601,13 @@ describe('POST /warden/api/chat — external provider routing', () => {
     await drain(res);
     await waitForBackgroundPersist();
 
-    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-new', {
-      role: 'assistant',
-      content: 'answer',
-      providerId: 'conn-1',
-      model: 'gpt-4o-mini',
-    });
+    expect(appendMessage).toHaveBeenCalledWith(
+      'user-1',
+      'tenant-1',
+      'session-new',
+      { role: 'assistant', content: 'answer', providerId: 'conn-1', model: 'gpt-4o-mini' },
+      PERSIST_DB,
+    );
   });
 
   it('maps auth_failed to a 503 unavailable status', async () => {
@@ -768,12 +793,18 @@ describe('POST /warden/api/chat — file attachments', () => {
         },
       ],
     });
-    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-new', {
-      role: 'user',
-      content: 'what is this\n\n[Image attached: photo.png]',
-      providerId: 'conn-1',
-      model: 'gpt-4o',
-    });
+    expect(appendMessage).toHaveBeenCalledWith(
+      'user-1',
+      'tenant-1',
+      'session-new',
+      {
+        role: 'user',
+        content: 'what is this\n\n[Image attached: photo.png]',
+        providerId: 'conn-1',
+        model: 'gpt-4o',
+      },
+      PERSIST_DB,
+    );
   });
 
   it('composes a document attachment into plain text, identical for the model and for persistence', async () => {
@@ -802,12 +833,13 @@ describe('POST /warden/api/chat — file attachments', () => {
     expect(requestProviderChat).toHaveBeenCalledWith(
       expect.objectContaining({ messages: [{ role: 'user', content: expectedContent }] }),
     );
-    expect(appendMessage).toHaveBeenCalledWith('user-1', 'tenant-1', 'session-new', {
-      role: 'user',
-      content: expectedContent,
-      providerId: 'conn-1',
-      model: 'gpt-4o',
-    });
+    expect(appendMessage).toHaveBeenCalledWith(
+      'user-1',
+      'tenant-1',
+      'session-new',
+      { role: 'user', content: expectedContent, providerId: 'conn-1', model: 'gpt-4o' },
+      PERSIST_DB,
+    );
   });
 
   it('a document attachment works with the local model too (no vision gating)', async () => {

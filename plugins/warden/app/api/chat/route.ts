@@ -7,9 +7,11 @@ import {
   deleteMessage,
   deleteSession,
   extendMessage,
+  getPluginDbForBackgroundWork,
   getRecentMessagesForContext,
   replaceMessage,
   SessionNotFoundError,
+  type Db,
   type MessageView,
 } from '../../_lib/sessions';
 import {
@@ -274,6 +276,19 @@ async function dispatchAndRespond(
         });
 
   if (result.kind === 'stream') {
+    // Resolved here, inside the request, and handed to every write below.
+    // The persistence callbacks can run *after* this request ends (the user
+    // presses Stop, or closes the tab), and `sdk.db.getClient()` needs the
+    // live request's plugin-id header to pick this plugin's own database —
+    // resolving it lazily in that callback silently selected the wrong one.
+    let persistDb: Db | undefined;
+    if (persist) {
+      persistDb = await getPluginDbForBackgroundWork().catch((error) => {
+        console.error('[warden] could not resolve the plugin database:', error);
+        return undefined;
+      });
+    }
+
     let response = new Response(result.response.body, {
       status: 200,
       headers: {
@@ -299,12 +314,18 @@ async function dispatchAndRespond(
       // racing it — an immediate stream failure can otherwise reach the
       // capture callback before the insert has landed.
       const userMessageWrite: Promise<MessageView | null> = persist.userTurn
-        ? appendMessage(persist.userId, persist.tenantId, persist.sessionId, {
-            role: 'user',
-            content: persist.userTurn.content,
-            providerId: persist.providerId,
-            model: persist.model,
-          }).catch((error) => {
+        ? appendMessage(
+            persist.userId,
+            persist.tenantId,
+            persist.sessionId,
+            {
+              role: 'user',
+              content: persist.userTurn.content,
+              providerId: persist.providerId,
+              model: persist.model,
+            },
+            persistDb,
+          ).catch((error) => {
             console.error('[warden] failed to persist user message:', error);
             return null;
           })
@@ -317,7 +338,7 @@ async function dispatchAndRespond(
             // Also the cancelled case: the user pressed Stop, so what they
             // saw on screen is the reply — persisting exactly that keeps a
             // reload consistent with the conversation they were looking at.
-            await persistReply(persist, text).catch((error) =>
+            await persistReply(persist, text, persistDb).catch((error) =>
               console.error('[warden] failed to persist assistant message:', error),
             );
             return;
@@ -337,7 +358,12 @@ async function dispatchAndRespond(
           await userMessageWrite
             .then((userMessage) => {
               if (persist.sessionWasCreated) {
-                return deleteSession(persist.userId, persist.tenantId, persist.sessionId);
+                return deleteSession(
+                  persist.userId,
+                  persist.tenantId,
+                  persist.sessionId,
+                  persistDb,
+                );
               }
               if (!userMessage) return undefined;
               return deleteMessage(
@@ -345,6 +371,7 @@ async function dispatchAndRespond(
                 persist.tenantId,
                 persist.sessionId,
                 userMessage.id,
+                persistDb,
               );
             })
             .catch((error) =>
@@ -399,26 +426,31 @@ async function persistReply(
     reply: ReplyPersistence;
   },
   text: string,
+  client?: Db,
 ): Promise<void> {
   const { userId, tenantId, sessionId, providerId, model, reply } = persist;
   switch (reply.kind) {
     case 'append':
-      await appendMessage(userId, tenantId, sessionId, {
-        role: 'assistant',
-        content: text,
-        providerId,
-        model,
-      });
+      await appendMessage(
+        userId,
+        tenantId,
+        sessionId,
+        { role: 'assistant', content: text, providerId, model },
+        client,
+      );
       return;
     case 'extend':
-      await extendMessage(userId, tenantId, sessionId, reply.messageId, text);
+      await extendMessage(userId, tenantId, sessionId, reply.messageId, text, client);
       return;
     case 'replace':
-      await replaceMessage(userId, tenantId, sessionId, reply.messageId, {
-        content: text,
-        providerId,
-        model,
-      });
+      await replaceMessage(
+        userId,
+        tenantId,
+        sessionId,
+        reply.messageId,
+        { content: text, providerId, model },
+        client,
+      );
       return;
   }
 }

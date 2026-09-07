@@ -1106,6 +1106,16 @@ deliberately blocks loopback). Each of these passed the unit suite:
   several actions it exceeded the column, putting a horizontal scrollbar on
   the conversation and pushing the last action out of reach. Fixed in
   `packages/ui` (patch bump), not worked around locally.
+- **"Last checked" reported the wrong thing.** Three linked causes, worse
+  than the missing line that prompted the look: `markPluginConnectionError`
+  never stamped `last_checked_at`, so a provider that used to work kept its
+  last _successful_ timestamp and showed it beside an error badge; the
+  providers page read the connection rows concurrently with the discovery
+  pass that writes them, rendering pre-check state; and
+  `invalidateDiscoveryCacheForUser` left an in-flight pass running that
+  wrote its stale result back afterwards, which is why "Recheck providers"
+  could look inert. Fixed in `packages/db` (patch bump, plus the field's
+  first written contract in `docs/plugin-development.md`) and in the plugin.
 
 **Review checklist:**
 

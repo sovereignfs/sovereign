@@ -1322,6 +1322,10 @@ describe.skipIf(!PG_URL)('plugin external connection helpers (RFC 0049)', () => 
     const [listed] = await listPluginConnections(db, context, { provider: 'email.google' });
     expect(listed).toMatchObject({ status: 'needs_reauth', lastError: '{"message":"expired"}' });
     expect(listed?.lastUsedAt).toBeGreaterThan(0);
+    // A failed check is still a check: without this the column kept whatever
+    // the last *successful* attempt wrote, so a plugin showing "last checked"
+    // beside an error badge reported a stale, reassuring time.
+    expect(listed?.lastCheckedAt).toBeGreaterThan(0);
 
     const updated = await updatePluginConnection(db, 'conn-1', context, {
       label: 'Work Google Mail',

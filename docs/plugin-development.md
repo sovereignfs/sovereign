@@ -2033,6 +2033,12 @@ Token refresh failures should call `sdk.connections.markError(id, { error,
 status: 'needs_reauth' })` with sanitized messages only. Account and Console
 show connection metadata and status; they never show credentials.
 
+`lastCheckedAt` records when the connection was last _verified_, whatever the
+outcome — `markError()` stamps it just as a successful `update()` does. Read
+it as "when we last looked," not "when it last worked"; pair it with `status`
+to tell the user which. `lastUsedAt` is separate and means real traffic, not a
+health check.
+
 Provider declarations may include `config.public` and `config.secrets` maps for
 instance-level settings such as OAuth client IDs and client secrets. Console
 shows those fields to admins, displays the absolute callback URL, stores public

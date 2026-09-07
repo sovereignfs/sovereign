@@ -27,6 +27,10 @@ import { EyeIcon } from './eye';
 import { EyeOffIcon } from './eye-off';
 import { HatGlassesIcon } from './hat-glasses';
 import { MailIcon } from './mail';
+import { MessageSquareIcon } from './message-square';
+import { ArchiveIcon } from './archive';
+import { ArchiveRestoreIcon } from './archive-restore';
+import { ClockIcon } from './clock';
 import { BellIcon } from './bell';
 import { InboxIcon } from './inbox';
 import { ActivityIcon } from './activity';
@@ -128,6 +132,10 @@ export type IconName =
   | 'eye-off'
   | 'hat-glasses'
   | 'mail'
+  | 'message-square'
+  | 'archive'
+  | 'archive-restore'
+  | 'clock'
   | 'bell'
   | 'inbox'
   | 'activity'
@@ -231,6 +239,10 @@ export const ICONS: Record<IconName, IconComponent> = {
   'eye-off': EyeOffIcon,
   'hat-glasses': HatGlassesIcon,
   mail: MailIcon,
+  'message-square': MessageSquareIcon,
+  archive: ArchiveIcon,
+  'archive-restore': ArchiveRestoreIcon,
+  clock: ClockIcon,
   bell: BellIcon,
   inbox: InboxIcon,
   activity: ActivityIcon,
@@ -332,6 +344,10 @@ export { EyeIcon } from './eye';
 export { EyeOffIcon } from './eye-off';
 export { HatGlassesIcon } from './hat-glasses';
 export { MailIcon } from './mail';
+export { MessageSquareIcon } from './message-square';
+export { ArchiveIcon } from './archive';
+export { ArchiveRestoreIcon } from './archive-restore';
+export { ClockIcon } from './clock';
 export { BellIcon } from './bell';
 export { InboxIcon } from './inbox';
 export { ActivityIcon } from './activity';

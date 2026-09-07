@@ -45,8 +45,17 @@
   border-bottom-left-radius: var(--sv-radius-sm);
 }
 
+/*
+ * Wraps rather than overflowing. A turn can carry several actions plus a
+ * caption (which model answered, and when), and on a phone-width column
+ * that row is easily wider than the message list — an unwrapped row put a
+ * horizontal scrollbar on the conversation and clipped the last action off
+ * the edge, where it could not be reached at all.
+ */
 .actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--sv-space-2);
   margin-top: var(--sv-space-1);
   font-size: var(--sv-font-size-caption);

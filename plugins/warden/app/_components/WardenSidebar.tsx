@@ -20,12 +20,13 @@ import {
   renameSessionAction,
   unpinSessionAction,
 } from '../actions';
-import { SIDEBAR_RECENT_LIMIT, type SessionView } from '../_lib/sessions';
+import type { SessionView } from '../_lib/sessions';
 import {
   MODELS_PATHNAME,
   NEW_CHAT_PATHNAME,
   PROVIDERS_PATHNAME,
   resolveActiveSessionId,
+  SIDEBAR_RECENT_LIMIT,
 } from '../_lib/active-session';
 import { useWardenShell } from './WardenLayoutShell';
 import { WardenSettingsDialog } from './WardenSettingsDialog';

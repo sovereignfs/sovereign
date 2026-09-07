@@ -31,6 +31,22 @@ export function resolveActiveSessionId(
   return orderedSessionIds[0] ?? null;
 }
 
+/**
+ * How many unpinned sessions `WardenSidebar`'s "Recent" group shows before
+ * folding the rest behind "Show more"; the sidebar also searches across
+ * every session once there are more than this many. Nothing is ever
+ * deleted for falling outside this window.
+ *
+ * Lives here, not in `sessions.ts`, for the same reason
+ * `model-visibility-policy.ts` exists: `WardenSidebar` is a client
+ * component, and importing a *value* (rather than a type) from
+ * `sessions.ts` pulls that server-only module — and transitively
+ * `@sovereignfs/sdk`'s `next/headers` — into the browser bundle, which
+ * fails the whole route at build time. This file has zero imports and must
+ * stay that way. `sessions.ts` re-exports it for server-side callers.
+ */
+export const SIDEBAR_RECENT_LIMIT = 10;
+
 /** The `/warden/new` route — the one path that forces a blank chat. */
 export const NEW_CHAT_PATHNAME = '/warden/new';
 

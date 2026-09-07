@@ -30,12 +30,10 @@ async function db(): Promise<Db> {
  *  (RFC 0063 §10) — not silently auto-evicting the oldest pin. */
 export const MAX_PINNED_SESSIONS = 5;
 
-/** How many unpinned sessions `WardenSidebar`'s "Recent" group shows
- *  before folding the rest behind "Show more" (RFC 0063 §10 left the
- *  cutoff's shape open; a hard cutoff made the 11th chat unreachable). The
- *  sidebar also searches across every session once there are more than
- *  this many. Nothing is ever deleted for falling outside this window. */
-export const SIDEBAR_RECENT_LIMIT = 10;
+/** Re-exported for server-side callers; defined in `active-session.ts`
+ *  because the sidebar (a client component) needs the value too — see that
+ *  file for why it can't live here. */
+export { SIDEBAR_RECENT_LIMIT } from './active-session';
 
 const TITLE_MAX_CHARS = 60;
 

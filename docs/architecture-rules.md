@@ -1120,6 +1120,29 @@ CLAUDE.md's per-release narrative (now archived in `docs/task-history.md`).
 Each is a genuine, reusable constraint; the originating release is noted so the
 full story is one grep away.
 
+- **A deletion handler severs cross-user attribution; it never deletes the row
+  and never writes a sentinel id** (RFC 0097). `sdk.portability.provideDelete`
+  handlers are usually written as "delete everything scoped by
+  `owner_user_id`", which silently ignores a third class of row: one another
+  user owns but the departing user is _attributed_ on
+  (`shopper_list_items.added_by`, `shopper_purchases.purchased_by`,
+  `sovereign-tasks`' `assignee_id`). Deleting it corrupts the owner's data;
+  leaving it keeps a deleted account's id in the table. Set the attribution
+  column to `null` and count those rows in `DeletionResult.anonymized`, never
+  in `deleted` — a severed row still exists, and `deleted` is the number an
+  operator cites to evidence an erasure. Attribution columns are declared
+  nullable; ownership columns (`owner_user_id`, `user_id`) stay `NOT NULL` and
+  their rows are deleted outright. A "deleted user" sentinel id was considered
+  and rejected: it is invisible to the type system (every existing read site
+  keeps compiling), must be excluded by hand from every filter and aggregate
+  forever, and buys nothing at render time because
+  `sdk.directory.resolveUsers()` returns nothing for it either way. The
+  platform already answered this question the same way for
+  `activity_log.actor_id` (nullable, paired with an `actor_type`
+  discriminator). Relaxing an already-shipped `NOT NULL` column is a plain
+  `drizzle-kit generate` in both dialects — the "hand-author the migration"
+  rule covers _renames_, which drizzle-kit cannot do non-interactively, not
+  nullability changes.
 - **A plugin declaring `data:import` must register `sdk.portability.provideImport()`**,
   and `data:export` must be paired with `provideExport()`. The restore path
   looks up handlers by plugin id at import time and _skips_ a section with no

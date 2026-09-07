@@ -3093,6 +3093,72 @@ remapId(originalId) }` — use `remapId` to translate stored IDs to fresh ones
   });
   ```
 
+  **Attribution on other users' rows (RFC 0097).** Deleting by ownership alone
+  is only correct if every row you hold is owned by exactly one user. As soon as
+  users can share anything, your rows fall into **three** buckets, not two:
+
+  | Row                                                         | Action                                  |
+  | ----------------------------------------------------------- | --------------------------------------- |
+  | Owned by the departing user                                 | **Delete**                              |
+  | Owned by another user, **attributed to** the departing user | **Sever the attribution, keep the row** |
+  | Owned by another user, not attributed to them               | Leave untouched                         |
+
+  The middle bucket is the one that gets missed. A shopping-list item the
+  departing user added to _someone else's_ list, or a task they were assigned on
+  _someone else's_ board, belongs to that other user — deleting it corrupts data
+  you have no claim to. But leaving it untouched keeps a deleted account's id in
+  your table forever. The answer is to sever the attribution, not the row:
+
+  ```ts
+  await sdk.portability.provideDelete(async ({ userId, tenantId, db }) => {
+    // 1. Rows the user owned — delete.
+    const deleted = await (db as MyDb)
+      .delete(myTasks)
+      .where(and(eq(myTasks.tenantId, tenantId), eq(myTasks.ownerUserId, userId)));
+
+    // 2. Rows someone else owns that name the departing user — sever.
+    //    Scope by tenantId exactly as you scope the DELETEs above.
+    const severed = await (db as MyDb)
+      .update(myTasks)
+      .set({ assigneeId: null })
+      .where(and(eq(myTasks.tenantId, tenantId), eq(myTasks.assigneeId, userId)));
+
+    return { deleted: deleted.rowsAffected ?? 0, anonymized: severed.rowsAffected ?? 0 };
+  });
+  ```
+
+  Three rules make this work:
+
+  - **Attribution columns are nullable; ownership columns are not.** An
+    _ownership_ column (`owner_user_id`, `user_id`) says whose data this is and
+    stays `NOT NULL` — its rows are deleted with the user. An _attribution_
+    column (`added_by`, `assignee_id`, `purchased_by`, `created_by`) says who
+    acted on a row someone else owns; declare it nullable from the start. This
+    matches the platform's own `activity_log.actor_id`, which is nullable for
+    exactly this reason. Do **not** invent a "deleted user" sentinel id: it is
+    invisible to the type system, so nothing forces your read paths to handle
+    it, and it has to be excluded by hand from every filter and aggregate
+    forever. Relaxing an already-shipped `NOT NULL` column is a normal
+    `drizzle-kit generate` in both dialects — it writes the SQLite table rebuild
+    for you.
+  - **Count severed rows in `anonymized`, never in `deleted`.** A severed row
+    still exists. `deleted` is the number an operator would cite to evidence an
+    erasure request, so folding severed rows into it overstates what happened.
+  - **Render `null` as no byline at all.** Resolve attribution through
+    `sdk.directory.resolveUsers()`, which returns rows only for active users.
+    Distinguish two cases: `null` means the attribution was deliberately severed
+    (or never set) — omit the byline entirely rather than printing "Deleted
+    user", which leaves the departed user more present in someone else's UI, not
+    less. A non-null id that `resolveUsers()` doesn't return means the user is
+    gone or not visible to the viewer — a neutral label such as "Someone" is
+    right there. You need that second branch regardless: these columns carry no
+    foreign key (the `user` table lives in a different database), so an id has
+    always been able to outlive its user.
+
+  Severing removes the direct identifier only. Free text, timestamps, and
+  co-occurrence on a small shared list can still point at a contributor — don't
+  describe it to users as full anonymity.
+
   **Cross-plugin references in exports (RFC 0051):** a `PluginExportSection`
   may also include `references?: PluginReference[]` — opaque links your plugin
   holds to another plugin's records (see `sdk.plugins` below for the shape).

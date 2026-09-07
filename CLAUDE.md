@@ -162,6 +162,12 @@ each: `docs/architecture-rules.md`.
 - **Plugin tables are slug-prefixed** (`tasks_lists`); every user-scoped table
   has `tenant_id`; every non-platform plugin gets its own isolated
   `plugin_<slug>` schema/namespace (epic 8.28).
+- **A `provideDelete` handler severs cross-user attribution rather than
+  deleting the row** — a row another user owns but the departing user is
+  attributed on (`added_by`, `assignee_id`) gets its attribution column set to
+  `null`, counted in `DeletionResult.anonymized`, never in `deleted`.
+  Attribution columns are nullable; ownership columns stay `NOT NULL`. Never a
+  "deleted user" sentinel id (RFC 0097).
 - **A plugin declaring `data:import` must register `sdk.portability.provideImport()`**
   (and `data:export` ↔ `provideExport()`); a missing handler is silently skipped
   on restore, not an error.

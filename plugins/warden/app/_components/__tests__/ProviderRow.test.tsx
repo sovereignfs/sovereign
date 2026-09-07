@@ -22,12 +22,16 @@ const provider = {
   lastCheckedAt: null,
 };
 
-function renderRow(onChanged = vi.fn(), overrides: Partial<typeof provider> = {}) {
+function renderRow(
+  onChanged = vi.fn(),
+  overrides: Partial<typeof provider> = {},
+  discovery?: Parameters<typeof ProviderRow>[0]['discovery'],
+) {
   return render(
     <ToastProvider>
       <ProviderRow
         provider={{ ...provider, ...overrides }}
-        discovery={undefined}
+        discovery={discovery}
         onChanged={onChanged}
       />
     </ToastProvider>,
@@ -136,5 +140,26 @@ describe('ProviderRow — last checked', () => {
     cleanup();
     renderRow(vi.fn(), { lastCheckedAt: Math.floor(Date.now() / 1000) - 3 * 60 });
     expect(screen.getByText('Last checked 3 minutes ago')).toBeDefined();
+  });
+
+  it('still says when a *failing* provider was checked, beside its error', () => {
+    // The platform stamps `lastCheckedAt` on a failed check too
+    // (`markPluginConnectionError`), so an unreachable provider reports when
+    // it was last tried rather than falling silent — or, worse, showing the
+    // time of an older attempt that succeeded.
+    renderRow(
+      vi.fn(),
+      { status: 'error', lastCheckedAt: Math.floor(Date.now() / 1000) - 60 },
+      {
+        id: 'conn-1',
+        label: 'OpenRouter',
+        baseUrl: 'https://openrouter.ai/api/v1',
+        ok: false,
+        message: 'This provider is unreachable.',
+        modelCount: 0,
+      },
+    );
+    expect(screen.getByText('This provider is unreachable.')).toBeDefined();
+    expect(screen.getByText('Last checked 1 minute ago')).toBeDefined();
   });
 });

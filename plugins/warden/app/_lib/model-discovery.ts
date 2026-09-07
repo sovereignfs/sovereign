@@ -65,12 +65,30 @@ const DISCOVERY_CACHE_TTL_MS = 30_000;
 const DISCOVERY_STALE_MAX_MS = 5 * 60_000;
 const discoveryCache = new Map<string, { result: ModelDiscoveryResult; freshUntil: number }>();
 const inFlight = new Map<string, Promise<ModelDiscoveryResult>>();
+/**
+ * Bumped on every invalidation. A pass records the value it started under
+ * and only caches its result if that value still holds — see
+ * `invalidateDiscoveryCacheForUser`.
+ */
+const cacheGeneration = new Map<string, number>();
 
-/** Drops this user's cached discovery result, if any — the next
- *  `discoverModels()` call for them runs a live pass instead of serving a
- *  cached one. Safe to call even if nothing is cached. */
+/**
+ * Drops this user's cached discovery result so the next `discoverModels()`
+ * call runs a live pass. Safe to call even if nothing is cached.
+ *
+ * Clearing the cache alone is not enough, and getting this wrong made
+ * "Recheck providers" look like it did nothing at all. A pass already in
+ * flight when this is called would still write its result afterwards —
+ * resurrecting the exact data the caller asked to discard — and any caller
+ * arriving in the meantime would be deduped onto that same doomed pass. So
+ * this also detaches the in-flight pass (it still completes; it just no
+ * longer caches or attracts new callers) and bumps the generation so its
+ * late write is dropped.
+ */
 export function invalidateDiscoveryCacheForUser(userId: string): void {
   discoveryCache.delete(userId);
+  inFlight.delete(userId);
+  cacheGeneration.set(userId, (cacheGeneration.get(userId) ?? 0) + 1);
 }
 
 /** @internal test-only reset — clears every cached user's entry so test
@@ -78,6 +96,7 @@ export function invalidateDiscoveryCacheForUser(userId: string): void {
 export function resetDiscoveryCacheForTests(): void {
   discoveryCache.clear();
   inFlight.clear();
+  cacheGeneration.clear();
 }
 
 export interface DiscoveredModel {
@@ -301,14 +320,20 @@ function refreshDiscovery(userId: string): Promise<ModelDiscoveryResult> {
   const running = inFlight.get(userId);
   if (running) return running;
 
+  const startedAt = cacheGeneration.get(userId) ?? 0;
   const pass = runDiscovery()
     .then((result) => {
-      discoveryCache.set(userId, { result, freshUntil: Date.now() + DISCOVERY_CACHE_TTL_MS });
+      // Dropped if the cache was invalidated while this pass was running —
+      // otherwise a "Recheck" would be undone by the very pass it replaced.
+      if ((cacheGeneration.get(userId) ?? 0) === startedAt) {
+        discoveryCache.set(userId, { result, freshUntil: Date.now() + DISCOVERY_CACHE_TTL_MS });
+      }
       return result;
     })
     .finally(() => {
-      // Only clear our own entry — a `resetDiscoveryCacheForTests()` or a
-      // later pass may already have replaced it.
+      // Only clear our own entry — an invalidation, a
+      // `resetDiscoveryCacheForTests()`, or a later pass may already have
+      // replaced it.
       if (inFlight.get(userId) === pass) inFlight.delete(userId);
     });
   inFlight.set(userId, pass);

@@ -15,7 +15,14 @@ import styles from '../../warden.module.css';
  * navigation you just used disappears out from under you.
  */
 export default async function WardenProvidersPage() {
-  const [providers, discovery] = await Promise.all([listProviders(), discoverModels()]);
+  // Sequenced, not concurrent: a discovery pass *writes* each connection's
+  // status and last-checked time (`markProviderHealthy`/`markProviderError`),
+  // so reading the rows alongside it renders the state from before this
+  // check — which is how a just-failed provider came to sit under a
+  // reassuring timestamp belonging to an older, successful attempt.
+  // `discoverModels()` is cached, so this usually costs nothing extra.
+  const discovery = await discoverModels();
+  const providers = await listProviders();
 
   return (
     <div className={styles.paneScroll}>

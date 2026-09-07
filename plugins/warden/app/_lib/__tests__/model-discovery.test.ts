@@ -361,4 +361,56 @@ describe('discoverModels caching', () => {
       vi.useRealTimers();
     }
   });
+  it('a pass already running when the cache is invalidated never writes its result back', async () => {
+    checkHarnessHealth.mockResolvedValue({ kind: 'unreachable' });
+    listProviders.mockResolvedValue([provider]);
+
+    // First pass: hold it open so an invalidation can land mid-flight.
+    let releaseFirst: (value: Response) => void = () => {};
+    pinnedFetch.mockReturnValueOnce(
+      new Promise<Response>((resolve) => {
+        releaseFirst = resolve;
+      }),
+    );
+    const firstCall = discoverModels();
+    await vi.waitFor(() => expect(pinnedFetch).toHaveBeenCalledTimes(1));
+
+    // The user hits "Recheck" while that pass is still out.
+    invalidateDiscoveryCacheForUser('user-1');
+
+    // It finishes afterwards with what is now yesterday's news.
+    releaseFirst(jsonResponse({ data: [{ id: 'stale' }] }));
+    await firstCall;
+
+    // The next read must run live rather than find the stale pass's write.
+    pinnedFetch.mockResolvedValue(jsonResponse({ data: [{ id: 'fresh' }] }));
+    const after = await discoverModels();
+    expect(after.models.map((m) => m.key)).toEqual(['conn-1:fresh']);
+    expect(pinnedFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('a caller arriving after an invalidation starts a new pass instead of joining the old one', async () => {
+    checkHarnessHealth.mockResolvedValue({ kind: 'unreachable' });
+    listProviders.mockResolvedValue([provider]);
+
+    let releaseFirst: (value: Response) => void = () => {};
+    pinnedFetch.mockReturnValueOnce(
+      new Promise<Response>((resolve) => {
+        releaseFirst = resolve;
+      }),
+    );
+    const firstCall = discoverModels();
+    await vi.waitFor(() => expect(pinnedFetch).toHaveBeenCalledTimes(1));
+
+    invalidateDiscoveryCacheForUser('user-1');
+    pinnedFetch.mockResolvedValue(jsonResponse({ data: [{ id: 'fresh' }] }));
+    const second = await discoverModels();
+    expect(second.models.map((m) => m.key)).toEqual(['conn-1:fresh']);
+
+    releaseFirst(jsonResponse({ data: [{ id: 'stale' }] }));
+    await firstCall;
+    // And the late finisher still must not overwrite what the new pass cached.
+    const third = await discoverModels();
+    expect(third.models.map((m) => m.key)).toEqual(['conn-1:fresh']);
+  });
 });

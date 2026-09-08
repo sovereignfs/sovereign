@@ -8,6 +8,7 @@ import {
   assertRemovablePlugin,
   authHealthUrl,
   defaultArchivePath,
+  formatPluginStatusReport,
   migrationBackupGuidance,
   pollUntilHealthy,
   readPlatformVersion,
@@ -63,10 +64,62 @@ describe('assertRemovablePlugin', () => {
     }).toThrow(/built-in platform plugin/);
   });
 
+  // Regression: hardcoded (not derived from PLATFORM_PLUGIN_DIRS, unlike the
+  // it.each above) so this actually fails if the list ever drops these ids
+  // again -- it previously omitted them entirely, silently letting
+  // `sv plugin remove inbox`/`warden` delete a platform plugin that ships in
+  // the monorepo (allowlisted alongside account/console/launcher in the root
+  // .gitignore's `!/plugins/*/` exceptions).
+  it.each(['inbox', 'warden'])('refuses to remove the platform plugin %s (hardcoded)', (id) => {
+    expect(() => {
+      assertRemovablePlugin(id);
+    }).toThrow(/built-in platform plugin/);
+  });
+
   it('allows removing a third-party plugin', () => {
     expect(() => {
       assertRemovablePlugin('fs.example.tasks');
     }).not.toThrow();
+  });
+});
+
+describe('formatPluginStatusReport', () => {
+  it('reports a row-less plugin as having no plugin_status row', () => {
+    const lines = formatPluginStatusReport({
+      pluginId: 'fs.sovereign.inbox',
+      enabled: undefined,
+      accessPolicy: undefined,
+      selfService: undefined,
+    });
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatch(/No plugin_status row for "fs\.sovereign\.inbox"/);
+  });
+
+  // Regression: this is exactly the stuck state `checkBootCompatibility()`
+  // used to be able to leave a chrome plugin in (see runtime/src/boot-compat.ts)
+  // -- `sv plugin status` must surface the explicit `enabled: false` row
+  // plainly, not fall back to the row-less message.
+  it('reports an explicit disabled row plainly', () => {
+    const lines = formatPluginStatusReport({
+      pluginId: 'fs.sovereign.inbox',
+      enabled: false,
+      accessPolicy: 'everyone',
+      selfService: false,
+    });
+    expect(lines.join('\n')).toMatch(/enabled:\s+false/);
+    expect(lines.join('\n')).toMatch(/accessPolicy:\s+everyone/);
+  });
+
+  it('reports an enabled row plainly', () => {
+    const lines = formatPluginStatusReport({
+      pluginId: 'fs.example.tasks',
+      enabled: true,
+      accessPolicy: 'admins',
+      selfService: true,
+    });
+    expect(lines.join('\n')).toMatch(/enabled:\s+true/);
+    expect(lines.join('\n')).toMatch(/accessPolicy:\s+admins/);
+    expect(lines.join('\n')).toMatch(/selfService:\s+true/);
   });
 });
 

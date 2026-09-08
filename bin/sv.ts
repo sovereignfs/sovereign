@@ -31,6 +31,7 @@ import {
   assertRemovablePlugin,
   authHealthUrl,
   defaultArchivePath,
+  formatPluginStatusReport,
   migrationBackupGuidance,
   pollUntilHealthy,
   readPlatformVersion,
@@ -732,6 +733,65 @@ const pluginMigrateToIsolated = defineCommand({
   },
 });
 
+const pluginStatus = defineCommand({
+  meta: {
+    name: 'status',
+    description: "Print a plugin's plugin_status row (enabled, access policy) -- read-only",
+  },
+  args: {
+    id: {
+      type: 'positional',
+      required: true,
+      description: 'Plugin manifest id (e.g. fs.sovereign.inbox)',
+    },
+  },
+  async run({ args }) {
+    const { id } = args;
+    const { getPlatformDb, listPluginStatus, getPluginAccessPolicy } =
+      await import('@sovereignfs/db');
+    const pdb = await getPlatformDb();
+    const [allStatus, policy] = await Promise.all([
+      listPluginStatus(pdb),
+      getPluginAccessPolicy(pdb, id),
+    ]);
+    const row = allStatus.find((r) => r.pluginId === id);
+    for (const line of formatPluginStatusReport({
+      pluginId: id,
+      enabled: row?.enabled,
+      accessPolicy: policy?.accessPolicy,
+      selfService: policy?.selfService,
+    })) {
+      consola.info(line);
+    }
+  },
+});
+
+const pluginEnable = defineCommand({
+  meta: {
+    name: 'enable',
+    description:
+      'Force plugin_status.enabled = true for a plugin id (break-glass). ' +
+      'PATCH /api/admin/plugins/[id] refuses to toggle a platform chrome plugin ' +
+      "(Console/Launcher/Account/Inbox) in either direction, and Console's Apps " +
+      'catalog never lists them -- this is the only way back if one ends up ' +
+      'disabled (e.g. a bad boot-time compatibility check, a manual DB edit).',
+  },
+  args: {
+    id: {
+      type: 'positional',
+      required: true,
+      description: 'Plugin manifest id (e.g. fs.sovereign.inbox)',
+    },
+  },
+  async run({ args }) {
+    const { id } = args;
+    const { getPlatformDb, setPluginEnabled } = await import('@sovereignfs/db');
+    const pdb = await getPlatformDb();
+    await setPluginEnabled(pdb, id, true);
+    consola.success(`Set plugin_status.enabled = true for "${id}".`);
+  },
+});
+
 const plugin = defineCommand({
   meta: { name: 'plugin', description: 'Scaffold, add, or remove individual plugins' },
   subCommands: {
@@ -740,6 +800,8 @@ const plugin = defineCommand({
     remove: pluginRemove,
     migrate: pluginMigrate,
     'migrate-to-isolated': pluginMigrateToIsolated,
+    status: pluginStatus,
+    enable: pluginEnable,
   },
 });
 

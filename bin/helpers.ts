@@ -164,13 +164,49 @@ export function migrationBackupGuidance(dialect: 'sqlite' | 'postgres'): {
  * are committed (gitignore-allowlisted) and load-bearing — `sv plugin remove`
  * refuses to delete them. Matches the allowlist in the root `.gitignore`.
  */
-export const PLATFORM_PLUGIN_DIRS = ['account', 'console', 'launcher'] as const;
+export const PLATFORM_PLUGIN_DIRS = ['account', 'console', 'inbox', 'launcher', 'warden'] as const;
 
 /** Throw if `id` names a built-in platform plugin that must not be removed. */
 export function assertRemovablePlugin(id: string): void {
   if ((PLATFORM_PLUGIN_DIRS as readonly string[]).includes(id)) {
     throw new Error(`"${id}" is a built-in platform plugin and cannot be removed.`);
   }
+}
+
+/**
+ * A single plugin's `plugin_status` row state, as read by `sv plugin status`
+ * (`bin/sv.ts`). Each field is `undefined` when no explicit row/value exists
+ * — the same "row-less" convention `runtime/src/plugin-status.ts` uses —
+ * rather than baking in that module's full resolution logic (examples,
+ * chrome plugins, dev bypass, hard-disable) here: this is a raw diagnostic
+ * view of the row, not a re-simulation of the runtime's access decision.
+ */
+export interface PluginStatusReport {
+  pluginId: string;
+  enabled: boolean | undefined;
+  accessPolicy: string | undefined;
+  selfService: boolean | undefined;
+}
+
+/**
+ * Render a `PluginStatusReport` as the lines `sv plugin status <id>` prints.
+ * Pure — no I/O — so the formatting is unit-testable without a database.
+ */
+export function formatPluginStatusReport(report: PluginStatusReport): string[] {
+  const { pluginId, enabled, accessPolicy, selfService } = report;
+  if (enabled === undefined && accessPolicy === undefined) {
+    return [
+      `No plugin_status row for "${pluginId}" -- row-less defaults apply ` +
+        '(see runtime/src/plugin-status.ts): enabled unless it is an unshown ' +
+        'example or manifest-hard-disabled.',
+    ];
+  }
+  return [
+    `plugin_status for "${pluginId}":`,
+    `  enabled:      ${enabled ?? '(no row -- defaults to enabled)'}`,
+    `  accessPolicy: ${accessPolicy ?? '(no row -- defaults to "everyone" for a chrome plugin, "disabled" otherwise)'}`,
+    `  selfService:  ${selfService ?? '(no row)'}`,
+  ];
 }
 
 /** Read the platform version from the workspace root package.json. */

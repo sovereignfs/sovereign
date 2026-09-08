@@ -337,11 +337,24 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   `plugin_status` row for one at all, and `runAllPluginMigrations()`
   (`runtime/src/plugin-migrations.ts`) skips it entirely.
 - **Chrome plugins** (`fs.sovereign.launcher`, `fs.sovereign.account`,
-  `fs.sovereign.console`) are reached through the sidebar chrome (home `/`,
-  Console ⚙, Account avatar), never via the Launcher grid or the sidebar's
-  middle plugin-icon section (LCH-04, PLT-12). The canonical ID set is
-  `CHROME_PLUGIN_IDS` in `runtime/src/launcher-plugins.ts` — reuse it, never
-  re-hardcode the list.
+  `fs.sovereign.console`, `fs.sovereign.inbox`) are reached through the
+  sidebar chrome (home `/`, Console ⚙, Account avatar, Inbox 🔔 bell), never
+  via the Launcher grid or the sidebar's middle plugin-icon section (LCH-04,
+  PLT-12). The canonical ID set is `CHROME_PLUGIN_IDS` in
+  `runtime/src/launcher-plugins.ts` — reuse it, never re-hardcode the list.
+  **Always enabled, never toggleable, by construction** — `PATCH
+/api/admin/plugins/[id]` refuses to flip a chrome plugin's `plugin_status`
+  row in either direction, and `getPluginCatalog()` excludes them from
+  Console's Apps list entirely, so there is no admin UI path to a chrome
+  plugin at all. `checkBootCompatibility()` (`runtime/src/boot-compat.ts`)
+  must honor this too — it used to disable any incompatible plugin
+  unconditionally, which could silently 404 a chrome plugin platform-wide
+  with no way back (fixed: chrome plugins are now exempted from that write,
+  though still marked incompatible for health/admin visibility). If a chrome
+  plugin's row ever ends up `enabled: false` regardless (a manual DB edit, a
+  future bug), `sv plugin status <id>` / `sv plugin enable <id>`
+  (`bin/sv.ts`) are the only recovery path — a direct, unguarded DB write,
+  deliberately outside the admin API's refusal.
 - **Plugins that need the installed-plugin list fetch the gated `/api/plugins`**
   (forwarding the session cookie), not import the registry — the SDK boundary
   rule forbids plugins importing `runtime/src` or internal packages. The route

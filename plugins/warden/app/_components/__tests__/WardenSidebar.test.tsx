@@ -3,17 +3,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ToastProvider } from '@sovereignfs/ui';
 import type { SessionView } from '../../_lib/sessions';
+import { WardenLayoutShell } from '../WardenLayoutShell';
 import { WardenSidebar } from '../WardenSidebar';
 
 const renameSessionAction = vi.fn();
 const pinSessionAction = vi.fn();
 const unpinSessionAction = vi.fn();
 const deleteSessionAction = vi.fn();
+// The Settings dialog loads its own data on open (`WardenSettingsDialog`);
+// it resolves to an empty model list here so the dialog renders without a
+// live discovery pass.
+const loadGeneralSettingsAction = vi.fn(() =>
+  Promise.resolve({ ok: true as const, data: { visibleModels: [], defaultModelKey: null } }),
+);
 vi.mock('../../actions', () => ({
   renameSessionAction: (...args: unknown[]) => renameSessionAction(...args),
   pinSessionAction: (...args: unknown[]) => pinSessionAction(...args),
   unpinSessionAction: (...args: unknown[]) => unpinSessionAction(...args),
   deleteSessionAction: (...args: unknown[]) => deleteSessionAction(...args),
+  loadGeneralSettingsAction: () => loadGeneralSettingsAction(),
 }));
 
 const push = vi.fn();
@@ -104,14 +112,7 @@ function session(overrides: Partial<SessionView> = {}): SessionView {
 function renderSidebar(props: Partial<Parameters<typeof WardenSidebar>[0]> = {}) {
   return render(
     <ToastProvider>
-      <WardenSidebar
-        pinnedSessions={[]}
-        recentSessions={[]}
-        orderedSessionIds={[]}
-        settingsModels={[]}
-        settingsDefaultModelKey={null}
-        {...props}
-      />
+      <WardenSidebar pinnedSessions={[]} recentSessions={[]} orderedSessionIds={[]} {...props} />
     </ToastProvider>,
   );
 }
@@ -123,7 +124,14 @@ function openMenuFor(label: string) {
 describe('WardenSidebar — groups', () => {
   it('shows an empty message when there are no sessions at all', () => {
     renderSidebar();
-    expect(screen.getByText('No sessions yet — start one above.')).toBeDefined();
+    expect(screen.getByText('No chats yet — start one above.')).toBeDefined();
+  });
+
+  it('shows a spinner in place of the list while loading, with the nav still usable', () => {
+    renderSidebar({ loading: true });
+    expect(screen.getByLabelText('Loading chats…')).toBeDefined();
+    expect(screen.queryByText('No chats yet — start one above.')).toBeNull();
+    expect(screen.getByRole('link', { name: 'New chat' })).toBeDefined();
   });
 
   it('renders a Pinned group above a Recent group, each with their own sessions', () => {
@@ -221,16 +229,27 @@ describe('WardenSidebar — groups', () => {
 });
 
 describe('WardenSidebar — collapse control', () => {
-  it('renders no collapse button when onToggleCollapse is omitted', () => {
+  it('renders no collapse button outside the layout shell', () => {
     renderSidebar();
     expect(screen.queryByRole('button', { name: 'Hide sessions sidebar' })).toBeNull();
   });
 
-  it('renders a collapse button that calls onToggleCollapse when provided', () => {
-    const onToggleCollapse = vi.fn();
-    renderSidebar({ onToggleCollapse });
+  it('renders a collapse button that hides the sidebar when inside the shell', () => {
+    // The shell starts collapsed and reads the stored preference in an
+    // effect; `'0'` is the "user expanded it before" value.
+    window.localStorage.setItem('warden:sidebarCollapsed', '0');
+    render(
+      <ToastProvider>
+        <WardenLayoutShell
+          sidebar={<WardenSidebar pinnedSessions={[]} recentSessions={[]} orderedSessionIds={[]} />}
+        >
+          <p>Main</p>
+        </WardenLayoutShell>
+      </ToastProvider>,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Hide sessions sidebar' }));
-    expect(onToggleCollapse).toHaveBeenCalled();
+    expect(screen.queryByRole('navigation', { name: 'Chat sessions' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Show sessions sidebar' })).toBeDefined();
   });
 });
 

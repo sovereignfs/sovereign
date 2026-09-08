@@ -115,4 +115,18 @@ describe('assertSafeProviderBaseUrl', () => {
       UnsafeProviderUrlError,
     );
   });
+  it('gives up on a DNS lookup that never answers instead of waiting indefinitely', async () => {
+    vi.useFakeTimers();
+    try {
+      // `getaddrinfo` retrying against a dead nameserver — the promise
+      // simply never settles.
+      lookup.mockReturnValue(new Promise(() => {}));
+      const pending = assertSafeProviderBaseUrl('https://slow.example.com/v1');
+      const assertion = expect(pending).rejects.toThrow(UnsafeProviderUrlError);
+      await vi.advanceTimersByTimeAsync(5_000);
+      await assertion;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

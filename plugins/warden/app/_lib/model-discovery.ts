@@ -40,9 +40,31 @@ function isUndecryptableSecretError(error: unknown): boolean {
  * per-user cache bounds that to one live pass per `DISCOVERY_CACHE_TTL_MS`;
  * `invalidateDiscoveryCacheForUser` gives mutation sites and the explicit
  * "Recheck" actions (`actions.ts`) a way to force a fresh pass sooner.
+ *
+ * Two refinements on top of the plain TTL, both found investigating slow
+ * Warden launches:
+ *
+ * - **In-flight dedup.** The chat page, the Settings dialog and the
+ *   Providers/Models pages can all call this within the same request (or
+ *   within milliseconds of each other). With only a TTL cache, every caller
+ *   that arrived before the first live pass *finished* started its own —
+ *   two full passes against every provider, and two rounds of status
+ *   writes, for a single navigation. Concurrent callers now share one
+ *   promise per user.
+ * - **Stale-while-revalidate.** Once the TTL lapses, the next caller used to
+ *   block on a full live pass (up to 8s per unreachable provider) even
+ *   though a perfectly usable result from 31 seconds ago was sitting right
+ *   there. An expired entry is now served immediately while a refresh runs
+ *   in the background, up to `DISCOVERY_STALE_MAX_MS` — beyond that the
+ *   result is old enough that a provider added or removed on another device
+ *   could plausibly be missing, so the caller waits for a fresh pass.
+ *   `invalidateDiscoveryCacheForUser` still forces the next call to block
+ *   on a live pass: an explicit "Recheck" must never answer from cache.
  */
 const DISCOVERY_CACHE_TTL_MS = 30_000;
-const discoveryCache = new Map<string, { result: ModelDiscoveryResult; expiresAt: number }>();
+const DISCOVERY_STALE_MAX_MS = 5 * 60_000;
+const discoveryCache = new Map<string, { result: ModelDiscoveryResult; freshUntil: number }>();
+const inFlight = new Map<string, Promise<ModelDiscoveryResult>>();
 
 /** Drops this user's cached discovery result, if any — the next
  *  `discoverModels()` call for them runs a live pass instead of serving a
@@ -55,6 +77,7 @@ export function invalidateDiscoveryCacheForUser(userId: string): void {
  *  cases don't leak results into one another via the shared module cache. */
 export function resetDiscoveryCacheForTests(): void {
   discoveryCache.clear();
+  inFlight.clear();
 }
 
 export interface DiscoveredModel {
@@ -241,10 +264,42 @@ async function runDiscovery(): Promise<ModelDiscoveryResult> {
  */
 export async function discoverModels(): Promise<ModelDiscoveryResult> {
   const session = await sdk.auth.requireSession();
-  const cached = discoveryCache.get(session.user.id);
-  if (cached && cached.expiresAt > Date.now()) return cached.result;
+  const userId = session.user.id;
+  const now = Date.now();
+  const cached = discoveryCache.get(userId);
 
-  const result = await runDiscovery();
-  discoveryCache.set(session.user.id, { result, expiresAt: Date.now() + DISCOVERY_CACHE_TTL_MS });
-  return result;
+  if (cached && cached.freshUntil > now) return cached.result;
+
+  if (cached && cached.freshUntil + DISCOVERY_STALE_MAX_MS > now) {
+    // Stale but recent: answer now, refresh behind the caller's back. The
+    // refresh is deduped through `inFlight` like any other pass, and its
+    // failure is logged rather than surfaced — the caller already has a
+    // result, and the next call will try again.
+    void refreshDiscovery(userId).catch((error) => {
+      console.error('[warden] background model discovery failed:', error);
+    });
+    return cached.result;
+  }
+
+  return refreshDiscovery(userId);
+}
+
+/** One live pass per user at a time — every caller that arrives while a
+ *  pass is running awaits that same promise instead of starting another. */
+function refreshDiscovery(userId: string): Promise<ModelDiscoveryResult> {
+  const running = inFlight.get(userId);
+  if (running) return running;
+
+  const pass = runDiscovery()
+    .then((result) => {
+      discoveryCache.set(userId, { result, freshUntil: Date.now() + DISCOVERY_CACHE_TTL_MS });
+      return result;
+    })
+    .finally(() => {
+      // Only clear our own entry — a `resetDiscoveryCacheForTests()` or a
+      // later pass may already have replaced it.
+      if (inFlight.get(userId) === pass) inFlight.delete(userId);
+    });
+  inFlight.set(userId, pass);
+  return pass;
 }

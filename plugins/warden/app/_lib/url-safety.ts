@@ -77,6 +77,36 @@ function isLoopbackOrLinkLocal(address: string, family: number): boolean {
   return false;
 }
 
+/**
+ * `dns.lookup` has no timeout of its own: it goes through the OS resolver
+ * (`getaddrinfo`), whose retry schedule against an unresponsive nameserver
+ * can run well past the 8s the *fetch* that follows is bounded to. Every
+ * discovery pass and every chat request resolves each provider's host
+ * first, so an unbounded lookup here was the one stage of a Warden page
+ * load with no ceiling at all. The pending `getaddrinfo` cannot itself be
+ * cancelled; racing it just stops the caller waiting on it.
+ */
+const DNS_LOOKUP_TIMEOUT_MS = 5000;
+
+function lookupWithTimeout(hostname: string): Promise<{ address: string; family: number }[]> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`DNS lookup for ${hostname} timed out.`)),
+      DNS_LOOKUP_TIMEOUT_MS,
+    );
+    lookup(hostname, { all: true, verbatim: true }).then(
+      (result) => {
+        clearTimeout(timer);
+        resolve(result);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 /** A validated provider base URL, plus the exact address that validation resolved. */
 export interface SafeProviderUrl {
   url: URL;
@@ -122,7 +152,7 @@ export async function assertSafeProviderBaseUrl(rawUrl: string): Promise<SafePro
 
   let addresses: { address: string; family: number }[];
   try {
-    addresses = await lookup(hostname, { all: true, verbatim: true });
+    addresses = await lookupWithTimeout(hostname);
   } catch {
     throw new UnsafeProviderUrlError("The base URL's host could not be resolved.");
   }

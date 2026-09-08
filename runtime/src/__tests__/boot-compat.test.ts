@@ -113,4 +113,28 @@ describe('checkBootCompatibility', () => {
     expect(recordWarnings).toHaveBeenCalledWith('fs.example.zzz', []);
     expect(markIncompatible).toHaveBeenCalledWith('fs.example.dbfail', 'too new');
   });
+
+  it('marks an incompatible chrome plugin as incompatible but never disables it', async () => {
+    getInstalledPlugins.mockReturnValue([manifest('fs.sovereign.inbox')]);
+    checkCompatibility.mockReturnValue({
+      compatible: false,
+      reason: 'requires a newer platform',
+      warnings: [],
+    });
+
+    const { checkBootCompatibility } = await import('../boot-compat');
+    await checkBootCompatibility();
+
+    // Still surfaced in health/admin routes...
+    expect(markIncompatible).toHaveBeenCalledWith(
+      'fs.sovereign.inbox',
+      'requires a newer platform',
+    );
+    // ...but never disabled: a chrome plugin's plugin_status row has no
+    // admin-reachable way back (PATCH /api/admin/plugins/[id] refuses to
+    // toggle a chrome id, and Console's Apps catalog excludes them), so an
+    // `enabled: false` write here would permanently 404 the plugin platform-
+    // wide with no recovery short of a direct DB edit.
+    expect(setPluginEnabled).not.toHaveBeenCalled();
+  });
 });

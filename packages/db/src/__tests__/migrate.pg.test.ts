@@ -7,7 +7,7 @@ import { Pool } from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { PlatformDb } from '../client';
 import { runMigrations, runPluginMigrations } from '../migrate';
-import { getPlatformSetting, setPlatformSetting } from '../platform-db';
+import { getInstanceId, getPlatformSetting, setPlatformSetting } from '../platform-db';
 import { pluginMigrationsTableName } from '../plugin-client';
 import type { PluginDb } from '../plugin-client';
 
@@ -232,6 +232,37 @@ describe.skipIf(!PG_URL)('runMigrations — version tracking & downgrade guard',
     expect(result.downgradeDetected).toBe(false);
     // The running version is now persisted for the next startup to compare.
     expect(await getPlatformSetting(db, 'platform_version')).toBe(result.currentVersion);
+  }, 120000);
+
+  // Regression coverage for a real production incident: `instance_id` was
+  // seeded only by `bootstrapPlatformDb()`, which nothing in the production
+  // boot path calls — it survives for tests and the dev seed script, while
+  // real deployments seed through `runMigrations()`/`seedPlatformData()`
+  // alone. So every self-hosted instance that never ran the dev seed had no
+  // `instance_id` row at all, and the first `sdk.platform.getConfig()` call
+  // to reach it threw "instance_id missing — was bootstrapPlatformDb()
+  // run?". Surfaced live by a plugin's schedule handler (the Ledger
+  // month-end recap, which reads `instanceUrl` to build an absolute link),
+  // but it would have hit any caller: `getConfig()` resolves `getInstanceId`
+  // in a `Promise.all`, so a missing row fails the whole call.
+  it('seeds a stable instance_id on a fresh install (regression: production getConfig() crash)', async () => {
+    const { db, migrationsTable } = await freshPlatformDb();
+    await runMigrations(db, migrationsTable);
+
+    const instanceId = await getPlatformSetting(db, 'instance_id');
+    expect(instanceId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+    // `getInstanceId` is what `sdk.platform.getConfig()` actually calls.
+    expect(await getInstanceId(db)).toBe(instanceId);
+  }, 120000);
+
+  it('never regenerates instance_id on a later restart', async () => {
+    const { db, migrationsTable } = await freshPlatformDb();
+    await runMigrations(db, migrationsTable);
+    const first = await getInstanceId(db);
+
+    await runMigrations(db, migrationsTable);
+
+    expect(await getInstanceId(db)).toBe(first);
   }, 120000);
 
   it('reports no downgrade on an unchanged restart', async () => {

@@ -134,6 +134,23 @@ async function seedPlatformData(pdb: PlatformDb): Promise<MigrationResult> {
         VALUES ('root_plugin_id', ${DEFAULT_TENANT_ID}, ${DEFAULT_ROOT_PLUGIN_ID}, ${now})
         ON CONFLICT (key, tenant_id) DO NOTHING`,
   );
+  // Stable UUID identifying this installation (`sdk.platform.getConfig()`'s
+  // `instanceId`, and required for the call to succeed at all —
+  // `getInstanceId()` throws otherwise). Generated once, never overwritten.
+  // This seed used to live only in `bootstrapPlatformDb()`, an interim path
+  // nothing in production actually calls (tests and the dev seed script are
+  // its only callers) — every real deployment seeded `tenants`/
+  // `root_plugin_id` here but never `instance_id`, so the first
+  // `getConfig()` call on a real instance threw "instance_id missing".
+  // Found live: a plugin's schedule handler calling `getConfig()` for an
+  // email link surfaced it, but any caller would have hit the same crash.
+  const instanceId = crypto.randomUUID();
+  await dbRun(
+    pdb,
+    sql`INSERT INTO platform_settings (key, tenant_id, value, updated_at)
+        VALUES ('instance_id', ${DEFAULT_TENANT_ID}, ${instanceId}, ${now})
+        ON CONFLICT (key, tenant_id) DO NOTHING`,
+  );
 
   // Read the version that was stored from the last startup.
   const stored = await dbGet<{ value: string }>(

@@ -112,8 +112,33 @@ preferred display name (white-label name falling back to the tenant row name).
 - `runtime` — **minor** `0.32.0 → 0.33.0` (capability rename affects API surface)
 - `plugins/console` — **patch** `0.14.0 → 0.14.1` (label text only)
 
+## Addendum: instance_id was never seeded in production (2026-09-08)
+
+**Status:** Fixed, `@sovereignfs/db` patch.
+
+`bootstrapPlatformDb()` (the function this RFC's own Changes section names as
+where `instance_id` gets seeded) is an interim path nothing in the real
+production boot calls — only tests and the local dev seed script
+(`scripts/seed.ts`) do. The actual production seeding path is
+`getPlatformDb()` → `runMigrations()` → `seedPlatformData()`
+(`packages/db/src/migrate.ts`), which seeds `tenants` and `root_plugin_id`
+but never `instance_id`. Every self-hosted instance that never ran the dev
+seed script therefore had no `instance_id` row, and the first
+`sdk.platform.getConfig()` call on that instance threw `"instance_id
+missing — was bootstrapPlatformDb() run?"` — `getConfig()` resolves
+`getInstanceId()` inside a `Promise.all`, so this failed the whole call for
+any caller, not just whichever plugin happened to be first. Surfaced live by
+a plugin's schedule handler reading `instanceUrl` for an email link.
+
+Fix: `seedPlatformData()` now seeds `instance_id` too, with the same
+`ON CONFLICT DO NOTHING` idempotency `bootstrapPlatformDb()` already used —
+so it self-heals on the next restart of any affected instance, no manual
+migration needed. `bootstrapPlatformDb()` is untouched (still correct for
+its own callers).
+
 ## Changelog
 
-| Version | Date      | Change               |
-| ------- | --------- | -------------------- |
-| 1.0     | June 2026 | Accepted and shipped |
+| Version | Date       | Change                                              |
+| ------- | ---------- | --------------------------------------------------- |
+| 1.0     | June 2026  | Accepted and shipped                                |
+| 1.1     | 2026-09-08 | Addendum: instance_id seeding gap fixed (see above) |

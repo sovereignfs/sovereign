@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useCallback, useEffect, useRef, useState } from 'react';
-import { Button, Checkbox, FormField, Input, Select, useToast } from '@sovereignfs/ui';
+import { Button, Checkbox, FormField, Input, Select, Spinner, useToast } from '@sovereignfs/ui';
 import type { DirectoryUser } from '@sovereignfs/sdk';
 import { DetailSection } from '../_components/DetailPaneHeader';
 import type { ActionResult } from '../_lib/action-result';
@@ -479,7 +479,9 @@ export function PluginAccessFields({
       {showUserPicker && (
         <DetailSection title="Selected users">
           {users === null ? (
-            <p className={styles.textMuted}>Loading…</p>
+            <p className={styles.textMuted}>
+              <Spinner size="sm" /> Loading…
+            </p>
           ) : (
             <UserGrantList pluginId={pluginId} users={users} onChanged={refresh} />
           )}
@@ -490,7 +492,9 @@ export function PluginAccessFields({
       {showGroupPicker && (
         <DetailSection title="Selected groups">
           {groups === null ? (
-            <p className={styles.textMuted}>Loading…</p>
+            <p className={styles.textMuted}>
+              <Spinner size="sm" /> Loading…
+            </p>
           ) : (
             <GroupGrantList pluginId={pluginId} groups={groups} onChanged={refresh} />
           )}

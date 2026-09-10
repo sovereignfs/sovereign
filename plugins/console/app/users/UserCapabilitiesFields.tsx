@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Button, Icon, Tooltip } from '@sovereignfs/ui';
+import { Button, Icon, Spinner, Tooltip } from '@sovereignfs/ui';
 import { GRANTABLE_CAPABILITIES, type GrantableCapability } from '@/src/capabilities';
 import { useActionRunner } from '../_lib/use-action';
 import styles from '../console.module.css';
@@ -58,7 +58,11 @@ export function UserCapabilitiesFields({ userId }: { userId: string }) {
   }
 
   if (grants === null) {
-    return <p className={styles.textMuted}>Loading…</p>;
+    return (
+      <p className={styles.textMuted}>
+        <Spinner size="sm" /> Loading…
+      </p>
+    );
   }
 
   return (

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Button, Checkbox, Select } from '@sovereignfs/ui';
+import { Button, Checkbox, Select, Spinner } from '@sovereignfs/ui';
 import styles from '../account.module.css';
 import notifStyles from './notifications.module.css';
 
@@ -146,7 +146,9 @@ export default function NotificationsPage() {
   if (!prefs)
     return (
       <div className={styles.sections}>
-        <p>Loading…</p>
+        <p>
+          <Spinner size="sm" /> Loading…
+        </p>
       </div>
     );
 

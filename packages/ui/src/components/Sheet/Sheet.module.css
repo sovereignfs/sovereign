@@ -54,5 +54,20 @@
 .content {
   flex: 1 1 auto;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  /* `none`, not `contain`: `contain` only stops scroll *chaining* to the
+     parent — the panel itself still rubber-bands, which is a real bug for
+     any caller-supplied content that puts a sticky element inside this
+     scroll container (a documented, supported pattern — see this file's own
+     `.content` comment above and Sheet.tsx's remark that "any content-owned
+     internal sticky positioning... resolves against this same scrolling
+     ancestor"). Confirmed live: sovereign-tasks' TaskDetailPane renders a
+     `position: sticky` header inside a Sheet on mobile, and pulling down at
+     the top of its scroll content dragged that header down with the bounce,
+     exposing blank panel background above it — the identical symptom
+     Dialog.module.css's own `.content` already documents and fixes with
+     `none` ("the panel itself still bounces, which reveals white
+     panel-background between OverlayHeader and the sticky tab strip on iOS
+     PWA"). A bounded overlay panel has no legitimate reason to bounce at
+     all, so `none` costs nothing functionally — same reasoning as Dialog. */
+  overscroll-behavior: none;
 }

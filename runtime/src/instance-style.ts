@@ -88,6 +88,15 @@ export function buildInstanceStyle(config: InstanceConfig): string {
     const hoverLDark = Math.max(0, Math.min(100, l + ACCENT_HOVER_LIGHTNESS_DELTA));
     lines.push(`  --sv-color-accent: hsl(${h}, ${s}%, ${l}%);`);
     lines.push(`  --sv-color-accent-hover: hsl(${h}, ${s}%, ${hoverLLight}%);`);
+    // Re-assert --sv-color-accent inside the dark block too, not just its
+    // hover variant: this whole style is injected as an inline <style> after
+    // packages/ui's semantic.css, so its unconditional `:root` rule above
+    // would otherwise win the cascade tie against semantic.css's
+    // `[data-theme='dark']` override (equal specificity, later source wins) —
+    // pinning the accent to its light-mode value while
+    // --sv-color-text-on-accent still flips to dark-mode black, producing
+    // unreadable low-contrast accent buttons/logos in dark mode.
+    darkLines.push(`  --sv-color-accent: hsl(${h}, ${s}%, ${l}%);`);
     // On dark theme the accent-hover lightens instead of darkens.
     darkLines.push(`  --sv-color-accent-hover: hsl(${h}, ${s}%, ${hoverLDark}%);`);
   }

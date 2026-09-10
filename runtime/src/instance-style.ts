@@ -4,6 +4,14 @@ import { THEME_PRESETS } from '@sovereignfs/ui';
 /** Fixed lightness delta used to derive --sv-color-accent-hover from the instance accent. */
 const ACCENT_HOVER_LIGHTNESS_DELTA = 8;
 
+/**
+ * WCAG relative-luminance crossover point between "black text wins" and
+ * "white text wins": solving contrast(L, white) = contrast(L, black) for L
+ * gives L = sqrt(1.05 * 0.05) - 0.05 ≈ 0.179. Below it, white text has the
+ * higher contrast ratio against the colour; above it, black does.
+ */
+const ACCENT_TEXT_LUMINANCE_THRESHOLD = 0.179;
+
 /** RFC 0077 — corner-radius intensity presets, applied as --sv-radius-scale.
  * 'm' (scale 1) matches the primitive token's own default in primitives.css —
  * setting it explicitly here is a no-op visually, kept for a single source
@@ -39,6 +47,18 @@ function hexToHsl(hex: string): [number, number, number] {
       h = ((r - g) / d + 4) / 6;
   }
   return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
+}
+
+/** WCAG relative luminance (0–1) of a validated 6-digit hex colour. */
+function relativeLuminance(hex: string): number {
+  const channel = (byte: number) => {
+    const c = byte / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const r = channel(parseInt(hex.slice(1, 3), 16));
+  const g = channel(parseInt(hex.slice(3, 5), 16));
+  const b = channel(parseInt(hex.slice(5, 7), 16));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
 /**
@@ -86,19 +106,36 @@ export function buildInstanceStyle(config: InstanceConfig): string {
     // Clamped so the result stays in [0, 100].
     const hoverLLight = Math.max(0, Math.min(100, l - ACCENT_HOVER_LIGHTNESS_DELTA));
     const hoverLDark = Math.max(0, Math.min(100, l + ACCENT_HOVER_LIGHTNESS_DELTA));
+    // packages/ui's semantic.css pairs --sv-color-accent with
+    // --sv-color-text-on-accent purely by theme (white in light, near-black
+    // in dark) — correct only for the *default* monochrome accent, which
+    // genuinely inverts lightness between themes. A custom instance accent
+    // colour does NOT change between themes (only its hover variant does,
+    // above), so blindly flipping the paired text colour to dark-mode black
+    // can land on an unreadable pairing whenever the operator's colour isn't
+    // light enough for that. Compute the actual contrasting text colour from
+    // the colour itself instead, same "guaranteed contrast for a literal
+    // colour" reasoning as --sv-color-text-on-light-fill/-dark-fill.
+    const textOnAccent =
+      relativeLuminance(config.instancePrimary) > ACCENT_TEXT_LUMINANCE_THRESHOLD
+        ? 'var(--sv-grey-950)'
+        : 'var(--sv-white)';
     lines.push(`  --sv-color-accent: hsl(${h}, ${s}%, ${l}%);`);
     lines.push(`  --sv-color-accent-hover: hsl(${h}, ${s}%, ${hoverLLight}%);`);
-    // Re-assert --sv-color-accent inside the dark block too, not just its
-    // hover variant: this whole style is injected as an inline <style> after
-    // packages/ui's semantic.css, so its unconditional `:root` rule above
-    // would otherwise win the cascade tie against semantic.css's
-    // `[data-theme='dark']` override (equal specificity, later source wins) —
-    // pinning the accent to its light-mode value while
-    // --sv-color-text-on-accent still flips to dark-mode black, producing
-    // unreadable low-contrast accent buttons/logos in dark mode.
+    lines.push(`  --sv-color-text-on-accent: ${textOnAccent};`);
+    // Re-assert every accent-derived token inside the dark block too, even
+    // where the value is identical to the light one (--sv-color-accent,
+    // --sv-color-text-on-accent): this whole style is injected as an inline
+    // <style> after semantic.css, so its unconditional `:root` rule already
+    // wins the cascade tie against semantic.css's `[data-theme='dark']`
+    // block regardless of theme (equal specificity, later source wins) —
+    // verified empirically, not just inferred. Duplicating explicitly here
+    // means correctness doesn't depend on that document-order subtlety
+    // continuing to hold if the injection point ever changes.
     darkLines.push(`  --sv-color-accent: hsl(${h}, ${s}%, ${l}%);`);
     // On dark theme the accent-hover lightens instead of darkens.
     darkLines.push(`  --sv-color-accent-hover: hsl(${h}, ${s}%, ${hoverLDark}%);`);
+    darkLines.push(`  --sv-color-text-on-accent: ${textOnAccent};`);
   }
 
   // Both blocks are built from the same merged lines/darkLines arrays (not an

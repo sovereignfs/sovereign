@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Button, FormField, Input, Textarea } from '@sovereignfs/ui';
+import { Button, FormField, Input, Spinner, Textarea } from '@sovereignfs/ui';
 import styles from '../account.module.css';
 import billingStyles from './billing.module.css';
 
@@ -101,7 +101,9 @@ export default function BillingPage() {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Active licenses</h2>
         {loading ? (
-          <p className={styles.help}>Loading…</p>
+          <p className={styles.help}>
+            <Spinner size="sm" /> Loading…
+          </p>
         ) : active.length === 0 ? (
           <p className={styles.help}>No active app licenses.</p>
         ) : (

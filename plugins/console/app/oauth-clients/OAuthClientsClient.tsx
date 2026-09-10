@@ -10,6 +10,7 @@ import {
   FormField,
   Icon,
   Input,
+  Spinner,
   TagInput,
   useToast,
 } from '@sovereignfs/ui';
@@ -324,7 +325,9 @@ export function OAuthClientsClient({ selectedClientId }: { selectedClientId: str
       )}
 
       {loading ? (
-        <p className={styles.textMuted}>Loading…</p>
+        <p className={styles.textMuted}>
+          <Spinner size="sm" /> Loading…
+        </p>
       ) : clients.length === 0 ? (
         <p className={styles.emptyTableMsg}>
           No external clients registered yet. Register one to let an outside app sign users in.

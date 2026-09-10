@@ -86,116 +86,122 @@ export default async function UsersPage({
         action={canManageUsers ? <InviteDialog /> : undefined}
       />
 
-      <div className={styles.tableCard}>
-        <div className={styles.tableWrapper}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th className={styles.th}>Name / Email</th>
-                <th className={styles.th}>Role</th>
-                <th className={styles.th}>Status</th>
-                <th className={styles.th}>Joined</th>
-                <th className={styles.th}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {members.map((member) => {
-                const isSelected = !!member.id && member.id === selectedMember?.id;
-                return (
-                  <tr
-                    key={member.id ?? `invite-${member.email}`}
-                    className={[styles.tr, isSelected ? styles.trSelected : '']
-                      .filter(Boolean)
-                      .join(' ')}
-                  >
-                    <td className={styles.td}>
-                      <div className={styles.userCell}>
-                        {member.id ? (
-                          <Link
-                            href={`?page=${safePage}&user=${member.id}`}
-                            className={styles.userCellLink}
-                            aria-current={isSelected ? 'true' : undefined}
-                          >
-                            <span className={styles.userName}>{member.name ?? '—'}</span>
-                            <span className={styles.userEmail}>{member.email}</span>
-                          </Link>
-                        ) : (
-                          <>
-                            <span className={styles.userName}>{member.name ?? '—'}</span>
-                            <span className={styles.userEmail}>{member.email}</span>
-                          </>
-                        )}
-                      </div>
-                    </td>
-
-                    <td className={styles.td}>
-                      <RoleBadge role={member.role} />
-                    </td>
-
-                    <td className={styles.td}>
-                      <span className={styles.badgeGroup}>
-                        <MemberStatusBadge status={member.status} />
-                        {member.isTestUser && (
-                          <Badge variant="mono" size="sm">
-                            Test
-                          </Badge>
-                        )}
-                      </span>
-                    </td>
-
-                    <td className={styles.td}>
-                      <time dateTime={new Date(member.createdAt).toISOString()}>
-                        {new Date(member.createdAt).toLocaleDateString()}
-                      </time>
-                      {member.expiresAt && (
-                        <span className={styles.expiryNote}>
-                          {' '}
-                          · expires {new Date(member.expiresAt).toLocaleDateString()}
-                        </span>
-                      )}
-                    </td>
-
-                    <td className={styles.td}>
-                      {member.status === 'invited' ? (
-                        canManageUsers ? (
-                          <div className={styles.rowActions}>
-                            <CancelInviteButton email={member.email} />
-                          </div>
-                        ) : (
-                          <span className={styles.textMuted}>—</span>
-                        )
-                      ) : member.id ? (
-                        <Icon
-                          name="chevron-right"
-                          size="sm"
-                          aria-hidden
-                          className={styles.textMuted}
-                        />
-                      ) : (
-                        <span className={styles.textMuted}>—</span>
-                      )}
-                    </td>
+      {total === 0 ? (
+        <p className={styles.emptyTableMsg}>No members yet. Invite one to get started.</p>
+      ) : (
+        <>
+          <div className={styles.tableCard}>
+            <div className={styles.tableWrapper}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th className={styles.th}>Name / Email</th>
+                    <th className={styles.th}>Role</th>
+                    <th className={styles.th}>Status</th>
+                    <th className={styles.th}>Joined</th>
+                    <th className={styles.th}></th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                </thead>
+                <tbody>
+                  {members.map((member) => {
+                    const isSelected = !!member.id && member.id === selectedMember?.id;
+                    return (
+                      <tr
+                        key={member.id ?? `invite-${member.email}`}
+                        className={[styles.tr, isSelected ? styles.trSelected : '']
+                          .filter(Boolean)
+                          .join(' ')}
+                      >
+                        <td className={styles.td}>
+                          <div className={styles.userCell}>
+                            {member.id ? (
+                              <Link
+                                href={`?page=${safePage}&user=${member.id}`}
+                                className={styles.userCellLink}
+                                aria-current={isSelected ? 'true' : undefined}
+                              >
+                                <span className={styles.userName}>{member.name ?? '—'}</span>
+                                <span className={styles.userEmail}>{member.email}</span>
+                              </Link>
+                            ) : (
+                              <>
+                                <span className={styles.userName}>{member.name ?? '—'}</span>
+                                <span className={styles.userEmail}>{member.email}</span>
+                              </>
+                            )}
+                          </div>
+                        </td>
 
-      {/* Mobile: card list (hidden on desktop via CSS) — unchanged by the
+                        <td className={styles.td}>
+                          <RoleBadge role={member.role} />
+                        </td>
+
+                        <td className={styles.td}>
+                          <span className={styles.badgeGroup}>
+                            <MemberStatusBadge status={member.status} />
+                            {member.isTestUser && (
+                              <Badge variant="mono" size="sm">
+                                Test
+                              </Badge>
+                            )}
+                          </span>
+                        </td>
+
+                        <td className={styles.td}>
+                          <time dateTime={new Date(member.createdAt).toISOString()}>
+                            {new Date(member.createdAt).toLocaleDateString()}
+                          </time>
+                          {member.expiresAt && (
+                            <span className={styles.expiryNote}>
+                              {' '}
+                              · expires {new Date(member.expiresAt).toLocaleDateString()}
+                            </span>
+                          )}
+                        </td>
+
+                        <td className={styles.td}>
+                          {member.status === 'invited' ? (
+                            canManageUsers ? (
+                              <div className={styles.rowActions}>
+                                <CancelInviteButton email={member.email} />
+                              </div>
+                            ) : (
+                              <span className={styles.textMuted}>—</span>
+                            )
+                          ) : member.id ? (
+                            <Icon
+                              name="chevron-right"
+                              size="sm"
+                              aria-hidden
+                              className={styles.textMuted}
+                            />
+                          ) : (
+                            <span className={styles.textMuted}>—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile: card list (hidden on desktop via CSS) — unchanged by the
           desktop detail-column redesign; no persistent sidebar/detail
           columns exist on mobile (see layout.tsx). */}
-      <div className={styles.userCardList}>
-        {members.map((member) => (
-          <UserCard
-            key={member.id ?? `invite-${member.email}`}
-            member={member}
-            canAssignRoles={canAssignRoles}
-            canManageUsers={canManageUsers}
-          />
-        ))}
-      </div>
+          <div className={styles.userCardList}>
+            {members.map((member) => (
+              <UserCard
+                key={member.id ?? `invite-${member.email}`}
+                member={member}
+                canAssignRoles={canAssignRoles}
+                canManageUsers={canManageUsers}
+              />
+            ))}
+          </div>
+        </>
+      )}
 
       <ConsolePagination
         page={safePage}

@@ -1,0 +1,9 @@
+.root {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sv-space-3);
+  min-height: 240px;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+}

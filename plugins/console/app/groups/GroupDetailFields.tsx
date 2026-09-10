@@ -1,7 +1,15 @@
 'use client';
 
 import { useActionState, useCallback, useEffect, useRef, useState } from 'react';
-import { Avatar, Button, ConfirmDialog, FormField, Input, useToast } from '@sovereignfs/ui';
+import {
+  Avatar,
+  Button,
+  ConfirmDialog,
+  FormField,
+  Input,
+  Spinner,
+  useToast,
+} from '@sovereignfs/ui';
 import type { DirectoryUser } from '@sovereignfs/sdk';
 import {
   addGroupMemberAction,
@@ -305,7 +313,9 @@ export function GroupDetailFields({ group }: { group: GroupSummary }) {
 
       <DetailSection title="Members">
         {members === null ? (
-          <p className={styles.textMuted}>Loading…</p>
+          <p className={styles.textMuted}>
+            <Spinner size="sm" /> Loading…
+          </p>
         ) : (
           <MemberList groupId={group.id} members={members} onChanged={refreshMembers} />
         )}

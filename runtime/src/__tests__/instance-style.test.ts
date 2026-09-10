@@ -62,30 +62,46 @@ describe('buildInstanceStyle — radius (RFC 0077)', () => {
 });
 
 describe('buildInstanceStyle — accent colour (RFC 0027)', () => {
-  it("re-asserts --sv-color-accent inside the [data-theme='dark'] block, not just its hover variant", () => {
-    // Regression guard: this whole style is injected as an inline <style> tag
-    // after packages/ui's semantic.css, so an unconditional `:root` rule for
-    // --sv-color-accent wins the cascade tie against semantic.css's own
-    // `[data-theme='dark']` override (equal specificity, later source wins).
-    // Without a dark-block re-assertion here, dark mode kept the light-mode
-    // accent colour while --sv-color-text-on-accent still flipped to
-    // dark-mode black, making accent-coloured buttons/logos unreadable.
+  it("re-asserts --sv-color-accent identically in both the root and [data-theme='dark'] blocks", () => {
+    // --sv-color-accent itself doesn't change between themes (only its hover
+    // variant does) — this guards the explicit dark-block duplication, kept
+    // for robustness against the injection point's document-order relative
+    // to semantic.css rather than because the *value* differs.
     const style = buildInstanceStyle(config({ instancePrimary: '#3b82f6' }));
     const darkBlockIndex = style.indexOf("[data-theme='dark']");
     expect(darkBlockIndex).toBeGreaterThan(-1);
-    const darkBlock = style.slice(darkBlockIndex);
-    expect(darkBlock).toContain('--sv-color-accent: hsl(');
-  });
-
-  it('uses the same accent hue/saturation/lightness in both the root and dark blocks', () => {
-    const style = buildInstanceStyle(config({ instancePrimary: '#3b82f6' }));
-    const darkBlockIndex = style.indexOf("[data-theme='dark']");
     const rootBlock = style.slice(0, darkBlockIndex);
     const darkBlock = style.slice(darkBlockIndex);
     const rootAccent = rootBlock.match(/--sv-color-accent: (hsl\([^)]+\));/)?.[1];
     const darkAccent = darkBlock.match(/--sv-color-accent: (hsl\([^)]+\));/)?.[1];
     expect(rootAccent).toBeTruthy();
     expect(darkAccent).toBe(rootAccent);
+  });
+
+  it('picks white text for a dark accent colour, in both the root and dark blocks', () => {
+    // Regression guard for the real bug: semantic.css pairs --sv-color-accent
+    // with --sv-color-text-on-accent purely by theme (white in light,
+    // near-black in dark) — correct only for the default monochrome accent,
+    // which genuinely inverts lightness between themes. A custom accent does
+    // NOT invert, so blindly following dark-mode's black-text default landed
+    // on unreadable near-black-on-dark-accent buttons/logos. The chosen text
+    // colour must instead follow the accent's own luminance and stay the
+    // same across both blocks.
+    const style = buildInstanceStyle(config({ instancePrimary: '#0f172a' }));
+    const darkBlockIndex = style.indexOf("[data-theme='dark']");
+    const rootBlock = style.slice(0, darkBlockIndex);
+    const darkBlock = style.slice(darkBlockIndex);
+    expect(rootBlock).toContain('--sv-color-text-on-accent: var(--sv-white);');
+    expect(darkBlock).toContain('--sv-color-text-on-accent: var(--sv-white);');
+  });
+
+  it('picks near-black text for a light accent colour, in both the root and dark blocks', () => {
+    const style = buildInstanceStyle(config({ instancePrimary: '#fef3c7' }));
+    const darkBlockIndex = style.indexOf("[data-theme='dark']");
+    const rootBlock = style.slice(0, darkBlockIndex);
+    const darkBlock = style.slice(darkBlockIndex);
+    expect(rootBlock).toContain('--sv-color-text-on-accent: var(--sv-grey-950);');
+    expect(darkBlock).toContain('--sv-color-text-on-accent: var(--sv-grey-950);');
   });
 });
 

@@ -4192,6 +4192,96 @@ it's not part of the committed repository:
 }
 ```
 
+### Release automation (`latest` / `stable` branches)
+
+A plugin scaffolded via `sv plugin new` / `npm create @sovereignfs/plugin` ships with two
+GitHub Actions workflows that maintain floating branches alongside your immutable `vX.Y.Z`
+release tags:
+
+- **`latest`** — fully automatic. `.github/workflows/release-latest.yml` force-updates the
+  `latest` branch to the commit of every `v*.*.*` tag you push. There's no review gate, so it
+  can be broken; an operator who points at it is accepting that trade for auto-updating.
+- **`stable`** — deliberately manual. `.github/workflows/promote-stable.yml` is a
+  `workflow_dispatch` action you trigger by hand (Actions tab → **Promote to stable** → enter a
+  tag) once you're actually confident in a release. `stable` never moves just because you tagged
+  one.
+
+Both are ordinary branches, not tags, on purpose: `git fetch` updates a branch automatically,
+while a client that already has a same-named local tag won't silently pick up a moved one. Never
+retarget the `vX.Y.Z` tags themselves — they're the immutable record an operator rolls back to
+(see [`docs/rfcs/0006-deployment-upgrade-strategy.md`](rfcs/0006-deployment-upgrade-strategy.md),
+which the platform's own image tagging follows the same way). For the same reason, only promote a
+release to `stable` once its migrations stay expand-contract safe for an operator rolling back to
+whatever `stable` pointed at before.
+
+An operator picks their own drift tolerance through the existing `ref` field — in
+`sovereign.plugins.json` (above) or a registry entry's `repository.ref` — by pointing it at
+`"latest"`, `"stable"`, or an exact tag:
+
+```json
+{
+  "id": "io.example.tasks",
+  "repository": "https://github.com/you/sovereign-plugin-tasks",
+  "ref": "stable"
+}
+```
+
+If your plugin predates this scaffold, copy both files in by hand:
+
+`.github/workflows/release-latest.yml`:
+
+```yaml
+name: Update latest branch
+
+# Moves `latest` to the commit of every vX.Y.Z tag pushed, automatically and
+# with no review gate.
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  update-latest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Force-update latest branch to this tag
+        run: git push origin "${GITHUB_SHA}:refs/heads/latest" --force
+```
+
+`.github/workflows/promote-stable.yml`:
+
+```yaml
+name: Promote to stable
+
+# Deliberately manual: `stable` never moves on its own. Run this workflow
+# (Actions tab → "Promote to stable" → Run workflow) and name a tag once
+# you're confident it's solid.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to promote (e.g. v1.4.2)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag }}
+      - name: Force-update stable branch to the given tag
+        run: git push origin "${GITHUB_SHA}:refs/heads/stable" --force
+```
+
 ### Private repositories
 
 A plugin's repository doesn't have to be public. Add an optional `tokenEnv` field naming an

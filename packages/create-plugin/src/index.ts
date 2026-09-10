@@ -245,6 +245,68 @@ export default async function ${toPascalCase(slug)}Page() {
 `,
   );
 
+  // .github/workflows/release-latest.yml — moves `latest` to every tagged
+  // release automatically, no review gate. See docs/plugin-development.md's
+  // "Release automation" section.
+  scaffoldFile(
+    dir,
+    '.github/workflows/release-latest.yml',
+    `name: Update latest branch
+
+# Moves \`latest\` to the commit of every vX.Y.Z tag pushed, automatically and
+# with no review gate — see docs/plugin-development.md's "Release automation"
+# section in the Sovereign monorepo.
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  update-latest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Force-update latest branch to this tag
+        run: git push origin "\${GITHUB_SHA}:refs/heads/latest" --force
+`,
+  );
+
+  // .github/workflows/promote-stable.yml — deliberately manual: `stable`
+  // never moves on its own, only when a human runs this action.
+  scaffoldFile(
+    dir,
+    '.github/workflows/promote-stable.yml',
+    `name: Promote to stable
+
+# Deliberately manual: \`stable\` never moves on its own. Run this workflow
+# (Actions tab → "Promote to stable" → Run workflow) and name a tag once
+# you're confident it's solid.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to promote (e.g. v1.4.2)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: \${{ inputs.tag }}
+      - name: Force-update stable branch to the given tag
+        run: git push origin "\${GITHUB_SHA}:refs/heads/stable" --force
+`,
+  );
+
   // AGENTS.md
   scaffoldFile(
     dir,
@@ -311,6 +373,9 @@ it carries no content of its own to avoid drifting out of sync.
   print(`       pnpm sv plugin add <repo-url>`);
   print(`     or add it to sovereign.plugins.json and run pnpm install:plugins`);
   print(`  ${CYAN}3.${RESET} Run ${BOLD}pnpm dev${RESET} to start the development server.`);
+  print('');
+  print(`${DIM}Tagging a release (vX.Y.Z) auto-updates the "latest" branch; run the${RESET}`);
+  print(`${DIM}"Promote to stable" action by hand when you're confident in one.${RESET}`);
   print('');
   print(
     `${DIM}Docs: https://github.com/sovereignfs/sovereign/blob/main/docs/plugin-development.md${RESET}`,

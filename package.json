@@ -69,7 +69,7 @@
     "@types/node": "catalog:",
     "@types/semver": "catalog:",
     "age-encryption": "catalog:",
-    "better-auth": "~1.6.30",
+    "better-auth": "~1.7.3",
     "better-sqlite3-multiple-ciphers": "catalog:",
     "citty": "^0.2.2",
     "consola": "^3.4.2",

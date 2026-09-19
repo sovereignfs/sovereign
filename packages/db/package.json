@@ -16,7 +16,7 @@
   "dependencies": {
     "@libsql/client": "^0.18.0",
     "better-sqlite3-multiple-ciphers": "catalog:",
-    "cron-parser": "^5.10.0",
+    "cron-parser": "^5.10.1",
     "drizzle-orm": "^0.45.2",
     "pg": "^8.23.0"
   },

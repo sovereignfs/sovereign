@@ -63,13 +63,51 @@ group during the pre-v1 hardening period:
 - `sdk.crypto` — server-side field encryption (RFC 0092, `crypto:use` permission). `encryptField()`/`decryptField()` under per-(sensitivity class × plugin) keys; whether a class is actually encrypted is operator policy (`SOVEREIGN_ENCRYPT_CLASSES`), and plugin code stays policy-agnostic via the `svf0` passthrough envelope. Distinct from `sdk.e2ee`: the runtime can decrypt these fields.
 - `sdk.storage` — plugin-scoped binary object storage (RFC 0044). Local filesystem storage is implemented; future backends may expand the host implementation without changing plugin calls.
 - `sdk.connections` — external provider connection metadata, OAuth state helpers, and server-side effective provider config reads (RFC 0049). Credential values remain in `sdk.secrets`; Account/Console surfaces expose metadata only.
+- `sdk.events` — ephemeral realtime channels (RFC 0045, `events:publish`).
+  `publish()` only: clients subscribe through a runtime route
+  (`GET /api/events/stream`), not an SDK call. Best-effort and not persisted —
+  not a durable queue, an inbox (`sdk.messages`), or an audit log
+  (`sdk.activity`).
+- `sdk.jobs` — background jobs and schedules (RFC 0046, `jobs:write`). `type`
+  must match an entry in the manifest's `jobs` array; the handler is wired
+  through that entry's module rather than a runtime `register()` call.
+- `sdk.tools` — platform-mediated tool contracts (RFC 0047), the write/action
+  counterpart to `sdk.data`. A provider declares tools in its manifest
+  (`tools:provide`) and registers `preview`/`execute` handlers; a caller needs
+  `tools:call`. Mutating or external effects go through a confirmation token.
+- `sdk.messages` — Message Inbox (RFC 0048, `messages:send`). Send-only by
+  design: plugins never read a user's inbox.
+- `sdk.email` — user-scoped email (RFC 0062, `mailer:send`), the safer
+  alternative to `sdk.mailer.send()`. The platform resolves a `recipientUserId`
+  to an address and applies delivery policy, rate limits, and audit logging
+  server-side, so a plugin never handles the address itself.
+- `sdk.webhooks` — helpers for a public plugin webhook route's own handler
+  (RFC 0050). The manifest's `webhooks` field declares metadata only — path,
+  methods, body-size cap; verifying the request stays the handler's job.
+- `sdk.handoffs` — platform-mediated flow handoffs (RFC 0053,
+  `handoffs:send`/`handoffs:receive`): a signed, short-lived payload letting one
+  plugin start or continue a user-facing flow in another.
+- `sdk.authz` — plugin-scoped roles and resource-scoped grants (RFC 0054), the
+  middle ground between coarse platform capabilities
+  (`sdk.auth.hasCapability`) and a plugin inventing its own table. Grants live
+  in the owning plugin's storage; the platform never persists them, and they are
+  never injected into the session capability header.
+- `sdk.plugins` — opaque cross-plugin record references (RFC 0051). Exposes
+  install/enable state and contract summaries, never another plugin's private
+  data.
+- `sdk.e2ee` — client-side encryption profile persistence (RFC 0060). Server-side
+  plumbing only: the content master key is generated and wrapped in the browser
+  (`@sovereignfs/sdk/e2ee-crypto`, `.../e2ee-device`), and the server only ever
+  stores opaque material. This is the surface Account and Wallet use, and the
+  one place the runtime genuinely cannot decrypt — unlike `sdk.crypto`.
+- `sdk.id` — random ID generation. The one surface with no host indirection: it
+  runs inside the SDK on Web Crypto, so it works without a registered host.
 - `sdk.device` — surface detection (RFC 0080): `getSurface()`/`getShellVersion()`/`isNativeShell()` (server, main barrel) and `useDeviceEnvironment()`/`readEnvironment()` (client, `@sovereignfs/sdk/device-client` subpath). A presentation hint only, never a security boundary — see `docs/architecture-rules.md`. The device **bridge** capability contract (RFC 0083) — `provideBridge()`, `BridgeImpl`, `DeviceResult` — lives on a separate `@sovereignfs/sdk/device-bridge` subpath, deliberately React-free so `@sovereignfs/bridge` can import it without pulling React into its own zero-dependency build. The plugin-facing capability surface — `supports()`, `getTransport()`, `getShellInfo()`, `isDeviceOnlyTierAvailable()`, `haptics.impact()`, `nativeNotifications.{getPermission,requestPermission,show}()`, `biometrics.confirm()`, `secureStorage.{get,set,remove,keys,clear}()` — lands in `device-client.ts` (workstream 0003 leg 2; `biometrics`/`secureStorage` added later, RFC 0083/RFC 0093). Needs the `device:haptics`/`device:notifications`/`device:biometrics`/`device:secureStorage` manifest permissions; those are install/review-time metadata and a consent-prompt input, not an enforced boundary — client-side plugin identity is self-declared. `secureStorage` is the one exception worth naming: its own hardware-backed device-auth gate (Keychain/Keystore or WebAuthn PRF) is real even though the plugin-id attribution around it is not — same posture as `biometrics.confirm()`. See `docs/plugin-development.md`'s permission table for the full caveat.
 
-These surfaces are **reserved** — they exist as stubs and throw
-`NotImplementedError` (or in `sdk.billing`'s case, `EntitlementRequiredError`).
-Their shape may change before they ship:
+One surface is **reserved**: it exists as a stub that throws
+`NotImplementedError` rather than failing quietly, and its shape may change
+before it ships.
 
-- `sdk.events` — reserved post-v1 surface.
 - `sdk.billing` — plugin monetization (RFC 0003). `getEntitlement(pluginId)` and
   `requireEntitlement(pluginId)` are exported as stubs; `EntitlementRequiredError`
   is exported. The platform's own paywall gating (middleware redirect + license

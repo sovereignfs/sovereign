@@ -1794,8 +1794,10 @@ surface without touching any source file. A fork is warranted only when you need
 custom plugins compiled into the same image (e.g. for air-gapped environments or
 proprietary code), or when you are building a commercial white-labeled derivative.
 
-For the full model, zone taxonomy, AGPL compliance table, and `sv fork check`
-follow-on, see [RFC 0028](rfcs/0028-operator-fork-model.md).
+For the full model, zone taxonomy, and AGPL compliance table, see
+[RFC 0028](rfcs/0028-operator-fork-model.md). That RFC also sketches a
+`sv fork check` command for flagging a fork that has fallen behind; it is a
+proposal, not a shipped command.
 
 ### Choose a track
 

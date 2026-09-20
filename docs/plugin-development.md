@@ -2951,6 +2951,16 @@ The SDK surface (`sdk.*`):
   ```ts
   const db = await sdk.db.getClient();
   ```
+- **`platform`** — `getConfig()` returns this instance's runtime configuration
+  (SRS PLT-06): `tenantName`, `instanceName`, `instanceId`, `version`,
+  `inviteOnly`, and the white-label fields `instancePrimaryColor`,
+  `emailFromName`, `emailLogo`. Async by contract, since the platform DB is
+  dialect-agnostic. Read it instead of hardcoding an instance's name, accent
+  colour, or version into a plugin — those are operator-configurable at runtime
+  from Console.
+  ```ts
+  const { instanceName, instancePrimaryColor } = await sdk.platform.getConfig();
+  ```
 - **`jobs`**, **`tools`**, **`handoffs`**, **`authz`**, **`crypto`**, **`e2ee`** —
   each documented with its manifest field above:
   [`jobs`](#jobs--background-jobs-rfc-0046),

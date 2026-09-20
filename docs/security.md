@@ -87,7 +87,7 @@ For the fields those two plugins chose to encrypt, the runtime and server-side
 plugin code can never decrypt them, even with full server access. This is
 **not a blanket guarantee** and should not be read as "Sovereign has
 client-side encryption" in the general sense: every other plugin (Tasks,
-Ledger, Docs, PlainWrite, HealthLog, Shopper, Tally, TriText) currently stores
+Kanban, Ledger, Docs, Plainwrite, Sheets, Shopper, Tally, Travellog) currently stores
 its data with no client-side or at-rest protection, and most platform data
 overall is **not** encrypted at rest by default — anyone who can read the
 server's disk or a raw backup can still read the bulk of it, including all

@@ -17,10 +17,15 @@ queue.
 
 - A self-hostable, multi-user workspace runtime.
 - Shared authentication, account security, and administrative controls.
-- Launcher, Account, and Console workspace apps.
-- Sovereign Tasks, Sovereign Shopper, and Sovereign Plainwrite as first-party
-  apps composed with the platform.
+- Launcher, Account, Inbox, and Console workspace apps.
+- A first-party app catalogue composed with the platform: Kanban, Ledger,
+  Plainwrite, Sheets, Shopper, Tally, Tasks, and Travellog.
+- Warden, a built-in personal AI assistant that each user points at their own
+  model provider.
+- A native desktop application that loads a self-hosted instance.
 - A plugin SDK boundary, app-scoped databases, and shared design system.
+- Opt-in client-side encryption for apps that adopt it, and operator-configured
+  field-level encryption — not whole-database encryption at rest.
 - Docker and non-Docker deployment guidance.
 
 ## Being built
@@ -29,7 +34,10 @@ queue.
 - Broader plugin capabilities for storage, jobs, events, tools, and external
   connections.
 - More complete device and installed-app experiences.
-- Sovereign Wallet Phase 1 for loyalty and membership card workflows.
+- Sovereign Wallet Phase 1 for loyalty and membership card workflows, and
+  Sovereign Docs as a document workspace.
+- A native mobile application, verified against real instances but not yet
+  released through the app stores.
 - Clearer user, operator, and app-developer documentation.
 
 ## Next
@@ -41,15 +49,15 @@ queue.
 
 ## Later
 
-- Expanded desktop and mobile shells around a self-hosted instance.
-- Purpose-specific apps that demonstrate the runtime beyond administration.
 - More complete portability between compatible Sovereign deployments.
 
 ## Exploring
 
-- Client-side encryption foundations for sensitive app data.
+- Encryption at rest for the bulk of the data model, after a single-key
+  whole-database approach was tried and withdrawn.
 - Peer-to-peer chat with separate chat identity and transport.
-- Local-first assistant and orchestration experiences.
+- Assistant orchestration beyond single conversations, and local inference as a
+  default rather than an operator add-on.
 
 **Exploring does not mean committed.** Draft RFCs are design inputs and may be
 changed, phased, or withdrawn.

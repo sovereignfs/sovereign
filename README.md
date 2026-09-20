@@ -62,16 +62,22 @@ The `sv` CLI wraps common tasks: `pnpm sv <command>` (`dev`, `build`, `generate`
 ## Monorepo layout
 
 ```
-apps/auth/        better-auth identity server (the only separate Next.js app)
+apps/
+  auth/           better-auth identity server
+  harness/        optional local inference service (llama.cpp + GGUF models, RFC 0040)
+  relay/          optional APNs push relay for native mobile (RFC 0087)
 packages/
   sdk/            @sovereignfs/sdk — published plugin↔platform contract
   ui/             @sovereignfs/ui — published design system
+  bridge/         @sovereignfs/bridge — published device-bridge implementation (RFC 0083)
+  create-plugin/  @sovereignfs/create-plugin — published scaffolding CLI
   db/             Drizzle client factory + schema (SQLite/Postgres)
   manifest/       manifest schema + validation
   mailer/         SMTP abstraction
   tsconfig/       shared TypeScript configs
 runtime/          the platform shell: middleware, plugin host, SDK bridge
-plugins/          built-in platform plugins (console, launcher, account)
+plugins/          built-in plugins (account, console, inbox, launcher, warden)
+example-plugins/  SDK reference plugins, enabled by SOVEREIGN_EXAMPLES_ENABLED
 registry/         public plugin index (plugins.json) + submission process
 scripts/          install-plugins, generate-registry, dev orchestrator
 bin/sv            the sv CLI

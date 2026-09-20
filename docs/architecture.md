@@ -222,10 +222,18 @@ telemetry**. Threat model and a self-hoster hardening checklist live in
 
 ## Post-v1 (specified, not built)
 
-Native mobile via a Capacitor shell + `sdk.device.*` (SRS §3.12), and at-rest /
-field-level / zero-knowledge encryption (SRS §3.17 Tiers 2–4, RFC 0008) are
-designed but out of scope for v1. White-labeling Phases 2–3 (branded email + auth
-login page + dynamic PWA manifest) are also deferred (Tasks 1.0.04–1.0.05).
+Whole-database encryption at rest (SRS §3.17 Tier 2, RFC 0008) is specified and
+not shipped — a single-key SQLite implementation (RFC 0071) was released and then
+retired. Field-level encryption (RFC 0092) and client-side/zero-knowledge
+encryption (Tier 4, RFC 0060) _are_ implemented, as opt-in surfaces adopted so far
+by Account and Wallet only; see [`docs/security.md`](security.md) for the honest
+scope of each. White-labeling Phases 2–3 (branded email + auth login page +
+dynamic PWA manifest) remain deferred (Tasks 1.0.04–1.0.05).
+
+Native mobile (SRS §3.12) is no longer post-v1: `sdk.device.*` ships, the device
+bridge contract is specified in RFC 0083, and the Capacitor shell lives in
+[`sovereign-mobile`](https://github.com/sovereignfs/sovereign-mobile) — verified
+against real instances, but not yet released through the app stores.
 
 ## Design proposals (RFCs)
 
@@ -234,5 +242,16 @@ See the [RFC index](rfcs/README.md) for the status of each at a glance.
 
 ## Repository layout
 
-See the monorepo structure in the
-[README](https://github.com/sovereignfs/sovereign#monorepo-layout).
+The platform runtime is `runtime/`, and `apps/auth` is the better-auth identity
+server alongside it. Two further Next.js apps ship from this monorepo but are
+optional, and off unless an operator deploys them deliberately: `apps/harness`
+(local inference, RFC 0040 — a llama.cpp server plus GGUF model download and
+verification; when it isn't running, Warden shows an unavailable state rather
+than breaking) and `apps/relay` (the APNs push relay for native mobile,
+RFC 0087). Supporting packages live under `packages/`
+(`sdk`, `ui`, `db`, `manifest`, `mailer`, `bridge`, `create-plugin`, `tsconfig`),
+built-in plugins under `plugins/`, developer references under `example-plugins/`,
+and the CLI at `bin/sv`.
+
+See the [README](https://github.com/sovereignfs/sovereign#monorepo-layout) for
+the full tree.

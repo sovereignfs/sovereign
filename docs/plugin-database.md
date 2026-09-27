@@ -82,10 +82,19 @@ export const lists = sqliteTable('lists', {
   object passed to `.from()`/`.insert()`. A `sqliteTable()`-defined table works
   correctly against a Postgres-backed client at query time (verified empirically)
   **as long as the physical Postgres columns use types that serialize identically**:
-  plain `integer` for booleans, IDs, and timestamps — never native Postgres `boolean`
-  or `bigint` — matching what Drizzle's SQLite column mappers already produce.
-  Reaching for a native Postgres type here breaks writes at runtime the first time a
-  boolean or bigint column round-trips through the mismatched serializer.
+  plain `integer` for booleans and IDs — never native Postgres `boolean` — matching
+  what Drizzle's SQLite column mappers already produce. Reaching for a native
+  Postgres type here breaks writes at runtime the first time such a column
+  round-trips through the mismatched serializer.
+- **Unix-ms timestamps are the one exception: use `bigint({ mode: 'number' })`, not
+  `integer`.** A 13-digit millisecond value (~1.7e12 today) is far past the
+  2,147,483,647 ceiling of a 32-bit Postgres `integer`, so an `integer` column fails
+  on the first insert against Postgres. `mode: 'number'` is what keeps it
+  serialization-compatible — it maps to a JS `number`, exactly what the SQLite
+  integer mapper produces, whereas the default `mode: 'bigint'` hands query code a
+  `BigInt` it does not expect. Beware that node-postgres returns `bigint` as a
+  _string_ from raw queries that bypass the query builder; coerce with `Number()`
+  there. See `plugins/warden/app/_db/schema.postgres.ts` for a live example.
 - **You still need a genuine, separate Postgres schema file to generate Postgres
   migrations from.** `drizzle-kit generate --dialect postgresql` cannot read a
   `sqliteTable()`-based schema file — it silently reports zero tables found. Keep a

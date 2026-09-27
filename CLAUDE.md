@@ -211,7 +211,10 @@ each: `docs/architecture-rules.md`.
   (`pluginMigrationsTableName(id)`) — drizzle's tracker lives in a fixed
   `drizzle` schema regardless of `search_path`. Never apply this to SQLite plugins.
 - **A shared/isolated plugin needs a separate `pgTable` schema file** using
-  plain `integer` for booleans/timestamps, never native `boolean`/`bigint`.
+  plain `integer` for booleans and ids, never native `boolean`; Unix-ms
+  timestamps use `bigint({ mode: 'number' })`, since a 13-digit millisecond
+  value overflows Postgres's 32-bit `integer` (`plugins/warden` and the Ledger
+  plugin both do this).
 - **Session-scoped Postgres primitives (advisory locks, GUCs, temp tables) run
   on one pinned client** (`pdb.db.$client.connect()`), never independent calls
   on the pool — a leaked `pg_advisory_lock` hung every restart in production.

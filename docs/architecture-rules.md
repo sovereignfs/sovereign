@@ -658,12 +658,21 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   `pgTable`-based schema file to generate Postgres migrations from** —
   `drizzle-kit generate --dialect postgresql` cannot read a `sqliteTable()`
   schema; it silently reports zero tables. That Postgres schema file must
-  use plain `integer` for booleans/timestamps, never native Postgres
-  `boolean`/`bigint` — Drizzle's query-builder dialect is bound to the
-  client connection, not to the table object's origin, so the existing
-  SQLite-typed query code keeps working against a Postgres-backed client
-  only if the physical columns serialize identically to what the SQLite
-  column mappers already produce. See `docs/plugin-database.md` for the
+  use plain `integer` for booleans and ids, never native Postgres `boolean`
+  — Drizzle's query-builder dialect is bound to the client connection, not
+  to the table object's origin, so the existing SQLite-typed query code
+  keeps working against a Postgres-backed client only if the physical
+  columns serialize identically to what the SQLite column mappers already
+  produce. **A Unix-ms timestamp is the exception and must be
+  `bigint({ mode: 'number' })`**: a 13-digit millisecond value is far past
+  the 2,147,483,647 ceiling of a 32-bit `integer`, so an `integer` column
+  fails on the first insert against Postgres. `mode: 'number'` is what keeps
+  it compatible — it maps to a JS `number`, exactly what the SQLite integer
+  mapper produces, whereas the default `mode: 'bigint'` would hand query code
+  a `BigInt` it does not expect. `plugins/warden/app/_db/schema.postgres.ts`
+  is the reference pair; note also that node-postgres returns `bigint` as a
+  _string_ from raw (non-query-builder) queries, so coerce with `Number()`
+  there. See `docs/plugin-database.md` for the
   full pattern (`packages/db/src/schema/{sqlite,postgres}/platform.ts` is a
   different case — the platform's own query code is dialect-aware via
   `packages/db/src/exec.ts`, so its Postgres schema uses native types).

@@ -54,7 +54,7 @@ catalog:
   '@types/react': ^19.2.18
   '@types/react-dom': ^19.2.5
   '@types/node': ^22.20.1
-  next: ^16.3.4
+  next: ^16.3.6
   semver: ^7.8.5
   '@types/semver': ^7.8.0
   # Client-component testing — shared by packages/ui and any plugin with its
@@ -103,6 +103,9 @@ catalog:
 overrides:
   nanoid: '>=3.3.18 <6.0.0'
   fast-uri: '>=3.1.6 <4.0.0'
+  'brace-expansion@>=4.0.0': '>=5.0.11 <6.0.0'
+  engine.io: '>=6.6.10 <7.0.0'
+  undici: '>=8.10.2 <9.0.0'
 
 # Transitive deps allowed to run install scripts (pnpm blocks them by default).
 # esbuild (via tsx) needs its postinstall to link the platform binary.

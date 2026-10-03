@@ -119,6 +119,36 @@ export const WithTitle: Story = {
   render: (_args) => <DrawerWithTitleDemo />,
 };
 
+function NestedDrawerDemo() {
+  const [formOpen, setFormOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setFormOpen(true)}>Add expense</Button>
+      <Drawer open={formOpen} onClose={() => setFormOpen(false)} title="Add expense">
+        <div style={{ display: 'grid', gap: 12, padding: 16 }}>
+          <input aria-label="Amount" placeholder="0.00" style={{ padding: 8, font: 'inherit' }} />
+          <Button variant="secondary" onClick={() => setPickerOpen(true)}>
+            Pick a date
+          </Button>
+          <Drawer open={pickerOpen} onClose={() => setPickerOpen(false)} title="Date">
+            <div style={{ padding: 16, minHeight: 180 }}>A calendar would go here.</div>
+          </Drawer>
+        </div>
+      </Drawer>
+    </>
+  );
+}
+
+/** A Drawer opened from inside another Drawer — the shape `DatePicker`
+ * produces on mobile, and the regression this component's portal exists for.
+ * The inner drawer must cover the whole viewport and dim the outer one, not
+ * render inside it clipped to its panel. */
+export const NestedInsideAnotherDrawer: Story = {
+  args: { open: false, onClose: () => {}, children: null },
+  render: (_args) => <NestedDrawerDemo />,
+};
+
 /** Play function opens the drawer and asserts its list items are visible. */
 export const OpenViaInteraction: Story = {
   args: { open: false, onClose: () => {}, children: null },
@@ -126,7 +156,10 @@ export const OpenViaInteraction: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole('button', { name: /open drawer/i }));
-    const drawer = canvas.getByRole('navigation');
+    // Queried from the document, not the story canvas: Drawer portals into
+    // the shell root (or document.body, as here) rather than rendering where
+    // it sits in the tree — see `useOverlayPortalTarget`.
+    const drawer = within(document.body).getByRole('dialog', { name: 'Navigation menu' });
     await expect(drawer).toBeVisible();
   },
 };

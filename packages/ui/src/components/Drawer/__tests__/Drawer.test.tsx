@@ -86,17 +86,18 @@ describe('Drawer', () => {
 
   it('calls onClose on scrim click but not on panel click', () => {
     const onClose = vi.fn();
-    const { container } = render(
+    render(
       <Drawer open onClose={onClose} aria-label="Nav">
         <button>Action</button>
       </Drawer>,
     );
-    // The scrim is the outermost div; the panel is a child.
-    fireEvent.click(screen.getByRole('dialog')); // panel — should not close
+    const panel = screen.getByRole('dialog');
+    fireEvent.click(panel); // panel — should not close
     expect(onClose).not.toHaveBeenCalled();
-    // Click the scrim background (the container's first child).
-    const scrim = container.firstElementChild as HTMLElement;
-    fireEvent.click(scrim);
+    // The scrim is the panel's parent. Reached through the panel rather than
+    // the render container: the Drawer portals out of it (see
+    // `useOverlayPortalTarget`), so the container is empty.
+    fireEvent.click(panel.parentElement as HTMLElement);
     expect(onClose).toHaveBeenCalledOnce();
   });
 
@@ -221,6 +222,38 @@ describe('Drawer', () => {
       fireEvent.pointerMove(handle, { clientY: 0 }); // upward
       fireEvent.pointerUp(handle, { clientY: 0 });
       expect(onClose).not.toHaveBeenCalled();
+    });
+  });
+  // Regression (overlay portal) — this is the component the bug was found
+  // against: a `DatePicker` opened from a form inside a Drawer opens a Drawer
+  // of its own, which used to render inside the outer panel and be clipped by
+  // it. See `useOverlayPortalTarget`.
+  describe('portal', () => {
+    it('renders into the shell root when the host provides one', () => {
+      const shell = document.createElement('div');
+      shell.id = 'sv-app-shell';
+      document.body.appendChild(shell);
+      render(
+        <Drawer open onClose={() => {}} aria-label="Nav">
+          Body
+        </Drawer>,
+      );
+      expect(shell.contains(screen.getByRole('dialog'))).toBe(true);
+      shell.remove();
+    });
+
+    it('keeps a nested Drawer out of the outer panel', () => {
+      render(
+        <Drawer open onClose={() => {}} aria-label="Outer">
+          <Drawer open onClose={() => {}} aria-label="Inner">
+            <button>Pick a date</button>
+          </Drawer>
+        </Drawer>,
+      );
+      const outer = screen.getByRole('dialog', { name: 'Outer' });
+      const inner = screen.getByRole('dialog', { name: 'Inner' });
+      expect(outer.contains(inner)).toBe(false);
+      expect(document.body.contains(inner)).toBe(true);
     });
   });
 });

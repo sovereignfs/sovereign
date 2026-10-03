@@ -160,6 +160,13 @@ The most common footguns:
   with `405`.
 - Intra-overlay navigation must use `<Link replace>`. Dialogs are dismissed
   with `router.back()`, and push-based navigation stacks history incorrectly.
+- `Dialog`, `Drawer`, and `Sheet` must render through a portal into
+  `#sv-app-shell` (falling back to `document.body` only where no shell root
+  exists). Their animating `transform` makes each panel the containing block
+  for `position: fixed` descendants, so rendering in place confines a nested
+  overlay to the one that opened it. Do not style an overlay via a selector
+  rooted at a DOM ancestor, and do not assert on `render()`'s `container` in
+  overlay tests.
 - CSP must remain nonce/hash based; do not add `'unsafe-inline'` to `script-src`.
 - CSP `form-action` must include the auth origin. `'self'` alone blocks the
   cross-origin logout POST redirect.

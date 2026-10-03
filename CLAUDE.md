@@ -322,6 +322,13 @@ each: `docs/architecture-rules.md`.
   after children's effects. Fork rendered content only.
 - **Intra-overlay navigation uses `<Link replace>`** — the dialog closes with
   `router.back()`, so a push stacks history.
+- **`Dialog`/`Drawer`/`Sheet` portal into `#sv-app-shell`** (not
+  `document.body` — the shell's inset/chrome-height custom properties are
+  inherited): their animating `transform` makes a panel the containing block
+  for `position: fixed` descendants, so a nested overlay used to render
+  inside, and be clipped by, the one that opened it. Don't reach into an
+  overlay with a CSS selector from a DOM ancestor, or assert on `render()`'s
+  `container` in its tests.
 - **`router.push()` to the current URL doesn't refetch server data — use
   `router.refresh()`.** Callbacks passed as effect deps must be memoized.
 - **An RSC element stored into client state loses its `key`** (it crosses as

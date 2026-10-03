@@ -147,7 +147,10 @@ export const OpenViaInteraction: Story = {
     const canvas = within(canvasElement);
     const trigger = canvas.getByRole('button', { name: /open md dialog/i });
     await userEvent.click(trigger);
-    const dialog = canvas.getByRole('dialog');
+    // Queried from the document, not the story canvas: Dialog portals into
+    // the shell root (or document.body, as here) rather than rendering where
+    // it sits in the tree — see `useOverlayPortalTarget`.
+    const dialog = within(document.body).getByRole('dialog');
     await expect(dialog).toBeVisible();
   },
 };

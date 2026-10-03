@@ -1,6 +1,6 @@
 'use client';
 
-import { type RefObject, useEffect, useRef } from 'react';
+import { type RefObject, useEffect, useRef, useState } from 'react';
 import { lockBodyScroll, unlockBodyScroll } from './scroll-lock';
 
 // Internal to the design system — not exported from `index.ts`. Shared by
@@ -51,6 +51,55 @@ export function isTopmostOpenOverlay(id: string): boolean {
   return openOverlayIds.at(-1) === id;
 }
 
+// The runtime shell's stable root id (`runtime/app/(platform)/layout.tsx`) —
+// also the element `usePublishShellChromeHeight` writes its measured chrome
+// heights onto. Duplicated as a literal there rather than imported: this
+// package is framework-agnostic and never imports from the runtime.
+const SHELL_ROOT_ID = 'sv-app-shell';
+
+/**
+ * The element an overlay surface renders into, instead of rendering in place.
+ *
+ * Every overlay panel here animates with a `transform`, and a transformed
+ * element is the containing block for its `position: fixed` descendants —
+ * so an overlay opened from inside another one (a `DatePicker`'s own Drawer
+ * inside a form in a `Drawer`, a `ConfirmDialog`-shaped surface inside a
+ * `Dialog`) resolved its "full viewport" scrim against the *outer panel*
+ * instead, and was then clipped by that panel's `overflow: hidden`. The
+ * nested surface rendered inside the one that opened it, dimming only it,
+ * and leaving the real scrim above it belonging to the outer overlay — so
+ * tapping what looked like the nested overlay's own backdrop dismissed the
+ * outer one, discarding whatever the user had typed into it. Rendering into
+ * a known-untransformed ancestor is what makes `position: fixed` mean the
+ * viewport again, at any nesting depth.
+ *
+ * The target is the shell root, not `document.body`: `--sv-dialog-inset-left`
+ * (the sidebar inset, set on that element by the shell's own CSS) and
+ * `--sv-shell-footer-height` (written onto it by
+ * `usePublishShellChromeHeight`) are *inherited* custom properties. Portaling
+ * past them to `document.body` would silently fall back to their defaults —
+ * the panel would start at the viewport edge under the platform sidebar, and
+ * a Drawer would extend beneath the mobile footer nav. `document.body` is the
+ * fallback for every host that has no shell root at all (Storybook, unit
+ * tests, `apps/auth`), where neither property is set in the first place.
+ *
+ * Resolved in an effect rather than during render, so the first render —
+ * including the server's — returns `null` for both and the portal only
+ * mounts on the client. `createPortal` has no server renderer; gating it is
+ * what keeps a route-driven overlay that mounts already-open (the runtime's
+ * `@modal` slot) from throwing during SSR. Nothing is lost visually: an
+ * overlay's entrance styles leave it at `opacity: 0` (or translated fully
+ * off-screen) until the two-phase mount adds its open class a frame after
+ * hydration anyway.
+ */
+export function useOverlayPortalTarget(): HTMLElement | null {
+  const [target, setTarget] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setTarget(document.getElementById(SHELL_ROOT_ID) ?? document.body);
+  }, []);
+  return target;
+}
+
 /**
  * Locks document scroll for the whole mounted lifetime of an overlay
  * (including its exit animation), not just while `open` — so the background
@@ -72,7 +121,9 @@ export function useOverlayScrollLock(mounted: boolean): void {
  * the panel when `active` becomes true, and restores the original focus on
  * cleanup. Callers pass whichever prop should trigger the capture — `open`
  * for Dialog/Drawer, `mounted` for Sheet (which restores focus on unmount
- * rather than on the raw `open` transition).
+ * rather than on the raw `open` transition) — each ANDed with their resolved
+ * `useOverlayPortalTarget`, since the panel only exists in the DOM once the
+ * portal has somewhere to mount into.
  */
 export function useOverlayFocusCapture(
   panelRef: RefObject<HTMLElement | null>,

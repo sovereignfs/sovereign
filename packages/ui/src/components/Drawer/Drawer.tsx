@@ -1,11 +1,13 @@
 'use client';
 
 import { type PointerEvent as ReactPointerEvent, type ReactNode, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useMountTransition, usePrefersReducedMotion } from '../../motion';
 import {
   OVERLAY_MOTION_DURATION_MS,
   useOverlayFocusCapture,
   useOverlayKeyboardTrap,
+  useOverlayPortalTarget,
   useOverlayScrollLock,
 } from '../../overlay-shell';
 import { OverlayHeader } from '../OverlayHeader/OverlayHeader';
@@ -59,6 +61,11 @@ const SWIPE_DISMISS_THRESHOLD_PX = 100;
  * — dragging from body content would fight that content's own internal
  * scroll, the same reasoning behind the tasks plugin's edge-zone-only
  * swipe-to-reveal technique.
+ *
+ * Renders through a portal into the shell root, like `Dialog` — see
+ * `useOverlayPortalTarget`. The panel supplies no padding of its own: content
+ * that needs a gutter brings it (the pattern `DatePicker`'s own `.drawerBody`
+ * already follows).
  */
 export function Drawer({
   open,
@@ -78,9 +85,12 @@ export function Drawer({
   // updates the DOM directly at 60fps instead of re-rendering on every event —
   // same technique as the tasks plugin's swipe-to-reveal rows.
   const dragStartY = useRef<number | null>(null);
+  const portalTarget = useOverlayPortalTarget();
 
   useOverlayScrollLock(mounted);
-  useOverlayFocusCapture(panelRef, open);
+  // Gated on the portal target as well as `open` — see Dialog.tsx's identical
+  // call for why `open` alone leaves focus outside an already-open panel.
+  useOverlayFocusCapture(panelRef, open && portalTarget !== null);
   useOverlayKeyboardTrap(panelRef, open, onClose);
 
   // Swipe-down-to-dismiss, initiated only from the grab handle (see the
@@ -125,10 +135,14 @@ export function Drawer({
     if (honorDistance && dy > SWIPE_DISMISS_THRESHOLD_PX) onClose();
   }
 
-  if (!mounted) return null;
+  if (!mounted || !portalTarget) return null;
   const isOpenPhase = phase === 'open';
 
-  return (
+  // Rendered into the shell root rather than in place — see
+  // `useOverlayPortalTarget`. This is the component the bug was found
+  // against: a `DatePicker` opened from a form inside a Drawer opens a
+  // Drawer of its own.
+  return createPortal(
     // role="presentation" removes the scrim from the AT (it is purely visual).
     // e.target check lets clicks inside the panel bubble without triggering dismiss.
     // No onKeyDown here — useOverlayKeyboardTrap above already owns Escape via a
@@ -170,6 +184,7 @@ export function Drawer({
         {title && <OverlayHeader title={title} onClose={onClose} />}
         <div className={styles.body}>{children}</div>
       </div>
-    </div>
+    </div>,
+    portalTarget,
   );
 }

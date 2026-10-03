@@ -96,4 +96,34 @@ describe('Sheet', () => {
     );
     expect(screen.getByRole('dialog').className).toMatch(/panelFromTop/);
   });
+  // Regression (overlay portal) — see `useOverlayPortalTarget`. A Sheet has
+  // no scrim, but its panel is `position: fixed` and was confined by a
+  // transformed ancestor exactly like Dialog's and Drawer's.
+  describe('portal', () => {
+    it('renders into the shell root when the host provides one', () => {
+      const shell = document.createElement('div');
+      shell.id = 'sv-app-shell';
+      document.body.appendChild(shell);
+      render(
+        <Sheet open onClose={() => {}} aria-label="Details">
+          Body
+        </Sheet>,
+      );
+      expect(shell.contains(screen.getByRole('dialog'))).toBe(true);
+      shell.remove();
+    });
+
+    it('keeps a nested Sheet out of the outer panel', () => {
+      render(
+        <Sheet open onClose={() => {}} aria-label="Outer">
+          <Sheet open onClose={() => {}} aria-label="Inner">
+            Nested body
+          </Sheet>
+        </Sheet>,
+      );
+      const outer = screen.getByRole('dialog', { name: 'Outer' });
+      const inner = screen.getByRole('dialog', { name: 'Inner' });
+      expect(outer.contains(inner)).toBe(false);
+    });
+  });
 });

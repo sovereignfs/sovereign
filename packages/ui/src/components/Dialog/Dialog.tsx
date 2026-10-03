@@ -1,11 +1,13 @@
 'use client';
 
 import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useMountTransition, usePrefersReducedMotion } from '../../motion';
 import {
   OVERLAY_MOTION_DURATION_MS,
   useOverlayFocusCapture,
   useOverlayKeyboardTrap,
+  useOverlayPortalTarget,
   useOverlayScrollLock,
 } from '../../overlay-shell';
 import { Icon } from '../Icon/Icon';
@@ -132,6 +134,15 @@ export interface DialogProps {
  * the panel. Styling references `--sv-*` tokens only; on mobile the panel becomes
  * a full-screen sheet regardless of `size`.
  *
+ * Renders through a portal into the shell root (`useOverlayPortalTarget`)
+ * rather than where it sits in the tree, so its scrim and panel resolve
+ * `position: fixed` against the viewport even when it is opened from inside
+ * another overlay. React context and event bubbling follow the React tree,
+ * not the DOM, so `useOverlaySecondRow` and a consumer's own click handlers
+ * are unaffected; a CSS selector that reaches *into* the overlay from one of
+ * its DOM ancestors is not, and has to target the overlay's own content
+ * instead.
+ *
  * Animated open/close: fade + scale on desktop, slide-up on mobile (matching
  * the "feels like a page push" framing of the mobile sheet). The `open`/
  * `onClose` API is unchanged — closing still stays mounted internally for the
@@ -163,15 +174,23 @@ export function Dialog({
     reducedMotion ? 0 : OVERLAY_MOTION_DURATION_MS,
   );
   const [secondRow, setSecondRow] = useState<ReactNode | null>(null);
+  const portalTarget = useOverlayPortalTarget();
 
   useOverlayScrollLock(mounted);
-  useOverlayFocusCapture(panelRef, open);
+  // Gated on the portal target too, not `open` alone: the panel doesn't exist
+  // in the DOM until the portal mounts, so for a Dialog whose very first
+  // render is already `open` (a route-driven overlay, or a consumer that
+  // mounts `<Dialog open>` conditionally) a capture keyed on `open` alone
+  // would run against a null ref and never move focus into the panel.
+  useOverlayFocusCapture(panelRef, open && portalTarget !== null);
   useOverlayKeyboardTrap(panelRef, open, onClose);
 
-  if (!mounted) return null;
+  if (!mounted || !portalTarget) return null;
   const isOpenPhase = phase === 'open';
 
-  return (
+  // Rendered into the shell root rather than in place — see
+  // `useOverlayPortalTarget` for the nesting bug this fixes.
+  return createPortal(
     // role="presentation" removes the scrim from the AT (it is purely visual).
     // e.target check lets clicks inside the panel bubble without triggering dismiss.
     // No onKeyDown here — useOverlayKeyboardTrap above already owns Escape via a
@@ -249,6 +268,7 @@ export function Dialog({
         </div>
         {footer && <div className={styles.footer}>{footer}</div>}
       </div>
-    </div>
+    </div>,
+    portalTarget,
   );
 }

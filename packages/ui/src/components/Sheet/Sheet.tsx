@@ -1,11 +1,13 @@
 'use client';
 
 import { type ReactNode, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useMountTransition, usePrefersReducedMotion } from '../../motion';
 import {
   OVERLAY_MOTION_DURATION_MS,
   useOverlayFocusCapture,
   useOverlayKeyboardTrap,
+  useOverlayPortalTarget,
   useOverlayScrollLock,
 } from '../../overlay-shell';
 import { OverlayHeader } from '../OverlayHeader/OverlayHeader';
@@ -56,7 +58,8 @@ export interface SheetProps {
  * "outside" to tap-dismiss. Behaviour: Esc dismisses; focus moves into the
  * panel on open and is restored on close; Tab is trapped within the panel;
  * animated open/close via the same two-phase mount as `Dialog`/`Drawer`,
- * respecting `prefers-reduced-motion`.
+ * respecting `prefers-reduced-motion`. Renders through a portal into the
+ * shell root, like `Dialog`/`Drawer` — see `useOverlayPortalTarget`.
  */
 export function Sheet({
   open,
@@ -75,13 +78,21 @@ export function Sheet({
     reducedMotion ? 0 : OVERLAY_MOTION_DURATION_MS,
   );
 
+  const portalTarget = useOverlayPortalTarget();
+
   useOverlayScrollLock(mounted);
-  useOverlayFocusCapture(panelRef, mounted);
+  // Gated on the portal target as well as `mounted` — see Dialog.tsx's
+  // identical call for why the ref is still null without it.
+  useOverlayFocusCapture(panelRef, mounted && portalTarget !== null);
   useOverlayKeyboardTrap(panelRef, open, onClose);
 
-  if (!mounted) return null;
+  if (!mounted || !portalTarget) return null;
 
-  return (
+  // Rendered into the shell root rather than in place — see
+  // `useOverlayPortalTarget`. A Sheet has no scrim of its own, but its panel
+  // is `position: fixed` between the shell's header and footer, so it is
+  // confined by a transformed ancestor exactly like the other two.
+  return createPortal(
     <div
       ref={panelRef}
       role="dialog"
@@ -104,6 +115,7 @@ export function Sheet({
           sticky positioning (e.g. a form's own sub-header) resolves against
           this same scrolling ancestor either way. */}
       <div className={styles.content}>{children}</div>
-    </div>
+    </div>,
+    portalTarget,
   );
 }

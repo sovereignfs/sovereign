@@ -315,4 +315,70 @@ describe('Dialog Escape precedence with a nested ConfirmDialog', () => {
     await flush();
     expect(outerOnClose).toHaveBeenCalledOnce();
   });
+  // Regression (overlay portal): every overlay panel animates with a
+  // `transform`, which makes it the containing block for `position: fixed`
+  // descendants — so an overlay opened from inside another one used to render
+  // *inside* it and get clipped by its `overflow: hidden`. All three surfaces
+  // now portal out to the shell root instead; see `useOverlayPortalTarget`.
+  describe('portal', () => {
+    function mountShellRoot(): HTMLElement {
+      const shell = document.createElement('div');
+      shell.id = 'sv-app-shell';
+      document.body.appendChild(shell);
+      return shell;
+    }
+
+    it('renders into the shell root when the host provides one', () => {
+      const shell = mountShellRoot();
+      render(
+        <Dialog open onClose={() => {}} aria-label="Settings">
+          Body
+        </Dialog>,
+      );
+      expect(shell.contains(screen.getByRole('dialog'))).toBe(true);
+      shell.remove();
+    });
+
+    it('falls back to document.body when there is no shell root', () => {
+      const { container } = render(
+        <Dialog open onClose={() => {}} aria-label="Settings">
+          Body
+        </Dialog>,
+      );
+      const panel = screen.getByRole('dialog');
+      // Out of the render container entirely, but still in the document.
+      expect(container.contains(panel)).toBe(false);
+      expect(document.body.contains(panel)).toBe(true);
+    });
+
+    it('keeps a nested Dialog out of the outer panel', () => {
+      render(
+        <Dialog open onClose={() => {}} aria-label="Outer">
+          <Dialog open onClose={() => {}} aria-label="Inner">
+            Nested body
+          </Dialog>
+        </Dialog>,
+      );
+      const outer = screen.getByRole('dialog', { name: 'Outer' });
+      const inner = screen.getByRole('dialog', { name: 'Inner' });
+      expect(outer.contains(inner)).toBe(false);
+    });
+
+    it('still moves focus into a panel that mounts already open', () => {
+      render(
+        <Dialog open onClose={() => {}} aria-label="Settings">
+          <button>First</button>
+        </Dialog>,
+      );
+      // The panel only exists once the portal target resolves in an effect,
+      // so the focus capture is keyed on that too — on `open` alone it would
+      // run against a null ref and leave focus on document.body. Asserted as
+      // "somewhere inside the panel" rather than against a specific control:
+      // which element is first in the panel is the header's business, not
+      // this regression's.
+      const panel = screen.getByRole('dialog');
+      expect(document.activeElement).not.toBe(document.body);
+      expect(panel.contains(document.activeElement)).toBe(true);
+    });
+  });
 });

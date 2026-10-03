@@ -182,6 +182,34 @@ iterable`. The slot's hand-written `@modal/default.tsx` (empty fallback) and
   sidebar width (`--sv-shell-sidebar-width`, reset to `0` on mobile) on `.shell`
   so overlay dialogs start at the sidebar's right edge and leave the rail
   visible/usable — never hardcode the sidebar width into the `Dialog`.
+- **`Dialog`/`Drawer`/`Sheet` render through a portal into the shell root
+  (`#sv-app-shell`), never in place.** Each of the three animates its panel
+  with a `transform`, and a transformed element is the containing block for
+  its `position: fixed` descendants. Rendered in place, an overlay opened
+  from _inside_ another one therefore resolved its full-viewport scrim
+  against the outer panel and was then clipped by that panel's
+  `overflow: hidden`: it drew inside the overlay that opened it, dimmed only
+  that overlay, and left the real backdrop above it belonging to the outer
+  surface — so tapping what looked like its own backdrop dismissed the outer
+  overlay and discarded whatever had been typed into it. Found against a
+  `DatePicker` (which opens a `Drawer` of its own on mobile) inside a
+  `Drawer` form in `sovereign-plugin-ledger`. The target is the shell root
+  specifically, with `document.body` only as the fallback for hosts that have
+  no shell root (Storybook, unit tests, `apps/auth`): `--sv-dialog-inset-left`,
+  `--sv-dialog-inset-top`, `--sv-shell-footer-height`, `--sv-shell-header-height`
+  and `--sv-vh` are all set on `.shell` itself and are _inherited_ custom
+  properties, so portaling past them to `document.body` would silently drop
+  the sidebar inset and the mobile-footer clearance. `ConfirmDialog` is
+  deliberately not part of this — it stays on the native `<dialog>` element,
+  whose `showModal()` already renders in the browser's top layer. The portal
+  target is resolved in an effect, never during render, because
+  `createPortal` has no server renderer and a route-driven overlay
+  (the `@modal` slot) mounts already open; the focus capture is keyed on that
+  resolved target as well as `open`, or it runs against a panel that is not in
+  the DOM yet and never moves focus. React context and event bubbling follow
+  the React tree, so nothing a consumer composes _through_ the overlay breaks
+  — but a CSS selector reaching into an overlay from one of its DOM ancestors
+  does, and so does a test asserting on `render()`'s `container`.
 - **`shell: minimal` (RFC 0014, Task 0.5.25) composes into `runtime/app/(minimal)/`** — a
   chrome-free, full-bleed route group (no sidebar, header, or footer). The committed
   `(minimal)/layout.tsx` applies `100dvh` and safe-area insets; generated composed routes

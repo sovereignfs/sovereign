@@ -978,6 +978,47 @@ See [`docs/plugin-database.md`](plugin-database.md) for the full reference.
 
 ## Published package migrations
 
+### `@sovereignfs/ui` 0.83.3 → 0.84.0 — `Dialog`/`Drawer`/`Sheet` render through a portal
+
+**No API change.** Every prop, type, and rendered class name is unchanged;
+what moves is _where in the DOM_ the overlay lands. The three surfaces now
+render through `createPortal` into the runtime shell root (`#sv-app-shell`),
+falling back to `document.body` for a host that has no shell root (Storybook,
+unit tests, `apps/auth`), instead of rendering in place.
+
+**Why.** Each panel animates with a `transform`, and a transformed element is
+the containing block for its `position: fixed` descendants. An overlay opened
+from _inside_ another one therefore sized its full-viewport scrim against the
+outer panel and was then clipped by that panel's `overflow: hidden` — it
+rendered inside the overlay that opened it, dimmed only that overlay, and left
+the real backdrop above it belonging to the outer surface, so tapping what
+looked like its own backdrop dismissed the outer overlay and discarded
+whatever had been typed into it. The common way to hit this is a `DatePicker`
+in a form inside a `Drawer`: on mobile the picker opens a `Drawer` of its own.
+
+**Migration — only if your plugin styles an overlay from outside it.** React
+context and event bubbling follow the React tree, not the DOM, so
+`useOverlaySecondRow`, `useToast`, your own providers, and click handlers on
+ancestors are all unaffected. Two things are not:
+
+- **A CSS selector that reaches into an overlay from one of its DOM
+  ancestors** (`.myPage .someDialogChild { … }`) no longer matches. Style the
+  overlay's own content directly — it is still your component, with its own
+  CSS-module classes.
+- **A test that asserts on `render()`'s `container`** no longer finds the
+  panel. Query it through `screen` (which searches the whole document), as
+  `packages/ui`'s own Dialog/Drawer/Sheet tests do.
+
+An inherited CSS custom property set on the shell root or above (`--sv-color-*`,
+`--sv-dialog-inset-left`, `--sv-shell-footer-height`, `[data-theme]`) still
+reaches the overlay — that is why the portal targets the shell root rather than
+`document.body`. One set on an element _between_ the shell root and the
+overlay's old position does not.
+
+Bumped **minor** rather than patch: the API is untouched, but a component's
+DOM placement is observable behaviour for a published contract, and NFR-04's
+floor for anything a consumer could be relying on is a minor.
+
 ### `@sovereignfs/ui` — `Dialog`'s `size` prop drops `xl`/`full`, adds `auto` (breaking)
 
 **`DialogSize` is now `'sm' | 'md' | 'lg' | 'auto'`** — `xl` and `full` are

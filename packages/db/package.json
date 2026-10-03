@@ -16,15 +16,15 @@
   "dependencies": {
     "@libsql/client": "^0.18.0",
     "better-sqlite3-multiple-ciphers": "catalog:",
-    "cron-parser": "^5.10.0",
-    "drizzle-orm": "^0.45.2",
+    "cron-parser": "^5.10.1",
+    "drizzle-orm": "^0.45.3",
     "pg": "^8.23.0"
   },
   "devDependencies": {
     "@sovereignfs/tsconfig": "workspace:*",
     "@types/better-sqlite3": "^9.6.0",
     "@types/pg": "^8.23.1",
-    "drizzle-kit": "^0.31.10",
+    "drizzle-kit": "^0.31.11",
     "tsup": "catalog:",
     "typescript": "catalog:"
   }

@@ -20,7 +20,7 @@
     "better-auth": "~1.6.30",
     "better-sqlite3-multiple-ciphers": "catalog:",
     "next": "catalog:",
-    "pg": "^8.23.0",
+    "pg": "^8.23.1",
     "react": "catalog:",
     "react-dom": "catalog:"
   },

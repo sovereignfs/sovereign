@@ -6,11 +6,11 @@
   "dependencies": {
     "@sovereignfs/sdk": "workspace:*",
     "@sovereignfs/ui": "workspace:*",
-    "drizzle-orm": "^0.45.2",
+    "drizzle-orm": "^0.45.4",
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "unpdf": "^1.8.1"
+    "unpdf": "^1.9.1"
   },
   "devDependencies": {
     "@sovereignfs/tsconfig": "workspace:*",
@@ -18,7 +18,7 @@
     "@testing-library/react": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "drizzle-kit": "^0.31.10",
+    "drizzle-kit": "^0.31.11",
     "typescript": "catalog:"
   },
   "scripts": {

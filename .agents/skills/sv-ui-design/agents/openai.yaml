@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Sovereign UI Design'
+  short_description: 'Design-system-first, plain-language UI workflow for Sovereign.'
+  default_prompt: 'Use sv-ui-design before building or changing anything a user sees.'

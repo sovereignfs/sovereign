@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Sovereign Task Start'
+  short_description: 'Start an assigned Sovereign roadmap task.'
+  default_prompt: 'Use sv-task-start to prepare the assigned Sovereign task.'

@@ -1,0 +1,111 @@
+# Epic 9: Identity Pages
+
+> The pages where a person manages their own account: profile, security,
+> preferences, connected apps, and deleting the account.
+
+## Status
+
+📋 Planned
+
+## Overview
+
+Core is the sign-in server, so a person's identity settings live here. They
+require `profile:manage`, are built from `@sovereignfs/ui`, and follow the
+Sovereign Account screens: they open as an overlay above the current page and
+close back to it (spec §1.3, §3.11).
+
+## Related
+
+- [docs/specs/core-app.md](../specs/core-app.md) — §3.11
+
+## Tasks
+
+#### 📋 9.1 — Profile
+
+**Goal:** A person can set their name and avatar.
+
+**Deliverables:**
+
+- Name and avatar; the email address shown but not editable
+- Avatars stored in the database per spec §3.15: at most 1 MB, PNG, JPEG or
+  WebP (no SVG); cropped and scaled in the browser to about 512 pixels square
+  before upload
+- Changes reflected in the `name` and `picture` claims
+
+**Dependencies:** 4.1
+
+**Spec reference:** §3.11, §3.6.2
+
+**Review checklist:**
+
+- After a change, a client's next userinfo call returns the new name
+
+#### 📋 9.2 — Security
+
+**Goal:** A person manages their own credentials and sessions.
+
+**Deliverables:**
+
+- Change password; manage passkeys; enrol or remove TOTP and backup codes
+- List sessions and end any of them
+
+**Dependencies:** 4.5, 4.6, 4.7
+
+**Spec reference:** §3.11
+
+**Review checklist:**
+
+- Ending a session from the list signs that browser out
+
+#### 📋 9.3 — Preferences `[parallel]`
+
+**Goal:** A person sets their timezone and locale.
+
+**Deliverables:**
+
+- Timezone (validated as IANA) and locale, reflected in the `zoneinfo` and
+  `locale` claims
+
+**Dependencies:** 4.4
+
+**Spec reference:** §3.11, §3.6.2
+
+**Review checklist:**
+
+- An invalid timezone is refused by the server
+
+#### 📋 9.4 — Connected apps
+
+**Goal:** A person sees which apps they have granted access to and can revoke
+it.
+
+**Deliverables:**
+
+- The list of clients with consent and the scopes granted; revoke
+
+**Dependencies:** 6.2
+
+**Spec reference:** §3.11, §3.6.4
+
+**Review checklist:**
+
+- Revoking ends the client's refresh tokens and the next sign-in asks again
+
+#### 📋 9.5 — Delete account
+
+**Goal:** A person can delete their own account.
+
+**Deliverables:**
+
+- Deletion confirmed with the password; the owner is told to transfer
+  ownership first
+- All sessions end and all tokens are revoked; the `sub` is never reused
+
+**Dependencies:** 5.3, 6.3
+
+**Spec reference:** §3.3.6, §3.11
+
+**Review checklist:**
+
+- The owner cannot delete their account while still owner
+- After deletion, no token for the account is accepted

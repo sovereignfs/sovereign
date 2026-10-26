@@ -1,0 +1,168 @@
+# Epic 4: Identity & Auth
+
+> How people get an account and prove who they are: sign-up and sign-in,
+> registration policy, email verification, password reset, terms, TOTP,
+> passkeys and sessions.
+
+## Status
+
+📋 Planned
+
+## Overview
+
+Built on better-auth 1.7 inside `apps/core`. The hardening the legacy auth
+server accumulated (no fresh-session requirement, verifying upgrades against
+a populated store, the signed cookie cache, rate limiting) is recorded in
+`docs/architecture-rules.md`. Every page is built from `@sovereignfs/ui`.
+
+## Related
+
+- [docs/specs/core-app.md](../specs/core-app.md) — §3.3, §3.4, §3.5
+
+## Tasks
+
+#### 📋 4.1 — better-auth and email/password
+
+**Goal:** People can sign up and sign in with email and password.
+
+**Deliverables:**
+
+- better-auth 1.7 in `apps/core` with its own migrations on all three
+  databases
+- Sign-up (name, email, password) and sign-in pages
+- Password policy from `SV_AUTH_PASSWORD_*`, enforced by the server
+
+**Dependencies:** 0.2, 1.2
+
+**Spec reference:** §3.3.2
+
+**Review checklist:**
+
+- Sign-up and sign-in work in a browser on all three databases
+- A password breaking the policy is refused by the server, not only the page
+- A better-auth upgrade is tested against a populated store
+
+#### 📋 4.2 — Registration policy and the first account
+
+**Goal:** Sign-up is open or invite-only, and the first account becomes the
+owner.
+
+**Deliverables:**
+
+- `SV_AUTH_INVITE_ONLY` default with the Console override (1.4)
+- Server-side refusal of sign-ups without a valid, unexpired invite for that
+  address
+- The first account is exempt and becomes `platform:owner`
+
+**Dependencies:** 4.1, 1.4
+
+**Spec reference:** §3.3.1, §3.2.1
+
+**Review checklist:**
+
+- An uninvited sign-up is refused when invite-only is on, by a direct request
+  as well as through the page
+- The first account on an empty instance is the owner
+
+#### 📋 4.3 — Email verification and password reset
+
+**Goal:** Addresses are verified and forgotten passwords can be reset safely.
+
+**Deliverables:**
+
+- `SV_AUTH_REQUIRE_EMAIL_VERIFICATION` (default `true`); single-use one-hour
+  link that signs the person in; resend
+- Password reset by single-use one-hour link; completing it ends every session
+- The reset request answers the same way whether or not the address exists
+- The "account created" email sent after sign-up
+
+**Dependencies:** 4.1, 3.2
+
+**Spec reference:** §3.3.3, §3.3.4
+
+**Review checklist:**
+
+- An unverified account cannot sign in while verification is required
+- After a reset, a session opened before it no longer works
+- Responses for known and unknown addresses are indistinguishable
+
+#### 📋 4.4 — Terms, privacy and timezone `[parallel]`
+
+**Goal:** Sign-up records acceptance of the terms and a valid timezone.
+
+**Deliverables:**
+
+- Default Privacy Policy and Terms of Service pages
+- A required acceptance at sign-up, recorded with the account
+- Browser timezone captured at sign-up and validated as IANA before storing
+
+**Dependencies:** 4.1
+
+**Spec reference:** §3.3.2, §3.3.5
+
+**Review checklist:**
+
+- Sign-up without acceptance is refused by the server
+- An invalid timezone is never stored
+
+#### 📋 4.5 — TOTP and backup codes `[parallel]`
+
+**Goal:** People can protect their account with an authenticator app.
+
+**Deliverables:**
+
+- Enrolment with QR code and key, turned on only after a valid code
+- Ten single-use backup codes; regenerate
+- Password required to enable, disable or regenerate
+- A second sign-in step accepting a code or a backup code
+
+**Dependencies:** 4.1
+
+**Spec reference:** §3.4.1
+
+**Review checklist:**
+
+- Enrol, sign in with a code, sign in with a backup code (which then stops
+  working), disable — in a browser
+
+#### 📋 4.6 — Passkeys `[parallel]`
+
+**Goal:** People can add passkeys and sign in without a password.
+
+**Deliverables:**
+
+- Add, name and remove passkeys; passwordless sign-in
+- Relying party from `SV_AUTH_WEBAUTHN_RP_ID`, `_RP_NAME`, `_ORIGIN`
+
+**Dependencies:** 4.1
+
+**Spec reference:** §3.4.2
+
+**Review checklist:**
+
+- Add a passkey and sign in with it, using a virtual authenticator
+- Removing the last passkey leaves password sign-in working
+
+#### 📋 4.7 — Sessions and account states
+
+**Goal:** Sessions are safe, verified cheaply, and end when an account is
+deactivated.
+
+**Deliverables:**
+
+- Cookies scoped to `SV_AUTH_COOKIE_DOMAIN` when set
+- Signed cookie cache (300 seconds) with a server-side verification fallback
+- No fresh-session requirement; the password is asked for where the spec says
+- Rate limiting on authentication endpoints, stored in the database
+- Trusted origins from `SV_AUTH_TRUSTED_ORIGINS`
+- Deactivation and reactivation: deactivating ends all sessions
+
+**Dependencies:** 4.1
+
+**Spec reference:** §3.3.6, §3.5
+
+**Review checklist:**
+
+- Repeated failed sign-ins are rate limited
+- A deactivated account's open session stops working within the cookie cache
+  lifetime

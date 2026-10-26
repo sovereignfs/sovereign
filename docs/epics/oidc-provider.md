@@ -26,17 +26,26 @@ flow and receive exactly the claims their scopes allow.
 
 **Deliverables:**
 
-- `/.well-known/openid-configuration`; authorization, token, userinfo and JWKS
-  endpoints; ID tokens signed with EdDSA
-- Authorization code flow only; PKCE `S256` required for public clients;
-  refresh tokens on `offline_access`; no dynamic registration; exact matching
-  of redirect URIs
+- better-auth's JWT plugin with `issuer` set to the instance URL, so
+  `/.well-known/openid-configuration` and `/.well-known/oauth-authorization-server`
+  are served at the root (a route handler delegates to
+  `auth.api.getOpenIdConfig()`); endpoints stay under `/api/auth`; ID tokens
+  signed with EdDSA; signing keys rotate every 90 days with a 30-day grace
+  period
+- `@better-auth/oauth-provider` configured as in research 0001: `grantTypes`
+  limited to `authorization_code` and `refresh_token`; PKCE `S256` required for
+  every client; refresh tokens on `offline_access`; no dynamic registration;
+  `storeClientSecret: 'hashed'`; exact matching of redirect URIs
 - Scopes and claims from spec §3.6.2: `openid`, `profile`, `email`, `roles`,
-  `directory`, `offline_access`
+  `directory`, `offline_access`; `customIdTokenClaims` and
+  `customUserInfoClaims` emit `name`, `picture`, `email`, `email_verified`,
+  `locale`, `zoneinfo` and `roles` (only when the scope was granted) in both the
+  ID token and userinfo
 - Token lifetimes per spec §3.6.1: access 15 minutes, ID 1 hour, refresh 30
   days from last use
-- Refresh tokens rotated on every use, with reuse detection revoking every
-  token descended from a reused one
+- Refresh tokens rotated on every use; reuse of a rotated token is refused and
+  removes every refresh and access token the client holds for that account
+- Regression tests for each behaviour verified in research 0001
 
 **Dependencies:** 4.1, 5.1
 
@@ -44,10 +53,16 @@ flow and receive exactly the claims their scopes allow.
 
 **Review checklist:**
 
-- An off-the-shelf OIDC relying party completes sign-in against core
-- A client receives no claim outside its allowed and granted scopes
-- An implicit or password grant request is refused
-- Presenting an already-used refresh token revokes its whole family
+- An off-the-shelf OIDC relying party configured with only the instance URL
+  completes sign-in against core
+- A client receives no claim outside its allowed and granted scopes, and
+  `roles` only when it is trusted and the scope was granted
+- An implicit, password or client-credentials grant request is refused
+- Authorize without a `code_challenge` is refused for confidential and public
+  clients
+- Presenting an already-used refresh token is refused and the client's other
+  tokens for that account stop working
+- The discovery `issuer`, every ID token `iss` and the JWKS agree
 
 #### 📋 6.2 — Consent
 
@@ -74,22 +89,40 @@ their mind.
 
 #### 📋 6.3 — Logout and revocation
 
-**Goal:** Signing out, deactivation, deletion and revoked consent all end a
-client's access.
+**Goal:** Signing out, deactivation, deletion and removed access all end a
+client's access, and clients are told when a session ends.
 
 **Deliverables:**
 
-- End-session endpoint honouring registered post-logout redirect URIs
-- Deactivating or deleting an account revokes its tokens; core's endpoints
-  stop accepting them
-- Revoking consent ends that client's refresh tokens for the account
+- End-session endpoint (RP-initiated logout) honouring only registered
+  post-logout redirect URIs
+- Back-channel logout: clients with a back-channel logout URI receive a signed
+  logout token (with `sub` and `sid`) when a person's session ends; `sid` in
+  the ID token for clients with end-session or a back-channel URI
+- **One revocation routine** used by deactivation, deletion and "Remove
+  access", written against the generated Drizzle schema (not raw table names):
+  it revokes every access token and refresh token for the account (or for the
+  account and one client), including `offline_access` refresh tokens, which
+  ending a session leaves alone. Deactivation and deletion also end the
+  sessions in the same operation
+- Core's own endpoints (userinfo, token, introspection) stop accepting revoked
+  tokens
+- Deleting the consent through the plugin is never exposed directly; the
+  identity pages call our routine, which deletes the consent and revokes the
+  client's tokens together
 
 **Dependencies:** 6.2, 4.7
 
-**Spec reference:** §3.3.6, §3.6.3, §3.6.4
+**Spec reference:** §3.3.6, §3.6.3, §3.6.4, §3.6.5
 
 **Review checklist:**
 
-- After deactivation, a refresh token and an access token for the account are
-  both rejected
-- After revoking consent, the client's next sign-in asks again
+- After deactivation, a refresh token (with and without `offline_access`), an
+  access token and a userinfo call for the account are all rejected
+- After "Remove access", the client's refresh token is rejected and the next
+  sign-in asks for consent again
+- Signing out of core posts a logout token to a registered back-channel URI
+  and revokes that session's access tokens
+- An end-session request to an unregistered post-logout redirect URI does not
+  redirect there
+- The routine behaves the same on sqld, PostgreSQL and a SQLite file

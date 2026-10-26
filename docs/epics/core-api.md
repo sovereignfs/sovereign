@@ -52,14 +52,22 @@ users.
 - Lookup by exact email address only; no listing or partial matching
 - Requires an access token issued for a signed-in person with the `directory`
   scope; rate limited per client and per account
+- Token check: the app requests its token with `resource=<SV_URL>/api/v1`
+  (a `resources` entry whose allowed scope is `directory`,
+  `enforcePerClientResources: false`), which makes the access token a signed
+  JWT. Core verifies signature, audience and scope against its own keys **and**
+  looks the token up to confirm it has not been revoked
 
-**Dependencies:** 10.1, 6.1
+**Dependencies:** 10.1, 6.1, 6.3
 
 **Spec reference:** §3.9
 
 **Review checklist:**
 
 - A token without the `directory` scope is refused
+- A token with a valid signature but revoked (by deactivation or Remove
+  access) is refused
+- A token issued without `resource` is refused by the Directory API
 - A partial email address returns nothing
 - Exceeding the rate limit is refused
 

@@ -45,16 +45,20 @@ only at the page. All pages are built from `@sovereignfs/ui`.
 - List with search by name or email; detail view; copy `sub`
 - Change role (owner only); deactivate, reactivate, delete; reset MFA (the
   account holder is emailed)
+- Deactivate and delete call the revocation routine from 6.3, so the account's
+  sessions end and every token stops working at once
 - Only the owner acts on operator accounts
 
-**Dependencies:** 8.1, 4.5, 4.6, 4.7
+**Dependencies:** 8.1, 4.5, 4.6, 4.7, 6.3
 
-**Spec reference:** §3.2.1, §3.4.3, §3.10
+**Spec reference:** §3.2.1, §3.3.6, §3.4.3, §3.6.3, §3.10
 
 **Review checklist:**
 
 - An admin cannot deactivate, delete or reset the MFA of another admin or the
   owner, by a direct request as well as through the page
+- Deactivating an account from the Console makes its refresh and userinfo calls
+  fail
 
 #### 📋 8.3 — Invites `[parallel]`
 
@@ -123,8 +127,9 @@ Console.
 **Deliverables:**
 
 - List, register, edit, enable, disable, delete; rotate secret with a
-  show-once dialog offering "end the old secret now" (default) or "keep it
-  for 24 hours"
+  show-once dialog that warns the old secret stops working immediately
+- Fields for the back-channel logout URI, post-logout redirect URIs and
+  end-session (spec §3.7.1), with a short explanation for app authors
 - "Client" appears only in these technical settings; elsewhere the text says
   "app"
 
@@ -135,3 +140,5 @@ Console.
 **Review checklist:**
 
 - A newly registered client signs a person in through core
+- Setting a back-channel logout URI makes the client receive a logout notice
+  when a session ends

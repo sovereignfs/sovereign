@@ -155,7 +155,9 @@ deactivated.
 - No fresh-session requirement; the password is asked for where the spec says
 - Rate limiting on authentication endpoints, stored in the database
 - Trusted origins from `SV_AUTH_TRUSTED_ORIGINS`
-- Deactivation and reactivation: deactivating ends all sessions
+- Deactivation and reactivation: deactivating ends all sessions. Revoking the
+  account's OAuth tokens is added to the same operation by 6.3 (research 0001,
+  B1); this task leaves the hook where it will be called
 
 **Dependencies:** 4.1
 

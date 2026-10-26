@@ -152,16 +152,22 @@ database.
 - Development: a persistent sqld container started by `pnpm dev`; a seed
   script for local accounts
 - `.env.example` listing every variable core reads
+- Core's public URL resolves and is reachable from inside its own container
+  (a hairpin route or a host entry in the compose files), because checking an
+  `id_token_hint` makes core fetch its own signing keys from `SV_URL` (spec
+  §3.6.5); documented for `sovereign-infra`
 
 **Dependencies:** 0.2, 1.2
 
-**Spec reference:** §3.15, §3.17.1
+**Spec reference:** §3.15, §3.17.1, §3.6.5
 
 **Review checklist:**
 
 - A fresh instance boots from the documented variables on each of the three
   databases
 - The image boots with no `.env` baked in
+- RP-initiated logout with an `id_token_hint` works from inside the compose
+  setup
 
 #### 📋 0.6 — Phase 1 acceptance
 

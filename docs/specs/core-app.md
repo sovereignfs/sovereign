@@ -206,8 +206,10 @@ accepting them, and the acceptance is recorded with the account.
 #### 3.3.6 Account states
 
 - **Active:** can sign in.
-- **Deactivated:** cannot sign in; all sessions end and all tokens issued to
-  clients for the account are revoked. Reactivation restores sign-in only.
+- **Deactivated:** cannot sign in; all sessions end and every token issued to
+  clients for the account is revoked, including refresh tokens obtained with
+  `offline_access` (§3.6.3). Clients that registered a back-channel logout URI
+  are notified (§3.6.5). Reactivation restores sign-in only.
 - **Deleted:** the account and its credentials are removed. Its `sub` is never
   reused.
 
@@ -257,21 +259,29 @@ passkeys), subject to §3.2.1. The account holder is told by email.
 
 #### 3.6.1 Endpoints and flows
 
-- Core publishes an OpenID Connect discovery document at
-  `/.well-known/openid-configuration`, with authorization, token, userinfo,
-  JWKS and end-session endpoints.
-- The authorization code flow is the only flow. PKCE with `S256` is required
-  for public clients and recommended for confidential ones. The implicit and
-  password grants are not offered.
+- The **issuer is the instance URL** (`SV_URL`, with no path). Core publishes
+  its OpenID Connect discovery document at `/.well-known/openid-configuration`
+  (and the OAuth equivalent at `/.well-known/oauth-authorization-server`), with
+  authorization, token, userinfo, JWKS and end-session endpoints, so an app can
+  be configured with the instance URL alone. Every token's `iss` equals the
+  issuer.
+- The authorization code flow, with refresh tokens, is the only flow. PKCE with
+  `S256` is **required for every client**, confidential or public; `plain` is
+  not accepted. The implicit, password and client-credentials grants are not
+  offered.
 - Refresh tokens are issued when the client requests `offline_access`.
 - Token lifetimes: access tokens 15 minutes, ID tokens 1 hour, refresh tokens
-  30 days from their last use. A refresh token is rotated on every use; if a
-  refresh token that has already been used is presented again, every token
-  descended from it is revoked.
+  30 days from their last use. A refresh token is rotated on every use. If a
+  refresh token that has already been used is presented again, core refuses it
+  and removes **every** refresh token and access token that client holds for
+  that account — a person signed in to the same app on several devices is
+  signed out of all of them.
 - Clients are registered by operators only; dynamic client registration is
   off.
 - Redirect URIs and post-logout redirect URIs match exactly.
-- ID tokens are signed (EdDSA) with keys published at the JWKS endpoint.
+- ID tokens are signed (EdDSA) with keys published at the JWKS endpoint. The
+  signing keys rotate every 90 days; the previous key stays published for a
+  30-day grace period so tokens already issued keep verifying.
 
 #### 3.6.2 Scopes and claims
 
@@ -287,10 +297,20 @@ passkeys), subject to §3.2.1. The account holder is told by email.
 A client receives only the scopes it is allowed (§3.7) and the user has
 granted (§3.6.4).
 
+The claims of the granted scopes appear both in the **ID token** and at the
+userinfo endpoint, so an ordinary relying party can read them from either.
+`locale` and `zoneinfo` are the person's saved preferences (§3.11).
+
 #### 3.6.3 Account state and tokens
 
 A deactivated or deleted account MUST NOT obtain new tokens, and tokens already
 issued for it MUST stop being accepted by core's own endpoints.
+
+Deactivating or deleting an account therefore revokes **every** access token
+and refresh token issued for it, in the same operation that ends its sessions.
+This includes refresh tokens obtained with `offline_access`: ending a session
+revokes that session's access tokens but, by design, leaves such refresh tokens
+alone, so revoking them is core's own step.
 
 #### 3.6.4 Consent
 
@@ -301,8 +321,30 @@ issued for it MUST stop being accepted by core's own endpoints.
 - Consent is remembered per account, per client and per set of scopes. A
   client asking for a scope the person has not granted asks again.
 - Only trusted clients may receive the `roles` scope.
-- A person can revoke consent in Connected apps (§3.11). Revoking ends that
-  client's refresh tokens for the account; the next sign-in asks again.
+- A person can remove an app's access in Connected apps (§3.11). Removing
+  access deletes the consent **and** revokes every access token and refresh
+  token that client holds for the account, in one step; the next sign-in asks
+  again.
+
+#### 3.6.5 Sign-out and logout notices
+
+- **Sign-out from an app.** An app that has end-session enabled (§3.7.1) can
+  send the person to core's end-session endpoint with the `id_token_hint` it
+  received. Core ends the person's core session and returns them to the app's
+  post-logout redirect URI with the app's `state` — but only if that URI is
+  registered for the client; an unregistered one is never followed.
+- **Back-channel logout.** When a person's core session ends — they sign out of
+  core, they end a session in their identity pages, an operator ends it, or the
+  account is deactivated — core revokes the access tokens of that session and
+  sends a signed *logout token* (OpenID Connect Back-Channel Logout, carrying
+  the `sub` and the session id `sid`) to the back-channel logout URI of every
+  client that session was used with. A notice that fails is logged and not
+  retried, so an app must also treat its own session as ending when its access
+  tokens stop working.
+- A client that registers a back-channel logout URI or enables end-session
+  receives a `sid` claim in its ID tokens.
+- Core's public URL (`SV_URL`) MUST be reachable from the core process itself,
+  because checking an `id_token_hint` fetches core's own signing keys from it.
 
 ### 3.7 App registration
 
@@ -312,10 +354,11 @@ Operators with `client:manage` register clients in the Console.
 
 | Setting | Notes |
 | --- | --- |
-| Client type | Confidential (has a secret) or public (no secret, PKCE required) |
-| Redirect URIs | One or more; exact match |
-| Post-logout redirect URIs | Optional |
-| Back-channel logout URI | Optional. Stored now; used from a later phase |
+| Client type | Confidential (has a secret) or public (no secret). PKCE is required for both |
+| Redirect URIs | One or more; exact match. Must be `https`. `http` is accepted on `localhost` and `*.localhost` only when the instance's own URL (`SV_URL`) is `http`, that is on a development instance |
+| Post-logout redirect URIs | Optional; the only addresses core returns a person to after sign-out |
+| Back-channel logout URI | Optional. Core sends a signed logout notice there when a person's session ends (§3.6.5) |
+| End-session | Lets the app send people to core's sign-out (§3.6.5). On automatically when a post-logout redirect URI or a back-channel logout URI is set |
 | Allowed scopes | Any of §3.6.2; `roles` only when trusted |
 | Trusted | Off by default |
 | Enabled | On by default |
@@ -334,12 +377,16 @@ Operators with `client:manage` register clients in the Console.
 
 - A confidential client's secret is generated by core, shown once, and stored
   only as a hash.
-- An operator can rotate the secret; the new one is shown once. When
-  rotating, the operator chooses whether the old secret stops working at once
-  (the default) or keeps working for 24 hours alongside the new one.
+- An operator can rotate the secret; the new one is shown once and **the old
+  one stops working at once**. A client has one secret at a time, so the app is
+  redeployed with the new secret as part of the rotation.
 - **Disabling** a client stops new authorizations and token refreshes and hides
   it from the launcher; enabling it again restores both.
 - **Deleting** a client revokes every token and consent issued for it.
+- Every change is made by writing the client through core's own registry, which
+  applies the rules above (for example, `roles` is refused for an untrusted
+  client, and the trusted flag is core's to set). Launcher entries (§3.7.2) are
+  stored with the client.
 
 ### 3.8 Launcher
 
@@ -348,8 +395,8 @@ Operators with `client:manage` register clients in the Console.
   description, with search by name.
 - Choosing an app opens its launch URL in the same tab, as an ordinary link,
   so a person can still open it in a new tab themselves. The app then signs
-  the person in through core; because the person already has a session, this completes
-  without a prompt unless consent is needed.
+  the person in through core; because the person already has a session, this
+  completes without a prompt unless consent is needed.
 - In Phase 1 every signed-in person sees every listed app. **The launcher is
   not access control:** an app that should be restricted decides that itself,
   for example from the `roles` claim.
@@ -360,7 +407,12 @@ The Directory API lets an app find accounts on the instance, for example to
 share something with a person.
 
 - It is called by a client with an access token issued for a signed-in person
-  and carrying the `directory` scope.
+  and carrying the `directory` scope. To get one, the app requests its token
+  with `resource` set to the Core API address (`<SV_URL>/api/v1`), which makes
+  the access token a signed JWT addressed to the Core API. Core accepts a call
+  only if the token's signature, audience and `directory` scope are valid
+  **and** the token has not been revoked — a signature alone is not enough,
+  because a revoked token would otherwise keep working until it expires.
 - **Search** takes a text query and a limit, matches names, and returns for each
   account: `sub`, `name` and `picture`. Deactivated accounts are not returned.
 - **Resolve** takes a list of `sub` values and returns the same fields for each,
@@ -394,7 +446,7 @@ closing them returns there (§1.3).
 | Profile | Name and avatar. The email address is shown but cannot be changed in Phase 1 |
 | Security | Change password; manage passkeys; enrol or remove TOTP and backup codes; list sessions and end any of them |
 | Preferences | Timezone and locale |
-| Connected apps | Clients the person has granted consent to, with the scopes granted; revoke |
+| Connected apps | Apps the person has allowed, with the scopes granted; **Remove access** revokes the app's tokens as well (§3.6.4) |
 | Delete account | Requires the password. The owner must transfer ownership first |
 
 ### 3.12 Console: instance settings
@@ -447,9 +499,9 @@ that apps can show the same branding. The address and format are defined in
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `SV_URL` | yes | Core's public URL |
+| `SV_URL` | yes | Core's public URL, which is also the issuer (§3.6.1). It must be reachable from the core process itself (§3.6.5) |
 | `SV_AUTH_SECRET` / `_FILE` | yes | Signing secret, at least 32 characters |
-| `SV_AUTH_COOKIE_DOMAIN` | no | Parent domain for session cookies |
+| `SV_AUTH_COOKIE_DOMAIN` | no | Parent domain for session cookies. Apps signing in through OpenID Connect do not need it; it matters only when core's own pages or passkeys are shared across subdomains |
 | `SV_AUTH_TRUSTED_ORIGINS` | no | Extra origins accepted for requests |
 | `SV_AUTH_INVITE_ONLY` | no | Registration policy default (§3.3.1) |
 | `SV_AUTH_REQUIRE_EMAIL_VERIFICATION` | no | Default `true` (§3.3.3) |
@@ -465,7 +517,8 @@ Database variables name the engine (`SV_POSTGRES_URL`, `SV_SQLD_URL`,
 ### 3.16 Not in Phase 1
 
 Groups and per-app access policies; per-account capability grants;
-verification levels; acting on back-channel logout; social sign-in; changing
+verification levels; retrying a failed back-channel logout notice; social
+sign-in; changing
 an email address; editable email templates; theme presets, colours and text
 size preferences; mail, notification and activity APIs for apps; account
 deletion and export across apps; backups; end-to-end encryption and the
@@ -486,12 +539,20 @@ databases for apps.
 6. An operator registers two clients, one of them an off-the-shelf OIDC
    application. Both sign people in through core, appear in the launcher, and
    receive only the claims their scopes allow.
-7. An untrusted client shows the consent screen once; revoking it in Connected
-   apps ends its refresh tokens and the next sign-in asks again. A trusted
+7. An untrusted client shows the consent screen once; removing its access in
+   Connected apps revokes its tokens and the next sign-in asks again. A trusted
    client never shows it, and only a trusted client receives `roles`.
-8. Deactivating an account ends its sessions and its tokens stop working.
+8. Deactivating an account ends its sessions and every token issued for it
+   stops working, including a refresh token obtained with `offline_access`.
 9. A client with the `directory` scope can search by name, resolve by `sub`,
-   and look up an exact email address, and cannot list addresses.
+   and look up an exact email address, and cannot list addresses. A token that
+   has been revoked is refused even though its signature is still valid.
+10. Signing out of core sends a back-channel logout notice to a client that
+    registered one, and revokes that session's access tokens. A client's
+    end-session request returns the person only to a registered post-logout
+    redirect URI.
+11. Rotating a client's secret makes the old secret fail at once.
+12. The same behaviour holds on sqld, PostgreSQL and a SQLite file.
 
 ### 3.18 Open questions
 
@@ -509,3 +570,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-26 | Added §1.3 (pages built from `@sovereignfs/ui`); the owner chooses their role when transferring ownership; environment variable names marked provisional, with database variables named by engine. |
 | 2026-10-26 | Answered the open questions: token lifetimes and refresh rotation (§3.6.1), secret rotation choice (§3.7.3), launcher opens apps in the same tab (§3.8), images stored in the database and `_FILE` for every secret (§3.15). |
 | 2026-10-26 | §1.3: core's UI follows the established Sovereign UI page by page; §3.11: identity pages open as an overlay. |
+| 2026-10-27 | Applied research 0001 (better-auth's OAuth provider): issuer is the instance URL with discovery at the root, PKCE required for every client, signing-key rotation, reuse detection removes all of a client's tokens for the account (§3.6.1); claims in the ID token as well as userinfo (§3.6.2); deactivation and deletion revoke every token including `offline_access` (§3.3.6, §3.6.3); Remove access revokes tokens (§3.6.4, §3.11); new §3.6.5 on sign-out and back-channel logout, now in Phase 1 (§3.16); redirect URI rule with development `http` (§3.7.1); secret rotation is immediate (§3.7.3); Directory API tokens are resource-scoped JWTs with a revocation check (§3.9); acceptance criteria 7–12 (§3.17). |

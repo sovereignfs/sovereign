@@ -27,13 +27,20 @@ right effects on tokens and the launcher.
 **Deliverables:**
 
 - Client settings from spec §3.7.1 (type, redirect URIs, post-logout URIs,
-  back-channel logout URI stored for later, allowed scopes, trusted, enabled)
-- Launcher entry from spec §3.7.2
-- Secrets: generated, shown once, stored hashed; rotation with the operator's
-  choice of ending the old secret at once (default) or after 24 hours
-  (spec §3.7.3). First confirm that `@better-auth/oauth-provider` can hold two
-  secrets for one client; if it cannot, ship immediate rotation only and
-  record the gap in the spec
+  back-channel logout URI, end-session, allowed scopes, trusted, enabled)
+- Launcher entry from spec §3.7.2, stored in the client's `metadata`
+- **A registry module that is the only writer of client rows** (research 0001,
+  B3–B5): it registers the client through the plugin so the secret is hashed and
+  defaults apply, then writes core's own fields (trusted flag, launcher entry,
+  development redirect URIs) through the plugin's adapter — never through
+  Drizzle's schema objects, which return the plugin's JSON columns as strings.
+  `clientReference` is set so every account passing `clientPrivileges` (owner
+  or admin) can manage every client, not only its creator
+- Redirect URI validation of our own (`https`; `http` on `localhost` and
+  `*.localhost` only when `SV_URL` is `http`); refuses `roles` on an untrusted
+  client and removes it when a client stops being trusted
+- Secrets: generated, shown once, stored hashed; rotation takes effect at once
+  (spec §3.7.3)
 - Disabling stops new authorizations and refreshes and hides the entry;
   deleting revokes every token and consent for the client
 - Every change requires `client:manage`
@@ -47,8 +54,11 @@ right effects on tokens and the launcher.
 - A disabled client cannot complete sign-in or refresh a token
 - After deletion, no token issued to the client is accepted
 - `roles` cannot be allowed on an untrusted client
-- With the 24-hour choice both secrets work until the overlap ends; with the
-  default the old secret fails immediately
+- After rotating a secret the old one fails at once and the new one works
+- A second admin can rotate, edit, disable and delete a client the first
+  created; a plain user can do none of it
+- A plain `http` redirect is refused on a production instance and accepted for
+  `*.localhost` on a development instance
 
 #### 📋 7.2 — Launcher
 

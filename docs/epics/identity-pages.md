@@ -76,20 +76,24 @@ close back to it (spec §1.3, §3.11).
 
 #### 📋 9.4 — Connected apps
 
-**Goal:** A person sees which apps they have granted access to and can revoke
-it.
+**Goal:** A person sees which apps they have allowed and can remove an app's
+access.
 
 **Deliverables:**
 
-- The list of clients with consent and the scopes granted; revoke
+- The list of apps with consent and the scopes granted
+- **Remove access** calls the revocation routine from 6.3: it deletes the
+  consent and revokes the app's access and refresh tokens for the account in
+  one step (it never calls the plugin's consent deletion on its own)
 
-**Dependencies:** 6.2
+**Dependencies:** 6.2, 6.3
 
 **Spec reference:** §3.11, §3.6.4
 
 **Review checklist:**
 
-- Revoking ends the client's refresh tokens and the next sign-in asks again
+- After Remove access, the app's refresh token is rejected and the next
+  sign-in asks for consent again
 
 #### 📋 9.5 — Delete account
 

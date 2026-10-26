@@ -1,0 +1,57 @@
+{
+  "name": "sovereign-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Sovereign Core — a self-hostable identity and foundation service, and the shared packages every Sovereign app uses.",
+  "license": "AGPL-3.0-or-later",
+  "packageManager": "pnpm@11.28.9",
+  "engines": {
+    "node": ">=24.15 <25"
+  },
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "turbo typecheck && tsc --noEmit",
+    "test": "turbo test && vitest run",
+    "test:watch": "vitest",
+    "docs:check-links": "tsx scripts/check-doc-links.ts",
+    "verify:push": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm docs:check-links && pnpm test",
+    "prepare": "simple-git-hooks"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint-staged",
+    "pre-push": "pnpm verify:push"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "prettier --write",
+      "eslint --fix --no-warn-ignored"
+    ],
+    "*.{js,mjs,cjs,json,jsonc,css,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@sovereignfs/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "eslint-plugin-jsx-a11y": "catalog:",
+    "globals": "catalog:",
+    "jiti": "catalog:",
+    "lint-staged": "catalog:",
+    "prettier": "catalog:",
+    "simple-git-hooks": "catalog:",
+    "tsx": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
+  }
+}

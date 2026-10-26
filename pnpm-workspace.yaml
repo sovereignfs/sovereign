@@ -1,0 +1,86 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+  # Imported from the legacy repository with their history but not yet ported to
+  # this workspace (roadmap task 2.1): they still expect the legacy catalog, and
+  # bridge imports types from the removed SDK. Excluded so the workspace installs;
+  # task 2.1 deletes these three lines.
+  - '!packages/ui'
+  - '!packages/bridge'
+  - '!packages/mailer'
+
+# Refuse to install on a Node outside package.json "engines".
+engineStrict: true
+
+# Without this, pnpm only records optional-dependency variants for the *host*
+# platform running `pnpm install` — not the platforms the lockfile is installed
+# on later. A lockfile made on a contributor's darwin/arm64 Mac then has no
+# musl variant of a native package, and the Alpine image crashes at boot with
+# "Cannot find module '@libsql/linux-arm64-musl'" (a legacy incident; see
+# docs/architecture-rules.md). Covers every real target: contributors' macs,
+# CI's linux/x64 glibc runners, and node:24-alpine on arm64 and x64.
+supportedArchitectures:
+  os:
+    - darwin
+    - linux
+  cpu:
+    - arm64
+    - x64
+  libc:
+    - glibc
+    - musl
+
+# Single source of truth for shared dev tooling versions. Packages reference
+# these as `"typescript": "catalog:"` so a `pnpm add` can never float one
+# package onto a different major. Add a dependency here when more than one
+# package uses it; package-specific dependencies stay in the package.
+#
+# Held back on purpose, until the blocker lifts:
+#   typescript  ~6.0.x  typescript-eslint requires typescript <6.1, so 7.x is out.
+#   pnpm        11.x    AGENTS.md says pnpm 11; a new major gets its own task.
+# ESLint is on 10 although eslint-plugin-jsx-a11y still declares support only up
+# to 9: ESLint 9 is end-of-life ("no longer supported"), and the plugin's rules
+# were checked to run correctly on 10 (see peerDependencyRules below, and the
+# test in scripts/__tests__/eslint-config.test.ts that fails if they stop firing).
+catalog:
+  typescript: ~6.0.3
+  '@types/node': ^24.19.2
+  next: ^16.4.3
+  react: ^19.3.1
+  react-dom: ^19.3.1
+  '@types/react': ^19.3.0
+  '@types/react-dom': ^19.3.0
+  vitest: ^5.0.5
+  turbo: ^2.11.10
+  tsx: ^4.23.15
+  jiti: ^2.7.0
+  eslint: ^10.13.0
+  '@eslint/js': ^10.0.1
+  typescript-eslint: ^8.72.0
+  eslint-config-prettier: ^10.1.8
+  eslint-plugin-jsx-a11y: ^6.10.2
+  globals: ^17.13.0
+  prettier: ^3.9.10
+  lint-staged: ^17.6.0
+  simple-git-hooks: ^2.14.0
+
+# Supply-chain age gate: refuse to resolve a release published less than a day
+# ago, and fail loudly instead of quietly adding the package to an exclusion
+# list (pnpm's default). A catalog floor must therefore name a release that is
+# at least a day old.
+minimumReleaseAge: 1440
+minimumReleaseAgeStrict: true
+
+# eslint-plugin-jsx-a11y declares ESLint ^3..^9 but works on 10; allow exactly
+# that one mismatch rather than silencing peer warnings in general.
+peerDependencyRules:
+  allowedVersions:
+    'eslint-plugin-jsx-a11y>eslint': '10'
+
+# pnpm blocks dependency build scripts by default; list the ones that must run.
+# esbuild (via tsx) needs its postinstall to link the platform binary.
+# simple-git-hooks is declined: the root `prepare` script installs the git hooks
+# explicitly, so the dependency's own postinstall is redundant.
+allowBuilds:
+  esbuild: true
+  simple-git-hooks: false

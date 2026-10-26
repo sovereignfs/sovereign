@@ -1,0 +1,15 @@
+node_modules
+**/dist
+**/.next
+**/.turbo
+pnpm-lock.yaml
+# Imported from the legacy repository with their history; reformatting them
+# would rewrite imported files. Roadmap task 2.1 ports them and removes these.
+packages/ui
+packages/bridge
+packages/mailer
+docs/design-system.md
+scripts/generate-icons.ts
+scripts/icon-list.ts
+scripts/generate-theme-presets-css.ts
+scripts/design-tokens-check.ts

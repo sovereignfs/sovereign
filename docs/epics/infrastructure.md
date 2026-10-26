@@ -69,7 +69,9 @@ every supported platform.
 
 - `pnpm install --frozen-lockfile` succeeds on macOS and in `node:24-alpine`
   (the lockfile carries the glibc and musl variants of native packages for
-  arm64 and x64; a git-less copy installs, as a Docker build context would)
+  arm64 and x64; a git-less copy installs, as a Docker build context would).
+  Run in `node:24-alpine` on aarch64 and on x86_64: a frozen install, lint,
+  typecheck and the tests all pass
 - `pnpm format:check` and `pnpm lint` pass
 - `pnpm verify:push` passes
 - Each new guard is seen to fail when broken: skills drift, the package

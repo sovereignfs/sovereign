@@ -1,0 +1,96 @@
+name: Bug report
+description: Something isn't working as expected.
+labels: ['bug', 'needs-triage']
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please search existing issues before filing to avoid duplicates.
+        For security vulnerabilities, use [GitHub Security Advisories](https://github.com/sovereignfs/sovereign/security/advisories/new) — do not open a public issue.
+
+  - type: input
+    id: version
+    attributes:
+      label: Sovereign Core version
+      placeholder: 'e.g. 0.3.1'
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment method
+      options:
+        - Docker Compose
+        - Bare Node.js
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: database
+    attributes:
+      label: Database
+      options:
+        - sqld
+        - PostgreSQL
+        - SQLite file
+        - Unknown
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      description: Where does the issue occur?
+      options:
+        - Sign-in, sign-up or account security
+        - Sign-in for apps (OIDC, consent)
+        - Console
+        - Launcher
+        - Core API
+        - Design system (packages/ui)
+        - Another package
+        - Unknown
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / error output
+      description: Paste any relevant logs. Automatically formatted as code.
+      render: shell
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Screenshots, config snippets, anything else relevant.

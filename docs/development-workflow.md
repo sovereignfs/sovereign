@@ -159,13 +159,13 @@ Status lives in exactly two places:
 
 Status values, used identically in `ROADMAP.md` rows and epic headings:
 
-| Status | Meaning                                                                                 |
-| ------ | --------------------------------------------------------------------------------------- |
-| 📋     | Planned — not started                                                                   |
-| ⏳     | In progress — a branch/PR is open for it                                                |
-| ✅     | Complete — merged to `main`                                                             |
-| 🚧     | Parked — deliberately paused; the heading names what must be re-read before resuming    |
-| ❌     | Rejected — decided against, kept for the record; never delete the row or heading        |
+| Status | Meaning                                                                              |
+| ------ | ------------------------------------------------------------------------------------ |
+| 📋     | Planned — not started                                                                |
+| ⏳     | In progress — a branch/PR is open for it                                             |
+| ✅     | Complete — merged to `main`                                                          |
+| 🚧     | Parked — deliberately paused; the heading names what must be re-read before resuming |
+| ❌     | Rejected — decided against, kept for the record; never delete the row or heading     |
 
 **Epic file headings (`#### ✅ X.Y — …`) are updated when a task completes.** To
 close a task, mark both the roadmap row and the matching `docs/epics/<file>.md`
@@ -244,13 +244,13 @@ because it references the ID, not a markdown anchor.
 When a PR bumps a version, use the release identifier as the version-bump
 commit subject and as the release tag:
 
-| Versioned target                   | Commit subject / tag |
-| ---------------------------------- | -------------------- |
-| Root `package.json`                | `vX.Y.Z`             |
-| `packages/ui`                      | `ui-vX.Y.Z`          |
-| `packages/bridge`                  | `bridge-vX.Y.Z`      |
-| `apps/core`                        | `core-vX.Y.Z`        |
-| Any other package                  | `<slug>-vX.Y.Z`      |
+| Versioned target    | Commit subject / tag |
+| ------------------- | -------------------- |
+| Root `package.json` | `vX.Y.Z`             |
+| `packages/ui`       | `ui-vX.Y.Z`          |
+| `packages/bridge`   | `bridge-vX.Y.Z`      |
+| `apps/core`         | `core-vX.Y.Z`        |
+| Any other package   | `<slug>-vX.Y.Z`      |
 
 Use the package slug from the workspace path unless a release workflow defines a
 more specific slug. The bump rules themselves are in `AGENTS.md`.
@@ -265,15 +265,15 @@ required. The skills live in `.agents/skills/` (Codex) and `.claude/skills/`
 (Claude Code) as byte-identical copies; a test fails CI if they diverge, so edit
 one and copy to the other.
 
-| Skill                  | Trigger                                                                  | What it does                                                                                      |
-| ---------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| `/sv-task-start`       | Session start, with a task or leg assignment                             | Writes CURRENT_TASK.md (task or leg mode), creates the branch                                     |
-| `/sv-ui-design`        | Any change a person sees                                                 | DS-first rules, plain-language copy, error UX, wireframe-before-build, pre-merge checklist        |
-| `/sv-task-complete`    | Implementation done                                                      | Orchestrates the four steps below in order, then drafts the PR description                        |
-| `/sv-verify`           | Step 1 of task-complete, or standalone                                   | Runs all checks, returns a structured pass/fail table                                             |
-| `/sv-security-check`   | Step 2, conditional — auth, proxy, API, server actions, OIDC, Docker     | Reviews the diff against the security-relevant hard rules, blocks the PR on a violation           |
-| `/sv-update-task-docs` | Step 4, after the version bump                                           | Marks roadmap row(s) and epic heading(s) ✅, syncs RFC/workstream status, deletes CURRENT_TASK.md |
-| `/sv-create-pr`        | Only when the developer asks                                             | Opens the GitHub PR as a draft                                                                    |
+| Skill                  | Trigger                                                              | What it does                                                                                      |
+| ---------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `/sv-task-start`       | Session start, with a task or leg assignment                         | Writes CURRENT_TASK.md (task or leg mode), creates the branch                                     |
+| `/sv-ui-design`        | Any change a person sees                                             | DS-first rules, plain-language copy, error UX, wireframe-before-build, pre-merge checklist        |
+| `/sv-task-complete`    | Implementation done                                                  | Orchestrates the four steps below in order, then drafts the PR description                        |
+| `/sv-verify`           | Step 1 of task-complete, or standalone                               | Runs all checks, returns a structured pass/fail table                                             |
+| `/sv-security-check`   | Step 2, conditional — auth, proxy, API, server actions, OIDC, Docker | Reviews the diff against the security-relevant hard rules, blocks the PR on a violation           |
+| `/sv-update-task-docs` | Step 4, after the version bump                                       | Marks roadmap row(s) and epic heading(s) ✅, syncs RFC/workstream status, deletes CURRENT_TASK.md |
+| `/sv-create-pr`        | Only when the developer asks                                         | Opens the GitHub PR as a draft                                                                    |
 
 Each agent is briefed with `CURRENT_TASK.md` rather than the full project
 context. The steps run **sequentially**, not in parallel: verification must pass

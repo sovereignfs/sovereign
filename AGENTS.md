@@ -122,7 +122,7 @@ recorded as an ADR in `docs/adrs/`. A documented "not now" is a valid outcome.
 ## Code quality
 
 Prettier (single quotes, semicolons, trailing commas `all`, width 100, 2-space)
-is the single formatting authority; ESLint 9 flat config + `typescript-eslint`
+is the single formatting authority; ESLint 10 flat config + `typescript-eslint`
 (recommended + strict) + `eslint-config-prettier` for linting;
 `simple-git-hooks` + `lint-staged` pre-commit; `.editorconfig` baseline.
 
@@ -252,7 +252,19 @@ do-not-publish signal.
 
 ## Commands
 
-Arrive with task 0.1; listed here once they exist.
+```bash
+pnpm install --frozen-lockfile   # routine install (also installs the git hooks)
+pnpm format / format:check       # Prettier
+pnpm lint / lint:fix             # ESLint
+pnpm typecheck                   # turbo typecheck in every package, then tsc for the repo's scripts
+pnpm test / test:watch           # turbo test in every package, then the repo-level Vitest suite
+pnpm build                       # turbo build
+pnpm docs:check-links            # every relative Markdown link resolves
+pnpm verify:push                 # format:check, lint, typecheck, docs:check-links, test (the pre-push hook)
+```
+
+`pnpm dev`, the database scripts and the Docker commands arrive with the tasks
+that create them (0.2, 0.5, 1.2).
 
 ## Environment notes
 
@@ -271,6 +283,12 @@ Arrive with task 0.1; listed here once they exist.
 - **An `overrides` entry for an advisory is capped to the consumer's declared
   range**, never open-ended.
 - **TypeScript 6:** the shared base sets `types: ["node"]`; never add `baseUrl`.
+  TypeScript stays on 6.0.x until `typescript-eslint` supports 7; ESLint is on 10
+  even though `eslint-plugin-jsx-a11y` still declares 9 (a scoped peer allowance
+  in `pnpm-workspace.yaml`, with a test that fails if its rules stop firing).
+- **pnpm refuses releases less than a day old** (`minimumReleaseAge`, strict). A
+  catalog range whose floor is a brand-new release fails to install — name a
+  release at least a day old. Never accept pnpm's offer to add an exclusion.
 - **Tests** await every async operation they start, and scope long timeouts to
   the one slow test.
 

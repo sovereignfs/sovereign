@@ -27,6 +27,8 @@ account-deletion endpoints here.
 
 **Deliverables:**
 
+- Delete the `spec/core-api` entry from `PLANNED_TARGETS` in
+  `scripts/lib/doc-links.ts` once the directory exists
 - `spec/core-api/`: OpenAPI 3.1, versioned paths (`/api/v1/…`), bearer token
   authentication, error format
 - `packages/api-client`: a typed client generated from the contract

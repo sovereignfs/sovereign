@@ -185,5 +185,19 @@ pointing here.
   range** (`'>=3.1.6 <4.0.0'`), never open-ended; an open range once moved a
   dependency onto a major its consumer didn't support.
 - **TypeScript 6:** the shared base sets `types: ["node"]`; never add `baseUrl`.
+- **pnpm's release-age gate stays strict.** `minimumReleaseAge` refuses a release
+  published less than a day ago; by default pnpm then quietly adds the package to
+  `minimumReleaseAgeExclude`, defeating the gate. `minimumReleaseAgeStrict: true`
+  makes it fail instead. A catalog range whose floor is a day-old release cannot
+  install — name an older floor. (Hit on the first install: a `typescript-eslint`
+  floor set to the newest patch.)
+- **A tool major is held back only for a named blocker, written next to the pin.**
+  TypeScript 7 waits for `typescript-eslint`; ESLint 9 is end-of-life ("no longer
+  supported"), so ESLint runs on 10 and `eslint-plugin-jsx-a11y`, which declares
+  support only to 9, is allowed through one scoped `peerDependencyRules` entry —
+  after its rules were run on 10, and with a test that fails if they stop firing.
+- **Don't take a `@types/*` package that pins an end-of-life dependency.**
+  `@types/eslint-plugin-jsx-a11y` depends on ESLint 9; a local declaration of the
+  one shape used (`types/`) keeps a second ESLint out of the tree.
 - **Tests await every async operation they start,** and a long timeout is scoped
   to the one slow test, not set globally.

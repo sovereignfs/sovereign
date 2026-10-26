@@ -10,24 +10,24 @@ Build one of these per feature with technical internals, before writing any
 user-facing string. Internal terms stay in code, schema, the Core API and
 developer docs.
 
-| Internal (code, protocol)              | User-facing                                                      |
-| -------------------------------------- | ---------------------------------------------------------------- |
-| OAuth / OIDC client                    | app                                                              |
-| scope `profile`                        | "Your name, picture, language and time zone"                     |
-| scope `email`                          | "Your email address"                                             |
-| scope `directory`                      | "Find other people on this instance"                             |
-| scope `offline_access`                 | "Stay signed in when you're not using it"                        |
-| consent grant                          | "Apps you've allowed" / "Connected apps"                         |
-| revoke consent                         | "Remove access"                                                  |
-| `sub`                                  | never shown, except "Copy account ID" in the Console             |
-| session                                | "Signed-in device" (with browser and last active)                |
-| TOTP / backup codes                    | "Authenticator app" / "Recovery codes"                           |
-| passkey (WebAuthn credential)          | "Passkey"                                                        |
-| `platform:owner` / `admin` / `user`    | Owner / Admin / Member                                           |
-| capability matrix                      | "What each role can do" (Console only)                           |
-| deactivated account                    | "Suspended — can't sign in"                                      |
-| client secret (Console)                | "Secret" — shown once, with "Copy" and a warning it won't reappear |
-| trusted client (Console)               | "Skip the permission screen for this app"                        |
+| Internal (code, protocol)           | User-facing                                                        |
+| ----------------------------------- | ------------------------------------------------------------------ |
+| OAuth / OIDC client                 | app                                                                |
+| scope `profile`                     | "Your name, picture, language and time zone"                       |
+| scope `email`                       | "Your email address"                                               |
+| scope `directory`                   | "Find other people on this instance"                               |
+| scope `offline_access`              | "Stay signed in when you're not using it"                          |
+| consent grant                       | "Apps you've allowed" / "Connected apps"                           |
+| revoke consent                      | "Remove access"                                                    |
+| `sub`                               | never shown, except "Copy account ID" in the Console               |
+| session                             | "Signed-in device" (with browser and last active)                  |
+| TOTP / backup codes                 | "Authenticator app" / "Recovery codes"                             |
+| passkey (WebAuthn credential)       | "Passkey"                                                          |
+| `platform:owner` / `admin` / `user` | Owner / Admin / Member                                             |
+| capability matrix                   | "What each role can do" (Console only)                             |
+| deactivated account                 | "Suspended — can't sign in"                                        |
+| client secret (Console)             | "Secret" — shown once, with "Copy" and a warning it won't reappear |
+| trusted client (Console)            | "Skip the permission screen for this app"                          |
 
 The pattern generalizes: the left column is precise mechanism, the right
 column is **consequence in the person's world**. When unsure, ask "what does

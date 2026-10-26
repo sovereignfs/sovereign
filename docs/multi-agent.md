@@ -28,10 +28,10 @@ what is in flight.
 
 ## One instruction file
 
-| File        | Read by                 | Purpose                                                    |
-| ----------- | ----------------------- | ---------------------------------------------------------- |
-| `AGENTS.md` | Codex; every agent      | The conventions and architectural rules — the only copy    |
-| `CLAUDE.md` | Claude Code             | Imports `AGENTS.md` and adds only Claude Code specifics    |
+| File        | Read by            | Purpose                                                 |
+| ----------- | ------------------ | ------------------------------------------------------- |
+| `AGENTS.md` | Codex; every agent | The conventions and architectural rules — the only copy |
+| `CLAUDE.md` | Claude Code        | Imports `AGENTS.md` and adds only Claude Code specifics |
 
 Keeping one copy means the two agents can never follow diverging rules. Both
 files are **lean, stable instructions** — not changelogs. They contain

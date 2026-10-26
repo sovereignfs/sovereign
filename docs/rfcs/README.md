@@ -7,6 +7,6 @@ in [CONTRIBUTING.md](../../CONTRIBUTING.md#proposing-a-feature-rfcs).
 Files are named `NNNN-short-slug.md`, numbered in order; withdrawn numbers are
 not reused. Each RFC carries a `Status:` line, kept in step with the table below.
 
-| RFC | Title | Status |
-| --- | --- | --- |
-| — | None yet | — |
+| RFC | Title    | Status |
+| --- | -------- | ------ |
+| —   | None yet | —      |

@@ -24,7 +24,7 @@ in this epic is that phase's acceptance suite.
 
 ## Tasks
 
-#### 📋 0.1 — Workspace skeleton
+#### ⏳ 0.1 — Workspace skeleton
 
 **Goal:** A pnpm + Turborepo workspace that installs from a frozen lockfile on
 every supported platform.
@@ -34,19 +34,29 @@ every supported platform.
 - Root `package.json` (`private`, `packageManager` pinned, `engines.node` ≥ 24.15),
   `.node-version`, `.npmrc`, `.gitignore`, `.editorconfig`
 - `pnpm-workspace.yaml`: workspace globs (`apps/*`, `packages/*`); the shared
-  `catalog:` (with `next` at the latest stable release); advisory
-  `overrides`, each capped to its consumer's declared
-  range; `supportedArchitectures` covering darwin/linux, arm64/x64, glibc/musl;
-  `allowBuilds`
+  `catalog:` (with `next` at the latest stable release); `overrides`, each
+  capped to its consumer's declared range (none needed yet); `supportedArchitectures`
+  covering darwin/linux, arm64/x64, glibc/musl; `allowBuilds`; a strict
+  release-age gate; and the one scoped peer allowance for `eslint-plugin-jsx-a11y`
+- `packages/ui`, `packages/bridge` and `packages/mailer` **excluded** from the
+  workspace until task 2.1 (they expect the legacy catalog, and `bridge` imports
+  types from the removed SDK), and left out of Prettier, ESLint and the
+  link checker for the same reason; the exclusions are listed in one place each,
+  with a pointer to 2.1
 - `turbo.json` with `build`, `dev`, `lint`, `typecheck`, `test`
 - Prettier (single quotes, semicolons, trailing commas `all`, width 100,
-  2-space) and ESLint 9 flat config with `typescript-eslint` strict and
-  `eslint-config-prettier`; pre-commit hooks running both
+  2-space) and ESLint 10 flat config with `typescript-eslint` strict, jsx-a11y
+  and `eslint-config-prettier`; a lint rule that stops `packages/*` importing the
+  core app; pre-commit hooks running Prettier and ESLint
 - Root scripts the skills rely on: `format`, `format:check`, `lint`,
   `typecheck`, `test`, `build`, `docs:check-links`, `verify:push` (run by a
   pre-push hook)
-- A test that fails when `.agents/skills/` and `.claude/skills/` differ
-  (except `agents/openai.yaml`)
+- `scripts/check-doc-links.ts`: every relative Markdown link resolves; targets a
+  later task will create are listed in `PLANNED_TARGETS` and accepted only while
+  missing
+- Tests that fail when `.agents/skills/` and `.claude/skills/` differ (except
+  `agents/openai.yaml`), when the package-boundary or accessibility lint rules
+  stop firing, and when the link checker misbehaves
 - Root `package.json` at version `0.0.0`; `CURRENT_TASK.md` gitignored
 - `packages/tsconfig` (already imported from legacy with its history before the
   first push) wired into the workspace
@@ -58,7 +68,12 @@ every supported platform.
 **Review checklist:**
 
 - `pnpm install --frozen-lockfile` succeeds on macOS and in `node:24-alpine`
+  (the lockfile carries the glibc and musl variants of native packages for
+  arm64 and x64; a git-less copy installs, as a Docker build context would)
 - `pnpm format:check` and `pnpm lint` pass
+- `pnpm verify:push` passes
+- Each new guard is seen to fail when broken: skills drift, the package
+  boundary, the accessibility rules, a dead link
 - `git rev-list --max-parents=0 HEAD` returns only the manifesto commit
 
 #### 📋 0.2 — `apps/core` skeleton

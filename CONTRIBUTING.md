@@ -15,12 +15,20 @@ follow the same rules, written for them in [AGENTS.md](AGENTS.md).
 
 ## Development setup
 
-You need Node 24.15 or later (the exact version is in `.node-version`), pnpm 11,
-and Docker (for the development sqld database).
+You need Node 24.15 or later (the exact version is in `.node-version`), pnpm 11
+(`packageManager` in `package.json` pins the version; pnpm fetches it for you),
+and Docker (for the development sqld database, from task 0.5).
 
-The workspace, development server, test commands and seed data arrive with the
-first tasks of the roadmap (0.1, 0.2 and 0.5); this section is filled in as they
-land.
+```bash
+git clone git@github.com:sovereignfs/sovereign-core.git
+cd sovereign-core
+pnpm install --frozen-lockfile   # also installs the pre-commit and pre-push hooks
+pnpm verify:push                 # everything CI will check
+```
+
+The hooks run Prettier and ESLint on the files you commit and the full
+`pnpm verify:push` before a push. The development server, database scripts and
+seed data arrive with tasks 0.2, 0.5 and 1.2; this section grows as they land.
 
 ---
 

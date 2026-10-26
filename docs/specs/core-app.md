@@ -1,9 +1,9 @@
 # Sovereign Core — app specification
 
-| | |
-| --- | --- |
-| **Status** | Draft |
-| **Covers** | `apps/core` |
+|                      |                    |
+| -------------------- | ------------------ |
+| **Status**           | Draft              |
+| **Covers**           | `apps/core`        |
 | **Phases specified** | Phase 1 of the MVP |
 
 This document is the single source of truth for what the core app does. Where
@@ -54,15 +54,16 @@ backups) that apps may use.
 - Core's UI follows the established Sovereign UI as it is: each kind of page
   keeps the layout and behaviour of its Sovereign predecessor.
 
-  | Core page | Follows the Sovereign |
-  | --- | --- |
-  | Sign-in, sign-up, forgot and reset password, second step, verify email | sign-in pages |
-  | Consent | consent page |
-  | The frame around signed-in pages: header, navigation, mobile header and footer, user menu | platform shell |
-  | Launcher | Launcher |
-  | Console | Console |
-  | Identity pages | Account, opened as an overlay above the current page |
-  | Privacy Policy and Terms of Service | legal pages |
+  | Core page                                                                                 | Follows the Sovereign                                |
+  | ----------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+  | Sign-in, sign-up, forgot and reset password, second step, verify email                    | sign-in pages                                        |
+  | Consent                                                                                   | consent page                                         |
+  | The frame around signed-in pages: header, navigation, mobile header and footer, user menu | platform shell                                       |
+  | Launcher                                                                                  | Launcher                                             |
+  | Console                                                                                   | Console                                              |
+  | Identity pages                                                                            | Account, opened as an overlay above the current page |
+  | Privacy Policy and Terms of Service                                                       | legal pages                                          |
+
 - Core MUST NOT use another component library, Tailwind, or runtime CSS-in-JS.
   Its own styles are CSS Modules that reference the design system's semantic
   tokens; colours, spacing and radii are never hard-coded.
@@ -74,29 +75,29 @@ backups) that apps may use.
 
 ### 1.2 Terminology
 
-| Term | Meaning |
-| --- | --- |
-| **Account** | A person's identity in core: email address, credentials, profile. |
-| **Role** | A named set of capabilities assigned to an account. Named `scope:role-name`. |
-| **Capability** | A single permission that is checked in code. Named `resource:action`. |
-| **Owner** | The account holding `platform:owner`. There is exactly one. |
-| **Operator** | An account holding `platform:owner` or `platform:admin`. |
-| **Client** | An application registered with core as an OAuth/OIDC client. |
-| **App** | A client as presented to users, through its launcher entry. |
-| **Trusted client** | A client whose users are not asked for consent (§3.6.4). |
-| **Console** | Core's administration area, for operators. |
-| **Identity pages** | Core's pages where a person manages their own account. |
-| **Launcher** | Core's home page for signed-in users, listing apps. |
+| Term               | Meaning                                                                      |
+| ------------------ | ---------------------------------------------------------------------------- |
+| **Account**        | A person's identity in core: email address, credentials, profile.            |
+| **Role**           | A named set of capabilities assigned to an account. Named `scope:role-name`. |
+| **Capability**     | A single permission that is checked in code. Named `resource:action`.        |
+| **Owner**          | The account holding `platform:owner`. There is exactly one.                  |
+| **Operator**       | An account holding `platform:owner` or `platform:admin`.                     |
+| **Client**         | An application registered with core as an OAuth/OIDC client.                 |
+| **App**            | A client as presented to users, through its launcher entry.                  |
+| **Trusted client** | A client whose users are not asked for consent (§3.6.4).                     |
+| **Console**        | Core's administration area, for operators.                                   |
+| **Identity pages** | Core's pages where a person manages their own account.                       |
+| **Launcher**       | Core's home page for signed-in users, listing apps.                          |
 
 ---
 
 ## 2. Phase overview
 
-| Phase | Theme | Status |
-| --- | --- | --- |
-| **1** | Identity, sign-in server, app registration | Specified below |
-| 2 | Core services for apps: mail, notifications, activity, account-deletion fan-out, backups | Not yet specified |
-| Later | Groups and access policies, export, recovery kit, relay, and more | Not yet specified |
+| Phase | Theme                                                                                    | Status            |
+| ----- | ---------------------------------------------------------------------------------------- | ----------------- |
+| **1** | Identity, sign-in server, app registration                                               | Specified below   |
+| 2     | Core services for apps: mail, notifications, activity, account-deletion fan-out, backups | Not yet specified |
+| Later | Groups and access policies, export, recovery kit, relay, and more                        | Not yet specified |
 
 ---
 
@@ -112,11 +113,11 @@ core and see it in the launcher.
 
 #### 3.2.1 Roles
 
-| Role | Who |
-| --- | --- |
+| Role             | Who                                           |
+| ---------------- | --------------------------------------------- |
 | `platform:owner` | The one account responsible for the instance. |
-| `platform:admin` | Operators appointed by the owner. |
-| `platform:user` | Everyone else. The default for a new account. |
+| `platform:admin` | Operators appointed by the owner.             |
+| `platform:user`  | Everyone else. The default for a new account. |
 
 - Role names MUST follow `scope:role-name`. Phase 1 defines only the
   `platform` scope; other scopes are reserved for later use.
@@ -134,20 +135,20 @@ core and see it in the launcher.
 Capabilities are the unit every check uses. Roles are only named bundles of
 them.
 
-| Capability | Allows | Default roles |
-| --- | --- | --- |
-| `profile:manage` | Edit one's own profile, credentials and preferences | user, admin, owner |
-| `launcher:access` | Use the launcher | user, admin, owner |
-| `console:access` | Enter the Console | admin, owner |
-| `user:view` | View the account list | admin, owner |
-| `user:manage` | Invite, deactivate, reactivate, delete accounts; reset MFA | admin, owner |
-| `client:manage` | Register, edit, disable and delete clients; rotate secrets | admin, owner |
-| `instance:view` | View instance settings | admin, owner |
-| `instance:configure` | Change instance settings other than secrets | admin, owner |
-| `instance:configure-secrets` | View and change instance secrets (SMTP credentials) | owner only |
-| `role:assign` | Change another account's role | owner only |
-| `capability:configure` | Edit the capability matrix | owner only |
-| `ownership:transfer` | Transfer ownership | owner only |
+| Capability                   | Allows                                                     | Default roles      |
+| ---------------------------- | ---------------------------------------------------------- | ------------------ |
+| `profile:manage`             | Edit one's own profile, credentials and preferences        | user, admin, owner |
+| `launcher:access`            | Use the launcher                                           | user, admin, owner |
+| `console:access`             | Enter the Console                                          | admin, owner       |
+| `user:view`                  | View the account list                                      | admin, owner       |
+| `user:manage`                | Invite, deactivate, reactivate, delete accounts; reset MFA | admin, owner       |
+| `client:manage`              | Register, edit, disable and delete clients; rotate secrets | admin, owner       |
+| `instance:view`              | View instance settings                                     | admin, owner       |
+| `instance:configure`         | Change instance settings other than secrets                | admin, owner       |
+| `instance:configure-secrets` | View and change instance secrets (SMTP credentials)        | owner only         |
+| `role:assign`                | Change another account's role                              | owner only         |
+| `capability:configure`       | Edit the capability matrix                                 | owner only         |
+| `ownership:transfer`         | Transfer ownership                                         | owner only         |
 
 #### 3.2.3 The capability matrix
 
@@ -285,14 +286,14 @@ passkeys), subject to §3.2.1. The account holder is told by email.
 
 #### 3.6.2 Scopes and claims
 
-| Scope | Claims or access |
-| --- | --- |
-| `openid` | `sub`: stable, unique, never reused |
-| `profile` | `name`, `picture`, `locale`, `zoneinfo` |
-| `email` | `email`, `email_verified` |
-| `roles` | `roles`: the account's platform roles. Trusted clients only (§3.6.4) |
-| `directory` | Access to the Directory API (§3.9) |
-| `offline_access` | A refresh token |
+| Scope            | Claims or access                                                     |
+| ---------------- | -------------------------------------------------------------------- |
+| `openid`         | `sub`: stable, unique, never reused                                  |
+| `profile`        | `name`, `picture`, `locale`, `zoneinfo`                              |
+| `email`          | `email`, `email_verified`                                            |
+| `roles`          | `roles`: the account's platform roles. Trusted clients only (§3.6.4) |
+| `directory`      | Access to the Directory API (§3.9)                                   |
+| `offline_access` | A refresh token                                                      |
 
 A client receives only the scopes it is allowed (§3.7) and the user has
 granted (§3.6.4).
@@ -336,7 +337,7 @@ alone, so revoking them is core's own step.
 - **Back-channel logout.** When a person's core session ends — they sign out of
   core, they end a session in their identity pages, an operator ends it, or the
   account is deactivated — core revokes the access tokens of that session and
-  sends a signed *logout token* (OpenID Connect Back-Channel Logout, carrying
+  sends a signed _logout token_ (OpenID Connect Back-Channel Logout, carrying
   the `sub` and the session id `sid`) to the back-channel logout URI of every
   client that session was used with. A notice that fails is logged and not
   retried, so an app must also treat its own session as ending when its access
@@ -352,26 +353,26 @@ Operators with `client:manage` register clients in the Console.
 
 #### 3.7.1 Client settings
 
-| Setting | Notes |
-| --- | --- |
-| Client type | Confidential (has a secret) or public (no secret). PKCE is required for both |
-| Redirect URIs | One or more; exact match. Must be `https`. `http` is accepted on `localhost` and `*.localhost` only when the instance's own URL (`SV_URL`) is `http`, that is on a development instance |
-| Post-logout redirect URIs | Optional; the only addresses core returns a person to after sign-out |
-| Back-channel logout URI | Optional. Core sends a signed logout notice there when a person's session ends (§3.6.5) |
-| End-session | Lets the app send people to core's sign-out (§3.6.5). On automatically when a post-logout redirect URI or a back-channel logout URI is set |
-| Allowed scopes | Any of §3.6.2; `roles` only when trusted |
-| Trusted | Off by default |
-| Enabled | On by default |
+| Setting                   | Notes                                                                                                                                                                                   |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Client type               | Confidential (has a secret) or public (no secret). PKCE is required for both                                                                                                            |
+| Redirect URIs             | One or more; exact match. Must be `https`. `http` is accepted on `localhost` and `*.localhost` only when the instance's own URL (`SV_URL`) is `http`, that is on a development instance |
+| Post-logout redirect URIs | Optional; the only addresses core returns a person to after sign-out                                                                                                                    |
+| Back-channel logout URI   | Optional. Core sends a signed logout notice there when a person's session ends (§3.6.5)                                                                                                 |
+| End-session               | Lets the app send people to core's sign-out (§3.6.5). On automatically when a post-logout redirect URI or a back-channel logout URI is set                                              |
+| Allowed scopes            | Any of §3.6.2; `roles` only when trusted                                                                                                                                                |
+| Trusted                   | Off by default                                                                                                                                                                          |
+| Enabled                   | On by default                                                                                                                                                                           |
 
 #### 3.7.2 Launcher entry
 
-| Setting | Notes |
-| --- | --- |
-| Name | Required |
-| Description | Optional, short |
-| Icon | Optional; a default is drawn from the name when absent |
-| Launch URL | Where the launcher sends people |
-| Show in launcher | On by default |
+| Setting          | Notes                                                  |
+| ---------------- | ------------------------------------------------------ |
+| Name             | Required                                               |
+| Description      | Optional, short                                        |
+| Icon             | Optional; a default is drawn from the name when absent |
+| Launch URL       | Where the launcher sends people                        |
+| Show in launcher | On by default                                          |
 
 #### 3.7.3 Secrets and lifecycle
 
@@ -441,21 +442,21 @@ Every person manages their own account here (capability `profile:manage`).
 The identity pages open as an overlay above the page the person was on, and
 closing them returns there (§1.3).
 
-| Page | Contents |
-| --- | --- |
-| Profile | Name and avatar. The email address is shown but cannot be changed in Phase 1 |
-| Security | Change password; manage passkeys; enrol or remove TOTP and backup codes; list sessions and end any of them |
-| Preferences | Timezone and locale |
+| Page           | Contents                                                                                                          |
+| -------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Profile        | Name and avatar. The email address is shown but cannot be changed in Phase 1                                      |
+| Security       | Change password; manage passkeys; enrol or remove TOTP and backup codes; list sessions and end any of them        |
+| Preferences    | Timezone and locale                                                                                               |
 | Connected apps | Apps the person has allowed, with the scopes granted; **Remove access** revokes the app's tokens as well (§3.6.4) |
-| Delete account | Requires the password. The owner must transfer ownership first |
+| Delete account | Requires the password. The owner must transfer ownership first                                                    |
 
 ### 3.12 Console: instance settings
 
-| Setting | Capability | Notes |
-| --- | --- | --- |
-| Instance name | `instance:configure` | Shown in pages and emails |
-| Logo (light and dark), favicon | `instance:configure` | Used by core's pages, the launcher and emails, and published for apps (§3.13) |
-| Invite-only | `instance:configure` | Overrides `SV_AUTH_INVITE_ONLY` (§3.3.1) |
+| Setting                                        | Capability                   | Notes                                                                                       |
+| ---------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------- |
+| Instance name                                  | `instance:configure`         | Shown in pages and emails                                                                   |
+| Logo (light and dark), favicon                 | `instance:configure`         | Used by core's pages, the launcher and emails, and published for apps (§3.13)               |
+| Invite-only                                    | `instance:configure`         | Overrides `SV_AUTH_INVITE_ONLY` (§3.3.1)                                                    |
 | SMTP: host, port, user, from address, password | `instance:configure-secrets` | Overrides the `SV_SMTP_*` variables; the password is stored encrypted and never shown again |
 
 ### 3.13 Instance branding for apps
@@ -497,19 +498,19 @@ that apps can show the same branding. The address and format are defined in
 - Phase 1 environment variables. **The names are provisional** until
   `spec/env.md` fixes the shared naming rules:
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `SV_URL` | yes | Core's public URL, which is also the issuer (§3.6.1). It must be reachable from the core process itself (§3.6.5) |
-| `SV_AUTH_SECRET` / `_FILE` | yes | Signing secret, at least 32 characters |
-| `SV_AUTH_COOKIE_DOMAIN` | no | Parent domain for session cookies. Apps signing in through OpenID Connect do not need it; it matters only when core's own pages or passkeys are shared across subdomains |
-| `SV_AUTH_TRUSTED_ORIGINS` | no | Extra origins accepted for requests |
-| `SV_AUTH_INVITE_ONLY` | no | Registration policy default (§3.3.1) |
-| `SV_AUTH_REQUIRE_EMAIL_VERIFICATION` | no | Default `true` (§3.3.3) |
-| `SV_AUTH_PASSWORD_MIN_LENGTH`, `SV_AUTH_PASSWORD_REQUIRE_*` | no | Password policy (§3.3.2) |
-| `SV_AUTH_WEBAUTHN_RP_ID`, `_RP_NAME`, `_ORIGIN` | no | Passkey relying party (§3.4.2) |
-| `SV_DB_DIALECT`, `SV_SQLD_URL`, `SV_SQLD_ADMIN_URL`, `SV_SQLITE_URL`, `SV_POSTGRES_URL` | yes, by dialect | Database |
-| `SV_FIELD_ENCRYPTION_KEYS` / `_FILE` | yes | Keys for stored secrets |
-| `SV_SMTP_HOST`, `_PORT`, `_USER`, `_PASSWORD` / `_PASSWORD_FILE`, `_FROM` | no | Mail defaults (§3.12) |
+| Variable                                                                                | Required        | Purpose                                                                                                                                                                  |
+| --------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `SV_URL`                                                                                | yes             | Core's public URL, which is also the issuer (§3.6.1). It must be reachable from the core process itself (§3.6.5)                                                         |
+| `SV_AUTH_SECRET` / `_FILE`                                                              | yes             | Signing secret, at least 32 characters                                                                                                                                   |
+| `SV_AUTH_COOKIE_DOMAIN`                                                                 | no              | Parent domain for session cookies. Apps signing in through OpenID Connect do not need it; it matters only when core's own pages or passkeys are shared across subdomains |
+| `SV_AUTH_TRUSTED_ORIGINS`                                                               | no              | Extra origins accepted for requests                                                                                                                                      |
+| `SV_AUTH_INVITE_ONLY`                                                                   | no              | Registration policy default (§3.3.1)                                                                                                                                     |
+| `SV_AUTH_REQUIRE_EMAIL_VERIFICATION`                                                    | no              | Default `true` (§3.3.3)                                                                                                                                                  |
+| `SV_AUTH_PASSWORD_MIN_LENGTH`, `SV_AUTH_PASSWORD_REQUIRE_*`                             | no              | Password policy (§3.3.2)                                                                                                                                                 |
+| `SV_AUTH_WEBAUTHN_RP_ID`, `_RP_NAME`, `_ORIGIN`                                         | no              | Passkey relying party (§3.4.2)                                                                                                                                           |
+| `SV_DB_DIALECT`, `SV_SQLD_URL`, `SV_SQLD_ADMIN_URL`, `SV_SQLITE_URL`, `SV_POSTGRES_URL` | yes, by dialect | Database                                                                                                                                                                 |
+| `SV_FIELD_ENCRYPTION_KEYS` / `_FILE`                                                    | yes             | Keys for stored secrets                                                                                                                                                  |
+| `SV_SMTP_HOST`, `_PORT`, `_USER`, `_PASSWORD` / `_PASSWORD_FILE`, `_FROM`               | no              | Mail defaults (§3.12)                                                                                                                                                    |
 
 Database variables name the engine (`SV_POSTGRES_URL`, `SV_SQLD_URL`,
 `SV_SQLITE_URL`), not the component.
@@ -564,10 +565,10 @@ apps) and §3.15 (image storage, secrets from files).
 
 ## Changelog
 
-| Date | Change |
-| --- | --- |
-| 2026-10-26 | First draft: principles, terminology, phase overview, Phase 1. |
-| 2026-10-26 | Added §1.3 (pages built from `@sovereignfs/ui`); the owner chooses their role when transferring ownership; environment variable names marked provisional, with database variables named by engine. |
-| 2026-10-26 | Answered the open questions: token lifetimes and refresh rotation (§3.6.1), secret rotation choice (§3.7.3), launcher opens apps in the same tab (§3.8), images stored in the database and `_FILE` for every secret (§3.15). |
-| 2026-10-26 | §1.3: core's UI follows the established Sovereign UI page by page; §3.11: identity pages open as an overlay. |
+| Date       | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-26 | First draft: principles, terminology, phase overview, Phase 1.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 2026-10-26 | Added §1.3 (pages built from `@sovereignfs/ui`); the owner chooses their role when transferring ownership; environment variable names marked provisional, with database variables named by engine.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 2026-10-26 | Answered the open questions: token lifetimes and refresh rotation (§3.6.1), secret rotation choice (§3.7.3), launcher opens apps in the same tab (§3.8), images stored in the database and `_FILE` for every secret (§3.15).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 2026-10-26 | §1.3: core's UI follows the established Sovereign UI page by page; §3.11: identity pages open as an overlay.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | 2026-10-27 | Applied research 0001 (better-auth's OAuth provider): issuer is the instance URL with discovery at the root, PKCE required for every client, signing-key rotation, reuse detection removes all of a client's tokens for the account (§3.6.1); claims in the ID token as well as userinfo (§3.6.2); deactivation and deletion revoke every token including `offline_access` (§3.3.6, §3.6.3); Remove access revokes tokens (§3.6.4, §3.11); new §3.6.5 on sign-out and back-channel logout, now in Phase 1 (§3.16); redirect URI rule with development `http` (§3.7.1); secret rotation is immediate (§3.7.3); Directory API tokens are resource-scoped JWTs with a revocation check (§3.9); acceptance criteria 7–12 (§3.17). |

@@ -8,5 +8,5 @@ Files are named `NNNN-short-slug.md`, numbered in order. A decision is never
 edited after it is accepted; a later ADR supersedes it and says so.
 
 | ADR | Decision | Status |
-| --- | --- | --- |
-| — | None yet | — |
+| --- | -------- | ------ |
+| —   | None yet | —      |

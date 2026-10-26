@@ -39,8 +39,8 @@ Run it manually any time with `sv-security-check`.
 
 3. **Check these rules explicitly:**
 
-   | Rule                            | What to verify in the diff                                                                                                                 |
-   | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+   | Rule                            | What to verify in the diff                                                                                                                |
+   | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
    | Server actions authorize inside | Every `'use server'` function requires a session; mutations also check the specific capability. Reads don't demand a mutation capability. |
    | Route handlers authorize inside | Every API route checks its own session, token scope or capability; nothing trusts a caller-supplied identity header.                      |
    | Owner and operator guarantees   | Owner-only capabilities stay ungrantable; only the owner acts on operators; no path leaves zero or two owners.                            |
@@ -60,9 +60,9 @@ Run it manually any time with `sv-security-check`.
    | better-auth `Origin`            | Server-to-server calls to better-auth send `Origin` equal to its base URL.                                                                |
    | `session.freshAge: 0`           | Unchanged unless a re-authentication flow ships with it.                                                                                  |
    | Session cookies                 | Profile self-mutations clear both `session_data` cookie variants.                                                                         |
-   | Stored secrets                  | Encrypted through `packages/crypto`; client secrets hashed; never logged or returned after creation.                                     |
+   | Stored secrets                  | Encrypted through `packages/crypto`; client secrets hashed; never logged or returned after creation.                                      |
    | Uploads                         | Type and size checked on the server; SVG sanitised; served with `nosniff`.                                                                |
-   | Enumeration                     | Responses don't reveal whether an email address has an account (reset, directory beyond exact match).                                   |
+   | Enumeration                     | Responses don't reveal whether an email address has an account (reset, directory beyond exact match).                                     |
    | Client globals                  | No browser globals in `useState` initializers or render.                                                                                  |
    | Docker workspace                | Dockerfiles keep the `pnpm-workspace.yaml` COPY; migrations ship in the image.                                                            |
    | Regex                           | No anchored quantifier before `$`/`^` on untrusted input.                                                                                 |

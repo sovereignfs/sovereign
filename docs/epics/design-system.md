@@ -28,8 +28,18 @@ first.
 
 **Deliverables:**
 
+- Remove the three `!packages/…` exclusions from `pnpm-workspace.yaml`, and the
+  matching entries in `.prettierignore`, `eslint.config.ts`, `tsconfig.json` and
+  `scripts/lib/doc-links.ts` (for `docs/design-system.md` and the four imported
+  scripts too); add to the catalog whatever the three packages need (Storybook,
+  dnd-kit, testing-library, tsup, Playwright, jsdom…) at current releases
 - `packages/ui`, `packages/bridge`, `packages/mailer` resolve their
   dependencies from the new catalog and `packages/tsconfig`
+- **`bridge` stops depending on the removed SDK:** it imports types from
+  `@sovereignfs/sdk/device-bridge` (a 129-line module of types and
+  registration); move that module into `packages/bridge` and delete the
+  `@sovereignfs/sdk` dev dependency. (`ui` only mentions the SDK in comments, so
+  needs no code change.)
 - Root scripts `generate:icons`, `generate:theme-presets` and
   `design:tokens:check` wired up; the token check pointed at `apps/core` and
   `packages/` instead of legacy paths
@@ -45,6 +55,8 @@ first.
 **Review checklist:**
 
 - `pnpm build`, `pnpm test` and `pnpm typecheck` pass for all three packages
+- `pnpm install --frozen-lockfile` still works with the exclusions gone
+- No file under `packages/` mentions `@sovereignfs/sdk` except in prose that explains why
 - `pnpm design:tokens:check` passes and fails on a hard-coded colour
 
 #### 📋 2.2 — Publishing and licence

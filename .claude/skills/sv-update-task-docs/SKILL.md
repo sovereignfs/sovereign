@@ -50,9 +50,9 @@ standalone. Requires `CURRENT_TASK.md`.
    workstream is complete.
 
 7. **Sync version-bearing docs** when this branch bumped the root version
-   (`git diff main...HEAD -- package.json`): update `AGENTS.md`'s
-   `Current platform version: **\`X\`**` line and `ROADMAP.md`'s
-   `**Version:**` header, and set its `**Last updated:**` to today.
+   (`git diff main...HEAD -- package.json`): update the "Current platform
+   version" line in `AGENTS.md` and the "Version" header in `ROADMAP.md`, and set
+   that file's "Last updated" date to today.
 
 8. **Validate:** each completed task ID appears exactly once as a roadmap
    link; roadmap and epic statuses are `✅`; a bumped root version matches

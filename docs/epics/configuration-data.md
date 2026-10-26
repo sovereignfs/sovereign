@@ -30,6 +30,8 @@ per-app prefix.
 
 **Deliverables:**
 
+- Delete the `spec/env.md` entry from `PLANNED_TARGETS` in
+  `scripts/lib/doc-links.ts` once the file exists
 - `spec/env.md`: prefix rule (`SV_` for core, the app's own prefix otherwise),
   shared suffixes, database variables named by engine (`SV_POSTGRES_URL`,
   `SV_SQLD_URL`, `SV_SQLITE_URL`), the `_FILE` rule (every secret accepts a

@@ -129,7 +129,7 @@ can affect is run.
 - A docs-only PR runs only the change-detection job
 - A deliberately failing test on one database leg fails CI
 
-#### 📋 0.4 — Repository documents `[parallel]`
+#### ✅ 0.4 — Repository documents `[parallel]`
 
 **Goal:** People and agents know how to work here before code lands.
 

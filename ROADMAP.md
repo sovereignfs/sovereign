@@ -1,6 +1,6 @@
 # Sovereign Core — Roadmap
 
-**Version:** 0.1.0 · **Last updated:** 2026-10-26
+**Version:** 0.2.0 · **Last updated:** 2026-10-26
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -25,7 +25,7 @@ _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked · �
 | Version | Task                                             | Status | Epic task                               |
 | ------- | ------------------------------------------------ | ------ | --------------------------------------- |
 | 0.1.0   | Workspace skeleton                               | ✅     | [0.1](docs/epics/infrastructure.md)     |
-| —       | Repository documents `[parallel]`                | 📋     | [0.4](docs/epics/infrastructure.md)     |
+| 0.2.0   | Repository documents `[parallel]`                | ✅     | [0.4](docs/epics/infrastructure.md)     |
 | —       | Continuous integration                           | 📋     | [0.3](docs/epics/infrastructure.md)     |
 | —       | Environment convention and `packages/config`     | 📋     | [1.1](docs/epics/configuration-data.md) |
 | —       | ui, bridge and mailer build in the new workspace | 📋     | [2.1](docs/epics/design-system.md)      |

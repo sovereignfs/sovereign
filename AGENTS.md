@@ -294,7 +294,7 @@ that create them (0.2, 0.5, 1.2).
 
 ## Status
 
-Current platform version: **`0.0.0`**. `ROADMAP.md` is the canonical task queue
+Current platform version: **`0.1.0`**. `ROADMAP.md` is the canonical task queue
 and completion record.
 
 **The next task is assigned by the developer at session start.** Read

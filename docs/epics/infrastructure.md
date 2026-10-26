@@ -6,7 +6,7 @@
 
 ## Status
 
-📋 Planned
+⏳ In Progress
 
 ## Overview
 
@@ -24,7 +24,7 @@ in this epic is that phase's acceptance suite.
 
 ## Tasks
 
-#### ⏳ 0.1 — Workspace skeleton
+#### ✅ 0.1 — Workspace skeleton
 
 **Goal:** A pnpm + Turborepo workspace that installs from a frozen lockfile on
 every supported platform.

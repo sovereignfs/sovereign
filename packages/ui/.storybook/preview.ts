@@ -7,11 +7,11 @@ import '../src/tokens/theme-presets.css';
 import './preview-globals.css';
 import { THEME_PRESETS, type ThemePresetName } from '../src/tokens/theme-presets';
 
-// RFC 0077 corner-radius presets. Mirrors runtime/src/instance-style.ts's
-// RADIUS_SCALE table — that's the canonical, production lookup (driven by
-// InstanceConfig.instanceRadius); this is Storybook's own dev-tooling copy,
-// not a second source of truth for the feature. packages/ui can't import it
-// directly — runtime depends on packages/ui, never the reverse.
+// Corner-radius presets. This is Storybook's own dev-tooling copy of the
+// RADIUS_SCALE lookup an app uses to turn its configured preset into
+// --sv-radius-scale; it is not a second source of truth for the feature.
+// packages/ui can't import an app's copy — apps depend on packages/ui, never
+// the reverse.
 const RADIUS_SCALE: Record<string, number> = {
   none: 0,
   xs: 0.35,

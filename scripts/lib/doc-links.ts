@@ -31,28 +31,14 @@ const IGNORED_DIRECTORIES = new Set([
   'test-results',
 ]);
 
-/**
- * Paths (relative to the root) that are not checked yet. Files imported from the
- * legacy repository still carry links to legacy-only pages; task 2.1 ports them
- * and removes these entries.
- */
-const SKIPPED_PATHS = [
-  'packages/ui',
-  'packages/bridge',
-  'packages/mailer',
-  'docs/design-system.md',
-];
-
-function* walk(dir: string, root: string): Generator<string> {
+function* walk(dir: string): Generator<string> {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     // Never follow a symlink: a loop would recurse forever, and a link out of
     // the repository would make this read documents that are not ours.
     if (entry.isSymbolicLink()) continue;
     if (IGNORED_DIRECTORIES.has(entry.name)) continue;
     const full = path.join(dir, entry.name);
-    const rel = path.relative(root, full).split(path.sep).join('/');
-    if (SKIPPED_PATHS.includes(rel)) continue;
-    if (entry.isDirectory()) yield* walk(full, root);
+    if (entry.isDirectory()) yield* walk(full);
     else if (entry.isFile() && entry.name.endsWith('.md')) yield full;
   }
 }
@@ -106,7 +92,7 @@ export function checkDocLinks(
   planned: Record<string, string> = PLANNED_TARGETS,
 ): Finding[] {
   const findings: Finding[] = [];
-  for (const file of walk(root, root)) {
+  for (const file of walk(root)) {
     const rel = path.relative(root, file).split(path.sep).join('/');
     const masked = maskCode(readFileSync(file, 'utf8'));
     masked.split('\n').forEach((line, index) => {

@@ -29,8 +29,8 @@ export interface RootLayoutProps {
    */
   variant?: RootLayoutVariant;
   children: ReactNode;
-  /** px. Default 64 — matches the platform's own persistent nav rail
-   *  (`--sv-shell-sidebar-width`, runtime/app/(platform)/shell.module.css).
+  /** px. Default 64 — matches the shell's own persistent nav rail
+   *  (`--sv-shell-sidebar-width`).
    *  Only used by `'sidebar'`. */
   sidebarWidth?: number;
   /** px. Default 48 — matches a real `shell: minimal` plugin's own compact

@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
-// The platform's canonical mobile breakpoint — matches the shell chrome and
-// Dialog's own full-screen-sheet switch (`runtime/app/globals.css`,
-// `Dialog.module.css`). A plugin whose own layout genuinely needs a different
+// The canonical mobile breakpoint — matches the shell chrome and Dialog's own
+// full-screen-sheet switch (`Dialog.module.css`). A page whose own layout genuinely needs a different
 // threshold may still hardcode its own value (e.g. a three-column layout that
 // only needs to fork earlier than 768px) — this constant is the *default* every
 // consumer should reach for first, so the platform's idea of "mobile" doesn't

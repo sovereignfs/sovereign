@@ -1,4 +1,4 @@
-/* Matches runtime/app/globals.css's own reset — without this, Storybook
+/* Matches the app shell's own global reset — without this, Storybook
    renders every component's padding/border ON TOP OF a min-height/height
    instead of within it (the browser default is content-box), so anything
    sized against a real px budget (Header's 48px bar, Popover's calc() math,

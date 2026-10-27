@@ -6,7 +6,7 @@
  * content is sparse, only hitting the cap (and scrolling internally, inside
  * `.content`) once content actually exceeds it. Before this, height was
  * fixed too, which left short-content consumers (e.g. a two-field form in
- * console/plugins/PluginAccessDialog.tsx) looking like a near-empty
+ * the Console) looking like a near-empty
  * skeleton — see docs/architecture-rules.md. `auto` goes further — content-
  * driven on BOTH width and height, each independently capped rather than
  * either being fixed — for content whose natural footprint varies enough

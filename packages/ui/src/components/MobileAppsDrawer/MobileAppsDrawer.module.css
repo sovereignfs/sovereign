@@ -1,8 +1,6 @@
-/* Matches the runtime shell's own Apps drawer grid exactly
-   (runtime/app/(platform)/_components/MobileNav.module.css's .drawerGrid/
-   .drawerGridItem/.drawerGridIcon/.drawerGridName) — this component is
-   meant to replace that hand-rolled markup for any consumer building its
-   own Apps-style launcher. No header row — see the component's own doc
+/* Matches the shell's own Apps drawer grid exactly — this component is
+   meant to replace hand-rolled markup for any consumer building its own
+   Apps-style launcher. No header row — see the component's own doc
    comment for why. */
 
 .grid {

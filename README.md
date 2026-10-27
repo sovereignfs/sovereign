@@ -39,9 +39,9 @@ and more. The spec lists what is in and out of each phase.
 | -------------------- | --------------------------------------------------------------- | ----------------------------------------------------- |
 | `apps/core`          | The core app: sign-in server, Console, launcher                 | Planned (roadmap task 0.2 onwards)                    |
 | `packages/tsconfig`  | Shared TypeScript configuration                                 | In the workspace                                      |
-| `packages/ui`        | The design system, `@sovereignfs/ui`                            | Imported with history; ported by task 2.1             |
-| `packages/bridge`    | The device bridge, `@sovereignfs/bridge`                        | Imported with history; ported by task 2.1             |
-| `packages/mailer`    | Mail delivery                                                   | Imported with history; ported by task 2.1             |
+| `packages/ui`        | The design system, `@sovereignfs/ui`                            | In the workspace (Storybook runs and builds)          |
+| `packages/bridge`    | The device bridge, `@sovereignfs/bridge`                        | In the workspace                                      |
+| `packages/mailer`    | Mail delivery                                                   | In the workspace                                      |
 | `packages/config`    | The environment convention and start-up validation              | In the workspace                                      |
 | `packages/*` (later) | `database`, `crypto`, `auth`, `api-client`, …                   | Planned                                               |
 | `spec/`              | `env.md` (the environment convention) and the Core API contract | `env.md` written; the contract is planned (task 10.1) |
@@ -57,7 +57,7 @@ and Docker (from task 0.5, for the development database).
 git clone git@github.com:sovereignfs/sovereign-core.git
 cd sovereign-core
 pnpm install --frozen-lockfile   # also installs the pre-commit and pre-push hooks
-pnpm verify:push                 # format, lint, typecheck, doc links and tests
+pnpm verify:push                 # format, lint, typecheck, design tokens, doc links and tests
 ```
 
 [`CONTRIBUTING.md`](CONTRIBUTING.md) has the branching, commit and pull request

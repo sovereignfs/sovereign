@@ -67,11 +67,18 @@ describe('checkDocLinks', () => {
     expect(checkDocLinks(root, { 'spec/core-api': 'task 10.1' })).toEqual([]);
   });
 
-  it('does not scan dependencies or the not-yet-ported legacy files', () => {
+  it('does not scan dependencies', () => {
     write('node_modules/x/README.md', '[bad](nope.md)\n');
+    expect(checkDocLinks(root, {})).toEqual([]);
+  });
+
+  it('checks the design-system documents and the packages like any other', () => {
     write('packages/ui/README.md', '[bad](nope.md)\n');
     write('docs/design-system.md', '[bad](nope.md)\n');
-    expect(checkDocLinks(root, {})).toEqual([]);
+    expect(checkDocLinks(root, {}).map((f) => f.file)).toEqual([
+      'docs/design-system.md',
+      'packages/ui/README.md',
+    ]);
   });
 
   it('plans only targets that a roadmap task will create', () => {

@@ -3,7 +3,7 @@
   "version": "0.4.0",
   "private": true,
   "type": "module",
-  "description": "Sovereign Core — a self-hostable identity and foundation service, and the shared packages every Sovereign app uses.",
+  "description": "Sovereign Core \u2014 a self-hostable identity and foundation service, and the shared packages every Sovereign app uses.",
   "license": "AGPL-3.0-or-later",
   "packageManager": "pnpm@11.28.9",
   "engines": {
@@ -12,6 +12,8 @@
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
+    "storybook": "pnpm --filter @sovereignfs/ui storybook",
+    "build-storybook": "pnpm --filter @sovereignfs/ui build-storybook",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
@@ -21,7 +23,10 @@
     "test:db": "vitest run --project db",
     "test:watch": "vitest --project unit",
     "docs:check-links": "tsx scripts/check-doc-links.ts",
-    "verify:push": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm docs:check-links && pnpm test",
+    "design:tokens:check": "tsx scripts/design-tokens-check.ts",
+    "generate:icons": "tsx scripts/generate-icons.ts && prettier --write packages/ui/src/components/Icon/icons",
+    "generate:theme-presets": "tsx scripts/generate-theme-presets-css.ts && prettier --write packages/ui/src/tokens/theme-presets.css",
+    "verify:push": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm design:tokens:check && pnpm docs:check-links && pnpm test",
     "prepare": "simple-git-hooks"
   },
   "simple-git-hooks": {
@@ -47,7 +52,9 @@
     "eslint-plugin-jsx-a11y": "catalog:",
     "globals": "catalog:",
     "jiti": "catalog:",
+    "jsdom": "catalog:",
     "lint-staged": "catalog:",
+    "lucide": "1.40.0",
     "pg": "catalog:",
     "prettier": "catalog:",
     "simple-git-hooks": "catalog:",

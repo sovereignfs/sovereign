@@ -18,15 +18,6 @@ export default defineConfig(
       '**/storybook-static/**',
       '.claude/worktrees/**',
       '.remember/**',
-      // Imported from the legacy repository with their history; ported to this
-      // workspace by roadmap task 2.1, which removes everything below.
-      'packages/ui/**',
-      'packages/bridge/**',
-      'packages/mailer/**',
-      'scripts/generate-icons.ts',
-      'scripts/icon-list.ts',
-      'scripts/generate-theme-presets-css.ts',
-      'scripts/design-tokens-check.ts',
     ],
   },
 

@@ -33,7 +33,7 @@
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ICON_LIST, type IconName } from './icon-list.ts';
+import { ICON_LIST, type IconName } from './icon-list';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = join(ROOT, 'packages', 'ui', 'src', 'components', 'Icon', 'icons');

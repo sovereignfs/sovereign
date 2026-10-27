@@ -23,7 +23,7 @@
 import { writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { THEME_PRESETS, type ThemePresetName } from '../packages/ui/src/tokens/theme-presets.ts';
+import { THEME_PRESETS, type ThemePresetName } from '../packages/ui/src/tokens/theme-presets';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_FILE = join(ROOT, 'packages/ui/src/tokens/theme-presets.css');

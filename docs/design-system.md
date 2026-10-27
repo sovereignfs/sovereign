@@ -9,14 +9,14 @@ audiences:
 # Sovereign Design System
 
 `@sovereignfs/ui` is the Sovereign Design System: design tokens and React
-components shared by the runtime shell, the Console plugin, and every
-third-party plugin. It is a **public contract** — token names and component APIs
-are versioned with the same discipline as the SDK (NFR-04). Renaming a token or
-changing a component API is a breaking change.
+components shared by core's own pages (sign-in, consent, the Console, the
+launcher, the identity pages) and every app built on Sovereign. It is a
+**public contract** — token names and component APIs follow strict semver.
+Renaming a token or changing a component API is a breaking change.
 
 This document is for **contributors** to the design system and for understanding
-how theming works. The plugin-developer consumption guide (how to use components
-and tokens inside a plugin) lives in `docs/plugin-development.md` (from v0.5).
+how theming works. An app outside this repository uses the package as
+described under [Using the design system in an app](#using-the-design-system-in-an-app).
 
 ## Contents
 
@@ -25,7 +25,7 @@ and tokens inside a plugin) lives in `docs/plugin-development.md` (from v0.5).
 - [Token reference](#token-reference)
 - [Building a component](#building-a-component)
 - [Theming](#theming)
-- [Standalone usage (outside the plugin runtime)](#standalone-usage-outside-the-plugin-runtime)
+- [Using the design system in an app](#using-the-design-system-in-an-app)
 - [Responsive & mobile](#responsive--mobile)
 
 ---
@@ -45,14 +45,14 @@ and tokens inside a plugin) lives in `docs/plugin-development.md` (from v0.5).
   keyboard operability are part of "done," not a later pass.
 - **No framework lock-in for tokens.** Tokens are plain CSS custom properties —
   consumable from any CSS, no JS import required.
-- **DS-first: plugins are consumers.** Reusable UI/UX capability — interaction
+- **DS-first: core and apps are consumers.** Reusable UI/UX capability — interaction
   hooks, overlay surfaces, secondary headers, motion, controls (pickers,
-  calendars) — ships from `@sovereignfs/ui`, or from the runtime shell when it
-  is shell chrome. It is never implemented plugin-locally: when a gap or defect
-  is discovered while working in a plugin, the fix is designed as a
-  design-system addition that the plugin then consumes — not built in the
-  plugin "to be promoted later". Plugin repositories keep only consumption
-  code and genuinely plugin-specific logic.
+  calendars) — ships from `@sovereignfs/ui`, or from core's shell when it is
+  shell chrome. It is never implemented locally in an app: when a gap or defect
+  is discovered while working in core or an app, the fix is designed as a
+  design-system addition that it then consumes — not built locally "to be
+  promoted later". An app keeps only consumption code and genuinely
+  app-specific logic.
 
 ## Token architecture
 
@@ -66,7 +66,7 @@ primitives.css   raw, context-free scales — the palette, spacing, type, radii
   --sv-radius-sm/md/lg/xl/2xl/3xl/full
         │  mapped by
         ▼
-semantic.css     contextual roles — what components and plugins reference
+semantic.css     contextual roles — what components and apps reference
   --sv-color-surface · --sv-color-text-primary · --sv-color-border
   --sv-color-accent · --sv-color-info-* · --sv-shadow-card/hover/popover …
 ```
@@ -76,29 +76,27 @@ semantic.css     contextual roles — what components and plugins reference
   override these values (at `:root` or under `[data-theme]`) — and because
   components only reference semantic tokens, nothing else changes.
 - **Reference semantic colour tokens, not primitive colours**, in components and
-  plugin CSS. The scale tokens (`--sv-space-*`, `--sv-radius-*`,
+  app CSS. The scale tokens (`--sv-space-*`, `--sv-radius-*`,
   `--sv-font-size-*`) are theme-stable and used directly — they have no separate
   semantic layer because they don't change per theme.
   - **Exception:** `--sv-radius-sm` through `--sv-radius-3xl` are proportional
     to `--sv-radius-scale` (default `1`, today's values), which an instance's
-    corner-radius preset (None/XS/S/M/L, Console → Instance identity) can
-    override at `:root` — the same `InstanceProvider` injection mechanism as
-    `--sv-color-accent` (RFC 0077). Component and plugin code is unaffected:
+    corner-radius preset (None/XS/S/M/L) can override at `:root`, the same way
+    `--sv-color-accent` is overridden. Component and app code is unaffected:
     keep referencing `--sv-radius-sm` etc. by name, never `--sv-radius-scale`
     directly. `--sv-radius-full` (avatars, pills) is not part of the scale and
     stays fixed regardless of the preset.
   - **Exception:** every `--sv-font-size-*` is `rem`-based, so it scales with
     `--sv-text-size-scale` (default `1`; `1.125` at `[data-text-size='large']`,
     `1.25` at `[data-text-size='larger']`) — the user's in-app text-size
-    preference (Account → Preferences → Appearance, task 10.2), applied
-    pre-paint the same way `[data-theme]` is. Unlike the radius exception, this
+    preference, applied pre-paint the same way `[data-theme]` is. Unlike the radius exception, this
     also scales `--sv-space-*` and `--sv-radius-*`, since rem resolves against
     the root element's actual font-size, not a per-token override — see
     `packages/ui/src/tokens/primitives.css`'s comment on `--sv-text-size-scale`.
 
-The tokens ship as plain `.css` files. The runtime shell loads them once
+The tokens ship as plain `.css` files. An app's root layout loads them once
 (`@sovereignfs/ui/tokens.css`, which imports primitives then semantic) so the
-variables are available globally to every plugin.
+variables are available globally to its pages.
 
 ## Token reference
 
@@ -113,7 +111,7 @@ variables are available globally to every plugin.
 | Font size     | `--sv-font-size-2xs` (10px), `-label` (11px), `-xs` (12px), `-caption` (13px), `-sm` (14px), `-md` (16px), `-lg` (18px), `-xl` (20px), `-2xl` (24px) |
 | Font weight   | `--sv-font-weight-regular` (400), `-medium` (500), `-semibold` (600), `-bold` (700)                                                                  |
 | Radius        | `--sv-radius-sm` (6px), `-md` (8px), `-lg` (11px), `-xl` (12px), `-2xl` (14px), `-3xl` (20px), `-full`                                               |
-| Border width  | `--sv-border-width-hairline` (1px) — RFC 0094, referenced instead of a literal border width                                                          |
+| Border width  | `--sv-border-width-hairline` (1px) — referenced instead of a literal border width                                                                    |
 | Icon size     | `--sv-icon-size-xs` (12px), `-sm` (16px), `-md` (20px), `-lg` (24px)                                                                                 |
 
 **Font families:** `--sv-font-family` names Hanken Grotesk as the preferred body font
@@ -171,13 +169,13 @@ hierarchy regression, not a fix.
 | `--sv-shadow-popover`       | composed shadow        | composed shadow        | Floating panels (e2)                                                      |
 | `--sv-shadow-overlay`       | composed shadow        | composed shadow        | Dialog / overlay elevation                                                |
 | `--sv-shadow-control`       | composed shadow        | composed shadow        | Small interactive-control shadows, e.g. Toggle thumb                      |
-| `--sv-button-shadow`        | `none`                 | `none`                 | RFC 0094 — `Button`'s own shadow; a no-op default, set by a theme preset  |
-| `--sv-button-press-x`       | `0`                    | `0`                    | RFC 0094 — `Button`'s `:active` press-offset X; a no-op default           |
-| `--sv-button-press-y`       | `0`                    | `0`                    | RFC 0094 — `Button`'s `:active` press-offset Y; a no-op default           |
+| `--sv-button-shadow`        | `none`                 | `none`                 | `Button`'s own shadow; a no-op default, set by a theme preset             |
+| `--sv-button-press-x`       | `0`                    | `0`                    | `Button`'s `:active` press-offset X; a no-op default                      |
+| `--sv-button-press-y`       | `0`                    | `0`                    | `Button`'s `:active` press-offset Y; a no-op default                      |
 
 ### Status colours
 
-A minimal error (red), warning (amber), and success (green) palette for banners, badges, and inline validation. Always reference these tokens — never hardcode colour hex in a component or plugin.
+A minimal error (red), warning (amber), and success (green) palette for banners, badges, and inline validation. Always reference these tokens — never hardcode colour hex in a component or app.
 
 | Token                        | Light     | Dark      | Role                              |
 | ---------------------------- | --------- | --------- | --------------------------------- |
@@ -202,7 +200,7 @@ These tokens are backed by `--sv-red-*`, `--sv-amber-*`, `--sv-green-*`, and `--
 
 #### Focus visible
 
-Every interactive component in `@sovereignfs/ui` exposes a `:focus-visible` outline referencing `--sv-color-focus-ring`. Third-party plugins must do the same — never suppress the focus ring with `outline: none` without providing an equivalent visible indicator.
+Every interactive component in `@sovereignfs/ui` exposes a `:focus-visible` outline referencing `--sv-color-focus-ring`. Apps must do the same — never suppress the focus ring with `outline: none` without providing an equivalent visible indicator.
 
 ```css
 /* Reference implementation (used in Button, Input, etc.): */
@@ -288,10 +286,10 @@ For a bare control outside `FormField` (e.g. `Input` used standalone), pair it w
 
    Anything else — a colour, a spacing gap, a border-radius — must be a
    token. `pnpm design:tokens:check` also fails on hardcoded hex/`rgb()`
-   colour literals in `packages/ui/src/components`, `runtime/app`, and
-   `plugins/*/app` — the check isn't limited to the design system package
-   itself, since a hardcoded literal in the shell or a first-party plugin is
-   the same drift with the same fix (add or reuse a token).
+   colour literals in `packages/ui/src/components` and `apps/` — the check
+   isn't limited to the design system package itself, since a hardcoded
+   literal in core's pages is the same drift with the same fix (add or reuse
+   a token).
 
 4. **RSC-safe.** Keep components presentational and prop-forwarding. Add
    `'use client'` only when the component genuinely needs hooks or browser state.
@@ -306,23 +304,24 @@ For a bare control outside `FormField` (e.g. `Input` used standalone), pair it w
 
 ### Token validation
 
-`pnpm design:tokens:check` (`scripts/design-tokens-check.ts`) scans every
-`var(--sv-...)` reference in `packages/ui/src`, `runtime/app`, and
-`plugins/*/app` and fails if it doesn't resolve to a token actually defined in
-`packages/ui/src/tokens/{primitives,semantic}.css` (plus the runtime-shell
-layout namespace — `--sv-shell-*` / `--sv-dialog-inset-*` — defined in
-`runtime/app/globals.css` and `shell.module.css`; see
-[`--sv-dialog-inset-top`](#--sv-dialog-inset-top) below). It also fails on
-hardcoded hex/`rgb()`/`rgba()` colour literals in `.module.css` files under
-`packages/ui/src/components`, `runtime/app`, and `plugins/*/app`.
-`packages/ui` is checked because third-party plugins inherit whatever ships
-there; the shell and first-party plugins are checked because a literal
-reached for under time pressure instead of a token is exactly how a screen
-ends up half-adhering to the design system, and it's cheaper to catch
-mechanically than in review. Runs in CI (`design-tokens` job) after
-typecheck, and as part of `pnpm verify:push` (the pre-push hook).
+`pnpm design:tokens:check` (`scripts/design-tokens-check.ts`, with the checks in
+`scripts/lib/design-tokens.ts`) scans every `var(--sv-...)` reference in
+`packages/ui/src` and `apps/` and fails if it doesn't resolve to a token
+actually defined in `packages/ui/src/tokens/{primitives,semantic}.css`. The
+exceptions are listed in the script, each with its reason: tokens set at
+runtime from JavaScript, the shell's layout namespace (`--sv-shell-*` and
+`--sv-dialog-inset-*`, set by the app that owns the shell; see
+[`--sv-dialog-inset-top`](#--sv-dialog-inset-top) below), and the one token
+`Dialog` declares for `PageContainer`. It also fails on hardcoded
+hex/`rgb()`/`rgba()` colour literals in `.module.css` files under
+`packages/ui/src/components` and `apps/`. `packages/ui` is checked because
+every app inherits whatever ships there; core's pages are checked because a
+literal reached for under time pressure instead of a token is exactly how a
+screen ends up half-adhering to the design system, and it's cheaper to catch
+mechanically than in review. It runs in CI and as part of `pnpm verify:push`
+(the pre-push hook).
 
-## Icon system (RFC 0011)
+## Icon system
 
 The design system ships a curated set of **[Lucide](https://lucide.dev)** icons as
 inline, RSC-safe SVG components. `lucide` is a build-time devDependency only — the
@@ -373,31 +372,27 @@ The icon list lives in `scripts/icon-list.ts`. To add an icon:
 3. Commit the new file in `packages/ui/src/components/Icon/icons/` alongside the
    updated `index.ts`.
 
-The set is intentionally small — add only icons the platform chrome or plugin
-ecosystem actively uses.
+The set is intentionally small — add only icons core's pages or an app
+actively uses.
 
 **Current icons:** `house`, `settings`, `log-out`, `chevron-right/left/down/up`,
 `x`, `check`, `plus`, `trash-2`, `pencil`, `rotate-ccw`, `search`, `user`,
 `shield`, `lock`, `eye`, `eye-off`, `mail`, `bell`, `activity`, `package`,
 `grid-2x2`, `info`, `alert-triangle`, `calendar`, `sliders-horizontal`,
 `ellipsis-vertical`, `external-link`, plus a `file`/`upload` pair and a curated
-grocery-item/category set (Sovereign Shopper, SHP-05) — see `scripts/icon-list.ts`
-for the full, authoritative list.
+set of item and category icons — see `scripts/icon-list.ts` for the full,
+authoritative list.
 
-### Plugin-identity icons vs UI-affordance icons
+### App-identity images vs UI-affordance icons
 
-There is an explicit split between two kinds of icons:
+There is an explicit split between two kinds of images:
 
 - **UI-affordance icons** (home, settings, close, …) — use `<Icon name="…">`.
-- **Plugin-identity icons** — the author-supplied `icon.svg` in the plugin's root
-  directory, wired into the Launcher tile and sidebar via
-  `<img src="/plugin-icons/<id>.svg" alt="">`. **Never** injected with
-  `dangerouslySetInnerHTML` — SVG from third-party plugins is untrusted markup
-  (RFC 0008 §4). The monogram is the fallback when a plugin ships no `icon.svg`.
-
-Plugin icons are copied to `runtime/public/plugin-icons/` by the generate script
-at dev startup and build time, served statically at `/plugin-icons/<id>.svg`
-without a session gate.
+- **App logos** — the image an app registers for its launcher tile (core-app
+  §3.8). It is an image the app's author supplied, so it is untrusted: render
+  it as `<img src="…" alt="">` and **never** inject the SVG markup with
+  `dangerouslySetInnerHTML`. Core sanitises uploaded SVG before it is stored
+  (core-app §3.14). A monogram is the fallback when an app has no logo.
 
 ### Lucide license
 
@@ -417,24 +412,22 @@ attribute on a root element to switch:
 </html>
 ```
 
-**Tenant theming** (CON-08) works the same way: a tenant overrides semantic
-tokens at `:root` (for example, giving Sovereign a brand colour by setting
+**Instance theming** works the same way: an instance overrides semantic
+tokens at `:root` (for example, giving the instance a brand colour by setting
 `--sv-color-accent`). Primitives stay fixed; only the semantic layer is
 overridden. Because every component references the semantic layer, a theme is
 purely a set of CSS variable values — no component or build changes required.
 
-**Theme presets** (RFC 0094/0095) generalize this into a closed, built-in set
-of full visual identities — `default` (today's look, byte-identical) and
-`neobrutalism` — each bundling border width, shadow shape, and corner radius
-together, defined once in `packages/ui/src/tokens/theme-presets.ts` and
-consumed both as generated CSS (`[data-theme-preset='neobrutalism']`, for
-Storybook and standalone use) and as a plain TS object (imported directly by
-`runtime/src/instance-style.ts` for live-instance delivery via the same
-`InstanceProvider` `:root`-injection pipe accent colour and radius already
-use — never as an `<html>` attribute in production). An operator picks a
-preset via Console → Instance identity or `INSTANCE_THEME_PRESET`; their
-already-configured accent colour and radius preset continue to override the
-chosen preset's own defaults for those specific tokens.
+**Theme presets** generalize this into a closed, built-in set of full visual
+identities — `default` and `neobrutalism` — each bundling border width, shadow
+shape, and corner radius together, defined once in
+`packages/ui/src/tokens/theme-presets.ts` and consumed both as generated CSS
+(`[data-theme-preset='neobrutalism']`, for Storybook and standalone use) and as
+a plain TS object an app can inject at `:root` itself — never as an `<html>`
+attribute in production. A configured accent colour and radius preset continue
+to override the chosen preset's own defaults for those specific tokens. Core
+does not offer presets, colours or text size to its operators in Phase 1
+(core-app §3.16).
 
 **Important — `--sv-radius-scale` and any future preset token that composes
 into another token via `calc()` can only be overridden at the actual `:root`
@@ -449,13 +442,12 @@ reference implementation of this constraint. Leaf tokens (e.g.
 
 ---
 
-## Standalone usage (outside the plugin runtime)
+## Using the design system in an app
 
-`@sovereignfs/ui` works as an ordinary npm dependency in an app that is
-**not** a Sovereign plugin and does not run inside the Sovereign runtime
-shell — no plugin manifest, no runtime composition, no session access, and
-no dependency on `@sovereignfs/sdk` (RFC 0073). It's published to the npm
-registry today; check `npm view @sovereignfs/ui` for the current version.
+`@sovereignfs/ui` works as an ordinary npm dependency in any React app,
+including one that has no relationship with Sovereign Core: it needs no core
+session, no core package, and no provider. Core's own pages use it exactly
+this way. Check `npm view @sovereignfs/ui` for the current version.
 
 ### Installation
 
@@ -480,26 +472,24 @@ tier directly, `@sovereignfs/ui/tokens/primitives.css` and
 
 Every component in `@sovereignfs/ui` is a pure CSS-variable/props consumer —
 there is no `SovereignUIRoot`-style wrapper to mount and none is required to
-use components outside the runtime shell. The package has zero
-`@sovereignfs/sdk` coupling and no `createContext`/`useContext` usage that
-crosses component boundaries (`Toast` and `Dialog` manage their own local
-state internally, not a shared runtime-injected global). If a future
+use components anywhere. The package depends on no other Sovereign package
+and has no `createContext`/`useContext` usage that crosses component
+boundaries (`Toast` and `Dialog` manage their own local state internally, not
+a shared injected global). If a future
 component needs shared context (theme, density, locale), introducing one
 would be a breaking change subject to the semver policy below — not
 something to assume silently.
 
-### Hooks are runtime-independent
+### Hooks are framework-independent
 
 `useIsMobile`, `useIsOffline`, `useLongPress`, `useDoubleTapHandler`, and
-`useCommitOnEnterOrBlur` have no dependency on the Sovereign runtime or any
-other package in this monorepo — they're safe to use in any React 18+ app,
-standalone or otherwise.
+`useCommitOnEnterOrBlur` have no dependency on any other package in this
+monorepo — they're safe to use in any React 18+ app.
 
-### Dark mode outside the runtime shell
+### Dark mode
 
-Inside the runtime shell, dark mode is driven by a `[data-theme='dark']`
-attribute the shell sets for you (see [Theming](#theming) above). A
-standalone consumer sets the same attribute itself, on its own root:
+Dark mode is driven by a `[data-theme='dark']` attribute (see
+[Theming](#theming) above). The app sets it on its own root:
 
 ```ts
 document.documentElement.dataset.theme = 'dark'; // or 'light'
@@ -509,11 +499,11 @@ There's no built-in `prefers-color-scheme` auto-detection — that choice
 (system preference vs. explicit toggle vs. always-light) is left to the
 consuming app.
 
-### No same-origin or runtime-relative asset dependencies
+### No same-origin asset dependencies
 
-Verified for this task: `@sovereignfs/ui` has no `fetch()`, `new URL()`,
-or `src="/…"`-style runtime-relative asset reference anywhere in its
-source. Icons in particular ([Icon system](#icon-system-rfc-0011)) are
+`@sovereignfs/ui` has no `fetch()`, `new URL()`, or `src="/…"`-style
+relative asset reference anywhere in its source. Icons in particular
+([Icon system](#icon-system)) are
 bundled as inline SVG React components at build time — no icon font, sprite
 sheet, or CDN request, and no dependency on being served from the same
 origin as any Sovereign instance.
@@ -536,30 +526,28 @@ function ExampleForm() {
 }
 ```
 
-### Standalone-surface stability
+### Stability
 
-`@sovereignfs/ui` follows the same strict semver discipline as
-`@sovereignfs/sdk` (NFR-04 — see [`docs/sdk-stability.md`](sdk-stability.md)):
-patch releases never break, minor releases are additive-only, and breaking
-changes require a major bump plus a migration note in `docs/upgrade.md`.
-For the specific case of standalone (non-plugin) consumption:
+`@sovereignfs/ui` follows strict semver: patch releases never break, minor
+releases are additive-only, and breaking changes require a major bump plus a
+migration note (`docs/upgrade.md`). In particular:
 
 - **Stable** — token names (both tiers), and the core primitives
   (`Button`, `FormField`, `Input`, `Card`, `StatusBadge`, `Icon`, and the
   four hooks listed above). Safe to build against today.
-- **Experimental for standalone use** — editor-workflow primitives added
-  for plugin-internal use (e.g. `SplitPane`, epic task 9.16) have not been
-  independently audited for standalone (non-runtime) behavior. They likely
-  work, but carry a smaller compatibility guarantee until audited.
+- **Experimental outside core** — editor-workflow primitives added for a
+  specific app's needs (e.g. `SplitPane`) have not been independently audited
+  for use elsewhere. They likely work, but carry a smaller compatibility
+  guarantee until audited.
 
 ---
 
-## Instance identity tokens (RFC 0027 / RFC 0032)
+## Instance identity tokens
 
 The `--sv-instance-*` namespace is a separate tier from `--sv-color-*`. Instance
 tokens hold **URLs** (logo and favicon paths), not colours. They are set once
-by the operator at deploy time or via Console → Settings → Instance identity — they do
-not change with dark mode or user preferences.
+by the operator in the Console (core-app §3.12) — they do not change with dark
+mode or user preferences.
 
 ```css
 :root {
@@ -569,9 +557,9 @@ not change with dark mode or user preferences.
 }
 ```
 
-`InstanceProvider` (a runtime server component) sets these at `:root` from the
-`instance_config` table, merged over `INSTANCE_*` env-var defaults. Plugins
-running inside the shell receive the values automatically — no import required.
+Core sets these at `:root` from the instance settings it stores. An app that
+wants the instance's look reads the published values (core-app §3.13) and sets
+the same variables itself.
 
 ### Why a separate namespace?
 
@@ -582,12 +570,12 @@ running inside the shell receive the values automatically — no import required
 | Theming use | Dynamic swap          | Static identity   |
 
 Mixing URL values into the colour namespace would conflate two concerns and
-confuse plugin developers — a colour picker returns `#hex`, not a `url()`.
+confuse app developers — a colour picker returns `#hex`, not a `url()`.
 
-### Using instance tokens in plugin CSS
+### Using instance tokens in CSS
 
 ```css
-/* In your plugin's CSS module */
+/* In a CSS module */
 .logo {
   background-image: var(--sv-instance-logo);
   background-size: contain;
@@ -597,24 +585,17 @@ confuse plugin developers — a colour picker returns `#hex`, not a `url()`.
 ```
 
 > **Note:** `--sv-instance-logo` is a CSS `url()` value, so it works in
-> `background-image` but not in `src` attributes directly. Use the API routes
-> (`/api/instance/logo`, `/api/instance/favicon`) in HTML `<img>` tags, or use
-> `sdk.platform.getConfig()` which returns `instanceName` as a string prop.
+> `background-image` but not in `src` attributes directly. Use the logo
+> address core publishes (core-app §3.13) in HTML `<img>` tags, and pass the
+> instance name as a string prop.
 
 ### Instance name
 
 **The instance name is a React prop, not a CSS custom property.** CSS custom
 properties cannot supply rendered text content for HTML elements — they only
 work with `content:` on pseudo-elements, which is too narrow for the shell
-chrome. `InstanceProvider` passes `instanceName` as a render-prop to the layout.
-
-Plugin developers read it from `sdk.platform.getConfig()`:
-
-```ts
-const config = await sdk.platform.getConfig();
-// config.instanceName — the operator-configured display name
-// config.instancePrimaryColor — validated hex or undefined
-```
+chrome. The layout reads it from the instance settings and passes it down as
+a prop.
 
 ---
 
@@ -622,10 +603,7 @@ const config = await sdk.platform.getConfig();
 
 This section covers the design-system conventions for building mobile-responsive
 UI — the breakpoint constant, the `Drawer` primitive, touch-target sizing, safe
-areas, and dynamic viewport height. (RFC 0013.) For the practical, plugin-author-
-facing version of this material — a long-press recipe, a PWA-feel checklist, and
-guidance on when double-tap latency is and isn't worth it — see
-[`docs/plugin-development.md`'s "Building for mobile"](./plugin-development.md#building-for-mobile).
+areas, and dynamic viewport height.
 
 ### Breakpoint convention
 
@@ -658,7 +636,7 @@ shrink `100vh`; `dvh` tracks the actual available height:
 }
 ```
 
-The shell already uses this convention; follow it in full-screen plugin UI.
+The shell already uses this convention; follow it in full-screen app UI.
 
 ### Safe-area insets
 
@@ -791,9 +769,9 @@ intended pressed-state feedback, not a mobile-only affordance.
 
 Touch gesture handling is deceptively easy to get wrong — a naive long-press
 timer or a hand-rolled `matchMedia` check reliably misfires in ways that read
-as "the app feels janky." These hooks carry the fixes so no plugin has to
+as "the app feels janky." These hooks carry the fixes so no app has to
 rediscover them. Per the DS-first principle (see "Design principles" above),
-build touch gesture handling here, not in a plugin.
+build touch gesture handling here, not in an app.
 
 ```tsx
 import {
@@ -898,8 +876,8 @@ client mounts and reads the real value, same SSR-safety pattern as
 `useIsMobile`. Reflects only the browser's own signal: true whenever the OS
 reports a network interface is up, even without real upstream connectivity
 (e.g. Wi-Fi with no internet) — there is currently no better cross-browser
-signal available. The platform shell's own `OfflineBanner` is built on this
-hook rather than deriving connectivity separately (research 0012); use it
+signal available. The shell's own `OfflineBanner` is built on this
+hook rather than deriving connectivity separately; use it
 directly for any other connectivity-reactive UI.
 
 **`OfflineGate({ children, surfaceName?, className? })`**
@@ -918,39 +896,39 @@ user is enough and the content itself is still worth showing.
 ```
 
 **`useOfflineTileState(offline, deviceOnlyAvailable)`**
-Which of two app-tile states, if any, applies given a plugin's declared
-`offline` manifest tier (research 0012, epic task 2.33): `'connectivity-dimmed'`
+Which of two app-tile states, if any, applies given an app's declared
+offline tier: `'connectivity-dimmed'`
 (a no-tier app, reactive and temporary, only while genuinely offline right
 now) or `'capability-restricted'` (a `device-only` app on a surface without
 the store it needs — static, unrelated to connectivity, and must never read
 as "offline" to a user who plainly isn't). `deviceOnlyAvailable` is the
-caller's own `isDeviceOnlyTierAvailable()` result (from
-`@sovereignfs/sdk/device-client`) — passed in rather than computed here, so
-this package never depends on `@sovereignfs/sdk`. The Launcher's `PluginTile`
-and the shell's own Apps-drawer item both apply this identically rather than
-each re-deriving the two states slightly differently.
+caller's own answer to whether the device-only tier is available here —
+passed in rather than computed here, so this package depends on no app
+runtime. The launcher's app tile and the shell's own Apps-drawer item both
+apply this identically rather than each re-deriving the two states slightly
+differently.
 
 ```tsx
-const state = useOfflineTileState(plugin.offline, isDeviceOnlyTierAvailable());
+const state = useOfflineTileState(app.offline, deviceOnlyAvailable);
 // 'connectivity-dimmed' | 'capability-restricted' | null
 ```
 
 **`DeviceOnlyGate({ children, surfaceName?, available, className? })`**
-The `device-only`-tier counterpart to `OfflineGate`: blocks a plugin's own
+The `device-only`-tier counterpart to `OfflineGate`: blocks an app's own
 content from rendering on a surface that can't provide the durable, encrypted,
 device-auth-gated store that tier requires, showing an explanatory empty state
-instead of a broken screen. A `device-only` plugin wraps its own root content
-in this the same way Console/Account wrap theirs in `OfflineGate` — an opt-in
+instead of a broken screen. A `device-only` app wraps its own root content
+in this the same way the Console wraps its own in `OfflineGate` — an opt-in
 pattern each surface applies to itself, not a platform-level route gate,
 since a user can always reach a route directly (a bookmark, a deep link)
 without passing through a launcher tile first. `available` is the same
-`isDeviceOnlyTierAvailable()` result `useOfflineTileState` takes — **not a
-security boundary**; the actual protection is that the data is encrypted and
-the key requires device auth to release (epic task 1.22), independent of
+value `useOfflineTileState` takes — **not a security boundary**; the actual
+protection is that the data is encrypted and the key requires device auth to
+release, independent of
 whether this gate is present, bypassed, or never reached at all.
 
 ```tsx
-<DeviceOnlyGate available={isDeviceOnlyTierAvailable()} surfaceName="Wallet">
+<DeviceOnlyGate available={deviceOnlyAvailable} surfaceName="Wallet">
   <CardList />
 </DeviceOnlyGate>
 ```
@@ -958,29 +936,27 @@ whether this gate is present, bypassed, or never reached at all.
 **`DeviceStorageKeyGate({ children, surfaceName?, status, setupAction?, className? })`**
 The enrollment counterpart to `DeviceOnlyGate`: that gate checks whether the
 `device-only` tier is available on this surface at all; this one checks
-whether the user has actually set up their Device Storage Key (RFC 0093 §2,
-epic task 1.22) — the one-time, per-device secret every `device-only` plugin
-on that device shares. `status` is the caller's own
-`getDeviceStorageKeyStatus()` result (from
-`@sovereignfs/sdk/device-only-storage`) — passed in rather than computed
+whether the user has actually set up their Device Storage Key — the one-time,
+per-device secret every `device-only` app on that device shares. `status` is
+the caller's own device-storage-key status — passed in rather than computed
 here, same boundary `available` draws for `DeviceOnlyGate`. Enrollment is
-centralized in Account → Security, not per-plugin — a `device-only` plugin
-never runs its own enrollment ceremony; it wraps its own root content in
-this gate (typically nested inside `DeviceOnlyGate`) and supplies
-`setupAction`, a link to Account → Security, for the `'not-set-up'` case.
+centralized in one place, not per app — a `device-only` app never runs its own
+enrollment ceremony; it wraps its own root content in this gate (typically
+nested inside `DeviceOnlyGate`) and supplies `setupAction`, a link to that
+place, for the `'not-set-up'` case.
 
-`status` also carries a `'no-device-auth'` value — RFC 0093 §5's hard-block
-case, where the environment supports the tier but this device has no
-passcode, fingerprint, or face unlock configured at all, so a key cannot be
-created here regardless of what the user does in your plugin. Distinct from
+`status` also carries a `'no-device-auth'` value — the hard-block case, where
+the environment supports the tier but this device has no passcode,
+fingerprint, or face unlock configured at all, so a key cannot be created
+here regardless of what the user does in your app. Distinct from
 `'not-set-up'` (which the user can fix by clicking through `setupAction`):
 this one shows an explanatory message with **no** `setupAction`, since the
-fix is a device settings change, not anything Account → Security can help
+fix is a device settings change, not anything the enrollment page can help
 with — the same reasoning `DeviceOnlyGate`'s "Phone only" message has no
 action either.
 
 ```tsx
-<DeviceOnlyGate available={isDeviceOnlyTierAvailable()} surfaceName="Notes">
+<DeviceOnlyGate available={deviceOnlyAvailable} surfaceName="Notes">
   <DeviceStorageKeyGate
     status={deviceStorageKeyStatus}
     surfaceName="Notes"
@@ -993,8 +969,8 @@ action either.
 
 **`useSwipeReveal({ revealWidth, open, onOpen, onClose, disabled? })`**
 Horizontal swipe-to-reveal for a row's trailing actions (e.g. Done/Delete on a
-task or list row) — extracted from `sovereign-tasks`' two independent
-hand-rolled implementations (RFC 0079). Returns `{ rowRef, handlers }` to
+task or list row) — extracted from two independent
+hand-rolled implementations. Returns `{ rowRef, handlers }` to
 spread onto the row. Axis-locks after 8px of movement (horizontal vs.
 vertical) so a vertical list scroll and this gesture never fight each other;
 while locked horizontal, it writes the row's `transform` directly to the DOM
@@ -1018,8 +994,8 @@ const { rowRef, handlers } = useSwipeReveal({
 
 **`useSnapCarousel({ itemCount, onSettle?, debounceMs? })`**
 Debounced "settled slide" detection over a native `scroll-snap-type: x`
-container — extracted from `sovereign-tasks` and `sovereign-shopper`'s
-independently duplicated carousels (RFC 0079). Momentum and rubber-banding
+container — extracted from independently
+duplicated carousels. Momentum and rubber-banding
 come entirely from the browser's own scroll physics; this hook only handles
 "which slide did the user land on," via a passive `scroll` listener debounced
 120ms by default (not the `scrollend` event, which pre-17.4 iOS
@@ -1044,9 +1020,8 @@ const { scrollRef, scrollToIndex } = useSnapCarousel({
 ```
 
 **`useReorderSensors({ mouseActivationDistancePx?, touchActivationDelayMs?, touchActivationTolerancePx? })`**
-dnd-kit sensor set for a drag-reorder list, extracted from `plugins/account`'s
-sidebar-order UI after the identical pattern turned up duplicated
-byte-for-byte across three separate plugins. Returns dnd-kit's `sensors`
+dnd-kit sensor set for a drag-reorder list, extracted after the identical
+pattern turned up duplicated byte-for-byte across three separate screens. Returns dnd-kit's `sensors`
 value — pass straight to `<DndContext sensors={...}>`. Bundles a MouseSensor
 (handle-initiated, desktop) and a TouchSensor (long-press lift, mobile — dnd-
 kit's built-in pointer sensor never implements native HTML5 Drag-and-Drop for
@@ -1054,7 +1029,7 @@ touch input, so this is what makes reordering usable on iOS PWA/Safari) with
 a shared exclusion rule: a drag started inside an element marked `data-no-dnd`
 is refused, so a nested interactive control (a visibility toggle, a delete
 button) fires its own handler instead of lifting the row. A bare call keeps
-the values `plugins/account` already shipped: 8px mouse activation distance,
+the values those screens already shipped: 8px mouse activation distance,
 300ms touch long-press delay, 8px touch drift tolerance. The exclusion
 predicate is also exported standalone as `shouldHandleDndEvent(target)` for
 unit testing without spinning up dnd-kit.
@@ -1078,7 +1053,7 @@ across the app).
 Some views are route-based on web but want a genuinely different mobile UX —
 a swipeable filmstrip of the same sibling routes, not a squeeze of a
 multi-column layout. This is a recurring pattern, not a one-off: it shows up
-wherever a plugin has a set of sibling list/detail routes (a task list app, a
+wherever an app has a set of sibling list/detail routes (a task list app, a
 shopping-list app). Build it with these shared primitives, not a hand-rolled
 scroller — every hand-rolled version of this so far has independently
 duplicated the same scroll-snap CSS and pathname-sync logic.
@@ -1113,7 +1088,7 @@ more than a simple tree-swap is needed.
 **`SwipableMobileCarousel`** + **`SwipableMobileCarouselSlide`** (with
 `SwipableMobileCarouselSlideHeader`/`Body`/`Footer`)
 This library's first compound component — every other component here is
-flat/prop-based, but slide content is large, arbitrary, per-plugin subtrees
+flat/prop-based, but slide content is large, arbitrary, per-app subtrees
 that need a header-known/body-loading split an array-of-objects prop would
 only express with worse JSX ergonomics. Wraps `useSnapCarousel` internally:
 native `scroll-snap-type: x` supplies the actual swipe physics, this
@@ -1123,7 +1098,7 @@ changes (e.g. a caller re-sorts their slide array while mounted).
 
 ```tsx
 const { activeIndex, onSettle } = useCarouselRouteSync({
-  indexForPathname: (p) => indexForPathname(p, lists), // your plugin's own logic, unchanged
+  indexForPathname: (p) => indexForPathname(p, lists), // your app's own logic, unchanged
   pathForIndex: (i) => pathForIndex(i, lists),
   pathname: usePathname(),
   onNavigate: (path) => router.replace(path, { scroll: false }),
@@ -1322,17 +1297,13 @@ and the CSS transition duration must agree, or the component stays mounted
 
 ### Page layout — `PageContainer`
 
-**As of task 9.25, the runtime shell applies no padding to plugin content at
-all.** (Earlier versions of this doc — and of the shell — said the opposite:
-the shell padded every plugin and `PageContainer` only constrained width.
-That's no longer true; see `docs/upgrade.md` if you're updating a plugin
-written against the old contract.) The shell still reserves _clearance_ for
-chrome a plugin cannot measure itself — space below the offline banner while
-it's visible, space above the mobile footer — but contributes no inset of its
-own. A plugin that renders no `PageContainer` sits edge-to-edge.
+**The shell applies no padding to page content at all.** It reserves
+_clearance_ for chrome a page cannot measure itself — space below the offline
+banner while it's visible, space above the mobile footer — but contributes no
+inset of its own. A page that renders no `PageContainer` sits edge-to-edge.
 
-**Wrap every plugin page (or its root layout) in `PageContainer`.** It is
-the single place a plugin's padding and max-width come from — nowhere else:
+**Wrap every page (or its root layout) in `PageContainer`.** It is the single
+place a page's padding and max-width come from — nowhere else:
 
 ```tsx
 import { PageContainer } from '@sovereignfs/ui';
@@ -1342,9 +1313,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 }
 ```
 
-Both props default to the common case — a full-width page with the shell's
-former gutter — so a bare `<PageContainer>{children}</PageContainer>` is a
-safe starting point for any plugin.
+Both props default to the common case — a full-width page with the standard
+gutter — so a bare `<PageContainer>{children}</PageContainer>` is a
+safe starting point for any page.
 
 | `maxWidth` | Pixel value | Use when                                                     |
 | ---------- | ----------- | ------------------------------------------------------------ |
@@ -1357,41 +1328,36 @@ safe starting point for any plugin.
 `border-box`, so `maxWidth="md"` with the default `padding="md"` yields a
 960px box with 896px of content, not 1024px.
 
-| `padding` | Desktop                | ≤768px                | Use when                                                          |
-| --------- | ---------------------- | --------------------- | ----------------------------------------------------------------- |
-| `none`    | 0                      | 0                     | An ancestor already pads this content, or a fullbleed layout      |
-| `sm`      | `--sv-space-4` (16px)  | `--sv-space-3` (12px) | A dense, chrome-like page                                         |
-| `md`      | `--sv-space-8` (32px)  | `--sv-space-4` (16px) | The common case (**default**) — matches the shell's former gutter |
-| `lg`      | `--sv-space-12` (48px) | `--sv-space-6` (24px) | A spacious marketing-style layout                                 |
+| `padding` | Desktop                | ≤768px                | Use when                                                     |
+| --------- | ---------------------- | --------------------- | ------------------------------------------------------------ |
+| `none`    | 0                      | 0                     | An ancestor already pads this content, or a fullbleed layout |
+| `sm`      | `--sv-space-4` (16px)  | `--sv-space-3` (12px) | A dense, chrome-like page                                    |
+| `md`      | `--sv-space-8` (32px)  | `--sv-space-4` (16px) | The common case (**default**) — the standard page gutter     |
+| `lg`      | `--sv-space-12` (48px) | `--sv-space-6` (24px) | A spacious marketing-style layout                            |
 
-A fixed four-step scale, deliberately — not a free-form value. A consistency
-review (the one that motivated `PageContainer` in the first place, task 9.18)
-found four different ad-hoc padding combinations across plugins; a free-form
+A fixed four-step scale, deliberately — not a free-form value. A review of
+ad-hoc padding found four different combinations across pages; a free-form
 prop would just relocate that inconsistency from CSS modules into JSX. **Do
-not add your own outer `padding` or `max-width` in a plugin's
-`app/layout.tsx` or page-level CSS module** — declare it through
-`PageContainer`'s props instead. Adding both stacks the two insets (a real
-bug this fixed: every example plugin under `example-plugins/` was
-double-padded until task 9.25).
+not add your own outer `padding` or `max-width` in a layout or page-level CSS
+module** — declare it through `PageContainer`'s props instead. Adding both
+stacks the two insets.
 
-Plugins that manage their own full-bleed shell/sidebar/content grid opt out
-via `data-plugin-fullbleed` on their root element (`sovereign-tasks`,
-`sovereign-shopper`) and should not use `PageContainer` — it has nothing to
-add once a plugin owns its layout entirely.
+A page that manages its own full-bleed sidebar/content grid should not use
+`PageContainer` — it has nothing to add once the page owns its layout
+entirely.
 
-**Inside an overlay (`shell: "overlay"`).** An overlay plugin's page renders
+**Inside an overlay.** An overlay page (the Console, the identity pages) renders
 into two different hosts from one component tree — the `Dialog` on a soft
-navigation, the runtime shell's full-page fallback on a hard one — and
-`Dialog`'s own content region is already padded. Wrap the page in
-`PageContainer` as usual; a `Dialog` ancestor sets `--sv-page-gutter: 0` on
-its content region, which `PageContainer` reads as a stand-down signal and
-renders with no padding of its own, so the same tree is correctly padded
-exactly once in both hosts. This is automatic — no prop, no per-context
-branching in plugin code.
+navigation, the shell's full-page fallback on a hard one — and `Dialog`'s own
+content region is already padded. Wrap the page in `PageContainer` as usual; a
+`Dialog` ancestor sets `--sv-page-gutter: 0` on its content region, which
+`PageContainer` reads as a stand-down signal and renders with no padding of
+its own, so the same tree is correctly padded exactly once in both hosts. This
+is automatic — no prop, no per-context branching in page code.
 
-### `MobileHeader` and `MobileFooter` components (RFC 0088)
+### `MobileHeader` and `MobileFooter` components
 
-The runtime shell's mobile header and footer are built from two
+The shell's mobile header and footer are built from two
 presentational, prop-driven components — `MobileHeader` and `MobileFooter`.
 Both draw a deliberate line between what's **immutable** (rendered
 unconditionally, no prop controls it) and what's **overridable**:
@@ -1418,9 +1384,9 @@ import { MobileHeader, MobileFooter } from '@sovereignfs/ui';
 />;
 ```
 
-Neither component fetches data or imports `@sovereignfs/sdk` — `bell` and
+Neither component fetches data or imports a Sovereign package — `bell` and
 `avatarMenu` are supplied as already-wired `ReactNode`s by the consumer (the
-runtime shell today), and `leftIcons`/`rightIcons` entries take a plain
+shell), and `leftIcons`/`rightIcons` entries take a plain
 `href` or `onClick` rather than a router import, keeping both components
 framework-agnostic. `MobileFooter` logs a dev-mode-only `console.error`
 (never thrown) if `leftIcons.length !== rightIcons.length`, since a mismatch
@@ -1429,11 +1395,8 @@ by `SwipableMobileCarousel`'s non-`Slide`-children check.
 
 Both components own their own chrome — background, border, safe-area-aware
 padding, sticky positioning, and a 768px max-width (so neither stretches
-full-bleed if mounted outside an actual mobile viewport) — matching the
-runtime shell's own hand-rolled mobile header/footer markup exactly, since
-these components are meant to eventually replace it. A consumer that
-disables the shell's own header/footer for its route (`manifest.json`'s
-`shellConfig.mobileHeader`/`mobileFooter: false`, RFC 0075) to render these
+full-bleed if mounted outside an actual mobile viewport). A consumer that
+turns off the shell's own header/footer for a route to render these
 itself gets `--sv-shell-header-height`/`--sv-shell-footer-height` re-declared
 automatically — both components measure their own rendered height and
 publish it on the shell root (`usePublishShellChromeHeight`; the shell zeroes
@@ -1441,22 +1404,14 @@ the variable when that chrome is off, and this overrides that zero back to
 the real value) — no manual re-declaration needed. `Drawer`, `Dialog`, and
 `Sheet` all read those variables to know how much screen edge to clear; this
 is what stops them rendering straight to the true viewport edges, underneath
-the consumer's own self-rendered chrome. See `docs/architecture-rules.md`
-for the incident this closes (found live in `sovereign-tasks`, generic to
-any plugin using this pattern).
-
-This extraction is deliberately scoped as groundwork, not a plugin-facing
-override mechanism — see [RFC 0088](./rfcs/0088-mobile-header-footer-design-system-components.md)
-for the full immutable/overridable rationale and the open questions a future
-RFC would need to resolve before a plugin could render this chrome itself.
+the consumer's own self-rendered chrome.
 
 ### `MobileAppsDrawer` component
 
 A bottom-sheet "Apps" launcher grid — the same 3-column, 56px/radius-14px
-tile layout as the runtime shell's own Apps drawer (opened from
+tile layout as the shell's own Apps drawer (opened from
 `MobileFooter`'s launcher button), generalized so the tile list comes from
-the consumer via an `items` prop instead of being hardcoded to installed
-plugins:
+the consumer via an `items` prop instead of being hardcoded:
 
 ```tsx
 import { MobileAppsDrawer } from '@sovereignfs/ui';
@@ -1489,13 +1444,13 @@ One API per surface; presentation adapts per platform. On mobile the shell
 chrome (header + footer nav) **stays visible and interactive** — these
 overlays fill the space between, never cover it.
 
-|                          | Desktop                                                     | Mobile                                                                                           | Use when                                                                              |
-| ------------------------ | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| `Dialog` (sm/md/lg/auto) | Centered fixed-size modal, optional `header`/`footer` rows  | Full-page modal page between shell header/footer, slide transition, `OverlayHeader` on top       | Modal: the user must act before continuing (overlay-shell plugins — Console, Account) |
-| `ConfirmDialog`          | Small content-sized centered card                           | Same centered card (decision D4 — not a full-screen sheet)                                       | Destructive / confirm prompts                                                         |
-| `Drawer`                 | Bottom sheet (rare on desktop)                              | Partial-height bottom sheet (half screen or less), grab handle, swipe-down dismiss, `snapHeight` | Navigation or options revealed by tapping a trigger (Apps button, `Menu` on mobile)   |
-| `Sheet`                  | n/a — desktop shows the same content inline (columns/panes) | Full-page slide-in page replacement                                                              | Detail views inside a plugin (task detail, list edit)                                 |
-| `Menu` (adaptive)        | `Popover`                                                   | `Drawer`                                                                                         | Context / `⋯` action menus                                                            |
+|                          | Desktop                                                     | Mobile                                                                                           | Use when                                                                                     |
+| ------------------------ | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| `Dialog` (sm/md/lg/auto) | Centered fixed-size modal, optional `header`/`footer` rows  | Full-page modal page between shell header/footer, slide transition, `OverlayHeader` on top       | Modal: the user must act before continuing (overlay pages — the Console, the identity pages) |
+| `ConfirmDialog`          | Small content-sized centered card                           | Same centered card (decision D4 — not a full-screen sheet)                                       | Destructive / confirm prompts                                                                |
+| `Drawer`                 | Bottom sheet (rare on desktop)                              | Partial-height bottom sheet (half screen or less), grab handle, swipe-down dismiss, `snapHeight` | Navigation or options revealed by tapping a trigger (Apps button, `Menu` on mobile)          |
+| `Sheet`                  | n/a — desktop shows the same content inline (columns/panes) | Full-page slide-in page replacement                                                              | Detail views inside an app (task detail, list edit)                                          |
+| `Menu` (adaptive)        | `Popover`                                                   | `Drawer`                                                                                         | Context / `⋯` action menus                                                                   |
 
 All overlay components share `--sv-color-scrim` / `--sv-shadow-overlay` tokens,
 the same focus-trap / Esc / scrim-click dismissal convention (`Sheet` has no
@@ -1573,12 +1528,12 @@ layout-agnostic (no built-in button alignment); arrange its content same as
 
 ### `useOverlaySecondRow` — the double-header problem
 
-An overlay-shell plugin (Console, Account) is rendered by `Dialog` on mobile,
-which shows its own `OverlayHeader` (title from the manifest + close) above
-the plugin's `children`. If the plugin _also_ renders its own title/tab-strip
-header as ordinary content, mobile ends up with two stacked header bars — the
-Dialog's and the plugin's own. `useOverlaySecondRow` solves this by letting
-content **inside** `Dialog` (however deeply nested — a plugin's route layout,
+An overlay page (the Console, the identity pages) is rendered by `Dialog` on
+mobile, which shows its own `OverlayHeader` (title + close) above the page's
+`children`. If the page _also_ renders its own title/tab-strip header as
+ordinary content, mobile ends up with two stacked header bars — the Dialog's
+and the page's own. `useOverlaySecondRow` solves this by letting content
+**inside** `Dialog` (however deeply nested — a route layout,
 several component layers below wherever `<Dialog>` itself is instantiated)
 supply the Dialog's second-row content directly:
 
@@ -1613,8 +1568,7 @@ a plain non-overlay route. The caller is still responsible for hiding its own
 inline header copy on mobile when the return value is `true`, via its own CSS
 — `useOverlaySecondRow` only moves the content, it doesn't hide anything
 itself, since the same JSX renders in both places by design (single source of
-tab-strip markup, no duplicated component). See `plugins/account/app/layout.tsx`
-and `plugins/console/app/layout.tsx` for the reference implementation.
+tab-strip markup, no duplicated component).
 
 ### `Drawer` component
 
@@ -1649,7 +1603,7 @@ import { Sheet } from '@sovereignfs/ui';
 </Sheet>;
 ```
 
-Fills a plugin's content area between the shell's fixed header and footer,
+Fills the content area between the shell's fixed header and footer,
 sliding in from an edge (`slideFrom="bottom"` default, or `"top"` for a short
 options menu near a header trigger) instead of centering like `Dialog`. No
 desktop equivalent — a desktop layout shows the same content inline (columns,
@@ -1705,7 +1659,7 @@ Adaptive: `Popover` on desktop, `Drawer` on mobile — the same `items` list
 renders in both. Selecting an item both closes the menu and calls its
 `onSelect`; a consumer's `onSelect` never needs to call `onClose` itself.
 Replaces the desktop-Popover/mobile-Drawer fork a `⋯` action menu otherwise
-re-derives per plugin.
+re-derives per screen.
 
 `items` accepts three entry shapes, mixed freely in one list — enough to
 express a native-OS-style menu with grouped sections above a run of plain
@@ -1730,7 +1684,7 @@ with no reserved leading space at all.
 
 ### `--sv-dialog-inset-top`
 
-Mirrors `--sv-dialog-inset-left` on the vertical axis. The runtime shell sets it
+Mirrors `--sv-dialog-inset-left` on the vertical axis. The app that owns the shell sets it
 to the mobile header height (`--sv-shell-header-height`) so an open `Dialog` or
 overlay-sheet begins **below** the sticky header — the header stays visible and
 interactive. Defaults to `0` (full-viewport scrim) for standalone use:
@@ -1742,8 +1696,7 @@ interactive. Defaults to `0` (full-viewport scrim) for standalone use:
 }
 ```
 
-Plugin code does not need to set this; it is a platform-level concern wired by
-the shell.
+Page code does not need to set this; it is wired once, by the shell.
 
 ### `Calendar` and `DatePicker`
 
@@ -1759,7 +1712,7 @@ import { DatePicker } from '@sovereignfs/ui';
 ```
 
 `Calendar` is a keyboard-navigable month grid — date-only (no time or range
-selection yet; recurrence UI stays plugin-side). Keyboard follows the WAI-ARIA
+selection yet; recurrence UI stays app-side). Keyboard follows the WAI-ARIA
 APG grid pattern with roving tabindex: arrow keys move focus by day/week,
 Home/End jump to the start/end of the focused week, PageUp/PageDown change
 month, Enter/Space selects. `minDate`/`maxDate` disable out-of-range dates.
@@ -1784,17 +1737,13 @@ import { Calendar } from '@sovereignfs/ui';
 ## Component stories (Storybook)
 
 Every `@sovereignfs/ui` component has a Storybook story. The Storybook instance
-is the living design reference for component authors, plugin developers, and
+is the living design reference for component authors, app developers, and
 designers — each component is rendered in isolation with every meaningful
 variant, both light and dark themes, and responsive viewports.
 
-**Hosted:** [sovereignfs.github.io/storybook](https://sovereignfs.github.io/storybook/)
-— deployed by pushing a `sb-v*` tag (e.g. `git tag sb-v0.11.0 && git push origin sb-v0.11.0`),
-via `.github/workflows/storybook-deploy.yml`.
-The built static site is published to
-[`sovereignfs/storybook`](https://github.com/sovereignfs/storybook); source
-stories live in this repository. See [Sovereign repositories](repositories.md)
-for the full support-repository map.
+**Hosted:** [sovereignfs.github.io/storybook](https://sovereignfs.github.io/storybook/).
+Deploying it from this repository is part of the publishing work in the
+roadmap; until then, run it locally (below).
 
 ### Running locally
 
@@ -1899,18 +1848,5 @@ pnpm build-storybook          # static output → packages/ui/storybook-static/
 pnpm --filter @sovereignfs/ui build-storybook  # same, scoped
 ```
 
-**CI (`storybook-build` job):** runs `build-storybook` on every non-draft PR and
-uploads the static output as a workflow artifact (7-day retention) — download
-`storybook-static` from the Actions run to review the PR's stories without a live
-hosting service.
-
-**Hosted deploy (`.github/workflows/storybook-deploy.yml`):** pushes the static
-build to the `gh-pages` branch of `sovereignfs/storybook`. Triggered by pushing a
-`sb-v*` tag — the tag does not need to match a package version, just mark the point
-you want live. Can also be triggered manually via **Actions → Deploy Storybook →
-Run workflow**.
-
-```bash
-git tag sb-v0.11.0
-git push origin sb-v0.11.0
-```
+**CI:** the build job runs `build-storybook` on every pull request that changes
+code, so a story that no longer bundles fails the build.

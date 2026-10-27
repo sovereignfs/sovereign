@@ -4,23 +4,25 @@ import { defineConfig } from 'vitest/config';
 // tests that need a real database (`*.db.test.ts`); it runs once per dialect in
 // CI, with SV_DB_DIALECT naming the one under test and the matching URL set.
 export default defineConfig({
+  // Component tests are .tsx. Use Vite's own JSX transform for every package, so a
+  // test does not depend on which tsconfig.json happens to be nearest to it.
+  oxc: { jsx: { runtime: 'automatic' } },
   test: {
+    // Node by default; a component test opts into jsdom with a
+    // `// @vitest-environment jsdom` pragma at the top of the file.
     environment: 'node',
+    css: {
+      // Resolve CSS Module class names to their literal names so tests can assert
+      // on them (styles.ghost === 'ghost').
+      modules: { classNameStrategy: 'non-scoped' },
+    },
     projects: [
       {
         extends: true,
         test: {
           name: 'unit',
-          include: ['scripts/**/*.test.ts', 'packages/*/src/**/*.test.ts'],
-          exclude: [
-            '**/node_modules/**',
-            '**/*.db.test.ts',
-            // Imported from the legacy repository and not yet ported (roadmap task
-            // 2.1): their dependencies are not installed. Task 2.1 removes these.
-            'packages/ui/**',
-            'packages/bridge/**',
-            'packages/mailer/**',
-          ],
+          include: ['scripts/**/*.test.ts', 'packages/*/src/**/*.test.{ts,tsx}'],
+          exclude: ['**/node_modules/**', '**/*.db.test.ts'],
         },
       },
       {

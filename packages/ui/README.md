@@ -1,6 +1,6 @@
 # @sovereignfs/ui
 
-Sovereign Design System — design tokens and React components for building [Sovereign](https://github.com/sovereignfs/sovereign) plugins.
+Sovereign Design System — design tokens and React components for building [Sovereign](https://github.com/sovereignfs) apps.
 
 ## Installation
 
@@ -51,7 +51,7 @@ Primitive tokens   --sv-grey-50 … --sv-grey-950  /  --sv-space-1 … --sv-spac
 Semantic tokens    --sv-color-surface  /  --sv-color-text-primary  /  --sv-shadow-card
 ```
 
-Plugin developers reference **semantic tokens** — never primitive colours directly. Dark mode and instance theming work by swapping semantic token values; no component changes required.
+App developers reference **semantic tokens** — never primitive colours directly. Dark mode and instance theming work by swapping semantic token values; no component changes required.
 
 ## Icon component
 
@@ -66,9 +66,7 @@ Available icon names: `activity`, `alert-triangle`, `bell`, `check`, `chevron-do
 ## Documentation
 
 - [Storybook — live component & token gallery](https://sovereignfs.github.io/storybook)
-- [Design system reference](https://github.com/sovereignfs/sovereign/blob/main/docs/design-system.md)
-- [Plugin development guide](https://github.com/sovereignfs/sovereign/blob/main/docs/plugin-development.md)
-- [SDK stability & semver policy](https://github.com/sovereignfs/sovereign/blob/main/docs/sdk-stability.md)
+- [Design system reference](../../docs/design-system.md)
 
 ## License
 

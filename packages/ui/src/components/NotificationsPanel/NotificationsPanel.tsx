@@ -90,7 +90,7 @@ function NotificationRow({ item }: { item: NotificationsPanelItem }) {
  * category → color mapping, no mark-read/dismiss networking. The real
  * `NotificationBell` owns real platform data (`/api/account/notifications`,
  * a shared cross-instance store); this component can't and shouldn't know
- * about that (SDK boundary). The consumer supplies `items` already resolved
+ * about that. The consumer supplies `items` already resolved
  * and wires `onOpen`/`onDismiss`/`onMarkAllRead`/`onClearAll` to whatever
  * its own data layer needs, against a shared panel instead of a
  * `shell: minimal` plugin hand-rebuilding one locally. Built on the shared

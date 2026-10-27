@@ -5,7 +5,7 @@
 
 ## Status
 
-⏳ In Progress
+✅ Complete
 
 ## Overview
 
@@ -68,7 +68,7 @@ call `send`, and the Console screens that edit these settings.
   silently, a transport kept after the settings change, an unreadable password ignored, and a
   start-up warning without its consequence
 
-#### ⏳ 3.2 — Templates
+#### ✅ 3.2 — Templates
 
 **Goal:** Every email core sends uses a branded default template.
 

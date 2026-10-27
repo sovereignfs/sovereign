@@ -1,11 +1,15 @@
 name: Storybook
 
-# Publishes the design system's Storybook to GitHub Pages from this repository. It runs when a
-# `sb-v*` tag is pushed (the tag need not match a package version; it marks the commit to put
-# live) or when started by hand. Pages must be enabled for the repository with the source set
-# to "GitHub Actions" (Settings > Pages); the workflow cannot do that itself.
+# Builds the design system's Storybook here and publishes it to the dedicated repository
+# sovereignfs/storybook, whose GitHub Pages serves https://sovereignfs.github.io/storybook/.
+# It runs when a `sb-v*` tag is pushed (the tag need not match a package version; it marks the
+# commit to put live) or when started by hand.
 #
-# Live at https://sovereignfs.github.io/sovereign-core/
+# One-time setup, by an owner of both repositories (nothing in this repository's own settings):
+#   1. Generate a key pair:  ssh-keygen -t ed25519 -N '' -C storybook-deploy -f storybook-deploy
+#   2. Add storybook-deploy.pub to sovereignfs/storybook as a deploy key with write access.
+#   3. Add the private key to this repository as the Actions secret STORYBOOK_DEPLOY_KEY.
+# The key can write to that one repository and nothing else.
 
 on:
   push:
@@ -15,39 +19,38 @@ on:
 permissions:
   contents: read
 
-# One deployment at a time, and a newer one replaces a queued older one without cancelling
-# a running one half way.
+# One deployment at a time; a running one is never cancelled half way through a push.
 concurrency:
-  group: pages
+  group: storybook-deploy
   cancel-in-progress: false
 
 jobs:
-  build:
-    name: Build
+  deploy:
+    name: Build and deploy
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Check the deploy key is configured
+        env:
+          DEPLOY_KEY: ${{ secrets.STORYBOOK_DEPLOY_KEY }}
+        run: |
+          if [[ -z "$DEPLOY_KEY" ]]; then
+            echo "The secret STORYBOOK_DEPLOY_KEY is not set; see the setup steps at the top of this workflow." >&2
+            exit 1
+          fi
+
       - uses: ./.github/actions/setup
       - run: pnpm build-storybook
-      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
-        with:
-          path: packages/ui/storybook-static
 
-  deploy:
-    name: Deploy
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: build
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+      - name: Publish to sovereignfs/storybook
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
+        with:
+          deploy_key: ${{ secrets.STORYBOOK_DEPLOY_KEY }}
+          external_repository: sovereignfs/storybook
+          publish_branch: gh-pages
+          publish_dir: packages/ui/storybook-static
+          commit_message: 'deploy: storybook from ${{ github.sha }}'

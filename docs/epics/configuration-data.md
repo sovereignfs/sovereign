@@ -120,7 +120,7 @@ schema (core's base schema), which will also call `assertSchemaParity` on it.
 - Core's `/api/health` run against none, a SQLite file, sqld and PostgreSQL (up), and
   against unreachable PostgreSQL and sqld (503); an incomplete setting stops start-up
 
-#### ⏳ 1.3 — Encryption of stored secrets `[parallel]`
+#### ✅ 1.3 — Encryption of stored secrets `[parallel]`
 
 **Goal:** Secrets core stores (such as the SMTP password) are encrypted with a
 key from the environment.

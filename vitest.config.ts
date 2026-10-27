@@ -21,7 +21,11 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'unit',
-          include: ['scripts/**/*.test.ts', 'packages/*/src/**/*.test.{ts,tsx}'],
+          include: [
+            'scripts/**/*.test.ts',
+            'packages/*/src/**/*.test.{ts,tsx}',
+            'apps/*/src/**/*.test.{ts,tsx}',
+          ],
           exclude: ['**/node_modules/**', '**/*.db.test.ts'],
         },
       },

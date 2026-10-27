@@ -39,6 +39,20 @@ pointing here.
 
 ## Auth, security, proxy
 
+- **The Content Security Policy is built per request, around a fresh nonce, in
+  `proxy.ts`, and the proxy matches every path.** API routes and static files carry
+  it too; every way out of the proxy goes through one helper, so a branch added
+  later (a redirect) cannot skip it. The nonce reaches the page through the request,
+  where Next stamps its own scripts, so the root layout reads the request's headers:
+  that makes every page render per request, which a nonce needs (a prerendered page
+  has none). `style-src-attr 'unsafe-inline'` is the one inline allowance, for the
+  design system's `style=""` custom properties; `script-src` never has it.
+  `upgrade-insecure-requests` is sent only when core is served over https, because
+  some browsers would otherwise upgrade requests to a plain-http `localhost`.
+- **Start-up checks that can end the process live in a Node-only module** imported
+  behind `NEXT_RUNTIME === 'nodejs'`, and are skipped during `next build`
+  (`NEXT_PHASE`): `process.exit` in `instrumentation.ts` itself is flagged by the
+  Edge analysis, and a build in CI has no secrets.
 - **No secret has a default.** Required secrets throw at start-up when unset or
   too short. A default secret is a secret every installation shares.
 - **Server actions and route handlers authorize inside themselves.** Every

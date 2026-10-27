@@ -6,7 +6,7 @@
 
 ## Status
 
-⏳ In Progress
+✅ Complete
 
 ## Overview
 
@@ -166,7 +166,7 @@ package; encryption of the SQLite file or PostgreSQL storage, which is the opera
 - Core run with a bad ring (exit 1, the problem named, no key in the output) and with a
   good ring read from a file
 
-#### ⏳ 1.4 — Core's base schema and settings
+#### ✅ 1.4 — Core's base schema and settings
 
 **Goal:** Core has its own tables and a settings store where Console values
 override environment defaults.

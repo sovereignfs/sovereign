@@ -26,7 +26,14 @@ const privatePackages = packages.filter((p) => p.manifest.private === true).map(
 
 describe('the publish workflow', () => {
   it('finds the published packages it is meant to check', () => {
-    expect(published).toEqual(expect.arrayContaining(['ui', 'bridge']));
+    expect(published).toEqual(['ui']);
+  });
+
+  // A decision, not an accident: the device bridge is not published for now. Publishing it later
+  // means removing "private" and adding its tag to the workflow, and this test with them.
+  it('keeps the device bridge private, with no release tag', () => {
+    expect(privatePackages).toContain('bridge');
+    expect(workflow).not.toContain('bridge-v');
   });
 
   it.each(published)('releases %s on its own tag and knows its directory', (dir) => {

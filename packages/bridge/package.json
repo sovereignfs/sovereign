@@ -1,6 +1,7 @@
 {
   "name": "@sovereignfs/bridge",
   "version": "0.2.1",
+  "private": true,
   "type": "module",
   "description": "Sovereign device bridge — capability negotiation between an app's pages and a native shell (Capacitor/Tauri), with a browser fallback.",
   "license": "MPL-2.0",

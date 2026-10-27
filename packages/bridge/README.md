@@ -3,6 +3,9 @@
 The device bridge: capability negotiation between an app's pages and a native shell
 (Capacitor or Tauri), with a browser fallback. It has no runtime dependencies.
 
+> Not published to npm yet. It is release-ready but marked `private`, so nothing publishes it by
+> accident; `docs/releasing.md` says how to publish it when the time comes.
+
 - **`@sovereignfs/bridge`** is the page side. Call `installWebBridge()` once from the app's
   client bootstrap; `getBridge()` reads the registration back. With no native shell, or a shell
   speaking another protocol version, it degrades to the `web` transport with no capabilities

@@ -39,17 +39,37 @@ package's `package.json` and `LICENSE` in agreement.
 
 ## Releasing
 
-The automated release workflow, with npm provenance, is decided separately and does not exist
-yet. Until it does, a maintainer who can publish to the `@sovereignfs` scope releases by hand:
+Pushing a tag releases the package: `ui-vX.Y.Z` releases `@sovereignfs/ui`, `bridge-vX.Y.Z`
+releases `@sovereignfs/bridge`. `.github/workflows/publish.yml` does the rest, and **publishes
+nothing unless every one of these holds**:
 
-1. Check out `main` at the merge commit that carries the version bump; the tree is clean.
-2. `pnpm install --frozen-lockfile && pnpm build && pnpm packages:check`.
-3. `pnpm --filter @sovereignfs/ui publish` (or `@sovereignfs/bridge`). npm asks for the
-   second factor. The `publishConfig` already sets public access.
-4. Tag the commit `ui-vX.Y.Z` (or `bridge-vX.Y.Z`) and push the tag.
+1. the full CI passes on the tagged commit (the same suite as a pull request, every job);
+2. the tagged commit is on `main`, so a tag put on a branch by mistake cannot release;
+3. the tag matches the version in the package's `package.json` (`ui-v0.85.2` needs `0.85.2`);
+4. the build and `pnpm packages:check` pass, so the tarball is the one described above.
 
-`@sovereignfs/bridge` has never been published from this repository; its first release is
-the first time the name is claimed on npm, so check the scope is yours before step 3.
+Then it runs `pnpm publish --access public --provenance`, authenticated with the Actions secret
+`NPM_TOKEN`. **Provenance** makes npm show the package as built from this repository at this
+commit. The release job installs without any cache, so nothing it publishes depends on what
+another run could have stored.
+
+To release:
+
+1. Merge the pull request that carries the version bump (the `ui-vX.Y.Z` or `bridge-vX.Y.Z` commit).
+2. Tag the merge commit and push the tag: `git tag ui-v0.85.2 && git push origin ui-v0.85.2`.
+3. Watch the Publish run in the Actions tab. A published version cannot be replaced, so if a step
+   fails after npm accepted the package, bump the version and release again.
+
+`NPM_TOKEN` is an npm automation token with publish rights on the `@sovereignfs` scope; it
+expires or is revoked from the npm side, and a failing release with an authentication error
+means it needs replacing. `@sovereignfs/bridge` has never been published: its first release is the
+first time the name is claimed on npm, so check the scope is yours before tagging it.
+
+If the workflow itself is broken, a maintainer can release by hand from a clean checkout of
+`main` (`pnpm install --frozen-lockfile && pnpm build && pnpm packages:check`, then
+`pnpm --filter @sovereignfs/ui publish --access public`, with npm's second factor), and tag the
+commit afterwards. The old `sovereign` repository's publish workflow must be retired before the
+first release from here, so that two places cannot release the same package.
 
 ## Storybook
 

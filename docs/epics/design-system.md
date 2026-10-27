@@ -95,7 +95,11 @@ release from this repository, under MPL-2.0.
 - A release path, documented in `docs/releasing.md`: what is published, how the version is
   set, `pnpm packages:check` (packs each published package, checks the tarball with a tested
   checker, and runs the real `pnpm publish --dry-run`; it runs in CI after the build), and
-  the manual release steps a maintainer follows until the release workflow is decided
+  `.github/workflows/publish.yml`: pushing `ui-vX.Y.Z` or `bridge-vX.Y.Z` runs the full CI on
+  the tagged commit, checks the commit is on `main` and the tag matches the package version,
+  repeats the build and `packages:check`, then publishes with provenance using the Actions
+  secret `NPM_TOKEN`. The release job installs without a cache. A test keeps the workflow's
+  tags in step with the published packages
 - Storybook deployment from this repository: `.github/workflows/storybook.yml` builds it and
   publishes it to the dedicated `sovereignfs/storybook` repository (the existing
   <https://sovereignfs.github.io/storybook/>, unchanged) when a `sb-v*` tag is pushed or the
@@ -103,8 +107,9 @@ release from this repository, under MPL-2.0.
   access token that can write to that repository, as the old repository's workflow did). This
   repository's own Pages settings are not used
 
-**Not here:** the automated release workflow and npm provenance, which are decided
-separately, and publishing anything: no release was made.
+**Not here:** a release: nothing was published, and neither the publish nor the Storybook
+workflow has run. The old `sovereign` repository's publish workflow still exists and must be
+retired before the first release from here.
 
 **Dependencies:** 2.1
 

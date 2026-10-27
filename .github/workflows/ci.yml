@@ -19,6 +19,8 @@ on:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
   workflow_dispatch:
+  # Called by publish.yml on a release tag, where every job runs.
+  workflow_call:
 
 # Cancel a superseded run of the same pull request (or branch).
 concurrency:

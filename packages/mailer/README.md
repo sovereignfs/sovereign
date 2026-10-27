@@ -57,5 +57,32 @@ not cleaned: it would let a caller inject headers.
 
 ## Templates
 
-`renderInviteEmail` and `renderPasswordResetEmail` render the invitation and password-reset emails
-(React Email). The templates core ships, and their branding, are a separate step.
+`renderEmail(request, branding)` returns an email's `subject`, `html` and plain `text`, all from one
+set of words, ready for `Mailer.send`. There are five: `invite`, `verifyEmail`, `passwordReset`,
+`accountCreated` and `mfaReset`. English is the default; a locale and operator overrides are accepted,
+and any line a translation lacks falls back to English.
+
+```ts
+const email = await renderEmail(
+  { template: 'passwordReset', link: 'https://core.example.com/reset-password?token=…' },
+  {
+    name: 'Acme Identity',
+    instanceUrl: 'https://core.example.com',
+    logoUrl: 'https://core.example.com/logo.png',
+  },
+);
+await mailer.send({ to, subject: email.subject, text: email.text, html: email.html });
+```
+
+- **A link must be on the instance's own address**, or the email is not made
+  (`EmailRenderError`, `link-outside-instance`). A reset or verification link built from a request's
+  `Host` header would send the token to whoever chose that header; checking it here means no flow can
+  do that by mistake. A link that is not an http(s) address is refused too.
+- **Branding is checked, because it reaches HTML, CSS and a subject.** The name is reduced to one
+  line (so a subject cannot gain a header), the colour must be `#rrggbb` (a free-form value could add
+  styles of its own), and the logo and instance address must be web addresses without credentials.
+  Everything that reaches the HTML goes through React, which escapes it.
+- **Both parts say the same thing.** The plain text carries the same link and sentences for clients
+  that show no HTML. With no logo the header is the instance name as text; with one, an image whose
+  alt text is the name (many clients block images by default).
+- **An invitation says when it expires only when it does.** `expiresAt` is shown as a UTC date.

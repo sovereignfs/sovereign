@@ -15,12 +15,42 @@ export interface InviteCopy {
   subject: string;
   intro: string;
   cta: string;
+  /** Used only when the invitation has an expiry; `{{expires}}` is its date. */
   expiry: string;
+  ignore: string;
+}
+
+export interface VerifyEmailCopy {
+  subject: string;
+  intro: string;
+  cta: string;
+  expiry: string;
+  ignore: string;
+}
+
+export interface AccountCreatedCopy {
+  subject: string;
+  /** Used only when the person's name is known; `{{name}}` is it. */
+  greeting: string;
+  intro: string;
+  cta: string;
+  ignore: string;
+}
+
+export interface MfaResetCopy {
+  subject: string;
+  intro: string;
+  next: string;
+  cta: string;
+  ignore: string;
 }
 
 export interface EmailCopyByTemplate {
   passwordReset: PasswordResetCopy;
   invite: InviteCopy;
+  verifyEmail: VerifyEmailCopy;
+  accountCreated: AccountCreatedCopy;
+  mfaReset: MfaResetCopy;
 }
 
 export type EmailTemplateId = keyof EmailCopyByTemplate;
@@ -29,7 +59,13 @@ export type EmailTemplateId = keyof EmailCopyByTemplate;
 export const SUPPORTED_EMAIL_LOCALES = ['en', 'de', 'si', 'ta'] as const;
 export type SupportedEmailLocale = (typeof SUPPORTED_EMAIL_LOCALES)[number];
 
-const BUILTIN_LOCALES: Record<SupportedEmailLocale, EmailCopyByTemplate> = { en, de, si, ta };
+// A translation may be partial: a template or a line it lacks falls back to English.
+const BUILTIN_LOCALES: Record<SupportedEmailLocale, Partial<EmailCopyByTemplate>> = {
+  en,
+  de,
+  si,
+  ta,
+} as unknown as Record<SupportedEmailLocale, Partial<EmailCopyByTemplate>>;
 
 function isSupportedLocale(locale: string): locale is SupportedEmailLocale {
   return (SUPPORTED_EMAIL_LOCALES as readonly string[]).includes(locale);

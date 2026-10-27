@@ -18,9 +18,10 @@ export type {
 } from './types.js';
 
 export {
-  renderInviteEmail,
-  renderPasswordResetEmail,
-  renderSubject,
+  DEFAULT_PRIMARY_COLOR,
+  EmailRenderError,
+  prepareBranding,
+  renderEmail,
   resolveEmailCopy,
   SUPPORTED_EMAIL_LOCALES,
 } from './templates/index';
@@ -28,8 +29,9 @@ export type {
   EmailBranding,
   EmailCopyByTemplate,
   EmailLocale,
+  EmailRenderErrorCode,
+  EmailRequest,
   EmailTemplateId,
-  InviteCopy,
-  PasswordResetCopy,
+  RenderedEmail,
   SupportedEmailLocale,
 } from './templates/index';

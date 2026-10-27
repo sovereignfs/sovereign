@@ -27,10 +27,17 @@ function define<T extends string | boolean | number>(
   return definition;
 }
 
+// eslint-disable-next-line no-control-regex -- control characters are exactly what is refused
+const CONTROL = /[\u0000-\u001f\u007f]/;
+
 const text =
   (max: number) =>
-  (value: string): string | undefined =>
-    value.trim() === '' || value.length > max ? `must be 1-${max} characters` : undefined;
+  (value: string): string | undefined => {
+    if (value.trim() === '' || value.length > max) return `must be 1-${max} characters`;
+    // A line break in the instance name would reach an email subject; no text setting needs one.
+    if (CONTROL.test(value)) return 'must not contain line breaks or other control characters';
+    return undefined;
+  };
 
 const none = (): undefined => undefined;
 

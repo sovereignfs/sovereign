@@ -1,33 +1,27 @@
-import { Button, Text } from 'react-email';
 import type { InviteCopy } from './copy';
-import { DEFAULT_PRIMARY_COLOR, type EmailBranding } from './branding';
+import type { EmailBranding } from './branding';
+import { EmailButton } from './components/EmailButton';
 import { EmailLayout } from './components/EmailLayout';
+import { Lead, Note } from './components/EmailText';
+import { brandColor } from './branding';
 
 export interface InviteEmailProps {
   registerUrl: string;
   branding: EmailBranding;
   copy: InviteCopy;
+  /** Present only when the invitation expires; already interpolated with its date. */
+  expiry?: string | undefined;
 }
 
-export function InviteEmail({ registerUrl, branding, copy }: InviteEmailProps) {
+export function InviteEmail({ registerUrl, branding, copy, expiry }: InviteEmailProps) {
   return (
     <EmailLayout branding={branding} preview={copy.intro}>
-      <Text style={{ fontSize: 15, color: '#18181b', margin: '0 0 16px' }}>{copy.intro}</Text>
-      <Button
-        href={registerUrl}
-        style={{
-          backgroundColor: branding.primaryColor ?? DEFAULT_PRIMARY_COLOR,
-          color: '#ffffff',
-          fontSize: 14,
-          fontWeight: 600,
-          padding: '12px 24px',
-          borderRadius: 6,
-          textDecoration: 'none',
-        }}
-      >
+      <Lead>{copy.intro}</Lead>
+      <EmailButton href={registerUrl} color={brandColor(branding)}>
         {copy.cta}
-      </Button>
-      <Text style={{ fontSize: 13, color: '#71717a', margin: '20px 0 0' }}>{copy.expiry}</Text>
+      </EmailButton>
+      {expiry ? <Note first>{expiry}</Note> : null}
+      <Note first={!expiry}>{copy.ignore}</Note>
     </EmailLayout>
   );
 }

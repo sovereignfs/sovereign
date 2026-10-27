@@ -170,6 +170,18 @@ pointing here.
   licence requires it); source, tests, stories and configuration never ship. The check packs the
   real tarball and runs a real `publish --dry-run`, because a `files` list that looks right can
   still miss an entry point or ship a workspace dependency that npm cannot resolve.
+- **A link in an email is on the instance's own address, and is checked where the email is
+  rendered.** A reset or verification link built from a request's `Host` header sends the token to
+  whoever chose the header (password-reset poisoning). Flows build links from `SV_URL`
+  (`emailLink`), and the renderer refuses any other origin, any non-web scheme and any credentials in
+  it, so one flow's mistake cannot become an attack.
+- **Whatever reaches an email is escaped or validated, by where it lands.** Text goes through React
+  (HTML escaping); the instance name and a person's name are reduced to one line before they can
+  reach a subject; a colour must be `#rrggbb` before it reaches a `style` attribute; a logo must be a
+  web address. A setting that appears in emails refuses control characters when it is saved.
+- **Every email has an HTML and a plain text version from one set of words,** and says an expiry only
+  when there is one (a fixed "48 hours" in the old copy was simply wrong for an invitation that has
+  an operator-chosen expiry or none).
 - **A flow that needs mail fails loudly when mail cannot be sent.** Not configured, half
   configured or unreachable are all errors with a message that says what to fix; nothing is
   dropped and nothing pretends to have been sent. The start-up only warns, because a core

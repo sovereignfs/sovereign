@@ -29,3 +29,8 @@ export interface EmailLocale {
 }
 
 export const DEFAULT_PRIMARY_COLOR = '#09090b';
+
+/** The button colour: the instance's, or the default. Validated before it gets here (see `prepareBranding`). */
+export function brandColor(branding: EmailBranding): string {
+  return branding.primaryColor ?? DEFAULT_PRIMARY_COLOR;
+}

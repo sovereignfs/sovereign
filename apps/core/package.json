@@ -18,6 +18,7 @@
     "@sovereignfs/config": "workspace:*",
     "@sovereignfs/crypto": "workspace:*",
     "@sovereignfs/database": "workspace:*",
+    "@sovereignfs/mailer": "workspace:*",
     "@sovereignfs/ui": "workspace:*",
     "drizzle-orm": "catalog:",
     "next": "catalog:",

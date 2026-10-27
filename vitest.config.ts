@@ -20,6 +20,7 @@ export default defineConfig({
       source('config', './packages/config/src/index.ts'),
       source('crypto', './packages/crypto/src/index.ts'),
       source('database', './packages/database/src/index.ts'),
+      source('mailer', './packages/mailer/src/index.ts'),
       {
         find: /^@sovereignfs\/database\/testing$/,
         replacement: fileURLToPath(new URL('./packages/database/src/testing.ts', import.meta.url)),

@@ -170,6 +170,22 @@ pointing here.
   licence requires it); source, tests, stories and configuration never ship. The check packs the
   real tarball and runs a real `publish --dry-run`, because a `files` list that looks right can
   still miss an entry point or ship a workspace dependency that npm cannot resolve.
+- **A flow that needs mail fails loudly when mail cannot be sent.** Not configured, half
+  configured or unreachable are all errors with a message that says what to fix; nothing is
+  dropped and nothing pretends to have been sent. The start-up only warns, because a core
+  without email still serves sign-in for accounts that need none.
+- **SMTP credentials never cross a network unencrypted.** With a login the connection must be
+  encrypted, by implicit TLS or by a STARTTLS upgrade that is required (a server that merely
+  does not offer it must make the send fail, not send the password in the clear), and the
+  certificate is verified. Test it against a server that offers no TLS and one with an untrusted
+  certificate, and assert the password never arrived.
+- **An error from a mail library is translated, not passed on.** Its text can echo the user name
+  or the server's reply. Keep the code and the numeric SMTP reply, and write the message.
+- **Refuse, do not clean, a line break in anything that becomes a header.** A subject or an
+  address with one is a header injection; the message is refused.
+- **A shared package reads no environment.** The mailer takes its settings from the caller; core
+  resolves them from the Console and `SV_SMTP_*`, so a saved value can override and apply
+  without a restart.
 - **Stored secrets are encrypted with a key ring, bound to where they are stored.** AES-256-GCM,
   a fresh random IV per value, and the key id and a context (`table.column[:row]`) in the
   authenticated data, so a ciphertext copied into another field or row does not open. New values

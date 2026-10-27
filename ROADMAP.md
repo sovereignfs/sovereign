@@ -39,7 +39,7 @@ _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked · �
 
 | Version | Task                                      | Status | Epic task                               |
 | ------- | ----------------------------------------- | ------ | --------------------------------------- |
-| —       | Mail delivery and SMTP configuration      | 📋     | [3.1](docs/epics/mail.md)               |
+| —       | Mail delivery and SMTP configuration      | ⏳     | [3.1](docs/epics/mail.md)               |
 | —       | Templates                                 | 📋     | [3.2](docs/epics/mail.md)               |
 | —       | better-auth and email/password            | 📋     | [4.1](docs/epics/identity-auth.md)      |
 | —       | Registration policy and the first account | 📋     | [4.2](docs/epics/identity-auth.md)      |

@@ -2,8 +2,17 @@
   "name": "@sovereignfs/bridge",
   "version": "0.2.0",
   "type": "module",
-  "description": "Sovereign device bridge \u2014 capability negotiation between an app's pages and a native shell (Capacitor/Tauri), with a browser fallback.",
-  "license": "AGPL-3.0-or-later",
+  "description": "Sovereign device bridge — capability negotiation between an app's pages and a native shell (Capacitor/Tauri), with a browser fallback.",
+  "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sovereignfs/sovereign-core.git",
+    "directory": "packages/bridge"
+  },
+  "homepage": "https://github.com/sovereignfs/sovereign-core/tree/main/packages/bridge#readme",
+  "bugs": {
+    "url": "https://github.com/sovereignfs/sovereign-core/issues"
+  },
   "publishConfig": {
     "access": "public",
     "types": "./dist/index.d.ts",
@@ -24,7 +33,8 @@
   },
   "files": [
     "dist",
-    "src"
+    "LICENSE",
+    "README.md"
   ],
   "scripts": {
     "build": "tsup",

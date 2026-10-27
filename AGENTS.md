@@ -32,6 +32,7 @@ assumptions:
 - `docs/architecture-rules.md` — full detail behind every hard rule listed
   below.
 - `docs/design-system.md` — the `@sovereignfs/ui` model.
+- `docs/releasing.md` — what is published to npm and how it is released.
 - `.agents/skills/sv-*` — task lifecycle skills (`sv-task-start`,
   `sv-task-complete`, `sv-verify`, `sv-security-check`, `sv-update-task-docs`,
   `sv-create-pr`, `sv-ui-design`). Byte-identical copies live in
@@ -263,6 +264,7 @@ pnpm dev                         # core on :3000 (needs SV_URL and SV_AUTH_SECRE
 pnpm build                       # turbo build
 pnpm storybook / build-storybook # the design system's Storybook (dev server on :6006 / static build)
 pnpm design:tokens:check         # every --sv-* token used is defined; no hard-coded colours
+pnpm packages:check              # pack the published packages, check the tarballs, dry-run the publish (after a build)
 pnpm generate:icons              # regenerate the Icon components from scripts/icon-list.ts
 pnpm generate:theme-presets      # regenerate tokens/theme-presets.css from theme-presets.ts
 pnpm docs:check-links            # every relative Markdown link resolves

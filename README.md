@@ -88,9 +88,10 @@ rules; [`AGENTS.md`](AGENTS.md) has the same conventions written for AI agents.
 | `apps/core`  | [AGPL-3.0-or-later](LICENSE)                    |
 | `packages/*` | MPL-2.0, so apps under any licence can use them |
 
-The packages imported so far still declare AGPL-3.0-or-later in their
-`package.json`; task 2.2 changes them to MPL-2.0 and adds the licence text to
-each. The `LICENSE` at the root is the AGPL text.
+Each package declares MPL-2.0 in its `package.json` and carries the licence text in its own
+`LICENSE`; a test keeps them in agreement. The `LICENSE` at the root is the AGPL text. The design
+system also keeps a `NOTICE` for the icons derived from Lucide (ISC). Publishing to npm is in
+[`docs/releasing.md`](docs/releasing.md).
 
 ## Security
 

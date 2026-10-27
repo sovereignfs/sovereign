@@ -29,7 +29,8 @@ first.
 **Deliverables:**
 
 - Remove the three `!packages/…` exclusions from `pnpm-workspace.yaml`, and the
-  matching entries in `.prettierignore`, `eslint.config.ts`, `tsconfig.json` and
+  matching entries in `.prettierignore`, `eslint.config.ts`, `tsconfig.json`,
+  `vitest.config.ts` and
   `scripts/lib/doc-links.ts` (for `docs/design-system.md` and the four imported
   scripts too); add to the catalog whatever the three packages need (Storybook,
   dnd-kit, testing-library, tsup, Playwright, jsdom…) at current releases

@@ -1,0 +1,32 @@
+{
+  "name": "@sovereignfs/config",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The environment variable convention for Sovereign core and apps: declare, read and validate settings with a per-app prefix.",
+  "license": "MPL-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@sovereignfs/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}

@@ -23,23 +23,32 @@ the SMTP password.
 
 ## Tasks
 
-#### 📋 1.1 — Environment convention and `packages/config`
+#### ⏳ 1.1 — Environment convention and `packages/config`
 
 **Goal:** One way to declare, read and validate environment variables, with a
 per-app prefix.
 
 **Deliverables:**
 
-- Delete the `spec/env.md` entry from `PLANNED_TARGETS` in
-  `scripts/lib/doc-links.ts` once the file exists
-- `spec/env.md`: prefix rule (`SV_` for core, the app's own prefix otherwise),
-  shared suffixes, database variables named by engine (`SV_POSTGRES_URL`,
-  `SV_SQLD_URL`, `SV_SQLITE_URL`), the `_FILE` rule (every secret accepts a
-  `_FILE` form; setting both forms is an error), how a value saved in the
-  Console overrides an environment default
-- `packages/config`: takes the prefix as an option; typed schema with secrets
-  marked as such; reads `_FILE` forms for every secret; validates at start-up
-  and fails with a message naming the variable; never logs secret values
+- `spec/env.md`: the prefix rule (`SV` for core, the app's own prefix otherwise),
+  the names every app shares, database variables named by engine
+  (`SV_POSTGRES_URL`, `SV_SQLD_URL`, `SV_SQLITE_URL`), the `_FILE` rule (every
+  secret accepts a `_FILE` form; setting both forms is an error; no secret has a
+  default), value syntax, start-up validation, and how a value saved in the
+  Console overrides an environment default. The `spec/env.md` entry is gone from
+  `PLANNED_TARGETS` in `scripts/lib/doc-links.ts`
+- `packages/config` (`@sovereignfs/config`, MPL-2.0, `private` until an app outside
+  this repository needs it): `defineConfig({ prefix, variables })` with typed
+  builders (`string`, `secret`, `url`, `integer`, `boolean`, `oneOf`, `list`);
+  `load()` reports every problem at once in a `ConfigError`, each naming its
+  variable and none showing a value; a `Secret` that renders as `[redacted]` in
+  logs, JSON and `util.inspect`; `_FILE` forms for every secret; and `describe()`
+  for generating docs and `.env.example`. No runtime dependencies and no static
+  `node:fs` import
+- The types make the rules: `secret()` has no overload that takes a default, and an
+  optional variable's type includes `undefined`
+- A test that fails if any package declares a dependency on the core app, beside the
+  existing lint rule that stops a package importing it
 
 **Dependencies:** 0.1
 
@@ -48,9 +57,15 @@ per-app prefix.
 **Review checklist:**
 
 - A missing required secret, a short secret and a malformed URL each fail
-  start-up with a named variable
+  start-up with a named variable — each seen as a failing test, and run against
+  the built package under plain Node
 - Setting both `SV_AUTH_SECRET` and `SV_AUTH_SECRET_FILE` fails start-up
-- The package has no dependency on `apps/core`
+- The package has no dependency on `apps/core` — and a test fails if one is added
+- Each guarantee was broken on purpose and the matching test failed: the both-forms
+  check, the minimum length, redaction, no echo of a value, the one-newline rule,
+  an eager file read, blank-as-unset, a leaked read error, and a secret with a default
+- Not yet done: apps outside this repository that carry their own copy of this
+  logic can switch to the package once it is published
 
 #### 📋 1.2 — `packages/database`
 

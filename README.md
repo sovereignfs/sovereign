@@ -35,17 +35,18 @@ and more. The spec lists what is in and out of each phase.
 
 ## Repository layout
 
-| Path                 | What                                                         | State                                     |
-| -------------------- | ------------------------------------------------------------ | ----------------------------------------- |
-| `apps/core`          | The core app: sign-in server, Console, launcher              | Planned (roadmap task 0.2 onwards)        |
-| `packages/tsconfig`  | Shared TypeScript configuration                              | In the workspace                          |
-| `packages/ui`        | The design system, `@sovereignfs/ui`                         | Imported with history; ported by task 2.1 |
-| `packages/bridge`    | The device bridge, `@sovereignfs/bridge`                     | Imported with history; ported by task 2.1 |
-| `packages/mailer`    | Mail delivery                                                | Imported with history; ported by task 2.1 |
-| `packages/*` (later) | `config`, `database`, `crypto`, `auth`, `api-client`, …      | Planned                                   |
-| `spec/`              | The environment convention and the Core API contract         | Planned (tasks 1.1 and 10.1)              |
-| `docs/`              | The spec, epics, research, RFCs and decisions                | [Index below](#documentation)             |
-| `scripts/`           | Repository tooling and the tests that guard the repo's rules | In use                                    |
+| Path                 | What                                                            | State                                                 |
+| -------------------- | --------------------------------------------------------------- | ----------------------------------------------------- |
+| `apps/core`          | The core app: sign-in server, Console, launcher                 | Planned (roadmap task 0.2 onwards)                    |
+| `packages/tsconfig`  | Shared TypeScript configuration                                 | In the workspace                                      |
+| `packages/ui`        | The design system, `@sovereignfs/ui`                            | Imported with history; ported by task 2.1             |
+| `packages/bridge`    | The device bridge, `@sovereignfs/bridge`                        | Imported with history; ported by task 2.1             |
+| `packages/mailer`    | Mail delivery                                                   | Imported with history; ported by task 2.1             |
+| `packages/config`    | The environment convention and start-up validation              | In the workspace                                      |
+| `packages/*` (later) | `database`, `crypto`, `auth`, `api-client`, …                   | Planned                                               |
+| `spec/`              | `env.md` (the environment convention) and the Core API contract | `env.md` written; the contract is planned (task 10.1) |
+| `docs/`              | The spec, epics, research, RFCs and decisions                   | [Index below](#documentation)                         |
+| `scripts/`           | Repository tooling and the tests that guard the repo's rules    | In use                                                |
 
 ## Getting started
 

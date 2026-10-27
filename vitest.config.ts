@@ -11,8 +11,16 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'unit',
-          include: ['scripts/**/*.test.ts'],
-          exclude: ['**/node_modules/**', '**/*.db.test.ts'],
+          include: ['scripts/**/*.test.ts', 'packages/*/src/**/*.test.ts'],
+          exclude: [
+            '**/node_modules/**',
+            '**/*.db.test.ts',
+            // Imported from the legacy repository and not yet ported (roadmap task
+            // 2.1): their dependencies are not installed. Task 2.1 removes these.
+            'packages/ui/**',
+            'packages/bridge/**',
+            'packages/mailer/**',
+          ],
         },
       },
       {

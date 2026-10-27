@@ -16,7 +16,6 @@ export type Finding = {
  */
 export const PLANNED_TARGETS: Record<string, string> = {
   'spec/core-api': 'task 10.1',
-  'spec/env.md': 'task 1.1',
 };
 
 /** Directories never scanned: dependencies, build output, and imported packages. */

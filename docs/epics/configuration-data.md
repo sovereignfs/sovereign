@@ -6,7 +6,7 @@
 
 ## Status
 
-📋 Planned
+⏳ In Progress
 
 ## Overview
 
@@ -23,7 +23,7 @@ the SMTP password.
 
 ## Tasks
 
-#### ⏳ 1.1 — Environment convention and `packages/config`
+#### ✅ 1.1 — Environment convention and `packages/config`
 
 **Goal:** One way to declare, read and validate environment variables, with a
 per-app prefix.

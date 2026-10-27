@@ -1,23 +1,26 @@
 # Releasing packages
 
-Two packages are published to npm, under the names they have always had:
+One package is published to npm, under the name it has always had:
 
-| Package               | What it is                                        | Licence                                  |
-| --------------------- | ------------------------------------------------- | ---------------------------------------- |
-| `@sovereignfs/ui`     | The design system: tokens and React components    | MPL-2.0 (icons derived from Lucide: ISC) |
-| `@sovereignfs/bridge` | The device bridge between pages and native shells | MPL-2.0                                  |
+| Package           | What it is                                     | Licence                                  |
+| ----------------- | ---------------------------------------------- | ---------------------------------------- |
+| `@sovereignfs/ui` | The design system: tokens and React components | MPL-2.0 (icons derived from Lucide: ISC) |
 
-Every other package is `private` for now and is not published. `apps/core` is a deployable,
-not a package. The two published packages are MPL-2.0 so that apps under any licence can use
-them (the other packages are MPL-2.0 too, for when they follow); `apps/core` and the
-repository are AGPL-3.0-or-later ([README](../README.md#licence)).
+Every other package is `private` for now and is not published, **`@sovereignfs/bridge`
+included**: it is release-ready (licence, files, README) but marked `private`, so nothing can
+publish it by accident. To publish it later, remove `"private"` from its `package.json`, add its
+tag and directory to `publish.yml` and a case for it to `scripts/__tests__/publish-workflow.test.ts`,
+and check the `@sovereignfs` scope on npm is yours: it has never been published, so its first
+release claims the name. `apps/core` is a deployable, not a package. The published package is
+MPL-2.0 so that apps under any licence can use it (the other packages are MPL-2.0 too, for when
+they follow); `apps/core` and the repository are AGPL-3.0-or-later ([README](../README.md#licence)).
 
 ## What a release is made of
 
 - **A version, set in the pull request.** The package's own `version` follows semver by what
-  changed in it ([AGENTS.md](../AGENTS.md) has the policy: `ui` and `bridge` are published
-  contracts, so a patch never breaks, and a break needs a minor bump plus a migration note).
-  The bump is its own commit, `ui-vX.Y.Z` or `bridge-vX.Y.Z`.
+  changed in it ([AGENTS.md](../AGENTS.md) has the policy: `ui` is a published
+  contract, so a patch never breaks, and a break needs a minor bump plus a migration note).
+  The bump is its own commit, `ui-vX.Y.Z`.
 - **A tarball that is only what an app needs:** `dist/`, `LICENSE`, `README.md`, and for `ui`
   the `NOTICE` with Lucide's ISC licence. No source, tests, stories or configuration; no
   `workspace:` or `catalog:` dependency (pnpm rewrites them to real ranges when it packs).
@@ -39,8 +42,8 @@ package's `package.json` and `LICENSE` in agreement.
 
 ## Releasing
 
-Pushing a tag releases the package: `ui-vX.Y.Z` releases `@sovereignfs/ui`, `bridge-vX.Y.Z`
-releases `@sovereignfs/bridge`. `.github/workflows/publish.yml` does the rest, and **publishes
+Pushing a tag releases the package: `ui-vX.Y.Z` releases `@sovereignfs/ui`.
+`.github/workflows/publish.yml` does the rest, and **publishes
 nothing unless every one of these holds**:
 
 1. the full CI passes on the tagged commit (the same suite as a pull request, every job);
@@ -55,7 +58,7 @@ another run could have stored.
 
 To release:
 
-1. Merge the pull request that carries the version bump (the `ui-vX.Y.Z` or `bridge-vX.Y.Z` commit).
+1. Merge the pull request that carries the version bump (the `ui-vX.Y.Z` commit).
 2. Tag the merge commit and push the tag: `git tag ui-v0.85.2 && git push origin ui-v0.85.2`.
 3. Watch the Publish run in the Actions tab. A published version cannot be replaced, so if a step
    fails after npm accepted the package, bump the version and release again.

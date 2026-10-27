@@ -80,7 +80,8 @@ first.
 #### ✅ 2.2 — Publishing and licence
 
 **Goal:** `@sovereignfs/ui` and `@sovereignfs/bridge` keep their npm names and
-release from this repository, under MPL-2.0.
+release from this repository, under MPL-2.0. (Decided later: only `ui` is published for now;
+`bridge` is release-ready and marked `private`.)
 
 **Deliverables (as built):**
 
@@ -91,11 +92,12 @@ release from this repository, under MPL-2.0.
   `LICENSE` in agreement, and the README says the same
 - The published packages ship `dist/` and their licence and README only (no `src`, tests or
   stories: `ui` shipped its source before), with `repository`, `homepage` and `bugs`
-  pointing at this repository; `bridge` has a README now
+  pointing at this repository; `bridge` has a README now and is marked `private`, so it is
+  release-ready but is not published
 - A release path, documented in `docs/releasing.md`: what is published, how the version is
   set, `pnpm packages:check` (packs each published package, checks the tarball with a tested
   checker, and runs the real `pnpm publish --dry-run`; it runs in CI after the build), and
-  `.github/workflows/publish.yml`: pushing `ui-vX.Y.Z` or `bridge-vX.Y.Z` runs the full CI on
+  `.github/workflows/publish.yml`: pushing `ui-vX.Y.Z` runs the full CI on
   the tagged commit, checks the commit is on `main` and the tag matches the package version,
   repeats the build and `packages:check`, then publishes with provenance using the Actions
   secret `NPM_TOKEN`. The release job installs without a cache. A test keeps the workflow's
@@ -117,7 +119,7 @@ retired before the first release from here.
 
 **Review checklist:**
 
-- A dry-run publish of each package succeeds (`pnpm packages:check`: `ui` and `bridge`)
+- A dry-run publish of each package succeeds (`pnpm packages:check`: `ui`; `bridge` is private for now and was dry-run published before it was marked so)
 - `package.json` and `LICENSE` agree for every package (the licence test)
 - The checker fails on what it should: a missing licence, an entry point pointing at
   source, a file that must not ship, a workspace dependency; seen on the real packages

@@ -234,7 +234,7 @@ Playwright · OpenAPI 3.1 (`spec/core-api/`) · Docker Compose.
 apps/core/          the core app — identity, sign-in server, Console, launcher
 packages/
   ui/               design system — published
-  bridge/           device bridge — published
+  bridge/           device bridge — release-ready, not published yet
   config/           env convention and start-up validation
   database/         sqld / PostgreSQL / SQLite file
   crypto/           field encryption (later: end-to-end, recovery kit)

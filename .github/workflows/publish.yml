@@ -3,8 +3,9 @@ name: Publish
 # Releases a package to npm when its tag is pushed. Each published package has its own release
 # cycle and its own tag:
 #   ui-vX.Y.Z      -> @sovereignfs/ui
-#   bridge-vX.Y.Z  -> @sovereignfs/bridge
-# Every other package is private and never published. docs/releasing.md has the whole process.
+# Every other package is private and never published (@sovereignfs/bridge is private for now;
+# publishing it later means removing "private" and adding its tag and case here).
+# docs/releasing.md has the whole process.
 #
 # Nothing publishes unless the full CI passes on the tagged commit, the commit is on `main`, the
 # tag matches the version in package.json, and the packed tarball passes `pnpm packages:check`.
@@ -13,7 +14,6 @@ on:
   push:
     tags:
       - 'ui-v*.*.*'
-      - 'bridge-v*.*.*'
 
 permissions:
   contents: read
@@ -51,8 +51,7 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           case "$TAG" in
-            ui-v*)     dir=ui;     prefix=ui-v ;;
-            bridge-v*) dir=bridge; prefix=bridge-v ;;
+            ui-v*) dir=ui; prefix=ui-v ;;
             *) echo "The tag $TAG is not a package release tag." >&2; exit 1 ;;
           esac
           expected="${TAG#"$prefix"}"

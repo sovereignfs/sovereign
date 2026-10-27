@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@sovereignfs/config": "workspace:*",
+    "@sovereignfs/crypto": "workspace:*",
     "@sovereignfs/database": "workspace:*",
     "@sovereignfs/ui": "workspace:*",
     "next": "catalog:",

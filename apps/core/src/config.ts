@@ -1,12 +1,14 @@
 import { defineConfig, secret, url } from '@sovereignfs/config';
+import { fieldEncryptionVariables, resolveFieldEncryption } from '@sovereignfs/crypto';
 import { databaseVariables, resolveDatabase } from '@sovereignfs/database';
 
 /**
  * Every environment variable core reads is declared here (rules: spec/env.md), and
  * `.env.example` lists the same ones; a test keeps the two in step. Variables for
- * field encryption, mail and registration arrive with the tasks that use them. The
- * database variables come from `@sovereignfs/database`; core does not require a
- * database yet, so with no `SV_DB_DIALECT` it runs without one.
+ * mail and registration arrive with the tasks that use them. The database and
+ * field-encryption variables come from their packages; core does not require a database
+ * or keys yet, so without them it runs as before (they become required with the first
+ * stored secret).
  */
 export const config = defineConfig({
   prefix: 'SV',
@@ -25,6 +27,7 @@ export const config = defineConfig({
       description: 'Signs sessions and tokens. At least 32 characters',
     }),
     ...databaseVariables,
+    ...fieldEncryptionVariables,
   },
 });
 
@@ -33,6 +36,11 @@ export type CoreConfig = ReturnType<typeof config.load>;
 /** Which database core uses, checked against what its dialect needs; `undefined` when none is set. */
 export function getDatabaseSettings() {
   return resolveDatabase(getConfig(), { prefix: config.prefix });
+}
+
+/** The cipher for stored secrets, from the key ring; `undefined` when no key ring is set. */
+export function getFieldCipher() {
+  return resolveFieldEncryption(getConfig(), { prefix: config.prefix });
 }
 
 let loaded: CoreConfig | undefined;

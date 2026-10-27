@@ -60,6 +60,26 @@ describe('start-up validation', () => {
     ).toBe(false);
   });
 
+  it('starts with a valid key ring, or none', async () => {
+    const ring = `k1:${Buffer.alloc(32, 7).toString('base64')}`;
+    expect((await start({ ...good, SV_FIELD_ENCRYPTION_KEYS: ring })).exited).toBe(false);
+  });
+
+  it('stops when the key ring is set and wrong, even though none is required yet', async () => {
+    const result = await start({ ...good, SV_FIELD_ENCRYPTION_KEYS: 'k1:tooshort,k1:alsobad' });
+    expect(result.exited).toBe(true);
+    expect(result.printed).toContain(
+      'SV_FIELD_ENCRYPTION_KEYS entry 1 has a key that is not 32 bytes',
+    );
+  });
+
+  it('never prints a key from a bad ring', async () => {
+    const key = Buffer.alloc(32, 9).toString('base64');
+    const result = await start({ ...good, SV_FIELD_ENCRYPTION_KEYS: `K1:${key}` });
+    expect(result.exited).toBe(true);
+    expect(result.printed).not.toContain(key);
+  });
+
   it('never prints the secret or a database password', async () => {
     const result = await start({
       SV_URL: 'http://localhost:3000',

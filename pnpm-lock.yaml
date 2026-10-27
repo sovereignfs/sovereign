@@ -195,6 +195,9 @@ importers:
       '@sovereignfs/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@sovereignfs/crypto':
+        specifier: workspace:*
+        version: link:../../packages/crypto
       '@sovereignfs/database':
         specifier: workspace:*
         version: link:../../packages/database
@@ -243,6 +246,22 @@ importers:
         version: 6.0.3
 
   packages/config:
+    devDependencies:
+      '@sovereignfs/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+
+  packages/crypto:
+    dependencies:
+      '@sovereignfs/config':
+        specifier: workspace:*
+        version: link:../config
     devDependencies:
       '@sovereignfs/tsconfig':
         specifier: workspace:*

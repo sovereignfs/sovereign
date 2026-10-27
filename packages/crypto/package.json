@@ -1,0 +1,35 @@
+{
+  "name": "@sovereignfs/crypto",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Field encryption for Sovereign: authenticated encryption with a key ring and lazy re-encryption on rotation.",
+  "license": "MPL-2.0",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sovereignfs/config": "workspace:*"
+  },
+  "devDependencies": {
+    "@sovereignfs/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}

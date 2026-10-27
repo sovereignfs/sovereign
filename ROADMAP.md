@@ -31,7 +31,7 @@ _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked · �
 | 0.5.0   | ui, bridge and mailer build in the new workspace | ✅     | [2.1](docs/epics/design-system.md)      |
 | 0.6.0   | `apps/core` skeleton                             | ✅     | [0.2](docs/epics/infrastructure.md)     |
 | 0.7.0   | `packages/database`                              | ✅     | [1.2](docs/epics/configuration-data.md) |
-| —       | Encryption of stored secrets `[parallel]`        | 📋     | [1.3](docs/epics/configuration-data.md) |
+| —       | Encryption of stored secrets `[parallel]`        | ⏳     | [1.3](docs/epics/configuration-data.md) |
 | —       | Core's base schema and settings                  | 📋     | [1.4](docs/epics/configuration-data.md) |
 | —       | Publishing and licence                           | 📋     | [2.2](docs/epics/design-system.md)      |
 

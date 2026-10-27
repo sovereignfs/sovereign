@@ -121,6 +121,9 @@ describe('sqld namespaces', () => {
 
   it('puts a time limit on every request, so one that never answers does not hang', async () => {
     // A server that accepts the request and never replies: it ends only when the signal aborts.
+    // It deliberately keeps only the signal, not the Request: a collection in the middle of the
+    // wait must not stop the timeout from arriving (it did, on a loaded CI runner, before the
+    // client kept the Request reachable itself).
     const hangs = (request: Request) =>
       new Promise<Response>((_resolve, reject) => {
         request.signal.addEventListener('abort', () => reject(request.signal.reason as Error));

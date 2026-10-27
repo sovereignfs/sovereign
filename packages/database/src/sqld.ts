@@ -61,6 +61,10 @@ export async function createSqldClient(
       return fetchImpl(request).finally(() => {
         clearTimeout(timer);
         original.signal.removeEventListener('abort', abortWithCaller);
+        // Keep `request` reachable until the call settles. A Request's signal follows ours only
+        // while the Request itself is alive (it is garbage-collected otherwise, and the abort
+        // never arrives); a real fetch holds it, but this must not depend on what `fetchImpl` does.
+        void request;
       });
     },
   });

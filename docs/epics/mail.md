@@ -19,7 +19,7 @@ consumer package with an SMTP transport and a transport tests can read.
 
 ## Tasks
 
-#### ⏳ 3.1 — Mail delivery and SMTP configuration
+#### ✅ 3.1 — Mail delivery and SMTP configuration
 
 **Goal:** Core can send mail through SMTP configured by environment variables
 or the Console.

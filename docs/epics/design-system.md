@@ -96,10 +96,12 @@ release from this repository, under MPL-2.0.
   set, `pnpm packages:check` (packs each published package, checks the tarball with a tested
   checker, and runs the real `pnpm publish --dry-run`; it runs in CI after the build), and
   the manual release steps a maintainer follows until the release workflow is decided
-- Storybook deployment from this repository: `.github/workflows/storybook.yml` publishes to
-  GitHub Pages when a `sb-v*` tag is pushed or the workflow is started by hand
-  (<https://sovereignfs.github.io/sovereign-core/>). The repository's Pages setting must be
-  turned on by an owner (source: GitHub Actions); the workflow cannot do it
+- Storybook deployment from this repository: `.github/workflows/storybook.yml` builds it and
+  publishes it to the dedicated `sovereignfs/storybook` repository (the existing
+  <https://sovereignfs.github.io/storybook/>, unchanged) when a `sb-v*` tag is pushed or the
+  workflow is started by hand, using a write-only deploy key stored as the secret
+  `STORYBOOK_DEPLOY_KEY`. Setting that key up is a one-time owner action; this repository's own
+  Pages settings are not used
 
 **Not here:** the automated release workflow and npm provenance, which are decided
 separately, and publishing anything: no release was made.
@@ -115,7 +117,7 @@ separately, and publishing anything: no release was made.
 - The checker fails on what it should: a missing licence, an entry point pointing at
   source, a file that must not ship, a workspace dependency; seen on the real packages
 - actionlint is clean on the new workflow, and zizmor reports only the `./` style finding
-  kept on purpose
+  kept on purpose; the deploy runs once the key is configured
 
 #### 📋 2.3 — Components core needs `[parallel]`
 

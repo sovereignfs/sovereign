@@ -1741,9 +1741,10 @@ is the living design reference for component authors, app developers, and
 designers — each component is rendered in isolation with every meaningful
 variant, both light and dark themes, and responsive viewports.
 
-**Hosted:** [sovereignfs.github.io/sovereign-core](https://sovereignfs.github.io/sovereign-core/),
-deployed from this repository when a `sb-v*` tag is pushed (see
-[`docs/releasing.md`](releasing.md)). Run it locally with the commands below.
+**Hosted:** [sovereignfs.github.io/storybook](https://sovereignfs.github.io/storybook/),
+published from this repository to the dedicated `sovereignfs/storybook` repository when a
+`sb-v*` tag is pushed (see [`docs/releasing.md`](releasing.md)). Run it locally with the
+commands below.
 
 ### Running locally
 

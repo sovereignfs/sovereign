@@ -53,14 +53,18 @@ the first time the name is claimed on npm, so check the scope is yours before st
 
 ## Storybook
 
-The design system's Storybook is deployed to GitHub Pages **from this repository**, by
-`.github/workflows/storybook.yml`:
+The design system's Storybook is built in this repository and published to its own repository,
+`sovereignfs/storybook`, whose GitHub Pages serves <https://sovereignfs.github.io/storybook/>.
+`.github/workflows/storybook.yml` does the publishing:
 
 - Push a tag `sb-vX.Y.Z` (it need not match a package version; it marks the commit to put
   live), or start the workflow by hand from the Actions tab.
-- It runs at <https://sovereignfs.github.io/sovereign-core/>.
-- **Pages must be enabled once** for the repository, with the source set to "GitHub Actions"
-  (Settings, then Pages). The workflow cannot enable it. Until it is, the deploy job fails and
-  nothing else is affected.
+- It pushes the static build to the `gh-pages` branch of `sovereignfs/storybook` with a deploy
+  key, so the address does not change and this repository's own Pages settings are not used.
+- **One-time setup**, by an owner of both repositories: generate an ed25519 key pair, add the
+  public key to `sovereignfs/storybook` as a deploy key **with write access**, and add the
+  private key to this repository as the Actions secret `STORYBOOK_DEPLOY_KEY`. The key can
+  write to that one repository and nothing else. Until it is set the workflow stops at its
+  first step and says so.
 - Every pull request that changes code builds Storybook in CI, so a story that no longer
   bundles fails there, not at deploy time.

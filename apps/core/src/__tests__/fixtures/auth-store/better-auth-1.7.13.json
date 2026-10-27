@@ -1,0 +1,49 @@
+{
+  "betterAuth": "1.7.13",
+  "secret": "a-secret-that-is-long-enough-to-pass-validation",
+  "email": "captured@example.com",
+  "password": "correct horse battery",
+  "cookie": "better-auth.session_token=9fEfhHip5iH39WZjVNm22ziuuwAjMQOD.o9DJlTN0txIW8gk1mNC8Gxdf77qXFwktoEzchPrYJws%3D",
+  "tables": {
+    "users": [
+      {
+        "id": "5vP3xffif5o2u1L8sJe6yGzndIDAVIaf",
+        "name": "Captured Person",
+        "email": "captured@example.com",
+        "email_verified": false,
+        "image": null,
+        "created_at": 1793133792292,
+        "updated_at": 1793133792292
+      }
+    ],
+    "accounts": [
+      {
+        "id": "mzWpxnomnhSpmuD6l1Lij9AHW2fZuZL1",
+        "account_id": "5vP3xffif5o2u1L8sJe6yGzndIDAVIaf",
+        "provider_id": "credential",
+        "user_id": "5vP3xffif5o2u1L8sJe6yGzndIDAVIaf",
+        "access_token": null,
+        "refresh_token": null,
+        "id_token": null,
+        "access_token_expires_at": null,
+        "refresh_token_expires_at": null,
+        "scope": null,
+        "password": "a4c04a521df26cfc2f37ae1c64ffa4e7:1995d325f251f652913f8254473a2f7561cd1d766e3ddd8400bbeb0442c5548fb88b6da5a12c6520f4cb66a30261b0cf5d2ffd5fe0db3f382f30b0a8c81ba155",
+        "created_at": 1793133792293,
+        "updated_at": 1793133792293
+      }
+    ],
+    "sessions": [
+      {
+        "id": "0JEfgQWhCzYbadcz9duQmomaciY1rW8A",
+        "expires_at": 4102444800000,
+        "token": "9fEfhHip5iH39WZjVNm22ziuuwAjMQOD",
+        "created_at": 1793133792294,
+        "updated_at": 1793133792294,
+        "ip_address": "198.51.100.1",
+        "user_agent": "",
+        "user_id": "5vP3xffif5o2u1L8sJe6yGzndIDAVIaf"
+      }
+    ]
+  }
+}

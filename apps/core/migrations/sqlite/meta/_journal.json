@@ -8,6 +8,13 @@
       "when": 1793126373076,
       "tag": "0000_instance_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1793133061049,
+      "tag": "0001_auth_tables",
+      "breakpoints": true
     }
   ]
 }

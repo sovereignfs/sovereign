@@ -79,7 +79,35 @@ pointing here.
   one.** Its migrator refuses to add a required column to a table that has rows,
   which surfaces only at boot on a real instance. (Legacy skipped 1.7.0–1.7.2
   for exactly this; the genuine cookie fixtures in the session tests guard the
-  signed cookie format.)
+  signed cookie format.) Core keeps what each version wrote in
+  `apps/core/src/__tests__/fixtures/auth-store/` (a person, a password hash and
+  a live session with its signed cookie); `auth.suite.ts` loads every capture
+  into each database and checks sign-in and the open session still work. Before
+  upgrading, capture the installed version
+  (`SV_CAPTURE_AUTH_STORE=1 pnpm vitest run --project unit auth-store.capture`),
+  keep the old file, upgrade, and run the suite on all three databases.
+- **The password policy is enforced where the hash is made, not in a request
+  hook.** better-auth stores a password only by hashing it, whichever way it
+  arrived; `setPassword` is server-only and has no path, so a hook keyed on the
+  request path never sees it (found by a test that called it directly). The
+  hash function is wrapped (`policedHash` in `src/auth/auth.ts`) to refuse a
+  password that breaks the policy, with the reason; the hash itself is
+  better-auth's own, so existing accounts keep working. better-auth's own length
+  limits are set wide so core's one sentence is what a person reads.
+- **The origin and CSRF checks are never switched off.** better-auth turns its
+  origin check off by itself when `NODE_ENV` is `test`; core sets
+  `disableOriginCheck: false` and `disableCSRFCheck: false` explicitly, so tests
+  exercise the check production runs.
+- **Rate limits count attempts per client address, in the database, and trust a
+  forwarded address only through declared proxies.** `SV_AUTH_TRUSTED_PROXIES`
+  lists the reverse proxies in front of core. Without it only a single-address
+  `X-Forwarded-For` is believed; any other request shares one limit per path, so
+  a client can never choose its own address.
+- **PostgreSQL migrations never name a schema.** drizzle-kit writes foreign keys
+  as `"public"."users"`; core runs in whichever schema the connection's
+  `search_path` names (each test file gets its own). `pnpm --filter
+@sovereignfs/core db:generate` strips the qualifier, and a test fails if one
+  is left.
 - **Self-mutations of the profile clear both session-data cookie variants**
   (`better-auth.session_data` and `__Secure-better-auth.session_data`), or the
   cookie cache keeps serving the old values.

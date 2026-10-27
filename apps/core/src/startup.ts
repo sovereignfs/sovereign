@@ -34,9 +34,7 @@ export function validateConfigOrExit(): void {
  */
 export async function migrateDatabaseOrExit(): Promise<void> {
   try {
-    const database = await getDatabase();
-    if (database === undefined) return;
-    const { applied } = await migrateCore(database);
+    const { applied } = await migrateCore(await getDatabase());
     if (applied.length > 0) console.log(`Database migrated: ${applied.join(', ')}`);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown error';

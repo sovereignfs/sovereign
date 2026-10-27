@@ -9,7 +9,16 @@ describe("core's schemas", () => {
   });
 
   it('are not empty', () => {
-    expect(Object.keys(sqlite)).toContain('instanceSettings');
-    expect(Object.keys(postgres)).toContain('instanceSettings');
+    for (const table of [
+      'instanceSettings',
+      'users',
+      'sessions',
+      'accounts',
+      'verifications',
+      'rateLimits',
+    ]) {
+      expect(Object.keys(sqlite)).toContain(table);
+      expect(Object.keys(postgres)).toContain(table);
+    }
   });
 });

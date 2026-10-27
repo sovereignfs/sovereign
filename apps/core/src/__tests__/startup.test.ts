@@ -33,10 +33,23 @@ afterEach(() => {
 });
 
 describe('start-up validation', () => {
-  const good = { SV_URL: 'http://localhost:3000', SV_AUTH_SECRET: SECRET };
+  const configured = { SV_URL: 'http://localhost:3000', SV_AUTH_SECRET: SECRET };
+  const good = { ...configured, SV_DB_DIALECT: 'sqlite', SV_SQLITE_URL: 'file:./data/core.db' };
 
-  it('starts with the address and the secret, and no database', async () => {
+  it('starts with the address, the secret and a database', async () => {
     expect((await start(good)).exited).toBe(false);
+  });
+
+  it('stops without a database, naming the variable: accounts live in it', async () => {
+    const result = await start(configured);
+    expect(result.exited).toBe(true);
+    expect(result.printed).toContain('SV_DB_DIALECT is required but not set');
+  });
+
+  it('stops when a password rule cannot be met', async () => {
+    const result = await start({ ...good, SV_AUTH_PASSWORD_MIN_LENGTH: '0' });
+    expect(result.exited).toBe(true);
+    expect(result.printed).toContain('SV_AUTH_PASSWORD_MIN_LENGTH');
   });
 
   it('stops with exit code 1 and names what is missing', async () => {
@@ -48,16 +61,13 @@ describe('start-up validation', () => {
   });
 
   it('stops when a dialect is chosen and its address is missing', async () => {
-    const result = await start({ ...good, SV_DB_DIALECT: 'postgres' });
+    const result = await start({ ...configured, SV_DB_DIALECT: 'postgres' });
     expect(result.exited).toBe(true);
     expect(result.printed).toContain('SV_POSTGRES_URL is required when DB_DIALECT is postgres');
   });
 
   it('starts with a complete database setting', async () => {
-    expect(
-      (await start({ ...good, SV_DB_DIALECT: 'sqlite', SV_SQLITE_URL: 'file:./data/core.db' }))
-        .exited,
-    ).toBe(false);
+    expect((await start(good)).exited).toBe(false);
   });
 
   it('starts with a valid key ring, or none', async () => {

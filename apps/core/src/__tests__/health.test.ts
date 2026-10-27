@@ -17,13 +17,8 @@ beforeEach(() => {
 
 describe('the health report', () => {
   it('says whether core and its database are up, and nothing else', async () => {
-    getDatabase.mockResolvedValue(undefined);
+    getDatabase.mockResolvedValue(databaseThatAnswers);
     expect(Object.keys(await healthReport()).sort()).toEqual(['app', 'database', 'status']);
-  });
-
-  it('is ok, with the database not configured, when there is no database', async () => {
-    getDatabase.mockResolvedValue(undefined);
-    expect(await healthReport()).toEqual({ status: 'ok', app: 'up', database: 'not-configured' });
   });
 
   it('is ok, with the database up, when it answers', async () => {

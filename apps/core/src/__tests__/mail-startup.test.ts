@@ -70,7 +70,7 @@ describe('the mail warning at start-up', () => {
 });
 
 describe('with no database at all', () => {
-  it('still warns, from the environment alone', async () => {
+  it('stays quiet and does not throw: the missing database is reported by the configuration check', async () => {
     vi.resetModules();
     for (const name of Object.keys(process.env).filter((n) => n.startsWith('SV_')))
       vi.stubEnv(name, '');
@@ -78,7 +78,7 @@ describe('with no database at all', () => {
     vi.stubEnv('SV_AUTH_SECRET', SECRET);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const { warnIfMailNotConfigured } = await import('../startup');
-    await warnIfMailNotConfigured();
-    expect(warn.mock.calls.map((c) => String(c[0])).join('\n')).toContain('Email is not set up');
+    await expect(warnIfMailNotConfigured()).resolves.toBeUndefined();
+    expect(warn).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,4 @@
-import { boolean, defineConfig, integer, secret, string, url } from '@sovereignfs/config';
+import { boolean, defineConfig, integer, list, secret, string, url } from '@sovereignfs/config';
 import { fieldEncryptionVariables, resolveFieldEncryption } from '@sovereignfs/crypto';
 import { databaseVariables, resolveDatabase } from '@sovereignfs/database';
 
@@ -26,6 +26,49 @@ export const config = defineConfig({
       minLength: 32,
       description: 'Signs sessions and tokens. At least 32 characters',
     }),
+    authCookieDomain: string({
+      name: 'AUTH_COOKIE_DOMAIN',
+      description:
+        "Parent domain for session cookies, so core's own pages and passkeys can be shared across subdomains. Apps signing in through OpenID Connect do not need it",
+    }),
+    authTrustedOrigins: list({
+      name: 'AUTH_TRUSTED_ORIGINS',
+      default: [],
+      description: "Extra origins accepted for requests, besides core's own; comma-separated",
+    }),
+    authTrustedProxies: list({
+      name: 'AUTH_TRUSTED_PROXIES',
+      default: [],
+      description:
+        'Addresses or ranges (such as 10.0.0.0/8) of the reverse proxies in front of core, comma-separated. Sign-in limits count attempts per client address, read from X-Forwarded-For through these proxies; without them only a single-address header is believed, and every other request shares one limit',
+    }),
+    authPasswordMinLength: integer({
+      name: 'AUTH_PASSWORD_MIN_LENGTH',
+      default: 8,
+      min: 1,
+      max: 128,
+      description: 'The shortest password accepted',
+    }),
+    authPasswordRequireUppercase: boolean({
+      name: 'AUTH_PASSWORD_REQUIRE_UPPERCASE',
+      default: false,
+      description: 'Require an upper-case letter in a password',
+    }),
+    authPasswordRequireLowercase: boolean({
+      name: 'AUTH_PASSWORD_REQUIRE_LOWERCASE',
+      default: false,
+      description: 'Require a lower-case letter in a password',
+    }),
+    authPasswordRequireNumber: boolean({
+      name: 'AUTH_PASSWORD_REQUIRE_NUMBER',
+      default: false,
+      description: 'Require a digit in a password',
+    }),
+    authPasswordRequireSymbol: boolean({
+      name: 'AUTH_PASSWORD_REQUIRE_SYMBOL',
+      default: false,
+      description: 'Require a character that is neither a letter nor a digit in a password',
+    }),
     authInviteOnly: boolean({
       name: 'AUTH_INVITE_ONLY',
       description:
@@ -46,9 +89,9 @@ export const config = defineConfig({
 
 export type CoreConfig = ReturnType<typeof config.load>;
 
-/** Which database core uses, checked against what its dialect needs; `undefined` when none is set. */
+/** Which database core uses, checked against what its dialect needs. Core cannot run without one: accounts live in it. */
 export function getDatabaseSettings() {
-  return resolveDatabase(getConfig(), { prefix: config.prefix });
+  return resolveDatabase(getConfig(), { prefix: config.prefix, required: true });
 }
 
 /** The cipher for stored secrets, from the key ring; `undefined` when no key ring is set. */

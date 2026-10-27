@@ -67,7 +67,7 @@ per-app prefix.
 - Not yet done: apps outside this repository that carry their own copy of this
   logic can switch to the package once it is published
 
-#### ⏳ 1.2 — `packages/database`
+#### ✅ 1.2 — `packages/database`
 
 **Goal:** One database interface that behaves the same on sqld, PostgreSQL and
 a SQLite file.

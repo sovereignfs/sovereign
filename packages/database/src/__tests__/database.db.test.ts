@@ -10,8 +10,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { MigrationError, migrate, readMigrations } from '../index.js';
 import type { Database, Migration } from '../index.js';
 import { postgresSchema, sqliteSchema } from './fixtures/schema.js';
-import { createTestDatabase, dialect } from './support.js';
-import type { TestDatabase } from './support.js';
+import { createTestDatabase, testDialect as dialect } from '../testing.js';
+import type { TestDatabase } from '../testing.js';
 
 const DIALECTS = ['sqld', 'sqlite', 'postgres'];
 

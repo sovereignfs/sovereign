@@ -186,3 +186,6 @@ export function assertSchemaParity(
     throw new Error(`The SQLite and PostgreSQL schemas differ:\n  - ${differences.join('\n  - ')}`);
   }
 }
+
+export { createTestDatabase, testDialect } from './test-database.js';
+export type { TestDatabase } from './test-database.js';

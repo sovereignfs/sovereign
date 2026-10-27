@@ -42,6 +42,17 @@ Without them core exits at start-up and says which are missing. Core runs withou
 database for now; set `SV_DB_DIALECT` and its address (see `.env.example`) to give it one,
 and `/api/health` reports it up or down.
 
+Core's tables are written twice, once per dialect (`apps/core/src/db/schema/sqlite.ts` and
+`postgres.ts`), and a test fails if the two stop being a pair. After changing both, generate
+the migrations and commit them with the change:
+
+```bash
+pnpm --filter core db:generate   # both dialects; random file names
+pnpm --filter core db:generate:sqlite -- --name add_thing   # or one dialect, with a name
+```
+
+Core applies its migrations when it starts, and every instance may do so at once.
+
 The tests that need a real database (`*.db.test.ts`, run with `pnpm test:db`) use the
 dialect named by `SV_DB_DIALECT`, once per dialect in CI. To run a leg locally, start the
 server CI starts and set the variables it sets:

@@ -1,4 +1,4 @@
-import { defineConfig, secret, url } from '@sovereignfs/config';
+import { boolean, defineConfig, integer, secret, string, url } from '@sovereignfs/config';
 import { fieldEncryptionVariables, resolveFieldEncryption } from '@sovereignfs/crypto';
 import { databaseVariables, resolveDatabase } from '@sovereignfs/database';
 
@@ -26,6 +26,19 @@ export const config = defineConfig({
       minLength: 32,
       description: 'Signs sessions and tokens. At least 32 characters',
     }),
+    authInviteOnly: boolean({
+      name: 'AUTH_INVITE_ONLY',
+      description:
+        'Registration policy default: true means sign-up needs an invite. A value saved in the Console overrides it. Unset means true',
+    }),
+    smtpHost: string({
+      name: 'SMTP_HOST',
+      description: 'Outgoing mail server. A value saved in the Console overrides it',
+    }),
+    smtpPort: integer({ name: 'SMTP_PORT', min: 1, max: 65535, description: 'Its port' }),
+    smtpUser: string({ name: 'SMTP_USER', description: 'Its user name' }),
+    smtpPassword: secret({ name: 'SMTP_PASSWORD', description: 'Its password' }),
+    smtpFrom: string({ name: 'SMTP_FROM', description: 'The address mail is sent from' }),
     ...databaseVariables,
     ...fieldEncryptionVariables,
   },

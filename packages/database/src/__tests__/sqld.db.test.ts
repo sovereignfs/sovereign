@@ -2,7 +2,7 @@
 import { randomBytes } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 import { connect, createNamespace, createSqldClient, dropNamespace } from '../index.js';
-import { dialect } from './support.js';
+import { testDialect as dialect } from '../testing.js';
 
 const url = process.env.SV_SQLD_URL ?? '';
 const admin = process.env.SV_SQLD_ADMIN_URL ?? '';

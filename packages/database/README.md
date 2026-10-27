@@ -100,6 +100,10 @@ would silently truncate (over 63 bytes).
 
 ## Testing
 
+`@sovereignfs/database/testing` also exports `createTestDatabase()`, for an app's own
+`*.db.test.ts` files: a private namespace, file or schema on the CI leg's database, with
+`open()` for more connections and `cleanup()`.
+
 Tests that need a real database are named `*.db.test.ts` and run against the dialect named
 by `SV_DB_DIALECT`, once per dialect in CI (`pnpm test:db`). How to start the servers
 locally is in [`CONTRIBUTING.md`](../../CONTRIBUTING.md).

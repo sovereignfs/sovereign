@@ -166,17 +166,37 @@ package; encryption of the SQLite file or PostgreSQL storage, which is the opera
 - Core run with a bad ring (exit 1, the problem named, no key in the output) and with a
   good ring read from a file
 
-#### 📋 1.4 — Core's base schema and settings
+#### ⏳ 1.4 — Core's base schema and settings
 
 **Goal:** Core has its own tables and a settings store where Console values
 override environment defaults.
 
-**Deliverables:**
+**Deliverables (as built):**
 
-- Core's initial migrations on all three dialects
-- An instance settings store: a saved value wins over the environment default;
-  unset falls back to the environment; changes apply without a restart
-- Secret settings stored through 1.3
+- Core's schemas, written as a pair (`apps/core/src/db/schema/sqlite.ts` and
+  `postgres.ts`), and drizzle-kit configuration with `db:generate`; the first migration on
+  both dialects creates `instance_settings` (key, value, `encrypted`, `updated_at`,
+  `updated_by`). A parity test keeps the pair in step, and a database test checks the
+  migrated table has the columns the schema describes. The base schema is one table for
+  now: accounts, sessions and the rest arrive with the tasks that need them
+- Core applies its migrations at start-up (every instance may, at once), and a failure
+  stops it; a traced build ships the migration folder
+- An instance settings store (`SettingsStore`): a saved value wins over the environment
+  variable, which wins over the built-in default; clearing the saved value returns to the
+  environment. A change applies without a restart: at once on the instance that made it,
+  within a short cache time (5 seconds) on others. Settings: instance name, invite-only
+  (on when nothing says otherwise), and the SMTP host, port, user, from address and
+  password; their environment variables (`SV_AUTH_INVITE_ONLY`, `SV_SMTP_*`) are declared
+- Secret settings stored through the field encryption of the previous task: encrypted,
+  bound to their row, never described back (the Console learns that one is saved, not what
+  it is). A saved secret that cannot be decrypted is reported unreadable and is not replaced
+  by the environment's value; one unreadable secret does not stop the others
+- Without a database, reads fall back to the environment and the defaults and saving is
+  refused with a clear error
+
+**Not here:** the Console screens that save these values (the Console epic), sending mail
+(the mail epic), images (logos, favicon), and making the key ring and a database required,
+which comes with the first feature that needs them.
 
 **Dependencies:** 1.2, 1.3
 
@@ -184,5 +204,12 @@ override environment defaults.
 
 **Review checklist:**
 
-- A setting resolves environment → saved value → back to environment when the
-  saved value is cleared, on all three databases
+- A setting resolves environment, then saved value, then back to the environment when the
+  saved value is cleared, on all three databases: the same suite on a SQLite file in
+  `pnpm test` and on sqld, a SQLite file and PostgreSQL in the CI legs
+- Core started against SQLite (twice), sqld (a new namespace) and PostgreSQL (two
+  instances at once) migrates exactly once
+- Broken on purpose, each caught by a test: the environment beating a saved value, clear
+  keeping the row, describe showing a secret, a secret stored in the clear, an unreadable
+  secret falling back to the environment, the cache not invalidated on save, one encryption
+  context for every row, and invite-only defaulting to open

@@ -9,13 +9,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate --config=drizzle.config.sqlite.ts && drizzle-kit generate --config=drizzle.config.postgres.ts",
+    "db:generate:sqlite": "drizzle-kit generate --config=drizzle.config.sqlite.ts",
+    "db:generate:postgres": "drizzle-kit generate --config=drizzle.config.postgres.ts"
   },
   "dependencies": {
     "@sovereignfs/config": "workspace:*",
     "@sovereignfs/crypto": "workspace:*",
     "@sovereignfs/database": "workspace:*",
     "@sovereignfs/ui": "workspace:*",
+    "drizzle-orm": "catalog:",
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
@@ -25,6 +29,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "drizzle-kit": "catalog:",
     "typescript": "catalog:"
   }
 }

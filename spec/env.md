@@ -128,8 +128,10 @@ SMTP settings, the instance name). For those, in order:
 2. otherwise the **environment variable**;
 3. otherwise the built-in **default**.
 
-A saved value takes effect without a restart, and clearing it returns the setting to the
-environment. A saved secret (the SMTP password) is stored encrypted and is never shown
+A saved value takes effect without a restart (at once on the instance that saved it, within
+a few seconds on others), and clearing it returns the setting to the environment. When the
+environment says nothing either, the built-in default applies, and where there is none the
+setting is off: a setting left unset never opens access. A saved secret (the SMTP password) is stored encrypted and is never shown
 again.
 
 Settings an app needs **before its database is reachable** are environment-only and

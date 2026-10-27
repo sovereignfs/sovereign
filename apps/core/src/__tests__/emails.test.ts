@@ -138,8 +138,9 @@ describe("core's emails", () => {
       expect(sent.subject).toContain('Sovereign');
       expect(sent.html).toContain('https://core.example.com/');
       expect(sent.text).toContain('https://core.example.com/');
+      // The whole origin, parsed: a prefix check would accept https://core.example.com.evil.test.
       for (const href of (sent.html ?? '').match(/href="[^"]+"/g) ?? []) {
-        expect(href.slice(6, -1).startsWith('https://core.example.com')).toBe(true);
+        expect(new URL(href.slice(6, -1)).origin).toBe('https://core.example.com');
       }
     },
   );

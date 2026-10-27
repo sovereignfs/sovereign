@@ -153,6 +153,18 @@ pointing here.
   addon loads at import; a PostgreSQL deployment, or a musl image without a matching
   binary, must never load it. Keep driver packages in `serverExternalPackages` so Next
   does not bundle them.
+- **A setting resolves saved value, then environment, then built-in default, and a setting
+  left unset never opens access.** Registration is invite-only until someone chooses
+  otherwise. Clearing a saved value returns to the environment. A change shows at once on the
+  instance that made it and within the cache time (seconds) on others.
+- **A saved secret that cannot be decrypted is "unreadable", never silently replaced by the
+  environment's value.** Something running on a credential nobody chose is worse than
+  something asking for it again. Every read degrades per value, so one unreadable secret does
+  not stop the others, and the Console never gets a secret's value, only whether one is saved.
+- **Core brings its own database up to date at start-up, and a failure stops it.** Every
+  instance may run the migrations at once (the runner applies each exactly once), and the
+  migration folder is read from disk, so a traced build must ship it (`outputFileTracingIncludes`)
+  and the read opts out of whole-project tracing (`turbopackIgnore`).
 - **Stored secrets are encrypted with a key ring, bound to where they are stored.** AES-256-GCM,
   a fresh random IV per value, and the key id and a context (`table.column[:row]`) in the
   authenticated data, so a ciphertext copied into another field or row does not open. New values

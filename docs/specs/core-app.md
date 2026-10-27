@@ -167,7 +167,8 @@ them.
 
 - `SV_AUTH_INVITE_ONLY` sets the default: `true` means sign-up needs a valid
   invite, `false` means anyone can sign up. A value saved in the Console
-  overrides the variable.
+  overrides the variable. When neither is set, sign-up needs an invite: a
+  setting left unset never opens access (§1.1).
 - The first account on an instance is exempt from invite-only and becomes the
   owner.
 - With invite-only on, a sign-up without a valid, unexpired invite for that
@@ -459,6 +460,17 @@ closing them returns there (§1.3).
 | Invite-only                                    | `instance:configure`         | Overrides `SV_AUTH_INVITE_ONLY` (§3.3.1)                                                    |
 | SMTP: host, port, user, from address, password | `instance:configure-secrets` | Overrides the `SV_SMTP_*` variables; the password is stored encrypted and never shown again |
 
+How a setting resolves: the value **saved in the Console**; otherwise the
+**environment variable**; otherwise the built-in default (the instance name is
+`Sovereign`; invite-only is on; the SMTP settings have none and are simply off).
+Clearing a saved value returns the setting to the environment. A change applies
+without a restart: at once on the instance that saved it, and on others within
+a few seconds. A saved secret is stored encrypted, bound to its setting, and is
+never shown again: the Console learns that one is saved, not what it is. A
+saved secret that cannot be decrypted (its key left the key ring) is reported
+as unreadable and is **not** replaced by the environment's value; the Console
+asks for it again.
+
 ### 3.13 Instance branding for apps
 
 Core publishes the instance name, logos and favicon at a well-known address so
@@ -576,3 +588,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-27 | §3.15: the environment variable names are no longer provisional; the rules they follow are in `spec/env.md`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | 2026-10-27 | §3.15: added `SV_SQLD_NAMESPACE` (the sqld namespace core uses, default `default`, so apps can share one sqld server) and `SV_POSTGRES_POOL_MAX`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | 2026-10-27 | §3.15: the format of `SV_FIELD_ENCRYPTION_KEYS` is a key ring of `id:key` entries, newest first, in `spec/env.md`; rotation puts a new key in front and keeps the old ones.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-10-27 | §3.3.1, §3.12: a setting left unset never opens access, so invite-only is on when neither the Console nor `SV_AUTH_INVITE_ONLY` sets it; §3.12 describes how a setting resolves and what an unreadable saved secret does.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |

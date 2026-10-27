@@ -5,6 +5,8 @@ const config: NextConfig = {
   transpilePackages: ['@sovereignfs/ui'],
   // Native and driver packages stay outside the bundle and load from node_modules.
   serverExternalPackages: ['@libsql/client', 'libsql', 'pg'],
+  // The migrations are read from disk at start-up, so a traced (standalone) build must ship them.
+  outputFileTracingIncludes: { '/*': ['./migrations/**/*.sql'] },
   poweredByHeader: false,
   reactStrictMode: true,
 };

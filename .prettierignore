@@ -3,3 +3,5 @@ node_modules
 **/.next
 **/.turbo
 pnpm-lock.yaml
+
+apps/core/migrations/**/meta

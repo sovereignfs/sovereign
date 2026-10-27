@@ -2,23 +2,19 @@ import { randomBytes } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { defineConfig } from '@sovereignfs/config';
+import { defineConfig, Secret } from '@sovereignfs/config';
 import pg from 'pg';
-import {
-  connect,
-  createNamespace,
-  databaseVariables,
-  dropNamespace,
-  resolveDatabase,
-} from '../index.js';
-import type { Database, ResolvedDatabase } from '../index.js';
+import { connect } from './database.js';
+import { databaseVariables, resolveDatabase, type ResolvedDatabase } from './settings.js';
+import { createNamespace, dropNamespace } from './sqld.js';
+import type { Database } from './types.js';
 
 /**
- * What a `*.db.test.ts` file runs against: the database the CI leg started, chosen with
- * SV_DB_DIALECT and its URL variables, exactly as core would read them. Every test file
+ * For `*.db.test.ts` files, in this package and in apps. What a test runs against: the
+ * database the CI leg started, chosen with SV_DB_DIALECT and its URL variables, exactly as core would read them. Every test file
  * gets a private namespace, file or schema, so files can run in parallel on one server.
  */
-export const dialect = process.env.SV_DB_DIALECT;
+export const testDialect = process.env.SV_DB_DIALECT;
 
 const loadSettings = defineConfig({ prefix: 'SV', variables: databaseVariables });
 
@@ -67,7 +63,7 @@ export async function createTestDatabase(): Promise<TestDatabase> {
   scoped.searchParams.set('options', `-c search_path=${name}`);
   const own: ResolvedDatabase = {
     ...resolved,
-    url: new (await import('@sovereignfs/config')).Secret(scoped.toString()),
+    url: new Secret(scoped.toString()),
   };
   return {
     resolved: own,

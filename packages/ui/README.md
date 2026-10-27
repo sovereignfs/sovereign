@@ -70,4 +70,4 @@ Available icon names: `activity`, `alert-triangle`, `bell`, `check`, `chevron-do
 
 ## License
 
-AGPL-3.0-or-later
+[MPL-2.0](LICENSE). The icons are derived from Lucide (ISC); see [NOTICE](NOTICE).

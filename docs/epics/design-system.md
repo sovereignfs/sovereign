@@ -77,18 +77,32 @@ first.
   undefined token (a test, and seen on a real component)
 - The built `bridge` runs under plain Node and has no dependencies
 
-#### 📋 2.2 — Publishing and licence
+#### ⏳ 2.2 — Publishing and licence
 
 **Goal:** `@sovereignfs/ui` and `@sovereignfs/bridge` keep their npm names and
 release from this repository, under MPL-2.0.
 
-**Deliverables:**
+**Deliverables (as built):**
 
-- Package licences changed to MPL-2.0, with a `LICENSE` in each package; the
-  `NOTICE` carrying Lucide's ISC licence kept
-- A release path for each package (the release workflow itself is decided
-  separately)
-- Storybook deployment from this repository
+- Every package under `packages/` declares MPL-2.0 and carries the licence text in its own
+  `LICENSE` (the same file everywhere); `apps/core` and the repository stay
+  AGPL-3.0-or-later. The design system keeps its `NOTICE` with Lucide's ISC licence, listed
+  in `files`. A test (`scripts/__tests__/licences.test.ts`) keeps each `package.json` and
+  `LICENSE` in agreement, and the README says the same
+- The published packages ship `dist/` and their licence and README only (no `src`, tests or
+  stories: `ui` shipped its source before), with `repository`, `homepage` and `bugs`
+  pointing at this repository; `bridge` has a README now
+- A release path, documented in `docs/releasing.md`: what is published, how the version is
+  set, `pnpm packages:check` (packs each published package, checks the tarball with a tested
+  checker, and runs the real `pnpm publish --dry-run`; it runs in CI after the build), and
+  the manual release steps a maintainer follows until the release workflow is decided
+- Storybook deployment from this repository: `.github/workflows/storybook.yml` publishes to
+  GitHub Pages when a `sb-v*` tag is pushed or the workflow is started by hand
+  (<https://sovereignfs.github.io/sovereign-core/>). The repository's Pages setting must be
+  turned on by an owner (source: GitHub Actions); the workflow cannot do it
+
+**Not here:** the automated release workflow and npm provenance, which are decided
+separately, and publishing anything: no release was made.
 
 **Dependencies:** 2.1
 
@@ -96,8 +110,12 @@ release from this repository, under MPL-2.0.
 
 **Review checklist:**
 
-- A dry-run publish of each package succeeds
-- `package.json` and `LICENSE` agree for every package
+- A dry-run publish of each package succeeds (`pnpm packages:check`: `ui` and `bridge`)
+- `package.json` and `LICENSE` agree for every package (the licence test)
+- The checker fails on what it should: a missing licence, an entry point pointing at
+  source, a file that must not ship, a workspace dependency; seen on the real packages
+- actionlint is clean on the new workflow, and zizmor reports only the `./` style finding
+  kept on purpose
 
 #### 📋 2.3 — Components core needs `[parallel]`
 

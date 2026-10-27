@@ -138,6 +138,7 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm build
       - run: pnpm build-storybook
+      - run: pnpm packages:check
 
   # The tests that need a real database (`*.db.test.ts`), once per supported
   # dialect. SV_DB_DIALECT names the leg; only its service is started. The URLs

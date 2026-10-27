@@ -33,7 +33,7 @@ _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked · �
 | 0.7.0   | `packages/database`                              | ✅     | [1.2](docs/epics/configuration-data.md) |
 | 0.8.0   | Encryption of stored secrets `[parallel]`        | ✅     | [1.3](docs/epics/configuration-data.md) |
 | 0.9.0   | Core's base schema and settings                  | ✅     | [1.4](docs/epics/configuration-data.md) |
-| —       | Publishing and licence                           | 📋     | [2.2](docs/epics/design-system.md)      |
+| —       | Publishing and licence                           | ⏳     | [2.2](docs/epics/design-system.md)      |
 
 ### M1 — People can sign in to core
 

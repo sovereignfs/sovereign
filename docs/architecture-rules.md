@@ -165,6 +165,11 @@ pointing here.
   instance may run the migrations at once (the runner applies each exactly once), and the
   migration folder is read from disk, so a traced build must ship it (`outputFileTracingIncludes`)
   and the read opts out of whole-project tracing (`turbopackIgnore`).
+- **A published package ships `dist/` and its licence, and nothing else an app does not need.**
+  `files` is an allow-list (`dist`, `LICENSE`, `README.md`, and `NOTICE` where a dependency's
+  licence requires it); source, tests, stories and configuration never ship. The check packs the
+  real tarball and runs a real `publish --dry-run`, because a `files` list that looks right can
+  still miss an entry point or ship a workspace dependency that npm cannot resolve.
 - **Stored secrets are encrypted with a key ring, bound to where they are stored.** AES-256-GCM,
   a fresh random IV per value, and the key id and a context (`table.column[:row]`) in the
   authenticated data, so a ciphertext copied into another field or row does not open. New values

@@ -63,6 +63,8 @@ catalog:
   prettier: ^3.9.10
   lint-staged: ^17.6.0
   simple-git-hooks: ^2.14.0
+  pg: ^8.23.1
+  '@types/pg': ^8.23.1
 
 # Supply-chain age gate: refuse to resolve a release published less than a day
 # ago, and fail loudly instead of quietly adding the package to an exclusion

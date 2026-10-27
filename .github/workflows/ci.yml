@@ -1,0 +1,220 @@
+name: CI
+
+# Validation runs on pull requests targeting `main`, and on demand. There is no
+# push trigger: `main` is meant to be gated by the pull request. A cheap first job
+# works out what the change touches and the others run only when it says so, so a
+# documentation-only pull request runs nothing but that job. Run it by hand
+# (Actions -> CI -> Run workflow) to check any branch, `main` included.
+#
+# While a pull request is a draft, or carries the `skip-ci` label, no job runs;
+# GitHub itself also skips the run when the head commit message says [skip ci].
+# Label events are in the trigger so adding or removing `skip-ci` takes effect at
+# once.
+#
+# Local actions are referenced as ./.github/actions/..., not the newer $/... form
+# that GitHub added in July 2026 and zizmor prefers; ./ works everywhere and cannot
+# be tested from here. Revisit when workflows can be run before they are merged.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+  workflow_dispatch:
+
+# Cancel a superseded run of the same pull request (or branch).
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  changes:
+    name: Classify changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Every other job needs this one, so skipping it skips them all.
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.draft == false &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-ci'))
+    outputs:
+      format: ${{ steps.classify.outputs.format }}
+      lint: ${{ steps.classify.outputs.lint }}
+      typecheck: ${{ steps.classify.outputs.typecheck }}
+      test: ${{ steps.classify.outputs.test }}
+      build: ${{ steps.classify.outputs.build }}
+      db: ${{ steps.classify.outputs.db }}
+      audit: ${{ steps.classify.outputs.audit }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+      # scripts/ci-changes.ts runs under plain Node: nothing is installed yet.
+      - id: classify
+        name: Classify the changed files
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [[ "$EVENT" == "pull_request" ]]; then
+            git diff --name-only "$BASE_SHA...$HEAD_SHA" | node scripts/ci-changes.ts | tee -a "$GITHUB_OUTPUT"
+          else
+            node scripts/ci-changes.ts --all | tee -a "$GITHUB_OUTPUT"
+          fi
+
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: changes
+    if: needs.changes.outputs.format == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm format:check
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: changes
+    if: needs.changes.outputs.lint == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm lint
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: changes
+    if: needs.changes.outputs.typecheck == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm typecheck
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: changes
+    if: needs.changes.outputs.test == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+
+  # The tests that need a real database (`*.db.test.ts`), once per supported
+  # dialect. SV_DB_DIALECT names the leg; only its service is started. The URLs
+  # use `localhost`, never an IP address: with namespaces enabled sqld takes the
+  # namespace from the first label of the Host header, so http://127.0.0.1:8080
+  # is read as the namespace "127".
+  test-db:
+    name: Database (${{ matrix.dialect }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: changes
+    if: needs.changes.outputs.db == 'true'
+    strategy:
+      # One failing dialect must not hide the result of the others.
+      fail-fast: false
+      matrix:
+        dialect: [sqld, sqlite, postgres]
+    env:
+      SV_DB_DIALECT: ${{ matrix.dialect }}
+      SV_SQLD_URL: http://localhost:8080
+      SV_SQLD_ADMIN_URL: http://localhost:8081
+      SV_SQLITE_URL: file:/tmp/sovereign-ci.db
+      SV_POSTGRES_URL: postgres://sovereign:sovereign@localhost:5432/sovereign_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+
+      # sqld is started with `docker run`, not a `services:` container: it needs the
+      # --enable-namespaces command-line flag (it has no environment-variable
+      # equivalent), and `services:` cannot override a container's command.
+      - name: Start sqld
+        if: matrix.dialect == 'sqld'
+        run: |
+          docker run -d --name sqld-ci -p 8080:8080 -p 8081:8081 \
+            -e SQLD_NODE=primary \
+            -e SQLD_HTTP_LISTEN_ADDR=0.0.0.0:8080 \
+            -e SQLD_ADMIN_LISTEN_ADDR=0.0.0.0:8081 \
+            ghcr.io/tursodatabase/libsql-server:v0.24.33 \
+            /bin/sqld --enable-namespaces
+          for _ in $(seq 1 30); do
+            curl -sf http://localhost:8080/health && exit 0
+            sleep 1
+          done
+          echo "sqld did not become healthy" >&2
+          docker logs sqld-ci >&2
+          exit 1
+
+      - name: Start PostgreSQL
+        if: matrix.dialect == 'postgres'
+        run: |
+          docker run -d --name postgres-ci -p 5432:5432 \
+            -e POSTGRES_USER=sovereign \
+            -e POSTGRES_PASSWORD=sovereign \
+            -e POSTGRES_DB=sovereign_test \
+            postgres:18
+          for _ in $(seq 1 30); do
+            docker exec postgres-ci pg_isready -U sovereign -d sovereign_test && exit 0
+            sleep 1
+          done
+          echo "PostgreSQL did not become ready" >&2
+          docker logs postgres-ci >&2
+          exit 1
+
+      - run: pnpm test:db
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: changes
+    if: needs.changes.outputs.audit == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      # Development tooling is audited too: it runs on contributors' machines and in
+      # CI. A scheduled workflow (dependency-audit.yml) repeats this against `main`,
+      # so a newly disclosed advisory against an unchanged dependency is not missed.
+      - run: pnpm audit --audit-level=high

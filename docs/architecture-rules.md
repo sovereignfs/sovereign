@@ -112,6 +112,12 @@ pointing here.
 - **drizzle-kit can't generate a rename non-interactively.** Hand-author both
   dialects' migration and snapshot, then check with `drizzle-kit check` and a
   no-op `drizzle-kit generate`.
+- **Every sqld request names its namespace, `default` included.** With namespaces
+  enabled, sqld takes the namespace from the first DNS label of the `Host` header
+  when none is sent, so `http://127.0.0.1:8080` is read as the namespace "127" and
+  answers 404 ("Namespace `127` doesn't exist"). Sending `x-namespace` on every
+  request makes the URL's host irrelevant (found while building the CI database
+  legs). Namespace routing by header needs sqld 0.24.33 or later.
 - **Encryption settings fail per app and never convert data silently.** A
   required key with an existing plaintext store is a start-up error for that
   app only; a genuinely empty data directory may start encrypted; converting is
@@ -184,6 +190,13 @@ pointing here.
 - **An `overrides` entry for an advisory is capped to the consumer's declared
   range** (`'>=3.1.6 <4.0.0'`), never open-ended; an open range once moved a
   dependency onto a major its consumer didn't support.
+- **Workflows are pinned and least-privileged.** Third-party actions are pinned to a
+  full commit SHA with the release in a comment (Dependabot updates both); every
+  `actions/checkout` sets `persist-credentials: false` since CI never pushes;
+  workflow permissions default to `contents: read`; values from the `github`
+  context reach a `run:` script through `env:`, never by interpolation; and each
+  job has a `timeout-minutes`. `actionlint` and `zizmor` both pass on the
+  workflows (run them from their Docker images after changing one).
 - **TypeScript 6:** the shared base sets `types: ["node"]`; never add `baseUrl`.
 - **pnpm's release-age gate stays strict.** `minimumReleaseAge` refuses a release
   published less than a day ago; by default pnpm then quietly adds the package to

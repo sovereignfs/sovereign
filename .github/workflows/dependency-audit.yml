@@ -1,0 +1,32 @@
+name: Dependency audit (scheduled)
+
+# The `audit` job in ci.yml runs only when a pull request touches a manifest or the
+# lockfile: it catches a vulnerability a change is about to introduce, but not one
+# newly disclosed against dependencies that have not changed. This repeats the same
+# check against `main` on a schedule so that case does not go unnoticed.
+on:
+  schedule:
+    # Mondays 07:00 UTC, an hour after CodeQL so the two do not start together.
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  audit:
+    name: pnpm audit (main)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      # Development tooling is included: it runs on contributors' machines and in CI.
+      # Reviewed exceptions, if any are ever needed, go in pnpm-workspace.yaml.
+      - run: pnpm audit --audit-level=high

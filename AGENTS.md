@@ -257,7 +257,8 @@ pnpm install --frozen-lockfile   # routine install (also installs the git hooks)
 pnpm format / format:check       # Prettier
 pnpm lint / lint:fix             # ESLint
 pnpm typecheck                   # turbo typecheck in every package, then tsc for the repo's scripts
-pnpm test / test:watch           # turbo test in every package, then the repo-level Vitest suite
+pnpm test / test:watch           # turbo test in every package, then the repo-level unit tests
+pnpm test:db                     # the *.db.test.ts tests, against the dialect named by SV_DB_DIALECT
 pnpm build                       # turbo build
 pnpm docs:check-links            # every relative Markdown link resolves
 pnpm verify:push                 # format:check, lint, typecheck, docs:check-links, test (the pre-push hook)

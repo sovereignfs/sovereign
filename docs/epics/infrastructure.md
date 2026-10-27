@@ -77,7 +77,7 @@ every supported platform.
   boundary, the accessibility rules, a dead link
 - `git rev-list --max-parents=0 HEAD` returns only the manifesto commit
 
-#### ⏳ 0.2 — `apps/core` skeleton
+#### ✅ 0.2 — `apps/core` skeleton
 
 **Goal:** An empty Next.js app, on the latest stable release, that is already
 secure by default and drawn with the design system.

@@ -1,0 +1,62 @@
+version: 2
+
+updates:
+  # The pnpm workspace. Dependabot resolves the whole repository, including the
+  # catalog in pnpm-workspace.yaml, from the root; no per-package entries needed.
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 10
+    labels:
+      - 'dependencies'
+    # Wait a week after a release before proposing it: a compromised release is
+    # usually caught within days. This also keeps a bot pull request clear of pnpm's
+    # one-day release-age gate (minimumReleaseAge). Security updates are exempt.
+    cooldown:
+      default-days: 7
+    ignore:
+      # TypeScript 7 is out, but typescript-eslint requires typescript <6.1.
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
+      # Tracks the root `engines` major (Node 24), not the newest Node release.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+    groups:
+      # Next.js patches change framework behaviour: a bump gets its own pull request
+      # and its own verification, never the routine batch.
+      next:
+        patterns:
+          - 'next'
+          - '@next/*'
+      # better-auth minors can change the persisted schema and the signed session
+      # cookie format; same rule - own pull request, checked against a populated
+      # database.
+      better-auth:
+        patterns:
+          - 'better-auth'
+          - '@better-auth/*'
+      # Routine patch and minor bumps in one pull request. A major always gets its
+      # own, whatever the grouping.
+      minor-and-patch:
+        update-types:
+          - 'minor'
+          - 'patch'
+        exclude-patterns:
+          - 'next'
+          - '@next/*'
+          - 'better-auth'
+          - '@better-auth/*'
+
+  # Workflow actions (actions/checkout, etc.), pinned to commit SHAs with the
+  # release in a comment; Dependabot updates both together.
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 10
+    labels:
+      - 'dependencies'
+      - 'ci'
+    cooldown:
+      default-days: 7

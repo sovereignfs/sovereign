@@ -104,21 +104,39 @@ secure by default and drawn with the design system.
 - Every response carries the CSP header with a fresh nonce
 - Start-up without `SV_AUTH_SECRET` fails with a clear message
 
-#### 📋 0.3 — Continuous integration
+#### ⏳ 0.3 — Continuous integration
 
-**Goal:** Every PR and every push to `main` is checked, and only what a change
-can affect is run.
+**Goal:** Every pull request is checked, and only what a change can affect is run.
 
 **Deliverables:**
 
-- A first job that works out what the change touches; documentation-only
-  changes run nothing else
-- Format, lint, typecheck, unit tests, build
-- Database test legs: sqld, SQLite file, PostgreSQL
-- CI runs on pull requests targeting `main` only — no push-to-`main` trigger;
-  skipped while the PR is a draft, labelled `skip-ci`, or the head commit says
-  `[skip ci]`
-- CodeQL and a scheduled dependency audit
+- `.github/workflows/ci.yml` and a `setup` composite action (pnpm with its store
+  cached, Node from `.node-version`, a frozen-lockfile install)
+- A first job, **Classify changes**, that runs `scripts/ci-changes.ts` under plain
+  Node (nothing installed) and decides which other jobs run. A change to
+  documentation only runs nothing else; an unrecognised path, an empty diff and a
+  change to the CI definition run everything. The script is tested, including as
+  CI invokes it
+- Jobs for format, lint, typecheck, test and build; a dependency audit that runs
+  when a manifest or the lockfile changes
+- Database legs for sqld, a SQLite file and PostgreSQL, each started the way
+  production will run it (sqld `v0.24.33` with `--enable-namespaces` through
+  `docker run`, since `services:` cannot set a command; PostgreSQL 18). Vitest has
+  two projects: `unit` (`pnpm test`) and `db` (`pnpm test:db`, the
+  `*.db.test.ts` files, run once per dialect with `SV_DB_DIALECT`). A smoke test
+  per dialect gives each leg something real to prove: sqld keeps namespaces apart,
+  a SQLite file round-trips, PostgreSQL isolates schemas and returns `bigint` as a
+  string. A leg with no dialect set fails rather than passing empty
+- Triggers: pull requests targeting `main` only (no push trigger) and a manual
+  `workflow_dispatch`; no job runs while the PR is a draft or labelled `skip-ci`,
+  and GitHub skips the run for `[skip ci]` in the head commit
+- `codeql.yml` (also on pushes to `main`), the weekly `dependency-audit.yml`, and
+  `dependabot.yml` (weekly, seven-day cooldown, Next.js and better-auth in their own
+  groups, no TypeScript or `@types/node` majors)
+- Hardening: third-party actions pinned to commit SHAs, `persist-credentials: false`
+  on every checkout, `contents: read`, job timeouts, `github` context passed to
+  scripts through `env`. `actionlint` and `zizmor` pass (zizmor's one remaining
+  preference, the `$/` form for local actions, is deliberately not adopted)
 
 **Dependencies:** 0.1
 
@@ -126,8 +144,14 @@ can affect is run.
 
 **Review checklist:**
 
-- A docs-only PR runs only the change-detection job
-- A deliberately failing test on one database leg fails CI
+- A docs-only PR runs only the change-detection job: the classifier, run as the
+  workflow runs it over a real documentation-only commit, turns every job off
+- A deliberately failing test on one database leg fails CI: a leg pointed at a
+  dead PostgreSQL exits non-zero, `fail-fast: false` keeps the other legs
+  reporting, and each leg passed against its real service
+- `actionlint` is clean and `zizmor` reports nothing but the deliberate `./` choice
+- Not verifiable here: the first real run on a GitHub pull request (labels, drafts
+  and the matrix cannot be exercised locally)
 
 #### ✅ 0.4 — Repository documents `[parallel]`
 

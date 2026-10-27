@@ -1,0 +1,54 @@
+name: CodeQL
+
+# Static analysis for the JavaScript/TypeScript code. It runs on pushes to `main`
+# (so it also covers direct pushes, which ci.yml does not), on every pull request,
+# and weekly so that a newly published query pack can flag code that has not
+# changed. It is separate from ci.yml: its runtime is independent of the format,
+# lint, typecheck, test and build jobs and should neither compete with nor block
+# them.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+  schedule:
+    # Mondays 06:00 UTC.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze (javascript-typescript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Skipped while a pull request is a draft or labelled `skip-ci`; always runs on
+    # a push, the schedule and a manual run.
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.draft == false &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-ci'))
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          languages: javascript-typescript
+          # The JavaScript/TypeScript extractor works from source; nothing to build.
+          build-mode: none
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          category: '/language:javascript-typescript'

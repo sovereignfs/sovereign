@@ -83,10 +83,31 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>
 
 ### Continuous integration
 
-CI runs automatically on every pull request targeting `main`. There is no
-push-to-`main` trigger — `main` is validated pre-merge by the PR. The jobs (set
-up by roadmap task 0.3) cover formatting, lint, typecheck, build, and tests on
-each supported database.
+CI (`.github/workflows/ci.yml`) runs on every pull request targeting `main`, and
+on demand: **Actions → CI → Run workflow** checks any branch, `main` included.
+There is no push-to-`main` trigger — `main` is meant to be gated by the pull
+request.
+
+A first job, **Classify changes**, runs `scripts/ci-changes.ts` over the files the
+pull request touches and decides which of the others run. A change to
+documentation only (Markdown, `docs/`, `LICENSE`, `MANIFESTO`, the issue and pull
+request templates) runs nothing else. A path the script does not recognise runs
+the jobs rather than skip them, and a change to the CI definition itself runs
+everything.
+
+| Job               | Runs                                                                 |
+| ----------------- | -------------------------------------------------------------------- |
+| Format            | `pnpm format:check`                                                  |
+| Lint              | `pnpm lint`                                                          |
+| Typecheck         | `pnpm typecheck`                                                     |
+| Test              | `pnpm test`                                                          |
+| Build             | `pnpm build`                                                         |
+| Database (3 legs) | `pnpm test:db` against sqld, a SQLite file and PostgreSQL            |
+| Dependency audit  | `pnpm audit --audit-level=high`, when a manifest or lockfile changes |
+
+CodeQL (`codeql.yml`) also runs on pushes to `main`, on pull requests, and weekly;
+`dependency-audit.yml` repeats the audit against `main` weekly. Dependabot opens
+weekly pull requests for dependencies and for the pinned workflow actions.
 
 **While a PR is a draft, all jobs are skipped** — marking it _Ready for review_
 runs them. To skip CI on demand you have three options:
@@ -94,6 +115,12 @@ runs them. To skip CI on demand you have three options:
 - keep the PR a **draft**;
 - add the **`skip-ci` label** to the PR;
 - put **`[skip ci]`** (or `[ci skip]`, `[no ci]`) in the head commit message.
+
+Run the database legs locally with the same services: start sqld
+(`ghcr.io/tursodatabase/libsql-server`, with `--enable-namespaces`) and/or
+PostgreSQL, set `SV_DB_DIALECT` to `sqld`, `sqlite` or `postgres` and the matching
+`SV_SQLD_URL` and `SV_SQLD_ADMIN_URL`, `SV_SQLITE_URL` or `SV_POSTGRES_URL`, then
+run `pnpm test:db`. `ci.yml` shows the exact commands.
 
 ---
 

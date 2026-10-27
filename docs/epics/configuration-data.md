@@ -59,8 +59,11 @@ a SQLite file.
 
 **Deliverables:**
 
-- Dialect selection (`SV_DB_DIALECT`), clients for sqld (with namespaces),
-  PostgreSQL (pool) and a SQLite file
+- Dialect selection (`SV_DB_DIALECT`), clients for sqld (with namespaces, sending
+  `x-namespace` on every request, `default` included), PostgreSQL (pool) and a
+  SQLite file
+- Real database tests named `*.db.test.ts`, which the CI legs from task 0.3 run
+  once per dialect (`pnpm test:db`)
 - Paired Drizzle schemas and migrations per dialect; a migration runner with
   its own record of what ran
 - A parity test that fails when a column exists in one dialect only

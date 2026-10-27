@@ -104,7 +104,7 @@ secure by default and drawn with the design system.
 - Every response carries the CSP header with a fresh nonce
 - Start-up without `SV_AUTH_SECRET` fails with a clear message
 
-#### ⏳ 0.3 — Continuous integration
+#### ✅ 0.3 — Continuous integration
 
 **Goal:** Every pull request is checked, and only what a change can affect is run.
 

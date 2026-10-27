@@ -67,24 +67,41 @@ per-app prefix.
 - Not yet done: apps outside this repository that carry their own copy of this
   logic can switch to the package once it is published
 
-#### 📋 1.2 — `packages/database`
+#### ⏳ 1.2 — `packages/database`
 
 **Goal:** One database interface that behaves the same on sqld, PostgreSQL and
 a SQLite file.
 
-**Deliverables:**
+**Deliverables (as built):**
 
-- Dialect selection (`SV_DB_DIALECT`), clients for sqld (with namespaces, sending
-  `x-namespace` on every request, `default` included), PostgreSQL (pool) and a
-  SQLite file
-- Real database tests named `*.db.test.ts`, which the CI legs from task 0.3 run
-  once per dialect (`pnpm test:db`)
-- Paired Drizzle schemas and migrations per dialect; a migration runner with
-  its own record of what ran
-- A parity test that fails when a column exists in one dialect only
-- Helpers for the data-layer rules in `docs/architecture-rules.md`: timestamps as `bigint` milliseconds
-  on PostgreSQL, session-scoped primitives on a pinned client, identifiers under
-  63 bytes
+- `@sovereignfs/database` (private, MPL-2.0): `connect(resolveDatabase(settings))` opens
+  sqld (a namespace per app, `x-namespace` on every request, `default` included), a
+  PostgreSQL pool, or a SQLite file; `databaseVariables` are the variables of
+  `spec/env.md`, to spread into an app's `defineConfig`. A URL that does not fit the
+  dialect is an error, not a guess. `SV_SQLD_NAMESPACE` is new (the spec's table has it)
+- One async interface: `run` with `?` placeholders on every dialect, integers as numbers
+  everywhere (node-postgres's `bigint` and `count(*)` included, exact or an error),
+  `transaction`, `session` (one pinned connection, where PostgreSQL session primitives
+  belong), `ping` with a timeout, and the typed Drizzle handle. Using the database inside
+  its own transaction throws the same error on every dialect
+- A migration runner with its own record (`sv_migrations`): a folder of `NNNN_name.sql`
+  per dialect; exactly once under concurrent starts; atomic per migration; refuses a
+  changed, missing or out-of-order migration
+- `@sovereignfs/database/testing`: `schemaDifferences` / `assertSchemaParity` compare a
+  SQLite and a PostgreSQL schema (tables, columns' logical type, nullability, primary key,
+  indexes, unique constraints, foreign keys) and flag identifiers over 63 bytes
+- Helpers for the data-layer rules: `sqliteTimestampMs` / `postgresTimestampMs`,
+  `assertIdentifier`, `toNumber`
+- `*.db.test.ts` tests that run against the CI leg's database: connection, rows, integers,
+  transactions, sessions, migrations (from empty, repeated, changed, missing, out of order,
+  half-failed, five instances at once), and sqld's namespaces and header
+- Core uses it: with `SV_DB_DIALECT` set, `/api/health` reports the database `up` or
+  `down` (503), and start-up fails on an incomplete database setting. Core still runs with
+  no database, until its base schema arrives. The tests read the workspace packages from
+  source, so a test run needs no build
+
+**Not here:** drizzle-kit configuration and `db:generate` arrive with the first real
+schema (core's base schema), which will also call `assertSchemaParity` on it.
 
 **Dependencies:** 1.1
 
@@ -92,8 +109,16 @@ a SQLite file.
 
 **Review checklist:**
 
-- Migrations apply from empty on all three databases in CI
+- Migrations apply from empty on all three databases: seen on real sqld 0.24.33, a SQLite
+  file and PostgreSQL 18, and run in the CI legs
 - The parity test is seen to fail when a column is added to one dialect only
+  (`parity.test.ts`), or a table, a type, an index or a long identifier
+- Broken on purpose, each caught by a test: the `x-namespace` header for `default`, the
+  migration checksum, transaction rollback, the bigint parser, the advisory lock, the
+  in-process file serialisation, and the guard against using the database inside a
+  transaction
+- Core's `/api/health` run against none, a SQLite file, sqld and PostgreSQL (up), and
+  against unreachable PostgreSQL and sqld (503); an incomplete setting stops start-up
 
 #### 📋 1.3 — Encryption of stored secrets `[parallel]`
 

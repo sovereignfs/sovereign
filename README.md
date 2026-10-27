@@ -43,7 +43,8 @@ and more. The spec lists what is in and out of each phase.
 | `packages/bridge`    | The device bridge, `@sovereignfs/bridge`                        | In the workspace                                      |
 | `packages/mailer`    | Mail delivery                                                   | In the workspace                                      |
 | `packages/config`    | The environment convention and start-up validation              | In the workspace                                      |
-| `packages/*` (later) | `database`, `crypto`, `auth`, `api-client`, …                   | Planned                                               |
+| `packages/database`  | One interface over sqld, PostgreSQL and a SQLite file           | In the workspace                                      |
+| `packages/*` (later) | `crypto`, `auth`, `api-client`, …                               | Planned                                               |
 | `spec/`              | `env.md` (the environment convention) and the Core API contract | `env.md` written; the contract is planned (task 10.1) |
 | `docs/`              | The spec, epics, research, RFCs and decisions                   | [Index below](#documentation)                         |
 | `scripts/`           | Repository tooling and the tests that guard the repo's rules    | In use                                                |

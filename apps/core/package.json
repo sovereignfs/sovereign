@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Sovereign Core — the sign-in server, Console and launcher.",
+  "description": "Sovereign Core \u2014 the sign-in server, Console and launcher.",
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "dev": "next dev",
@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@sovereignfs/config": "workspace:*",
+    "@sovereignfs/database": "workspace:*",
     "@sovereignfs/ui": "workspace:*",
     "next": "catalog:",
     "react": "catalog:",

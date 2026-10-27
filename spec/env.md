@@ -39,9 +39,10 @@ the prefix differs: `SV_URL` in core, `TASKS_URL` in an app that uses the `TASKS
 | `DB_DIALECT`                                       | Which database: `sqld`, `sqlite` or `postgres`                                     |        |
 | `SQLD_URL`                                         | An sqld server's address (when `DB_DIALECT` is `sqld`)                             |        |
 | `SQLD_ADMIN_URL`                                   | Its admin address, used to create namespaces                                       |        |
+| `SQLD_NAMESPACE`                                   | The sqld namespace the app uses, so apps can share a server. Default `default`     |        |
 | `SQLITE_URL`                                       | A SQLite database file, as a `file:` URL (when `DB_DIALECT` is `sqlite`)           |        |
 | `POSTGRES_URL`                                     | A PostgreSQL address, which can carry a password (when `DB_DIALECT` is `postgres`) | yes    |
-| `POSTGRES_POOL_MAX`                                | Connections in the PostgreSQL pool                                                 |        |
+| `POSTGRES_POOL_MAX`                                | Connections in the PostgreSQL pool, at least 2. Default 10                         |        |
 | `FIELD_ENCRYPTION_KEYS`                            | The keys that encrypt stored secrets, newest first                                 | yes    |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_FROM` | Outgoing mail                                                                      |        |
 | `SMTP_PASSWORD`                                    | Its password                                                                       | yes    |

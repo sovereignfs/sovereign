@@ -1,10 +1,12 @@
 import { defineConfig, secret, url } from '@sovereignfs/config';
+import { databaseVariables, resolveDatabase } from '@sovereignfs/database';
 
 /**
  * Every environment variable core reads is declared here (rules: spec/env.md), and
  * `.env.example` lists the same ones; a test keeps the two in step. Variables for
- * the database, field encryption, mail and registration arrive with the tasks that
- * use them.
+ * field encryption, mail and registration arrive with the tasks that use them. The
+ * database variables come from `@sovereignfs/database`; core does not require a
+ * database yet, so with no `SV_DB_DIALECT` it runs without one.
  */
 export const config = defineConfig({
   prefix: 'SV',
@@ -22,10 +24,16 @@ export const config = defineConfig({
       minLength: 32,
       description: 'Signs sessions and tokens. At least 32 characters',
     }),
+    ...databaseVariables,
   },
 });
 
 export type CoreConfig = ReturnType<typeof config.load>;
+
+/** Which database core uses, checked against what its dialect needs; `undefined` when none is set. */
+export function getDatabaseSettings() {
+  return resolveDatabase(getConfig(), { prefix: config.prefix });
+}
 
 let loaded: CoreConfig | undefined;
 

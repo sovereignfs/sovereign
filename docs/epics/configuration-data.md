@@ -120,18 +120,34 @@ schema (core's base schema), which will also call `assertSchemaParity` on it.
 - Core's `/api/health` run against none, a SQLite file, sqld and PostgreSQL (up), and
   against unreachable PostgreSQL and sqld (503); an incomplete setting stops start-up
 
-#### 📋 1.3 — Encryption of stored secrets `[parallel]`
+#### ⏳ 1.3 — Encryption of stored secrets `[parallel]`
 
 **Goal:** Secrets core stores (such as the SMTP password) are encrypted with a
 key from the environment.
 
-**Deliverables:**
+**Deliverables (as built):**
 
-- The field-encryption part of `packages/crypto`: authenticated encryption, a
-  key ring from `SV_FIELD_ENCRYPTION_KEYS` (current key plus older ones, each
-  with an id), lazy re-encryption on rotation
-- A clear error when a value cannot be decrypted, so callers can degrade per
-  value
+- `@sovereignfs/crypto` (private, MPL-2.0), the field-encryption part: `FieldCipher`
+  with AES-256-GCM, a fresh random IV per value, and an envelope
+  `sv1:<key id>:<iv>:<ciphertext>:<tag>`. The key id and a caller-given context
+  (`settings.smtp_password`, or table, column and row) are authenticated with the value,
+  so a ciphertext copied into another field or row does not decrypt there
+- A key ring from `SV_FIELD_ENCRYPTION_KEYS` (also `_FILE`): `id:key` entries, newest
+  first, each key 32 random bytes in base64 or base64url. New values use the first key,
+  any key decrypts. `open` returns the value and, for one written under an older key, the
+  upgraded envelope to write back, so a rotation finishes itself as values are read;
+  `isCurrent` finds the rest for a sweep. Problems with the ring are reported at start-up
+  by entry position, never showing a key
+- `DecryptionError` with a `reason` (`malformed`, `unknown-key`, `authentication-failed`),
+  never showing a value or a key, so callers degrade per value. A bad context is a
+  `TypeError`, a mistake in the caller
+- `fieldEncryptionVariables` and `resolveFieldEncryption`, to spread into an app's
+  config, as the database package does. Core declares them and validates the ring at
+  start-up; a ring that is set but wrong stops it. It is not required until core stores its
+  first secret (the next task makes it so)
+
+**Not here:** end-to-end encryption and the recovery kit, which come later to this
+package; encryption of the SQLite file or PostgreSQL storage, which is the operator's disk.
 
 **Dependencies:** 1.1
 
@@ -139,8 +155,16 @@ key from the environment.
 
 **Review checklist:**
 
-- Round-trip, tamper and wrong-key tests pass
-- After a key rotation, values written under the old key still decrypt
+- Round-trip, tamper (IV, ciphertext, tag, key id, truncation, extension) and wrong-key
+  tests pass, and so do wrong-context and malformed-value tests
+- After a key rotation, values written under the old key still decrypt, upgrade to the new
+  key, and read with the new key alone
+- Broken on purpose, each caught by a test: the context left out of the authenticated
+  data, a fixed IV, no upgrade, duplicate ids, the oldest key as current, an unknown key
+  reported as an authentication failure, mixed base64 alphabets, and an error that repeats
+  the value
+- Core run with a bad ring (exit 1, the problem named, no key in the output) and with a
+  good ring read from a file
 
 #### 📋 1.4 — Core's base schema and settings
 

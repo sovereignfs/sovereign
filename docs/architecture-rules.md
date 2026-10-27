@@ -153,6 +153,15 @@ pointing here.
   addon loads at import; a PostgreSQL deployment, or a musl image without a matching
   binary, must never load it. Keep driver packages in `serverExternalPackages` so Next
   does not bundle them.
+- **Stored secrets are encrypted with a key ring, bound to where they are stored.** AES-256-GCM,
+  a fresh random IV per value, and the key id and a context (`table.column[:row]`) in the
+  authenticated data, so a ciphertext copied into another field or row does not open. New values
+  use the first key; any key in the ring decrypts; a value read under an older key comes back
+  with its upgraded envelope, so a rotation finishes itself. A bad context is a `TypeError`, not
+  a `DecryptionError`: never let a caller's mistake look like a value that failed.
+- **A malformed key ring is a start-up error even where encryption is optional,** and no
+  message shows a key: problems are named by entry position, because a mistyped entry may be a
+  key itself.
 - **Encryption settings fail per app and never convert data silently.** A
   required key with an existing plaintext store is a start-up error for that
   app only; a genuinely empty data directory may start encrypted; converting is

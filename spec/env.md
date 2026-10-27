@@ -43,7 +43,7 @@ the prefix differs: `SV_URL` in core, `TASKS_URL` in an app that uses the `TASKS
 | `SQLITE_URL`                                       | A SQLite database file, as a `file:` URL (when `DB_DIALECT` is `sqlite`)           |        |
 | `POSTGRES_URL`                                     | A PostgreSQL address, which can carry a password (when `DB_DIALECT` is `postgres`) | yes    |
 | `POSTGRES_POOL_MAX`                                | Connections in the PostgreSQL pool, at least 2. Default 10                         |        |
-| `FIELD_ENCRYPTION_KEYS`                            | The keys that encrypt stored secrets, newest first                                 | yes    |
+| `FIELD_ENCRYPTION_KEYS`                            | The keys that encrypt stored secrets: `id:key` entries, newest first (§3)          | yes    |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_FROM` | Outgoing mail                                                                      |        |
 | `SMTP_PASSWORD`                                    | Its password                                                                       | yes    |
 
@@ -74,6 +74,16 @@ a token, a signing secret, and an address that carries credentials (a database U
 - **No secret has a default value.** A default secret is one every installation shares.
   A secret is either required or optional, never defaulted.
 - The `_FILE` suffix is reserved: no variable's name ends in it.
+
+### Field encryption keys
+
+`FIELD_ENCRYPTION_KEYS` is a key ring: comma-separated `id:key` entries, **newest first**.
+An id is 1-32 lower-case letters, digits, `-` or `_`; a key is 32 random bytes in base64 or
+base64url (`openssl rand -base64 32`). New values are encrypted with the first entry and any
+entry decrypts, so rotating is putting a new entry in front and keeping the old ones until no
+stored value names them. The ring is a secret, so it also takes the `_FILE` form. A ring that
+is set but malformed is a start-up error even where encryption is optional; each problem names
+its entry by position and none shows a key.
 
 ## 4. Values
 

@@ -18,6 +18,7 @@ export default defineConfig({
   resolve: {
     alias: [
       source('config', './packages/config/src/index.ts'),
+      source('crypto', './packages/crypto/src/index.ts'),
       source('database', './packages/database/src/index.ts'),
       {
         find: /^@sovereignfs\/database\/testing$/,

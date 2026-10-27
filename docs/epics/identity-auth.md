@@ -6,7 +6,7 @@
 
 ## Status
 
-📋 Planned
+⏳ In Progress
 
 ## Overview
 
@@ -21,7 +21,7 @@ a populated store, the signed cookie cache, rate limiting) is recorded in
 
 ## Tasks
 
-#### 📋 4.1 — better-auth and email/password
+#### ✅ 4.1 — better-auth and email/password
 
 **Goal:** People can sign up and sign in with email and password.
 

@@ -34,7 +34,7 @@ the task is corrected.
 | 1   | [Configuration & Data](configuration-data.md) | ✅ Complete    | `packages/config`, `packages/database`, encryption of stored secrets, base schema |
 | 2   | [Design System](design-system.md)             | ⏳ In Progress | `packages/ui` in the new workspace, publishing, components core needs             |
 | 3   | [Mail](mail.md)                               | ✅ Complete    | `packages/mailer`, SMTP configuration, templates                                  |
-| 4   | [Identity & Auth](identity-auth.md)           | 📋 Planned     | Sign-up, sign-in, verification, reset, TOTP, passkeys, sessions                   |
+| 4   | [Identity & Auth](identity-auth.md)           | ⏳ In Progress | Sign-up, sign-in, verification, reset, TOTP, passkeys, sessions                   |
 | 5   | [Roles & Capabilities](roles-capabilities.md) | 📋 Planned     | Platform roles, capability matrix, ownership                                      |
 | 6   | [OIDC Provider](oidc-provider.md)             | 📋 Planned     | Sign-in server for apps: flows, claims, consent, logout                           |
 | 7   | [Apps & Launcher](apps-launcher.md)           | 📋 Planned     | Client registry with launcher entries, the launcher                               |

@@ -27,8 +27,20 @@ pnpm verify:push                 # everything CI will check
 ```
 
 The hooks run Prettier and ESLint on the files you commit and the full
-`pnpm verify:push` before a push. The development server, database scripts and
-seed data arrive with tasks 0.2, 0.5 and 1.2; this section grows as they land.
+`pnpm verify:push` before a push.
+
+To run core, give it the two variables it cannot start without (`SV_URL` and
+`SV_AUTH_SECRET`; the rules are in [`spec/env.md`](spec/env.md)):
+
+```bash
+cp apps/core/.env.example apps/core/.env.local
+# set SV_AUTH_SECRET to the output of: openssl rand -base64 48
+pnpm dev                         # http://localhost:3000, and /api/health
+```
+
+Without them core exits at start-up and says which are missing. The database
+scripts and seed data arrive with tasks 0.5 and 1.2; this section grows as they
+land.
 
 ---
 

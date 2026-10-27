@@ -259,6 +259,7 @@ pnpm lint / lint:fix             # ESLint
 pnpm typecheck                   # turbo typecheck in every package, then tsc for the repo's scripts
 pnpm test / test:watch           # turbo test in every package, then the repo-level unit tests
 pnpm test:db                     # the *.db.test.ts tests, against the dialect named by SV_DB_DIALECT
+pnpm dev                         # core on :3000 (needs SV_URL and SV_AUTH_SECRET, see apps/core/.env.example)
 pnpm build                       # turbo build
 pnpm storybook / build-storybook # the design system's Storybook (dev server on :6006 / static build)
 pnpm design:tokens:check         # every --sv-* token used is defined; no hard-coded colours
@@ -268,8 +269,8 @@ pnpm docs:check-links            # every relative Markdown link resolves
 pnpm verify:push                 # format:check, lint, typecheck, design:tokens:check, docs:check-links, test (the pre-push hook)
 ```
 
-`pnpm dev`, the database scripts and the Docker commands arrive with the tasks
-that create them (0.2, 0.5, 1.2).
+The database scripts and the Docker commands arrive with the tasks that create
+them (0.5, 1.2).
 
 ## Environment notes
 

@@ -37,7 +37,7 @@ and more. The spec lists what is in and out of each phase.
 
 | Path                 | What                                                            | State                                                 |
 | -------------------- | --------------------------------------------------------------- | ----------------------------------------------------- |
-| `apps/core`          | The core app: sign-in server, Console, launcher                 | Planned (roadmap task 0.2 onwards)                    |
+| `apps/core`          | The core app: sign-in server, Console, launcher                 | A skeleton: themes, CSP, health check; no sign-in yet |
 | `packages/tsconfig`  | Shared TypeScript configuration                                 | In the workspace                                      |
 | `packages/ui`        | The design system, `@sovereignfs/ui`                            | In the workspace (Storybook runs and builds)          |
 | `packages/bridge`    | The device bridge, `@sovereignfs/bridge`                        | In the workspace                                      |

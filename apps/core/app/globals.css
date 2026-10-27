@@ -1,0 +1,21 @@
+@import '@sovereignfs/ui/tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--sv-font-family);
+  color: var(--sv-color-text-primary);
+  background: var(--sv-color-surface);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

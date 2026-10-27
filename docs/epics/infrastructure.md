@@ -77,21 +77,32 @@ every supported platform.
   boundary, the accessibility rules, a dead link
 - `git rev-list --max-parents=0 HEAD` returns only the manifesto commit
 
-#### 📋 0.2 — `apps/core` skeleton
+#### ⏳ 0.2 — `apps/core` skeleton
 
 **Goal:** An empty Next.js app, on the latest stable release, that is already
 secure by default and drawn with the design system.
 
-**Deliverables:**
+**Deliverables (as built):**
 
-- `apps/core` on the latest stable Next.js (16.4.3 as of 2026-10-26; check the
-  npm `latest` tag when the task starts), App Router, TypeScript, extends
-  `packages/tsconfig`
-- `@sovereignfs/ui` tokens and components wired in; light and dark themes
-- `proxy.ts` applying a nonce-based Content Security Policy on every return
-  path; no `'unsafe-inline'` in `script-src`
-- `GET /api/health` reporting app and database status only
-- Start-up refuses to run without required secrets (uses `packages/config`)
+- `apps/core` (`@sovereignfs/core`, private) on Next.js 16.4.3, the npm `latest`
+  tag when the task started: App Router, TypeScript, extends `packages/tsconfig`,
+  `transpilePackages` for the design system
+- `@sovereignfs/ui` tokens and components wired in: a page built from `Card`,
+  `PageContainer` and `StatusBadge`; light and dark themes, chosen before the first
+  paint by an inline script that carries the request's nonce (saved choice, else the
+  system preference)
+- `proxy.ts` building a Content Security Policy around a fresh nonce for every
+  request, on every path (API routes and static files too); no `'unsafe-inline'` in
+  `script-src`; the pure builder is `src/csp.ts` and is tested
+- `GET /api/health`, never cached, answering `{ status, app, database }` and
+  nothing else. There is no database layer yet, so `database` is `not-configured`;
+  the database package replaces it with a real check
+- Start-up refuses to run without `SV_URL` and `SV_AUTH_SECRET` (at least 32
+  characters, or `SV_AUTH_SECRET_FILE`): `instrumentation.ts` validates the whole
+  configuration with `packages/config`, prints every problem and exits non-zero. A
+  build does not need the secrets
+- `apps/core/.env.example` lists the declared variables, and a test fails if it
+  drifts from `src/config.ts`. `pnpm dev` runs core
 
 **Dependencies:** 0.1, 1.1, 2.1
 
@@ -100,8 +111,14 @@ secure by default and drawn with the design system.
 **Review checklist:**
 
 - `pnpm --filter core build` and `start` work; `/api/health` answers
-- Every response carries the CSP header with a fresh nonce
-- Start-up without `SV_AUTH_SECRET` fails with a clear message
+- Every response carries the CSP header with a fresh nonce: seen on the page, an
+  API route, a 404 and a static file, with a different nonce each time
+- Start-up without `SV_AUTH_SECRET` fails with a clear message: seen, both variables
+  named in one message, exit code 1
+- Both themes render with no Content Security Policy violation in the console
+- Each guarantee was broken on purpose and a test failed: `'unsafe-inline'` in
+  `script-src`, a constant nonce, the proxy not setting the header, a matcher that
+  skips API routes, and a health report that leaks a field
 
 #### ✅ 0.3 — Continuous integration
 

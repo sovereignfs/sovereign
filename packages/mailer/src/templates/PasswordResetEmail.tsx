@@ -1,7 +1,9 @@
-import { Button, Text } from 'react-email';
 import type { PasswordResetCopy } from './copy';
-import { DEFAULT_PRIMARY_COLOR, type EmailBranding } from './branding';
+import type { EmailBranding } from './branding';
+import { EmailButton } from './components/EmailButton';
 import { EmailLayout } from './components/EmailLayout';
+import { Lead, Note } from './components/EmailText';
+import { brandColor } from './branding';
 
 export interface PasswordResetEmailProps {
   resetUrl: string;
@@ -12,23 +14,12 @@ export interface PasswordResetEmailProps {
 export function PasswordResetEmail({ resetUrl, branding, copy }: PasswordResetEmailProps) {
   return (
     <EmailLayout branding={branding} preview={copy.intro}>
-      <Text style={{ fontSize: 15, color: '#18181b', margin: '0 0 16px' }}>{copy.intro}</Text>
-      <Button
-        href={resetUrl}
-        style={{
-          backgroundColor: branding.primaryColor ?? DEFAULT_PRIMARY_COLOR,
-          color: '#ffffff',
-          fontSize: 14,
-          fontWeight: 600,
-          padding: '12px 24px',
-          borderRadius: 6,
-          textDecoration: 'none',
-        }}
-      >
+      <Lead>{copy.intro}</Lead>
+      <EmailButton href={resetUrl} color={brandColor(branding)}>
         {copy.cta}
-      </Button>
-      <Text style={{ fontSize: 13, color: '#71717a', margin: '20px 0 0' }}>{copy.expiry}</Text>
-      <Text style={{ fontSize: 13, color: '#71717a', margin: '8px 0 0' }}>{copy.ignore}</Text>
+      </EmailButton>
+      <Note first>{copy.expiry}</Note>
+      <Note>{copy.ignore}</Note>
     </EmailLayout>
   );
 }

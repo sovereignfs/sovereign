@@ -9,7 +9,6 @@
   "invite": {
     "subject": "Sie wurden zu {{brandName}} eingeladen",
     "intro": "Sie wurden eingeladen, {{brandName}} beizutreten.",
-    "cta": "Konto erstellen",
-    "expiry": "Diese Einladung läuft in 48 Stunden ab."
+    "cta": "Konto erstellen"
   }
 }

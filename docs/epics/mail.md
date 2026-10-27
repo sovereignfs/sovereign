@@ -68,15 +68,33 @@ call `send`, and the Console screens that edit these settings.
   silently, a transport kept after the settings change, an unreadable password ignored, and a
   start-up warning without its consequence
 
-#### 📋 3.2 — Templates
+#### ⏳ 3.2 — Templates
 
 **Goal:** Every email core sends uses a branded default template.
 
-**Deliverables:**
+**Deliverables (as built):**
 
-- English templates for invitation, email verification, password reset,
-  account created and MFA reset, each with HTML and plain text
-- Branding from the instance name and logo
+- English templates for invitation, email verification, password reset, account created and
+  MFA reset (the last three are new; the first two are reworked), each rendered as a subject,
+  HTML and plain text from one set of words by `renderEmail` in `packages/mailer`. A locale and
+  operator overrides are accepted and fall back to English line by line; the old
+  fixed "expires in 48 hours" invitation line is gone (an invitation states its expiry date only
+  when it has one, in UTC)
+- Branding from the instance name (the Console setting, else `Sovereign`) and the logo when core
+  has one: the name as text in the header otherwise, or an image whose alt text is the name.
+  Images arrive with the Console's instance settings; `EmailService` takes the logo address from
+  a hook until then. The footer names the instance with its address
+- Links are on core's public address (`SV_URL`): `emailLink` builds them, and the renderer
+  refuses any link on another origin, any non-web scheme and any credentials, so a forged `Host`
+  header cannot redirect a reset or verification token
+- Branding is validated because it reaches HTML, CSS and a subject: the name is reduced to one
+  line, the colour must be `#rrggbb`, the logo and instance address must be web addresses.
+  Text settings (the instance name among them) refuse control characters when saved
+- `EmailService` in core renders with the instance's branding and sends through the mail
+  service, failing with a clear message when the link is wrong or email is not set up
+
+**Not here:** editing templates (not part of Phase 1), the flows that send these emails, and the
+logo images themselves.
 
 **Dependencies:** 3.1
 
@@ -84,5 +102,11 @@ call `send`, and the Console screens that edit these settings.
 
 **Review checklist:**
 
-- Each template renders with and without a logo
-- Links in each template point at core's public URL (`SV_URL`)
+- Each template renders with and without a logo: the five, in the tests, both ways
+- Links in each template point at core's public URL (`SV_URL`): every `href` in the HTML of every
+  template is on it, and a link on another host, a look-alike host, another port, the other
+  scheme, a credentials trick or a non-web scheme is refused
+- Broken on purpose, each caught by a test: the link origin check, the colour check, the logo
+  scheme check, the one-line instance name, the link left out of the text, an invitation that
+  always shows an expiry, `//host` allowed in an email path, the instance name ignored, and control
+  characters allowed in a setting

@@ -481,8 +481,12 @@ that apps can show the same branding. The address and format are defined in
 
 - Core sends: invitation, email verification, password reset, account created,
   and MFA reset.
-- Each uses a default English template carrying the instance name and logo.
-  Editing templates is not part of Phase 1.
+- Each uses a default English template carrying the instance name and logo,
+  sent as HTML and as plain text. Every link in an email is on core's own public
+  address (`SV_URL`), never one built from a request's headers, so a forged
+  `Host` header cannot redirect a reset or verification token. The invitation
+  states its expiry date only when it has one. Editing templates is not part of
+  Phase 1.
 - Credentials are sent only over an encrypted connection: implicit TLS, or a
   STARTTLS upgrade that is required, never merely offered. A server that does
   not offer TLS makes the send fail instead of receiving the password, and the
@@ -594,3 +598,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-27 | §3.15: the format of `SV_FIELD_ENCRYPTION_KEYS` is a key ring of `id:key` entries, newest first, in `spec/env.md`; rotation puts a new key in front and keeps the old ones.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-10-27 | §3.3.1, §3.12: a setting left unset never opens access, so invite-only is on when neither the Console nor `SV_AUTH_INVITE_ONLY` sets it; §3.12 describes how a setting resolves and what an unreadable saved secret does.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | 2026-10-27 | §3.14: SMTP credentials are sent only over an encrypted connection (implicit TLS, or STARTTLS that is required), and the server's certificate is verified.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| 2026-10-27 | §3.14: every email is sent as HTML and plain text, and every link in it is on core's public address (`SV_URL`); an invitation states its expiry only when it has one.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |

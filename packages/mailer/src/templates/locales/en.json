@@ -10,6 +10,28 @@
     "subject": "You've been invited to {{brandName}}",
     "intro": "You've been invited to join {{brandName}}.",
     "cta": "Create your account",
-    "expiry": "This invite expires in 48 hours."
+    "expiry": "This invitation expires on {{expires}}.",
+    "ignore": "If you were not expecting this invitation, you can safely ignore this email."
+  },
+  "verifyEmail": {
+    "subject": "Verify your {{brandName}} email address",
+    "intro": "Confirm that this is your email address to finish setting up your {{brandName}} account.",
+    "cta": "Verify email address",
+    "expiry": "This link can be used once and expires in 1 hour.",
+    "ignore": "If you did not create an account, you can safely ignore this email."
+  },
+  "accountCreated": {
+    "subject": "Welcome to {{brandName}}",
+    "greeting": "Hi {{name}},",
+    "intro": "Your {{brandName}} account has been created.",
+    "cta": "Sign in",
+    "ignore": "If you did not create this account, contact your administrator."
+  },
+  "mfaReset": {
+    "subject": "Two-step verification was reset on your {{brandName}} account",
+    "intro": "An administrator reset two-step verification on your {{brandName}} account. Your authenticator app and passkeys no longer work as a second step.",
+    "next": "Sign in with your password, then set up two-step verification again in your account's security settings.",
+    "cta": "Sign in",
+    "ignore": "If you did not expect this, contact your administrator."
   }
 }

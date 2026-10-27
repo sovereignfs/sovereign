@@ -1,135 +1,102 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import nodemailer, { type Transporter } from 'nodemailer';
-import { createMailer, SMTP_TIMEOUTS_MS } from '../mailer';
+import { describe, expect, it } from 'vitest';
+import { isMailError, MailError } from '../errors';
+import { createMailer, createUnavailableMailer } from '../mailer';
+import { createMemoryTransport } from '../memory';
 
-vi.mock('nodemailer', () => ({
-  default: { createTransport: vi.fn() },
-}));
+const FROM = 'Sovereign <no-reply@example.com>';
 
-const createTransport = vi.mocked(nodemailer.createTransport);
+describe('a mailer over the memory transport', () => {
+  it('delivers a message and lets a test read it back', async () => {
+    const transport = createMemoryTransport();
+    const mailer = createMailer(transport, { from: FROM });
+    const result = await mailer.send({
+      to: 'person@example.com',
+      subject: 'Welcome',
+      text: 'Hello',
+      html: '<p>Hello</p>',
+    });
 
-afterEach(() => {
-  vi.unstubAllEnvs();
-  vi.clearAllMocks();
-});
+    expect(result).toEqual({ accepted: ['person@example.com'], rejected: [] });
+    expect(transport.sent).toHaveLength(1);
+    expect(transport.last).toEqual({
+      from: FROM,
+      to: ['person@example.com'],
+      subject: 'Welcome',
+      text: 'Hello',
+      html: '<p>Hello</p>',
+    });
+  });
 
-describe('createMailer', () => {
-  it('no-ops when SMTP_HOST is set to empty string (does not throw, does not send)', async () => {
-    vi.stubEnv('SMTP_HOST', '');
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  it('keeps messages in order, and can be cleared', async () => {
+    const transport = createMemoryTransport();
+    const mailer = createMailer(transport, { from: FROM });
+    await mailer.send({ to: 'a@example.com', subject: 'One', text: 'x' });
+    await mailer.send({ to: 'b@example.com', subject: 'Two', text: 'x' });
+    expect(transport.sent.map((m) => m.subject)).toEqual(['One', 'Two']);
+    transport.clear();
+    expect(transport.sent).toEqual([]);
+    expect(transport.last).toBeUndefined();
+  });
 
-    const mailer = createMailer();
-    expect(mailer.configured).toBe(false);
+  it('never sends a message that is invalid, and says why', async () => {
+    const transport = createMemoryTransport();
+    const mailer = createMailer(transport, { from: FROM });
+    await expect(mailer.send({ to: 'nope', subject: 'x', text: 'x' })).rejects.toMatchObject({
+      code: 'invalid-message',
+    });
+    expect(transport.sent).toEqual([]);
+  });
+
+  it('turns a failure of the transport into a MailError without its own text', async () => {
+    const transport = createMemoryTransport();
+    transport.failNextWith(new Error('connect ECONNREFUSED 10.0.0.5:587 for user hunter2'));
+    const mailer = createMailer(transport, { from: FROM });
+    const error = await mailer
+      .send({ to: 'a@example.com', subject: 'x', text: 'x' })
+      .catch((e: unknown) => e);
+    expect(isMailError(error)).toBe(true);
+    expect((error as MailError).code).toBe('send-failed');
+    expect((error as MailError).message).not.toContain('hunter2');
+    expect((error as MailError).message).not.toContain('10.0.0.5');
+  });
+
+  it('passes a MailError from the transport on unchanged', async () => {
+    const transport = createMemoryTransport();
+    const failure = new MailError(
+      'authentication-failed',
+      'The mail server refused the SMTP user name or password.',
+      535,
+    );
+    transport.failNextWith(failure);
+    const mailer = createMailer(transport, { from: FROM });
+    await expect(mailer.send({ to: 'a@example.com', subject: 'x', text: 'x' })).rejects.toBe(
+      failure,
+    );
+  });
+
+  it('fails the next send once only', async () => {
+    const transport = createMemoryTransport();
+    const mailer = createMailer(transport, { from: FROM });
+    transport.failNextWith(new Error('boom'));
     await expect(
-      mailer.send({ to: 'a@b.c', subject: 'Hello', text: 'hi' }),
-    ).resolves.toBeUndefined();
-
-    expect(createTransport).not.toHaveBeenCalled();
-    expect(warn).toHaveBeenCalledOnce();
-    warn.mockRestore();
-  });
-
-  it('sends via nodemailer when configured, mapping fields', async () => {
-    vi.stubEnv('SMTP_HOST', 'smtp.example.com');
-    vi.stubEnv('SMTP_FROM', 'Sovereign <no-reply@example.com>');
-    const sendMail = vi.fn().mockResolvedValue(undefined);
-    createTransport.mockReturnValue({ sendMail } as unknown as Transporter);
-
-    const mailer = createMailer();
-    expect(mailer.configured).toBe(true);
-    await mailer.send({ to: 'user@example.com', subject: 'Welcome', html: '<p>Hi</p>' });
-
-    expect(createTransport).toHaveBeenCalledOnce();
-    expect(sendMail).toHaveBeenCalledWith(
-      expect.objectContaining({
-        from: 'Sovereign <no-reply@example.com>',
-        to: 'user@example.com',
-        subject: 'Welcome',
-        html: '<p>Hi</p>',
-      }),
-    );
-  });
-
-  it('lets a per-message from override the configured default', async () => {
-    vi.stubEnv('SMTP_HOST', 'smtp.example.com');
-    vi.stubEnv('SMTP_FROM', 'default@example.com');
-    const sendMail = vi.fn().mockResolvedValue(undefined);
-    createTransport.mockReturnValue({ sendMail } as unknown as Transporter);
-
-    const mailer = createMailer();
-    await mailer.send({ to: 'u@e.c', subject: 'S', text: 't', from: 'override@example.com' });
-
-    expect(sendMail).toHaveBeenCalledWith(
-      expect.objectContaining({ from: 'override@example.com' }),
-    );
+      mailer.send({ to: 'a@example.com', subject: 'x', text: 'x' }),
+    ).rejects.toBeInstanceOf(MailError);
+    await expect(
+      mailer.send({ to: 'a@example.com', subject: 'x', text: 'x' }),
+    ).resolves.toBeDefined();
   });
 });
 
-describe('createMailer — dev Mailpit fallback', () => {
-  it('connects to 127.0.0.1:1025 in non-production when SMTP_HOST is not set', () => {
-    // Delete SMTP_HOST so the ?? fallback path is reached (empty string is not null/undefined).
-    const saved = process.env.SMTP_HOST;
-    delete process.env.SMTP_HOST;
-    // NODE_ENV defaults to 'test' in Vitest, which is !== 'production', so isDev = true.
-    const sendMail = vi.fn().mockResolvedValue(undefined);
-    createTransport.mockReturnValue({ sendMail } as unknown as Transporter);
-
-    try {
-      const mailer = createMailer();
-      expect(mailer.configured).toBe(true);
-      expect(createTransport).toHaveBeenCalledWith(
-        // An IP literal, never `localhost`: nodemailer resolves hostnames via
-        // real DNS queries, and `localhost` stalled ~6s on first send.
-        expect.objectContaining({ host: '127.0.0.1', port: 1025 }),
-      );
-    } finally {
-      if (saved !== undefined) process.env.SMTP_HOST = saved;
-    }
-  });
-
-  it('SMTP_HOST env always takes precedence over the dev fallback', () => {
-    vi.stubEnv('SMTP_HOST', 'my-smtp-relay.example.com');
-    vi.stubEnv('SMTP_PORT', '587');
-    const sendMail = vi.fn().mockResolvedValue(undefined);
-    createTransport.mockReturnValue({ sendMail } as unknown as Transporter);
-
-    const mailer = createMailer();
-    expect(mailer.configured).toBe(true);
-    expect(createTransport).toHaveBeenCalledWith(
-      expect.objectContaining({ host: 'my-smtp-relay.example.com', port: 587 }),
-    );
-  });
-
-  it('no-ops in production when SMTP_HOST is not set', async () => {
-    const saved = process.env.SMTP_HOST;
-    delete process.env.SMTP_HOST;
-    vi.stubEnv('NODE_ENV', 'production');
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-
-    try {
-      const mailer = createMailer();
-      expect(mailer.configured).toBe(false);
-      await expect(
-        mailer.send({ to: 'a@b.c', subject: 'Test', text: 'hi' }),
-      ).resolves.toBeUndefined();
-      expect(createTransport).not.toHaveBeenCalled();
-      expect(warn).toHaveBeenCalledOnce();
-    } finally {
-      if (saved !== undefined) process.env.SMTP_HOST = saved;
-      warn.mockRestore();
-    }
-  });
-});
-
-describe('createMailer — transport timeouts', () => {
-  it('bounds connect/greeting/socket waits instead of taking nodemailer defaults', () => {
-    vi.stubEnv('SMTP_HOST', 'smtp.example.com');
-    createTransport.mockReturnValue({
-      sendMail: vi.fn().mockResolvedValue(undefined),
-    } as unknown as Transporter);
-
-    createMailer();
-    expect(createTransport).toHaveBeenCalledWith(expect.objectContaining(SMTP_TIMEOUTS_MS));
-    expect(SMTP_TIMEOUTS_MS.connectionTimeout).toBeLessThan(120_000);
+describe('an unavailable mailer', () => {
+  it('fails every send, saying email is not set up, instead of dropping the message', async () => {
+    const mailer = createUnavailableMailer('Email is not set up: no SMTP server is set.');
+    const error = await mailer
+      .send({ to: 'a@example.com', subject: 'x', text: 'x' })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(MailError);
+    expect(error).toMatchObject({
+      code: 'not-configured',
+      message: 'Email is not set up: no SMTP server is set.',
+    });
   });
 });

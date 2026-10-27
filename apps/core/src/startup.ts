@@ -2,6 +2,7 @@ import { ConfigError } from '@sovereignfs/config';
 import { getConfig, getDatabaseSettings, getFieldCipher } from './config';
 import { getDatabase } from './database';
 import { migrateCore } from './db/migrate';
+import { getMailService, mailStartupWarning } from './mail';
 
 /**
  * Reads and validates the whole configuration. On a problem it prints every one and
@@ -41,5 +42,18 @@ export async function migrateDatabaseOrExit(): Promise<void> {
     const message = error instanceof Error ? error.message : 'unknown error';
     console.error(`\nCore could not bring its database up to date: ${message}\n`);
     process.exit(1);
+  }
+}
+
+/**
+ * Warns, once, when email cannot be sent. It never stops core: core-app §3.14 wants a warning at
+ * start-up and a clear failure from any flow that needs mail, not a refusal to start.
+ */
+export async function warnIfMailNotConfigured(): Promise<void> {
+  try {
+    const warning = mailStartupWarning(await (await getMailService()).status());
+    if (warning) console.warn(`\n${warning}\n`);
+  } catch {
+    // Settings could not be read: the database check above already reported what is wrong.
   }
 }

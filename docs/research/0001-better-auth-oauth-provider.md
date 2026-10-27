@@ -25,11 +25,11 @@ handler directly (no browser), driving the full flow: sign-up, client
 registration, authorize, consent, token, refresh, userinfo, end-session,
 back-channel logout. The same flows were then repeated on:
 
-| Database                                                                          | How                                                                      | Result               |
-| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | -------------------- |
-| SQLite (better-auth's built-in Kysely path)                                       | `better-sqlite3`, in memory                                              | all behaviours below |
-| **PostgreSQL 18.4**                                                               | real server binary (`embedded-postgres`)                                 | all key flows pass   |
-| **libSQL** (the client sqld uses), through the **Drizzle adapter** (Fjord's path) | `@libsql/client` over a `file:` URL, Drizzle schema from `auth generate` | all key flows pass   |
+| Database                                                                                                | How                                                                      | Result               |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | -------------------- |
+| SQLite (better-auth's built-in Kysely path)                                                             | `better-sqlite3`, in memory                                              | all behaviours below |
+| **PostgreSQL 18.4**                                                                                     | real server binary (`embedded-postgres`)                                 | all key flows pass   |
+| **libSQL** (the client sqld uses), through the **Drizzle adapter** (the path an app outside core takes) | `@libsql/client` over a `file:` URL, Drizzle schema from `auth generate` | all key flows pass   |
 
 **Not verified:** a running `sqld` server (the Docker daemon was not running).
 The libSQL client over a file uses the same SQL dialect and driver, so the
@@ -198,7 +198,7 @@ Verified. Apps can be configured with just the instance URL as the issuer.
   code flow; only core's own pages and passkeys need core's cookie.
   `SV_AUTH_COOKIE_DOMAIN` can stay unset unless passkeys are shared across
   subdomains.
-- **Drizzle path** (sqld, Fjord's path): the CLI that generates the plugin's
+- **Drizzle path** (sqld; the path an app outside core takes): the CLI that generates the plugin's
   Drizzle schema is the `auth` package (`npx auth generate`, version 1.7.14);
   `@better-auth/cli` is stale. Table names are snake_case (`oauth_client`,
   `skip_consent`). Our revocation code (B1, B2) must use the generated schema

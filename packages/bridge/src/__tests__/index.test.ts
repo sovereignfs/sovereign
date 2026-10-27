@@ -1,16 +1,14 @@
 // @vitest-environment jsdom
-import type { BridgeImpl } from '@sovereignfs/sdk/device-bridge';
+import type { BridgeImpl } from '../device-bridge';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { installWebBridge } from '../index';
 import { BRIDGE_GLOBAL_KEY, PROTOCOL_VERSION } from '../protocol';
 import { installBridge } from '../shell';
 
-// `provideBridge()`'s Symbol.for-keyed global is the intended, documented
-// way to read back a registration — the same technique `@sovereignfs/sdk`
-// itself uses internally (`packages/sdk/src/device-bridge.ts`). Leg 1 has
-// no plugin-facing consumer of the registration yet (that's leg 2), so
-// there's no `sdk.device.*` call to round-trip through instead.
-const BRIDGE_SYMBOL = Symbol.for('@sovereignfs/sdk:bridge');
+// Registration is stored under a Symbol.for key on globalThis (see
+// device-bridge.ts). The tests read it back directly as well as through
+// getBridge(), so a rename of the key cannot slip past unnoticed.
+const BRIDGE_SYMBOL = Symbol.for('@sovereignfs/bridge:registered');
 
 function registeredImpl(): BridgeImpl {
   const impl = (globalThis as unknown as Record<symbol, BridgeImpl>)[BRIDGE_SYMBOL];

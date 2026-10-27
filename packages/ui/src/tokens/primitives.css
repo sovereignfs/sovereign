@@ -82,12 +82,12 @@
   --sv-font-weight-semibold: 600;
   --sv-font-weight-bold: 700;
 
-  /* In-app text-size control (task 10.2), discharging the pinch-zoom-disabled
-     accessibility debt (runtime/app/layout.tsx sets userScalable: false).
+  /* In-app text-size control, discharging the pinch-zoom-disabled
+     accessibility debt of an app that sets userScalable: false.
      Every --sv-font-size-* above is rem-based, so scaling the root font size
      scales the whole type system with no per-component changes. Driven by
-     [data-text-size] on <html>, set pre-paint by runtime/src/theme-script.ts
-     from the `sv-text-size` cookie — same mechanism as [data-theme]. Like
+     [data-text-size] on <html>, set pre-paint by the app — same mechanism as
+     [data-theme]. Like
      --sv-radius-scale, this is a theme-stable scale token with no separate
      semantic tier. */
   --sv-text-size-scale: 1;
@@ -99,11 +99,10 @@
   --sv-icon-size-lg: 1.5rem; /* 24px — prominent / standalone */
 
   /* Border radii (v3.1 spec values). --sv-radius-scale is the one
-     instance-controllable exception to "scale tokens are theme-stable"
-     (RFC 0077) — an operator's corner-radius preset (None/XS/S/M/L)
-     overrides it at :root via the InstanceProvider style injection
-     (runtime/src/instance-provider.tsx), same pipeline as --sv-color-accent.
-     Every corner token below is proportional to it, so a plugin author never
+     instance-controllable exception to "scale tokens are theme-stable" —
+     an operator's corner-radius preset (None/XS/S/M/L) overrides it at
+     :root, same pipeline as --sv-color-accent.
+     Every corner token below is proportional to it, so an app author never
      references --sv-radius-scale directly — they keep using --sv-radius-sm
      etc. exactly as before. --sv-radius-full is deliberately NOT derived
      from the scale: it's a shape token (circle/pill), not a corner-rounding

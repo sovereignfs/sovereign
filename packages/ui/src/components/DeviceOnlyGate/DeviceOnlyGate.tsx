@@ -8,11 +8,10 @@ export interface DeviceOnlyGateProps {
   /** Defaults to a generic "this app" phrasing — pass the plugin's own name. */
   surfaceName?: string;
   /**
-   * The caller's own `isDeviceOnlyTierAvailable()` result (from
-   * `@sovereignfs/sdk/device-client`) — taken as a plain boolean rather than
-   * computed inside this component, so `@sovereignfs/ui` never depends on
-   * `@sovereignfs/sdk` (this package must stay usable standalone, outside the
-   * plugin runtime — RFC 0073).
+   * Whether the device-only tier is available here, as the caller works it
+   * out — taken as a plain boolean rather than computed inside this
+   * component, so `@sovereignfs/ui` depends on no app runtime (this package
+   * must stay usable standalone).
    */
   available: boolean;
   className?: string;

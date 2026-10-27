@@ -2794,7 +2794,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             <ComponentCard
               name="DeviceOnlyGate"
               importLine="import { DeviceOnlyGate } from '@sovereignfs/ui';"
-              usage="Blocks a device-only-tier plugin's content on a surface without the durable, encrypted, device-auth-gated store that tier needs. `available` is the caller's own isDeviceOnlyTierAvailable() result (from @sovereignfs/sdk/device-client) — a capability signal, never a security boundary; the real protection is that the data is encrypted regardless."
+              usage="Blocks a device-only-tier app's content on a surface without the durable, encrypted, device-auth-gated store that tier needs. `available` is the caller's own answer to whether that tier is available here — a capability signal, never a security boundary; the real protection is that the data is encrypted regardless."
             >
               <DeviceOnlyGate available={false} surfaceName="Wallet">
                 <p style={{ margin: 0, fontFamily: 'var(--sv-font-family)', fontSize: 14 }}>
@@ -2807,7 +2807,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             <ComponentCard
               name="DeviceStorageKeyGate"
               importLine="import { DeviceStorageKeyGate } from '@sovereignfs/ui';"
-              usage="Blocks a device-only-tier plugin's content until the user has set up their Device Storage Key. `status` is the caller's own getDeviceStorageKeyStatus() result (from @sovereignfs/sdk/device-only-storage). Enrollment is centralized in Account > Security, not per-plugin — `setupAction` is where the caller supplies a link there."
+              usage="Blocks a device-only-tier app's content until the user has set up their Device Storage Key. `status` is the caller's own device-storage-key status. Enrollment is centralized in one place, not per app — `setupAction` is where the caller supplies a link there."
             >
               <DeviceStorageKeyGate
                 status="not-set-up"
@@ -3754,11 +3754,11 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                 </li>
                 <li>Use Tailwind classes or runtime CSS-in-JS</li>
                 <li>
-                  Import from <code style={{ fontFamily: ffm }}>runtime/src</code> (SDK boundary)
+                  Import from an app (<code style={{ fontFamily: ffm }}>apps/</code>) — packages
+                  never import apps
                 </li>
                 <li>
-                  Override <code style={{ fontFamily: ffm }}>--sv-color-accent</code> from plugin
-                  CSS
+                  Override <code style={{ fontFamily: ffm }}>--sv-color-accent</code> from page CSS
                 </li>
               </ul>
             </div>

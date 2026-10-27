@@ -260,8 +260,12 @@ pnpm typecheck                   # turbo typecheck in every package, then tsc fo
 pnpm test / test:watch           # turbo test in every package, then the repo-level unit tests
 pnpm test:db                     # the *.db.test.ts tests, against the dialect named by SV_DB_DIALECT
 pnpm build                       # turbo build
+pnpm storybook / build-storybook # the design system's Storybook (dev server on :6006 / static build)
+pnpm design:tokens:check         # every --sv-* token used is defined; no hard-coded colours
+pnpm generate:icons              # regenerate the Icon components from scripts/icon-list.ts
+pnpm generate:theme-presets      # regenerate tokens/theme-presets.css from theme-presets.ts
 pnpm docs:check-links            # every relative Markdown link resolves
-pnpm verify:push                 # format:check, lint, typecheck, docs:check-links, test (the pre-push hook)
+pnpm verify:push                 # format:check, lint, typecheck, design:tokens:check, docs:check-links, test (the pre-push hook)
 ```
 
 `pnpm dev`, the database scripts and the Docker commands arrive with the tasks

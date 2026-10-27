@@ -303,9 +303,8 @@ export type {
   NavListLinkProps,
 } from './components/NavList/NavList';
 
-// Theme presets (RFC 0094) — the closed, built-in preset data. Consumed
-// directly by runtime/src/instance-style.ts (RFC 0095); Storybook and
-// standalone consumers instead import the generated
-// '@sovereignfs/ui/tokens/theme-presets.css'.
+// Theme presets — the closed, built-in preset data. An app can inject it at
+// :root itself; Storybook and consumers that prefer CSS instead import the
+// generated '@sovereignfs/ui/tokens/theme-presets.css'.
 export { THEME_PRESETS, THEME_PRESET_NAMES } from './tokens/theme-presets';
 export type { ThemePresetName, ThemePresetTokens } from './tokens/theme-presets';

@@ -9,11 +9,10 @@ import type { RefObject } from 'react';
  *
  * Measures `ref`'s own rendered height and publishes it as an inline
  * `var(--sv-shell-header-height|--sv-shell-footer-height)` override on
- * `#sv-app-shell` (the runtime shell's stable root id, `runtime/app/
- * (platform)/layout.tsx`), removing it on unmount. This is what makes a
+ * `#sv-app-shell` (the shell's stable root id, set by the app that owns the
+ * shell), removing it on unmount. This is what makes a
  * *self-rendered* `MobileHeader`/`MobileFooter` — the sanctioned pattern for
- * a plugin that opts out of the platform's own chrome via
- * `shellConfig.mobileHeader`/`mobileFooter: false` (RFC 0075/0088) — work
+ * a page that opts out of the shell's own chrome — work
  * correctly with `Sheet`/`Drawer`/`Dialog`, which all size themselves against
  * these same two variables so they stop above/below the chrome instead of
  * sliding underneath it.

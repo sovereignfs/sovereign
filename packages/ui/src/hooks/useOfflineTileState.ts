@@ -21,12 +21,10 @@ export type OfflineTileState = 'connectivity-dimmed' | 'capability-restricted' |
  * Which of the two states, if any, applies to an app tile given its declared
  * offline tier.
  *
- * `deviceOnlyAvailable` is the caller's own
- * `isDeviceOnlyTierAvailable()` result (from
- * `@sovereignfs/sdk/device-client`) — deliberately taken as a plain boolean
- * parameter rather than computed inside this hook, so `@sovereignfs/ui` never
- * depends on `@sovereignfs/sdk` (this package must stay usable standalone,
- * outside the plugin runtime — RFC 0073).
+ * `deviceOnlyAvailable` is whether the device-only tier is available here, as
+ * the caller works it out — deliberately taken as a plain boolean parameter
+ * rather than computed inside this hook, so `@sovereignfs/ui` depends on no app
+ * runtime (this package must stay usable standalone).
  *
  * An `offline-first` app is never restricted by either state: that tier's
  * whole point is working with no network, so it stays fully interactive both

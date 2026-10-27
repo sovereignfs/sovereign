@@ -821,9 +821,8 @@ const isOffline = useIsOffline();`}</CodeBlock>
         </Card>
         <CodeBlock>{`import { useOfflineTileState } from '@sovereignfs/ui';
 
-// deviceOnlyAvailable comes from isDeviceOnlyTierAvailable() in
-// @sovereignfs/sdk/device-client — passed in, not computed here, so
-// @sovereignfs/ui never depends on @sovereignfs/sdk.
+// deviceOnlyAvailable is worked out by the caller and passed in, not
+// computed here, so @sovereignfs/ui depends on no app runtime.
 const state = useOfflineTileState(plugin.offline, deviceOnlyAvailable);
 // 'connectivity-dimmed' | 'capability-restricted' | null`}</CodeBlock>
       </section>

@@ -28,7 +28,7 @@ _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked · �
 | 0.2.0   | Repository documents `[parallel]`                | ✅     | [0.4](docs/epics/infrastructure.md)     |
 | 0.3.0   | Continuous integration                           | ✅     | [0.3](docs/epics/infrastructure.md)     |
 | 0.4.0   | Environment convention and `packages/config`     | ✅     | [1.1](docs/epics/configuration-data.md) |
-| —       | ui, bridge and mailer build in the new workspace | 📋     | [2.1](docs/epics/design-system.md)      |
+| —       | ui, bridge and mailer build in the new workspace | ⏳     | [2.1](docs/epics/design-system.md)      |
 | —       | `apps/core` skeleton                             | 📋     | [0.2](docs/epics/infrastructure.md)     |
 | —       | `packages/database`                              | 📋     | [1.2](docs/epics/configuration-data.md) |
 | —       | Encryption of stored secrets `[parallel]`        | 📋     | [1.3](docs/epics/configuration-data.md) |

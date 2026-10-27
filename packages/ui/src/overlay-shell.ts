@@ -51,10 +51,10 @@ export function isTopmostOpenOverlay(id: string): boolean {
   return openOverlayIds.at(-1) === id;
 }
 
-// The runtime shell's stable root id (`runtime/app/(platform)/layout.tsx`) —
-// also the element `usePublishShellChromeHeight` writes its measured chrome
-// heights onto. Duplicated as a literal there rather than imported: this
-// package is framework-agnostic and never imports from the runtime.
+// The shell's stable root id, set by the app that owns the shell — also the
+// element `usePublishShellChromeHeight` writes its measured chrome heights
+// onto. Duplicated as a literal there rather than imported: this package is
+// framework-agnostic and never imports from an app.
 const SHELL_ROOT_ID = 'sv-app-shell';
 
 /**

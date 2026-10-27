@@ -7,12 +7,11 @@
  *   - `scripts/generate-theme-presets-css.ts` (`pnpm generate:theme-presets`)
  *     reads this file and emits `theme-presets.css` for Storybook/standalone
  *     consumers.
- *   - `runtime/src/instance-style.ts` (RFC 0095) imports `THEME_PRESETS`
- *     directly and flattens the selected preset into the existing
- *     `:root { ... }` instance-style injection — no CSS parsing, no second
- *     copy of these values to drift out of sync.
+ *   - An app imports `THEME_PRESETS` directly and flattens the selected
+ *     preset into its `:root { ... }` instance-style injection — no CSS
+ *     parsing, no second copy of these values to drift out of sync.
  *
- * Presets are closed and built-in (RFC 0094's "Alternatives considered") —
+ * Presets are closed and built-in —
  * add a new one here and re-run the generator, never accept arbitrary
  * operator-supplied values into this shape.
  *

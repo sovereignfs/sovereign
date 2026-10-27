@@ -20,12 +20,10 @@ export interface DeviceStorageKeyGateProps {
   /** Defaults to a generic "This app" phrasing — pass the plugin's own name. */
   surfaceName?: string;
   /**
-   * The caller's own `getDeviceStorageKeyStatus()` result (from
-   * `@sovereignfs/sdk/device-only-storage`) — taken as a plain status rather
-   * than computed inside this component, so `@sovereignfs/ui` never depends
-   * on `@sovereignfs/sdk` (same boundary `DeviceOnlyGate`'s `available` prop
-   * draws — this package must stay usable standalone, outside the plugin
-   * runtime — RFC 0073).
+   * The caller's own device-storage-key status — taken as a plain status
+   * rather than computed inside this component, so `@sovereignfs/ui` depends
+   * on no app runtime (same boundary `DeviceOnlyGate`'s `available` prop
+   * draws — this package must stay usable standalone).
    */
   status: DeviceStorageKeyGateStatus;
   /**

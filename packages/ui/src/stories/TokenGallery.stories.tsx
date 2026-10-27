@@ -511,11 +511,11 @@ function TokenGalleryComponent() {
 
       <Section title="Text-size presets (task 10.2)">
         <p style={{ color: 'var(--sv-color-text-muted)', fontSize: 13, marginBottom: 12 }}>
-          Account → Preferences → Appearance. Overrides <code>--sv-text-size-scale</code> via{' '}
+          The user's text-size preference. Overrides <code>--sv-text-size-scale</code> via{' '}
           <code>[data-text-size]</code> on <code>&lt;html&gt;</code> — every rem-based token above
           (font sizes, but also spacing and radii) scales with it, since the root element&apos;s
           font-size is what rem resolves against. Discharges the accessibility debt from disabling
-          pinch-zoom (<code>runtime/app/layout.tsx</code>).
+          pinch-zoom in the app&apos;s viewport settings.
         </p>
         {TEXT_SIZE_PRESETS.map((p) => (
           <TextSizePresetRow key={p.preset} preset={p.preset} scale={p.scale} />

@@ -41,8 +41,7 @@ every supported platform.
 - `packages/ui`, `packages/bridge` and `packages/mailer` **excluded** from the
   workspace until task 2.1 (they expect the legacy catalog, and `bridge` imports
   types from the removed SDK), and left out of Prettier, ESLint and the
-  link checker for the same reason; the exclusions are listed in one place each,
-  with a pointer to 2.1
+  link checker for the same reason; task 2.1 removed every exclusion
 - `turbo.json` with `build`, `dev`, `lint`, `typecheck`, `test`
 - Prettier (single quotes, semicolons, trailing commas `all`, width 100,
   2-space) and ESLint 10 flat config with `typescript-eslint` strict, jsx-a11y

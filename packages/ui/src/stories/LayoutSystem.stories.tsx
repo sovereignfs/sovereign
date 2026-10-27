@@ -513,8 +513,8 @@ function LayoutSystemDoc() {
       <section style={{ marginBottom: 'var(--sv-space-10)' }}>
         <SectionHeader
           title="1. Web with Sidebar"
-          subtitle="The default desktop shell — a fixed vertical icon rail. shell: default (most plugins)."
-          source="runtime/app/(platform)/layout.tsx"
+          subtitle="The default desktop shell — a fixed vertical icon rail."
+          source="the app that owns the shell"
         />
         <WebWithSidebar />
         <Callout type="warn">
@@ -579,8 +579,8 @@ function LayoutSystemDoc() {
       <section style={{ marginBottom: 'var(--sv-space-10)' }}>
         <SectionHeader
           title="5. Mobile Header, Secondary Header (Dialog Header)"
-          subtitle="The same contextual second row, but lifted into the enclosing overlay's own header when the plugin is soft-navigated as a Dialog."
-          source="packages/ui — useOverlaySecondRow + Dialog's OverlayHeader; see plugins/console, plugins/account"
+          subtitle="The same contextual second row, but lifted into the enclosing overlay's own header when the page is soft-navigated as a Dialog."
+          source="packages/ui — useOverlaySecondRow + Dialog's OverlayHeader"
         />
         <MobileSecondaryDialogHeader />
         <Callout type="tip">

@@ -3,11 +3,5 @@
   "compilerOptions": {
     "noEmit": true
   },
-  "include": ["scripts/**/*.ts", "*.config.ts", "types/**/*.d.ts"],
-  "exclude": [
-    "scripts/generate-icons.ts",
-    "scripts/icon-list.ts",
-    "scripts/generate-theme-presets-css.ts",
-    "scripts/design-tokens-check.ts"
-  ]
+  "include": ["scripts/**/*.ts", "*.config.ts", "types/**/*.d.ts"]
 }

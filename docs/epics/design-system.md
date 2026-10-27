@@ -22,32 +22,46 @@ first.
 
 ## Tasks
 
-#### 📋 2.1 — ui, bridge and mailer build in the new workspace
+#### ⏳ 2.1 — ui, bridge and mailer build in the new workspace
 
 **Goal:** The imported packages build, test and run their tooling here.
 
-**Deliverables:**
+**Deliverables (as built):**
 
-- Remove the three `!packages/…` exclusions from `pnpm-workspace.yaml`, and the
-  matching entries in `.prettierignore`, `eslint.config.ts`, `tsconfig.json`,
-  `vitest.config.ts` and
-  `scripts/lib/doc-links.ts` (for `docs/design-system.md` and the four imported
-  scripts too); add to the catalog whatever the three packages need (Storybook,
-  dnd-kit, testing-library, tsup, Playwright, jsdom…) at current releases
-- `packages/ui`, `packages/bridge`, `packages/mailer` resolve their
-  dependencies from the new catalog and `packages/tsconfig`
-- **`bridge` stops depending on the removed SDK:** it imports types from
-  `@sovereignfs/sdk/device-bridge` (a 129-line module of types and
-  registration); move that module into `packages/bridge` and delete the
-  `@sovereignfs/sdk` dev dependency. (`ui` only mentions the SDK in comments, so
-  needs no code change.)
-- Root scripts `generate:icons`, `generate:theme-presets` and
-  `design:tokens:check` wired up; the token check pointed at `apps/core` and
-  `packages/` instead of legacy paths
-- Storybook runs and builds
-- `docs/design-system.md` (already imported from legacy with its history)
-  adapted to this repository: plugin wording and legacy paths (`runtime/`,
-  `plugins/`) replaced with core's
+- The three `!packages/…` exclusions are gone from `pnpm-workspace.yaml`, and so
+  are the matching entries in `.prettierignore`, `eslint.config.ts`,
+  `tsconfig.json`, `vitest.config.ts` and `scripts/lib/doc-links.ts` (for
+  `docs/design-system.md` and the imported scripts too). The catalog now holds
+  what the packages need: tsup 9, jsdom, Testing Library, Playwright, dnd-kit,
+  nodemailer, `@react-email/*`, and a named `storybook` catalog that keeps
+  Storybook's packages on one version. `lucide` is pinned exactly at the root
+  because it generates the icon components
+- `packages/ui`, `packages/bridge` and `packages/mailer` resolve their
+  dependencies from the catalog and `packages/tsconfig`. The imported code is
+  formatted with the repository's Prettier and passes its ESLint (strict, with
+  the accessibility rules)
+- **`bridge` has no SDK.** The contract it took from `@sovereignfs/sdk` (the
+  types and `provideBridge`/`getBridge`) is now `packages/bridge/src/device-bridge.ts`,
+  with no imports, so the package still ships with no runtime dependencies. The
+  registration key is `@sovereignfs/bridge:registered`. `ui` only mentioned the
+  SDK in comments and story text, which now say what the caller passes in
+- tsup 9 builds the declaration files without the `ignoreDeprecations` workaround
+  the older tsup needed under TypeScript 6, so the workaround is gone
+- `pnpm design:tokens:check`, `generate:icons` and `generate:theme-presets` are
+  wired up, and `verify:push` and CI run the token check. The token check is now
+  a tested library (`scripts/lib/design-tokens.ts`) that scans `packages/ui/src`
+  and `apps/`; the generators format their output with Prettier, so a
+  regeneration is a no-op. Regenerating with the pinned `lucide` changed two
+  committed icons (`beef`, `circle-check`) to the pinned version's drawings
+- The unit tests of all three packages run in the repository's `unit` project
+  (`.tsx` included; a test opts into jsdom with a pragma)
+- `pnpm storybook` and `pnpm build-storybook` run from the root; the dev server
+  serves the stories and the static build succeeds; CI builds it with the
+  packages
+- `docs/design-system.md` is adapted: plugin wording, legacy paths and legacy
+  references replaced with core's, and the Storybook deployment left to task 2.2.
+  Legacy RFC and task numbers that remain in code comments and stories point at
+  the legacy repository and are left as history
 
 **Dependencies:** 0.1
 
@@ -56,9 +70,12 @@ first.
 **Review checklist:**
 
 - `pnpm build`, `pnpm test` and `pnpm typecheck` pass for all three packages
-- `pnpm install --frozen-lockfile` still works with the exclusions gone
-- No file under `packages/` mentions `@sovereignfs/sdk` except in prose that explains why
-- `pnpm design:tokens:check` passes and fails on a hard-coded colour
+- `pnpm install --frozen-lockfile` still works with the exclusions gone — also
+  on `node:alpine` (musl)
+- No file under `packages/` mentions `@sovereignfs/sdk`
+- `pnpm design:tokens:check` passes, and fails on a hard-coded colour and on an
+  undefined token (a test, and seen on a real component)
+- The built `bridge` runs under plain Node and has no dependencies
 
 #### 📋 2.2 — Publishing and licence
 

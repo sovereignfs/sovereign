@@ -214,3 +214,9 @@ pointing here.
   one shape used (`types/`) keeps a second ESLint out of the tree.
 - **Tests await every async operation they start,** and a long timeout is scoped
   to the one slow test, not set globally.
+- **A generator formats its own output,** so a regeneration changes only what the
+  source changed. `generate:icons` and `generate:theme-presets` run Prettier on
+  what they write, and the `lucide` pin is exact: a generator's output follows its
+  input's version, and a bump is a reviewed diff, not a surprise.
+- **Checks that scan the repository read the working tree, not `git ls-files`.**
+  A new, uncommitted file is the one most likely to break the rule.

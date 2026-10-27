@@ -58,6 +58,8 @@ catalog:
   simple-git-hooks: ^2.14.0
   pg: ^8.23.1
   '@types/pg': ^8.23.1
+  '@libsql/client': ^0.18.0
+  drizzle-orm: ^0.45.4
   tsup: ^9.0.0
   jsdom: ^30.1.0
   '@testing-library/react': ^16.3.3

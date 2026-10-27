@@ -1,5 +1,5 @@
 import { ConfigError } from '@sovereignfs/config';
-import { getConfig } from './config';
+import { getConfig, getDatabaseSettings } from './config';
 
 /**
  * Reads and validates the whole configuration. On a problem it prints every one and
@@ -9,6 +9,8 @@ import { getConfig } from './config';
 export function validateConfigOrExit(): void {
   try {
     getConfig();
+    // Which database, and what its dialect needs: a missing address is a start-up error.
+    getDatabaseSettings();
   } catch (error) {
     if (error instanceof ConfigError) {
       console.error(`\n${error.message}\n\nSee apps/core/.env.example for every variable.\n`);

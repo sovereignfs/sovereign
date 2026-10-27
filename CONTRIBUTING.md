@@ -38,7 +38,29 @@ cp apps/core/.env.example apps/core/.env.local
 pnpm dev                         # http://localhost:3000, and /api/health
 ```
 
-Without them core exits at start-up and says which are missing. The database
+Without them core exits at start-up and says which are missing. Core runs without a
+database for now; set `SV_DB_DIALECT` and its address (see `.env.example`) to give it one,
+and `/api/health` reports it up or down.
+
+The tests that need a real database (`*.db.test.ts`, run with `pnpm test:db`) use the
+dialect named by `SV_DB_DIALECT`, once per dialect in CI. To run a leg locally, start the
+server CI starts and set the variables it sets:
+
+````bash
+# sqld (it needs the --enable-namespaces flag, which has no environment equivalent)
+docker run -d --name sqld-ci -p 8080:8080 -p 8081:8081 \
+  -e SQLD_NODE=primary -e SQLD_HTTP_LISTEN_ADDR=0.0.0.0:8080 -e SQLD_ADMIN_LISTEN_ADDR=0.0.0.0:8081 \
+  ghcr.io/tursodatabase/libsql-server:v0.24.33 /bin/sqld --enable-namespaces
+SV_DB_DIALECT=sqld SV_SQLD_URL=http://localhost:8080 SV_SQLD_ADMIN_URL=http://localhost:8081 pnpm test:db
+
+# PostgreSQL
+docker run -d --name postgres-ci -p 5432:5432 \
+  -e POSTGRES_USER=sovereign -e POSTGRES_PASSWORD=sovereign -e POSTGRES_DB=sovereign_test postgres:18
+SV_DB_DIALECT=postgres SV_POSTGRES_URL=postgres://sovereign:sovereign@localhost:5432/sovereign_test pnpm test:db
+
+# a SQLite file needs no server
+SV_DB_DIALECT=sqlite SV_SQLITE_URL=file:/tmp/sovereign-test.db pnpm test:db
+``` The database
 scripts and seed data arrive with tasks 0.5 and 1.2; this section grows as they
 land.
 
@@ -51,7 +73,7 @@ Always branch from an up-to-date `main`:
 ```bash
 git switch main && git pull
 git switch -c feat/your-feature-name
-```
+````
 
 **Branch prefixes:**
 

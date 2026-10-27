@@ -132,6 +132,27 @@ pointing here.
   answers 404 ("Namespace `127` doesn't exist"). Sending `x-namespace` on every
   request makes the URL's host irrelevant (found while building the CI database
   legs). Namespace routing by header needs sqld 0.24.33 or later.
+- **libSQL calls a custom `fetch` with a `Request`,** headers and body included. To add
+  `x-namespace`, set it on a copy of the request; passing `headers` in the init replaces
+  the request's own (its content type, an authorization header). A unit test with a stub
+  `fetch` cannot see this unless it reads the `Request`.
+- **The libSQL file driver is synchronous, so contention inside one process deadlocks.**
+  A connection waiting for the file blocks the whole process, including the connection it
+  is waiting for. Operations on one file run one at a time within the process; other
+  processes rely on SQLite's busy timeout. Never test "several instances at once" against
+  a file without that serialisation.
+- **Inside a transaction, use the executor you are given, never the database.** On
+  PostgreSQL the database would take another connection (outside the transaction, and
+  able to exhaust the pool); on a SQLite file it waits forever for a lock the transaction
+  holds. The interface throws the same error on every dialect.
+- **A migration runner keeps its own record, makes each migration atomic, and never
+  rewrites history.** Exactly once under concurrent starts (an advisory lock on one pinned
+  PostgreSQL connection, so the pool needs two; a re-check inside the write transaction
+  elsewhere); a changed, missing or out-of-order migration is an error, not a guess.
+- **Load a database driver only when its dialect is in use.** `@libsql/client`'s native
+  addon loads at import; a PostgreSQL deployment, or a musl image without a matching
+  binary, must never load it. Keep driver packages in `serverExternalPackages` so Next
+  does not bundle them.
 - **Encryption settings fail per app and never convert data silently.** A
   required key with an existing plaintext store is a start-up error for that
   app only; a genuinely empty data directory may start encrypted; converting is

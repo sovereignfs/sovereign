@@ -5,7 +5,7 @@
 
 ## Status
 
-📋 Planned
+⏳ In Progress
 
 ## Overview
 
@@ -22,7 +22,7 @@ first.
 
 ## Tasks
 
-#### ⏳ 2.1 — ui, bridge and mailer build in the new workspace
+#### ✅ 2.1 — ui, bridge and mailer build in the new workspace
 
 **Goal:** The imported packages build, test and run their tooling here.
 

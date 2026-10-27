@@ -32,7 +32,7 @@ the task is corrected.
 | --- | --------------------------------------------- | -------------- | --------------------------------------------------------------------------------- |
 | 0   | [Infrastructure](infrastructure.md)           | ⏳ In Progress | Workspace, CI, repository documents, Docker, Phase 1 acceptance                   |
 | 1   | [Configuration & Data](configuration-data.md) | ⏳ In Progress | `packages/config`, `packages/database`, encryption of stored secrets, base schema |
-| 2   | [Design System](design-system.md)             | 📋 Planned     | `packages/ui` in the new workspace, publishing, components core needs             |
+| 2   | [Design System](design-system.md)             | ⏳ In Progress | `packages/ui` in the new workspace, publishing, components core needs             |
 | 3   | [Mail](mail.md)                               | 📋 Planned     | `packages/mailer`, SMTP configuration, templates                                  |
 | 4   | [Identity & Auth](identity-auth.md)           | 📋 Planned     | Sign-up, sign-in, verification, reset, TOTP, passkeys, sessions                   |
 | 5   | [Roles & Capabilities](roles-capabilities.md) | 📋 Planned     | Platform roles, capability matrix, ownership                                      |

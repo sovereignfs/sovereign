@@ -77,7 +77,7 @@ first.
   undefined token (a test, and seen on a real component)
 - The built `bridge` runs under plain Node and has no dependencies
 
-#### ⏳ 2.2 — Publishing and licence
+#### ✅ 2.2 — Publishing and licence
 
 **Goal:** `@sovereignfs/ui` and `@sovereignfs/bridge` keep their npm names and
 release from this repository, under MPL-2.0.

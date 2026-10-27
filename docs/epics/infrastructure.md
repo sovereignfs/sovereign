@@ -95,8 +95,8 @@ secure by default and drawn with the design system.
   request, on every path (API routes and static files too); no `'unsafe-inline'` in
   `script-src`; the pure builder is `src/csp.ts` and is tested
 - `GET /api/health`, never cached, answering `{ status, app, database }` and
-  nothing else. There is no database layer yet, so `database` is `not-configured`;
-  the database package replaces it with a real check
+  nothing else. `database` is `up` or `down` from a real check (`not-configured` was
+  the answer until core required a database, in 4.1)
 - Start-up refuses to run without `SV_URL` and `SV_AUTH_SECRET` (at least 32
   characters, or `SV_AUTH_SECRET_FILE`): `instrumentation.ts` validates the whole
   configuration with `packages/config`, prints every problem and exits non-zero. A

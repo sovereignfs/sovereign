@@ -3,16 +3,16 @@
   "version": "0.6.0",
   "private": true,
   "type": "module",
-  "description": "Sovereign Core — the sign-in server, Console and launcher.",
+  "description": "Sovereign Core \u2014 the sign-in server, Console and launcher.",
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "db:generate": "drizzle-kit generate --config=drizzle.config.sqlite.ts && drizzle-kit generate --config=drizzle.config.postgres.ts",
+    "db:generate": "drizzle-kit generate --config=drizzle.config.sqlite.ts && drizzle-kit generate --config=drizzle.config.postgres.ts && node scripts/unqualify-postgres.mjs",
     "db:generate:sqlite": "drizzle-kit generate --config=drizzle.config.sqlite.ts",
-    "db:generate:postgres": "drizzle-kit generate --config=drizzle.config.postgres.ts"
+    "db:generate:postgres": "drizzle-kit generate --config=drizzle.config.postgres.ts && node scripts/unqualify-postgres.mjs"
   },
   "dependencies": {
     "@sovereignfs/config": "workspace:*",
@@ -20,6 +20,7 @@
     "@sovereignfs/database": "workspace:*",
     "@sovereignfs/mailer": "workspace:*",
     "@sovereignfs/ui": "workspace:*",
+    "better-auth": "^1.7.13",
     "drizzle-orm": "catalog:",
     "next": "catalog:",
     "react": "catalog:",
@@ -27,6 +28,8 @@
   },
   "devDependencies": {
     "@sovereignfs/tsconfig": "workspace:*",
+    "@testing-library/dom": "catalog:",
+    "@testing-library/react": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",

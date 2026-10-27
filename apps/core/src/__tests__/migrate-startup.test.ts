@@ -61,17 +61,17 @@ const sqlite = () => ({
 });
 
 describe('migrating at start-up', () => {
-  it('does nothing when no database is configured', async () => {
+  it('stops, naming the variable, when no database is configured: core cannot run without one', async () => {
     const result = await startUp({}, APP_ROOT);
-    expect(result.exited).toBe(false);
+    expect(result.exited).toBe(true);
     expect(result.database).toBeUndefined();
-    expect(result.logged).toBe('');
+    expect(result.printed).toContain('SV_DB_DIALECT');
   });
 
   it('brings a new database up to date, and says what it applied', async () => {
     const result = await startUp(sqlite(), APP_ROOT);
     expect(result.exited).toBe(false);
-    expect(result.logged).toContain('Database migrated: 0000_instance_settings');
+    expect(result.logged).toContain('Database migrated: 0000_instance_settings, 0001_auth_tables');
     const tables = await result.database?.run(
       "select name from sqlite_master where name in ('instance_settings', 'sv_migrations') order by name",
     );

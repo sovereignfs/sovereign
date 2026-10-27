@@ -5,11 +5,9 @@ name: Storybook
 # It runs when a `sb-v*` tag is pushed (the tag need not match a package version; it marks the
 # commit to put live) or when started by hand.
 #
-# One-time setup, by an owner of both repositories (nothing in this repository's own settings):
-#   1. Generate a key pair:  ssh-keygen -t ed25519 -N '' -C storybook-deploy -f storybook-deploy
-#   2. Add storybook-deploy.pub to sovereignfs/storybook as a deploy key with write access.
-#   3. Add the private key to this repository as the Actions secret STORYBOOK_DEPLOY_KEY.
-# The key can write to that one repository and nothing else.
+# It authenticates with the Actions secret STORYBOOK_DEPLOY_TOKEN: a personal access token that
+# can write to sovereignfs/storybook (fine-grained: Contents read and write on that one
+# repository). It expires, so renew it when a deploy starts failing with an authentication error.
 
 on:
   push:
@@ -34,12 +32,12 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Check the deploy key is configured
+      - name: Check the deploy token is configured
         env:
-          DEPLOY_KEY: ${{ secrets.STORYBOOK_DEPLOY_KEY }}
+          DEPLOY_TOKEN: ${{ secrets.STORYBOOK_DEPLOY_TOKEN }}
         run: |
-          if [[ -z "$DEPLOY_KEY" ]]; then
-            echo "The secret STORYBOOK_DEPLOY_KEY is not set; see the setup steps at the top of this workflow." >&2
+          if [[ -z "$DEPLOY_TOKEN" ]]; then
+            echo "The secret STORYBOOK_DEPLOY_TOKEN is not set; see the note at the top of this workflow." >&2
             exit 1
           fi
 
@@ -49,7 +47,7 @@ jobs:
       - name: Publish to sovereignfs/storybook
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
         with:
-          deploy_key: ${{ secrets.STORYBOOK_DEPLOY_KEY }}
+          personal_token: ${{ secrets.STORYBOOK_DEPLOY_TOKEN }}
           external_repository: sovereignfs/storybook
           publish_branch: gh-pages
           publish_dir: packages/ui/storybook-static

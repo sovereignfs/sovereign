@@ -59,12 +59,12 @@ The design system's Storybook is built in this repository and published to its o
 
 - Push a tag `sb-vX.Y.Z` (it need not match a package version; it marks the commit to put
   live), or start the workflow by hand from the Actions tab.
-- It pushes the static build to the `gh-pages` branch of `sovereignfs/storybook` with a deploy
-  key, so the address does not change and this repository's own Pages settings are not used.
-- **One-time setup**, by an owner of both repositories: generate an ed25519 key pair, add the
-  public key to `sovereignfs/storybook` as a deploy key **with write access**, and add the
-  private key to this repository as the Actions secret `STORYBOOK_DEPLOY_KEY`. The key can
-  write to that one repository and nothing else. Until it is set the workflow stops at its
+- It pushes the static build to the `gh-pages` branch of `sovereignfs/storybook`, so the address
+  does not change and this repository's own Pages settings are not used.
+- **It needs one secret:** `STORYBOOK_DEPLOY_TOKEN`, an Actions secret in this repository holding a
+  personal access token that can write to `sovereignfs/storybook` (fine-grained: Contents read and
+  write on that one repository). The token expires: when a deploy fails with an authentication
+  error, create a new one and replace the secret. Until the secret is set the workflow stops at its
   first step and says so.
 - Every pull request that changes code builds Storybook in CI, so a story that no longer
   bundles fails there, not at deploy time.

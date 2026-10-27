@@ -1,0 +1,94 @@
+name: Publish
+
+# Releases a package to npm when its tag is pushed. Each published package has its own release
+# cycle and its own tag:
+#   ui-vX.Y.Z      -> @sovereignfs/ui
+#   bridge-vX.Y.Z  -> @sovereignfs/bridge
+# Every other package is private and never published. docs/releasing.md has the whole process.
+#
+# Nothing publishes unless the full CI passes on the tagged commit, the commit is on `main`, the
+# tag matches the version in package.json, and the packed tarball passes `pnpm packages:check`.
+# It authenticates with the Actions secret NPM_TOKEN.
+on:
+  push:
+    tags:
+      - 'ui-v*.*.*'
+      - 'bridge-v*.*.*'
+
+permissions:
+  contents: read
+
+# Never two releases of one tag at once, and never cancel one that has begun publishing.
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # The full validation suite, on the tagged commit.
+  validate:
+    name: Validate
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: validate
+    permissions:
+      contents: read
+      # Lets npm sign a provenance statement: the package is shown as built from this
+      # repository and this commit.
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Work out which package this tag releases
+        id: package
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          case "$TAG" in
+            ui-v*)     dir=ui;     prefix=ui-v ;;
+            bridge-v*) dir=bridge; prefix=bridge-v ;;
+            *) echo "The tag $TAG is not a package release tag." >&2; exit 1 ;;
+          esac
+          expected="${TAG#"$prefix"}"
+          actual="$(node -p "require('./packages/$dir/package.json').version")"
+          name="$(node -p "require('./packages/$dir/package.json').name")"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "The tag $TAG expects $name@$expected, but packages/$dir/package.json is $actual." >&2
+            exit 1
+          fi
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "Releasing $name@$actual"
+
+      # A release is made from `main`, never from a branch that was tagged by mistake.
+      - name: Check the tagged commit is on main
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "The tagged commit is not on main; refusing to publish." >&2
+            exit 1
+          fi
+
+      - uses: ./.github/actions/setup
+        with:
+          cache: 'false'
+      # A second setup-node, with the registry, writes the .npmrc that reads NODE_AUTH_TOKEN.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - run: pnpm build
+      - run: pnpm packages:check
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PACKAGE: ${{ steps.package.outputs.name }}
+        run: pnpm --filter "$PACKAGE" publish --no-git-checks --access public --provenance

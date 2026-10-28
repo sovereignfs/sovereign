@@ -5,7 +5,7 @@
 
 ## Status
 
-📋 Planned
+⏳ In Progress
 
 ## Overview
 
@@ -20,7 +20,7 @@ close back to it (spec §1.3, §3.11).
 
 ## Tasks
 
-#### 📋 9.1 — Profile
+#### ✅ 9.1 — Profile
 
 **Goal:** A person can set their name and avatar.
 

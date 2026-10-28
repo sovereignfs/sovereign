@@ -39,7 +39,7 @@ the task is corrected.
 | 6   | [OIDC Provider](oidc-provider.md)             | 📋 Planned     | Sign-in server for apps: flows, claims, consent, logout                           |
 | 7   | [Apps & Launcher](apps-launcher.md)           | 📋 Planned     | Client registry with launcher entries, the launcher                               |
 | 8   | [Console](console.md)                         | 📋 Planned     | Operators' administration area                                                    |
-| 9   | [Identity Pages](identity-pages.md)           | 📋 Planned     | A person's own account pages                                                      |
+| 9   | [Identity Pages](identity-pages.md)           | ⏳ In Progress | A person's own account pages                                                      |
 | 10  | [Core API](core-api.md)                       | 📋 Planned     | `spec/core-api`, `packages/api-client`, Directory API, branding                   |
 
 _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked · ❌ Rejected_

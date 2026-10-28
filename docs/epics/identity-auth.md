@@ -72,7 +72,7 @@ screen for the setting; roles beyond owner and user, and the capability checks
   as well as through the page
 - The first account on an empty instance is the owner
 
-#### 📋 4.3 — Email verification and password reset
+#### ✅ 4.3 — Email verification and password reset
 
 **Goal:** Addresses are verified and forgotten passwords can be reset safely.
 

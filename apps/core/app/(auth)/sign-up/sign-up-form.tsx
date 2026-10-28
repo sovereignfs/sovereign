@@ -81,6 +81,8 @@ export function SignUpForm({ returnTo, passwordHint }: { returnTo: string; passw
 /** What went wrong, in words a person can act on. The server's password message is already that. */
 function messageFor(error: { status: number; code?: string; message?: string }): string {
   if (error.status === 429) return 'Too many attempts. Wait a minute, then try again.';
+  if (error.code === 'INVITE_REQUIRED')
+    return 'There is no valid invitation for this email address. Ask whoever runs this instance to invite you.';
   if (error.code === 'PASSWORD_DOES_NOT_MEET_POLICY' && error.message) return error.message;
   if (error.code === 'USER_ALREADY_EXISTS' || error.code?.startsWith('USER_ALREADY_EXISTS'))
     return 'An account with this email address already exists. Try signing in instead.';

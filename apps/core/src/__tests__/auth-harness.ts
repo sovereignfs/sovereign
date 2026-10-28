@@ -1,5 +1,6 @@
 import type { Database } from '@sovereignfs/database';
 import { createAuth, type Auth } from '../auth/auth';
+import type { RegistrationPolicy } from '../auth/registration';
 import { resolveAuthSettings } from '../auth/settings';
 import { config } from '../config';
 
@@ -12,8 +13,15 @@ const BASE_ENV = { SV_URL: BASE_URL, SV_AUTH_SECRET: SECRET };
 export const authSettings = (env: Record<string, string> = {}) =>
   resolveAuthSettings(config.load({ ...BASE_ENV, ...env }));
 
-export const makeAuth = (database: Database, env: Record<string, string> = {}): Auth =>
-  createAuth(database, authSettings(env));
+/** Sign-up open to anyone, so the sign-in tests need no invitation. `registration.suite.ts` tests the policy. */
+export const OPEN: RegistrationPolicy = { inviteOnly: () => Promise.resolve(false) };
+export const INVITE_ONLY: RegistrationPolicy = { inviteOnly: () => Promise.resolve(true) };
+
+export const makeAuth = (
+  database: Database,
+  env: Record<string, string> = {},
+  registration: RegistrationPolicy = OPEN,
+): Auth => createAuth(database, authSettings(env), registration);
 
 /** The parts of better-auth's JSON answers the tests read. */
 export type AuthBody = {

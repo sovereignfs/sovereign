@@ -103,6 +103,19 @@ pointing here.
   lists the reverse proxies in front of core. Without it only a single-address
   `X-Forwarded-For` is believed; any other request shares one limit per path, so
   a client can never choose its own address.
+- **Registration is enforced where an account is made, and fails closed.** The
+  invite check and the owner assignment are better-auth's `user.create.before`
+  hook, which every account passes through, not a request hook, which a
+  server-side call with no route never reaches. The first account is the one made
+  when _no account exists at all_, never "when there is no owner", so an instance
+  that somehow lost its owner is not open to whoever signs up next. At most one
+  owner is held by a partial unique index on `users.role`, so two sign-ups that both
+  find the instance empty cannot both win it; the loser fails. A role is never
+  taken from a request: the field is `input: false`, and the hook sets it anyway.
+  Whether sign-up needs an invite is read on every sign-up (it is a setting that
+  changes while core runs), and only an explicit `false` opens it. Every way an
+  invite can fail (none, expired, cancelled, used) gets the same answer, so a refusal
+  says nothing about the invitations other people hold.
 - **PostgreSQL migrations never name a schema.** drizzle-kit writes foreign keys
   as `"public"."users"`; core runs in whichever schema the connection's
   `search_path` names (each test file gets its own). `pnpm --filter

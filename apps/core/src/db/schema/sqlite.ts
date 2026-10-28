@@ -1,5 +1,6 @@
 import { sqliteTimestampMs } from '@sovereignfs/database';
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
+import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 /**
  * Core's tables on sqld and a SQLite file. Every table is written twice, here and in
@@ -29,15 +30,27 @@ export const instanceSettings = sqliteTable('instance_settings', {
  * Dates are `Date` objects on both dialects (a timestamp), which is what better-auth reads and
  * writes; only the rate limiter's counter time is a plain millisecond number.
  */
-export const users = sqliteTable('users', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  email: text('email').notNull().unique(),
-  emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
-  image: text('image'),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
-});
+export const users = sqliteTable(
+  'users',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    email: text('email').notNull().unique(),
+    emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
+    image: text('image'),
+    /** `scope:role-name` (core-app §3.2.1). Set by core when the account is made, never by a request. */
+    role: text('role').notNull().default('platform:user'),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => [
+    // At most one owner, whatever the code does: two sign-ups racing for the first account cannot
+    // both win it.
+    uniqueIndex('users_single_owner_idx')
+      .on(table.role)
+      .where(sql`role = 'platform:owner'`),
+  ],
+);
 
 export const sessions = sqliteTable(
   'sessions',
@@ -98,3 +111,21 @@ export const rateLimits = sqliteTable('rate_limits', {
   count: integer('count').notNull(),
   lastRequest: sqliteTimestampMs('last_request').notNull(),
 });
+
+/**
+ * Invitations to sign up (core-app §3.10). An invite is for one email address, stored lower-case,
+ * and is valid until it is used, cancelled or past `expires_at` (none: it does not expire).
+ */
+export const invites = sqliteTable(
+  'invites',
+  {
+    id: text('id').primaryKey(),
+    email: text('email').notNull(),
+    invitedBy: text('invited_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: sqliteTimestampMs('created_at').notNull(),
+    expiresAt: sqliteTimestampMs('expires_at'),
+    acceptedAt: sqliteTimestampMs('accepted_at'),
+    cancelledAt: sqliteTimestampMs('cancelled_at'),
+  },
+  (table) => [index('invites_email_idx').on(table.email)],
+);

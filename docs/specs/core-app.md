@@ -173,6 +173,18 @@ them.
   owner.
 - With invite-only on, a sign-up without a valid, unexpired invite for that
   email address MUST be refused by the server, not only hidden in the page.
+- The refusal is the same whether the address has no invite, or its invite has
+  expired, been cancelled or already been used, so it does not reveal which
+  addresses have been invited. A sign-up that an invite admits uses that invite
+  up.
+- "First" means no account exists at all. Once any account exists, an instance
+  that has lost its owner does not hand ownership to the next visitor. When two
+  sign-ups arrive together on an empty instance, one becomes the owner and the
+  other fails.
+- A role is set by core and never by a request: sign-up and profile edits ignore
+  or refuse a `role` the person supplies.
+- The sign-up page says what applies: that the account made now is the owner,
+  that sign-up is by invitation, or nothing when it is open.
 
 #### 3.3.2 Email and password
 
@@ -609,3 +621,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-27 | §3.3.1, §3.12: a setting left unset never opens access, so invite-only is on when neither the Console nor `SV_AUTH_INVITE_ONLY` sets it; §3.12 describes how a setting resolves and what an unreadable saved secret does.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | 2026-10-27 | §3.14: SMTP credentials are sent only over an encrypted connection (implicit TLS, or STARTTLS that is required), and the server's certificate is verified.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | 2026-10-27 | §3.14: every email is sent as HTML and plain text, and every link in it is on core's public address (`SV_URL`); an invitation states its expiry only when it has one.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 2026-10-28 | §3.3.1: an invite is used up by the sign-up it admits; every way an invite can fail is refused alike; "first account" means no account exists at all; a role is never taken from a request.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |

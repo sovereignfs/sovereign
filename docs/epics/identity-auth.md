@@ -53,6 +53,14 @@ owner.
 - Server-side refusal of sign-ups without a valid, unexpired invite for that
   address
 - The first account is exempt and becomes `platform:owner`
+- The `invites` table (an address, an optional expiry, used and cancelled marks)
+  and `users.role`, with at most one owner held by a unique index; accounts that
+  already exist get their oldest as the owner when the migration runs
+
+**Not here:** creating, listing and cancelling invites, the invite link and its
+"invalid" page, and sending the invitation (the Console epic); the Console
+screen for the setting; roles beyond owner and user, and the capability checks
+(the roles epic).
 
 **Dependencies:** 4.1, 1.4
 

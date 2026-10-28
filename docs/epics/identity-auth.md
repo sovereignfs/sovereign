@@ -126,7 +126,7 @@ this to accept, and the Preferences page where the time zone is changed.
 - Sign-up without acceptance is refused by the server
 - An invalid timezone is never stored
 
-#### 📋 4.5 — TOTP and backup codes `[parallel]`
+#### ✅ 4.5 — TOTP and backup codes `[parallel]`
 
 **Goal:** People can protect their account with an authenticator app.
 

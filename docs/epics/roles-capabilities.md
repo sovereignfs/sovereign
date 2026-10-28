@@ -33,6 +33,13 @@ guarantees always hold.
 - Invariants: exactly one owner; only the owner changes roles; only the owner
   acts on operator accounts
 
+- `changeRole` (admin and user only, by the owner), `mayActOn` for the rule
+  on the other account, and a seam (`getCapabilityMatrix`) where the owner's
+  edits will be read
+
+**Not here:** editing the matrix (next task), transferring ownership, and the
+Console screens that call these.
+
 **Dependencies:** 4.1
 
 **Spec reference:** §3.2.1, §3.2.2

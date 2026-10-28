@@ -181,6 +181,23 @@ pointing here.
   plugin does the encrypting. Rotating the auth secret ends every enrolment.
   Do not "fix" this by hand-rolling TOTP: the plugin's lock-out, attempt
   counters and single-use backup codes are what make it safe.
+- **Every check asks `can`, and every action and route calls `requireCapability`
+  (or `requireSession`) itself, first.** `src/roles` holds the capability
+  registry, the default matrix and `can`; `src/auth/authorize.ts` holds the
+  helpers a server action or route calls. `can` fails closed on a role it does
+  not know, gives the owner everything, and never gives an owner-only
+  capability to another role even from a matrix that says so, so the editable
+  matrix cannot weaken them. A test reads spec §3.2.2 and compares every role
+  against every capability; another reads `app/` and fails when a route or a
+  `'use server'` file does not authorize, so a new one cannot skip it. The two
+  public routes (better-auth's own and health) are listed in that test, and
+  adding to the list is a decision for review.
+- **The owner's guarantees are held in the code that changes things, not only
+  in the Console.** `changeRole` refuses anyone but the owner, refuses to make
+  an owner or change the owner, and `AccountStates` refuses to deactivate the
+  owner; a test runs a long fixed sequence of role changes, deactivations and
+  reactivations by every kind of actor and checks there is one active owner
+  after each step. Who may act on whom is `mayActOn`.
 - **PostgreSQL migrations never name a schema.** drizzle-kit writes foreign keys
   as `"public"."users"`; core runs in whichever schema the connection's
   `search_path` names (each test file gets its own). `pnpm --filter

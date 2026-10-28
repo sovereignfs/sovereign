@@ -180,6 +180,9 @@ each: `docs/architecture-rules.md`.
   better-auth). Every session passes `assertMayOpenSession` (the hook on creating
   one), and deactivating an account is `AccountStates`, one transaction.
   **better-auth's packages are pinned to one version.**
+- **Every check asks `can` and every server action or route calls
+  `requireCapability` itself** (a test fails when one does not); the owner's
+  guarantees are held in `changeRole` and `AccountStates`.
 - **PostgreSQL migrations name no schema** — `db:generate` strips drizzle-kit's
   `"public".` and a test guards it.
 - **Timing-safe comparison** for every key or token compare.

@@ -29,3 +29,15 @@
 .submit {
   width: 100%;
 }
+
+.terms {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-2);
+}
+
+.legal {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--sv-space-4);
+}

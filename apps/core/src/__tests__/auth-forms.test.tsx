@@ -93,8 +93,32 @@ describe('the sign-up form', () => {
     type('Name', 'Ada Lovelace');
     type('Email', 'ada@example.com');
     type('Password', 'correct horse battery');
+    fireEvent.click(screen.getByLabelText(/I agree to the Terms of Service/));
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
   };
+
+  it('will not send the sign-up until the terms are accepted, and says why', () => {
+    render(<SignUpForm returnTo="/" passwordHint="" />);
+    type('Name', 'Ada Lovelace');
+    type('Email', 'ada@example.com');
+    type('Password', 'correct horse battery');
+    fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    expect(screen.getByRole('alert').textContent).toContain('Accept the Terms of Service');
+    expect(signUp).not.toHaveBeenCalled();
+  });
+
+  it('links to both documents, in a new tab so the form is not lost', () => {
+    render(<SignUpForm returnTo="/" passwordHint="" />);
+    for (const [name, href] of [
+      ['Terms of Service', '/tos'],
+      ['Privacy Policy', '/privacy'],
+    ]) {
+      const link = screen.getByRole('link', { name });
+      expect(link.getAttribute('href')).toBe(href);
+      expect(link.getAttribute('target')).toBe('_blank');
+      expect(link.getAttribute('rel')).toContain('noopener');
+    }
+  });
 
   it('shows the password rules beside the field', () => {
     render(<SignUpForm returnTo="/" passwordHint="At least 12 characters." />);
@@ -110,6 +134,8 @@ describe('the sign-up form', () => {
       name: 'Ada Lovelace',
       email: 'ada@example.com',
       password: 'correct horse battery',
+      agreedToTerms: true,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       callbackURL: '/sign-in?returnTo=%2Fsettings',
     });
   });
@@ -228,6 +254,7 @@ describe('the sign-up form, while the address is not verified', () => {
     type('Name', 'Ada Lovelace');
     type('Email', 'ada@example.com');
     type('Password', 'correct horse battery');
+    fireEvent.click(screen.getByLabelText(/I agree to the Terms of Service/));
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
   };
 
@@ -262,6 +289,23 @@ describe('the sign-up form, while the address is not verified', () => {
     render(<SignUpForm returnTo="/" passwordHint="" />);
     fill();
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/'));
+  });
+
+  it('shows the server’s words when it refuses for the terms', async () => {
+    signUp.mockResolvedValue({
+      data: null,
+      error: { status: 400, code: 'TERMS_NOT_ACCEPTED', message: 'You must accept the terms.' },
+    });
+    render(<SignUpForm returnTo="/" passwordHint="" />);
+    fill();
+    expect(await screen.findByText('You must accept the terms.')).toBeTruthy();
+  });
+
+  it('says so, plainly, when the browser’s time zone is refused', async () => {
+    signUp.mockResolvedValue({ data: null, error: { status: 400, code: 'INVALID_TIMEZONE' } });
+    render(<SignUpForm returnTo="/" passwordHint="" />);
+    fill();
+    expect((await screen.findByRole('alert')).textContent).toContain('time zone');
   });
 
   it('says when email is not set up, instead of a vague failure', async () => {

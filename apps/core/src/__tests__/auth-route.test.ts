@@ -44,6 +44,7 @@ describe('the /api/auth route', () => {
           name: 'Ada Lovelace',
           email: 'ada@example.com',
           password: 'correct horse battery',
+          agreedToTerms: true,
         }),
       }),
     );
@@ -66,7 +67,12 @@ describe('the /api/auth route', () => {
     const response = await POST(
       request('/sign-up/email', {
         method: 'POST',
-        body: JSON.stringify({ name: 'Weak', email: 'weak@example.com', password: 'short' }),
+        body: JSON.stringify({
+          name: 'Weak',
+          email: 'weak@example.com',
+          password: 'short',
+          agreedToTerms: true,
+        }),
       }),
     );
     expect(response.status).toBe(400);
@@ -93,6 +99,7 @@ describe('the /api/auth route', () => {
           name: 'Ada',
           email: 'ada2@example.com',
           password: 'correct horse battery',
+          agreedToTerms: true,
         }),
       }),
     );

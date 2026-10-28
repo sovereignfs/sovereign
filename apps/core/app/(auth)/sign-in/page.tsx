@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { Card, PageContainer } from '@sovereignfs/ui';
+import { Card, LegalLinks, PageContainer } from '@sovereignfs/ui';
 import { getSession } from '../../../src/auth/session';
 import { safeReturnTo } from '../../../src/auth/return-to';
 import styles from '../auth.module.css';
@@ -29,6 +29,9 @@ export default async function SignInPage({
           <SignInForm returnTo={returnTo} notice={noticeFor(query)} />
         </div>
       </Card>
+      <div className={styles.legal}>
+        <LegalLinks />
+      </div>
     </PageContainer>
   );
 }

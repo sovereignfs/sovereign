@@ -11,6 +11,7 @@ import type { AuthMail } from './mail';
 import { isFirstAccount, type RegistrationPolicy } from './registration';
 import { ROLE_OWNER, ROLE_USER } from './roles';
 import type { AuthSettings } from './settings';
+import { signUpRecord, timezoneOrNull } from './terms';
 
 /** The longest request body, in characters, for a password; core's policy sets the real limit. */
 const BODY_LIMIT = 1024;
@@ -108,6 +109,13 @@ export function createAuth(
       // that tries to choose it.
       additionalFields: {
         role: { type: 'string', required: false, input: false, defaultValue: ROLE_USER },
+        // What the person sends at sign-up. Each is checked in the create hook below, and neither
+        // can be changed afterwards through an update (see the update hook).
+        timezone: { type: 'string', required: false, input: true },
+        agreedToTerms: { type: 'boolean', required: false, input: true, defaultValue: false },
+        // Set by core from `agreedToTerms`: when, and which text.
+        termsAcceptedAt: { type: 'date', required: false, input: false },
+        termsVersion: { type: 'string', required: false, input: false },
       },
     },
     databaseHooks: {
@@ -116,9 +124,11 @@ export function createAuth(
           // Every account is made through here, whatever the route: the sign-up endpoint, or a
           // server-side call that has no route (a request hook cannot see those).
           before: async (user) => {
+            // The terms and the time zone first: they are the person's to put right, whoever they are.
+            const record = signUpRecord(user);
             // The first account is exempt from invite-only and is the owner. A second sign-up
             // racing for it loses at the database, which holds one owner at most.
-            if (await isFirstAccount(database)) return { data: { role: ROLE_OWNER } };
+            if (await isFirstAccount(database)) return { data: { ...record, role: ROLE_OWNER } };
             if (
               (await registration.inviteOnly()) &&
               !(await hasValidInvite(database, user.email, Date.now()))
@@ -132,7 +142,7 @@ export function createAuth(
                 code: 'INVITE_REQUIRED',
               });
             }
-            return { data: { role: ROLE_USER } };
+            return { data: { ...record, role: ROLE_USER } };
           },
           after: async (user) => {
             await markInvitesAccepted(database, user.email, Date.now());
@@ -141,6 +151,20 @@ export function createAuth(
             if (!settings.requireEmailVerification) {
               background(mail.accountCreated({ email: user.email, name: user.name }));
             }
+          },
+        },
+        update: {
+          // The terms are accepted once, at sign-up, and recorded; an update cannot rewrite that. A
+          // time zone can be changed, and is checked as it was at sign-up.
+          before: (data) => {
+            if ('agreedToTerms' in data) {
+              throw new APIError('BAD_REQUEST', {
+                message: 'The terms are accepted when the account is created.',
+                code: 'FIELD_NOT_ALLOWED',
+              });
+            }
+            if (!('timezone' in data)) return Promise.resolve();
+            return Promise.resolve({ data: { timezone: timezoneOrNull(data.timezone) } });
           },
         },
       },

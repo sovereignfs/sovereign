@@ -340,7 +340,7 @@ export function authSuite(createDatabase: () => Promise<TestDatabase>): void {
       for (let i = 0; i < 5; i++) {
         const reply = await call(a, 'POST', '/sign-up/email', {
           address,
-          body: { name: 'Ada', email: freshEmail(), password: PASSWORD },
+          body: { name: 'Ada', email: freshEmail(), password: PASSWORD, agreedToTerms: true },
         });
         statuses.push(reply.status);
       }
@@ -441,7 +441,7 @@ export function authSuite(createDatabase: () => Promise<TestDatabase>): void {
       const a = makeAuth(db, { SV_URL: baseUrl });
       const reply = await call(a, 'POST', '/sign-up/email', {
         baseUrl,
-        body: { name: 'Ada', email: freshEmail(), password: PASSWORD },
+        body: { name: 'Ada', email: freshEmail(), password: PASSWORD, agreedToTerms: true },
       });
       expect(reply.status).toBe(200);
       const cookie = reply.setCookies.find((c) => c.includes('session_token=')) ?? '';
@@ -455,7 +455,7 @@ export function authSuite(createDatabase: () => Promise<TestDatabase>): void {
       const a = makeAuth(db, { SV_URL: baseUrl, SV_AUTH_COOKIE_DOMAIN: 'example.com' });
       const reply = await call(a, 'POST', '/sign-up/email', {
         baseUrl,
-        body: { name: 'Ada', email: freshEmail(), password: PASSWORD },
+        body: { name: 'Ada', email: freshEmail(), password: PASSWORD, agreedToTerms: true },
       });
       const cookie = reply.setCookies.find((c) => c.includes('session_token=')) ?? '';
       expect(cookie).toMatch(/Domain=example\.com/i);

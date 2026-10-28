@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { type FormEvent, useState } from 'react';
-import { Alert, Button, FormField, Input } from '@sovereignfs/ui';
+import { Alert, Button, Checkbox, FormField, Input, LegalLinks } from '@sovereignfs/ui';
 import { authClient } from '../../../src/auth/client';
 import { afterVerification } from '../messages';
 import { ResendVerification } from '../resend-verification';
@@ -13,17 +13,26 @@ export function SignUpForm({ returnTo, passwordHint }: { returnTo: string; passw
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | undefined>();
+  const [agreed, setAgreed] = useState(false);
   const [pending, setPending] = useState(false);
   const [waitingFor, setWaitingFor] = useState<string | undefined>();
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setPending(true);
     setError(undefined);
+    // The server refuses it too; this only saves the person a round trip.
+    if (!agreed) {
+      setError('Accept the Terms of Service and the Privacy Policy to create an account.');
+      return;
+    }
+    setPending(true);
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const result = await authClient.signUp.email({
       name,
       email,
       password,
+      agreedToTerms: true,
+      ...(timezone ? { timezone } : {}),
       callbackURL: afterVerification(returnTo),
     });
     if (result.error) {
@@ -96,6 +105,21 @@ export function SignUpForm({ returnTo, passwordHint }: { returnTo: string; passw
           />
         )}
       </FormField>
+      <div className={styles.terms}>
+        <Checkbox
+          checked={agreed}
+          onChange={setAgreed}
+          label="I agree to the Terms of Service and the Privacy Policy"
+          name="agreedToTerms"
+        />
+        <LegalLinks
+          renderLink={(href, label) => (
+            <a className={styles.link} href={href} target="_blank" rel="noopener noreferrer">
+              {label}
+            </a>
+          )}
+        />
+      </div>
       <Button type="submit" className={styles.submit} loading={pending}>
         {pending ? 'Creating account…' : 'Create account'}
       </Button>
@@ -118,6 +142,10 @@ function messageFor(error: { status: number; code?: string; message?: string }):
   if (error.code === 'INVITE_REQUIRED')
     return 'There is no valid invitation for this email address. Ask whoever runs this instance to invite you.';
   if (error.code === 'PASSWORD_DOES_NOT_MEET_POLICY' && error.message) return error.message;
+  if (error.code === 'TERMS_NOT_ACCEPTED' && error.message) return error.message;
+  if (error.code === 'INVALID_TIMEZONE') {
+    return 'Your browser reported a time zone this instance does not recognise. Try again in another browser.';
+  }
   if (error.code === 'USER_ALREADY_EXISTS' || error.code?.startsWith('USER_ALREADY_EXISTS'))
     return 'An account with this email address already exists. Try signing in instead.';
   if (error.code === 'INVALID_EMAIL') return 'Enter a valid email address.';

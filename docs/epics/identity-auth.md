@@ -111,6 +111,11 @@ resetting by any other way than the emailed link.
 - Default Privacy Policy and Terms of Service pages
 - A required acceptance at sign-up, recorded with the account
 - Browser timezone captured at sign-up and validated as IANA before storing
+- The acceptance recorded as when and which text (a digest of the documents as
+  shipped), and set by the server
+
+**Not here:** editing the legal texts (Console), asking accounts made before
+this to accept, and the Preferences page where the time zone is changed.
 
 **Dependencies:** 4.1
 

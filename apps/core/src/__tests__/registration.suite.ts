@@ -174,6 +174,7 @@ export function registrationSuite(createDatabase: () => Promise<TestDatabase>): 
           name: 'Mallory',
           email: 'mallory@example.com',
           password: PASSWORD,
+          agreedToTerms: true,
           role: 'platform:owner',
         },
       });
@@ -199,7 +200,13 @@ export function registrationSuite(createDatabase: () => Promise<TestDatabase>): 
       const email = freshEmail();
       await auth.api
         .signUpEmail({
-          body: { name: 'Eve', email, password: PASSWORD, role: 'platform:owner' } as never,
+          body: {
+            name: 'Eve',
+            email,
+            password: PASSWORD,
+            agreedToTerms: true,
+            role: 'platform:owner',
+          } as never,
         })
         .catch(() => undefined);
       expect(await roleOf(email)).not.toBe('platform:owner');
@@ -224,7 +231,7 @@ export function registrationSuite(createDatabase: () => Promise<TestDatabase>): 
       const auth = await withOwner();
       await expect(
         auth.api.signUpEmail({
-          body: { name: 'Eve', email: freshEmail(), password: PASSWORD },
+          body: { name: 'Eve', email: freshEmail(), password: PASSWORD, agreedToTerms: true },
         }),
       ).rejects.toMatchObject({ body: { code: 'INVITE_REQUIRED' } });
     });
@@ -330,7 +337,7 @@ export function registrationSuite(createDatabase: () => Promise<TestDatabase>): 
         last = (
           await call(auth, 'POST', '/sign-up/email', {
             address,
-            body: { name: 'G', email: freshEmail(), password: PASSWORD },
+            body: { name: 'G', email: freshEmail(), password: PASSWORD, agreedToTerms: true },
           })
         ).status;
       }
@@ -490,7 +497,7 @@ export function registrationSuite(createDatabase: () => Promise<TestDatabase>): 
     const jar = new Jar();
     const reply = await call(auth, 'POST', '/sign-up/email', {
       jar,
-      body: { name: 'Eve', email: freshEmail(), password: PASSWORD },
+      body: { name: 'Eve', email: freshEmail(), password: PASSWORD, agreedToTerms: true },
     });
     expect(reply.status).toBe(422);
     expect(reply.setCookies).toEqual([]);

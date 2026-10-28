@@ -40,6 +40,13 @@ export const users = sqliteTable(
     image: text('image'),
     /** `scope:role-name` (core-app §3.2.1). Set by core when the account is made, never by a request. */
     role: text('role').notNull().default('platform:user'),
+    /** An IANA time zone, taken from the browser at sign-up and checked before it is stored. */
+    timezone: text('timezone'),
+    /** Whether the terms were accepted at sign-up. False for an account made before they were asked. */
+    agreedToTerms: integer('agreed_to_terms', { mode: 'boolean' }).notNull().default(false),
+    termsAcceptedAt: integer('terms_accepted_at', { mode: 'timestamp_ms' }),
+    /** Which text was accepted: a digest of the Privacy Policy and Terms of Service as built. */
+    termsVersion: text('terms_version'),
     createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
   },

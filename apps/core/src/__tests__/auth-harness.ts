@@ -155,7 +155,7 @@ export async function signUp(
   const jar = options.jar ?? new Jar();
   const reply = await call(auth, 'POST', '/sign-up/email', {
     jar,
-    body: { name: options.name ?? 'Ada Lovelace', email, password },
+    body: { name: options.name ?? 'Ada Lovelace', email, password, agreedToTerms: true },
   });
   return { reply, email, password, jar };
 }

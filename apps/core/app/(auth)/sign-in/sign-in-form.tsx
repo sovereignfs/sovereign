@@ -38,6 +38,11 @@ export function SignInForm({ returnTo, notice }: { returnTo: string; notice?: Si
       );
       return;
     }
+    // The password was right but a second step is asked for: no session exists yet.
+    if (result.data && 'twoFactorRedirect' in result.data && result.data.twoFactorRedirect) {
+      window.location.assign(`/sign-in/two-factor?returnTo=${encodeURIComponent(returnTo)}`);
+      return;
+    }
     // A full navigation, so the next page is rendered with the new session cookie.
     window.location.assign(returnTo);
   }

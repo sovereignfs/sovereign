@@ -174,6 +174,8 @@ each: `docs/architecture-rules.md`.
   ended session stops working at once.
 - **Sign-up's terms and time zone are checked in the user-create hook and
   recorded by the server;** every page is rendered per request, for the nonce.
+- **Every way of opening a session must pass the second step** when TOTP is on,
+  and core offers no "trust this device".
 - **PostgreSQL migrations name no schema** — `db:generate` strips drizzle-kit's
   `"public".` and a test guards it.
 - **Timing-safe comparison** for every key or token compare.

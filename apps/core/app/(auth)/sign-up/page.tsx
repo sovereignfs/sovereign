@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Alert, Card, PageContainer } from '@sovereignfs/ui';
 import { describePasswordPolicy } from '../../../src/auth/password-policy';
-import { getAuthSettings } from '../../../src/auth';
+import { getAuthSettings } from '../../../src/auth/settings';
 import { getRegistrationMode } from '../../../src/auth/mode';
 import { safeReturnTo } from '../../../src/auth/return-to';
 import { getSession } from '../../../src/auth/session';

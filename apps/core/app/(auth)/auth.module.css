@@ -41,3 +41,13 @@
   justify-content: center;
   margin-top: var(--sv-space-4);
 }
+
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--sv-color-accent);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}

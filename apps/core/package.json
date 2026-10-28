@@ -3,7 +3,7 @@
   "version": "0.10.0",
   "private": true,
   "type": "module",
-  "description": "Sovereign Core \u2014 the sign-in server, Console and launcher.",
+  "description": "Sovereign Core — the sign-in server, Console and launcher.",
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "dev": "next dev",
@@ -24,7 +24,8 @@
     "drizzle-orm": "catalog:",
     "next": "catalog:",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "uqr": "^0.1.3"
   },
   "devDependencies": {
     "@sovereignfs/tsconfig": "workspace:*",

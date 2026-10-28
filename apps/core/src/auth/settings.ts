@@ -1,6 +1,6 @@
 import { isIP } from 'node:net';
 import { ConfigError, type Problem } from '@sovereignfs/config';
-import type { CoreConfig } from '../config';
+import { getConfig, type CoreConfig } from '../config';
 import { MAX_PASSWORD_LENGTH, type PasswordPolicy } from './password-policy';
 
 export type AuthSettings = {
@@ -118,4 +118,12 @@ function isAddressOrRange(entry: string): boolean {
   if (family === 0 || rest.length > 0) return false;
   if (prefix === undefined) return true;
   return /^\d{1,3}$/.test(prefix) && Number(prefix) <= (family === 4 ? 32 : 128);
+}
+
+/**
+ * The authentication settings, from the environment. Throws a `ConfigError` naming what is wrong.
+ * Here, not with `getAuth`, so a page that only needs the password rules does not load better-auth.
+ */
+export function getAuthSettings(): AuthSettings {
+  return resolveAuthSettings(getConfig());
 }

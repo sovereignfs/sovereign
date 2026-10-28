@@ -199,6 +199,16 @@ describe('the sign-in form, around verification and reset', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
   };
 
+  it('goes to the second step, not home, when the password was right but a code is wanted', async () => {
+    signIn.mockResolvedValue({ data: { twoFactorRedirect: true }, error: null });
+    render(<SignInForm returnTo="/settings?tab=mail" />);
+    submit();
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith('/sign-in/two-factor?returnTo=%2Fsettings%3Ftab%3Dmail'),
+    );
+    expect(assign).not.toHaveBeenCalledWith('/settings?tab=mail');
+  });
+
   it('offers a way to reset a forgotten password', () => {
     render(<SignInForm returnTo="/" />);
     expect(screen.getByRole('link', { name: 'Forgot your password?' }).getAttribute('href')).toBe(

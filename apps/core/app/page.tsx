@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Card, PageContainer, StatusBadge } from '@sovereignfs/ui';
 import { getSession } from '../src/auth/session';
@@ -20,6 +21,11 @@ export default async function Page() {
           </p>
           <div>
             <StatusBadge status="synced">Running</StatusBadge>
+          </div>
+          <div>
+            <Link className={styles.link} href="/security/two-factor">
+              Two-factor sign-in
+            </Link>
           </div>
           <div>
             <SignOutButton />

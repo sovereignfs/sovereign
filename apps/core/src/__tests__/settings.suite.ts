@@ -89,6 +89,7 @@ export function settingsSuite(createDatabase: () => Promise<TestDatabase>): void
         '0001_auth_tables',
         '0002_roles_and_invites',
         '0003_terms_and_timezone',
+        '0004_two_factor',
       ]);
     });
   });

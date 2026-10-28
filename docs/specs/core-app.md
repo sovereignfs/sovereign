@@ -281,6 +281,25 @@ Editing them is not part of Phase 1.
 - Enrolment produces ten single-use backup codes.
 - Enabling, disabling and regenerating backup codes require the password again.
 - With TOTP on, sign-in asks for a code (or a backup code) as a second step.
+- Turning it on needs an address that has been verified (§3.3.3), so an account
+  that never proved its address cannot later be signed in by a verification
+  link without the second step.
+- The key and the backup codes are shown once. The backup codes are withheld
+  until the first valid code has turned TOTP on. A backup code works once and is
+  then spent; regenerating retires every old one.
+- After the password is right, **no session exists** until the second step is
+  answered. A challenge allows five tries and then the person signs in again;
+  ten wrong codes lock the second step for 15 minutes, even against the right
+  code; the second step is also rate limited per client address.
+- Core offers no "trust this device": a request asking for one is refused, so
+  the second step is never skipped for a period.
+- Codes sent by email or text are not offered.
+- The key and the backup codes are stored encrypted by better-auth with
+  `SV_AUTH_SECRET`, not with the field encryption key ring (§3.15), because
+  better-auth does the encrypting. Changing `SV_AUTH_SECRET` therefore ends
+  everyone's authenticator enrolment as well as signing everyone out.
+- Until the Security page (§3.11) exists, enrolling, regenerating backup codes
+  and turning TOTP off are at `/security/two-factor`.
 
 #### 3.4.2 Passkeys
 
@@ -664,3 +683,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-28 | §3.3.1: an invite is used up by the sign-up it admits; every way an invite can fail is refused alike; "first account" means no account exists at all; a role is never taken from a request.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-10-28 | §3.3.2–§3.3.4, §3.5: the "account created" email waits for verification when it is required; sign-up and resend answer alike for known and unknown addresses; email is sent in the background and refused up front while it is not set up; core's own session checks bypass the cookie cache so a reset ends sessions at once.                                                                                                                                                                                                                                                                                                                                                                                                |
 | 2026-10-28 | §3.3.2, §3.3.5: the terms must be accepted at sign-up, enforced by the server, and recorded with when and which text; the time zone is stored in its canonical IANA spelling, refused when it is not one, and checked on every later change; the default legal pages are at `/privacy` and `/tos`.                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 2026-10-28 | §3.4.1: what enrolling, the second step and the backup codes do, that a verified address is needed, that no "trust this device" is offered, and that the key and codes are encrypted with `SV_AUTH_SECRET`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |

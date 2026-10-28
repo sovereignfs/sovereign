@@ -136,6 +136,12 @@ this to accept, and the Preferences page where the time zone is changed.
 - Ten single-use backup codes; regenerate
 - Password required to enable, disable or regenerate
 - A second sign-in step accepting a code or a backup code
+- A page at `/security/two-factor` for enrolling, new backup codes and turning
+  it off, until the Security page takes it over
+
+**Not here:** the Security page itself (identity pages), an operator resetting
+someone's MFA (Console), rejecting a code already used in its 30-second window,
+and rotating `SV_AUTH_SECRET` without ending enrolments.
 
 **Dependencies:** 4.1
 

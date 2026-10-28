@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Alert, Card, PageContainer } from '@sovereignfs/ui';
 import { describePasswordPolicy } from '../../../src/auth/password-policy';
-import { getAuthSettings } from '../../../src/auth';
+import { getAuthSettings } from '../../../src/auth/settings';
 import styles from '../auth.module.css';
 import { ResetPasswordForm } from './reset-password-form';
 

@@ -1,0 +1,98 @@
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--sv-font-size-2xl);
+  font-weight: var(--sv-font-weight-semibold);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--sv-font-size-lg);
+  font-weight: var(--sv-font-weight-semibold);
+}
+
+.text {
+  margin: 0;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-md);
+  line-height: 1.5;
+}
+
+.steps {
+  margin: 0;
+  padding-left: var(--sv-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-md);
+  line-height: 1.5;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sv-space-2);
+}
+
+/* A QR code is read by a camera, not a person, so it is black on white in every theme. */
+.qr {
+  align-self: flex-start;
+  padding: var(--sv-space-2);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-white);
+  line-height: 0;
+}
+
+.qr svg {
+  width: 11rem;
+  height: 11rem;
+}
+
+.qr path {
+  fill: var(--sv-black);
+}
+
+.key {
+  margin: 0;
+  font-family: var(--sv-font-family-mono);
+  font-size: var(--sv-font-size-md);
+  letter-spacing: 0.08em;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.codes {
+  margin: 0;
+  padding: var(--sv-space-3);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface-sunken);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sv-space-2);
+  list-style: none;
+  font-family: var(--sv-font-family-mono);
+  font-size: var(--sv-font-size-md);
+  user-select: all;
+}
+
+.footer {
+  margin: 0;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-sm);
+}
+
+.link {
+  color: var(--sv-color-accent);
+}

@@ -29,6 +29,13 @@
       "when": 1793213853449,
       "tag": "0003_terms_and_timezone",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1793216094777,
+      "tag": "0004_two_factor",
+      "breakpoints": true
     }
   ]
 }

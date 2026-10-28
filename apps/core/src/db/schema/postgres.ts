@@ -35,6 +35,7 @@ export const users = pgTable(
     agreedToTerms: boolean('agreed_to_terms').notNull().default(false),
     termsAcceptedAt: date('terms_accepted_at'),
     termsVersion: text('terms_version'),
+    twoFactorEnabled: boolean('two_factor_enabled').notNull().default(false),
     createdAt: date('created_at').notNull(),
     updatedAt: date('updated_at').notNull(),
   },
@@ -116,4 +117,20 @@ export const invites = pgTable(
     cancelledAt: postgresTimestampMs('cancelled_at'),
   },
   (table) => [index('invites_email_idx').on(table.email)],
+);
+
+export const twoFactors = pgTable(
+  'two_factors',
+  {
+    id: text('id').primaryKey(),
+    secret: text('secret').notNull(),
+    backupCodes: text('backup_codes').notNull(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    verified: boolean('verified').notNull().default(true),
+    failedVerificationCount: integer('failed_verification_count').notNull().default(0),
+    lockedUntil: date('locked_until'),
+  },
+  (table) => [uniqueIndex('two_factors_user_id_idx').on(table.userId)],
 );

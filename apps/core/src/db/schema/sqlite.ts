@@ -47,6 +47,8 @@ export const users = sqliteTable(
     termsAcceptedAt: integer('terms_accepted_at', { mode: 'timestamp_ms' }),
     /** Which text was accepted: a digest of the Privacy Policy and Terms of Service as built. */
     termsVersion: text('terms_version'),
+    /** Whether sign-in asks for a second step. Turned on only after a valid code (core-app §3.4.1). */
+    twoFactorEnabled: integer('two_factor_enabled', { mode: 'boolean' }).notNull().default(false),
     createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
   },
@@ -135,4 +137,26 @@ export const invites = sqliteTable(
     cancelledAt: sqliteTimestampMs('cancelled_at'),
   },
   (table) => [index('invites_email_idx').on(table.email)],
+);
+
+/**
+ * An authenticator app enrolment: the TOTP secret and the backup codes, both stored encrypted by
+ * better-auth (with `SV_AUTH_SECRET`) and never returned. One row per person. `verified` is false
+ * until the first valid code, so an abandoned enrolment never asks for a code at sign-in.
+ */
+export const twoFactors = sqliteTable(
+  'two_factors',
+  {
+    id: text('id').primaryKey(),
+    secret: text('secret').notNull(),
+    backupCodes: text('backup_codes').notNull(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    verified: integer('verified', { mode: 'boolean' }).notNull().default(true),
+    /** Wrong codes at the second sign-in step since the last right one; ten lock the account's second step. */
+    failedVerificationCount: integer('failed_verification_count').notNull().default(0),
+    lockedUntil: integer('locked_until', { mode: 'timestamp_ms' }),
+  },
+  (table) => [uniqueIndex('two_factors_user_id_idx').on(table.userId)],
 );

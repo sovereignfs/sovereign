@@ -1,5 +1,5 @@
 import { createAuthClient } from 'better-auth/react';
-import { inferAdditionalFields } from 'better-auth/client/plugins';
+import { inferAdditionalFields, twoFactorClient } from 'better-auth/client/plugins';
 
 /**
  * The browser's client for core's own sign-in. It talks to the same origin, so it needs no
@@ -10,6 +10,7 @@ import { inferAdditionalFields } from 'better-auth/client/plugins';
  */
 export const authClient = createAuthClient({
   plugins: [
+    twoFactorClient(),
     inferAdditionalFields({
       user: {
         timezone: { type: 'string', required: false },

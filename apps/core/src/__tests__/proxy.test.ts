@@ -110,6 +110,7 @@ describe('proxy', () => {
     it.each([
       '/sign-in',
       '/sign-up',
+      '/sign-in/two-factor',
       '/privacy',
       '/tos',
       '/forgot-password',
@@ -129,6 +130,8 @@ describe('proxy', () => {
     it.each([
       '/api/authors',
       '/sign-in/extra',
+      '/sign-in/two-factor/extra',
+      '/security/two-factor',
       '/sign-ups',
       '/api/healthz',
       '/console',

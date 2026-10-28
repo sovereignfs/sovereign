@@ -38,11 +38,12 @@ export function proxy(request: NextRequest): NextResponse {
   return withCsp(NextResponse.next({ request: { headers } }), csp);
 }
 
-/** The pages and routes anyone may reach: sign-in, sign-up, the password reset pages, the legal pages, better-auth's own routes, health, assets. */
+/** The pages and routes anyone may reach: sign-in and its second step, sign-up, the password reset pages, the legal pages, better-auth's own routes, health, assets. */
 function isPublic(pathname: string): boolean {
   return (
     pathname === '/sign-in' ||
     pathname === '/sign-up' ||
+    pathname === '/sign-in/two-factor' ||
     pathname === '/privacy' ||
     pathname === '/tos' ||
     pathname === '/forgot-password' ||

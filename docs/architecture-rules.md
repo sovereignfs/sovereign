@@ -143,6 +143,20 @@ pointing here.
 - **Every page is rendered per request** (`await connection()` in a page that
   reads nothing else dynamic), because the nonce in the Content Security Policy
   exists only for a request: a page prerendered at build time loads no script.
+- **Every way of opening a session passes the second step.** With TOTP on,
+  better-auth's sign-in answers the password with a challenge and opens no
+  session; the plugin hooks only the password sign-in paths. Anything else that
+  can open a session (the verification link, a passkey, later the provider's
+  own sign-in) must be checked against `twoFactorEnabled` before it is added.
+  The verification link is covered by requiring a verified address to turn
+  TOTP on, so a person with it on has no link left to follow.
+- **Core offers no "trust this device".** The second step is never skipped for a
+  period; a request that asks for it (`trustDevice`) is refused, not ignored.
+- **The authenticator key and the backup codes are encrypted by better-auth with
+  `SV_AUTH_SECRET`,** not with core's field encryption key ring, because the
+  plugin does the encrypting. Rotating the auth secret ends every enrolment.
+  Do not "fix" this by hand-rolling TOTP: the plugin's lock-out, attempt
+  counters and single-use backup codes are what make it safe.
 - **PostgreSQL migrations never name a schema.** drizzle-kit writes foreign keys
   as `"public"."users"`; core runs in whichever schema the connection's
   `search_path` names (each test file gets its own). `pnpm --filter

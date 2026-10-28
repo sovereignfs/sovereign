@@ -1,8 +1,9 @@
 import type { Database } from '@sovereignfs/database';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { APIError, createAuthMiddleware } from 'better-auth/api';
+import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/api';
 import { hashPassword } from 'better-auth/crypto';
+import { twoFactor } from 'better-auth/plugins/two-factor';
 import * as postgresSchema from '../db/schema/postgres';
 import * as sqliteSchema from '../db/schema/sqlite';
 import { hasValidInvite, markInvitesAccepted } from '../invites';
@@ -27,6 +28,7 @@ function adapterFor(database: Database) {
           account: postgresSchema.accounts,
           verification: postgresSchema.verifications,
           rateLimit: postgresSchema.rateLimits,
+          twoFactor: postgresSchema.twoFactors,
         }
       : {
           user: sqliteSchema.users,
@@ -34,6 +36,7 @@ function adapterFor(database: Database) {
           account: sqliteSchema.accounts,
           verification: sqliteSchema.verifications,
           rateLimit: sqliteSchema.rateLimits,
+          twoFactor: sqliteSchema.twoFactors,
         };
   return drizzleAdapter(database.drizzle as never, {
     provider: database.family === 'postgres' ? 'pg' : 'sqlite',
@@ -89,6 +92,9 @@ export type AuthDependencies = {
 
 /** Requests that send an email, and so cannot be answered when mail is not set up. */
 const NEEDS_MAIL = new Set(['/send-verification-email', '/request-password-reset']);
+
+/** The second sign-in step's two ways to answer, which also take a `trustDevice` flag core never offers. */
+const SECOND_STEP = new Set(['/two-factor/verify-totp', '/two-factor/verify-backup-code']);
 
 const ONE_HOUR = 60 * 60;
 
@@ -203,9 +209,30 @@ export function createAuth(
       },
     },
     hooks: {
-      // Before anything is looked up, so the answer is the same for every address: a request that
-      // needs email is refused while email is not set up. (Verification also gates sign-up.)
       before: createAuthMiddleware(async (ctx) => {
+        // A person's second factor is theirs alone: core offers no "trust this device" that would
+        // skip the second step for a month, so a request asking for one is refused, not ignored.
+        if (SECOND_STEP.has(ctx.path) && (ctx.body as { trustDevice?: unknown })?.trustDevice) {
+          throw new APIError('BAD_REQUEST', {
+            message: 'Trusting a device is not offered.',
+            code: 'TRUST_DEVICE_NOT_OFFERED',
+          });
+        }
+        // Two-factor is for an address that has been shown to be the person's. An unverified
+        // account that turned it on could later follow a verification link, which opens a session
+        // without a second step.
+        if (ctx.path === '/two-factor/enable') {
+          const session = await getSessionFromCtx(ctx);
+          const user = session && (await ctx.context.internalAdapter.findUserById(session.user.id));
+          if (user && !user.emailVerified) {
+            throw new APIError('BAD_REQUEST', {
+              message: 'Verify your email address before turning on two-factor sign-in.',
+              code: 'EMAIL_NOT_VERIFIED',
+            });
+          }
+        }
+        // Before anything is looked up, so the answer is the same for every address: a request that
+        // needs email is refused while email is not set up. (Verification also gates sign-up.)
         const needsMail =
           NEEDS_MAIL.has(ctx.path) ||
           (settings.requireEmailVerification && ctx.path === '/sign-up/email');
@@ -219,6 +246,12 @@ export function createAuth(
         });
       }),
     },
+    plugins: [
+      // Authenticator app (TOTP) with backup codes. The code sent by email or text is not offered:
+      // no `sendOTP` is given, so those endpoints answer that they are not configured. The secret and
+      // the backup codes are stored encrypted with SV_AUTH_SECRET by better-auth.
+      twoFactor({ issuer: 'Sovereign', backupCodeOptions: { amount: 10 } }),
+    ],
     session: {
       freshAge: 0,
       cookieCache: { enabled: true, maxAge: 300 },

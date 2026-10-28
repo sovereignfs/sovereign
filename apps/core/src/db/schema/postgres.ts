@@ -1,4 +1,4 @@
-import { postgresTimestampMs } from '@sovereignfs/database';
+import { postgresBytes, postgresTimestampMs } from '@sovereignfs/database';
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -158,3 +158,14 @@ export const passkeys = pgTable(
     uniqueIndex('passkeys_credential_id_idx').on(table.credentialID),
   ],
 );
+
+export const avatars = pgTable('avatars', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  contentType: text('content_type').notNull(),
+  bytes: postgresBytes('bytes').notNull(),
+  size: integer('size').notNull(),
+  version: text('version').notNull(),
+  updatedAt: postgresTimestampMs('updated_at').notNull(),
+});

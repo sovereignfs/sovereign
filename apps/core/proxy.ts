@@ -50,6 +50,7 @@ function isPublic(pathname: string): boolean {
     pathname === '/reset-password' ||
     pathname === '/api/health' ||
     pathname.startsWith('/api/auth/') ||
+    pathname.startsWith('/api/avatars/') ||
     pathname.startsWith('/_next/') ||
     pathname === '/favicon.ico'
   );

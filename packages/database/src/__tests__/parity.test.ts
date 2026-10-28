@@ -9,6 +9,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { integer, sqliteTable, text as sqliteText } from 'drizzle-orm/sqlite-core';
 import { describe, expect, it } from 'vitest';
+import { postgresBytes, sqliteBytes, toBuffer } from '../columns.js';
 import { assertSchemaParity, schemaDifferences } from '../testing.js';
 import { postgresSchema, sqliteSchema } from './fixtures/schema.js';
 
@@ -123,5 +124,48 @@ describe('schema parity', () => {
     expect(schemaDifferences(a, b).some((line) => line.includes('longer than 63 bytes'))).toBe(
       true,
     );
+  });
+});
+
+describe('binary columns', () => {
+  const pair = (postgresColumn: ReturnType<typeof postgresBytes> | ReturnType<typeof text>) => ({
+    sqlite: {
+      images: sqliteTable('images', {
+        id: sqliteText('id').primaryKey(),
+        data: sqliteBytes('data').notNull(),
+      }),
+    },
+    postgres: {
+      images: pgTable('images', { id: text('id').primaryKey(), data: postgresColumn.notNull() }),
+    },
+  });
+
+  it('are a pair when one is a blob and the other is bytea', () => {
+    const { sqlite, postgres } = pair(postgresBytes('data'));
+    expect(schemaDifferences(sqlite, postgres)).toEqual([]);
+  });
+
+  it('are not a pair when the other side stores text', () => {
+    const { sqlite, postgres } = pair(text('data'));
+    expect(schemaDifferences(sqlite, postgres)).toEqual([
+      expect.stringContaining('column "data" differs'),
+    ]);
+  });
+});
+
+describe('toBuffer', () => {
+  const bytes = [1, 2, 3, 250];
+
+  it.each([
+    ['a Buffer, as node-postgres gives bytea', Buffer.from(bytes)],
+    ['an ArrayBuffer, as libSQL gives a blob', new Uint8Array(bytes).buffer],
+    ['a typed array', new Uint8Array(bytes)],
+    ['a view into a larger buffer', new Uint8Array([9, ...bytes, 9]).subarray(1, 5)],
+  ])('reads %s', (_name, value) => {
+    expect([...toBuffer(value)]).toEqual(bytes);
+  });
+
+  it.each([null, undefined, 'text', 5, {}])('refuses %j, which is not bytes', (value) => {
+    expect(() => toBuffer(value)).toThrow(TypeError);
   });
 });

@@ -572,6 +572,13 @@ closing them returns there (§1.3).
 | Connected apps | Apps the person has allowed, with the scopes granted; **Remove access** revokes the app's tokens as well (§3.6.4) |
 | Delete account | Requires the password. The owner must transfer ownership first                                                    |
 
+- A name is 1 to 100 characters, trimmed, with no line breaks or other control
+  characters, on every path that sets one (sign-up and the profile).
+- A picture's address is set only by uploading a picture: no request can name
+  an address, since an address in a person's profile is shown in other
+  people's pages. Uploading and removing a picture are checked for where the
+  request came from, as well as for a session.
+
 ### 3.12 Console: instance settings
 
 | Setting                                        | Capability                   | Notes                                                                                       |
@@ -633,6 +640,13 @@ that apps can show the same branding. The address and format are defined in
     cache lifetimes;
   - not resized on the server. Avatars are cropped and scaled in the browser,
     to about 512 pixels square, before upload.
+  - judged by their bytes, never by a name or the type the client claimed, and
+    served as the kind the bytes proved to be; the longest side accepted is
+    4096 pixels, which refuses a picture built to exhaust a browser;
+  - an avatar is public and versioned: it is shown by apps in an image with no
+    credentials from the address in the `picture` claim, which carries the
+    picture's version, so it is cached for a year and a changed picture is a new
+    address. The picture of a deactivated account is not served.
 - **Secrets from files:** every variable that holds a secret also accepts a
   `_FILE` form naming a file to read it from. Setting both forms of the same
   variable is a start-up error.
@@ -728,3 +742,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-28 | §3.4.2: a passkey must be unlocked on the device and so counts as two factors; passkeys are discoverable; an unverified account is refused; the relying party defaults and is checked at start-up; the password is never removed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | 2026-10-28 | §3.3.6: what deactivating does (one transaction with the work that goes with it, notices after), that every way of opening a session is refused, that the owner cannot be deactivated, and that reactivating restores sign-in only.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | 2026-10-28 | §3.2.1: a role is changed only between admin and user, by the owner; the owner's role is fixed and the owner cannot be deactivated; a role that is not known holds no capability.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 2026-10-28 | §3.11, §3.15: a name's rules; the picture's address is set only by uploading; avatars are judged by their bytes, public and versioned; the longest side accepted.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |

@@ -20,5 +20,11 @@ export {
 } from './migrate.js';
 export type { Migration, MigrateResult } from './migrate.js';
 export { assertIdentifier, MAX_IDENTIFIER_BYTES, toNumber } from './identifiers.js';
-export { postgresTimestampMs, sqliteTimestampMs } from './columns.js';
+export {
+  postgresBytes,
+  postgresTimestampMs,
+  sqliteBytes,
+  sqliteTimestampMs,
+  toBuffer,
+} from './columns.js';
 export { createNamespace, createSqldClient, dropNamespace } from './sqld.js';

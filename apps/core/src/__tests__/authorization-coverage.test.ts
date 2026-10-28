@@ -9,8 +9,15 @@ import { describe, expect, it } from 'vitest';
  */
 const APP = path.join(import.meta.dirname, '../../app');
 
-/** Routes that are public on purpose: better-auth's own (it checks sessions and tokens itself) and health. */
-const PUBLIC_ROUTES = new Set(['api/auth/[...all]/route.ts', 'api/health/route.ts']);
+/**
+ * Routes that are public on purpose: better-auth's own (it checks sessions and tokens itself), a person's
+ * picture (shown by apps with no credentials, read only), and health.
+ */
+const PUBLIC_ROUTES = new Set([
+  'api/auth/[...all]/route.ts',
+  'api/avatars/[userId]/route.ts',
+  'api/health/route.ts',
+]);
 
 function files(directory: string): string[] {
   return readdirSync(directory).flatMap((name) => {
@@ -49,12 +56,24 @@ describe('server actions and route handlers authorize inside', () => {
     },
   );
 
-  it('keeps the public routes to the two that are public on purpose', () => {
+  it('keeps the public routes to the three that are public on purpose', () => {
     // Adding to the list is a decision to make in review, not a way to make this pass.
     expect([...PUBLIC_ROUTES].sort()).toEqual([
       'api/auth/[...all]/route.ts',
+      'api/avatars/[userId]/route.ts',
       'api/health/route.ts',
     ]);
+  });
+
+  it.each(
+    routes
+      .filter((file) => !relative(file).startsWith('api/auth/'))
+      .filter((file) =>
+        /export\s+(async\s+)?function\s+(POST|PUT|PATCH|DELETE)\b/.test(readFileSync(file, 'utf8')),
+      )
+      .map((file) => [relative(file), file]),
+  )('route %s, which changes something, checks where the request came from', (_name, file) => {
+    expect(/\brequireSameOrigin\(/.test(readFileSync(String(file), 'utf8'))).toBe(true);
   });
 
   it('recognises what it looks for', () => {

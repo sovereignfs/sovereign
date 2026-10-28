@@ -14,6 +14,7 @@ import { isFirstAccount, type RegistrationPolicy } from './registration';
 import { assertMayOpenSession } from './session-gate';
 import { ROLE_OWNER, ROLE_USER } from './roles';
 import type { AuthSettings } from './settings';
+import { cleanName, refuseImageInput } from '../profile/name';
 import { signUpRecord, timezoneOrNull } from './terms';
 
 /** The longest request body, in characters, for a password; core's policy sets the real limit. */
@@ -166,8 +167,11 @@ export function createAuth(
           // Every account is made through here, whatever the route: the sign-up endpoint, or a
           // server-side call that has no route (a request hook cannot see those).
           before: async (user) => {
-            // The terms and the time zone first: they are the person's to put right, whoever they are.
-            const record = signUpRecord(user);
+            // The name, the terms and the time zone first: they are the person's to put right, whoever
+            // they are. No picture comes with a sign-up: one is uploaded afterwards.
+            if (user.image !== undefined && user.image !== null) refuseImageInput();
+            const name = cleanName(user.name);
+            const record = { ...signUpRecord(user), name };
             // The first account is exempt from invite-only and is the owner. A second sign-up
             // racing for it loses at the database, which holds one owner at most.
             if (await isFirstAccount(database)) return { data: { ...record, role: ROLE_OWNER } };
@@ -197,7 +201,8 @@ export function createAuth(
         },
         update: {
           // The terms are accepted once, at sign-up, and recorded; an update cannot rewrite that. A
-          // time zone can be changed, and is checked as it was at sign-up.
+          // name and a time zone can be changed, and are checked as they were at sign-up. The picture
+          // is not set here: it is uploaded, which is the only thing that sets it.
           before: (data) => {
             if ('agreedToTerms' in data) {
               throw new APIError('BAD_REQUEST', {
@@ -205,8 +210,12 @@ export function createAuth(
                 code: 'FIELD_NOT_ALLOWED',
               });
             }
-            if (!('timezone' in data)) return Promise.resolve();
-            return Promise.resolve({ data: { timezone: timezoneOrNull(data.timezone) } });
+            // better-auth passes `name` and `image` on every update, undefined when not sent.
+            if (data.image !== undefined) refuseImageInput();
+            const patch: { name?: string; timezone?: string | null } = {};
+            if (data.name !== undefined) patch.name = cleanName(data.name);
+            if ('timezone' in data) patch.timezone = timezoneOrNull(data.timezone);
+            return Promise.resolve(Object.keys(patch).length > 0 ? { data: patch } : undefined);
           },
         },
       },

@@ -198,6 +198,20 @@ pointing here.
   owner; a test runs a long fixed sequence of role changes, deactivations and
   reactivations by every kind of actor and checks there is one active owner
   after each step. Who may act on whom is `mayActOn`.
+- **A route handler that changes something checks where the request came from.**
+  better-auth does this for its own routes; one written in core calls
+  `requireSameOrigin` (core's own address and `SV_AUTH_TRUSTED_ORIGINS`; no
+  `Origin` is refused) as well as `requireCapability`, or another site could send
+  the person's cookies with a request of its own. A test fails when a route
+  exporting `POST`, `PUT`, `PATCH` or `DELETE` does not.
+- **An image is judged by its bytes and served as what they proved.**
+  `inspectImage` reads the file's header (PNG, JPEG or WebP; at most 1 MB and
+  4096 pixels on a side), refuses SVG and anything else, and the picture is served
+  with that kind, `nosniff` and a version in its address. A request's declared
+  type and size are not believed, and a body is read only as far as the limit.
+- **`users.image` is set only by core.** A request cannot set it, at sign-up or
+  by an update, since the address would be shown in other people's pages; only
+  uploading a picture (`AvatarStore`) writes it.
 - **PostgreSQL migrations never name a schema.** drizzle-kit writes foreign keys
   as `"public"."users"`; core runs in whichever schema the connection's
   `search_path` names (each test file gets its own). `pnpm --filter

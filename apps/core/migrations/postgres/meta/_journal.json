@@ -50,6 +50,13 @@
       "when": 1793218397617,
       "tag": "0006_account_states",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793219552324,
+      "tag": "0007_avatars",
+      "breakpoints": true
     }
   ]
 }

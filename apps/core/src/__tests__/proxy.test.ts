@@ -118,6 +118,7 @@ describe('proxy', () => {
       '/api/health',
       '/api/auth/sign-in/email',
       '/api/auth/get-session',
+      '/api/avatars/some-user-id',
       '/_next/static/chunks/app.js',
       '/favicon.ico',
     ])('lets %s through', async (path) => {
@@ -133,6 +134,8 @@ describe('proxy', () => {
       '/sign-in/two-factor/extra',
       '/security/two-factor',
       '/security/passkeys',
+      '/api/avatar',
+      '/api/profile/avatar',
       '/sign-ups',
       '/api/healthz',
       '/console',

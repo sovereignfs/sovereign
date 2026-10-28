@@ -183,6 +183,9 @@ each: `docs/architecture-rules.md`.
 - **Every check asks `can` and every server action or route calls
   `requireCapability` itself** (a test fails when one does not); the owner's
   guarantees are held in `changeRole` and `AccountStates`.
+- **A route handler that changes something calls `requireSameOrigin`** (a test
+  fails when it does not); **an image is judged by its bytes**; **`users.image`
+  is set only by uploading a picture.**
 - **PostgreSQL migrations name no schema** — `db:generate` strips drizzle-kit's
   `"public".` and a test guards it.
 - **Timing-safe comparison** for every key or token compare.

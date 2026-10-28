@@ -1,4 +1,4 @@
-import { sqliteTimestampMs } from '@sovereignfs/database';
+import { sqliteBytes, sqliteTimestampMs } from '@sovereignfs/database';
 import { sql } from 'drizzle-orm';
 import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
@@ -190,3 +190,19 @@ export const passkeys = sqliteTable(
     uniqueIndex('passkeys_credential_id_idx').on(table.credentialID),
   ],
 );
+
+/**
+ * A person's picture (core-app §3.15), kept in the database so core's containers hold no state. One row
+ * per person, replaced when the picture changes. `version` changes with the bytes: it is in the picture's
+ * address and is its ETag, so a changed picture is a new address and a cache never serves the old one.
+ */
+export const avatars = sqliteTable('avatars', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  contentType: text('content_type').notNull(),
+  bytes: sqliteBytes('bytes').notNull(),
+  size: integer('size').notNull(),
+  version: text('version').notNull(),
+  updatedAt: sqliteTimestampMs('updated_at').notNull(),
+});

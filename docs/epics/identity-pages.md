@@ -32,13 +32,22 @@ close back to it (spec §1.3, §3.11).
   before upload
 - Changes reflected in the `name` and `picture` claims
 
+- A name's rules on every path that sets one; the picture's address set only
+  by uploading; `/profile`, until the identity pages share one overlay
+
+**Not here:** the `name` and `picture` claims themselves and the userinfo call
+(the provider epic reads `users.name` and `users.image`, so a change shows at
+once), and the overlay that the identity pages open in.
+
 **Dependencies:** 4.1
 
 **Spec reference:** §3.11, §3.6.2
 
 **Review checklist:**
 
-- After a change, a client's next userinfo call returns the new name
+- After a change, a client's next userinfo call returns the new name (here: the
+  person's session and `users` show it at once; the call arrives with the
+  provider)
 
 #### 📋 9.2 — Security
 

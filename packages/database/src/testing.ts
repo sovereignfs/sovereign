@@ -26,13 +26,26 @@ type TableShape = {
   names: string[];
 };
 
-type AnyColumn = { name: string; dataType: string; notNull: boolean; primary: boolean };
+type AnyColumn = {
+  name: string;
+  dataType: string;
+  notNull: boolean;
+  primary: boolean;
+  getSQLType?: () => string;
+};
+
+/** The type two dialects must agree on: binary data is `blob` on one and `bytea` on the other. */
+function logicalType(column: AnyColumn): string {
+  if (column.dataType === 'buffer') return 'bytes';
+  if (column.dataType === 'custom' && column.getSQLType?.() === 'bytea') return 'bytes';
+  return column.dataType;
+}
 
 function describeColumns(columns: readonly AnyColumn[]): Map<string, string> {
   return new Map(
     columns.map((c) => [
       c.name,
-      `${c.dataType}${c.notNull ? ' not null' : ''}${c.primary ? ' primary key' : ''}`,
+      `${logicalType(c)}${c.notNull ? ' not null' : ''}${c.primary ? ' primary key' : ''}`,
     ]),
   );
 }

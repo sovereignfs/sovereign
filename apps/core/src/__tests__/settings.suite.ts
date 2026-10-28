@@ -92,6 +92,7 @@ export function settingsSuite(createDatabase: () => Promise<TestDatabase>): void
         '0004_two_factor',
         '0005_passkeys',
         '0006_account_states',
+        '0007_avatars',
       ]);
     });
   });

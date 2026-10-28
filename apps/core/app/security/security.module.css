@@ -119,3 +119,36 @@
   margin: 0;
   font-weight: var(--sv-font-weight-semibold);
 }
+
+.avatarRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-4);
+}
+
+.avatar {
+  flex: none;
+  width: 6rem;
+  height: 6rem;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--sv-color-surface-sunken);
+  color: var(--sv-color-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--sv-font-size-2xl);
+  font-weight: var(--sv-font-weight-semibold);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

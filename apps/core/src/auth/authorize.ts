@@ -1,6 +1,7 @@
 import { can, type Capability } from '../roles/capabilities';
 import { getCapabilityMatrix } from '../roles/matrix';
 import { getSession } from './session';
+import { getAuthSettings } from './settings';
 
 export type AuthorizationErrorCode = 'unauthenticated' | 'forbidden';
 
@@ -56,4 +57,18 @@ export function authorizationResponse(error: unknown): Response | undefined {
       headers: { 'cache-control': 'no-store' },
     },
   );
+}
+
+/**
+ * Refuses a request that did not come from core's own pages (or an origin the operator trusted),
+ * for a route handler that changes something. better-auth checks this for its own routes; a route
+ * written here has to do it itself, or another site could send the person's cookies with a request
+ * of its own. The browser says where a request came from in `Origin`, on every request that changes
+ * something, and a request without it is refused.
+ */
+export function requireSameOrigin(request: Request): void {
+  const { baseUrl, trustedOrigins } = getAuthSettings();
+  const allowed = new Set([new URL(baseUrl).origin, ...trustedOrigins]);
+  const origin = request.headers.get('origin');
+  if (origin === null || !allowed.has(origin)) throw new AuthorizationError('forbidden');
 }

@@ -50,7 +50,7 @@ Console screens that call these.
 - A server action called directly by a role lacking the capability is refused
 - No path leaves the instance without an owner
 
-#### 📋 5.2 — Editable capability matrix
+#### ✅ 5.2 — Editable capability matrix
 
 **Goal:** The owner can change what admins and users may do, safely.
 

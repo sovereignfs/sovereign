@@ -1,6 +1,6 @@
 # Sovereign Core — Roadmap
 
-**Version:** 0.23.0 · **Last updated:** 2026-10-29
+**Version:** 0.24.0 · **Last updated:** 2026-10-29
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -57,7 +57,7 @@ _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked · �
 
 | Version | Task                               | Status | Epic task                               |
 | ------- | ---------------------------------- | ------ | --------------------------------------- |
-| —       | Editable capability matrix         | 📋     | [5.2](docs/epics/roles-capabilities.md) |
+| 0.24.0  | Editable capability matrix         | ✅     | [5.2](docs/epics/roles-capabilities.md) |
 | —       | Ownership transfer                 | 📋     | [5.3](docs/epics/roles-capabilities.md) |
 | —       | Provider, flows, scopes and claims | 📋     | [6.1](docs/epics/oidc-provider.md)      |
 | —       | Consent                            | 📋     | [6.2](docs/epics/oidc-provider.md)      |

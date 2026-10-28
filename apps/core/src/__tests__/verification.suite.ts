@@ -243,6 +243,18 @@ export function verificationSuite(createDatabase: () => Promise<TestDatabase>): 
       expect(visible(again.reply)).toEqual(visible(reply));
     });
 
+    it('refuses a sign-up that does not accept the terms outright, not with the made-up success', async () => {
+      const { auth, settled } = start();
+      const reply = await call(auth, 'POST', '/sign-up/email', {
+        body: { name: 'Eve', email: freshEmail(), password: PASSWORD },
+      });
+      await settled();
+      expect(reply.status).toBe(400);
+      expect(reply.body.code).toBe('TERMS_NOT_ACCEPTED');
+      expect(await count('users')).toBe(0);
+      expect(transport.sent).toHaveLength(0);
+    });
+
     it('still refuses an uninvited address outright, in words a person can act on', async () => {
       await signUp(start().auth);
       const { auth } = start({ inviteOnly: true });
@@ -271,7 +283,7 @@ export function verificationSuite(createDatabase: () => Promise<TestDatabase>): 
       await settled();
       const forged = await call(auth, 'POST', '/sign-up/email', {
         headers: { host: 'evil.example', 'x-forwarded-host': 'evil.example' },
-        body: { name: 'Eve', email: 'forged@example.com', password: PASSWORD },
+        body: { name: 'Eve', email: 'forged@example.com', password: PASSWORD, agreedToTerms: true },
       });
       await settled();
       expect(forged.status).toBe(200);
@@ -359,6 +371,7 @@ export function verificationSuite(createDatabase: () => Promise<TestDatabase>): 
           name: 'Eve',
           email: freshEmail(),
           password: PASSWORD,
+          agreedToTerms: true,
           callbackURL: 'https://evil.example/landing',
         },
       });

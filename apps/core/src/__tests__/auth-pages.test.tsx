@@ -87,6 +87,22 @@ describe('the sign-in page', () => {
   });
 });
 
+describe('the legal links', () => {
+  // The sign-up form carries its own, beside the box to tick.
+  it.each(['signIn', 'signUp'] as const)('are on the %s page', async (page) => {
+    const pagesNow = await pages();
+    const html = renderToStaticMarkup(await pagesNow[page]({ searchParams: search() }));
+    expect(html).toContain('href="/privacy"');
+    expect(html).toContain('href="/tos"');
+  });
+
+  it('are not repeated on the sign-up page', async () => {
+    const { signUp } = await pages();
+    const html = renderToStaticMarkup(await signUp({ searchParams: search() }));
+    expect(html.match(/href="\/privacy"/g)).toHaveLength(1);
+  });
+});
+
 describe('the sign-up page', () => {
   it('asks for a name, an email and a password', async () => {
     const { signUp } = await pages();
@@ -97,6 +113,14 @@ describe('the sign-up page', () => {
     expect(html).toMatch(/<input[^>]*type="email"/);
     expect(html).toMatch(/<input[^>]*type="password"/);
     expect(html).toContain('href="/sign-in?returnTo=%2F"');
+  });
+
+  it('asks for the terms to be accepted, beside links to read them', async () => {
+    const { signUp } = await pages();
+    const html = renderToStaticMarkup(await signUp({ searchParams: search() }));
+    expect(html).toMatch(/<input[^>]*type="checkbox"/);
+    expect(html).toContain('I agree to the Terms of Service and the Privacy Policy');
+    expect(html).toContain('target="_blank"');
   });
 
   it('tells the person the password rules the server will apply', async () => {

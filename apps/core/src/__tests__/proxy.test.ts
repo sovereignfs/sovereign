@@ -110,6 +110,8 @@ describe('proxy', () => {
     it.each([
       '/sign-in',
       '/sign-up',
+      '/privacy',
+      '/tos',
       '/forgot-password',
       '/reset-password',
       '/api/health',
@@ -132,6 +134,8 @@ describe('proxy', () => {
       '/console',
       '/reset-password/extra',
       '/forgot-passwords',
+      '/privacy/extra',
+      '/terms',
     ])('does not mistake %s for a public path', async (path) => {
       const { proxy } = await loadProxy('http://localhost:3000');
       expect(proxy(new NextRequest(`http://localhost:3000${path}`)).status).toBe(303);

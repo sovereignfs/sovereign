@@ -190,7 +190,11 @@ them.
 
 - Sign-up asks for name, email address and password, and the acceptance of the
   instance's terms (§3.3.5). The browser's timezone is captured and MUST be
-  validated as an IANA timezone before it is stored.
+  validated as an IANA timezone before it is stored: a name such as
+  `Europe/London` (kept in its proper spelling), never a fixed offset or free
+  text. One that is not is refused with `INVALID_TIMEZONE` and nothing is
+  stored; none at all is allowed. A time zone changed later is checked the
+  same way.
 - Passwords follow the policy set by `SV_AUTH_PASSWORD_MIN_LENGTH` (default 8)
   and, each off by default, `SV_AUTH_PASSWORD_REQUIRE_UPPERCASE`,
   `…_REQUIRE_LOWERCASE`, `…_REQUIRE_NUMBER` and `…_REQUIRE_SYMBOL`. The server
@@ -244,8 +248,19 @@ them.
 
 #### 3.3.5 Terms and privacy
 
-Core ships default Privacy Policy and Terms of Service pages. Sign-up requires
-accepting them, and the acceptance is recorded with the account.
+Core ships default Privacy Policy and Terms of Service pages, at `/privacy` and
+`/tos`, readable without signing in. They say only what is true of the software
+itself, for any instance: no operator, jurisdiction or particular app is named.
+Editing them is not part of Phase 1.
+
+- Sign-up requires accepting them, and the **server** refuses a sign-up that
+  does not (`TERMS_NOT_ACCEPTED`), whatever the page did, including the first
+  account and a sign-up made without a page.
+- The acceptance is recorded with the account: that it was accepted, when, and
+  which text, as a digest of the two documents as shipped. The server sets all
+  three; a request cannot name a version or a time, and an update of the
+  account cannot rewrite them.
+- An account made before the terms were asked has no acceptance on record.
 
 #### 3.3.6 Account states
 
@@ -648,3 +663,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-27 | §3.14: every email is sent as HTML and plain text, and every link in it is on core's public address (`SV_URL`); an invitation states its expiry only when it has one.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2026-10-28 | §3.3.1: an invite is used up by the sign-up it admits; every way an invite can fail is refused alike; "first account" means no account exists at all; a role is never taken from a request.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-10-28 | §3.3.2–§3.3.4, §3.5: the "account created" email waits for verification when it is required; sign-up and resend answer alike for known and unknown addresses; email is sent in the background and refused up front while it is not set up; core's own session checks bypass the cookie cache so a reset ends sessions at once.                                                                                                                                                                                                                                                                                                                                                                                                |
+| 2026-10-28 | §3.3.2, §3.3.5: the terms must be accepted at sign-up, enforced by the server, and recorded with when and which text; the time zone is stored in its canonical IANA spelling, refused when it is not one, and checked on every later change; the default legal pages are at `/privacy` and `/tos`.                                                                                                                                                                                                                                                                                                                                                                                                                            |

@@ -172,6 +172,8 @@ each: `docs/architecture-rules.md`.
   so verification, resend and reset answer alike for known and unknown
   addresses; core's own session check bypasses the signed cookie cache, so an
   ended session stops working at once.
+- **Sign-up's terms and time zone are checked in the user-create hook and
+  recorded by the server;** every page is rendered per request, for the nonce.
 - **PostgreSQL migrations name no schema** — `db:generate` strips drizzle-kit's
   `"public".` and a test guards it.
 - **Timing-safe comparison** for every key or token compare.

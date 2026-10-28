@@ -132,6 +132,17 @@ pointing here.
   up to 300 seconds after the session row is gone, so a password reset, a
   deactivation or a sign-out elsewhere would not end what core guards until it
   expired. Cost: one primary-key lookup per request.
+- **What sign-up must carry is checked in the user-create hook, and the record of
+  it is set by the server.** The terms must be accepted (`TERMS_NOT_ACCEPTED`)
+  and a time zone, if given, must be a real IANA name (`INVALID_TIMEZONE`),
+  before the invitation is even looked at. The time, and the version of the
+  text (a digest of the documents as built, so there is no number to forget to
+  raise), are written by core: those fields are `input: false`, and an update
+  of the account cannot touch them. Refusals are 400, never 403 (see the hook
+  rule above).
+- **Every page is rendered per request** (`await connection()` in a page that
+  reads nothing else dynamic), because the nonce in the Content Security Policy
+  exists only for a request: a page prerendered at build time loads no script.
 - **PostgreSQL migrations never name a schema.** drizzle-kit writes foreign keys
   as `"public"."users"`; core runs in whichever schema the connection's
   `search_path` names (each test file gets its own). `pnpm --filter

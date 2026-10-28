@@ -5,7 +5,7 @@
 
 ## Status
 
-📋 Planned
+⏳ In Progress
 
 ## Overview
 
@@ -19,7 +19,7 @@ rows. Later phases add groups and per-account grants on top.
 
 ## Tasks
 
-#### 📋 5.1 — Roles, capabilities and checks
+#### ✅ 5.1 — Roles, capabilities and checks
 
 **Goal:** Every protected action checks a capability, and the owner's
 guarantees always hold.

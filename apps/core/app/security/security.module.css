@@ -96,3 +96,26 @@
 .link {
   color: var(--sv-color-accent);
 }
+
+.passkeys {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+}
+
+.passkey {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+  padding: var(--sv-space-3);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface-sunken);
+}
+
+.passkeyName {
+  margin: 0;
+  font-weight: var(--sv-font-weight-semibold);
+}

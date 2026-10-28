@@ -66,6 +66,7 @@ export function authSuite(createDatabase: () => Promise<TestDatabase>): void {
       verifications: [sqliteSchema.verifications, postgresSchema.verifications],
       rate_limits: [sqliteSchema.rateLimits, postgresSchema.rateLimits],
       two_factors: [sqliteSchema.twoFactors, postgresSchema.twoFactors],
+      passkeys: [sqliteSchema.passkeys, postgresSchema.passkeys],
     } as const;
 
     it.each(Object.keys(tables))(

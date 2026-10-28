@@ -149,7 +149,23 @@ pointing here.
   can open a session (the verification link, a passkey, later the provider's
   own sign-in) must be checked against `twoFactorEnabled` before it is added.
   The verification link is covered by requiring a verified address to turn
-  TOTP on, so a person with it on has no link left to follow.
+  TOTP on, so a person with it on has no link left to follow. A passkey is
+  decided: it must be unlocked on the device, which makes it two factors, so it
+  does not ask for the code. The checks a password sign-in has inside
+  better-auth (a verified address now; an active account later) are one
+  function, `assertMayOpenSession` in `src/auth/session-gate.ts`, which every
+  other way of signing in calls.
+- **A passkey answer must be user-verified, and core checks it itself.**
+  better-auth asks the device to unlock ("preferred") but verifies with
+  `requireUserVerification: false`, so a bare touch of a security key would
+  sign in. Both ceremonies refuse an answer without the user-verified flag in
+  the plugin's `afterVerification` hook (`PASSKEY_NOT_UNLOCKED`); passkeys are
+  asked for as discoverable and unlocked.
+- **better-auth's packages move together.** `@better-auth/passkey` is pinned to
+  the exact version of `better-auth` (no `^`): a caret pulled 1.7.14 while
+  `better-auth` was 1.7.13, and each brought its own `@better-auth/core`, whose
+  separate context storage breaks transactions and hooks. Bump them in one
+  change, against a populated store.
 - **Core offers no "trust this device".** The second step is never skipped for a
   period; a request that asks for it (`trustDevice`) is refused, not ignored.
 - **The authenticator key and the backup codes are encrypted by better-auth with

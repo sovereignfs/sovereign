@@ -132,6 +132,7 @@ describe('proxy', () => {
       '/sign-in/extra',
       '/sign-in/two-factor/extra',
       '/security/two-factor',
+      '/security/passkeys',
       '/sign-ups',
       '/api/healthz',
       '/console',

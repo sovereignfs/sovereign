@@ -15,6 +15,7 @@
     "db:generate:postgres": "drizzle-kit generate --config=drizzle.config.postgres.ts && node scripts/unqualify-postgres.mjs"
   },
   "dependencies": {
+    "@better-auth/passkey": "1.7.13",
     "@sovereignfs/config": "workspace:*",
     "@sovereignfs/crypto": "workspace:*",
     "@sovereignfs/database": "workspace:*",

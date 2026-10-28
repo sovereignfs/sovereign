@@ -160,3 +160,31 @@ export const twoFactors = sqliteTable(
   },
   (table) => [uniqueIndex('two_factors_user_id_idx').on(table.userId)],
 );
+
+/**
+ * Passkeys (core-app §3.4.2): a public key the person's device holds the private half of. better-auth
+ * names the model `passkey`; ours is plural like the rest. `counter` is the device's signature
+ * counter, which better-auth raises on every use and checks so a cloned key is noticed.
+ */
+export const passkeys = sqliteTable(
+  'passkeys',
+  {
+    id: text('id').primaryKey(),
+    name: text('name'),
+    publicKey: text('public_key').notNull(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    credentialID: text('credential_id').notNull(),
+    counter: integer('counter').notNull(),
+    deviceType: text('device_type').notNull(),
+    backedUp: integer('backed_up', { mode: 'boolean' }).notNull(),
+    transports: text('transports'),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }),
+    aaguid: text('aaguid'),
+  },
+  (table) => [
+    index('passkeys_user_id_idx').on(table.userId),
+    uniqueIndex('passkeys_credential_id_idx').on(table.credentialID),
+  ],
+);

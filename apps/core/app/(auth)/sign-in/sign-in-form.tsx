@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import { Alert, Button, FormField, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../src/auth/client';
+import { passkeyProblem } from '../messages';
 import { ResendVerification } from '../resend-verification';
 import styles from '../auth.module.css';
 
@@ -15,7 +16,26 @@ export function SignInForm({ returnTo, notice }: { returnTo: string; notice?: Si
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [unverified, setUnverified] = useState(false);
+  // Known only in the browser, so it is read after the first render, never during it.
+  const [passkeysSupported, setPasskeysSupported] = useState(false);
+  const [passkeyPending, setPasskeyPending] = useState(false);
   const [pending, setPending] = useState(false);
+
+  useEffect(() => setPasskeysSupported(typeof window.PublicKeyCredential === 'function'), []);
+
+  async function signInWithPasskey() {
+    setPasskeyPending(true);
+    setError(undefined);
+    setUnverified(false);
+    const result = await authClient.signIn.passkey();
+    if (result?.error) {
+      setPasskeyPending(false);
+      setError(passkeyProblem(result.error));
+      return;
+    }
+    // A full navigation, so the next page is rendered with the new session cookie.
+    window.location.assign(returnTo);
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -97,6 +117,17 @@ export function SignInForm({ returnTo, notice }: { returnTo: string; notice?: Si
       <Button type="submit" className={styles.submit} loading={pending}>
         {pending ? 'Signing in…' : 'Sign in'}
       </Button>
+      {passkeysSupported ? (
+        <Button
+          type="button"
+          variant="secondary"
+          className={styles.submit}
+          loading={passkeyPending}
+          onClick={() => void signInWithPasskey()}
+        >
+          {passkeyPending ? 'Waiting for your device…' : 'Sign in with a passkey'}
+        </Button>
+      ) : null}
       <p className={styles.footer}>
         New here?{' '}
         <Link className={styles.link} href={`/sign-up?returnTo=${encodeURIComponent(returnTo)}`}>

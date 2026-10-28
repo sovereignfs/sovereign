@@ -36,6 +36,21 @@ export const config = defineConfig({
       default: [],
       description: "Extra origins accepted for requests, besides core's own; comma-separated",
     }),
+    authWebauthnRpId: string({
+      name: 'AUTH_WEBAUTHN_RP_ID',
+      description:
+        "The domain passkeys are bound to: core's own host, or a parent of it that its apps share (example.com). Unset means core's own host. Changing it makes existing passkeys stop working",
+    }),
+    authWebauthnRpName: string({
+      name: 'AUTH_WEBAUTHN_RP_NAME',
+      description: 'The name a device shows when asking about a passkey. Unset means Sovereign',
+    }),
+    authWebauthnOrigin: list({
+      name: 'AUTH_WEBAUTHN_ORIGIN',
+      default: [],
+      description:
+        "Origins passkeys may be used from, comma-separated, each on the relying party's domain. Unset means core's own address",
+    }),
     authTrustedProxies: list({
       name: 'AUTH_TRUSTED_PROXIES',
       default: [],

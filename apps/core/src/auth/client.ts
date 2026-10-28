@@ -1,4 +1,5 @@
 import { createAuthClient } from 'better-auth/react';
+import { passkeyClient } from '@better-auth/passkey/client';
 import { inferAdditionalFields, twoFactorClient } from 'better-auth/client/plugins';
 
 /**
@@ -11,6 +12,7 @@ import { inferAdditionalFields, twoFactorClient } from 'better-auth/client/plugi
 export const authClient = createAuthClient({
   plugins: [
     twoFactorClient(),
+    passkeyClient(),
     inferAdditionalFields({
       user: {
         timezone: { type: 'string', required: false },

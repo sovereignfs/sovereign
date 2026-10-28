@@ -36,6 +36,13 @@
       "when": 1793216094777,
       "tag": "0004_two_factor",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1793217680128,
+      "tag": "0005_passkeys",
+      "breakpoints": true
     }
   ]
 }

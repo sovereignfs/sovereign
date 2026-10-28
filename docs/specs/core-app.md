@@ -307,7 +307,26 @@ Editing them is not part of Phase 1.
   without a password.
 - The relying party is set by `SV_AUTH_WEBAUTHN_RP_ID`, `SV_AUTH_WEBAUTHN_RP_NAME`
   and `SV_AUTH_WEBAUTHN_ORIGIN`. When core and its apps share a parent domain,
-  the relying party ID SHOULD be that parent domain.
+  the relying party ID SHOULD be that parent domain. Unset, they are core's own
+  host, the name `Sovereign` and core's own address. A domain that is not core's
+  host or a parent of it, or an origin that is outside the domain or is not
+  https (localhost aside), stops core starting, saying which, because no passkey
+  could ever be made. Changing the relying party ID makes existing passkeys stop
+  working.
+- A passkey must be unlocked on the device (a PIN or a biometric) both when it
+  is made and when it is used, and an answer that was not is refused. A passkey
+  is therefore possession plus something the person knows or is, and counts as
+  two factors: signing in with one does not ask for the authenticator app's code
+  as well (§3.4.1).
+- Passkeys are discoverable: signing in with one needs no email address typed.
+- A passkey opens a session only where a password would: an account whose
+  address is not verified is refused while verification is required (§3.3.3).
+- Asking to sign in with a passkey is rate limited per client address.
+- The password is never removed: a person with no passkey, or whose last passkey
+  was removed, signs in with their password as before.
+- Until the Security page (§3.11) exists, adding, naming and removing passkeys
+  is at `/security/passkeys`, and the sign-in page offers "Sign in with a
+  passkey" in a browser that has them.
 
 #### 3.4.3 Reset by an operator
 
@@ -684,3 +703,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-28 | §3.3.2–§3.3.4, §3.5: the "account created" email waits for verification when it is required; sign-up and resend answer alike for known and unknown addresses; email is sent in the background and refused up front while it is not set up; core's own session checks bypass the cookie cache so a reset ends sessions at once.                                                                                                                                                                                                                                                                                                                                                                                                |
 | 2026-10-28 | §3.3.2, §3.3.5: the terms must be accepted at sign-up, enforced by the server, and recorded with when and which text; the time zone is stored in its canonical IANA spelling, refused when it is not one, and checked on every later change; the default legal pages are at `/privacy` and `/tos`.                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 2026-10-28 | §3.4.1: what enrolling, the second step and the backup codes do, that a verified address is needed, that no "trust this device" is offered, and that the key and codes are encrypted with `SV_AUTH_SECRET`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-10-28 | §3.4.2: a passkey must be unlocked on the device and so counts as two factors; passkeys are discoverable; an unverified account is refused; the relying party defaults and is checked at start-up; the password is never removed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |

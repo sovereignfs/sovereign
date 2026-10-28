@@ -23,6 +23,11 @@ export default async function Page() {
             <StatusBadge status="synced">Running</StatusBadge>
           </div>
           <div>
+            <Link className={styles.link} href="/security/passkeys">
+              Passkeys
+            </Link>
+          </div>
+          <div>
             <Link className={styles.link} href="/security/two-factor">
               Two-factor sign-in
             </Link>

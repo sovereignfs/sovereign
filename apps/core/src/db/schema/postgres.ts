@@ -134,3 +134,26 @@ export const twoFactors = pgTable(
   },
   (table) => [uniqueIndex('two_factors_user_id_idx').on(table.userId)],
 );
+
+export const passkeys = pgTable(
+  'passkeys',
+  {
+    id: text('id').primaryKey(),
+    name: text('name'),
+    publicKey: text('public_key').notNull(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    credentialID: text('credential_id').notNull(),
+    counter: integer('counter').notNull(),
+    deviceType: text('device_type').notNull(),
+    backedUp: boolean('backed_up').notNull(),
+    transports: text('transports'),
+    createdAt: date('created_at'),
+    aaguid: text('aaguid'),
+  },
+  (table) => [
+    index('passkeys_user_id_idx').on(table.userId),
+    uniqueIndex('passkeys_credential_id_idx').on(table.credentialID),
+  ],
+);

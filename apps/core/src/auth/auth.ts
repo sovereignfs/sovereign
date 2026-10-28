@@ -1,6 +1,7 @@
 import type { Database } from '@sovereignfs/database';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { passkey } from '@better-auth/passkey';
 import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/api';
 import { hashPassword } from 'better-auth/crypto';
 import { twoFactor } from 'better-auth/plugins/two-factor';
@@ -10,6 +11,7 @@ import { hasValidInvite, markInvitesAccepted } from '../invites';
 import { passwordPolicyMessage, passwordProblems, type PasswordPolicy } from './password-policy';
 import type { AuthMail } from './mail';
 import { isFirstAccount, type RegistrationPolicy } from './registration';
+import { assertMayOpenSession } from './session-gate';
 import { ROLE_OWNER, ROLE_USER } from './roles';
 import type { AuthSettings } from './settings';
 import { signUpRecord, timezoneOrNull } from './terms';
@@ -29,6 +31,7 @@ function adapterFor(database: Database) {
           verification: postgresSchema.verifications,
           rateLimit: postgresSchema.rateLimits,
           twoFactor: postgresSchema.twoFactors,
+          passkey: postgresSchema.passkeys,
         }
       : {
           user: sqliteSchema.users,
@@ -37,6 +40,7 @@ function adapterFor(database: Database) {
           verification: sqliteSchema.verifications,
           rateLimit: sqliteSchema.rateLimits,
           twoFactor: sqliteSchema.twoFactors,
+          passkey: sqliteSchema.passkeys,
         };
   return drizzleAdapter(database.drizzle as never, {
     provider: database.family === 'postgres' ? 'pg' : 'sqlite',
@@ -63,6 +67,14 @@ function policedHash(policy: PasswordPolicy) {
     return hashPassword(password);
   };
 }
+
+/** A passkey answer that was not unlocked on the device, which core does not accept. */
+const notUnlocked = () =>
+  new APIError('BAD_REQUEST', {
+    message:
+      'The passkey was not unlocked on the device. Use one that asks for a PIN or biometrics.',
+    code: 'PASSKEY_NOT_UNLOCKED',
+  });
 
 export type Auth = ReturnType<typeof createAuth>;
 
@@ -251,12 +263,53 @@ export function createAuth(
       // no `sendOTP` is given, so those endpoints answer that they are not configured. The secret and
       // the backup codes are stored encrypted with SV_AUTH_SECRET by better-auth.
       twoFactor({ issuer: 'Sovereign', backupCodeOptions: { amount: 10 } }),
+      // Passkeys (core-app §3.4.2). A passkey must be unlocked on the device (a PIN or a biometric), so
+      // using one is possession plus something the person knows or is: it is two factors by itself and
+      // does not ask for the authenticator app's code on top. better-auth asks the device for that
+      // ("preferred") but does not require it, so both ceremonies refuse an answer that was not
+      // user-verified; an authenticator that cannot unlock (a bare security key) is refused.
+      passkey({
+        rpID: settings.webauthn.rpId,
+        rpName: settings.webauthn.rpName,
+        origin:
+          settings.webauthn.origins.length === 1
+            ? settings.webauthn.origins[0]
+            : settings.webauthn.origins,
+        authenticatorSelection: { residentKey: 'required', userVerification: 'required' },
+        registration: {
+          afterVerification: ({ verification }) => {
+            if (!verification.registrationInfo?.userVerified) throw notUnlocked();
+          },
+        },
+        authentication: {
+          afterVerification: async ({ ctx, verification, clientData }) => {
+            if (!verification.authenticationInfo.userVerified) throw notUnlocked();
+            // The same checks as a password sign-in: this is another way to open a session.
+            const found = await ctx.context.adapter.findOne<{ userId: string }>({
+              model: 'passkey',
+              where: [{ field: 'credentialID', value: clientData.id }],
+            });
+            const user = found && (await ctx.context.internalAdapter.findUserById(found.userId));
+            if (user) assertMayOpenSession(user, settings);
+          },
+        },
+      }),
     ],
     session: {
       freshAge: 0,
       cookieCache: { enabled: true, maxAge: 300 },
     },
-    rateLimit: { enabled: true, storage: 'database', modelName: 'rateLimit' },
+    rateLimit: {
+      enabled: true,
+      storage: 'database',
+      modelName: 'rateLimit',
+      // Asking to sign in with a passkey writes a challenge for anyone who asks, so it is limited like
+      // the other ways of signing in.
+      customRules: {
+        '/passkey/generate-authenticate-options': { window: 10, max: 5 },
+        '/passkey/verify-authentication': { window: 10, max: 5 },
+      },
+    },
     advanced: {
       // Never off: better-auth switches the origin check off by itself when NODE_ENV is "test".
       disableOriginCheck: false,

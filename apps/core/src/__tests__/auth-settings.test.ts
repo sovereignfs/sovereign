@@ -131,6 +131,77 @@ describe('the authentication settings', () => {
     });
   });
 
+  describe('the passkey relying party', () => {
+    it('is core’s own host, the name Sovereign and core’s own address, when nothing is set', () => {
+      expect(resolve().webauthn).toEqual({
+        rpId: 'core.example.com',
+        rpName: 'Sovereign',
+        origins: ['https://core.example.com'],
+      });
+    });
+
+    it('can be a parent domain the apps share, with core and an app both as origins', () => {
+      expect(
+        resolve({
+          SV_AUTH_WEBAUTHN_RP_ID: 'Example.com',
+          SV_AUTH_WEBAUTHN_RP_NAME: ' Our Place ',
+          SV_AUTH_WEBAUTHN_ORIGIN: 'https://core.example.com, https://app.example.com',
+        }).webauthn,
+      ).toEqual({
+        rpId: 'example.com',
+        rpName: 'Our Place',
+        origins: ['https://core.example.com', 'https://app.example.com'],
+      });
+    });
+
+    it('is allowed on localhost over http, for development', () => {
+      const local = resolveAuthSettings(
+        config.load({
+          ...BASE,
+          SV_URL: 'http://localhost:3000',
+          SV_AUTH_WEBAUTHN_ORIGIN: 'http://localhost:3000',
+        }),
+      );
+      expect(local.webauthn.origins).toEqual(['http://localhost:3000']);
+    });
+
+    it.each([
+      [
+        'a domain that is not core’s host or a parent of it',
+        { SV_AUTH_WEBAUTHN_RP_ID: 'other.com' },
+        "core's own host or a parent",
+      ],
+      [
+        'a subdomain of core’s host',
+        { SV_AUTH_WEBAUTHN_RP_ID: 'deep.core.example.com' },
+        "core's own host or a parent",
+      ],
+      ['a URL', { SV_AUTH_WEBAUTHN_RP_ID: 'https://example.com' }, 'must be a domain'],
+      ['a leading dot', { SV_AUTH_WEBAUTHN_RP_ID: '.example.com' }, 'must be a domain'],
+    ])('refuses %s as the domain', (_name, env, words) => {
+      expect(problems(env)).toContain(words);
+    });
+
+    it.each([
+      ['a path', 'https://core.example.com/sign-in', 'must be an origin'],
+      ['not a URL', 'core.example.com', 'must be an origin'],
+      ['plain http away from localhost', 'http://core.example.com', 'must be https'],
+      ['a site outside the domain', 'https://evil.example', 'must be on core.example.com'],
+      ['a lookalike suffix', 'https://notcore.example.com', 'must be on core.example.com'],
+    ])('refuses an origin that is %s', (_name, origin, words) => {
+      expect(problems({ SV_AUTH_WEBAUTHN_ORIGIN: origin })).toContain(words);
+    });
+
+    it('checks an origin against the chosen domain, not core’s host', () => {
+      expect(
+        resolve({
+          SV_AUTH_WEBAUTHN_RP_ID: 'example.com',
+          SV_AUTH_WEBAUTHN_ORIGIN: 'https://app.example.com',
+        }).webauthn.origins,
+      ).toEqual(['https://app.example.com']);
+    });
+  });
+
   it('report every problem at once', () => {
     const message = problems({
       SV_AUTH_TRUSTED_PROXIES: 'nope',

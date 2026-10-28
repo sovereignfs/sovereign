@@ -159,7 +159,14 @@ and rotating `SV_AUTH_SECRET` without ending enrolments.
 **Deliverables:**
 
 - Add, name and remove passkeys; passwordless sign-in
-- Relying party from `SV_AUTH_WEBAUTHN_RP_ID`, `_RP_NAME`, `_ORIGIN`
+- Relying party from `SV_AUTH_WEBAUTHN_RP_ID`, `_RP_NAME`, `_ORIGIN`, with
+  defaults and start-up checks
+- A page at `/security/passkeys` and a sign-in button, until the Security page
+  takes over
+
+**Not here:** the Security page itself (identity pages), an operator resetting
+someone's passkeys (Console), passkey autofill in the email field, and signing
+up with a passkey instead of a password.
 
 **Dependencies:** 4.1
 

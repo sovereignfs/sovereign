@@ -168,6 +168,10 @@ each: `docs/architecture-rules.md`.
   every account passes through: invite-only fails closed, the first account is
   the one made when no account exists, the owner is held by a unique index, and
   a role is never taken from a request.
+- **Email is sent in the background, and its availability is checked first,**
+  so verification, resend and reset answer alike for known and unknown
+  addresses; core's own session check bypasses the signed cookie cache, so an
+  ended session stops working at once.
 - **PostgreSQL migrations name no schema** — `db:generate` strips drizzle-kit's
   `"public".` and a test guards it.
 - **Timing-safe comparison** for every key or token compare.

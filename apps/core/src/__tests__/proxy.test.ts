@@ -110,6 +110,8 @@ describe('proxy', () => {
     it.each([
       '/sign-in',
       '/sign-up',
+      '/forgot-password',
+      '/reset-password',
       '/api/health',
       '/api/auth/sign-in/email',
       '/api/auth/get-session',
@@ -122,13 +124,18 @@ describe('proxy', () => {
       expect(response.headers.get('location')).toBeNull();
     });
 
-    it.each(['/api/authors', '/sign-in/extra', '/sign-ups', '/api/healthz', '/console'])(
-      'does not mistake %s for a public path',
-      async (path) => {
-        const { proxy } = await loadProxy('http://localhost:3000');
-        expect(proxy(new NextRequest(`http://localhost:3000${path}`)).status).toBe(303);
-      },
-    );
+    it.each([
+      '/api/authors',
+      '/sign-in/extra',
+      '/sign-ups',
+      '/api/healthz',
+      '/console',
+      '/reset-password/extra',
+      '/forgot-passwords',
+    ])('does not mistake %s for a public path', async (path) => {
+      const { proxy } = await loadProxy('http://localhost:3000');
+      expect(proxy(new NextRequest(`http://localhost:3000${path}`)).status).toBe(303);
+    });
   });
 
   describe('with a session cookie', () => {

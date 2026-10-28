@@ -116,6 +116,22 @@ pointing here.
   changes while core runs), and only an explicit `false` opens it. Every way an
   invite can fail (none, expired, cancelled, used) gets the same answer, so a refusal
   says nothing about the invitations other people hold.
+- **Email is sent in the background, and whether it can be sent is asked first.**
+  A flow that sends email (verification, reset) must not answer differently, or
+  more slowly, for an address that has an account: `advanced.backgroundTasks`
+  runs the send without the request waiting for it, a send that fails is
+  logged and never thrown, and a request that needs email while it is not set
+  up is refused up front (`EMAIL_NOT_AVAILABLE`, 503) for every address alike.
+  Sign-up, resend and reset answer the same for known and unknown addresses.
+- **better-auth answers a 403 from a user-create hook with a made-up success
+  when verification is required** (its anti-enumeration design), so a refusal
+  that must reach the person uses another status: an uninvited sign-up is a
+  `422` (`INVITE_REQUIRED`).
+- **Core's own session check bypasses the signed cookie cache**
+  (`disableCookieCache` in `src/auth/session.ts`). The cache keeps answering for
+  up to 300 seconds after the session row is gone, so a password reset, a
+  deactivation or a sign-out elsewhere would not end what core guards until it
+  expired. Cost: one primary-key lookup per request.
 - **PostgreSQL migrations never name a schema.** drizzle-kit writes foreign keys
   as `"public"."users"`; core runs in whichever schema the connection's
   `search_path` names (each test file gets its own). `pnpm --filter

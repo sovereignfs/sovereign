@@ -11,6 +11,7 @@ beforeAll(async () => {
   folder = mkdtempSync(path.join(tmpdir(), 'sv-authroute-'));
   vi.stubEnv('SV_URL', ORIGIN);
   vi.stubEnv('SV_AUTH_SECRET', 'a-secret-that-is-long-enough-to-pass-validation');
+  vi.stubEnv('SV_AUTH_REQUIRE_EMAIL_VERIFICATION', 'false');
   vi.stubEnv('SV_DB_DIALECT', 'sqlite');
   vi.stubEnv('SV_SQLITE_URL', `file:${path.join(folder, 'core.db')}`);
   vi.spyOn(process, 'cwd').mockReturnValue(APP_ROOT);
@@ -78,5 +79,24 @@ describe('the /api/auth route', () => {
   it('is never cached', async () => {
     const route = await import('../../app/api/auth/[...all]/route');
     expect(route.dynamic).toBe('force-dynamic');
+  });
+
+  it('refuses a sign-up that needs email while email is not set up, which is how core starts by default', async () => {
+    vi.stubEnv('SV_AUTH_REQUIRE_EMAIL_VERIFICATION', 'true');
+    vi.resetModules();
+    const { POST } = await import('../../app/api/auth/[...all]/route');
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const response = await POST(
+      request('/sign-up/email', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: 'Ada',
+          email: 'ada2@example.com',
+          password: 'correct horse battery',
+        }),
+      }),
+    );
+    expect(response.status).toBe(503);
+    expect(((await response.json()) as { code: string }).code).toBe('EMAIL_NOT_AVAILABLE');
   });
 });

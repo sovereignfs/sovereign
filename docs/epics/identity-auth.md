@@ -82,7 +82,15 @@ screen for the setting; roles beyond owner and user, and the capability checks
   link that signs the person in; resend
 - Password reset by single-use one-hour link; completing it ends every session
 - The reset request answers the same way whether or not the address exists
-- The "account created" email sent after sign-up
+- The "account created" email sent after sign-up (once the address is verified,
+  when verification is required)
+- Pages: check your email, forgot password, choose a new password, and the
+  notices on sign-in; mail is sent in the background and refused up front while
+  it is not set up
+
+**Not here:** an email telling the holder of an address that someone tried to
+sign up with it (there is no template for it), changing an email address, and
+resetting by any other way than the emailed link.
 
 **Dependencies:** 4.1, 3.2
 

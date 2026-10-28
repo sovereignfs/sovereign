@@ -4,21 +4,32 @@ import Link from 'next/link';
 import { type FormEvent, useState } from 'react';
 import { Alert, Button, FormField, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../src/auth/client';
+import { ResendVerification } from '../resend-verification';
 import styles from '../auth.module.css';
 
-export function SignInForm({ returnTo }: { returnTo: string }) {
+/** Something the person arrived to be told: they changed their password, or a link did not work. */
+export type SignInNotice = 'password-changed' | 'link-invalid';
+
+export function SignInForm({ returnTo, notice }: { returnTo: string; notice?: SignInNotice }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | undefined>();
+  const [unverified, setUnverified] = useState(false);
   const [pending, setPending] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
     setError(undefined);
+    setUnverified(false);
     const result = await authClient.signIn.email({ email, password });
     if (result.error) {
       setPending(false);
+      // Said only to someone who gave the right password, so it tells nobody else anything.
+      if (result.error.code === 'EMAIL_NOT_VERIFIED') {
+        setUnverified(true);
+        return;
+      }
       // The same sentence whether the address has an account or not.
       setError(
         result.error.status === 429
@@ -33,7 +44,22 @@ export function SignInForm({ returnTo }: { returnTo: string }) {
 
   return (
     <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
+      {notice === 'password-changed' ? (
+        <Alert variant="success">Your password is changed. Sign in with the new one.</Alert>
+      ) : null}
+      {notice === 'link-invalid' ? (
+        <Alert variant="warning">
+          That link has expired or was already used. Sign in, and we can send you a new one.
+        </Alert>
+      ) : null}
       {error ? <Alert variant="error">{error}</Alert> : null}
+      {unverified ? (
+        <Alert variant="warning">
+          Verify your email address before signing in: follow the link we sent when you made the
+          account.
+        </Alert>
+      ) : null}
+      {unverified ? <ResendVerification email={email} returnTo={returnTo} /> : null}
       <FormField label="Email" required>
         {(field) => (
           <Input
@@ -58,6 +84,11 @@ export function SignInForm({ returnTo }: { returnTo: string }) {
           />
         )}
       </FormField>
+      <p className={styles.footer}>
+        <Link className={styles.link} href="/forgot-password">
+          Forgot your password?
+        </Link>
+      </p>
       <Button type="submit" className={styles.submit} loading={pending}>
         {pending ? 'Signing in…' : 'Sign in'}
       </Button>

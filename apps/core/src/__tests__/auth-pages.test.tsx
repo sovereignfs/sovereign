@@ -4,7 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const getSession = vi.fn();
 vi.mock('../auth/session', () => ({ getSession: () => getSession() as unknown }));
 vi.mock('../auth/client', () => ({
-  authClient: { signIn: { email: vi.fn() }, signUp: { email: vi.fn() }, signOut: vi.fn() },
+  authClient: {
+    signIn: { email: vi.fn() },
+    signUp: { email: vi.fn() },
+    signOut: vi.fn(),
+    sendVerificationEmail: vi.fn(),
+    requestPasswordReset: vi.fn(),
+    resetPassword: vi.fn(),
+  },
 }));
 
 const getRegistrationMode = vi.fn();
@@ -17,10 +24,13 @@ async function pages(env: Record<string, string> = {}) {
   for (const [name, value] of Object.entries(env)) vi.stubEnv(name, value);
   const signIn = (await import('../../app/(auth)/sign-in/page')).default;
   const signUp = (await import('../../app/(auth)/sign-up/page')).default;
-  return { signIn, signUp };
+  const forgot = (await import('../../app/(auth)/forgot-password/page')).default;
+  const reset = await import('../../app/(auth)/reset-password/page');
+  return { signIn, signUp, forgot, reset: reset.default, resetMetadata: reset.metadata };
 }
 
-const search = (returnTo?: string) => Promise.resolve(returnTo === undefined ? {} : { returnTo });
+const search = (returnTo?: string, extra: Record<string, string> = {}) =>
+  Promise.resolve({ ...(returnTo === undefined ? {} : { returnTo }), ...extra });
 
 beforeEach(() => {
   getSession.mockReset().mockResolvedValue(null);
@@ -127,5 +137,80 @@ describe('the sign-up page', () => {
     await expect(signUp({ searchParams: search() })).rejects.toMatchObject({
       digest: expect.stringContaining('NEXT_REDIRECT'),
     });
+  });
+});
+
+describe('the sign-in page, when an email link sends the person back', () => {
+  it('tells someone who has just reset their password to sign in', async () => {
+    const { signIn } = await pages();
+    const html = renderToStaticMarkup(
+      await signIn({ searchParams: search(undefined, { reset: '1' }) }),
+    );
+    expect(html).toContain('Your password is changed');
+  });
+
+  it('explains a verification link that did not work', async () => {
+    const { signIn } = await pages();
+    const html = renderToStaticMarkup(
+      await signIn({ searchParams: search(undefined, { error: 'TOKEN_EXPIRED' }) }),
+    );
+    expect(html).toContain('expired or was already used');
+  });
+
+  it('says nothing of the sort on an ordinary visit, and offers a way to reset a password', async () => {
+    const { signIn } = await pages();
+    const html = renderToStaticMarkup(await signIn({ searchParams: search() }));
+    expect(html).not.toContain('expired');
+    expect(html).not.toContain('password is changed');
+    expect(html).toContain('href="/forgot-password"');
+  });
+});
+
+describe('the forgot-password page', () => {
+  it('asks for an email address and says how long the link works', async () => {
+    const { forgot } = await pages();
+    const html = renderToStaticMarkup(await forgot());
+    expect(html.match(/<h1[ >]/g)).toHaveLength(1);
+    expect(html).toContain('Reset your password');
+    expect(html).toMatch(/<input[^>]*type="email"/);
+    expect(html).toContain('works for an hour');
+  });
+
+  it('sends someone who is already signed in away', async () => {
+    const { forgot } = await pages();
+    getSession.mockResolvedValue({ user: { id: 'u1' } });
+    await expect(forgot()).rejects.toMatchObject({
+      digest: expect.stringContaining('NEXT_REDIRECT'),
+    });
+  });
+});
+
+describe('the reset-password page', () => {
+  it('asks for a new password when the link brought a token, and shows the rules', async () => {
+    const { reset } = await pages({ SV_AUTH_PASSWORD_MIN_LENGTH: '12' });
+    const html = renderToStaticMarkup(
+      await reset({ searchParams: Promise.resolve({ token: 'tok' }) }),
+    );
+    expect(html).toMatch(/<input[^>]*type="password"/);
+    expect(html).toContain('At least 12 characters.');
+    expect(html).not.toContain('tok');
+  });
+
+  it.each([
+    ['no token', {}],
+    ['an empty token', { token: '' }],
+    ['a link that did not check out', { error: 'INVALID_TOKEN' }],
+    ['a token beside an error', { token: 'tok', error: 'INVALID_TOKEN' }],
+  ])('offers a new link, not a form, for %s', async (_name, query) => {
+    const { reset } = await pages();
+    const html = renderToStaticMarkup(await reset({ searchParams: Promise.resolve(query) }));
+    expect(html).not.toMatch(/<input/);
+    expect(html).toContain('expired or was already used');
+    expect(html).toContain('href="/forgot-password"');
+  });
+
+  it('keeps the token out of the Referer header sent to anywhere the page links', async () => {
+    const { resetMetadata } = await pages();
+    expect(resetMetadata.referrer).toBe('no-referrer');
   });
 });

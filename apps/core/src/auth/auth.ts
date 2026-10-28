@@ -1,12 +1,13 @@
 import type { Database } from '@sovereignfs/database';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { APIError } from 'better-auth/api';
+import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { hashPassword } from 'better-auth/crypto';
 import * as postgresSchema from '../db/schema/postgres';
 import * as sqliteSchema from '../db/schema/sqlite';
 import { hasValidInvite, markInvitesAccepted } from '../invites';
 import { passwordPolicyMessage, passwordProblems, type PasswordPolicy } from './password-policy';
+import type { AuthMail } from './mail';
 import { isFirstAccount, type RegistrationPolicy } from './registration';
 import { ROLE_OWNER, ROLE_USER } from './roles';
 import type { AuthSettings } from './settings';
@@ -73,10 +74,27 @@ export type Auth = ReturnType<typeof createAuth>;
  *   fallback; authentication endpoints are rate limited, with the counters in the database.
  * - better-auth's telemetry is off: core reports nothing to anyone.
  */
+/** What `createAuth` needs besides the database and the settings. */
+export type AuthDependencies = {
+  registration: RegistrationPolicy;
+  mail: AuthMail;
+  /**
+   * Runs a send without making the request wait for it. The default lets it run on its own: an
+   * answer that waited for the mail server would take longer for an address that has an account,
+   * which tells whoever asks. Tests pass a function that keeps the sends, to wait for them.
+   */
+  background?: (task: Promise<unknown>) => void;
+};
+
+/** Requests that send an email, and so cannot be answered when mail is not set up. */
+const NEEDS_MAIL = new Set(['/send-verification-email', '/request-password-reset']);
+
+const ONE_HOUR = 60 * 60;
+
 export function createAuth(
   database: Database,
   settings: AuthSettings,
-  registration: RegistrationPolicy,
+  { registration, mail, background = (task) => void task.catch(() => undefined) }: AuthDependencies,
 ) {
   return betterAuth({
     appName: 'Sovereign',
@@ -107,7 +125,9 @@ export function createAuth(
             ) {
               // One answer for no invite, an expired one, a cancelled one and a used one, so it
               // says nothing about invitations other people hold.
-              throw new APIError('FORBIDDEN', {
+              // Not 403: with verification required, better-auth answers a 403 from a hook with a
+              // made-up success, so the person would wait for an email that never comes.
+              throw new APIError('UNPROCESSABLE_ENTITY', {
                 message: 'Sign-up needs an invitation, and there is no valid one for this address.',
                 code: 'INVITE_REQUIRED',
               });
@@ -116,6 +136,11 @@ export function createAuth(
           },
           after: async (user) => {
             await markInvitesAccepted(database, user.email, Date.now());
+            // With verification required, the notice waits until the address is verified: nobody
+            // is told about an account on an address nobody has shown to be theirs.
+            if (!settings.requireEmailVerification) {
+              background(mail.accountCreated({ email: user.email, name: user.name }));
+            }
           },
         },
       },
@@ -128,6 +153,47 @@ export function createAuth(
       maxPasswordLength: BODY_LIMIT,
       password: { hash: policedHash(settings.passwordPolicy) },
       autoSignIn: true,
+      requireEmailVerification: settings.requireEmailVerification,
+      // A reset link works once and for an hour, and completing it ends every session.
+      sendResetPassword: ({ user, url }) =>
+        mail.passwordReset({ email: user.email, name: user.name }, url),
+      resetPasswordTokenExpiresIn: ONE_HOUR,
+      revokeSessionsOnPasswordReset: true,
+    },
+    emailVerification: {
+      sendVerificationEmail: ({ user, url }) =>
+        mail.verification({ email: user.email, name: user.name }, url),
+      sendOnSignUp: settings.requireEmailVerification,
+      // Signing in with an unverified address does not send another link: asking for one is its
+      // own request, so a wrong guess at a password cannot be used to fill an inbox.
+      sendOnSignIn: false,
+      // Following the link signs the person in; a second use finds the address already verified
+      // and does nothing, so the link opens a session once.
+      autoSignInAfterVerification: true,
+      expiresIn: ONE_HOUR,
+      afterEmailVerification: (user) => {
+        if (settings.requireEmailVerification) {
+          background(mail.accountCreated({ email: user.email, name: user.name }));
+        }
+        return Promise.resolve();
+      },
+    },
+    hooks: {
+      // Before anything is looked up, so the answer is the same for every address: a request that
+      // needs email is refused while email is not set up. (Verification also gates sign-up.)
+      before: createAuthMiddleware(async (ctx) => {
+        const needsMail =
+          NEEDS_MAIL.has(ctx.path) ||
+          (settings.requireEmailVerification && ctx.path === '/sign-up/email');
+        if (!needsMail) return;
+        const reason = await mail.unavailable();
+        if (reason === undefined) return;
+        console.warn(`${reason} A request that needs email was refused.`);
+        throw new APIError('SERVICE_UNAVAILABLE', {
+          message: "Email isn't set up on this instance, so this can't be done yet.",
+          code: 'EMAIL_NOT_AVAILABLE',
+        });
+      }),
     },
     session: {
       freshAge: 0,
@@ -139,6 +205,7 @@ export function createAuth(
       disableOriginCheck: false,
       disableCSRFCheck: false,
       useSecureCookies: settings.secureCookies,
+      backgroundTasks: { handler: background },
       // Without trusted proxies better-auth believes only a single-address X-Forwarded-For, and
       // gives every other request one shared limit; it never believes the leftmost of a chain.
       ...(settings.trustedProxies.length > 0

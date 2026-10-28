@@ -19,6 +19,7 @@ describe("core's schemas", () => {
       'twoFactors',
       'passkeys',
       'avatars',
+      'capabilityOverrides',
     ]) {
       expect(Object.keys(sqlite)).toContain(table);
       expect(Object.keys(postgres)).toContain(table);

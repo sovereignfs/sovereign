@@ -166,6 +166,17 @@ them.
   other role.
 - A change to the matrix MUST reach accounts that are already signed in within
   the session cookie cache lifetime (§3.5).
+- The owner's edits are stored as differences from the default, for the admin
+  and user rows only, and nothing else can be stored: the owner's row, a role
+  or capability that does not exist, and an owner-only capability are refused,
+  and a request with any one of them saves nothing. A change that only restates
+  the default removes the stored difference, so a matrix nobody edited has no
+  rows and a capability added to core later reaches everyone as its default
+  says. The owner can put both rows back to the defaults.
+- Core's own checks read the matrix from the database, not from the session
+  cookie, so an account already signed in sees a change at once on the instance
+  that saved it and within a few seconds on another; there is no per-session
+  version to carry. If the matrix cannot be read, the check fails.
 
 ### 3.3 Accounts: sign-up and sign-in
 
@@ -769,3 +780,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-28 | §3.11, §3.15: a name's rules; the picture's address is set only by uploading; avatars are judged by their bytes, public and versioned; the longest side accepted.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | 2026-10-29 | §3.11, §3.4.1, §3.4.2: the Security page and what it does: change password ends the other sessions; the sessions list never carries a token and ends a session only by its id, only the caller's own.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2026-10-29 | §3.3.2, §3.11: the language is validated and kept like the time zone (`INVALID_LOCALE`); what the Preferences page offers and that "Not set" saves nothing.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-10-29 | §3.2.3: the matrix is stored as differences from the default, what can never be stored, that a change shows within seconds without a per-session version, and that an unreadable matrix fails the check.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |

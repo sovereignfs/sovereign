@@ -194,6 +194,18 @@ pointing here.
   `'use server'` file does not authorize, so a new one cannot skip it. The two
   public routes (better-auth's own and health) are listed in that test, and
   adding to the list is a decision for review.
+- **The matrix in force is the code's default with the owner's stored
+  differences, read from the database on every guard; a stored row is never
+  trusted to be safe.** `capability_overrides` holds only differences, so a
+  capability added to the code later reaches everyone as its default says.
+  `applyOverrides` ignores a row for the owner, for a role or capability that
+  does not exist, and for an owner-only capability, so a tampered table cannot
+  hand those out; `changeCapabilities` refuses the same, all of a request or
+  none of it. A change is seen at once on the instance that made it and within
+  the store's few seconds elsewhere (§3.2.3 allows the session cookie's 300);
+  nothing is carried in the session, since no check reads the cookie. When the
+  matrix cannot be read, a check fails; it does not fall back to a more
+  generous one.
 - **The owner's guarantees are held in the code that changes things, not only
   in the Console.** `changeRole` refuses anyone but the owner, refuses to make
   an owner or change the owner, and `AccountStates` refuses to deactivate the

@@ -64,6 +64,13 @@
       "when": 1793229046371,
       "tag": "0008_locale",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793229639841,
+      "tag": "0009_capability_overrides",
+      "breakpoints": true
     }
   ]
 }

@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ROLE_ADMIN, ROLE_OWNER, ROLE_USER, ROLES } from '../auth/roles';
-import { ALL_CAPABILITIES, can } from '../roles/capabilities';
+import { ALL_CAPABILITIES, DEFAULT_MATRIX, can, type Matrix } from '../roles/capabilities';
 
 const getSession = vi.fn();
 vi.mock('../auth/session', () => ({ getSession: () => getSession() as unknown }));
+// The matrix in force is read from the database; here it is whatever the test says.
+const matrixInForce = vi.fn<() => Promise<Matrix>>();
+vi.mock('../roles/matrix', () => ({ getCapabilityMatrix: () => matrixInForce() }));
 
 const { AuthorizationError, authorizationResponse, requireCapability, requireSession } =
   await import('../auth/authorize');
@@ -11,7 +14,10 @@ const { AuthorizationError, authorizationResponse, requireCapability, requireSes
 const signedInAs = (role: unknown) =>
   getSession.mockResolvedValue({ user: { id: 'u1', role, email: 'a@example.com' } });
 
-beforeEach(() => getSession.mockReset().mockResolvedValue(null));
+beforeEach(() => {
+  getSession.mockReset().mockResolvedValue(null);
+  matrixInForce.mockReset().mockResolvedValue(DEFAULT_MATRIX);
+});
 
 const failure = async (run: () => Promise<unknown>) => {
   try {
@@ -43,6 +49,28 @@ describe('requireCapability', () => {
     const error = await failure(() => requireCapability(capability));
     if (can(role, capability)) expect(error).toBeUndefined();
     else expect(error).toMatchObject({ code: 'forbidden', capability });
+  });
+
+  it('judges by the matrix in force, not the default: an edited one changes the answer', async () => {
+    const edited: Matrix = {
+      [ROLE_ADMIN]: new Set(['profile:manage']),
+      [ROLE_USER]: new Set(['profile:manage', 'user:view']),
+    };
+    matrixInForce.mockResolvedValue(edited);
+    signedInAs(ROLE_ADMIN);
+    expect(await failure(() => requireCapability('user:manage'))).toMatchObject({
+      code: 'forbidden',
+    });
+    signedInAs(ROLE_USER);
+    expect(await failure(() => requireCapability('user:view'))).toBeUndefined();
+  });
+
+  it('is refused when the matrix cannot be read, rather than falling back to a more generous one', async () => {
+    matrixInForce.mockRejectedValue(new Error('database is down'));
+    signedInAs(ROLE_ADMIN);
+    expect(await failure(() => requireCapability('user:manage'))).toMatchObject({
+      message: 'database is down',
+    });
   });
 
   it('refuses nobody being signed in as unauthenticated, not forbidden', async () => {

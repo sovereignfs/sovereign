@@ -5,6 +5,7 @@ import {
   index,
   integer,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -19,6 +20,18 @@ export const instanceSettings = pgTable('instance_settings', {
   updatedAt: postgresTimestampMs('updated_at').notNull(),
   updatedBy: text('updated_by'),
 });
+
+export const capabilityOverrides = pgTable(
+  'capability_overrides',
+  {
+    role: text('role').notNull(),
+    capability: text('capability').notNull(),
+    granted: integer('granted').notNull(),
+    updatedAt: postgresTimestampMs('updated_at').notNull(),
+    updatedBy: text('updated_by'),
+  },
+  (table) => [primaryKey({ columns: [table.role, table.capability] })],
+);
 
 const date = (name: string) => timestamp(name, { withTimezone: true, mode: 'date' });
 

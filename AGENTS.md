@@ -183,6 +183,9 @@ each: `docs/architecture-rules.md`.
 - **Every check asks `can` and every server action or route calls
   `requireCapability` itself** (a test fails when one does not); the owner's
   guarantees are held in `changeRole` and `AccountStates`.
+  **The matrix in force is read from the database and a stored row is never
+  trusted:** owner-only capabilities and the owner's row cannot be edited, and a
+  check that cannot read the matrix fails.
 - **A route handler that changes something calls `requireSameOrigin`** (a test
   fails when it does not); **an image is judged by its bytes**; **`users.image`
   is set only by uploading a picture.**

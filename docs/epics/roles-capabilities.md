@@ -70,6 +70,9 @@ Console screens that call these.
 - Granting an owner-only capability to admins is refused by the server
 - A change takes effect for an already signed-in admin within 300 seconds
 
+**Not here:** the Console page that edits the matrix (the Console epic's capability
+matrix task); this task is the storage, the guards and the functions it calls.
+
 #### 📋 5.3 — Ownership transfer
 
 **Goal:** The owner can hand the instance to an admin.

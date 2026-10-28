@@ -1,6 +1,13 @@
 import { sqliteBytes, sqliteTimestampMs } from '@sovereignfs/database';
 import { sql } from 'drizzle-orm';
-import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import {
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
 
 /**
  * Core's tables on sqld and a SQLite file. Every table is written twice, here and in
@@ -22,6 +29,26 @@ export const instanceSettings = sqliteTable('instance_settings', {
   /** The account that saved it, when known. */
   updatedBy: text('updated_by'),
 });
+
+/**
+ * Where the owner changed the capability matrix (core-app §3.2.3). A row is a difference from the
+ * default matrix in code, for the admin or user role: `granted` 1 gives a capability the default
+ * withholds, 0 takes one away. No row means the default applies, so a capability added to the code
+ * later reaches everyone as its default says, and a matrix nobody edited has no rows at all.
+ */
+export const capabilityOverrides = sqliteTable(
+  'capability_overrides',
+  {
+    role: text('role').notNull(),
+    capability: text('capability').notNull(),
+    /** 1 or 0. A plain integer, so every dialect agrees. */
+    granted: integer('granted').notNull(),
+    updatedAt: sqliteTimestampMs('updated_at').notNull(),
+    /** The account that saved it, when known. */
+    updatedBy: text('updated_by'),
+  },
+  (table) => [primaryKey({ columns: [table.role, table.capability] })],
+);
 
 /**
  * better-auth's tables. better-auth names them user, session, account, verification and rateLimit

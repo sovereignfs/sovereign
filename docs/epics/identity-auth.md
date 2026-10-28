@@ -42,7 +42,7 @@ a populated store, the signed cookie cache, rate limiting) is recorded in
 - A password breaking the policy is refused by the server, not only the page
 - A better-auth upgrade is tested against a populated store
 
-#### 📋 4.2 — Registration policy and the first account
+#### ✅ 4.2 — Registration policy and the first account
 
 **Goal:** Sign-up is open or invite-only, and the first account becomes the
 owner.

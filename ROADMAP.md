@@ -1,6 +1,6 @@
 # Sovereign Core — Roadmap
 
-**Version:** 0.22.0 · **Last updated:** 2026-10-29
+**Version:** 0.23.0 · **Last updated:** 2026-10-29
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -51,7 +51,7 @@ _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked · �
 | 0.20.0  | Roles, capabilities and checks            | ✅     | [5.1](docs/epics/roles-capabilities.md) |
 | 0.21.0  | Profile                                   | ✅     | [9.1](docs/epics/identity-pages.md)     |
 | 0.22.0  | Security                                  | ✅     | [9.2](docs/epics/identity-pages.md)     |
-| —       | Preferences `[parallel]`                  | 📋     | [9.3](docs/epics/identity-pages.md)     |
+| 0.23.0  | Preferences `[parallel]`                  | ✅     | [9.3](docs/epics/identity-pages.md)     |
 
 ### M2 — Core is a sign-in server for apps
 

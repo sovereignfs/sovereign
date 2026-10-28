@@ -1,6 +1,6 @@
 # Sovereign Core — Roadmap
 
-**Version:** 0.17.0 · **Last updated:** 2026-10-28
+**Version:** 0.18.0 · **Last updated:** 2026-10-28
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -46,7 +46,7 @@ _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked · �
 | 0.15.0  | Email verification and password reset     | ✅     | [4.3](docs/epics/identity-auth.md)      |
 | 0.16.0  | Terms, privacy and timezone `[parallel]`  | ✅     | [4.4](docs/epics/identity-auth.md)      |
 | 0.17.0  | TOTP and backup codes `[parallel]`        | ✅     | [4.5](docs/epics/identity-auth.md)      |
-| —       | Passkeys `[parallel]`                     | 📋     | [4.6](docs/epics/identity-auth.md)      |
+| 0.18.0  | Passkeys `[parallel]`                     | ✅     | [4.6](docs/epics/identity-auth.md)      |
 | —       | Sessions and account states               | 📋     | [4.7](docs/epics/identity-auth.md)      |
 | —       | Roles, capabilities and checks            | 📋     | [5.1](docs/epics/roles-capabilities.md) |
 | —       | Profile                                   | 📋     | [9.1](docs/epics/identity-pages.md)     |

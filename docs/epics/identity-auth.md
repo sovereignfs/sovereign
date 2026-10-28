@@ -152,7 +152,7 @@ and rotating `SV_AUTH_SECRET` without ending enrolments.
 - Enrol, sign in with a code, sign in with a backup code (which then stops
   working), disable — in a browser
 
-#### 📋 4.6 — Passkeys `[parallel]`
+#### ✅ 4.6 — Passkeys `[parallel]`
 
 **Goal:** People can add passkeys and sign in without a password.
 

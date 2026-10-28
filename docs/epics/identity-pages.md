@@ -49,7 +49,7 @@ once), and the overlay that the identity pages open in.
   person's session and `users` show it at once; the call arrives with the
   provider)
 
-#### 📋 9.2 — Security
+#### ✅ 9.2 — Security
 
 **Goal:** A person manages their own credentials and sessions.
 

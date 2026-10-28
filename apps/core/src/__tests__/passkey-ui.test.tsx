@@ -190,6 +190,16 @@ describe('signing in with a passkey, on the sign-in form', () => {
     expect((await screen.findByRole('alert')).textContent).toContain('Verify your email address');
   });
 
+  it('says the account is deactivated', async () => {
+    signInPasskey.mockResolvedValue({
+      data: null,
+      error: { status: 403, code: 'ACCOUNT_DEACTIVATED' },
+    });
+    render(<SignInForm returnTo="/" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign in with a passkey' }));
+    expect((await screen.findByRole('alert')).textContent).toContain('has been deactivated');
+  });
+
   it('says to wait when the limit is reached', async () => {
     signInPasskey.mockResolvedValue({ data: null, error: { status: 429 } });
     render(<SignInForm returnTo="/" />);

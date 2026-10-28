@@ -151,10 +151,18 @@ pointing here.
   The verification link is covered by requiring a verified address to turn
   TOTP on, so a person with it on has no link left to follow. A passkey is
   decided: it must be unlocked on the device, which makes it two factors, so it
-  does not ask for the code. The checks a password sign-in has inside
-  better-auth (a verified address now; an active account later) are one
-  function, `assertMayOpenSession` in `src/auth/session-gate.ts`, which every
-  other way of signing in calls.
+  does not ask for the code. The checks a person must pass before any session
+  (a verified address, an active account) are one function,
+  `assertMayOpenSession` in `src/auth/session-gate.ts`, called from the hook on
+  creating a session: that hook sees every way of signing in, including ones
+  added later, so none can be a way round it. A way of signing in may also call
+  it earlier, for a clearer error.
+- **Deactivating an account is one transaction, with a place for the rest.**
+  `AccountStates` (`src/accounts`) sets the state and ends the sessions in one
+  transaction, runs registered steps inside it (revoking issued tokens joins
+  here) and notifies listeners after it commits. A failing step rolls the whole
+  thing back; a failing notice is logged. Core's own session check also refuses
+  a deactivated account, for a session created in the same moment.
 - **A passkey answer must be user-verified, and core checks it itself.**
   better-auth asks the device to unlock ("preferred") but verifies with
   `requireUserVerification: false`, so a bare touch of a security key would

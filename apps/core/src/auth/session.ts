@@ -10,8 +10,14 @@ import { getAuth } from './index';
  * working for what core itself guards at once, not when a copy of the cookie's cache runs out.
  */
 export async function getSession() {
-  return (await getAuth()).api.getSession({
+  const session = await (
+    await getAuth()
+  ).api.getSession({
     headers: await headers(),
     query: { disableCookieCache: true },
   });
+  // Deactivating an account ends its sessions; one opened at the same moment could slip past that,
+  // so a deactivated account has no session here whatever the table says (core-app §3.3.6).
+  if (session?.user.deactivatedAt) return null;
+  return session;
 }

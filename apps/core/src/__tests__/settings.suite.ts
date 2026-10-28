@@ -91,6 +91,7 @@ export function settingsSuite(createDatabase: () => Promise<TestDatabase>): void
         '0003_terms_and_timezone',
         '0004_two_factor',
         '0005_passkeys',
+        '0006_account_states',
       ]);
     });
   });

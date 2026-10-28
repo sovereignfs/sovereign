@@ -43,6 +43,13 @@
       "when": 1793217680128,
       "tag": "0005_passkeys",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1793218397162,
+      "tag": "0006_account_states",
+      "breakpoints": true
     }
   ]
 }

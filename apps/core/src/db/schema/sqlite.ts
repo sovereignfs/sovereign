@@ -49,6 +49,8 @@ export const users = sqliteTable(
     termsVersion: text('terms_version'),
     /** Whether sign-in asks for a second step. Turned on only after a valid code (core-app §3.4.1). */
     twoFactorEnabled: integer('two_factor_enabled', { mode: 'boolean' }).notNull().default(false),
+    /** When the account was deactivated (core-app §3.3.6), or null while it is active. */
+    deactivatedAt: integer('deactivated_at', { mode: 'timestamp_ms' }),
     createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
   },

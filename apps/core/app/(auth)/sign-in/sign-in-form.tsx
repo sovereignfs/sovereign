@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { type FormEvent, useEffect, useState } from 'react';
 import { Alert, Button, FormField, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../src/auth/client';
-import { passkeyProblem } from '../messages';
+import { DEACTIVATED, passkeyProblem } from '../messages';
 import { ResendVerification } from '../resend-verification';
 import styles from '../auth.module.css';
 
@@ -46,6 +46,10 @@ export function SignInForm({ returnTo, notice }: { returnTo: string; notice?: Si
     if (result.error) {
       setPending(false);
       // Said only to someone who gave the right password, so it tells nobody else anything.
+      if (result.error.code === 'ACCOUNT_DEACTIVATED') {
+        setError(DEACTIVATED);
+        return;
+      }
       if (result.error.code === 'EMAIL_NOT_VERIFIED') {
         setUnverified(true);
         return;

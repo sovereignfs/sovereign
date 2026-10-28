@@ -177,8 +177,9 @@ each: `docs/architecture-rules.md`.
 - **Every way of opening a session must pass the second step** when TOTP is on,
   and core offers no "trust this device".
 - **Passkeys must be user-verified** (checked in core's hooks, not left to
-  better-auth), and every non-password way of signing in calls
-  `assertMayOpenSession`. **better-auth's packages are pinned to one version.**
+  better-auth). Every session passes `assertMayOpenSession` (the hook on creating
+  one), and deactivating an account is `AccountStates`, one transaction.
+  **better-auth's packages are pinned to one version.**
 - **PostgreSQL migrations name no schema** — `db:generate` strips drizzle-kit's
   `"public".` and a test guards it.
 - **Timing-safe comparison** for every key or token compare.

@@ -36,6 +36,7 @@ export const users = pgTable(
     termsAcceptedAt: date('terms_accepted_at'),
     termsVersion: text('terms_version'),
     twoFactorEnabled: boolean('two_factor_enabled').notNull().default(false),
+    deactivatedAt: date('deactivated_at'),
     createdAt: date('created_at').notNull(),
     updatedAt: date('updated_at').notNull(),
   },

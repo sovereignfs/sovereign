@@ -72,7 +72,7 @@ describe('migrating at start-up', () => {
     const result = await startUp(sqlite(), APP_ROOT);
     expect(result.exited).toBe(false);
     expect(result.logged).toContain(
-      'Database migrated: 0000_instance_settings, 0001_auth_tables, 0002_roles_and_invites, 0003_terms_and_timezone, 0004_two_factor, 0005_passkeys',
+      'Database migrated: 0000_instance_settings, 0001_auth_tables, 0002_roles_and_invites, 0003_terms_and_timezone, 0004_two_factor, 0005_passkeys, 0006_account_states',
     );
     const tables = await result.database?.run(
       "select name from sqlite_master where name in ('instance_settings', 'sv_migrations') order by name",

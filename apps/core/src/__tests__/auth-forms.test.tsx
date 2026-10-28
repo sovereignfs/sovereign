@@ -209,6 +209,17 @@ describe('the sign-in form, around verification and reset', () => {
     expect(assign).not.toHaveBeenCalledWith('/settings?tab=mail');
   });
 
+  it('says the account is deactivated, in plain words, after the right password', async () => {
+    signIn.mockResolvedValue({ data: null, error: { status: 403, code: 'ACCOUNT_DEACTIVATED' } });
+    render(<SignInForm returnTo="/" />);
+    submit();
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('has been deactivated');
+    expect(alert.textContent).toContain('Ask whoever runs this instance');
+    expect(screen.queryByRole('button', { name: 'Send a new link' })).toBeNull();
+    expect(assign).not.toHaveBeenCalled();
+  });
+
   it('offers a way to reset a forgotten password', () => {
     render(<SignInForm returnTo="/" />);
     expect(screen.getByRole('link', { name: 'Forgot your password?' }).getAttribute('href')).toBe(

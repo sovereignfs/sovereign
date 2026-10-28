@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `deactivated_at` integer;

@@ -134,9 +134,33 @@ export function createAuth(
         // Set by core from `agreedToTerms`: when, and which text.
         termsAcceptedAt: { type: 'date', required: false, input: false },
         termsVersion: { type: 'string', required: false, input: false },
+        // Set by deactivating the account (`accounts/states.ts`), never by a request.
+        deactivatedAt: { type: 'date', required: false, input: false },
       },
     },
     databaseHooks: {
+      session: {
+        create: {
+          // Every session, whichever way it is opened: password, passkey, the second step, a
+          // verification link. A deactivated account has none, and neither does one whose address
+          // must be verified and is not.
+          before: async (session) => {
+            const { rows } = await database.run(
+              'select email_verified, deactivated_at from users where id = ?',
+              [session.userId],
+            );
+            const row = rows[0];
+            if (!row) throw new APIError('UNAUTHORIZED', { message: 'No such account.' });
+            assertMayOpenSession(
+              {
+                emailVerified: row.email_verified === true || row.email_verified === 1,
+                deactivatedAt: row.deactivated_at as number | string | null,
+              },
+              settings,
+            );
+          },
+        },
+      },
       user: {
         create: {
           // Every account is made through here, whatever the route: the sign-up endpoint, or a

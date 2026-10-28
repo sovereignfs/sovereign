@@ -269,6 +269,22 @@ Editing them is not part of Phase 1.
   clients for the account is revoked, including refresh tokens obtained with
   `offline_access` (§3.6.3). Clients that registered a back-channel logout URI
   are notified (§3.6.5). Reactivation restores sign-in only.
+  - Deactivating ends every session of the account in **one transaction** with
+    the work that must go with it (revoking the tokens issued to apps joins
+    there), so an account is never deactivated with a token still alive. Notices
+    to apps follow once it has committed; one that fails is logged and does not
+    undo it. Doing it twice is safe.
+  - No way of signing in opens a session for it: the check is made on creating
+    any session, so the password, a passkey, the second step and a verification
+    link are all refused. The person is told the account is deactivated, but
+    only after proving who they are. A session opened at the same moment is
+    refused by core's own pages as well.
+  - A session that is open stops working at once for what core guards (§3.5),
+    and through the session endpoint's cache within its lifetime.
+  - The owner cannot be deactivated: no action may leave the instance without
+    someone who can sign in as its owner.
+  - Reactivating does not bring back the sessions that were ended.
+  - Who may deactivate is the Console's (`user:manage`, within §3.2.1).
 - **Deleted:** the account and its credentials are removed. Its `sub` is never
   reused.
 
@@ -704,3 +720,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-28 | §3.3.2, §3.3.5: the terms must be accepted at sign-up, enforced by the server, and recorded with when and which text; the time zone is stored in its canonical IANA spelling, refused when it is not one, and checked on every later change; the default legal pages are at `/privacy` and `/tos`.                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 2026-10-28 | §3.4.1: what enrolling, the second step and the backup codes do, that a verified address is needed, that no "trust this device" is offered, and that the key and codes are encrypted with `SV_AUTH_SECRET`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-10-28 | §3.4.2: a passkey must be unlocked on the device and so counts as two factors; passkeys are discoverable; an unverified account is refused; the relying party defaults and is checked at start-up; the password is never removed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 2026-10-28 | §3.3.6: what deactivating does (one transaction with the work that goes with it, notices after), that every way of opening a session is refused, that the owner cannot be deactivated, and that reactivating restores sign-in only.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |

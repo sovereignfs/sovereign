@@ -192,6 +192,14 @@ deactivated.
 - Deactivation and reactivation: deactivating ends all sessions. Revoking the
   account's OAuth tokens is added to the same operation by 6.3 (research 0001,
   B1); this task leaves the hook where it will be called
+- Done by the earlier tasks, and checked again here: the cookie domain, the
+  signed cache, no fresh-session requirement, database rate limits and trusted
+  origins. New here: `AccountStates` (`addStep` runs inside the deactivating
+  transaction, `afterDeactivation` after it) and a check on creating any session
+
+**Not here:** the Console's deactivate and reactivate (the Console epic), the
+token revocation and back-channel notices (the provider epic), and listing and
+ending one's own sessions (identity pages).
 
 **Dependencies:** 4.1
 

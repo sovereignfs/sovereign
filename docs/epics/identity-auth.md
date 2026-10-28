@@ -102,7 +102,7 @@ resetting by any other way than the emailed link.
 - After a reset, a session opened before it no longer works
 - Responses for known and unknown addresses are indistinguishable
 
-#### 📋 4.4 — Terms, privacy and timezone `[parallel]`
+#### ✅ 4.4 — Terms, privacy and timezone `[parallel]`
 
 **Goal:** Sign-up records acceptance of the terms and a valid timezone.
 

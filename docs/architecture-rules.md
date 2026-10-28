@@ -206,6 +206,19 @@ pointing here.
   nothing is carried in the session, since no check reads the cookie. When the
   matrix cannot be read, a check fails; it does not fall back to a more
   generous one.
+- **Handing over ownership is one transaction of two conditional updates.**
+  `transferOwnership` demotes the previous owner `where role = owner` and
+  promotes the new one `where role = admin and deactivated_at is null`, in that
+  order, and throws (rolling back) unless each changed exactly one row. A
+  concurrent transfer, role change or deactivation finds the account no longer
+  as it expected and changes nothing; the single-owner unique index is the last
+  guard. A session's idea of the role is never trusted for this.
+- **Asking for the password again is rate limited by core.** `confirmPassword`
+  counts wrong answers per account in `rate_limits` (five in ten minutes, then
+  every answer is refused until the window passes, a right one included),
+  because better-auth's limiter guards its HTTP routes and a server-side
+  verification never reaches it. Use it before anything that cannot be undone
+  (a transfer, deleting the account).
 - **The owner's guarantees are held in the code that changes things, not only
   in the Console.** `changeRole` refuses anyone but the owner, refuses to make
   an owner or change the owner, and `AccountStates` refuses to deactivate the

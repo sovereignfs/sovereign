@@ -186,6 +186,9 @@ each: `docs/architecture-rules.md`.
   **The matrix in force is read from the database and a stored row is never
   trusted:** owner-only capabilities and the owner's row cannot be edited, and a
   check that cannot read the matrix fails.
+  **Handing over ownership is one transaction of two conditional updates, and a
+  password asked for again goes through `confirmPassword`, which counts wrong
+  answers.**
 - **A route handler that changes something calls `requireSameOrigin`** (a test
   fails when it does not); **an image is judged by its bytes**; **`users.image`
   is set only by uploading a picture.**

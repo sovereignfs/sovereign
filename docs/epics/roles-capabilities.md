@@ -92,3 +92,7 @@ matrix task); this task is the storage, the guards and the functions it calls.
 
 - After transfer, exactly one owner exists and capabilities follow the roles
 - Concurrent transfers cannot produce two owners
+
+**Not here:** the Console control that asks for the transfer (the Console epic's
+capability matrix and ownership task); this task is the guarded function it calls
+and the password confirmation it needs.

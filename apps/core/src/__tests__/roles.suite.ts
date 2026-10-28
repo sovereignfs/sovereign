@@ -11,6 +11,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AccountStateError, AccountStates } from '../accounts/states';
 import { ROLE_ADMIN, ROLE_OWNER, ROLE_USER } from '../auth/roles';
 import { migrateCore } from '../db/migrate';
+import { OwnershipTransferError, transferOwnership } from '../roles/ownership';
 import { RoleChangeError, changeRole } from '../roles/people';
 import { call, Jar, makeAuth, signedInAs, signUp } from './auth-harness';
 
@@ -182,7 +183,7 @@ export function rolesSuite(createDatabase: () => Promise<TestDatabase>): void {
       expect(await owners()).toHaveLength(1);
     });
 
-    it('holds through any sequence of role changes and deactivations, by anyone', async () => {
+    it('holds through any sequence of role changes, deactivations and transfers, by anyone', async () => {
       const { ids } = await instance();
       const states = new AccountStates(db, { log: () => undefined });
       const everyone = Object.values(ids);
@@ -198,7 +199,7 @@ export function rolesSuite(createDatabase: () => Promise<TestDatabase>): void {
       for (let step = 0; step < 150; step++) {
         const actorId = everyone[next(everyone.length)] as string;
         const targetId = everyone[next(everyone.length)] as string;
-        const action = next(3);
+        const action = next(4);
         try {
           if (action === 0) {
             await changeRole(
@@ -209,11 +210,22 @@ export function rolesSuite(createDatabase: () => Promise<TestDatabase>): void {
             );
           } else if (action === 1) {
             await states.deactivate(targetId);
+          } else if (action === 3) {
+            await transferOwnership(
+              db,
+              { id: actorId, role: await roleNow(actorId) },
+              { targetId, newRole: roles[next(roles.length)], password: 'anything' },
+              () => Promise.resolve('ok'),
+            );
           } else {
             await states.reactivate(targetId);
           }
         } catch (error) {
-          if (!(error instanceof RoleChangeError || error instanceof AccountStateError))
+          if (!(
+            error instanceof RoleChangeError ||
+            error instanceof AccountStateError ||
+            error instanceof OwnershipTransferError
+          ))
             throw error;
         }
         const now = await owners();

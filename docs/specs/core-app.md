@@ -133,6 +133,16 @@ core and see it in the launcher.
   by the owner: nobody is made the owner by a role change, and the owner's role
   cannot be changed. Ownership moves only by transfer (§3.2.3's owner row is
   fixed), which swaps two accounts in one step. The owner cannot be deactivated.
+- A transfer asks the owner for their password again. The new owner must be an
+  existing, active `platform:admin` other than the owner. The two changes are one
+  step, each conditional on what it expects to find (the owner still the owner,
+  the admin still an active admin), so two transfers at once, or one racing a
+  role change or a deactivation, cannot leave two owners or none: the loser
+  changes nothing. Capabilities follow the roles at once.
+- Asking for a password again is limited: five wrong answers within ten minutes
+  for an account, and every answer after that is refused, a right one too, until
+  the ten minutes have passed. A right answer clears the count. (better-auth's
+  own rate limit guards its HTTP routes and does not see this server-side check.)
 - A role that is not one of these holds no capability. A person's role is read
   from the database for what core guards, so a change shows at once.
 
@@ -781,3 +791,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-29 | §3.11, §3.4.1, §3.4.2: the Security page and what it does: change password ends the other sessions; the sessions list never carries a token and ends a session only by its id, only the caller's own.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2026-10-29 | §3.3.2, §3.11: the language is validated and kept like the time zone (`INVALID_LOCALE`); what the Preferences page offers and that "Not set" saves nothing.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-10-29 | §3.2.3: the matrix is stored as differences from the default, what can never be stored, that a change shows within seconds without a per-session version, and that an unreadable matrix fails the check.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 2026-10-29 | §3.2.1: what a transfer of ownership requires (the password again, an active admin), that it is one conditional step so two transfers cannot make two owners or none, and the limit on wrong passwords.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |

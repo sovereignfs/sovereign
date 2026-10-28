@@ -84,7 +84,11 @@ export function settingsSuite(createDatabase: () => Promise<TestDatabase>): void
     it('run again with nothing to do', async () => {
       const again = await migrateCore(db, MIGRATIONS);
       expect(again.applied).toEqual([]);
-      expect(again.alreadyApplied).toEqual(['0000_instance_settings', '0001_auth_tables']);
+      expect(again.alreadyApplied).toEqual([
+        '0000_instance_settings',
+        '0001_auth_tables',
+        '0002_roles_and_invites',
+      ]);
     });
   });
 

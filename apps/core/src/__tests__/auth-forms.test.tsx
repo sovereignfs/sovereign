@@ -123,6 +123,19 @@ describe('the sign-up form', () => {
     expect(await screen.findByText(/already exists/)).toBeTruthy();
   });
 
+  it('explains that sign-up is by invitation when the server says so', async () => {
+    signUp.mockResolvedValue({
+      data: null,
+      error: { status: 403, code: 'INVITE_REQUIRED', message: 'Sign-up needs an invitation.' },
+    });
+    render(<SignUpForm returnTo="/" passwordHint="" />);
+    fill();
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('no valid invitation for this email address');
+    expect(alert.textContent).toContain('Ask whoever runs this instance');
+    expect(assign).not.toHaveBeenCalled();
+  });
+
   it('gives a plain message for anything else, never the raw error', async () => {
     signUp.mockResolvedValue({
       data: null,

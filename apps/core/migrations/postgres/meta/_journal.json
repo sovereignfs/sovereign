@@ -15,6 +15,13 @@
       "when": 1793133062208,
       "tag": "0001_auth_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793211169971,
+      "tag": "0002_roles_and_invites",
+      "breakpoints": true
     }
   ]
 }

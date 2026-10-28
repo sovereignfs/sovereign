@@ -164,6 +164,10 @@ each: `docs/architecture-rules.md`.
   fresh one** (captures in `apps/core/src/__tests__/fixtures/auth-store`).
 - **The password policy is enforced where the hash is made** (`policedHash`),
   and better-auth's origin and CSRF checks are never switched off.
+- **Registration is enforced in better-auth's `user.create.before` hook,** which
+  every account passes through: invite-only fails closed, the first account is
+  the one made when no account exists, the owner is held by a unique index, and
+  a role is never taken from a request.
 - **PostgreSQL migrations name no schema** — `db:generate` strips drizzle-kit's
   `"public".` and a test guards it.
 - **Timing-safe comparison** for every key or token compare.

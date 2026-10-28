@@ -7,6 +7,9 @@ vi.mock('../auth/client', () => ({
   authClient: { signIn: { email: vi.fn() }, signUp: { email: vi.fn() }, signOut: vi.fn() },
 }));
 
+const getRegistrationMode = vi.fn();
+vi.mock('../auth/mode', () => ({ getRegistrationMode: () => getRegistrationMode() as unknown }));
+
 async function pages(env: Record<string, string> = {}) {
   vi.resetModules();
   vi.stubEnv('SV_URL', 'http://localhost:3000');
@@ -19,7 +22,10 @@ async function pages(env: Record<string, string> = {}) {
 
 const search = (returnTo?: string) => Promise.resolve(returnTo === undefined ? {} : { returnTo });
 
-beforeEach(() => getSession.mockReset().mockResolvedValue(null));
+beforeEach(() => {
+  getSession.mockReset().mockResolvedValue(null);
+  getRegistrationMode.mockReset().mockResolvedValue('open');
+});
 afterEach(() => vi.unstubAllEnvs());
 
 describe('the sign-in page', () => {
@@ -90,6 +96,29 @@ describe('the sign-up page', () => {
     });
     const html = renderToStaticMarkup(await signUp({ searchParams: search() }));
     expect(html).toContain('At least 12 characters, with a number.');
+  });
+
+  it('says nothing about invitations when anyone can sign up', async () => {
+    const { signUp } = await pages();
+    const html = renderToStaticMarkup(await signUp({ searchParams: search() }));
+    expect(html).not.toMatch(/invitation|owner/i);
+  });
+
+  it('says sign-up is by invitation when it is, and for which address', async () => {
+    getRegistrationMode.mockResolvedValue('invite-only');
+    const { signUp } = await pages();
+    const html = renderToStaticMarkup(await signUp({ searchParams: search() }));
+    expect(html).toContain('Sign-up here is by invitation');
+    expect(html).toContain('the email address your invitation was sent to');
+  });
+
+  it('tells the first visitor that the account they make is the owner', async () => {
+    getRegistrationMode.mockResolvedValue('first-account');
+    const { signUp } = await pages();
+    const html = renderToStaticMarkup(await signUp({ searchParams: search() }));
+    expect(html).toContain('no accounts yet');
+    expect(html).toContain('is its owner');
+    expect(html).not.toContain('by invitation');
   });
 
   it('sends someone who is already signed in away', async () => {

@@ -5,7 +5,10 @@ import { APIError } from 'better-auth/api';
 import { hashPassword } from 'better-auth/crypto';
 import * as postgresSchema from '../db/schema/postgres';
 import * as sqliteSchema from '../db/schema/sqlite';
+import { hasValidInvite, markInvitesAccepted } from '../invites';
 import { passwordPolicyMessage, passwordProblems, type PasswordPolicy } from './password-policy';
+import { isFirstAccount, type RegistrationPolicy } from './registration';
+import { ROLE_OWNER, ROLE_USER } from './roles';
 import type { AuthSettings } from './settings';
 
 /** The longest request body, in characters, for a password; core's policy sets the real limit. */
@@ -70,7 +73,11 @@ export type Auth = ReturnType<typeof createAuth>;
  *   fallback; authentication endpoints are rate limited, with the counters in the database.
  * - better-auth's telemetry is off: core reports nothing to anyone.
  */
-export function createAuth(database: Database, settings: AuthSettings) {
+export function createAuth(
+  database: Database,
+  settings: AuthSettings,
+  registration: RegistrationPolicy,
+) {
   return betterAuth({
     appName: 'Sovereign',
     baseURL: settings.baseUrl,
@@ -78,6 +85,41 @@ export function createAuth(database: Database, settings: AuthSettings) {
     database: adapterFor(database),
     telemetry: { enabled: false },
     trustedOrigins: settings.trustedOrigins,
+    user: {
+      // Set by core when the account is made. `input: false` makes better-auth refuse a request
+      // that tries to choose it.
+      additionalFields: {
+        role: { type: 'string', required: false, input: false, defaultValue: ROLE_USER },
+      },
+    },
+    databaseHooks: {
+      user: {
+        create: {
+          // Every account is made through here, whatever the route: the sign-up endpoint, or a
+          // server-side call that has no route (a request hook cannot see those).
+          before: async (user) => {
+            // The first account is exempt from invite-only and is the owner. A second sign-up
+            // racing for it loses at the database, which holds one owner at most.
+            if (await isFirstAccount(database)) return { data: { role: ROLE_OWNER } };
+            if (
+              (await registration.inviteOnly()) &&
+              !(await hasValidInvite(database, user.email, Date.now()))
+            ) {
+              // One answer for no invite, an expired one, a cancelled one and a used one, so it
+              // says nothing about invitations other people hold.
+              throw new APIError('FORBIDDEN', {
+                message: 'Sign-up needs an invitation, and there is no valid one for this address.',
+                code: 'INVITE_REQUIRED',
+              });
+            }
+            return { data: { role: ROLE_USER } };
+          },
+          after: async (user) => {
+            await markInvitesAccepted(database, user.email, Date.now());
+          },
+        },
+      },
+    },
     emailAndPassword: {
       enabled: true,
       // better-auth's own length limits would answer first, with its own wording; core's policy

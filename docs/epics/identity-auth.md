@@ -6,7 +6,7 @@
 
 ## Status
 
-⏳ In Progress
+✅ Complete
 
 ## Overview
 
@@ -177,7 +177,7 @@ up with a passkey instead of a password.
 - Add a passkey and sign in with it, using a virtual authenticator
 - Removing the last passkey leaves password sign-in working
 
-#### 📋 4.7 — Sessions and account states
+#### ✅ 4.7 — Sessions and account states
 
 **Goal:** Sessions are safe, verified cheaply, and end when an account is
 deactivated.

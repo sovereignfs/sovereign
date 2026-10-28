@@ -69,6 +69,12 @@ export const config = defineConfig({
       default: false,
       description: 'Require a character that is neither a letter nor a digit in a password',
     }),
+    authRequireEmailVerification: boolean({
+      name: 'AUTH_REQUIRE_EMAIL_VERIFICATION',
+      default: true,
+      description:
+        'Block sign-in until the address is verified by a link sent by email. Needs outgoing mail (SV_SMTP_*); with it on and no mail set up, nobody can finish signing up',
+    }),
     authInviteOnly: boolean({
       name: 'AUTH_INVITE_ONLY',
       description:

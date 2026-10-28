@@ -15,6 +15,8 @@ export type AuthSettings = {
   trustedProxies: string[];
   secureCookies: boolean;
   passwordPolicy: PasswordPolicy;
+  /** Whether sign-in waits for the address to be verified (core-app §3.3.3). */
+  requireEmailVerification: boolean;
 };
 
 const DOMAIN =
@@ -105,6 +107,7 @@ export function resolveAuthSettings(config: CoreConfig, prefix = 'SV'): AuthSett
     trustedProxies,
     secureCookies: config.url.startsWith('https://'),
     passwordPolicy,
+    requireEmailVerification: config.authRequireEmailVerification,
   };
 }
 

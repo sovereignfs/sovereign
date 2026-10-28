@@ -204,22 +204,43 @@ them.
   instance shares them.
 - Core cannot run without a database: accounts and sessions live in it, and
   start-up stops when none is configured.
-- After sign-up an "account created" email is sent.
+- An "account created" email is sent once the account is usable: at sign-up, or
+  when the address is verified when verification is required (§3.3.3), so
+  nobody is told about an account on an address that has not been shown to be
+  theirs.
 
 #### 3.3.3 Email verification
 
 - `SV_AUTH_REQUIRE_EMAIL_VERIFICATION` (default `true`) blocks sign-in until the
-  address is verified.
+  address is verified. Sign-up then makes the account, signs nobody in and
+  sends the link; a person who gives the right password before verifying is
+  told to verify and can ask for a new link. Signing in does not itself send
+  one.
 - The verification link is single-use, expires after one hour, and signs the
-  person in when followed. A new link can be requested.
+  person in when followed. Following it a second time opens no session. A new
+  link can be requested.
+- Sign-up and a request for a new link answer the same whether or not the
+  address already has an account, and send nothing to an address that does.
+  (An uninvited address is still refused outright when invite-only is on
+  (§3.3.1): a person who mistypes an invited address needs to be told.)
+- Email is sent in the background and a failed send is logged, never shown:
+  neither the time an answer takes nor what it says depends on whether an
+  address has an account. While email is not set up (§3.14), sign-up that
+  needs verification, a request for a new link and a password-reset request
+  are refused with a clear message, the same for every address.
+- Requests for a link are limited to 3 a minute per client address.
 
 #### 3.3.4 Password reset
 
 - A forgotten password is reset through a single-use link sent by email,
   valid for one hour.
-- Completing a reset MUST end every existing session of that account.
-- The reset request answers the same way whether or not the address has an
-  account.
+- Completing a reset MUST end every existing session of that account. Core's
+  own pages check the database (§3.5), so a session opened before the reset
+  stops working at once.
+- The reset request answers the same way, in the same time, whether or not the
+  address has an account, and sends nothing when it has none.
+- Completing a reset does not verify an address that was not verified: that is
+  what the verification link is for.
 
 #### 3.3.5 Terms and privacy
 
@@ -264,7 +285,11 @@ passkeys), subject to §3.2.1. The account holder is told by email.
 - Session cookies are scoped to `SV_AUTH_COOKIE_DOMAIN` when it is set, so that
   core's subdomains share them.
 - Sessions are verified from a signed cookie cache valid for 300 seconds, with
-  a server-side verification fallback.
+  a server-side verification fallback. Core's own pages and actions do not use
+  the cache: they check the database on every request, so a session that has
+  ended (a password reset, a sign-out elsewhere, a deactivation) stops working
+  for what core guards at once. The cache answers better-auth's own session
+  endpoint, which may therefore lag by up to its lifetime.
 - Sensitive actions do not depend on session age (no "fresh session"
   requirement); they ask for the password instead where this spec says so.
 - Authentication endpoints are rate limited, with the counters stored in the
@@ -622,3 +647,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-27 | §3.14: SMTP credentials are sent only over an encrypted connection (implicit TLS, or STARTTLS that is required), and the server's certificate is verified.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | 2026-10-27 | §3.14: every email is sent as HTML and plain text, and every link in it is on core's public address (`SV_URL`); an invitation states its expiry only when it has one.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2026-10-28 | §3.3.1: an invite is used up by the sign-up it admits; every way an invite can fail is refused alike; "first account" means no account exists at all; a role is never taken from a request.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-10-28 | §3.3.2–§3.3.4, §3.5: the "account created" email waits for verification when it is required; sign-up and resend answer alike for known and unknown addresses; email is sent in the background and refused up front while it is not set up; core's own session checks bypass the cookie cache so a reset ends sessions at once.                                                                                                                                                                                                                                                                                                                                                                                                |

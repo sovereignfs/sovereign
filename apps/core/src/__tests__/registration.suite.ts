@@ -119,7 +119,7 @@ export function registrationSuite(createDatabase: () => Promise<TestDatabase>): 
       const auth = await withOwner();
       await db.run("update users set role = 'platform:user'");
       const { reply } = await signUp(auth);
-      expect(reply.status).toBe(403);
+      expect(reply.status).toBe(422);
       expect(await count('users', "where role = 'platform:owner'")).toBe(0);
     });
 
@@ -212,7 +212,7 @@ export function registrationSuite(createDatabase: () => Promise<TestDatabase>): 
       const auth = await withOwner();
       const before = { users: await count('users'), accounts: await count('accounts') };
       const { reply, jar } = await signUp(auth);
-      expect(reply.status).toBe(403);
+      expect(reply.status).toBe(422);
       expect(reply.body.code).toBe('INVITE_REQUIRED');
       expect(jar.get('better-auth.session_token')).toBeUndefined();
       expect(await count('users')).toBe(before.users);
@@ -263,22 +263,22 @@ export function registrationSuite(createDatabase: () => Promise<TestDatabase>): 
       const auth = await withOwner();
       await invite('late@example.com', { expiresAt: Date.now() - 1000 });
       const { reply } = await signUp(auth, { email: 'late@example.com' });
-      expect(reply.status).toBe(403);
+      expect(reply.status).toBe(422);
       expect(await roleOf('late@example.com')).toBeUndefined();
     });
 
     it('refuses an invitation that was cancelled', async () => {
       const auth = await withOwner();
       await invite('changed@example.com', { cancelledAt: Date.now() - 1000 });
-      expect((await signUp(auth, { email: 'changed@example.com' })).reply.status).toBe(403);
+      expect((await signUp(auth, { email: 'changed@example.com' })).reply.status).toBe(422);
     });
 
     it('refuses an address that was invited, when the invitation is for another', async () => {
       const auth = await withOwner();
       await invite('someone@example.com');
-      expect((await signUp(auth, { email: 'someone-else@example.com' })).reply.status).toBe(403);
-      expect((await signUp(auth, { email: 'xsomeone@example.com' })).reply.status).toBe(403);
-      expect((await signUp(auth, { email: 'someone@example.com.au' })).reply.status).toBe(403);
+      expect((await signUp(auth, { email: 'someone-else@example.com' })).reply.status).toBe(422);
+      expect((await signUp(auth, { email: 'xsomeone@example.com' })).reply.status).toBe(422);
+      expect((await signUp(auth, { email: 'someone@example.com.au' })).reply.status).toBe(422);
     });
 
     it('uses an invitation up: once it has made an account it cannot make another', async () => {
@@ -290,7 +290,7 @@ export function registrationSuite(createDatabase: () => Promise<TestDatabase>): 
 
       await db.run('delete from users where email = ?', ['guest@example.com']);
       const again = await signUp(auth, { email: 'guest@example.com' });
-      expect(again.reply.status).toBe(403);
+      expect(again.reply.status).toBe(422);
     });
 
     it('does not use an invitation up when the sign-up fails', async () => {
@@ -319,7 +319,7 @@ export function registrationSuite(createDatabase: () => Promise<TestDatabase>): 
         answers.push({ status: reply.status, code: reply.body.code, message: reply.body.message });
       }
       expect(new Set(answers.map((a) => JSON.stringify(a))).size).toBe(1);
-      expect(answers[0]?.status).toBe(403);
+      expect(answers[0]?.status).toBe(422);
     });
 
     it('is still limited per address, so invitations cannot be guessed at speed', async () => {
@@ -401,11 +401,11 @@ export function registrationSuite(createDatabase: () => Promise<TestDatabase>): 
     it('applies at once, and clearing the saved value returns to the environment', async () => {
       const { store, registration } = policy({ SV_AUTH_INVITE_ONLY: 'true' });
       const auth = makeAuth(db, {}, registration);
-      expect((await signUp(auth)).reply.status).toBe(403);
+      expect((await signUp(auth)).reply.status).toBe(422);
       await store.set(SETTINGS.inviteOnly, false);
       expect((await signUp(auth)).reply.status).toBe(200);
       await store.clear(SETTINGS.inviteOnly);
-      expect((await signUp(auth)).reply.status).toBe(403);
+      expect((await signUp(auth)).reply.status).toBe(422);
     });
 
     it('closes sign-up when the setting cannot be read, never opens it', async () => {
@@ -469,7 +469,7 @@ export function registrationSuite(createDatabase: () => Promise<TestDatabase>): 
 
         // and the next sign-up is not the first account
         const reply = await signUp(makeAuth(old, {}, INVITE_ONLY));
-        expect(reply.reply.status).toBe(403);
+        expect(reply.reply.status).toBe(422);
       } finally {
         await old.close().catch(() => undefined);
         await older.cleanup();
@@ -492,7 +492,7 @@ export function registrationSuite(createDatabase: () => Promise<TestDatabase>): 
       jar,
       body: { name: 'Eve', email: freshEmail(), password: PASSWORD },
     });
-    expect(reply.status).toBe(403);
+    expect(reply.status).toBe(422);
     expect(reply.setCookies).toEqual([]);
   });
 }

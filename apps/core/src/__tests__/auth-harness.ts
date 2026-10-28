@@ -1,5 +1,6 @@
 import type { Database } from '@sovereignfs/database';
 import { createAuth, type Auth } from '../auth/auth';
+import type { AuthMail } from '../auth/mail';
 import type { RegistrationPolicy } from '../auth/registration';
 import { resolveAuthSettings } from '../auth/settings';
 import { config } from '../config';
@@ -8,7 +9,12 @@ export const BASE_URL = 'http://localhost:3000';
 export const SECRET = 'a-secret-that-is-long-enough-to-pass-validation';
 export const PASSWORD = 'correct horse battery';
 
-const BASE_ENV = { SV_URL: BASE_URL, SV_AUTH_SECRET: SECRET };
+// Verification is off here so the sign-in tests need no mail; `verification.suite.ts` turns it on.
+const BASE_ENV = {
+  SV_URL: BASE_URL,
+  SV_AUTH_SECRET: SECRET,
+  SV_AUTH_REQUIRE_EMAIL_VERIFICATION: 'false',
+};
 
 export const authSettings = (env: Record<string, string> = {}) =>
   resolveAuthSettings(config.load({ ...BASE_ENV, ...env }));
@@ -17,11 +23,19 @@ export const authSettings = (env: Record<string, string> = {}) =>
 export const OPEN: RegistrationPolicy = { inviteOnly: () => Promise.resolve(false) };
 export const INVITE_ONLY: RegistrationPolicy = { inviteOnly: () => Promise.resolve(true) };
 
+/** No mail at all: sends vanish, and mail is never "not set up". */
+export const NO_MAIL: AuthMail = {
+  unavailable: () => Promise.resolve(undefined),
+  verification: () => Promise.resolve(),
+  passwordReset: () => Promise.resolve(),
+  accountCreated: () => Promise.resolve(),
+};
+
 export const makeAuth = (
   database: Database,
   env: Record<string, string> = {},
   registration: RegistrationPolicy = OPEN,
-): Auth => createAuth(database, authSettings(env), registration);
+): Auth => createAuth(database, authSettings(env), { registration, mail: NO_MAIL });
 
 /** The parts of better-auth's JSON answers the tests read. */
 export type AuthBody = {

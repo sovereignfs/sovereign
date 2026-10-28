@@ -4,20 +4,32 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const signIn = vi.fn();
 const signUp = vi.fn();
+const sendVerificationEmail = vi.fn();
+const requestPasswordReset = vi.fn();
+const resetPassword = vi.fn();
 vi.mock('../auth/client', () => ({
   authClient: {
     signIn: { email: (input: unknown) => signIn(input) as unknown },
     signUp: { email: (input: unknown) => signUp(input) as unknown },
+    sendVerificationEmail: (input: unknown) => sendVerificationEmail(input) as unknown,
+    requestPasswordReset: (input: unknown) => requestPasswordReset(input) as unknown,
+    resetPassword: (input: unknown) => resetPassword(input) as unknown,
   },
 }));
 
 const { SignInForm } = await import('../../app/(auth)/sign-in/sign-in-form');
 const { SignUpForm } = await import('../../app/(auth)/sign-up/sign-up-form');
+const { ForgotPasswordForm } =
+  await import('../../app/(auth)/forgot-password/forgot-password-form');
+const { ResetPasswordForm } = await import('../../app/(auth)/reset-password/reset-password-form');
 
 const assign = vi.fn();
 beforeEach(() => {
   signIn.mockReset();
   signUp.mockReset();
+  sendVerificationEmail.mockReset();
+  requestPasswordReset.mockReset();
+  resetPassword.mockReset();
   assign.mockReset();
   vi.stubGlobal('location', { ...window.location, assign });
 });
@@ -90,7 +102,7 @@ describe('the sign-up form', () => {
   });
 
   it('sends the name, email and password, then goes where the person was headed', async () => {
-    signUp.mockResolvedValue({ data: {}, error: null });
+    signUp.mockResolvedValue({ data: { token: 'abc' }, error: null });
     render(<SignUpForm returnTo="/settings" passwordHint="" />);
     fill();
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/settings'));
@@ -98,6 +110,7 @@ describe('the sign-up form', () => {
       name: 'Ada Lovelace',
       email: 'ada@example.com',
       password: 'correct horse battery',
+      callbackURL: '/sign-in?returnTo=%2Fsettings',
     });
   });
 
@@ -126,7 +139,7 @@ describe('the sign-up form', () => {
   it('explains that sign-up is by invitation when the server says so', async () => {
     signUp.mockResolvedValue({
       data: null,
-      error: { status: 403, code: 'INVITE_REQUIRED', message: 'Sign-up needs an invitation.' },
+      error: { status: 422, code: 'INVITE_REQUIRED', message: 'Sign-up needs an invitation.' },
     });
     render(<SignUpForm returnTo="/" passwordHint="" />);
     fill();
@@ -150,5 +163,191 @@ describe('the sign-up form', () => {
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain('could not be created');
     expect(alert.textContent).not.toContain('SQLITE');
+  });
+});
+
+describe('the sign-in form, around verification and reset', () => {
+  const submit = () => {
+    type('Email', 'ada@example.com');
+    type('Password', 'correct horse battery');
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+  };
+
+  it('offers a way to reset a forgotten password', () => {
+    render(<SignInForm returnTo="/" />);
+    expect(screen.getByRole('link', { name: 'Forgot your password?' }).getAttribute('href')).toBe(
+      '/forgot-password',
+    );
+  });
+
+  it('asks for the address to be verified, and offers a new link, when the server says so', async () => {
+    signIn.mockResolvedValue({
+      data: null,
+      error: { status: 403, code: 'EMAIL_NOT_VERIFIED', message: 'Email not verified' },
+    });
+    sendVerificationEmail.mockResolvedValue({ data: { status: true }, error: null });
+    render(<SignInForm returnTo="/settings" />);
+    submit();
+    expect(await screen.findByText(/Verify your email address before signing in/)).toBeTruthy();
+    expect(screen.queryByText('The email or password is incorrect.')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send a new link' }));
+    expect(await screen.findByText(/A new link is on its way to ada@example.com/)).toBeTruthy();
+    expect(sendVerificationEmail).toHaveBeenCalledWith({
+      email: 'ada@example.com',
+      callbackURL: '/sign-in?returnTo=%2Fsettings',
+    });
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it('says so when a new link cannot be sent', async () => {
+    signIn.mockResolvedValue({ data: null, error: { status: 403, code: 'EMAIL_NOT_VERIFIED' } });
+    sendVerificationEmail.mockResolvedValue({
+      data: null,
+      error: { status: 503, code: 'EMAIL_NOT_AVAILABLE' },
+    });
+    render(<SignInForm returnTo="/" />);
+    submit();
+    fireEvent.click(await screen.findByRole('button', { name: 'Send a new link' }));
+    expect(await screen.findByText(/Email isn't set up on this instance/)).toBeTruthy();
+  });
+
+  it('tells the person who just changed their password to sign in', () => {
+    render(<SignInForm returnTo="/" notice="password-changed" />);
+    expect(screen.getByText(/Your password is changed/)).toBeTruthy();
+  });
+
+  it('explains a link that did not work, and what to do', () => {
+    render(<SignInForm returnTo="/" notice="link-invalid" />);
+    expect(screen.getByText(/expired or was already used/)).toBeTruthy();
+  });
+});
+
+describe('the sign-up form, while the address is not verified', () => {
+  const fill = () => {
+    type('Name', 'Ada Lovelace');
+    type('Email', 'ada@example.com');
+    type('Password', 'correct horse battery');
+    fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+  };
+
+  it('points to the inbox when the server made no session, and asks for the link to land on sign-in', async () => {
+    signUp.mockResolvedValue({ data: { token: null, user: {} }, error: null });
+    render(<SignUpForm returnTo="/settings" passwordHint="" />);
+    fill();
+    expect(await screen.findByText(/We have sent a link to ada@example.com/)).toBeTruthy();
+    expect(screen.queryByLabelText(/^Password/)).toBeNull();
+    expect(assign).not.toHaveBeenCalled();
+    expect(signUp).toHaveBeenCalledWith(
+      expect.objectContaining({ callbackURL: '/sign-in?returnTo=%2Fsettings' }),
+    );
+    expect(screen.getByRole('link', { name: 'Back to sign in' })).toBeTruthy();
+  });
+
+  it('asks for a new link on request', async () => {
+    signUp.mockResolvedValue({ data: { token: null, user: {} }, error: null });
+    sendVerificationEmail.mockResolvedValue({ data: { status: true }, error: null });
+    render(<SignUpForm returnTo="/" passwordHint="" />);
+    fill();
+    fireEvent.click(await screen.findByRole('button', { name: 'Send a new link' }));
+    expect(await screen.findByText(/A new link is on its way/)).toBeTruthy();
+    expect(sendVerificationEmail).toHaveBeenCalledWith({
+      email: 'ada@example.com',
+      callbackURL: '/sign-in',
+    });
+  });
+
+  it('goes straight on when the server signed the person in', async () => {
+    signUp.mockResolvedValue({ data: { token: 'abc', user: {} }, error: null });
+    render(<SignUpForm returnTo="/" passwordHint="" />);
+    fill();
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('/'));
+  });
+
+  it('says when email is not set up, instead of a vague failure', async () => {
+    signUp.mockResolvedValue({ data: null, error: { status: 503, code: 'EMAIL_NOT_AVAILABLE' } });
+    render(<SignUpForm returnTo="/" passwordHint="" />);
+    fill();
+    expect((await screen.findByRole('alert')).textContent).toContain("Email isn't set up");
+  });
+});
+
+describe('the forgot-password form', () => {
+  const submit = () => {
+    type('Email', 'ada@example.com');
+    fireEvent.click(screen.getByRole('button', { name: 'Send the link' }));
+  };
+
+  it('asks for the link to land on core’s reset page, and says the same whoever the address is', async () => {
+    requestPasswordReset.mockResolvedValue({ data: { status: true }, error: null });
+    render(<ForgotPasswordForm />);
+    submit();
+    expect(await screen.findByText(/If ada@example.com has an account/)).toBeTruthy();
+    expect(requestPasswordReset).toHaveBeenCalledWith({
+      email: 'ada@example.com',
+      redirectTo: '/reset-password',
+    });
+  });
+
+  it('says when email is not set up', async () => {
+    requestPasswordReset.mockResolvedValue({
+      data: null,
+      error: { status: 503, code: 'EMAIL_NOT_AVAILABLE' },
+    });
+    render(<ForgotPasswordForm />);
+    submit();
+    expect((await screen.findByRole('alert')).textContent).toContain("Email isn't set up");
+  });
+
+  it('says to wait when the limit is reached', async () => {
+    requestPasswordReset.mockResolvedValue({ data: null, error: { status: 429 } });
+    render(<ForgotPasswordForm />);
+    submit();
+    expect(await screen.findByText(/Too many requests/)).toBeTruthy();
+  });
+});
+
+describe('the reset-password form', () => {
+  const submit = (password = 'a different long passphrase') => {
+    type('New password', password);
+    fireEvent.click(screen.getByRole('button', { name: 'Change password' }));
+  };
+
+  it('sends the token with the new password, then goes to sign-in', async () => {
+    resetPassword.mockResolvedValue({ data: { status: true }, error: null });
+    render(<ResetPasswordForm token="tok123" passwordHint="At least 8 characters." />);
+    expect(screen.getByText('At least 8 characters.')).toBeTruthy();
+    submit();
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('/sign-in?reset=1'));
+    expect(resetPassword).toHaveBeenCalledWith({
+      newPassword: 'a different long passphrase',
+      token: 'tok123',
+    });
+  });
+
+  it('shows the server’s own words when the password breaks the rules, and keeps the form', async () => {
+    resetPassword.mockResolvedValue({
+      data: null,
+      error: {
+        status: 400,
+        code: 'PASSWORD_DOES_NOT_MEET_POLICY',
+        message: 'The password must include a number.',
+      },
+    });
+    render(<ResetPasswordForm token="tok123" passwordHint="" />);
+    submit('weak');
+    expect(await screen.findByText('The password must include a number.')).toBeTruthy();
+    expect(assign).not.toHaveBeenCalled();
+    expect((screen.getByLabelText(/^New password/) as HTMLInputElement).value).toBe('weak');
+  });
+
+  it('says the link is no longer good, and where to ask for another', async () => {
+    resetPassword.mockResolvedValue({ data: null, error: { status: 400, code: 'INVALID_TOKEN' } });
+    render(<ResetPasswordForm token="old" passwordHint="" />);
+    submit();
+    expect(await screen.findByText(/expired or was already used/)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Ask for a new link' }).getAttribute('href')).toBe(
+      '/forgot-password',
+    );
   });
 });

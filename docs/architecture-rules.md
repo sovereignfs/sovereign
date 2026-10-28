@@ -212,6 +212,13 @@ pointing here.
 - **`users.image` is set only by core.** A request cannot set it, at sign-up or
   by an update, since the address would be shown in other people's pages; only
   uploading a picture (`AvatarStore`) writes it.
+- **A session is named by its id and ended only for its owner; a list of
+  sessions never carries a token.** The token is the secret behind the cookie.
+  `endSession` deletes `where id = ? and user_id = ?`, so naming someone else's
+  session finds nothing, and `listSessions` selects no token column, so none can
+  reach a page. Changing the password ends the other sessions
+  (`revokeOtherSessions`), and the address shown for one is shortened or left
+  out when it only means "this computer".
 - **PostgreSQL migrations never name a schema.** drizzle-kit writes foreign keys
   as `"public"."users"`; core runs in whichever schema the connection's
   `search_path` names (each test file gets its own). `pnpm --filter

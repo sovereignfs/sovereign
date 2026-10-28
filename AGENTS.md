@@ -186,6 +186,8 @@ each: `docs/architecture-rules.md`.
 - **A route handler that changes something calls `requireSameOrigin`** (a test
   fails when it does not); **an image is judged by its bytes**; **`users.image`
   is set only by uploading a picture.**
+- **A session is ended by its id and only for its owner, and a list of sessions
+  never carries a token.**
 - **PostgreSQL migrations name no schema** — `db:generate` strips drizzle-kit's
   `"public".` and a test guards it.
 - **Timing-safe comparison** for every key or token compare.

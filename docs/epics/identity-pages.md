@@ -66,6 +66,9 @@ once), and the overlay that the identity pages open in.
 
 - Ending a session from the list signs that browser out
 
+**Not here:** the overlay the identity pages open in (the shell arrives with the
+launcher); until then the pages are ordinary pages under Profile and Security.
+
 #### 📋 9.3 — Preferences `[parallel]`
 
 **Goal:** A person sets their timezone and locale.

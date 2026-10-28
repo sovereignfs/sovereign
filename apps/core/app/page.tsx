@@ -28,13 +28,8 @@ export default async function Page() {
             </Link>
           </div>
           <div>
-            <Link className={styles.link} href="/security/passkeys">
-              Passkeys
-            </Link>
-          </div>
-          <div>
-            <Link className={styles.link} href="/security/two-factor">
-              Two-factor sign-in
+            <Link className={styles.link} href="/security">
+              Security
             </Link>
           </div>
           <div>

@@ -320,8 +320,8 @@ Editing them is not part of Phase 1.
   `SV_AUTH_SECRET`, not with the field encryption key ring (§3.15), because
   better-auth does the encrypting. Changing `SV_AUTH_SECRET` therefore ends
   everyone's authenticator enrolment as well as signing everyone out.
-- Until the Security page (§3.11) exists, enrolling, regenerating backup codes
-  and turning TOTP off are at `/security/two-factor`.
+- Enrolling, regenerating backup codes and turning TOTP off are at
+  `/security/two-factor`, reached from the Security page (§3.11).
 
 #### 3.4.2 Passkeys
 
@@ -346,8 +346,8 @@ Editing them is not part of Phase 1.
 - Asking to sign in with a passkey is rate limited per client address.
 - The password is never removed: a person with no passkey, or whose last passkey
   was removed, signs in with their password as before.
-- Until the Security page (§3.11) exists, adding, naming and removing passkeys
-  is at `/security/passkeys`, and the sign-in page offers "Sign in with a
+- Adding, naming and removing passkeys is at `/security/passkeys`, reached from
+  the Security page (§3.11), and the sign-in page offers "Sign in with a
   passkey" in a browser that has them.
 
 #### 3.4.3 Reset by an operator
@@ -578,6 +578,19 @@ closing them returns there (§1.3).
   an address, since an address in a person's profile is shown in other
   people's pages. Uploading and removing a picture are checked for where the
   request came from, as well as for a session.
+- The Security page gathers the password, two-factor sign-in, passkeys and the
+  person's sessions; the two-factor and passkey pages stay under it
+  (`/security/two-factor`, `/security/passkeys`). Profile and Security share one
+  heading and tab bar.
+- Changing the password asks for the current one, and ends every other session
+  of the person's: whoever else was signed in is signed out, this browser stays.
+- The sessions list shows, for each open session, a device label read loosely
+  from the browser ("Chrome on macOS"), when it began and was last used, and
+  the address when it says something (a loopback address does not). It never
+  carries the session's token. A session is ended by its id and only ever one
+  of the caller's own; ending the one in use signs that browser out, and ending
+  another signs that browser out at its next request. "Sign out everywhere
+  else" ends all but the one in use.
 
 ### 3.12 Console: instance settings
 
@@ -743,3 +756,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-28 | §3.3.6: what deactivating does (one transaction with the work that goes with it, notices after), that every way of opening a session is refused, that the owner cannot be deactivated, and that reactivating restores sign-in only.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | 2026-10-28 | §3.2.1: a role is changed only between admin and user, by the owner; the owner's role is fixed and the owner cannot be deactivated; a role that is not known holds no capability.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | 2026-10-28 | §3.11, §3.15: a name's rules; the picture's address is set only by uploading; avatars are judged by their bytes, public and versioned; the longest side accepted.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 2026-10-29 | §3.11, §3.4.1, §3.4.2: the Security page and what it does: change password ends the other sessions; the sessions list never carries a token and ends a session only by its id, only the caller's own.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |

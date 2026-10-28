@@ -1,0 +1,11 @@
+.frame {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--sv-font-size-xl);
+  font-weight: var(--sv-font-weight-semibold);
+}

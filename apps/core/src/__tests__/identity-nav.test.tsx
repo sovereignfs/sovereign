@@ -18,6 +18,7 @@ describe('the identity pages navigation', () => {
     expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
       '/profile',
       '/security',
+      '/preferences',
     ]);
   });
 
@@ -26,6 +27,7 @@ describe('the identity pages navigation', () => {
     ['/security', 'Security'],
     ['/security/passkeys', 'Security'],
     ['/security/two-factor', 'Security'],
+    ['/preferences', 'Preferences'],
   ])('marks the current page on %s as %s', (path, label) => {
     pathname = path;
     render(<IdentityNav />);

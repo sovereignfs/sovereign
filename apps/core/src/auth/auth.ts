@@ -15,6 +15,7 @@ import { assertMayOpenSession } from './session-gate';
 import { ROLE_OWNER, ROLE_USER } from './roles';
 import type { AuthSettings } from './settings';
 import { cleanName, refuseImageInput } from '../profile/name';
+import { localeOrNull } from './locale';
 import { signUpRecord, timezoneOrNull } from './terms';
 
 /** The longest request body, in characters, for a password; core's policy sets the real limit. */
@@ -128,9 +129,10 @@ export function createAuth(
       // that tries to choose it.
       additionalFields: {
         role: { type: 'string', required: false, input: false, defaultValue: ROLE_USER },
-        // What the person sends at sign-up. Each is checked in the create hook below, and neither
-        // can be changed afterwards through an update (see the update hook).
+        // What the person sends at sign-up, and may change later. Each is checked in the create
+        // hook below and again in the update hook.
         timezone: { type: 'string', required: false, input: true },
+        locale: { type: 'string', required: false, input: true },
         agreedToTerms: { type: 'boolean', required: false, input: true, defaultValue: false },
         // Set by core from `agreedToTerms`: when, and which text.
         termsAcceptedAt: { type: 'date', required: false, input: false },
@@ -167,7 +169,7 @@ export function createAuth(
           // Every account is made through here, whatever the route: the sign-up endpoint, or a
           // server-side call that has no route (a request hook cannot see those).
           before: async (user) => {
-            // The name, the terms and the time zone first: they are the person's to put right, whoever
+            // The name, the terms, the time zone and the language first: they are the person's to put right, whoever
             // they are. No picture comes with a sign-up: one is uploaded afterwards.
             if (user.image !== undefined && user.image !== null) refuseImageInput();
             const name = cleanName(user.name);
@@ -201,7 +203,7 @@ export function createAuth(
         },
         update: {
           // The terms are accepted once, at sign-up, and recorded; an update cannot rewrite that. A
-          // name and a time zone can be changed, and are checked as they were at sign-up. The picture
+          // name, a time zone and a language can be changed, and are checked as they were at sign-up. The picture
           // is not set here: it is uploaded, which is the only thing that sets it.
           before: (data) => {
             if ('agreedToTerms' in data) {
@@ -212,9 +214,10 @@ export function createAuth(
             }
             // better-auth passes `name` and `image` on every update, undefined when not sent.
             if (data.image !== undefined) refuseImageInput();
-            const patch: { name?: string; timezone?: string | null } = {};
+            const patch: { name?: string; timezone?: string | null; locale?: string | null } = {};
             if (data.name !== undefined) patch.name = cleanName(data.name);
             if ('timezone' in data) patch.timezone = timezoneOrNull(data.timezone);
+            if ('locale' in data) patch.locale = localeOrNull(data.locale);
             return Promise.resolve(Object.keys(patch).length > 0 ? { data: patch } : undefined);
           },
         },

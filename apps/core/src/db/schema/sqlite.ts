@@ -42,6 +42,7 @@ export const users = sqliteTable(
     role: text('role').notNull().default('platform:user'),
     /** An IANA time zone, taken from the browser at sign-up and checked before it is stored. */
     timezone: text('timezone'),
+    locale: text('locale'),
     /** Whether the terms were accepted at sign-up. False for an account made before they were asked. */
     agreedToTerms: integer('agreed_to_terms', { mode: 'boolean' }).notNull().default(false),
     termsAcceptedAt: integer('terms_accepted_at', { mode: 'timestamp_ms' }),

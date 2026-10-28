@@ -201,6 +201,10 @@ them.
   text. One that is not is refused with `INVALID_TIMEZONE` and nothing is
   stored; none at all is allowed. A time zone changed later is checked the
   same way.
+  The language (`locale`) is the same: a BCP 47 tag such as `en-GB`, kept in
+  its proper spelling, refused with `INVALID_LOCALE` when it is not one (a list,
+  `und`, free text); none at all is allowed, and one changed later is checked the
+  same way.
 - Passwords follow the policy set by `SV_AUTH_PASSWORD_MIN_LENGTH` (default 8)
   and, each off by default, `SV_AUTH_PASSWORD_REQUIRE_UPPERCASE`,
   `…_REQUIRE_LOWERCASE`, `…_REQUIRE_NUMBER` and `…_REQUIRE_SYMBOL`. The server
@@ -578,6 +582,13 @@ closing them returns there (§1.3).
   an address, since an address in a person's profile is shown in other
   people's pages. Uploading and removing a picture are checked for where the
   request came from, as well as for a session.
+- Preferences are the time zone and the language and region, each optional:
+  "Not set" saves nothing. The page offers the platform's list of time zones
+  and common languages named in English, with an option to use the browser's
+  time zone; the server checks whatever it is sent (§3.3.2), so a request that
+  names another is refused. A value already saved that the list does not name is
+  kept and shown. They are what other apps read as `zoneinfo` and `locale`
+  (§3.6.2).
 - The Security page gathers the password, two-factor sign-in, passkeys and the
   person's sessions; the two-factor and passkey pages stay under it
   (`/security/two-factor`, `/security/passkeys`). Profile and Security share one
@@ -757,3 +768,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-28 | §3.2.1: a role is changed only between admin and user, by the owner; the owner's role is fixed and the owner cannot be deactivated; a role that is not known holds no capability.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | 2026-10-28 | §3.11, §3.15: a name's rules; the picture's address is set only by uploading; avatars are judged by their bytes, public and versioned; the longest side accepted.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | 2026-10-29 | §3.11, §3.4.1, §3.4.2: the Security page and what it does: change password ends the other sessions; the sessions list never carries a token and ends a session only by its id, only the caller's own.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 2026-10-29 | §3.3.2, §3.11: the language is validated and kept like the time zone (`INVALID_LOCALE`); what the Preferences page offers and that "Not set" saves nothing.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |

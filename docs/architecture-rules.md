@@ -134,7 +134,9 @@ pointing here.
   expired. Cost: one primary-key lookup per request.
 - **What sign-up must carry is checked in the user-create hook, and the record of
   it is set by the server.** The terms must be accepted (`TERMS_NOT_ACCEPTED`)
-  and a time zone, if given, must be a real IANA name (`INVALID_TIMEZONE`),
+  and a time zone, if given, must be a real IANA name (`INVALID_TIMEZONE`) and
+  a language, if given, a real BCP 47 tag (`INVALID_LOCALE`), both kept in their
+  canonical spelling and checked again by every later update of the account,
   before the invitation is even looked at. The time, and the version of the
   text (a digest of the documents as built, so there is no number to forget to
   raise), are written by core: those fields are `input: false`, and an update

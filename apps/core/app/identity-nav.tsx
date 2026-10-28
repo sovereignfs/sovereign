@@ -8,6 +8,7 @@ import { NavTabs } from '@sovereignfs/ui';
 const PAGES = [
   { label: 'Profile', href: '/profile' },
   { label: 'Security', href: '/security' },
+  { label: 'Preferences', href: '/preferences' },
 ];
 
 export function IdentityNav() {

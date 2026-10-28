@@ -93,6 +93,7 @@ export function settingsSuite(createDatabase: () => Promise<TestDatabase>): void
         '0005_passkeys',
         '0006_account_states',
         '0007_avatars',
+        '0008_locale',
       ]);
     });
   });

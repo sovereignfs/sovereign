@@ -32,6 +32,7 @@ export const users = pgTable(
     image: text('image'),
     role: text('role').notNull().default('platform:user'),
     timezone: text('timezone'),
+    locale: text('locale'),
     agreedToTerms: boolean('agreed_to_terms').notNull().default(false),
     termsAcceptedAt: date('terms_accepted_at'),
     termsVersion: text('terms_version'),

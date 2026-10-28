@@ -1,5 +1,6 @@
 import { APIError } from 'better-auth/api';
 import { legalVersion } from '../legal/version';
+import { localeOrNull } from './locale';
 import { canonicalTimezone } from './timezone';
 
 /**
@@ -21,6 +22,7 @@ export function signUpRecord(user: Record<string, unknown>, now = new Date()) {
     termsAcceptedAt: now,
     termsVersion: legalVersion,
     timezone: timezoneOrNull(user.timezone),
+    locale: localeOrNull(user.locale),
   };
 }
 

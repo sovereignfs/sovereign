@@ -86,6 +86,10 @@ launcher); until then the pages are ordinary pages under Profile and Security.
 
 - An invalid timezone is refused by the server
 
+**Not here:** the `zoneinfo` and `locale` claims themselves (the provider epic reads
+`users.timezone` and `users.locale`), and capturing the browser's language at
+sign-up.
+
 #### 📋 9.4 — Connected apps
 
 **Goal:** A person sees which apps they have allowed and can remove an app's

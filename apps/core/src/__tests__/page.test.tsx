@@ -23,6 +23,12 @@ describe('the home page', () => {
     expect(html).toContain('ada@example.com');
   });
 
+  it('links to each of the identity pages, and only those that exist', async () => {
+    const html = await render();
+    const hrefs = [...html.matchAll(/<a [^>]*href="([^"]+)"/g)].map((match) => match[1]);
+    expect(hrefs).toEqual(['/profile', '/security', '/preferences']);
+  });
+
   it('offers to sign out', async () => {
     expect(await render()).toContain('Sign out');
   });

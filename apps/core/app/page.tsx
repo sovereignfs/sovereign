@@ -33,6 +33,11 @@ export default async function Page() {
             </Link>
           </div>
           <div>
+            <Link className={styles.link} href="/preferences">
+              Preferences
+            </Link>
+          </div>
+          <div>
             <SignOutButton />
           </div>
         </div>

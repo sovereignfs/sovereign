@@ -57,6 +57,13 @@
       "when": 1793219551883,
       "tag": "0007_avatars",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1793229045938,
+      "tag": "0008_locale",
+      "breakpoints": true
     }
   ]
 }

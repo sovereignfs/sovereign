@@ -1,6 +1,6 @@
 # Sovereign Core — Epics
 
-A domain-first map of the work on `sovereign-core`. An epic groups the tasks of
+A domain-first map of the work on `sovereign`. An epic groups the tasks of
 one domain, whichever phase they belong to; later phases add tasks to the same
 epics. [`ROADMAP.md`](../../ROADMAP.md) is the chronological index of the same
 tasks, in the order they are built.
@@ -28,20 +28,22 @@ the task is corrected.
 
 ## Epics
 
-| ID  | Epic                                          | Status         | Summary                                                                                                |
-| --- | --------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
-| 0   | [Infrastructure](infrastructure.md)           | ⏳ In Progress | Workspace, CI, repository documents, Docker, Phase 1 acceptance                                        |
-| 1   | [Configuration & Data](configuration-data.md) | ✅ Complete    | `packages/config`, `packages/database`, encryption of stored secrets, base schema                      |
-| 2   | [Design System](design-system.md)             | ⏳ In Progress | `packages/ui` in the new workspace, publishing, components core needs                                  |
-| 3   | [Mail](mail.md)                               | ✅ Complete    | `packages/mailer`, SMTP configuration, templates                                                       |
-| 4   | [Identity & Auth](identity-auth.md)           | ✅ Complete    | Sign-up, sign-in, verification, reset, TOTP, passkeys, sessions                                        |
-| 5   | [Roles & Capabilities](roles-capabilities.md) | ✅ Complete    | Platform roles, capability matrix, ownership                                                           |
-| 6   | [OIDC Provider](oidc-provider.md)             | ✅ Complete    | Sign-in server for apps: flows, claims, consent, logout                                                |
-| 7   | [Apps & Launcher](apps-launcher.md)           | ⏳ In Progress | Client registry with launcher entries, the launcher                                                    |
-| 8   | [Console](console.md)                         | ⏳ In Progress | Operators' administration area                                                                         |
-| 9   | [Identity Pages](identity-pages.md)           | ⏳ In Progress | A person's own account pages                                                                           |
-| 10  | [Core API](core-api.md)                       | 📋 Planned     | `spec/core-api`, `packages/api-client`, Directory API, branding                                        |
-| 11  | [Installable app (PWA)](pwa.md)               | ⏳ In Progress | Manifest, mobile metadata, service worker, offline page ([RFC 0001](../rfcs/0001-installable-core.md)) |
+| ID  | Epic                                          | Status         | Summary                                                                                                                       |
+| --- | --------------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 0   | [Infrastructure](infrastructure.md)           | ⏳ In Progress | Workspace, CI, repository documents, Docker, Phase 1 acceptance                                                               |
+| 1   | [Configuration & Data](configuration-data.md) | ✅ Complete    | `packages/config`, `packages/database`, encryption of stored secrets, base schema                                             |
+| 2   | [Design System](design-system.md)             | ⏳ In Progress | `packages/ui` in the new workspace, publishing, components core needs                                                         |
+| 3   | [Mail](mail.md)                               | ✅ Complete    | `packages/mailer`, SMTP configuration, templates                                                                              |
+| 4   | [Identity & Auth](identity-auth.md)           | ✅ Complete    | Sign-up, sign-in, verification, reset, TOTP, passkeys, sessions                                                               |
+| 5   | [Roles & Capabilities](roles-capabilities.md) | ✅ Complete    | Platform roles, capability matrix, ownership                                                                                  |
+| 6   | [OIDC Provider](oidc-provider.md)             | ✅ Complete    | Sign-in server for apps: flows, claims, consent, logout                                                                       |
+| 7   | [Apps & Launcher](apps-launcher.md)           | ⏳ In Progress | Client registry with launcher entries, the launcher                                                                           |
+| 8   | [Console](console.md)                         | ⏳ In Progress | Operators' administration area                                                                                                |
+| 9   | [Identity Pages](identity-pages.md)           | ⏳ In Progress | A person's own account pages                                                                                                  |
+| 10  | [Core API](core-api.md)                       | 📋 Planned     | `spec/core-api`, `packages/api-client`, Directory API, branding                                                               |
+| 11  | [Installable app (PWA)](pwa.md)               | ⏳ In Progress | Manifest, mobile metadata, service worker, offline page ([RFC 0001](../rfcs/0001-installable-core.md))                        |
+| 12  | [Release and deployment](release.md)          | ⏳ In Progress | The published image, guides for operators, the deployment design ([RFC 0002](../rfcs/0002-deployment-strategies.md))          |
+| 13  | [Operator CLI](operator-cli.md)               | 📋 Planned     | `sv`, `sv apply` and `sovereign-admin`: deploying and running an instance ([RFC 0002](../rfcs/0002-deployment-strategies.md)) |
 
 _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked · ❌ Rejected_
 
@@ -58,9 +60,11 @@ Task 2.3 runs throughout M1 and M2.
 
 ## After Phase 1
 
-| Milestone                        | Outcome                                                                                           | Tasks     |
-| -------------------------------- | ------------------------------------------------------------------------------------------------- | --------- |
-| **M4 — Core installs as an app** | Core is installable, shows its own offline page, and never stores a page that belongs to a person | 11.1–11.4 |
+| Milestone                                 | Outcome                                                                                           | Tasks      |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------- |
+| **M4 — Core installs as an app**          | Core is installable, shows its own offline page, and never stores a page that belongs to a person | 11.1–11.4  |
+| **M5 — Core can be deployed**             | An operator can pull a released image, connect their apps, and the deployment design is agreed    | 12.1–12.5  |
+| **M6 — Operators run core with one tool** | An operator can deploy, add apps, update and recover an instance with `sv`                        | 13.1–13.10 |
 
 ## Open spec questions
 

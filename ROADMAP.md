@@ -107,3 +107,32 @@ be argued before anything is built.
 | 0.46.0  | 2        | Service worker and offline page                 | ✅     | [11.2](docs/epics/pwa.md) |
 | —       | 3        | Standalone polish, guide and checks             | ⏳     | [11.3](docs/epics/pwa.md) |
 | 0.47.0  | 4        | Icons from the instance's own logo `[parallel]` | ✅     | [11.4](docs/epics/pwa.md) |
+
+### M5 — Core can be deployed
+
+[RFC 0002](docs/rfcs/0002-deployment-strategies.md) (Accepted) · epic [12](docs/epics/release.md)
+
+| Version | Priority | Task                               | Status | Epic task                     |
+| ------- | -------- | ---------------------------------- | ------ | ----------------------------- |
+| —       | 1        | Publish the image                  | ⏳     | [12.1](docs/epics/release.md) |
+| —       | 2        | Guides for operators `[parallel]`  | ⏳     | [12.2](docs/epics/release.md) |
+| —       | 3        | First release                      | 📋     | [12.3](docs/epics/release.md) |
+| —       | 4        | The deployment design `[parallel]` | ⏳     | [12.4](docs/epics/release.md) |
+| —       | 5        | Host-only cookies                  | 📋     | [12.5](docs/epics/release.md) |
+
+### M6 — Operators run core with one tool
+
+[RFC 0002](docs/rfcs/0002-deployment-strategies.md) (Accepted) · epic [13](docs/epics/operator-cli.md)
+
+| Version | Priority | Task                               | Status | Epic task                           |
+| ------- | -------- | ---------------------------------- | ------ | ----------------------------------- |
+| —       | 1        | The contracts                      | 📋     | [13.1](docs/epics/operator-cli.md)  |
+| —       | 2        | `sovereign-admin` in the image     | 📋     | [13.2](docs/epics/operator-cli.md)  |
+| —       | 3        | `sv apply`: the base               | 📋     | [13.3](docs/epics/operator-cli.md)  |
+| —       | 4        | `sv apply`: apps                   | 📋     | [13.4](docs/epics/operator-cli.md)  |
+| —       | 5        | Commands on the operator's machine | 📋     | [13.5](docs/epics/operator-cli.md)  |
+| —       | 6        | Deploying over SSH `[parallel]`    | 📋     | [13.6](docs/epics/operator-cli.md)  |
+| —       | 7        | Publishing and upgrading           | 📋     | [13.7](docs/epics/operator-cli.md)  |
+| —       | 8        | Backup, restore and rollback       | 📋     | [13.8](docs/epics/operator-cli.md)  |
+| —       | 9        | Deploying from GitHub `[parallel]` | 📋     | [13.9](docs/epics/operator-cli.md)  |
+| —       | 10       | The operator's guide               | 📋     | [13.10](docs/epics/operator-cli.md) |

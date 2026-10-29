@@ -1,6 +1,6 @@
 # Sovereign Core — Roadmap
 
-**Version:** 0.51.0 · **Last updated:** 2026-10-29
+**Version:** 0.52.0 · **Last updated:** 2026-10-29
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -119,9 +119,9 @@ be argued before anything is built.
 | —       | 3        | First release                      | 📋     | [12.3](docs/epics/release.md) |
 | —       | 4        | The deployment design `[parallel]` | ⏳     | [12.4](docs/epics/release.md) |
 | 0.48.0  | 5        | Host-only cookies                  | ✅     | [12.5](docs/epics/release.md) |
-| —       | 6        | Try real third-party apps          | 📋     | [12.6](docs/epics/release.md) |
+| 0.52.0  | 6        | Try real third-party apps          | ✅     | [12.6](docs/epics/release.md) |
 | —       | 7        | Compatibility settings             | 📋     | [12.7](docs/epics/release.md) |
-| —       | 8        | Try two more app families          | ⏳     | [12.8](docs/epics/release.md) |
+| 0.52.0  | 8        | Try two more app families          | ✅     | [12.8](docs/epics/release.md) |
 
 ### M6 — Operators run core with one tool
 

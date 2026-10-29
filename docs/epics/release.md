@@ -135,7 +135,7 @@ acceptance, in [epic 13](operator-cli.md).
 - Sign-out clears the cookies under both names
 - The security check is run
 
-#### 📋 12.6 — Try real third-party apps
+#### ✅ 12.6 — Try real third-party apps
 
 **Goal:** What "any OpenID Connect app" means is known from trying it, before the first release says so.
 
@@ -195,7 +195,7 @@ body, one asks for a scope core does not offer (`groups`) by default, and none n
 - EdDSA stays the default, and no existing app changes behaviour
 - The security check is run
 
-#### ⏳ 12.8 — Try two more app families
+#### ✅ 12.8 — Try two more app families
 
 **Goal:** The guide's claim about what connects is checked against the two common families that 12.6 left out, before the first
 release makes it.

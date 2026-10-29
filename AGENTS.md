@@ -239,7 +239,7 @@ each: `docs/architecture-rules.md`.
   loaded by `tokens.css`; never fetched from another site), and CSS names a family only
   through `var(--sv-font-family…)` or `inherit` (`pnpm design:tokens:check` fails otherwise).
 - **Every signed-in page has the one `AccountHeader`** (from its layout: the launcher,
-  the identity pages, the Console), a missing or failed page has `not-found.tsx` /
+  the identity pages, the Console; the mark and name left, the avatar menu right), a missing or failed page has `not-found.tsx` /
   `error.tsx`, and going to another page is a `ButtonLink`: no page is a dead end
   and none carries an unstyled link.
 - **Phase 1 acceptance is `apps/e2e`**: one named test for each item of §3.17

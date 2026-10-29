@@ -197,6 +197,8 @@ describe('proxy', () => {
       '/api/auth/jwks',
       '/_next/static/chunks/app.js',
       '/favicon.ico',
+      '/icons/favicon.svg',
+      '/icons/apple-touch-icon.png',
     ])('lets %s through', async (path) => {
       const { proxy } = await loadProxy('http://localhost:3000');
       const response = proxy(new NextRequest(`http://localhost:3000${path}`));
@@ -229,6 +231,8 @@ describe('proxy', () => {
       '/forgot-passwords',
       '/privacy/extra',
       '/terms',
+      '/icons',
+      '/iconsx/favicon.svg',
     ])('does not mistake %s for a public path', async (path) => {
       const { proxy } = await loadProxy('http://localhost:3000');
       expect(proxy(new NextRequest(`http://localhost:3000${path}`)).status).toBe(303);

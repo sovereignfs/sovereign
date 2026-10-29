@@ -82,17 +82,25 @@ Roboto, Helvetica, Arial, sans-serif`. A page or component names a family only
   step is one box for each digit of the code (pasting fills them), and offers a
   passkey instead.
 - Every signed-in page, the launcher, the identity pages and the Console alike,
-  has the same header: the instance's name (which leads home), Apps, Account
-  and, for an operator, Console, with the part the person is in marked, and
-  sign out. No page is a dead end, and none repeats the header's links of its
-  own. The pages before sign-in show the instance's logo, or its name when it
-  has none, so a person can tell whose sign-in it is.
+  has the same header. On the left, the instance's mark (its logo, or the first
+  letter of its name in a badge, a little larger than on the sign-in pages) and
+  its name, which lead home. On the right, the person's avatar (their picture, or
+  their initials), which opens a menu with who they are, their account, the
+  Console for an operator, and sign out. No page is a dead end, and none repeats
+  the header's links of its own. The pages before sign-in show the instance's
+  mark above their title, so a person can tell whose sign-in it is.
 - An address that leads nowhere, and a page that fails, show a page of the same
   design (a plain sentence and one way onward), never the framework's own. A
   Console page someone may not open shows the first, saying nothing of what is
   there.
 - An action that goes to another page ("Add an app") is a link made to look like
   a button (`ButtonLink`), not an unstyled link and not a button that navigates.
+- Until the operator sets a favicon of their own, an instance has the Sovereign
+  one, an `S` in white on a dark rounded square, as the established Sovereign app
+  has: core serves it (`/icons/favicon.svg`, `/icons/favicon.ico`,
+  `/icons/apple-touch-icon.png`, and `/favicon.ico`, which a browser asks for
+  whatever a page links) with no session, and the operator's favicon replaces it
+  as soon as it is set.
 - Core MUST NOT use another component library, Tailwind, or runtime CSS-in-JS.
   Its own styles are CSS Modules that reference the design system's semantic
   tokens; colours, spacing and radii are never hard-coded.
@@ -1224,3 +1232,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-30 | §1.3: every signed-in page has one header (name, Apps, Account, Console, sign out) with the current part marked; the pages before sign-in show the logo or else the name; a missing address and a failed page have pages of the design system's own; going to another page is a `ButtonLink`. Found by looking at every screen.                                                                                                                                                                                                                                                                                                                                                                                               |
 | 2026-10-30 | §1.3: the pages before sign-in and the pages that stand alone are one centred card with the instance's mark (its logo, or its initial), titled for the instance on sign-in; labels above the boxes with no asterisk; the password asked twice at sign-up and reset; the second step as one box for each digit, with a passkey offered instead; a person who has signed out is told so. Matches the established Sovereign sign-in pages.                                                                                                                                                                                                                                                                                       |
 | 2026-10-30 | §1.3: the typeface is Hanken Grotesk, shipped by the design system and served by core itself, with the stated fallback stack; no component or page may name another family, and the design-token check enforces it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 2026-10-30 | §1.3: the header has the instance's mark (larger than on the sign-in pages) and name on the left and the person's avatar on the right, whose menu holds their account, the Console for an operator, and sign out; until an operator sets a favicon an instance has the Sovereign one, served with no session.                                                                                                                                                                                                                                                                                                                                                                                                                 |

@@ -28,44 +28,7 @@
 /* ── Brand mark ──────────────────────────────────────────────────────────── */
 
 .brand {
-  width: 34px;
-  height: 34px;
   margin-bottom: var(--sv-space-5);
-  border-radius: var(--sv-radius-md);
-  background-color: var(--sv-color-accent);
-  color: var(--sv-color-text-on-accent);
-  font-size: var(--sv-font-size-md);
-  font-weight: var(--sv-font-weight-semibold);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* An instance's own logo is shown as it is, not in the badge. Both pictures are in the page and the theme shows
-   one, so the right one is there from the first paint. */
-.brandPicture {
-  display: flex;
-  align-items: center;
-  height: 34px;
-  margin-bottom: var(--sv-space-5);
-}
-
-.brandPicture img {
-  max-width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.brandDark {
-  display: none;
-}
-
-:global([data-theme='dark']) .brandLight {
-  display: none;
-}
-
-:global([data-theme='dark']) .brandDark {
-  display: block;
 }
 
 /* ── Title and what it is for ────────────────────────────────────────────── */

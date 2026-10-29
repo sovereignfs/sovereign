@@ -82,53 +82,49 @@ const identityNow = vi.fn();
 vi.mock('../instance/service', () => ({
   getInstanceIdentity: () => identityNow() as unknown,
 }));
-const { InstanceLogo } = await import('../../app/instance-logo');
-const { AuthBrand } = await import('../../app/(auth)/auth-card');
+const { BrandMark } = await import('../../app/brand-mark');
 
-describe('the logo in the header', () => {
-  beforeEach(() => identityNow.mockReset());
-
-  it('draws nothing when no logo is set: the header has the name beside it', async () => {
-    identityNow.mockResolvedValue(PLAIN_IDENTITY);
-    expect(renderToStaticMarkup(await InstanceLogo())).toBe('');
-  });
-
-  it('draws both pictures, so the theme can show the right one, with no text of their own', async () => {
-    identityNow.mockResolvedValue({
-      ...PLAIN_IDENTITY,
-      name: 'Acme',
-      logoLight: '/api/branding/logo-light?v=1',
-      logoDark: '/api/branding/logo-dark?v=1',
-    });
-    const html = renderToStaticMarkup(await InstanceLogo());
-    expect(html).toContain('src="/api/branding/logo-light?v=1"');
-    expect(html).toContain('src="/api/branding/logo-dark?v=1"');
-    // The name is beside it, so a screen reader is not told it twice.
-    expect(html.match(/alt=""/g)).toHaveLength(2);
-  });
-});
-
-describe('the mark on the pages before sign-in', () => {
+describe('the instance’s mark', () => {
   beforeEach(() => identityNow.mockReset());
 
   it('is the first letter of the instance’s name in a badge when no logo is set', async () => {
     identityNow.mockResolvedValue({ ...PLAIN_IDENTITY, name: 'acme' });
-    const html = renderToStaticMarkup(await AuthBrand());
-    expect(html).toContain('>A</div>');
+    const html = renderToStaticMarkup(await BrandMark({}));
+    expect(html).toContain('>A</span>');
     expect(html).not.toContain('<img');
     expect(html).toContain('aria-hidden="true"');
   });
 
-  it('is the instance’s own logo when it has one, both pictures named for it, for the theme to choose', async () => {
+  it('is the instance’s own logo when it has one: both pictures, for the theme to choose from', async () => {
     identityNow.mockResolvedValue({
       ...PLAIN_IDENTITY,
       name: 'Acme',
       logoLight: '/api/branding/logo-light?v=1',
       logoDark: '/api/branding/logo-dark?v=1',
     });
-    const html = renderToStaticMarkup(await AuthBrand());
+    const html = renderToStaticMarkup(await BrandMark({}));
     expect(html).toContain('src="/api/branding/logo-light?v=1"');
     expect(html).toContain('src="/api/branding/logo-dark?v=1"');
-    expect(html.match(/alt="Acme"/g)).toHaveLength(2);
+  });
+
+  it('names the logo only where nothing beside it says whose it is', async () => {
+    identityNow.mockResolvedValue({
+      ...PLAIN_IDENTITY,
+      name: 'Acme',
+      logoLight: '/api/branding/logo-light?v=1',
+      logoDark: '/api/branding/logo-dark?v=1',
+    });
+    expect(renderToStaticMarkup(await BrandMark({})).match(/alt=""/g)).toHaveLength(2);
+    expect(
+      renderToStaticMarkup(await BrandMark({ labelled: true })).match(/alt="Acme"/g),
+    ).toHaveLength(2);
+  });
+
+  it('is larger in the header than above a page’s title', async () => {
+    identityNow.mockResolvedValue(PLAIN_IDENTITY);
+    const small = renderToStaticMarkup(await BrandMark({}));
+    const large = renderToStaticMarkup(await BrandMark({ size: 'lg' }));
+    expect(small).toMatch(/class="[^"]*\bmd\b/);
+    expect(large).toMatch(/class="[^"]*\blg\b/);
   });
 });

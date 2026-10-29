@@ -11,7 +11,16 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: new URL(getConfig().url),
     title: { default: identity.name, template: `%s · ${identity.name}` },
-    ...(identity.favicon ? { icons: { icon: identity.favicon } } : {}),
+    // The instance's own favicon, or the Sovereign one until it sets one.
+    icons: identity.favicon
+      ? { icon: identity.favicon }
+      : {
+          icon: [
+            { url: '/icons/favicon.svg', type: 'image/svg+xml' },
+            { url: '/favicon.ico', sizes: 'any' },
+          ],
+          apple: '/icons/apple-touch-icon.png',
+        },
   };
 }
 

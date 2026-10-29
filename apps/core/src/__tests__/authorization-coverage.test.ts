@@ -11,10 +11,12 @@ const APP = path.join(import.meta.dirname, '../../app');
 
 /**
  * Routes that are public on purpose: better-auth's own (it checks sessions and tokens itself), a person's
- * picture and the instance's logos and favicon (shown by apps and emails with no credentials, read only), the two discovery documents (an app finds the
+ * picture and the instance's logos and favicon (shown by apps and emails with no credentials, read only), the default icons an instance has until it sets a favicon (the same for everyone, read only), the two discovery documents (an app finds the
  * instance there with no account), the instance's branding document (the same, for what an app shows), and health.
  */
 const PUBLIC_ROUTES = new Set([
+  'favicon.ico/route.ts',
+  'icons/[name]/route.ts',
   '.well-known/oauth-authorization-server/route.ts',
   '.well-known/openid-configuration/route.ts',
   '.well-known/sovereign-instance/route.ts',
@@ -72,7 +74,7 @@ describe('server actions and route handlers authorize inside', () => {
     },
   );
 
-  it('keeps the public routes to the seven that are public on purpose', () => {
+  it('keeps the public routes to the nine that are public on purpose', () => {
     // Adding to the list is a decision to make in review, not a way to make this pass.
     expect([...PUBLIC_ROUTES].sort()).toEqual([
       '.well-known/oauth-authorization-server/route.ts',
@@ -82,6 +84,8 @@ describe('server actions and route handlers authorize inside', () => {
       'api/avatars/[userId]/route.ts',
       'api/branding/[kind]/route.ts',
       'api/health/route.ts',
+      'favicon.ico/route.ts',
+      'icons/[name]/route.ts',
     ]);
   });
 

@@ -1,24 +1,15 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { LegalLinks } from '@sovereignfs/ui';
-import { getInstanceIdentity } from '../../src/instance/service';
+import { BrandMark } from '../brand-mark';
 import { AuthShell } from './auth-shell';
 import styles from './auth.module.css';
 
-/** The instance's mark: its logo if it has one, otherwise the first letter of its name in a badge. */
+/** The instance's mark, above a page's title, named for a screen reader since the title may not say whose it is. */
 export async function AuthBrand() {
-  const { name, logoLight, logoDark } = await getInstanceIdentity();
-  if (logoLight || logoDark) {
-    return (
-      <div className={styles.brandPicture}>
-        {logoLight ? <img className={styles.brandLight} src={logoLight} alt={name} /> : null}
-        {logoDark ? <img className={styles.brandDark} src={logoDark} alt={name} /> : null}
-      </div>
-    );
-  }
   return (
-    <div className={styles.brand} aria-hidden="true">
-      {name.trim()[0]?.toUpperCase() ?? 'S'}
+    <div className={styles.brand}>
+      <BrandMark labelled />
     </div>
   );
 }

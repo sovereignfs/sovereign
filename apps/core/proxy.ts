@@ -65,6 +65,8 @@ function isPublic(pathname: string): boolean {
     pathname.startsWith('/api/avatars/') ||
     pathname.startsWith('/api/branding/') ||
     pathname.startsWith('/_next/') ||
+    // The icons an instance has until it sets a favicon of its own.
+    pathname.startsWith('/icons/') ||
     pathname === '/favicon.ico'
   );
 }

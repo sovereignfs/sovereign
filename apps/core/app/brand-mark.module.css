@@ -1,0 +1,46 @@
+.md {
+  --mark-size: 34px;
+}
+
+.lg {
+  --mark-size: 40px;
+}
+
+.badge {
+  flex: none;
+  width: var(--mark-size);
+  height: var(--mark-size);
+  border-radius: var(--sv-radius-md);
+  background-color: var(--sv-color-accent);
+  color: var(--sv-color-text-on-accent);
+  font-size: calc(var(--mark-size) * 0.47);
+  font-weight: var(--sv-font-weight-semibold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* An instance's own logo is shown as it is, not in the badge. */
+.picture {
+  display: flex;
+  align-items: center;
+  height: var(--mark-size);
+}
+
+.picture img {
+  max-width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.dark {
+  display: none;
+}
+
+:global([data-theme='dark']) .light {
+  display: none;
+}
+
+:global([data-theme='dark']) .dark {
+  display: block;
+}

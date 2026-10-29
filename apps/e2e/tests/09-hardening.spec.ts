@@ -202,3 +202,30 @@ test('the typeface is Hanken Grotesk, served by core itself, and no page asks an
     [],
   );
 });
+
+test('an instance has the Sovereign favicon until it sets one, for a browser with no session', async ({
+  page,
+}) => {
+  await page.goto('/sign-in');
+  const links = await page.evaluate(() =>
+    [...document.querySelectorAll('link[rel~="icon"], link[rel="apple-touch-icon"]')].map((link) =>
+      link.getAttribute('href'),
+    ),
+  );
+  expect(links).toEqual(
+    expect.arrayContaining(['/icons/favicon.svg', '/favicon.ico', '/icons/apple-touch-icon.png']),
+  );
+  for (const [path, type] of [
+    ['/icons/favicon.svg', 'image/svg+xml'],
+    ['/icons/favicon.ico', 'image/x-icon'],
+    ['/icons/apple-touch-icon.png', 'image/png'],
+  ] as const) {
+    const response = await get(path);
+    expect(response.status, path).toBe(200);
+    expect(response.headers.get('content-type'), path).toBe(type);
+  }
+  // A browser that asks for the bare address is sent to the same icon.
+  const bare = await get('/favicon.ico');
+  expect(bare.status).toBe(307);
+  expect(bare.headers.get('location')).toBe(`${CORE_URL}/icons/favicon.ico`);
+});

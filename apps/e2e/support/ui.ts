@@ -68,8 +68,11 @@ export async function enterCode(page: Page, code: string): Promise<void> {
 
 export async function signOut(page: Page): Promise<void> {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Sign out' }).click();
+  await page.getByRole('button', { name: 'Your account' }).click();
+  await page.getByRole('menuitem', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(/\/sign-in/);
+  // Told so, as someone who has just left is.
+  await expect(page.getByText('You’ve been signed out.')).toBeVisible();
 }
 
 /** A message the page shows (not Next's own announcer for screen readers, which is also a role=alert). */

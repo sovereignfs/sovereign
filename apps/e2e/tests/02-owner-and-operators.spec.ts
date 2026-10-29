@@ -13,7 +13,14 @@ test('§3.17.2: the first account signs up and becomes the owner', async ({ page
   await signUp(page, owner);
   // Signed in: the launcher is the home page.
   await expect(heading(page)).toHaveText('Apps');
-  // The owner can enter the Console, and is listed as the owner.
+  // The header has the instance's name on the left and the person's avatar on the right, and the avatar's menu
+  // holds their account, the Console, which an owner may enter, and signing out.
+  await expect(page.getByRole('link', { name: 'Sovereign' })).toHaveAttribute('href', '/');
+  await page.getByRole('button', { name: 'Your account' }).click();
+  await expect(page.getByRole('menuitem')).toHaveText(['Account', 'Console', 'Sign out']);
+  await page.getByRole('menuitem', { name: 'Console' }).click();
+  await expect(page).toHaveURL(/\/console$/);
+  // The owner is listed as the owner.
   await page.goto('/console/accounts');
   const row = page.getByRole('row', { name: new RegExp(owner.email) });
   await expect(row).toContainText('Owner');

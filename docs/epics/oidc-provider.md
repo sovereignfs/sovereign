@@ -69,7 +69,7 @@ the client registry and its Console page (7.1, 8.6), the Directory API's resourc
 (10.2), and CORS for single-page apps. Clients are registered meanwhile through
 the provider's own server API.
 
-#### 📋 6.2 — Consent
+#### ✅ 6.2 — Consent
 
 **Goal:** People decide what untrusted clients may know, once, and can change
 their mind.

@@ -47,6 +47,11 @@ pointing here.
   that makes every page render per request, which a nonce needs (a prerendered page
   has none). `style-src-attr 'unsafe-inline'` is the one inline allowance, for the
   design system's `style=""` custom properties; `script-src` never has it.
+  The other hardening headers (`nosniff`, `X-Frame-Options`, `Referrer-Policy`,
+  `Permissions-Policy`, and `Strict-Transport-Security` over https only) go on the
+  same way, from `securityHeaders`, so no response is without them; HSTS is never
+  sent over http, where a browser ignores it and a name that has seen it on https
+  would refuse http for a year.
   `upgrade-insecure-requests` is sent only when core is served over https, because
   some browsers would otherwise upgrade requests to a plain-http `localhost`.
 - **Start-up checks that can end the process live in a Node-only module** imported

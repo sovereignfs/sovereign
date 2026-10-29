@@ -96,6 +96,54 @@ describe('proxy', () => {
     }
   });
 
+  describe('security headers', () => {
+    const NAMES = [
+      'x-content-type-options',
+      'x-frame-options',
+      'referrer-policy',
+      'permissions-policy',
+    ];
+
+    it('puts them on a page, on a redirect to sign-in, and on a static file', async () => {
+      const { proxy } = await loadProxy('http://localhost:3000');
+      for (const response of [
+        proxy(signedIn('http://localhost:3000/')),
+        proxy(new NextRequest('http://localhost:3000/profile')),
+        proxy(signedIn('http://localhost:3000/_next/static/chunks/app.js')),
+      ]) {
+        for (const name of NAMES) expect(response.headers.get(name), name).not.toBeNull();
+        expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+        expect(response.headers.get('x-frame-options')).toBe('DENY');
+      }
+    });
+
+    it('says nothing about the camera, a payment or a location is allowed, and leaves passkeys alone', async () => {
+      const { proxy } = await loadProxy('http://localhost:3000');
+      const policy =
+        proxy(signedIn('http://localhost:3000/')).headers.get('permissions-policy') ?? '';
+      for (const feature of ['camera', 'microphone', 'geolocation', 'payment']) {
+        expect(policy).toContain(`${feature}=()`);
+      }
+      expect(policy).not.toContain('publickey-credentials');
+    });
+
+    it('asks for https for a year only when core is served over https', async () => {
+      const insecure = await loadProxy('http://localhost:3000');
+      expect(
+        insecure.proxy(signedIn('http://localhost:3000/')).headers.get('strict-transport-security'),
+      ).toBeNull();
+      const secure = await loadProxy('https://core.example.com');
+      for (const request of [
+        signedIn('https://core.example.com/'),
+        new NextRequest('https://core.example.com/profile'),
+      ]) {
+        expect(secure.proxy(request).headers.get('strict-transport-security')).toBe(
+          'max-age=31536000',
+        );
+      }
+    });
+  });
+
   it('matches every path, so API routes and static files carry the policy too', async () => {
     const { config } = await loadProxy('http://localhost:3000');
     expect(config.matcher).toBe('/:path*');

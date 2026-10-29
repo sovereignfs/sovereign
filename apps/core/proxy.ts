@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { buildCsp, createNonce } from './src/csp';
+import { buildCsp, createNonce, securityHeaders } from './src/csp';
 
 /**
- * Applies the Content Security Policy to every response. The nonce is also handed to
+ * Applies the Content Security Policy, and the other security headers, to every response. The nonce is also handed to
  * the page through the request, where Next reads it to stamp its own scripts.
  *
  * A request with no session cookie is sent to sign-in. That is only a first, cheap turning-away:
@@ -10,16 +10,17 @@ import { buildCsp, createNonce } from './src/csp';
  * route that needs a person checks the session itself.
  *
  * Keep the Edge discipline here: no Node built-ins and no database access. Every way
- * out of this function goes through `withCsp`, so a branch added later cannot skip the header.
+ * out of this function goes through `withSecurity`, so a branch added later cannot skip the headers.
  */
 export function proxy(request: NextRequest): NextResponse {
   const nonce = createNonce();
+  // SV_URL is validated at start-up (instrumentation.ts); the proxy only reads it, and
+  // not through the configuration package, to keep to web-standard APIs.
+  const https = (process.env.SV_URL ?? '').trim().startsWith('https://');
   const csp = buildCsp({
     nonce,
     development: process.env.NODE_ENV === 'development',
-    // SV_URL is validated at start-up (instrumentation.ts); the proxy only reads it, and
-    // not through the configuration package, to keep to web-standard APIs.
-    upgradeInsecureRequests: (process.env.SV_URL ?? '').trim().startsWith('https://'),
+    upgradeInsecureRequests: https,
     // The launcher draws each app's icon from the address an operator gave; no other page loads a remote picture.
     remoteImages: request.nextUrl.pathname === '/',
   });
@@ -30,14 +31,14 @@ export function proxy(request: NextRequest): NextResponse {
     const returnTo = request.nextUrl.pathname + request.nextUrl.search;
     if (returnTo !== '/') signIn.searchParams.set('returnTo', returnTo);
     // 303, never 307: a 307 repeats the method, so a POST would be replayed at the sign-in page.
-    return withCsp(NextResponse.redirect(signIn, 303), csp);
+    return withSecurity(NextResponse.redirect(signIn, 303), csp, https);
   }
 
   const headers = new Headers(request.headers);
   headers.set('x-nonce', nonce);
   headers.set('Content-Security-Policy', csp);
 
-  return withCsp(NextResponse.next({ request: { headers } }), csp);
+  return withSecurity(NextResponse.next({ request: { headers } }), csp, https);
 }
 
 /** The pages and routes anyone may reach: sign-in and its second step, sign-up, invitation links, the password reset pages, the legal pages, better-auth's own routes, health, assets. */
@@ -76,12 +77,15 @@ function hasSessionCookie(request: NextRequest): boolean {
   );
 }
 
-function withCsp(response: NextResponse, csp: string): NextResponse {
+function withSecurity(response: NextResponse, csp: string, https: boolean): NextResponse {
   response.headers.set('Content-Security-Policy', csp);
+  for (const [name, value] of Object.entries(securityHeaders({ https }))) {
+    response.headers.set(name, value);
+  }
   return response;
 }
 
-// Everything, API routes and static files included: the policy goes on every response.
+// Everything, API routes and static files included: the policy and the headers go on every response.
 export const config = {
   matcher: '/:path*',
 };

@@ -73,3 +73,25 @@ export function buildCsp({
   if (upgradeInsecureRequests) policy.push('upgrade-insecure-requests');
   return policy.join('; ');
 }
+
+/**
+ * The headers every response carries beside the policy (core-app §3.5). None of them depends on the request:
+ *
+ * - `nosniff`: a response is the type it says it is, so an uploaded picture is never run as a script.
+ * - `X-Frame-Options`: what `frame-ancestors 'none'` says, for a browser that reads only this.
+ * - `Referrer-Policy`: another site is told where a person came from, never the path, so an invitation or
+ *   a reset address in the one they came from does not leave core.
+ * - `Permissions-Policy`: no page here asks for the camera, microphone, location or a payment, so none may.
+ *   Passkeys are left alone: they are allowed to the page's own origin by default.
+ * - `Strict-Transport-Security`: only when core is served over https, since over http a browser ignores it
+ *   and a name that has seen it on https will refuse http for a year. It names no subdomains.
+ */
+export function securityHeaders({ https }: { https: boolean }): Record<string, string> {
+  return {
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+    ...(https ? { 'Strict-Transport-Security': 'max-age=31536000' } : {}),
+  };
+}

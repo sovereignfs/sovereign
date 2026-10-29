@@ -18,7 +18,7 @@ import type { TestDatabase } from '@sovereignfs/database/testing';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AccountStates } from '../accounts/states';
 import type { Auth } from '../auth/auth';
-import { ROLE_ADMIN, ROLE_OWNER } from '../auth/roles';
+import { ROLE_OWNER } from '../auth/roles';
 import { migrateCore } from '../db/migrate';
 import {
   ACCESS_TOKEN_SECONDS,
@@ -27,10 +27,8 @@ import {
   KEY_ROTATION_SECONDS,
   REFRESH_TOKEN_SECONDS,
 } from '../oauth/provider';
-import { changeCapabilities } from '../roles/configure';
 import { SCOPE_COPY, readConsentRequest } from '../oauth/consent';
 import { signedQueryOf } from '../oauth/signed-query';
-import { changeRole } from '../roles/people';
 import { secretOf, totp } from './totp';
 import { BASE_URL, Jar, PASSWORD, authSettings, call, makeAuth, signUp } from './auth-harness';
 import {
@@ -43,6 +41,7 @@ import {
   refresh,
   registerClient,
   signInTo,
+  useDatabase,
   userInfo,
   verifyJwt,
   type RegisteredClient,
@@ -73,6 +72,7 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
     target = await createDatabase();
     db = await target.open();
     await migrateCore(db, MIGRATIONS);
+    useDatabase(db);
   });
 
   afterAll(async () => {
@@ -797,16 +797,15 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
     it('does not let a registered loopback address change its port', async () => {
       const { auth, owner } = await instance();
       const client = await registerClient(auth, owner, {
-        redirectUris: ['http://127.0.0.1:4000/cb'],
-        applicationType: 'native',
+        redirectUris: ['http://localhost:4000/cb'],
       });
       const same = await authorize(auth, owner, client, {
-        redirectUri: 'http://127.0.0.1:4000/cb',
+        redirectUri: 'http://localhost:4000/cb',
         challenge: pkce().challenge,
       });
       expect(same.code).toBeTruthy();
       const { code: issued, url } = await authorize(auth, owner, client, {
-        redirectUri: 'http://127.0.0.1:4999/cb',
+        redirectUri: 'http://localhost:4999/cb',
         challenge: pkce().challenge,
       });
       expect(issued).toBeUndefined();
@@ -1111,55 +1110,23 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
   });
 
   describe('who may register a client', () => {
-    const create = (auth: Auth, jar: Jar) =>
-      call(auth, 'POST', '/oauth2/create-client', {
-        jar,
-        body: { redirect_uris: [REDIRECT], token_endpoint_auth_method: 'none' },
-      });
-
-    it('is the owner, and an admin while the matrix gives admins client:manage', async () => {
-      const { auth, owner, person, ownerId, personId } = await instance();
-      expect((await create(auth, owner)).status).toBeLessThan(300);
-      expect((await create(auth, person)).status).toBeGreaterThanOrEqual(400);
-
-      await changeRole(db, { id: ownerId, role: ROLE_OWNER }, personId, ROLE_ADMIN);
-      expect((await create(auth, person)).status).toBeLessThan(300);
-    });
-
-    it('is nobody who is not signed in', async () => {
-      const { auth } = await instance();
-      const reply = await call(auth, 'POST', '/oauth2/create-client', {
-        body: { redirect_uris: [REDIRECT], token_endpoint_auth_method: 'none' },
-      });
-      expect(reply.status).toBeGreaterThanOrEqual(400);
-    });
-
-    it('stops being an admin’s when the owner takes client:manage away, and stays the owner’s', async () => {
-      const { auth, owner, person, ownerId, personId } = await instance();
-      await changeRole(db, { id: ownerId, role: ROLE_OWNER }, personId, ROLE_ADMIN);
-      expect((await create(auth, person)).status).toBeLessThan(300);
-      await changeCapabilities(db, { id: ownerId, role: ROLE_OWNER }, [
-        { role: ROLE_ADMIN, capability: 'client:manage', granted: false },
-      ]);
-      expect((await create(auth, person)).status).toBeGreaterThanOrEqual(400);
-      expect((await create(auth, owner)).status).toBeLessThan(300);
-    });
-
-    it('lets every operator see and manage every client, since they are the instance’s', async () => {
-      const { auth, owner, person, ownerId, personId } = await instance();
-      const made = await create(auth, owner);
-      await changeRole(db, { id: ownerId, role: ROLE_OWNER }, personId, ROLE_ADMIN);
-      const listed = await call(auth, 'GET', '/oauth2/get-clients', { jar: person, origin: null });
-      expect(listed.status).toBeLessThan(300);
-      const clients = (listed.body as unknown as { client_id: string }[]) ?? [];
-      expect(clients.map((c) => c.client_id)).toContain(made.body.client_id);
-    });
-
-    it('does not let an ordinary person list clients', async () => {
-      const { auth, owner, person } = await instance();
-      await create(auth, owner);
-      const listed = await call(auth, 'GET', '/oauth2/get-clients', { jar: person, origin: null });
-      expect(listed.status).toBeGreaterThanOrEqual(400);
+    it('is nobody over the provider’s own routes: they are switched off, and the registry is the only writer', async () => {
+      const { auth, owner } = await instance();
+      for (const [method, path] of [
+        ['POST', '/oauth2/register'],
+        ['POST', '/oauth2/create-client'],
+        ['POST', '/oauth2/update-client'],
+        ['POST', '/oauth2/delete-client'],
+        ['POST', '/oauth2/client/rotate-secret'],
+        ['POST', '/oauth2/client/rotate-keys'],
+      ] as const) {
+        const reply = await call(auth, method, path, {
+          jar: owner,
+          body: { redirect_uris: [REDIRECT], client_id: 'x' },
+        });
+        expect(reply.status, path).toBe(404);
+      }
+      expect((await db.run('select count(*) as n from oauth_clients')).rows[0]?.n).toBe(0);
     });
   });
 

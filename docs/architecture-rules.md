@@ -222,6 +222,17 @@ pointing here.
   turned off); the JWT plugin's own `/token`, which hands any session a signed
   JWT, is disabled. Claims are made by one function (`claimsFor`) for the ID token
   and userinfo alike and only from granted scopes.
+- **A client row is written by the registry and nothing else.**
+  `ClientRegistry` (`src/clients`) validates everything (`validate.ts`: addresses,
+  scopes, text), makes the client through the provider so the secret is hashed
+  and defaults apply, and writes core's own fields through the provider's adapter,
+  never through Drizzle's schema objects (the plugin's lists and objects come
+  back as text on SQLite). The provider's own routes to register, create, change,
+  delete or rotate a client are in `disabledPaths`, every method needs
+  `client:manage` read fresh from the matrix, and a test reads the source and
+  fails when anything else calls those endpoints or names the model. The
+  provider's address checks are bypassed on purpose (a placeholder address is
+  replaced straight after), because core-app §3.7.1 is the one rule set.
 - **One routine revokes tokens, and a session is ended by better-auth.**
   `revokeAllTokens` and `revokeClientTokens` (`src/oauth/revocation.ts`) update
   the tokens' `revoked` time on the caller's own transaction, with table and

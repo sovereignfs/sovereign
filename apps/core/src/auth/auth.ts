@@ -319,6 +319,14 @@ export function createAuth(
       // endpoints delete or narrow it and leave the app's refresh tokens alive.
       '/oauth2/delete-consent',
       '/oauth2/update-consent',
+      // A client is written only by the registry (`src/clients`), which applies every rule of core-app §3.7
+      // whoever asks: the provider's own endpoints for it would reach a client row around those rules.
+      '/oauth2/register',
+      '/oauth2/create-client',
+      '/oauth2/update-client',
+      '/oauth2/delete-client',
+      '/oauth2/client/rotate-secret',
+      '/oauth2/client/rotate-keys',
     ],
     plugins: [
       // Authenticator app (TOTP) with backup codes. The code sent by email or text is not offered:

@@ -284,3 +284,10 @@ on sqld, PostgreSQL and a SQLite file. What changed from the findings above:
 | (new) The signed cookie cache                                  | The authorize endpoint reads the session from the cache, so an ended or deactivated person's browser was still given an authorization code for up to 300 seconds. Core turns the cache off |
 | (new) Discovery `claims_supported`                             | Lacks `locale`, `zoneinfo` and `roles`; `advertisedMetadata.claims_supported` adds them                                                                                                    |
 | (new) `client_credentials` default                             | Still advertised and accepted unless `grantTypes` is set; set                                                                                                                              |
+
+Task 7.1 builds the registry on these. `adminCreateOAuthClient` needs the acting
+person's session cookies (without them it answers 401), so the registry takes the
+request's headers beside the actor. The provider's own rule that a `web` client
+cannot register `http` loopback, and that `http://app.localhost` is accepted for
+no client, is bypassed on purpose: the client is made with a placeholder address
+and the real ones are written through the adapter after core's own validation.

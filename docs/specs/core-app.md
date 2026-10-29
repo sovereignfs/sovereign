@@ -601,6 +601,21 @@ Operators with `client:manage` register clients in the Console.
   applies the rules above (for example, `roles` is refused for an untrusted
   client, and the trusted flag is core's to set). Launcher entries (§3.7.2) are
   stored with the client.
+- The registry is the only thing that writes a client, and every method of it
+  needs `client:manage` in the matrix in force. The provider's own routes for
+  registering, changing, deleting or rotating a client are switched off, so
+  nothing reaches a client around the rules. It says everything wrong with what
+  was entered at once, each beside its field, and makes nothing when anything is
+  wrong.
+- An address (a redirect address, a post-logout address, the back-channel
+  address, the launcher's icon and launch address) is `https`, or `http` on
+  `localhost` and `*.localhost` on a development instance; it has no user name,
+  no fragment and no wildcard. An app has up to twenty of each list, none twice.
+- A public app cannot become confidential or back: register another. Stopping
+  trust takes `roles` from the app's allowed scopes at the same time; asking for
+  `roles` for an untrusted app is refused.
+- Deleting an app removes its tokens and consents first, explicitly, then the
+  app, so the result does not depend on a database's cascade.
 
 ### 3.8 Launcher
 
@@ -861,3 +876,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-29 | §3.5: no signed cookie cache, so an ended session stops working at once everywhere, authorize included. §3.6.1: who may register a client, claims advertised in discovery, redirect addresses never followed when unregistered, the sign-in page carrying an app's request through every step, signing keys encrypted with `SV_AUTH_SECRET`, and what is not offered yet.                                                                                                                                                                                                                                                                                                                                                     |
 | 2026-10-29 | §3.6.4: where and how consent is asked, what the page shows and refuses to show, that refusing sends `access_denied`, and that `roles` is removed from an untrusted client's request and withheld from its tokens.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 2026-10-29 | §3.6.3–§3.6.5: one revocation routine on the operation's own transaction, that an authorization code issued before a deactivation gets no token, what ending a session revokes, Remove access as the only way consent is removed, how apps are told on deactivation and on ending a session in the identity pages, what the logout token carries, and what end-session refuses.                                                                                                                                                                                                                                                                                                                                               |
+| 2026-10-29 | §3.7: the registry is the only writer and needs `client:manage`; the provider's own client routes are off; what an address may be; the limits on lists; public and confidential cannot be exchanged; stopping trust takes `roles` away; deleting removes tokens and consents explicitly.                                                                                                                                                                                                                                                                                                                                                                                                                                      |

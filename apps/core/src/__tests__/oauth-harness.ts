@@ -1,5 +1,7 @@
 import { createHash, createPublicKey, randomBytes, verify } from 'node:crypto';
+import type { Database } from '@sovereignfs/database';
 import type { Auth } from '../auth/auth';
+import { ClientRegistry, type RegistryActor } from '../clients/registry';
 import { BASE_URL, call, type Jar } from './auth-harness';
 
 /** A relying party's view of core's OpenID Connect provider: what an off-the-shelf client would send. */
@@ -15,9 +17,7 @@ export type ClientOptions = {
   trusted?: boolean;
   /** `none` makes a public client, which has no secret. */
   authMethod?: 'client_secret_basic' | 'client_secret_post' | 'none';
-  grantTypes?: string[];
   postLogoutRedirectUris?: string[];
-  applicationType?: 'web' | 'native';
   /** The name shown on the consent page. */
   name?: string;
   /** Lets the app send someone to core's end-session endpoint. */
@@ -26,32 +26,52 @@ export type ClientOptions = {
   backchannelLogoutUri?: string;
 };
 
-/** Registers a client the way an operator will: through the provider's own server API, as the owner. */
+let registryDatabase: Database | undefined;
+
+/** The database the registry judges `client:manage` by and clears tokens from: the suite's own. */
+export function useDatabase(database: Database): void {
+  registryDatabase = database;
+}
+
+/** The registry the tests register clients through: development, since core's test address is http. */
+export function registryFor(auth: Auth): ClientRegistry {
+  if (!registryDatabase) throw new Error('call useDatabase(db) in the suite first');
+  return new ClientRegistry(auth, registryDatabase, { development: true });
+}
+
+/** Who is asking, as the registry sees it: the person behind a browser's cookies. */
+export async function actorOf(auth: Auth, jar: Jar): Promise<RegistryActor> {
+  const headers = new Headers({ cookie: jar.header() ?? '' });
+  const session = await auth.api.getSession({ headers });
+  if (!session) throw new Error('nobody is signed in');
+  return { user: { id: session.user.id, role: session.user.role }, headers };
+}
+
+/** Registers a client the way an operator will: through the registry, as the owner. */
 export async function registerClient(
   auth: Auth,
   owner: Jar,
   options: ClientOptions = {},
 ): Promise<RegisteredClient> {
-  const created = (await auth.api.adminCreateOAuthClient({
-    body: {
-      redirect_uris: options.redirectUris ?? [REDIRECT],
-      scope: options.scope ?? 'openid profile email roles offline_access',
-      token_endpoint_auth_method: options.authMethod ?? 'client_secret_basic',
-      grant_types: options.grantTypes ?? ['authorization_code', 'refresh_token'],
-      skip_consent: options.trusted ?? true,
-      ...(options.name ? { client_name: options.name } : {}),
-      ...(options.enableEndSession ? { enable_end_session: true } : {}),
-      ...(options.backchannelLogoutUri
-        ? { backchannel_logout_uri: options.backchannelLogoutUri }
-        : {}),
-      ...(options.applicationType ? { application_type: options.applicationType } : {}),
-      ...(options.postLogoutRedirectUris
-        ? { post_logout_redirect_uris: options.postLogoutRedirectUris }
-        : {}),
-    },
-    headers: new Headers({ cookie: owner.header() ?? '' }),
-  })) as { client_id: string; client_secret?: string };
-  return { clientId: created.client_id, secret: created.client_secret };
+  const { client, secret } = await registryFor(auth).register(await actorOf(auth, owner), {
+    name: options.name ?? 'Test app',
+    type: options.authMethod === 'none' ? 'public' : 'confidential',
+    redirectUris: options.redirectUris ?? [REDIRECT],
+    // An untrusted app may not be allowed `roles` (core-app §3.6.4), so its default leaves it out.
+    scopes: (
+      options.scope ??
+      ((options.trusted ?? true)
+        ? 'openid profile email roles offline_access'
+        : 'openid profile email offline_access')
+    ).split(' '),
+    trusted: options.trusted ?? true,
+    endSession: options.enableEndSession ?? false,
+    ...(options.postLogoutRedirectUris
+      ? { postLogoutRedirectUris: options.postLogoutRedirectUris }
+      : {}),
+    ...(options.backchannelLogoutUri ? { backchannelLogoutUri: options.backchannelLogoutUri } : {}),
+  });
+  return { clientId: client.clientId, secret };
 }
 
 export function pkce() {

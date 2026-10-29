@@ -193,6 +193,9 @@ each: `docs/architecture-rules.md`.
   is the issuer, only the code flow with PKCE `S256` exists, no client registers
   itself, redirect addresses match exactly, and its tables are checked against the
   installed plugins.
+- **A client is written only by `ClientRegistry`** (validation, the provider's
+  secret hashing, its adapter for core's fields; the provider's own write routes
+  are off), and every method needs `client:manage`.
 - **One routine revokes tokens, on the caller's own transaction; a session is
   ended through better-auth's endpoints, never by deleting its row** (the row's
   tokens would stay alive and no app would be told). Remove access is

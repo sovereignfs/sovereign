@@ -5,7 +5,7 @@
 
 ## Status
 
-📋 Planned
+⏳ In Progress
 
 ## Overview
 
@@ -59,6 +59,10 @@ right effects on tokens and the launcher.
   created; a plain user can do none of it
 - A plain `http` redirect is refused on a production instance and accepted for
   `*.localhost` on a development instance
+
+**Not here:** the Console pages and forms that call the registry (the Apps task
+in the Console epic) and the launcher page (7.2); the registry offers
+`list`, which the launcher will filter to enabled apps shown in it.
 
 #### 📋 7.2 — Launcher
 

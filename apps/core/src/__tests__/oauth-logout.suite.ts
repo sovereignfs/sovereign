@@ -26,6 +26,7 @@ import {
   refresh,
   registerClient,
   signInTo,
+  useDatabase,
   userInfo,
   verifyJwt,
   type RegisteredClient,
@@ -59,6 +60,7 @@ export function oauthLogoutSuite(createDatabase: () => Promise<TestDatabase>): v
     target = await createDatabase();
     db = await target.open();
     await migrateCore(db, MIGRATIONS);
+    useDatabase(db);
   });
   afterAll(async () => {
     await db.close().catch(() => undefined);
@@ -207,10 +209,7 @@ export function oauthLogoutSuite(createDatabase: () => Promise<TestDatabase>): v
 
     it('is for an app that has end-session switched on, and nobody else', async () => {
       const ctx = await instance();
-      const client = await registerClient(ctx.auth, ctx.owner, {
-        enableEndSession: false,
-        postLogoutRedirectUris: [POST_LOGOUT],
-      });
+      const client = await registerClient(ctx.auth, ctx.owner, { enableEndSession: false });
       const { tokens } = await signInTo(ctx.auth, ctx.person, client, { scope: 'openid' });
       network(ctx.auth);
       const reply = await endSessionRequest(ctx.auth, ctx.person, {

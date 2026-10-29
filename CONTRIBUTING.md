@@ -20,8 +20,8 @@ You need Node 24.15 or later (the exact version is in `.node-version`), pnpm 11
 and Docker (for the development sqld database, from task 0.5).
 
 ```bash
-git clone git@github.com:sovereignfs/sovereign-core.git
-cd sovereign-core
+git clone git@github.com:sovereignfs/sovereign.git
+cd sovereign
 pnpm install --frozen-lockfile   # also installs the pre-commit and pre-push hooks
 pnpm verify:push                 # everything CI will check
 ```

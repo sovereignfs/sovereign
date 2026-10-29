@@ -7,7 +7,7 @@
 Report vulnerabilities privately using GitHub Security Advisories — only
 repository maintainers can see your report:
 
-### [Report a vulnerability →](https://github.com/sovereignfs/sovereign-core/security/advisories/new)
+### [Report a vulnerability →](https://github.com/sovereignfs/sovereign/security/advisories/new)
 
 You will need a GitHub account. Your report remains private until we
 coordinate disclosure together.

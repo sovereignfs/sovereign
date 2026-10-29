@@ -110,7 +110,7 @@ release from this repository, under MPL-2.0. (Decided later: only `ui` is publis
   repository's own Pages settings are not used
 
 **Not here:** a release: nothing was published, and neither the publish nor the Storybook
-workflow has run. The old `sovereign` repository's publish workflow still exists and must be
+workflow has run. The legacy repository's publish workflow still exists and must be
 retired before the first release from here.
 
 **Dependencies:** 2.1

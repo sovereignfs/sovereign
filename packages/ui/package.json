@@ -16,12 +16,12 @@
   "license": "MPL-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sovereignfs/sovereign-core.git",
+    "url": "git+https://github.com/sovereignfs/sovereign.git",
     "directory": "packages/ui"
   },
-  "homepage": "https://github.com/sovereignfs/sovereign-core/tree/main/packages/ui#readme",
+  "homepage": "https://github.com/sovereignfs/sovereign/tree/main/packages/ui#readme",
   "bugs": {
-    "url": "https://github.com/sovereignfs/sovereign-core/issues"
+    "url": "https://github.com/sovereignfs/sovereign/issues"
   },
   "sideEffects": [
     "**/*.css"

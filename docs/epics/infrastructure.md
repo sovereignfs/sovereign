@@ -10,7 +10,7 @@
 
 ## Overview
 
-`sovereign-core` starts from a founding manifesto and the imported history of
+`sovereign` starts from a founding manifesto and the imported history of
 `packages/ui`, `packages/bridge` and `packages/mailer`. This epic turns that
 into a working pnpm + Turborepo workspace, adds `apps/core`, and makes the
 whole thing buildable, testable and deployable. The last task of each phase
@@ -202,7 +202,7 @@ database.
 
 **Deliverables:**
 
-- `sovereign-core` image (multi-stage, `node:24-alpine`), shipping its
+- `sovereign` image (multi-stage, `node:24-alpine`), shipping its
   migrations and every CLI it needs at runtime
 - Compose files: sqld (default), PostgreSQL overlay, single-container SQLite
   file

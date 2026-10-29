@@ -5,7 +5,7 @@ behaviour depend on. `AGENTS.md` carries the critical-violations summary; this
 document has the detail and the reason for each rule.
 
 Most rules below were learned in the legacy Sovereign repository, often from an
-incident, and carried over because they still apply to `sovereign-core`. Their
+incident, and carried over because they still apply here. Their
 original write-ups, with the full history, are in the legacy repository's
 `docs/architecture-rules.md` and `docs/incidents/` (as of commit `131f7585`,
 repository `sovereignfs/sovereign-legacy-v1` after the rename). Rules specific

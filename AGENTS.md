@@ -32,7 +32,7 @@ assumptions:
 - `docs/architecture-rules.md` — full detail behind every hard rule listed
   below.
 - `docs/design-system.md` — the `@sovereignfs/ui` model.
-- `docs/releasing.md` — what is published to npm and how it is released.
+- `docs/releasing.md` — what is published (npm, the image) and how it is released.
 - `.agents/skills/sv-*` — task lifecycle skills (`sv-task-start`,
   `sv-task-complete`, `sv-verify`, `sv-security-check`, `sv-update-task-docs`,
   `sv-create-pr`, `sv-ui-design`). Byte-identical copies live in

@@ -253,7 +253,9 @@ commit subject and as the release tag:
 | Any other package   | `<slug>-vX.Y.Z`      |
 
 Use the package slug from the workspace path unless a release workflow defines a
-more specific slug. The bump rules themselves are in `AGENTS.md`.
+more specific slug. The bump rules themselves are in `AGENTS.md`. `core-vX.Y.Z` is
+a commit subject only, never a tag: the image is released from the root `vX.Y.Z`
+tag ([docs/releasing.md](releasing.md)).
 
 ---
 

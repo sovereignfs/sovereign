@@ -109,7 +109,7 @@ describe('the compose files', () => {
   const defaults = compose('docker-compose.yml');
 
   it('run core from the published image, buildable from this checkout, with sqld as the default database', () => {
-    expect(defaults.services.core?.image).toContain('ghcr.io/sovereignfs/sovereign-core');
+    expect(defaults.services.core?.image).toContain('ghcr.io/sovereignfs/sovereign');
     expect(defaults.services.core?.environment?.SV_DB_DIALECT).toBe('sqld');
     expect(defaults.services.core?.environment?.SV_SQLD_URL).toBe('http://sqld:8080');
     expect(defaults.services.core?.environment?.SV_SQLD_ADMIN_URL).toBe('http://sqld:8081');

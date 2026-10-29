@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 #
-# Sovereign Core, as one image: `docker build -t sovereign-core .` from the repository's root.
+# Sovereign Core, as one image: `docker build -t sovereign .` from the repository's root.
 #
 # - Multi-stage on node:24-alpine. The last stage holds only what Next traced for the running server, the
 #   migrations it applies when it starts, and nothing else: no source, no dev dependencies, no package manager.

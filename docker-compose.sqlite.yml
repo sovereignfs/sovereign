@@ -5,11 +5,11 @@
 # The database is a file in the `core-data` volume, so back it up by copying that volume (or the file) while core is
 # stopped, or with `sqlite3 core.db ".backup"`. It cannot be shared by more than one core, so use sqld or PostgreSQL
 # for anything bigger. See docker-compose.yml for the rest (the address, the secret, the hairpin note).
-name: sovereign-core
+name: sovereign
 
 services:
   core:
-    image: ${SV_IMAGE:-ghcr.io/sovereignfs/sovereign-core:latest}
+    image: ${SV_IMAGE:-ghcr.io/sovereignfs/sovereign:latest}
     build:
       context: .
       dockerfile: Dockerfile

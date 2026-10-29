@@ -13,11 +13,11 @@
 # that is already true, since core listens there. Behind a reverse proxy on a public name, make the name reach the
 # proxy from inside the container too: give `core` `extra_hosts: ["core.example.com:host-gateway"]` when the proxy
 # is on the same host, or a network alias on the proxy's network (docs/deploying.md).
-name: sovereign-core
+name: sovereign
 
 services:
   core:
-    image: ${SV_IMAGE:-ghcr.io/sovereignfs/sovereign-core:latest}
+    image: ${SV_IMAGE:-ghcr.io/sovereignfs/sovereign:latest}
     build:
       context: .
       dockerfile: Dockerfile

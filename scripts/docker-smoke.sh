@@ -9,7 +9,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-export SV_IMAGE="${SV_IMAGE:-sovereign-core:smoke}"
+export SV_IMAGE="${SV_IMAGE:-sovereign:smoke}"
 export SV_URL=http://localhost:3000
 export SV_PORT=3000
 SV_AUTH_SECRET="$(openssl rand -base64 48)"

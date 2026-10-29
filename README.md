@@ -57,8 +57,8 @@ You need Node 24.15 or later (`.node-version` pins the exact version), pnpm 11,
 and Docker (for the development database and the image).
 
 ```bash
-git clone git@github.com:sovereignfs/sovereign-core.git
-cd sovereign-core
+git clone git@github.com:sovereignfs/sovereign.git
+cd sovereign
 pnpm install --frozen-lockfile   # also installs the pre-commit and pre-push hooks
 pnpm verify:push                 # format, lint, typecheck, design tokens, doc links and tests
 ```

@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Please search existing issues before filing to avoid duplicates.
-        For security vulnerabilities, use [GitHub Security Advisories](https://github.com/sovereignfs/sovereign-core/security/advisories/new) — do not open a public issue.
+        For security vulnerabilities, use [GitHub Security Advisories](https://github.com/sovereignfs/sovereign/security/advisories/new) — do not open a public issue.
 
   - type: input
     id: version

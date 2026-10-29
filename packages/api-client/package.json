@@ -7,12 +7,12 @@
   "license": "MPL-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sovereignfs/sovereign-core.git",
+    "url": "git+https://github.com/sovereignfs/sovereign.git",
     "directory": "packages/api-client"
   },
-  "homepage": "https://github.com/sovereignfs/sovereign-core/tree/main/packages/api-client#readme",
+  "homepage": "https://github.com/sovereignfs/sovereign/tree/main/packages/api-client#readme",
   "bugs": {
-    "url": "https://github.com/sovereignfs/sovereign-core/issues"
+    "url": "https://github.com/sovereignfs/sovereign/issues"
   },
   "publishConfig": {
     "access": "public",

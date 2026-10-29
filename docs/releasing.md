@@ -1,4 +1,9 @@
-# Releasing packages
+# Releasing
+
+Two things are released from this repository: a package to npm, and core's image to the GitHub Container Registry
+([below](#releasing-the-image)).
+
+## Packages
 
 One package is published to npm, under the name it has always had:
 
@@ -11,11 +16,11 @@ included**: it is release-ready (licence, files, README) but marked `private`, s
 publish it by accident. To publish it later, remove `"private"` from its `package.json`, add its
 tag and directory to `publish.yml` and a case for it to `scripts/__tests__/publish-workflow.test.ts`,
 and check the `@sovereignfs` scope on npm is yours: it has never been published, so its first
-release claims the name. `apps/core` is a deployable, not a package. The published package is
+release claims the name. `apps/core` is a deployable, not a package: it is released as an image. The published package is
 MPL-2.0 so that apps under any licence can use it (the other packages are MPL-2.0 too, for when
 they follow); `apps/core` and the repository are AGPL-3.0-or-later ([README](../README.md#licence)).
 
-## What a release is made of
+### What a release is made of
 
 - **A version, set in the pull request.** The package's own `version` follows semver by what
   changed in it ([AGENTS.md](../AGENTS.md) has the policy: `ui` is a published
@@ -27,7 +32,7 @@ they follow); `apps/core` and the repository are AGPL-3.0-or-later ([README](../
 - **Entry points in `dist/`.** In the repository `exports` point at `src/`; `publishConfig`
   repoints them at `dist/` when the package is packed.
 
-## Before releasing
+### Before releasing
 
 ```bash
 pnpm build
@@ -40,7 +45,7 @@ and runs the real `pnpm publish --dry-run`. It publishes nothing. CI runs it on 
 request that changes code, and a test (`scripts/__tests__/licences.test.ts`) keeps each
 package's `package.json` and `LICENSE` in agreement.
 
-## Releasing
+### Releasing a package
 
 Pushing a tag releases the package: `ui-vX.Y.Z` releases `@sovereignfs/ui`.
 `.github/workflows/publish.yml` does the rest, and **publishes
@@ -71,8 +76,38 @@ first time the name is claimed on npm, so check the scope is yours before taggin
 If the workflow itself is broken, a maintainer can release by hand from a clean checkout of
 `main` (`pnpm install --frozen-lockfile && pnpm build && pnpm packages:check`, then
 `pnpm --filter @sovereignfs/ui publish --access public`, with npm's second factor), and tag the
-commit afterwards. The old `sovereign` repository's publish workflow must be retired before the
+commit afterwards. The legacy repository's publish workflows must be retired before the
 first release from here, so that two places cannot release the same package.
+
+## Releasing the image
+
+Pushing a version tag releases the image: `vX.Y.Z` publishes `ghcr.io/sovereignfs/sovereign` for `linux/amd64` and
+`linux/arm64`, tagged `X.Y.Z`, `X.Y` and `latest`. `.github/workflows/publish-image.yml` does the rest, and **publishes
+nothing unless every one of these holds**:
+
+1. the full CI passes on the tagged commit, whose `image` job boots every compose setup from the image, and whose
+   acceptance suite runs on each database;
+2. the tagged commit is on `main`, so a tag put on a branch by mistake cannot release;
+3. the tag is a plain `vX.Y.Z` that matches the root `package.json`.
+
+The build uses no cache, so nothing it publishes depends on what another run stored, and it attaches a provenance
+statement and a software bill of materials. It authenticates with the run's own `GITHUB_TOKEN`, so there is no secret to
+keep or replace. The `arm64` half is built under emulation, which makes a release slow: most of an hour is normal.
+
+The image carries the platform version, the root `package.json`, bumped in the `vX.Y.Z` commit. `apps/core`'s own version
+keeps its `core-vX.Y.Z` commits but is no tag and releases nothing.
+
+To release:
+
+1. Land the commit that carries the root version bump on `main`.
+2. Tag that commit and push the tag: `git tag v1.2.3 && git push origin v1.2.3`.
+3. Watch the Publish image run in the Actions tab.
+4. From somewhere that has never logged in to GitHub's registry, check it arrived:
+   `docker pull ghcr.io/sovereignfs/sovereign:1.2.3`.
+
+A published version is not replaced. If a release is bad, fix it and release the next version, and say so in
+`docs/upgrade.md` if operators need to act. On the first release, check the package's visibility in the
+organization's Packages settings: it must be public for the `docker pull` above to work.
 
 ## Storybook
 

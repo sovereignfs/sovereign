@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Phase 1 acceptance: the browser suite for core-app §3.17, run against a built core.",
+  "description": "Phase 1 acceptance: the browser suite for core-app \u00a73.17, run against a built core.",
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "e2e": "playwright test",
@@ -11,6 +11,7 @@
   },
   "devDependencies": {
     "@playwright/test": "catalog:",
+    "@sovereignfs/config": "workspace:*",
     "@sovereignfs/database": "workspace:*",
     "@sovereignfs/tsconfig": "workspace:*",
     "@types/node": "catalog:",

@@ -42,6 +42,26 @@ export async function signIn(
   await expect(page).not.toHaveURL(/\/sign-in/);
 }
 
+/**
+ * An invited person joins: the owner (signed in on `ownerPage`) invites the address, and the person follows the link
+ * in a browser of their own and signs up. Returns them signed in.
+ */
+export async function join(
+  browser: Browser,
+  ownerPage: Page,
+  who: Who,
+): Promise<{ context: BrowserContext; page: Page }> {
+  await ownerPage.goto('/console/invites');
+  await ownerPage.getByLabel('Email address').fill(who.email);
+  await ownerPage.getByRole('button', { name: 'Invite' }).click();
+  const link = await ownerPage.locator('code').filter({ hasText: '/invite/' }).first().innerText();
+  const person = await newPerson(browser);
+  await person.page.goto(link);
+  await signUp(person.page, who, person.page.url());
+  await expect(heading(person.page)).toHaveText('Apps');
+  return person;
+}
+
 export async function signOut(page: Page): Promise<void> {
   await page.goto('/');
   await page.getByRole('button', { name: 'Sign out' }).click();

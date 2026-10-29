@@ -10,7 +10,6 @@ const stranger = person('Sam');
 test.describe.configure({ mode: 'serial' });
 
 test('§3.17.2: the first account signs up and becomes the owner', async ({ page }) => {
-  world.reset();
   await signUp(page, owner);
   // Signed in: the launcher is the home page.
   await expect(heading(page)).toHaveText('Apps');

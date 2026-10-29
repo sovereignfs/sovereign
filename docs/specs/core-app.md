@@ -826,6 +826,18 @@ closing them returns there (§1.3).
   another signs that browser out at its next request. "Sign out everywhere
   else" ends all but the one in use.
 
+- **Connected apps** (`/connected-apps`) lists the apps the signed-in person has
+  allowed, each with what it can do in the same plain sentences consent used
+  (§3.6.4), and when they first allowed it. An app that asked for more later is
+  one app, with everything it was allowed. It is read for the session's own
+  account only: nothing in a request names whose apps to list. An app an
+  operator trusts is never asked about, holds no consent and is not listed;
+  the page says so when it is empty. **Remove access** asks first, says that the
+  app stops working at once and will ask again, and then does what §3.6.4
+  describes in one step (the consent and every token the app holds for the
+  account), for the session's own account and the app named, and nothing else.
+  A removal that finds nothing says there was nothing to remove.
+
 ### 3.12 Console: instance settings
 
 | Setting                                        | Capability                   | Notes                                                                                       |
@@ -1043,3 +1055,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-29 | §3.2.3, §3.2.1: where the owner edits the matrix and hands over ownership, that the owner has no boxes, that owner-only capabilities are listed but never offered, that the whole table is saved as it was shown, and what the hand-over page asks and shows.                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | 2026-10-29 | §3.7.3: where apps are added, changed, switched off and on, given a new secret and deleted in the Console; that a secret is shown once and only in the answer to the request that made it; that each thing wrong is shown beside its field; what each action asks and says first; and that "client" appears only in the technical settings.                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-10-29 | §3.8: what the launcher page holds, that only a tile's own fields reach it, search by name, the icon drawn from the name, the empty states, and that only this page may load pictures from other addresses.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-10-29 | §3.11: what Connected apps lists and for whom, that an app asked about twice is one app, that an app an operator trusts is not listed, and what Remove access asks and says.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |

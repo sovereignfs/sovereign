@@ -13,6 +13,7 @@ import { AccountStates } from '../accounts/states';
 import type { Auth } from '../auth/auth';
 import { migrateCore } from '../db/migrate';
 import { planLogoutNotices, revokeOnDeactivation, sendLogoutNotices } from '../oauth/logout';
+import { listConnectedApps } from '../oauth/connected';
 import { removeAccess, revokeAllTokens, revokeClientTokens, stamp } from '../oauth/revocation';
 import { endOtherSessions, endSession } from '../sessions/sessions';
 import { BASE_URL, Jar, PASSWORD, call, makeAuthWithTasks, signUp } from './auth-harness';
@@ -637,6 +638,46 @@ export function oauthLogoutSuite(createDatabase: () => Promise<TestDatabase>): v
       });
       expect(again.code).toBeUndefined();
       expect(again.url?.pathname).toBe('/consent');
+    });
+
+    it('lists what a person allowed, in their words, for them alone, until access is removed', async () => {
+      const ctx = await instance();
+      const client = await registerClient(ctx.auth, ctx.owner, {
+        name: 'Notes',
+        trusted: false,
+        scope: 'openid profile email',
+      });
+      const { auth, person, personId } = ctx;
+      expect(await listConnectedApps(db, personId)).toEqual([]);
+      const first = await authorize(auth, person, client, {
+        scope: 'openid profile email',
+        challenge: pkce().challenge,
+      });
+      const consented = await call(auth, 'POST', '/oauth2/consent', {
+        jar: person,
+        body: { accept: true, oauth_query: signedQueryFor(first.location as string) },
+      });
+      expect(consented.status).toBeLessThan(400);
+
+      expect(await listConnectedApps(db, personId)).toEqual([
+        {
+          clientId: client.clientId,
+          name: 'Notes',
+          permissions: expect.arrayContaining([
+            'Recognise you each time you sign in',
+            'See your name, picture, language and time zone',
+            'See your email address',
+          ]) as string[],
+          since: expect.any(Number) as number,
+        },
+      ]);
+      const ownerId = String(
+        (await db.run("select id from users where role = 'platform:owner'")).rows[0]?.id,
+      );
+      expect(await listConnectedApps(db, ownerId)).toEqual([]);
+
+      await removeAccess(db, personId, client.clientId);
+      expect(await listConnectedApps(db, personId)).toEqual([]);
     });
 
     it('removes one app’s access and no other’s, and no other person’s', async () => {

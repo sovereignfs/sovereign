@@ -213,6 +213,9 @@ each: `docs/architecture-rules.md`.
 - **The launcher (`/`) reads apps through `listLauncherApps`** (tile fields only)
   after checking `launcher:access`; **only `/` may load pictures from other
   addresses** (`remoteImages` in `buildCsp`).
+- **Connected apps are read and removed for the session's own account** (never
+  one named in a request); Remove access is `removeAccess`, and nothing else
+  removes a consent.
 - **Every Console page calls `requireConsole` itself** (a test fails when one does
   not), and answers someone who may not enter with a page that is not there.
 - **A client is written only by `ClientRegistry`** (validation, the provider's

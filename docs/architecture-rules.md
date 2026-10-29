@@ -285,6 +285,13 @@ pointing here.
   (and `http://localhost:*` on a development instance) to `img-src` for the
   path `/` alone, since the icon is an address an operator gave; every other
   path keeps `'self' blob: data:`, and no other directive changes.
+- **A person's connected apps are read and removed for the session's own account
+  only.** `listConnectedApps` (`src/oauth/connected.ts`) takes the account from
+  the session the page checked, never from a request, reads the consent's scopes
+  through the layers the provider stored them in (a list in JSON text inside JSON
+  text on SQLite and sqld, an array on PostgreSQL), and says them in the words
+  consent used. `removeAccessAction` asks for `profile:manage` itself, first, and
+  calls `removeAccess` with the session's account and the app named.
 - **Every Console page checks for itself, and shows a page that is not there to
   someone who may not enter.** `requireConsole` (`src/console/guard.ts`) asks for
   a session, `console:access` and the capability the page needs, judged by the

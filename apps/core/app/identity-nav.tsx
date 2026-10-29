@@ -9,6 +9,7 @@ const PAGES = [
   { label: 'Profile', href: '/profile' },
   { label: 'Security', href: '/security' },
   { label: 'Preferences', href: '/preferences' },
+  { label: 'Connected apps', href: '/connected-apps' },
 ];
 
 export function IdentityNav() {

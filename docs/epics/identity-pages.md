@@ -90,7 +90,7 @@ launcher); until then the pages are ordinary pages under Profile and Security.
 `users.timezone` and `users.locale`), and capturing the browser's language at
 sign-up.
 
-#### 📋 9.4 — Connected apps
+#### ✅ 9.4 — Connected apps
 
 **Goal:** A person sees which apps they have allowed and can remove an app's
 access.
@@ -110,6 +110,10 @@ access.
 
 - After Remove access, the app's refresh token is rejected and the next
   sign-in asks for consent again
+
+**Not here:** a list of trusted apps (they are never asked about, so there is
+nothing the person agreed to), narrowing what an app may do without removing it,
+and telling the app that its access was removed.
 
 #### 📋 9.5 — Delete account
 

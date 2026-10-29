@@ -12,6 +12,15 @@ body {
   padding: 0;
 }
 
+/* A form control does not take its font from the page by default: it falls back to the system's. The typeface
+   is the design system's everywhere. */
+input,
+textarea,
+select,
+button {
+  font-family: inherit;
+}
+
 body {
   font-family: var(--sv-font-family);
   color: var(--sv-color-text-primary);

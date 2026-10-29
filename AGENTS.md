@@ -235,6 +235,9 @@ each: `docs/architecture-rules.md`.
   or an app's callback is requested twice with one authorization code. **Every
   response carries the hardening headers** (`securityHeaders`, from the proxy's
   one exit), HSTS over https only.
+- **The typeface is Hanken Grotesk, shipped by `@sovereignfs/ui`** (`tokens/fonts.css`,
+  loaded by `tokens.css`; never fetched from another site), and CSS names a family only
+  through `var(--sv-font-family…)` or `inherit` (`pnpm design:tokens:check` fails otherwise).
 - **Every signed-in page has the one `AccountHeader`** (from its layout: the launcher,
   the identity pages, the Console), a missing or failed page has `not-found.tsx` /
   `error.tsx`, and going to another page is a `ButtonLink`: no page is a dead end

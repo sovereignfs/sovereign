@@ -172,3 +172,33 @@ test('nobody can register an app by calling the provider, signed in or not', asy
   expect(signedIn.status()).toBeGreaterThanOrEqual(400);
   await uma.context.close();
 });
+
+test('the typeface is Hanken Grotesk, served by core itself, and no page asks another site for anything', async ({
+  page,
+}) => {
+  const requested: string[] = [];
+  page.on('request', (request) => requested.push(request.url()));
+  await page.goto('/sign-in');
+  const loaded = await page.evaluate(async () => {
+    await document.fonts.ready;
+    return [...document.fonts]
+      .filter((face) => face.status === 'loaded')
+      .map((face) => face.family);
+  });
+  expect(loaded).toContain('Hanken Grotesk');
+  const families = await page.evaluate(() =>
+    ['body', 'h1', 'input', 'button'].map((selector) =>
+      getComputedStyle(document.querySelector(selector) as Element).fontFamily.replace(/"/g, "'"),
+    ),
+  );
+  for (const family of families) {
+    expect(family).toBe(
+      "'Hanken Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    );
+  }
+  expect(requested.some((url) => /hanken-grotesk.*\.woff2/.test(url))).toBe(true);
+  // Every request, the font's included, went to core: nothing here tells another site who is reading.
+  expect(requested.filter((url) => !url.startsWith(CORE_URL) && !url.startsWith('data:'))).toEqual(
+    [],
+  );
+});

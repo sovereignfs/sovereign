@@ -96,6 +96,7 @@ export function settingsSuite(createDatabase: () => Promise<TestDatabase>): void
         '0008_locale',
         '0009_capability_overrides',
         '0010_oidc_provider',
+        '0011_instance_images',
       ]);
     });
   });

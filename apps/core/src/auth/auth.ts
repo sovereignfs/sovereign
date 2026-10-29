@@ -8,6 +8,7 @@ import { twoFactor } from 'better-auth/plugins/two-factor';
 import * as postgresSchema from '../db/schema/postgres';
 import * as sqliteSchema from '../db/schema/sqlite';
 import { hasValidInvite, markInvitesAccepted } from '../invites';
+import { advancedCookieOptions } from './cookies';
 import { passwordPolicyMessage, passwordProblems, type PasswordPolicy } from './password-policy';
 import type { AuthMail } from './mail';
 import { isFirstAccount, type RegistrationPolicy } from './registration';
@@ -390,7 +391,9 @@ export function createAuth(
       // Never off: better-auth switches the origin check off by itself when NODE_ENV is "test".
       disableOriginCheck: false,
       disableCSRFCheck: false,
-      useSecureCookies: settings.secureCookies,
+      // `__Host-` names while core is on its own host over https, `__Secure-` when a cookie domain shares them, and
+      // none over http (src/auth/cookies.ts).
+      ...advancedCookieOptions({ secure: settings.secureCookies, domain: settings.cookieDomain }),
       backgroundTasks: { handler: background },
       // Without trusted proxies better-auth believes only a single-address X-Forwarded-For, and
       // gives every other request one shared limit; it never believes the leftmost of a chain.

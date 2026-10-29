@@ -1,9 +1,10 @@
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-async function loadProxy(url: string) {
+async function loadProxy(url: string, cookieDomain?: string) {
   vi.resetModules();
   vi.stubEnv('SV_URL', url);
+  if (cookieDomain !== undefined) vi.stubEnv('SV_AUTH_COOKIE_DOMAIN', cookieDomain);
   return import('../../proxy');
 }
 
@@ -246,16 +247,76 @@ describe('proxy', () => {
   });
 
   describe('with a session cookie', () => {
-    it.each(['better-auth.session_token', '__Secure-better-auth.session_token'])(
-      'lets a request with %s through (the page verifies it)',
-      async (name) => {
-        const { proxy } = await loadProxy('http://localhost:3000');
-        const response = proxy(
-          new NextRequest('http://localhost:3000/', { headers: { cookie: `${name}=x` } }),
-        );
-        expect(response.status).toBe(200);
+    const through = async (
+      url: string,
+      cookieDomain: string | undefined,
+      name: string,
+    ): Promise<number> => {
+      const { proxy } = await loadProxy(url, cookieDomain);
+      return proxy(new NextRequest(`${url}/`, { headers: { cookie: `${name}=x` } })).status;
+    };
+
+    // The name is the one this instance sets (src/auth/cookies.ts), and only that one: better-auth would not read a
+    // cookie under another name as a session either, and a subdomain's planted one is turned away at the door.
+    it.each([
+      ['over http', 'http://localhost:3000', undefined, 'better-auth.session_token'],
+      [
+        'over https on its own host',
+        'https://core.example.com',
+        undefined,
+        '__Host-better-auth.session_token',
+      ],
+      [
+        'over https with a cookie domain',
+        'https://core.example.com',
+        'example.com',
+        '__Secure-better-auth.session_token',
+      ],
+    ])(
+      'lets a request through with the session cookie %s (the page verifies it)',
+      async (_, url, domain, name) => {
+        expect(await through(url, domain, name)).toBe(200);
       },
     );
+
+    it('reads SV_URL as the configuration does, so a differently written one still finds the cookie', async () => {
+      for (const url of ['HTTPS://Core.Example.com', 'HTTPS://core.example.com:8443']) {
+        expect(await through(url, undefined, '__Host-better-auth.session_token'), url).toBe(200);
+        expect(await through(url, undefined, 'better-auth.session_token'), url).toBe(303);
+      }
+    });
+
+    it('treats a blank cookie domain as unset, as the configuration does', async () => {
+      expect(
+        await through('https://core.example.com', '', '__Host-better-auth.session_token'),
+      ).toBe(200);
+      expect(
+        await through('https://core.example.com', '  ', '__Secure-better-auth.session_token'),
+      ).toBe(303);
+    });
+
+    it.each([
+      [
+        'over http',
+        'http://localhost:3000',
+        undefined,
+        ['__Host-better-auth.session_token', '__Secure-better-auth.session_token'],
+      ],
+      [
+        'over https on its own host',
+        'https://core.example.com',
+        undefined,
+        ['better-auth.session_token', '__Secure-better-auth.session_token'],
+      ],
+      [
+        'over https with a cookie domain',
+        'https://core.example.com',
+        'example.com',
+        ['better-auth.session_token', '__Host-better-auth.session_token'],
+      ],
+    ])('turns away a session cookie under another name %s', async (_, url, domain, names) => {
+      for (const name of names) expect(await through(url, domain, name), name).toBe(303);
+    });
 
     it('does not take another cookie, or the session_data cache, for a session', async () => {
       const { proxy } = await loadProxy('http://localhost:3000');

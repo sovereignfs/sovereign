@@ -4,6 +4,7 @@ import {
   requireCapability,
   requireSameOrigin,
 } from '../../../../src/auth/authorize';
+import { removalAttributes, sessionCacheCookieNames } from '../../../../src/auth/cookies';
 import { getAuthSettings } from '../../../../src/auth/settings';
 import { getDatabase } from '../../../../src/database';
 import { ImageError } from '../../../../src/images/validate';
@@ -11,17 +12,11 @@ import { AvatarStore, readLimited } from '../../../../src/profile/avatars';
 
 export const dynamic = 'force-dynamic';
 
-/** better-auth's session cache cookie, under both of its names: a changed picture must not be hidden by it. */
-const CACHE_COOKIES = ['better-auth.session_data', '__Secure-better-auth.session_data'];
-
 function withFreshSession(response: NextResponse): NextResponse {
   const { cookieDomain } = getAuthSettings();
-  for (const name of CACHE_COOKIES) {
-    response.cookies.set(name, '', {
-      maxAge: 0,
-      path: '/',
-      ...(cookieDomain ? { domain: cookieDomain } : {}),
-    });
+  // better-auth's session cache cookie, under every name it can have: a changed picture must not be hidden by it.
+  for (const name of sessionCacheCookieNames()) {
+    response.cookies.set(name, '', removalAttributes(name, cookieDomain));
   }
   response.headers.set('cache-control', 'no-store');
   return response;

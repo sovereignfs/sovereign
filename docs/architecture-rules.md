@@ -444,10 +444,21 @@ pointing here.
   `search_path` names (each test file gets its own). `pnpm --filter
 @sovereignfs/core db:generate` strips the qualifier, and a test fails if one
   is left.
-- **Self-mutations of the profile clear both session-data cookie variants**
-  (`better-auth.session_data` and `__Secure-better-auth.session_data`), or the
-  cookie cache keeps serving the old values. The cache is off now and none is set,
-  but the clearing stays, so turning it on cannot bring stale values back.
+- **Self-mutations of the profile clear every session-data cookie variant**
+  (`better-auth.session_data`, `__Secure-better-auth.session_data` and
+  `__Host-better-auth.session_data`), or the cookie cache keeps serving the old
+  values. The cache is off now and none is set, but the clearing stays, so turning
+  it on cannot bring stale values back. A prefixed cookie is removed with the
+  attributes its prefix needs (`removalAttributes`), or a browser ignores the removal.
+- **Core's cookies are host-only unless a cookie domain is set, and their names are
+  decided in `src/auth/cookies.ts` alone.** Over https with `SV_AUTH_COOKIE_DOMAIN`
+  unset they carry `__Host-`, which a browser refuses unless the cookie is `Secure`,
+  has `Path=/` and has no `Domain`, so an app on a subdomain cannot plant a cookie
+  that core reads as its own (cookie tossing). better-auth knows only `__Secure-`,
+  so its own prefix is turned off for these and the name is given to it
+  (`advancedCookieOptions`). better-auth's options, the proxy and the routes that
+  clear a cookie all read the one module, and a test fails when another file names
+  a cookie. The proxy accepts the one name the instance sets, not a list.
 - **Server-to-server calls to better-auth send an `Origin` equal to the auth
   base URL**, or its CSRF check answers 403.
 - **Timing-safe comparison for every key or token**: `timingSafeEqual` on

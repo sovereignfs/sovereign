@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { sessionCookieName } from './src/auth/cookies';
 import { buildCsp, createNonce, securityHeaders } from './src/csp';
 
 /**
@@ -7,7 +8,8 @@ import { buildCsp, createNonce, securityHeaders } from './src/csp';
  *
  * A request with no session cookie is sent to sign-in. That is only a first, cheap turning-away:
  * the cookie is not verified here (the proxy cannot reach the database), so every page and
- * route that needs a person checks the session itself.
+ * route that needs a person checks the session itself. Only the name this instance sets counts: a cookie
+ * under another one is not a session, and better-auth would not read it as one.
  *
  * Keep the Edge discipline here: no Node built-ins and no database access. Every way
  * out of this function goes through `withSecurity`, so a branch added later cannot skip the headers.
@@ -16,7 +18,7 @@ export function proxy(request: NextRequest): NextResponse {
   const nonce = createNonce();
   // SV_URL is validated at start-up (instrumentation.ts); the proxy only reads it, and
   // not through the configuration package, to keep to web-standard APIs.
-  const https = (process.env.SV_URL ?? '').trim().startsWith('https://');
+  const https = isHttps(process.env.SV_URL);
   const csp = buildCsp({
     nonce,
     development: process.env.NODE_ENV === 'development',
@@ -25,7 +27,14 @@ export function proxy(request: NextRequest): NextResponse {
     remoteImages: request.nextUrl.pathname === '/',
   });
 
-  if (!isPublic(request.nextUrl.pathname) && !hasSessionCookie(request)) {
+  // Read from the environment like SV_URL, and not through the configuration package. Whether the cookie domain is
+  // set decides the cookie's name (src/auth/cookies.ts), and a blank value is unset, as it is there.
+  const sessionCookie = sessionCookieName({
+    secure: https,
+    domain: process.env.SV_AUTH_COOKIE_DOMAIN?.trim() || undefined,
+  });
+
+  if (!isPublic(request.nextUrl.pathname) && !request.cookies.has(sessionCookie)) {
     // SV_URL, not the request's own address: behind a reverse proxy that is an internal one.
     const signIn = new URL('/sign-in', process.env.SV_URL);
     const returnTo = request.nextUrl.pathname + request.nextUrl.search;
@@ -39,6 +48,19 @@ export function proxy(request: NextRequest): NextResponse {
   headers.set('Content-Security-Policy', csp);
 
   return withSecurity(NextResponse.next({ request: { headers } }), csp, https);
+}
+
+/**
+ * Whether core is served over https, read as the configuration reads it: SV_URL is parsed, not matched as text, so
+ * `HTTPS://Core.Example.com` is https here as well. The cookie's name depends on it (src/auth/cookies.ts), and a proxy that
+ * disagreed with better-auth would look for a name nobody sets and send every signed-in person back to sign-in.
+ */
+function isHttps(url: string | undefined): boolean {
+  try {
+    return new URL((url ?? '').trim()).protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 /** The pages and routes anyone may reach: sign-in and its second step, sign-up, invitation links, the password reset pages, the legal pages, better-auth's own routes, health, assets. */
@@ -72,14 +94,6 @@ function isPublic(pathname: string): boolean {
     // The icons an instance has until it sets a favicon of its own.
     pathname.startsWith('/icons/') ||
     pathname === '/favicon.ico'
-  );
-}
-
-/** Whether better-auth's session cookie is present, under either of its names (secure or not). */
-function hasSessionCookie(request: NextRequest): boolean {
-  return (
-    request.cookies.has('better-auth.session_token') ||
-    request.cookies.has('__Secure-better-auth.session_token')
   );
 }
 

@@ -82,7 +82,8 @@ Then, in `.env`:
 
 **Leave `SV_AUTH_COOKIE_DOMAIN` unset**, also when apps run on subdomains of core's name. Apps sign in through core and
 need no shared cookie. Setting a parent domain sends core's session cookie, which signs a person in to core, to every
-host under that domain, whoever runs it.
+host under that domain, whoever runs it. Left unset, and over https, core's cookies are host-only (the `__Host-` prefix):
+a browser refuses to let any other host, an app on a subdomain included, set one that core would read as its own.
 
 With another proxy the same things apply: forward to port 3000, pass `Host` and `X-Forwarded-For`, and leave `/sw.js` and
 `/manifest.webmanifest` uncached.

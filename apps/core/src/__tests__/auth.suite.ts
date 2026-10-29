@@ -438,9 +438,76 @@ export function authSuite(createDatabase: () => Promise<TestDatabase>): void {
       expect(cookie).not.toMatch(/Domain=/i);
     });
 
-    it('is Secure, under the secure name, when core is served over https', async () => {
+    // A browser keeps a `__Host-` cookie only if it is Secure, has Path=/ and has no Domain. A cookie that fails
+    // that is dropped silently, and nobody could sign in, so every one of those is held here.
+    describe('over https on its own host', () => {
       const baseUrl = 'https://core.example.com';
-      const a = makeAuth(db, { SV_URL: baseUrl });
+      const HOST_SESSION = '__Host-better-auth.session_token';
+
+      it('is a host-only cookie: the __Host- name, Secure, Path=/, and no Domain', async () => {
+        const a = makeAuth(db, { SV_URL: baseUrl });
+        const reply = await call(a, 'POST', '/sign-up/email', {
+          baseUrl,
+          body: { name: 'Ada', email: freshEmail(), password: PASSWORD, agreedToTerms: true },
+        });
+        expect(reply.status).toBe(200);
+        const cookie = reply.setCookies.find((c) => c.includes('session_token=')) ?? '';
+        expect(cookie).toMatch(new RegExp(`^${HOST_SESSION}=`));
+        expect(cookie).toMatch(/;\s*Secure/i);
+        expect(cookie).toMatch(/;\s*Path=\//i);
+        expect(cookie).toMatch(/HttpOnly/i);
+        expect(cookie).toMatch(/SameSite=Lax/i);
+        expect(cookie).not.toMatch(/Domain=/i);
+      });
+
+      it('is read back under that name, and signing out clears it in a way a browser accepts', async () => {
+        const a = makeAuth(db, { SV_URL: baseUrl });
+        const jar = new Jar();
+        const email = freshEmail();
+        await call(a, 'POST', '/sign-up/email', {
+          baseUrl,
+          jar,
+          body: { name: 'Ada', email, password: PASSWORD, agreedToTerms: true },
+        });
+        expect(jar.get(HOST_SESSION)).toBeDefined();
+        expect(signedInAs(await call(a, 'GET', '/get-session', { baseUrl, jar }))).toMatchObject({
+          email,
+        });
+
+        const out = await call(a, 'POST', '/sign-out', { baseUrl, jar, body: {} });
+        expect(out.status).toBe(200);
+        const cleared = out.setCookies.find((c) => c.startsWith(`${HOST_SESSION}=`)) ?? '';
+        expect(cleared).toMatch(/Max-Age=0/i);
+        expect(cleared).toMatch(/;\s*Secure/i);
+        expect(cleared).toMatch(/;\s*Path=\//i);
+        expect(cleared).not.toMatch(/Domain=/i);
+        expect(signedInAs(await call(a, 'GET', '/get-session', { baseUrl, jar }))).toBeNull();
+      });
+
+      it('does not take a session from the same cookie under another name', async () => {
+        const a = makeAuth(db, { SV_URL: baseUrl });
+        const jar = new Jar();
+        await call(a, 'POST', '/sign-up/email', {
+          baseUrl,
+          jar,
+          body: { name: 'Ada', email: freshEmail(), password: PASSWORD, agreedToTerms: true },
+        });
+        const token = jar.get(HOST_SESSION) ?? '';
+        // What a subdomain could plant, were it allowed to: the plain and the __Secure- names.
+        for (const name of ['better-auth.session_token', '__Secure-better-auth.session_token']) {
+          const planted = new Jar();
+          planted.absorb([`${name}=${token}; Path=/`]);
+          expect(
+            signedInAs(await call(a, 'GET', '/get-session', { baseUrl, jar: planted })),
+            name,
+          ).toBeNull();
+        }
+      });
+    });
+
+    it('is shared with subdomains only when a cookie domain is set, and is then __Secure-, not __Host-', async () => {
+      const baseUrl = 'https://core.example.com';
+      const a = makeAuth(db, { SV_URL: baseUrl, SV_AUTH_COOKIE_DOMAIN: 'example.com' });
       const reply = await call(a, 'POST', '/sign-up/email', {
         baseUrl,
         body: { name: 'Ada', email: freshEmail(), password: PASSWORD, agreedToTerms: true },
@@ -449,17 +516,6 @@ export function authSuite(createDatabase: () => Promise<TestDatabase>): void {
       const cookie = reply.setCookies.find((c) => c.includes('session_token=')) ?? '';
       expect(cookie).toMatch(/^__Secure-better-auth\.session_token=/);
       expect(cookie).toMatch(/;\s*Secure/i);
-      expect(cookie).toMatch(/HttpOnly/i);
-    });
-
-    it('is shared with subdomains only when a cookie domain is set', async () => {
-      const baseUrl = 'https://core.example.com';
-      const a = makeAuth(db, { SV_URL: baseUrl, SV_AUTH_COOKIE_DOMAIN: 'example.com' });
-      const reply = await call(a, 'POST', '/sign-up/email', {
-        baseUrl,
-        body: { name: 'Ada', email: freshEmail(), password: PASSWORD, agreedToTerms: true },
-      });
-      const cookie = reply.setCookies.find((c) => c.includes('session_token=')) ?? '';
       expect(cookie).toMatch(/Domain=example\.com/i);
     });
   });

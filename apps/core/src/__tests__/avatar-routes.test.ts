@@ -90,12 +90,19 @@ describe('uploading a picture', () => {
     expect(await imageOf()).toBe(second);
   });
 
-  it('clears the session cache cookie under both names, so the page shows the new picture', async () => {
+  it('clears the session cache cookie under every name, so the page shows the new picture', async () => {
     const reply = await post(png(32, 32));
-    const cookies = reply.headers.getSetCookie().join('\n');
+    const lines = reply.headers.getSetCookie();
+    const cookies = lines.join('\n');
     expect(cookies).toContain('better-auth.session_data=;');
     expect(cookies).toContain('__Secure-better-auth.session_data=;');
+    expect(cookies).toContain('__Host-better-auth.session_data=;');
     expect(cookies).toMatch(/Max-Age=0/i);
+    // A browser ignores the removal of a prefixed cookie unless it meets the prefix: Secure, and for __Host- no Domain.
+    for (const line of lines.filter((l) => l.startsWith('__'))) {
+      expect(line, line).toMatch(/;\s*Secure/i);
+    }
+    expect(lines.find((l) => l.startsWith('__Host-')) ?? '').not.toMatch(/Domain=/i);
     expect(reply.headers.get('cache-control')).toBe('no-store');
   });
 

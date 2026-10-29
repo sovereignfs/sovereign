@@ -59,6 +59,8 @@ describe('the authentication settings', () => {
   it('use secure cookies exactly when core is served over https', () => {
     expect(resolve().secureCookies).toBe(true);
     expect(resolve({ SV_URL: 'http://localhost:3000' }).secureCookies).toBe(false);
+    // However it is written: the proxy reads it too, and the cookie's name depends on the two agreeing.
+    expect(resolve({ SV_URL: 'HTTPS://Core.Example.com' }).secureCookies).toBe(true);
   });
 
   it('refuse a minimum length of 0 or beyond the longest password', () => {

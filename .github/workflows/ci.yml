@@ -156,6 +156,69 @@ jobs:
           persist-credentials: false
       - run: bash scripts/docker-smoke.sh
 
+  # Phase 1 acceptance (core-app §3.17): the browser suite in apps/e2e drives a built core, as a person and as the
+  # apps that sign people in, once per supported dialect. Core is built here and run from its standalone output, the
+  # server the image runs; the suite makes a database of its own on the dialect's service. Chromium is installed
+  # for the run.
+  acceptance:
+    name: Acceptance (${{ matrix.dialect }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        dialect: [sqld, sqlite, postgres]
+    env:
+      SV_DB_DIALECT: ${{ matrix.dialect }}
+      SV_SQLD_URL: http://localhost:8080
+      SV_SQLD_ADMIN_URL: http://localhost:8081
+      SV_SQLITE_URL: file:/tmp/sovereign-e2e.db
+      SV_POSTGRES_URL: postgres://sovereign:sovereign@localhost:5432/sovereign_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+
+      - name: Start sqld
+        if: matrix.dialect == 'sqld'
+        run: |
+          docker run -d --name sqld-ci -p 8080:8080 -p 8081:8081 \
+            -e SQLD_NODE=primary \
+            -e SQLD_HTTP_LISTEN_ADDR=0.0.0.0:8080 \
+            -e SQLD_ADMIN_LISTEN_ADDR=0.0.0.0:8081 \
+            ghcr.io/tursodatabase/libsql-server:v0.24.33 \
+            /bin/sqld --enable-namespaces
+          for _ in $(seq 1 30); do
+            curl -sf http://localhost:8080/health && exit 0
+            sleep 1
+          done
+          echo "sqld did not become healthy" >&2
+          docker logs sqld-ci >&2
+          exit 1
+
+      - name: Start PostgreSQL
+        if: matrix.dialect == 'postgres'
+        run: |
+          docker run -d --name postgres-ci -p 5432:5432 \
+            -e POSTGRES_USER=sovereign \
+            -e POSTGRES_PASSWORD=sovereign \
+            -e POSTGRES_DB=sovereign_test \
+            postgres:18
+          for _ in $(seq 1 30); do
+            docker exec postgres-ci pg_isready -U sovereign -d sovereign_test && exit 0
+            sleep 1
+          done
+          echo "PostgreSQL did not become ready" >&2
+          docker logs postgres-ci >&2
+          exit 1
+
+      - run: pnpm --filter @sovereignfs/core... build
+      - run: pnpm --filter @sovereignfs/e2e exec playwright install --with-deps chromium
+      - run: pnpm e2e
+
   # The tests that need a real database (`*.db.test.ts`), once per supported
   # dialect. SV_DB_DIALECT names the leg; only its service is started. The URLs
   # use `localhost`, never an IP address: with namespaces enabled sqld takes the

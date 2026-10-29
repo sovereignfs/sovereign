@@ -11,6 +11,10 @@ import { inferAdditionalFields, twoFactorClient } from 'better-auth/client/plugi
  * decides what to do with them (`terms.ts`).
  */
 export const authClient = createAuthClient({
+  // Not better-auth's own redirect: it sends the browser to the address of any `{ redirect, url }` answer by
+  // itself, and the forms follow it too (`continuationUrl`), so an app's callback was requested twice with
+  // one authorization code and the second request failed. The forms are the only ones that navigate.
+  disableDefaultFetchPlugins: true,
   plugins: [
     twoFactorClient(),
     passkeyClient(),

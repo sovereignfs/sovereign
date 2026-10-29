@@ -585,6 +585,18 @@ pointing here.
   resolution needs it, or on-disk paths resolve outside the volume.
 - **The image ships its migrations and every CLI it needs at runtime.** A
   production deployment pulls images and has no source checkout.
+- **The image holds no environment and runs as nobody.** `.dockerignore` excludes
+  every `.env` (a secret in an image is a secret in every copy of it), the last
+  stage is the traced Next server with its migrations and static files and
+  nothing else, it runs as `node`, and core refuses to start without `SV_URL` and
+  `SV_AUTH_SECRET`. A Dockerfile test fails when a workspace package's manifest
+  is not copied, and `pnpm docker:smoke` boots each documented database from
+  the built image in CI. Core's own address must be reachable from inside its
+  container (it fetches its own keys for an `id_token_hint`), which
+  `docs/deploying.md` says how to arrange behind a proxy.
+- **Development seeding is for a machine's own instance.** `seedAccounts` refuses
+  an address that is not `localhost`, `*.localhost` or loopback, because the
+  accounts it makes have a password that is in the source.
 - **The lockfile covers every target platform.** `supportedArchitectures` names
   darwin and linux, arm64 and x64, glibc and musl — otherwise a lockfile made on
   a Mac lacks the musl variant of a native package and the Alpine image crashes

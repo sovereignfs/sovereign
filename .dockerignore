@@ -1,0 +1,23 @@
+# What a build context never needs. The image is built from a clean checkout: nothing local goes into it, and
+# above all no environment file (a secret baked into an image is a secret in every copy of it).
+.git
+.github
+**/node_modules
+**/.next
+**/.turbo
+**/dist
+**/coverage
+**/data
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+**/.DS_Store
+CURRENT_TASK*.md
+.claude
+.agents
+docs
+spec

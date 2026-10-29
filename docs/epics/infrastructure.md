@@ -195,7 +195,7 @@ secure by default and drawn with the design system.
 - `AGENTS.md` names `docs/specs/core-app.md` as the source of truth, and
   `CLAUDE.md` holds no conventions of its own
 
-#### 📋 0.5 — Docker image and compose
+#### ✅ 0.5 — Docker image and compose
 
 **Goal:** An operator can run core from a published image on each supported
 database.
@@ -225,6 +225,11 @@ database.
 - The image boots with no `.env` baked in
 - RP-initiated logout with an `id_token_hint` works from inside the compose
   setup
+
+**Not here:** a published image (the release workflow pushes it, when there is a
+release), a Kubernetes chart, and the infrastructure repository's own compose
+(`sovereign-infra`), which is told how to reach core's address in
+`docs/deploying.md`.
 
 #### 📋 0.6 — Phase 1 acceptance
 

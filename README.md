@@ -35,25 +35,26 @@ and more. The spec lists what is in and out of each phase.
 
 ## Repository layout
 
-| Path                 | What                                                            | State                                                 |
-| -------------------- | --------------------------------------------------------------- | ----------------------------------------------------- |
-| `apps/core`          | The core app: sign-in server, Console, launcher                 | A skeleton: themes, CSP, health check; no sign-in yet |
-| `packages/tsconfig`  | Shared TypeScript configuration                                 | In the workspace                                      |
-| `packages/ui`        | The design system, `@sovereignfs/ui`                            | In the workspace (Storybook runs and builds)          |
-| `packages/bridge`    | The device bridge, `@sovereignfs/bridge`                        | In the workspace                                      |
-| `packages/mailer`    | Mail delivery                                                   | In the workspace                                      |
-| `packages/config`    | The environment convention and start-up validation              | In the workspace                                      |
-| `packages/database`  | One interface over sqld, PostgreSQL and a SQLite file           | In the workspace                                      |
-| `packages/crypto`    | Field encryption with a key ring (end-to-end later)             | In the workspace                                      |
-| `packages/*` (later) | `auth`, `api-client`, …                                         | Planned                                               |
-| `spec/`              | `env.md` (the environment convention) and the Core API contract | `env.md` written; the contract is planned (task 10.1) |
-| `docs/`              | The spec, epics, research, RFCs and decisions                   | [Index below](#documentation)                         |
-| `scripts/`           | Repository tooling and the tests that guard the repo's rules    | In use                                                |
+| Path                  | What                                                            | State                                           |
+| --------------------- | --------------------------------------------------------------- | ----------------------------------------------- |
+| `apps/core`           | The core app: sign-in server, Console, launcher                 | Built; Phase 1 acceptance is the next milestone |
+| `packages/tsconfig`   | Shared TypeScript configuration                                 | In the workspace                                |
+| `packages/ui`         | The design system, `@sovereignfs/ui`                            | In the workspace (Storybook runs and builds)    |
+| `packages/bridge`     | The device bridge, `@sovereignfs/bridge`                        | In the workspace                                |
+| `packages/mailer`     | Mail delivery                                                   | In the workspace                                |
+| `packages/config`     | The environment convention and start-up validation              | In the workspace                                |
+| `packages/database`   | One interface over sqld, PostgreSQL and a SQLite file           | In the workspace                                |
+| `packages/crypto`     | Field encryption with a key ring (end-to-end later)             | In the workspace                                |
+| `packages/api-client` | The typed Core API client, generated from the contract          | In the workspace                                |
+| `packages/*` (later)  | `auth`, …                                                       | Planned                                         |
+| `spec/`               | `env.md` (the environment convention) and the Core API contract | Written                                         |
+| `docs/`               | The spec, epics, research, RFCs and decisions                   | [Index below](#documentation)                   |
+| `scripts/`            | Repository tooling and the tests that guard the repo's rules    | In use                                          |
 
 ## Getting started
 
 You need Node 24.15 or later (`.node-version` pins the exact version), pnpm 11,
-and Docker (from task 0.5, for the development database).
+and Docker (for the development database and the image).
 
 ```bash
 git clone git@github.com:sovereignfs/sovereign-core.git
@@ -61,6 +62,10 @@ cd sovereign-core
 pnpm install --frozen-lockfile   # also installs the pre-commit and pre-push hooks
 pnpm verify:push                 # format, lint, typecheck, design tokens, doc links and tests
 ```
+
+To run core from a published image on sqld, PostgreSQL or a SQLite file, see
+[`docs/deploying.md`](docs/deploying.md). To work on it, `pnpm dev` starts the server (and sqld, when the
+environment chooses it) and `pnpm seed` makes local accounts.
 
 [`CONTRIBUTING.md`](CONTRIBUTING.md) has the branching, commit and pull request
 rules; [`AGENTS.md`](AGENTS.md) has the same conventions written for AI agents.
@@ -72,6 +77,8 @@ rules; [`AGENTS.md`](AGENTS.md) has the same conventions written for AI agents.
   disagree with it, it wins until it is changed.
 - [`ROADMAP.md`](ROADMAP.md) and [`docs/epics/`](docs/epics/) — the ordered
   task list and the detail of each task.
+- [`docs/deploying.md`](docs/deploying.md) — running core: the image, the three
+  databases, the address it must reach, backing up and upgrading.
 - [`docs/development-workflow.md`](docs/development-workflow.md) — how a task
   is started, built and finished.
 - [`docs/architecture-rules.md`](docs/architecture-rules.md) — the hard rules,

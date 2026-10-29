@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "turbo build",
-    "dev": "turbo dev",
+    "dev": "tsx scripts/dev.ts",
     "storybook": "pnpm --filter @sovereignfs/ui storybook",
     "build-storybook": "pnpm --filter @sovereignfs/ui build-storybook",
     "format": "prettier --write .",
@@ -29,7 +29,9 @@
     "generate:theme-presets": "tsx scripts/generate-theme-presets-css.ts && prettier --write packages/ui/src/tokens/theme-presets.css",
     "verify:push": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm design:tokens:check && pnpm docs:check-links && pnpm test",
     "prepare": "simple-git-hooks",
-    "generate:api-client": "tsx scripts/generate-api-client.ts"
+    "generate:api-client": "tsx scripts/generate-api-client.ts",
+    "docker:smoke": "bash scripts/docker-smoke.sh",
+    "seed": "tsx apps/core/scripts/seed.ts"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged",

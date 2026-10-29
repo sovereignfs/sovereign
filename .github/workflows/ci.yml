@@ -142,6 +142,20 @@ jobs:
       - run: pnpm build-storybook
       - run: pnpm packages:check
 
+  # The image the operator runs, built from the Dockerfile, and each documented compose setup booted from it:
+  # sqld, PostgreSQL and a SQLite file (scripts/docker-smoke.sh). Docker is on the runner; nothing is installed.
+  image:
+    name: Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash scripts/docker-smoke.sh
+
   # The tests that need a real database (`*.db.test.ts`), once per supported
   # dialect. SV_DB_DIALECT names the leg; only its service is started. The URLs
   # use `localhost`, never an IP address: with namespaces enabled sqld takes the

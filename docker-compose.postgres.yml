@@ -1,0 +1,41 @@
+# PostgreSQL instead of sqld: an overlay on docker-compose.yml.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d
+#
+# It adds a PostgreSQL server, points core at it, and keeps sqld from starting. Set SV_POSTGRES_PASSWORD in `.env`
+# (or the shell); it is used by both the server and core. To use a server you already run, point SV_POSTGRES_URL at
+# it and start only core: `docker compose ... up -d --no-deps core`.
+services:
+  core:
+    environment:
+      SV_DB_DIALECT: postgres
+      SV_POSTGRES_URL: postgres://sovereign:${SV_POSTGRES_PASSWORD:?Set SV_POSTGRES_PASSWORD to a password for the database}@postgres:5432/sovereign
+      SV_SQLD_URL: !reset null
+      SV_SQLD_ADMIN_URL: !reset null
+      SV_SQLD_NAMESPACE: !reset null
+    depends_on: !override
+      postgres:
+        condition: service_healthy
+
+  # Not wanted here: a profile nothing asks for keeps it from starting.
+  sqld:
+    profiles: ['not-used-with-postgres']
+
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sovereign
+      POSTGRES_PASSWORD: ${SV_POSTGRES_PASSWORD:?Set SV_POSTGRES_PASSWORD to a password for the database}
+      POSTGRES_DB: sovereign
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U sovereign -d sovereign']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
+volumes:
+  postgres-data:

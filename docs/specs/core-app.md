@@ -1063,6 +1063,30 @@ What an app may call on core is defined once, in `spec/core-api/openapi.yaml`
 Database variables name the engine (`SV_POSTGRES_URL`, `SV_SQLD_URL`,
 `SV_SQLITE_URL`), not the component.
 
+#### Running core
+
+How an operator runs core is in `docs/deploying.md`; what is promised:
+
+- Core ships as **one image** built from the repository's `Dockerfile`:
+  multi-stage on `node:24-alpine`, holding only the traced server, its static
+  files and the migrations it applies when it starts. It holds **no environment**
+  (no `.env`, no secret, no address), runs as an unprivileged user, listens on
+  `3000`, and reports its health (the app and the database) to Docker. Started
+  with nothing, it refuses and says what is missing.
+- Three compose setups start it on each database, from the documented variables
+  alone: sqld (the default), PostgreSQL (an overlay), and a SQLite file in one
+  container. Only core is published; the database servers are pinned and keep
+  their data in volumes.
+- **Core's own public address must be reachable from inside its container**:
+  checking an `id_token_hint` makes core fetch its own signing keys from
+  `SV_URL` (§3.6.5). `http://localhost:3000` is, since core listens there; behind
+  a proxy on a public name the operator makes the name reach the proxy from
+  inside (a host entry or a network alias).
+- For development, `pnpm dev` starts a persistent sqld when the environment
+  chooses sqld, and `pnpm seed` makes an owner, an admin and an ordinary person
+  to try it with. The seed refuses any address that is not on the machine it
+  runs on.
+
 ### 3.16 Not in Phase 1
 
 Groups and per-app access policies; per-account capability grants;
@@ -1154,3 +1178,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-29 | §3.13.1: that the Core API is defined once, in an OpenAPI 3.1 contract; how its paths are versioned, how a call is authenticated, the one error body and its statuses; that the typed client is generated from it, and that core is tested against it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | 2026-10-29 | §3.13: where the branding document is, that it is public and readable from any origin, what it holds, that pictures are absolute and versioned, that one logo serves both themes, and that it is always current and revalidated.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | 2026-10-29 | §3.9: how the Directory API is held to its words: the resource and the checks made of a token (key, type, issuer, audience, expiry, scope), what a signature cannot say (account, app, session, revocation, recorded by time), what search, resolve and by-email match and return, and how calls are counted and refused.                                                                                                                                                                                                                                                                                                                                                                                                     |
+| 2026-10-29 | §3.15: how core is run: the one image (no environment baked in, a non-root process, migrations shipped, a health check), the three compose setups, the address core must be able to reach from inside its container, and the development seed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |

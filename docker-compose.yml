@@ -1,0 +1,67 @@
+# Sovereign Core with sqld (libSQL server): the default, and the one for an instance that will grow.
+#
+#   cp apps/core/.env.example .env        # then fill in SV_URL and SV_AUTH_SECRET at least
+#   docker compose up -d
+#
+# Other databases: add `-f docker-compose.postgres.yml` for PostgreSQL, or use `docker-compose.sqlite.yml` alone
+# for one container with a SQLite file. Everything core reads is in apps/core/.env.example; give it here through
+# `.env` (read by this file for the lines below, and passed on to core as it stands) or the shell. Nothing is
+# baked into the image, and core refuses to start, saying what is wrong, if SV_URL or SV_AUTH_SECRET is missing.
+#
+# Core's own public address (SV_URL) must work from inside core's container as well as from outside. Core checks an
+# `id_token_hint` (RP-initiated logout) by fetching its own signing keys from SV_URL. With SV_URL=http://localhost:3000
+# that is already true, since core listens there. Behind a reverse proxy on a public name, make the name reach the
+# proxy from inside the container too: give `core` `extra_hosts: ["core.example.com:host-gateway"]` when the proxy
+# is on the same host, or a network alias on the proxy's network (docs/deploying.md).
+name: sovereign-core
+
+services:
+  core:
+    image: ${SV_IMAGE:-ghcr.io/sovereignfs/sovereign-core:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - '${SV_PORT:-3000}:3000'
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      SV_URL: ${SV_URL:?Set SV_URL to the public address of core, for example https://core.example.com}
+      SV_AUTH_SECRET: ${SV_AUTH_SECRET:?Set SV_AUTH_SECRET to a long random secret (openssl rand -base64 48)}
+      SV_DB_DIALECT: sqld
+      SV_SQLD_URL: http://sqld:8080
+      SV_SQLD_ADMIN_URL: http://sqld:8081
+      SV_SQLD_NAMESPACE: ${SV_SQLD_NAMESPACE:-default}
+    depends_on:
+      sqld:
+        condition: service_healthy
+
+  sqld:
+    # Pinned: a database server is upgraded on purpose, not by a `pull`.
+    image: ghcr.io/tursodatabase/libsql-server:v0.24.33
+    restart: unless-stopped
+    # Namespaces keep each instance's data apart and are how core makes its own; there is no environment
+    # variable for the flag, so it is the command.
+    command: ['/bin/sqld', '--enable-namespaces']
+    environment:
+      SQLD_NODE: primary
+      SQLD_HTTP_LISTEN_ADDR: 0.0.0.0:8080
+      SQLD_ADMIN_LISTEN_ADDR: 0.0.0.0:8081
+    volumes:
+      - sqld-data:/var/lib/sqld
+    healthcheck:
+      # The image has no curl or wget: a plain request, made with the shell's own TCP connection.
+      test:
+        - CMD
+        - bash
+        - -c
+        - "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health HTTP/1.0\\r\\n\\r\\n' >&3 && head -n1 <&3 | grep -q ' 200'"
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
+volumes:
+  sqld-data:

@@ -230,6 +230,11 @@ each: `docs/architecture-rules.md`.
   revocation); a signed token is revoked by time (`token_revocations`, written
   by `revoke`); the Directory returns only `sub`, `name`, `picture`, matches
   names only and an email only whole.
+- **The image bakes in no environment**: `.dockerignore` leaves out every `.env`
+  file, the Dockerfile copies the manifest of every workspace package (a test
+  fails when a package is added and not copied), and `pnpm docker:smoke` (CI's
+  `image` job) boots sqld, PostgreSQL and SQLite from it. The seed refuses any
+  address that is not on this machine.
 - **Every Console page calls `requireConsole` itself** (a test fails when one does
   not), and answers someone who may not enter with a page that is not there.
 - **A client is written only by `ClientRegistry`** (validation, the provider's
@@ -333,6 +338,7 @@ docs/
   specs/            core-app.md — source of truth for apps/core
   epics/            task detail;  rfcs/  research/  adrs/
 scripts/            repository tooling
+Dockerfile, docker-compose*.yml   the image and its three compose setups (docs/deploying.md)
 ```
 
 Packages are under the `@sovereignfs/*` scope. `"private": true` is the
@@ -347,7 +353,10 @@ pnpm lint / lint:fix             # ESLint
 pnpm typecheck                   # turbo typecheck in every package, then tsc for the repo's scripts
 pnpm test / test:watch           # turbo test in every package, then the repo-level unit tests
 pnpm test:db                     # the *.db.test.ts tests, against the dialect named by SV_DB_DIALECT
-pnpm dev                         # core on :3000 (needs SV_URL and SV_AUTH_SECRET, see apps/core/.env.example)
+pnpm dev                         # core on :3000 (needs SV_URL and SV_AUTH_SECRET, see apps/core/.env.example); starts sqld first when .env chooses it
+pnpm seed                        # local accounts: owner, admin, user @example.test (development only; refuses a non-local SV_URL)
+pnpm docker:smoke                # build the image and boot sqld, PostgreSQL and SQLite compose setups from it (needs Docker)
+pnpm generate:api-client         # regenerate packages/api-client from spec/core-api/openapi.yaml
 pnpm build                       # turbo build
 pnpm storybook / build-storybook # the design system's Storybook (dev server on :6006 / static build)
 pnpm design:tokens:check         # every --sv-* token used is defined; no hard-coded colours

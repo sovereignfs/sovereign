@@ -4,6 +4,7 @@ import { Card } from '@sovereignfs/ui';
 import { getSession } from '../../src/auth/session';
 import { localeOptions, timezoneOptions } from '../../src/preferences/options';
 import styles from '../security/security.module.css';
+import { AppearanceChoice } from './appearance-choice';
 import { PreferencesPanel } from './preferences-panel';
 
 export const metadata: Metadata = { title: 'Preferences' };
@@ -18,6 +19,7 @@ export default async function PreferencesPage() {
     <Card padding="lg">
       <div className={styles.content}>
         <h1 className={styles.title}>Preferences</h1>
+        <AppearanceChoice />
         <PreferencesPanel
           timezone={timezone ?? ''}
           locale={locale ?? ''}

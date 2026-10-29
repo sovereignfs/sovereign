@@ -5,6 +5,7 @@ import { getConfig } from '../src/config';
 import { getInstanceIdentity } from '../src/instance/service';
 import { THEME_COLORS } from '../src/pwa';
 import { ServiceWorkerRegistration } from './service-worker-registration';
+import { ThemeWatcher } from './theme-watcher';
 import { THEME_SCRIPT } from '../src/theme-script';
 import './globals.css';
 
@@ -53,6 +54,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body>
         {children}
         <ServiceWorkerRegistration />
+        <ThemeWatcher />
       </body>
     </html>
   );

@@ -240,8 +240,9 @@ approval the first task writes the outcome into the spec before any code.
 
 Accepted as proposed, with the open questions answered as leaned:
 
-1. **Theme colour:** the `theme-color` tags also follow a saved theme choice, set by the pre-paint script. Core has no
-   theme preference yet, so today the system's colour scheme decides both; the script is ready for when it has.
+1. **Theme colour:** the `theme-color` tags also follow a saved theme choice, set by the pre-paint script. Preferences now
+   has an Appearance choice (light, dark or the system's), kept on the device; the bar takes a saved choice's colour once
+   the page is ready, since a tag changed earlier is not recognised by the framework, which then adds another.
 2. **Instance icons:** the default Sovereign icons are in every instance's manifest until the operator sets their own
    (task 11.4, decided in [ADR 0001](../adrs/0001-app-icons-are-supplied-not-generated.md): supplied, not generated).
 3. **An install hint:** not in this RFC.

@@ -112,7 +112,8 @@ Roboto, Helvetica, Arial, sans-serif`. A page or component names a family only
   app icons when they have set them (§3.12). Every page tells a
   device how to meet its screen: it runs to the edges (`viewport-fit: cover`),
   what matters stays clear of a notch and a home bar by the safe-area insets, the
-  browser's bar takes the page's colour in the system's colour scheme, and an
+  browser's bar takes the page's colour in the person's chosen theme, or else in the
+  system's colour scheme, and an
   iPhone opens a page added to its home screen as an app, named for the instance.
 - Core MUST NOT use another component library, Tailwind, or runtime CSS-in-JS.
   Its own styles are CSS Modules that reference the design system's semantic
@@ -944,6 +945,14 @@ closing them returns there (§1.3).
   names another is refused. A value already saved that the list does not name is
   kept and shown. They are what other apps read as `zoneinfo` and `locale`
   (§3.6.2).
+- Preferences also hold **Appearance**: light, dark, or the system's (the
+  default), for core on this device. It applies as it is chosen, needs no saving,
+  and is kept in the browser only (`localStorage`), not in the account: it is about
+  the screen in front of the person, no app needs it, and another device keeps its
+  own. "System" is no saved choice and goes on following the system's colour
+  scheme as it changes; a choice is there from the first paint on the next visit,
+  follows into other tabs, and gives the browser's bar the page's colour in that
+  theme.
 - The Security page gathers the password, two-factor sign-in, passkeys and the
   person's sessions; the two-factor and passkey pages stay under it
   (`/security/two-factor`, `/security/passkeys`). Profile and Security share one
@@ -1179,7 +1188,7 @@ Groups and per-app access policies; per-account capability grants;
 verification levels; retrying a failed back-channel logout notice; social
 sign-in; changing
 an email address; editable email templates; theme presets, colours and text
-size preferences; mail, notification and activity APIs for apps; account
+size preferences (a choice of light, dark or the system's is in Preferences, §3.11); mail, notification and activity APIs for apps; account
 deletion and export across apps; backups; end-to-end encryption and the
 recovery kit; push relay; built-in clients for native shells; provisioning
 databases for apps.
@@ -1274,3 +1283,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-30 | §1.3, §3.5: core installs as an app (a public manifest naming the instance, the Sovereign icons, how a page meets a device's screen), and what its service worker may keep (only files that are the same for everyone, on an allow-list, never a page), with the offline page it builds itself. The outcome of RFC 0001.                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 2026-10-30 | §3.5: how the service worker is held to its words: the allow-list (built files and icons, a `GET`, no query string, no `Authorization` header), one bounded versioned cache, no handler for anything else, the offline page it builds itself with a policy of its own, and the policy's `worker-src`.                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2026-10-30 | §1.3, §3.12, §3.15: an operator may set an app icon, and one for masking, which an installed core and an iPhone's home screen take in place of the Sovereign mark: a square PNG, 512 to 1024 pixels, kept as it is (ADR 0001: supplied, not generated).                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 2026-10-30 | §3.11, §1.3: Preferences gain Appearance, a choice of light, dark or the system's for core on this device, applied as it is chosen and kept in the browser only; the system's is the default and is followed as it changes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |

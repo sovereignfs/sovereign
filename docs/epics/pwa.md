@@ -124,8 +124,8 @@ belongs to a person.
 
 **Not here:** an install button in core (an RFC open question, not committed), and Apple splash images.
 
-**Done so far:** the `theme-color` follows a saved theme as well as the system's (the pre-paint script sets it, with
-tests; note that core has no theme preference yet, so today the system's scheme decides both); the deployment guide
+**Done so far:** the `theme-color` follows a saved theme as well as the system's (set once the page is ready, with
+tests; Preferences now has an Appearance choice for it to follow); the deployment guide
 says what installing needs (https, a proxy that does not cache `/sw.js` or the manifest, what is and is not stored,
 that apps open outside the window); Chromium's registration, caches and offline page are covered by the acceptance
 suite.

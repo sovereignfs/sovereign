@@ -193,6 +193,9 @@ each: `docs/architecture-rules.md`.
   is the issuer, only the code flow with PKCE `S256` exists, no client registers
   itself, redirect addresses match exactly, and its tables are checked against the
   installed plugins.
+- **An operator's action on an account holds the role rules in `AccountManager`**
+  (capability, whom, not oneself), and deleting is one transaction; the Console's
+  buttons are only a convenience.
 - **Every Console page calls `requireConsole` itself** (a test fails when one does
   not), and answers someone who may not enter with a page that is not there.
 - **A client is written only by `ClientRegistry`** (validation, the provider's

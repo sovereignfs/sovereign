@@ -65,6 +65,11 @@ manage yet.
 - Deactivating an account from the Console makes its refresh and userinfo calls
   fail
 
+**Not here:** an account's passkeys and sessions listed one by one (the counts
+are shown), ending an account's sessions without deactivating it, and invites
+(8.3); ownership transfer from the Console is the capability matrix and ownership
+task (8.5).
+
 #### 📋 8.3 — Invites `[parallel]`
 
 **Goal:** Operators can invite people by email.

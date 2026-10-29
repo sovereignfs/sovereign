@@ -25,6 +25,13 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
     icon: 'layout-dashboard',
     capability: 'console:access',
   },
+  {
+    id: 'accounts',
+    label: 'Accounts',
+    href: '/console/accounts',
+    icon: 'users',
+    capability: 'user:view',
+  },
 ];
 
 /**

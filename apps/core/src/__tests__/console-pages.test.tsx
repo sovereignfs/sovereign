@@ -1,11 +1,12 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ROLE_ADMIN, ROLE_OWNER, ROLE_USER } from '../auth/roles';
-import { DEFAULT_MATRIX } from '../roles/capabilities';
+import { DEFAULT_MATRIX, type Matrix } from '../roles/capabilities';
 
 const getSession = vi.fn();
 vi.mock('../auth/session', () => ({ getSession: () => getSession() as unknown }));
-vi.mock('../roles/matrix', () => ({ getCapabilityMatrix: () => Promise.resolve(DEFAULT_MATRIX) }));
+const matrixInForce = vi.fn<() => Promise<Matrix>>();
+vi.mock('../roles/matrix', () => ({ getCapabilityMatrix: () => matrixInForce() }));
 vi.mock('next/navigation', async (original) => ({
   ...(await original<typeof import('next/navigation')>()),
   usePathname: () => '/console',
@@ -24,7 +25,10 @@ const failure = async (run: () => Promise<unknown>) => {
   return undefined;
 };
 
-beforeEach(() => getSession.mockReset().mockResolvedValue(null));
+beforeEach(() => {
+  getSession.mockReset().mockResolvedValue(null);
+  matrixInForce.mockReset().mockResolvedValue(DEFAULT_MATRIX);
+});
 
 describe('the Console’s frame', () => {
   it('shows an operator the navigation beside the page', async () => {
@@ -60,10 +64,23 @@ describe('the Console’s own page', () => {
     expect(renderToStaticMarkup(await ConsolePage())).toContain('as an admin.');
   });
 
-  it('says so when there is nothing to open yet, rather than leaving an empty page', async () => {
+  it('offers the sections the person may open, each a link', async () => {
     as(ROLE_ADMIN);
     const html = renderToStaticMarkup(await ConsolePage());
+    expect(html).toContain('href="/console/accounts"');
+    expect(html).toContain('Accounts');
+    expect(html).not.toContain('There is nothing to manage here yet.');
+  });
+
+  it('says so when there is nothing to open, rather than leaving an empty page', async () => {
+    as(ROLE_ADMIN);
+    matrixInForce.mockResolvedValue({
+      [ROLE_ADMIN]: new Set(['profile:manage', 'console:access']),
+      [ROLE_USER]: new Set(['profile:manage']),
+    });
+    const html = renderToStaticMarkup(await ConsolePage());
     expect(html).toContain('There is nothing to manage here yet.');
+    expect(html).not.toContain('/console/accounts');
   });
 
   it.each([ROLE_USER, undefined])(

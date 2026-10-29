@@ -222,6 +222,14 @@ pointing here.
   turned off); the JWT plugin's own `/token`, which hands any session a signed
   JWT, is disabled. Claims are made by one function (`claimsFor`) for the ID token
   and userinfo alike and only from granted scopes.
+- **An operator's action on an account holds the role rules in the function, not
+  in the page.** `AccountManager` (`src/accounts/manage.ts`) checks `user:manage`
+  fresh, that the account exists, that it is not the actor's own, and `mayActOn`,
+  before any change; the Console's buttons are only a convenience and the server
+  actions are public endpoints. Deleting is one transaction that reads who to tell,
+  revokes every token and removes the account and what belongs to it, in an order
+  that does not rely on a database's cascade; the apps are told after the commit.
+  A search is matched as typed (`like` with `escape`), never as a pattern.
 - **Every Console page checks for itself, and shows a page that is not there to
   someone who may not enter.** `requireConsole` (`src/console/guard.ts`) asks for
   a session, `console:access` and the capability the page needs, judged by the

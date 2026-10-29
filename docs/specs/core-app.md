@@ -664,6 +664,31 @@ Operators manage accounts in the Console, within §3.2.
   link invalid" page.
 - **Ownership:** the owner can transfer ownership to an admin.
 
+The accounts list is newest first, 25 to a page, and its search matches part of
+a name or an email address as typed, whatever the case: `%`, `_` and `\` are
+characters, never patterns. An account's page shows its ID (its `sub`, which can
+be copied), role, state, whether its address is verified, two-factor sign-in and
+passkeys, how many devices it is signed in on, and its preferences. What an
+operator can do to an account is held by the server for a direct request as
+much as by the page that offers it:
+
+- It needs `user:manage` in the matrix in force. Changing a role needs
+  `role:assign`, which only the owner holds, and the owner's role is never
+  changed.
+- Only the owner acts on an operator account; an admin acts on ordinary accounts
+  only. Nobody deactivates, deletes or resets the sign-in of their own account
+  here: that is for their own pages, with their password.
+- **Delete** removes the account and everything that belongs to it in one
+  transaction: its sessions, credentials, passkeys, picture, tokens and
+  consents. The apps to tell are read first and told once it has committed; an
+  invite it sent stays, with no sender. Apps an operator registered stay, even
+  when it was the deleted account that registered them. Its `sub` is never
+  reused.
+- **Reset two-factor sign-in** removes the authenticator app and the passkeys, so
+  the account signs in with its password alone and can enrol again, and emails
+  the holder. When email is not set up the reset still happens and the operator
+  is told to tell the holder. Sessions are left open.
+
 The Console is at `/console`, and entering it takes `console:access`. Its
 navigation lists only the sections the person's role may open, judged by the
 matrix in force, and a role that cannot enter sees none. Someone who is not
@@ -889,3 +914,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-29 | §3.6.3–§3.6.5: one revocation routine on the operation's own transaction, that an authorization code issued before a deactivation gets no token, what ending a session revokes, Remove access as the only way consent is removed, how apps are told on deactivation and on ending a session in the identity pages, what the logout token carries, and what end-session refuses.                                                                                                                                                                                                                                                                                                                                               |
 | 2026-10-29 | §3.7: the registry is the only writer and needs `client:manage`; the provider's own client routes are off; what an address may be; the limits on lists; public and confidential cannot be exchanged; stopping trust takes `roles` away; deleting removes tokens and consents explicitly.                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 2026-10-29 | §3.10: where the Console is, who may enter and what they are shown when they may not, that each page checks for itself, and how the sections are laid out on a wide screen and on a phone.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| 2026-10-29 | §3.10: how accounts are listed and searched, what an account's page shows, and the rules every operator action is held to by the server: capability, who may act on whom, not on oneself; what deleting removes and tells; what resetting two-factor sign-in does and does not do.                                                                                                                                                                                                                                                                                                                                                                                                                                            |

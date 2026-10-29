@@ -147,6 +147,113 @@ function checkHardcodedLiterals(root: string): Violation[] {
   return violations;
 }
 
+/** The Sovereign typeface, exactly as `--sv-font-family` must name it. */
+export const FONT_STACK =
+  "'Hanken Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+const FONT_FAMILY_RE = /(^|[\s;{])font-family\s*:\s*([^;}]+)/g;
+const FONT_SHORTHAND_RE = /(^|[\s;{])font\s*:\s*([^;}]+)/g;
+
+/** Strips comments, so a rule written about a declaration is not taken for one. */
+const withoutComments = (css: string): string =>
+  css.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '));
+
+const lineOf = (text: string, index: number): number => text.slice(0, index).split('\n').length;
+
+/**
+ * The typeface is the design system's, whoever uses it: a component or a page names a family only through
+ * `var(--sv-font-family…)` (or takes its parent's with `inherit`), never a font of its own, so the one place
+ * that says which font Sovereign uses is the token.
+ */
+function checkFontFamilies(root: string): Violation[] {
+  const violations: Violation[] = [];
+  const files = [
+    ...filesUnder(root, 'packages/ui/src/components', ['.css']),
+    ...filesUnder(root, 'apps', ['.css']),
+  ];
+  for (const file of files) {
+    const css = withoutComments(readFileSync(path.join(root, file), 'utf8'));
+    for (const match of css.matchAll(FONT_FAMILY_RE)) {
+      const value = (match[2] ?? '').trim();
+      if (value === 'inherit' || /^var\(--sv-font-family(-mono)?\)$/.test(value)) continue;
+      violations.push({
+        file,
+        line: lineOf(css, match.index + (match[1] ?? '').length),
+        message: `font-family must be var(--sv-font-family) or inherit, not ${value}`,
+      });
+    }
+    for (const match of css.matchAll(FONT_SHORTHAND_RE)) {
+      const value = (match[2] ?? '').trim();
+      if (value === 'inherit') continue;
+      violations.push({
+        file,
+        line: lineOf(css, match.index + (match[1] ?? '').length),
+        message: `the font shorthand names a family: use font-size, font-weight and var(--sv-font-family), not ${value}`,
+      });
+    }
+  }
+  return violations;
+}
+
+/**
+ * The token names the Sovereign typeface and the stack the user asked for, in that order, and the design system
+ * carries the font: every `@font-face` is for that family, the files it names are there, and `tokens.css` loads
+ * them, so using the tokens is using the font.
+ */
+function checkTypeface(root: string): Violation[] {
+  const primitives = 'packages/ui/src/tokens/primitives.css';
+  if (!existsSync(path.join(root, primitives))) return [];
+  const violations: Violation[] = [];
+  const fail = (file: string, line: number, message: string) =>
+    violations.push({ file, line, message });
+
+  const tokens = withoutComments(readFileSync(path.join(root, primitives), 'utf8'));
+  const declared = /--sv-font-family\s*:\s*([^;]+);/.exec(tokens);
+  const stack = declared?.[1]?.replace(/\s+/g, ' ').replace(/"/g, "'").trim();
+  if (stack !== FONT_STACK) {
+    fail(
+      primitives,
+      lineOf(tokens, declared?.index ?? 0),
+      `--sv-font-family must be ${FONT_STACK}`,
+    );
+  }
+
+  const fonts = 'packages/ui/src/tokens/fonts.css';
+  const fontsPath = path.join(root, fonts);
+  if (!existsSync(fontsPath)) {
+    fail(fonts, 1, 'the design system must carry the typeface: tokens/fonts.css is missing');
+    return violations;
+  }
+  const css = withoutComments(readFileSync(fontsPath, 'utf8'));
+  const faces = [...css.matchAll(/@font-face\s*{([^}]*)}/g)];
+  if (faces.length === 0) fail(fonts, 1, 'tokens/fonts.css declares no @font-face');
+  for (const face of faces) {
+    const block = face[1] ?? '';
+    const line = lineOf(css, face.index);
+    const family = /font-family\s*:\s*['"]?([^;'"]+)['"]?/.exec(block)?.[1]?.trim();
+    if (family !== 'Hanken Grotesk')
+      fail(fonts, line, `@font-face must be for Hanken Grotesk, not ${family}`);
+    for (const url of block.matchAll(/url\(\s*['"]?([^)'"]+)['"]?\s*\)/g)) {
+      const target = url[1] ?? '';
+      if (/^(https?:)?\/\//.test(target)) {
+        fail(fonts, line, `the typeface must not come from another site: ${target}`);
+      } else if (!existsSync(path.join(path.dirname(fontsPath), target))) {
+        fail(fonts, line, `font file is missing: ${target}`);
+      }
+    }
+  }
+  const entry = 'packages/ui/src/tokens.css';
+  const entryPath = path.join(root, entry);
+  if (!existsSync(entryPath) || !readFileSync(entryPath, 'utf8').includes("'./tokens/fonts.css'")) {
+    fail(
+      entry,
+      1,
+      "tokens.css must import './tokens/fonts.css', so using the tokens is using the font",
+    );
+  }
+  return violations;
+}
+
 /**
  * Every `--sv-*` token a file uses must be defined, and CSS Modules in the design
  * system and the apps must never hardcode a colour that should be a token. The
@@ -157,7 +264,12 @@ function checkHardcodedLiterals(root: string): Violation[] {
 export function checkDesignTokens(root: string): TokenCheckResult {
   const defined = definedTokens(root);
   return {
-    violations: [...checkUndefinedTokens(root, defined), ...checkHardcodedLiterals(root)],
+    violations: [
+      ...checkUndefinedTokens(root, defined),
+      ...checkHardcodedLiterals(root),
+      ...checkFontFamilies(root),
+      ...checkTypeface(root),
+    ],
     definedTokens: defined.size,
   };
 }

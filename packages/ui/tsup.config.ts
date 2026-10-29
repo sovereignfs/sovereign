@@ -55,6 +55,14 @@ function copyCssToDist(): void {
   }
 }
 
+/**
+ * Ship the typeface beside the CSS that names it: `dist/tokens/fonts.css` reaches its files as `../fonts/…`, the
+ * same place they have under `src/`.
+ */
+function copyFontsToDist(): void {
+  cpSync(join(SRC, 'fonts'), join(DIST, 'fonts'), { recursive: true });
+}
+
 export default defineConfig({
   entry: ['src/index.ts'],
   format: ['esm'],
@@ -71,5 +79,6 @@ export default defineConfig({
   },
   onSuccess: async () => {
     copyCssToDist();
+    copyFontsToDist();
   },
 });

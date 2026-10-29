@@ -1,5 +1,6 @@
-/* Convenience entry that loads both token tiers. The runtime shell imports this
+/* Convenience entry that loads the typeface and both token tiers. The runtime shell imports this
  * once so --sv-* variables are available globally (primitives first, then the
  * semantic layer that maps them). */
+@import './tokens/fonts.css';
 @import './tokens/primitives.css';
 @import './tokens/semantic.css';

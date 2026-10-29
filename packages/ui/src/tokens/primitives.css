@@ -56,9 +56,10 @@
   --sv-space-16: 4rem;
 
   /* Typography
-     Default pair: Hanken Grotesk (body) + JetBrains Mono (code/identifiers).
-     Operators supply the web font via <link> or instance CSS; the fallback
-     stack applies when the font is not loaded. */
+     The Sovereign typeface is Hanken Grotesk, bundled with the design system (fonts.css, loaded by tokens.css),
+     with JetBrains Mono for code and identifiers, which an instance may supply. Every component takes its
+     family from these tokens and nothing else (`pnpm design:tokens:check`), so the typeface is the same
+     wherever the design system is used; the stack after it applies only while the font loads. */
   --sv-font-family:
     'Hanken Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
     sans-serif;

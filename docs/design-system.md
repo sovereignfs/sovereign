@@ -114,11 +114,25 @@ variables are available globally to its pages.
 | Border width  | `--sv-border-width-hairline` (1px) — referenced instead of a literal border width                                                                    |
 | Icon size     | `--sv-icon-size-xs` (12px), `-sm` (16px), `-md` (20px), `-lg` (24px)                                                                                 |
 
-**Font families:** `--sv-font-family` names Hanken Grotesk as the preferred body font
-with a full system-font fallback stack; `--sv-font-family-mono` names JetBrains Mono.
-The web fonts are **not loaded by the design system** — operators must supply a `<link>`
-or `@font-face` via their instance CSS. The system fallback applies automatically when
-the fonts are absent.
+**Font families:** the Sovereign typeface is **Hanken Grotesk**, and the design system
+carries it: `tokens/fonts.css` declares it from variable font files shipped in the package
+(`fonts/`, SIL Open Font License 1.1), and `tokens.css` loads it, so using the tokens is using
+the font, with nothing for an operator to supply and no request to another site. `--sv-font-family`
+is exactly
+
+```
+'Hanken Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif
+```
+
+(the fallbacks apply only while the font loads). `--sv-font-family-mono` names JetBrains Mono,
+which is not bundled and falls back to the system's monospace. It is enforced, not advised:
+`pnpm design:tokens:check` fails when the token is anything else, when `fonts.css` is missing, names
+another family, points at another site or at a file that is not there, when `tokens.css` does not
+load it, and when any component or app CSS names a family other than through
+`var(--sv-font-family…)` or `inherit` (the `font` shorthand included). A page that imports only the
+semantic tokens, not `tokens.css`, must import `tokens/fonts.css` too. Form controls do not inherit
+the page's font in a browser unless told to, so an app's global CSS sets
+`font-family: inherit` on `input, textarea, select, button`.
 
 **Typography hierarchy — chrome vs. content:** the persistent app chrome (the
 instance brand name in the sidebar / mobile header) and a page or overlay's

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import type { Decorator, Preview } from '@storybook/react-vite';
 import { withThemeByDataAttribute } from '@storybook/addon-themes';
+import '../src/tokens/fonts.css';
 import '../src/tokens/primitives.css';
 import '../src/tokens/semantic.css';
 import '../src/tokens/theme-presets.css';

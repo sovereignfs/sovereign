@@ -144,6 +144,12 @@ importers:
       '@types/pg':
         specifier: 'catalog:'
         version: 8.23.1
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
+      ajv-formats:
+        specifier: ^3.0.1
+        version: 3.0.1(ajv@8.20.0)
       eslint:
         specifier: 'catalog:'
         version: 10.13.0(jiti@2.7.0)
@@ -192,6 +198,9 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 5.0.5(@types/node@24.19.2)(jsdom@30.1.3(@noble/hashes@2.4.0))(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      yaml:
+        specifier: ^2.9.1
+        version: 2.9.1
 
   apps/core:
     dependencies:
@@ -256,6 +265,21 @@ importers:
       drizzle-kit:
         specifier: 'catalog:'
         version: 0.31.11
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+
+  packages/api-client:
+    devDependencies:
+      '@sovereignfs/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      tsup:
+        specifier: 'catalog:'
+        version: 9.0.0(jiti@2.7.0)(postcss@8.5.23)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -6294,8 +6318,8 @@ snapshots:
 
   acorn@8.19.0: {}
 
-  ajv-formats@3.0.1:
-    dependencies:
+  ajv-formats@3.0.1(ajv@8.20.0):
+    optionalDependencies:
       ajv: 8.20.0
 
   ajv@6.15.0:
@@ -6528,7 +6552,7 @@ snapshots:
   conf@15.1.0:
     dependencies:
       ajv: 8.20.0
-      ajv-formats: 3.0.1
+      ajv-formats: 3.0.1(ajv@8.20.0)
       atomically: 2.1.1
       debounce-fn: 6.0.0
       dot-prop: 10.2.0
@@ -8669,8 +8693,7 @@ snapshots:
 
   yallist@3.1.1: {}
 
-  yaml@2.9.1:
-    optional: true
+  yaml@2.9.1: {}
 
   yocto-queue@0.1.0: {}
 

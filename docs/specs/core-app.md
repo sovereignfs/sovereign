@@ -911,6 +911,28 @@ Core publishes the instance name, logos and favicon at a well-known address so
 that apps can show the same branding. The address and format are defined in
 `spec/core-api/`.
 
+### 3.13.1 The Core API contract
+
+What an app may call on core is defined once, in `spec/core-api/openapi.yaml`
+(OpenAPI 3.1), and nowhere else:
+
+- Paths are versioned (`/api/v1/...`); a change that could break an app that
+  already calls them is a new version, never an edit. The one unversioned path
+  is a public document under `/.well-known/`.
+- A call that needs authentication carries a bearer access token that core
+  issued to the app for a signed-in person (§3.9); the scope each operation
+  needs is on it in the contract.
+- Every failure has one body (`error` and `message`) and a status that says what
+  kind: 400, 401 (missing, expired, revoked or not for this API; with
+  `WWW-Authenticate`), 403 (no scope), 404, 429 (with `Retry-After`).
+- The typed client (`packages/api-client`) is **generated** from the contract
+  and committed; a test fails when it is not what the contract produces.
+- Core is **tested against** the contract: every answer a handler gives is
+  checked against the schema of its operation and status, a route the contract
+  does not describe fails, and an operation the contract describes as served
+  without a route fails. An operation marked `x-planned` is part of the contract
+  and not yet served.
+
 ### 3.14 Email
 
 - Core sends: invitation, email verification, password reset, account created,
@@ -1072,3 +1094,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-29 | §3.8: what the launcher page holds, that only a tile's own fields reach it, search by name, the icon drawn from the name, the empty states, and that only this page may load pictures from other addresses.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-10-29 | §3.11: what Connected apps lists and for whom, that an app asked about twice is one app, that an app an operator trusts is not listed, and what Remove access asks and says.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | 2026-10-29 | §3.3.6, §3.11: how a person deletes their own account (the password again, a question first, one whole step, the apps told), that the owner cannot and is told how to hand over first, and where they are sent afterwards.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| 2026-10-29 | §3.13.1: that the Core API is defined once, in an OpenAPI 3.1 contract; how its paths are versioned, how a call is authenticated, the one error body and its statuses; that the typed client is generated from it, and that core is tested against it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |

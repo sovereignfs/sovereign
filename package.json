@@ -28,7 +28,8 @@
     "generate:icons": "tsx scripts/generate-icons.ts && prettier --write packages/ui/src/components/Icon/icons",
     "generate:theme-presets": "tsx scripts/generate-theme-presets-css.ts && prettier --write packages/ui/src/tokens/theme-presets.css",
     "verify:push": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm design:tokens:check && pnpm docs:check-links && pnpm test",
-    "prepare": "simple-git-hooks"
+    "prepare": "simple-git-hooks",
+    "generate:api-client": "tsx scripts/generate-api-client.ts"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged",
@@ -48,6 +49,8 @@
     "@sovereignfs/tsconfig": "workspace:*",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
     "eslint-plugin-jsx-a11y": "catalog:",
@@ -63,6 +66,7 @@
     "turbo": "catalog:",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "yaml": "^2.9.1"
   }
 }

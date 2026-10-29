@@ -1,0 +1,45 @@
+{
+  "name": "@sovereignfs/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A typed client for the Sovereign Core API, generated from its OpenAPI contract.",
+  "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sovereignfs/sovereign-core.git",
+    "directory": "packages/api-client"
+  },
+  "homepage": "https://github.com/sovereignfs/sovereign-core/tree/main/packages/api-client#readme",
+  "bugs": {
+    "url": "https://github.com/sovereignfs/sovereign-core/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@sovereignfs/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "tsup": "catalog:",
+    "typescript": "catalog:"
+  }
+}

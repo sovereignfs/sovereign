@@ -300,6 +300,17 @@ pointing here.
   changes anything. It shares `#erase` with the operator's `delete`, so both are
   one transaction that revokes every token and removes what belongs to the
   account, and tell the apps afterwards.
+- **The Core API contract is the only definition, the client is generated from
+  it, and every handler is held to it.** `spec/core-api/openapi.yaml` is edited
+  first; `pnpm generate:api-client` rewrites `packages/api-client/src/generated/`
+  (a test fails if the committed files differ); a handler's answer is checked in
+  its test with `expectMatchesContract(operationId, status, body)`
+  (`src/__tests__/core-api-contract.ts`), which fails for a field that is
+  missing, extra or of the wrong kind; and a route under `app/api/v1` or a
+  `/.well-known/sovereign-*` document that the contract does not describe fails.
+  Objects in the contract are closed (`additionalProperties: false`), so an
+  answer cannot quietly grow a field. An operation not yet served is marked
+  `x-planned: true`, and the task that serves it removes the mark.
 - **Every Console page checks for itself, and shows a page that is not there to
   someone who may not enter.** `requireConsole` (`src/console/guard.ts`) asks for
   a session, `console:access` and the capability the page needs, judged by the

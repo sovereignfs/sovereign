@@ -81,8 +81,8 @@ describe('checkDocLinks', () => {
     ]);
   });
 
-  it('plans only targets that a roadmap task will create', () => {
-    expect(Object.keys(PLANNED_TARGETS).sort()).toEqual(['spec/core-api']);
+  it('plans nothing while every documented file exists', () => {
+    expect(Object.keys(PLANNED_TARGETS)).toEqual([]);
   });
 });
 

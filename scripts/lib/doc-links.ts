@@ -14,9 +14,7 @@ export type Finding = {
  * missing - once the file exists it is checked like any other link - and the
  * entry is deleted by the task that creates it.
  */
-export const PLANNED_TARGETS: Record<string, string> = {
-  'spec/core-api': 'task 10.1',
-};
+export const PLANNED_TARGETS: Record<string, string> = {};
 
 /** Directories never scanned: dependencies, build output, and imported packages. */
 const IGNORED_DIRECTORIES = new Set([

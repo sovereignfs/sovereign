@@ -1,0 +1,329 @@
+openapi: 3.1.0
+info:
+  title: Sovereign Core API
+  version: 1.0.0
+  summary: What an app calls on a Sovereign Core instance.
+  description: |
+    The HTTP contract between an app and the Core it signs people in with. This file is the one definition of it:
+    `packages/api-client` is generated from it, and Core's own handlers are tested against it, so neither can move
+    without the other.
+
+    Paths under `/api/v1` are versioned: a change that could break an app that already calls them is a new version,
+    never an edit. An unversioned path under `/.well-known/` is a public document anyone may read.
+
+    **Authentication.** A call that needs it carries an access token Core issued to the app for a signed-in person:
+    `Authorization: Bearer <token>`. The app asks for the token with `resource=<origin>/api/v1` and the scope the
+    call needs, which makes it a signed JWT addressed to this API. Core accepts a call only when the token's
+    signature, audience and scope are valid **and** the token has not been revoked: a signature alone is not
+    enough, because a revoked token would otherwise keep working until it expires.
+
+    **Errors.** Every failure has the same body, `ErrorResponse`, and a status that says what kind: 400 the request was
+    malformed, 401 the token is missing or no longer valid, 403 the token lacks the scope, 404 there is nothing
+    there, 429 slow down (with `Retry-After`).
+
+    An operation marked `x-planned: true` is part of the contract but not served yet.
+  license:
+    name: MPL-2.0
+    identifier: MPL-2.0
+servers:
+  - url: https://core.example.com
+    description: A Sovereign Core instance. Use its own address (its `SV_URL`).
+tags:
+  - name: Directory
+    description: Finding the people on an instance, to share something with them.
+  - name: Instance
+    description: What the instance looks like.
+paths:
+  /api/v1/directory/users:
+    get:
+      operationId: searchDirectoryUsers
+      tags: [Directory]
+      summary: Search for people by name
+      description: |
+        Matches the text against people's names and returns at most `limit` of them, best match first. Deactivated
+        accounts are not returned. A text that matches nobody returns an empty list, not an error.
+      security:
+        - bearer: [directory]
+      x-planned: true
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: What to look for in a name. 1 to 100 characters.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: limit
+          in: query
+          required: false
+          description: The most to return. 1 to 25; 10 when not given.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 25
+            default: 10
+      responses:
+        '200':
+          description: The people whose name matches.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [users]
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DirectoryUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/v1/directory/users/resolve:
+    post:
+      operationId: resolveDirectoryUsers
+      tags: [Directory]
+      summary: Look people up by their `sub`
+      description: |
+        Returns each person asked for whose account exists, with whether it is active. A deactivated account is
+        returned with `active: false`; a deleted account is left out, so an app learns nothing about an account that
+        is gone. People are returned in the order they were asked for.
+      security:
+        - bearer: [directory]
+      x-planned: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [subs]
+              properties:
+                subs:
+                  type: array
+                  description: The `sub` of each person. 1 to 100, each at most 255 characters.
+                  minItems: 1
+                  maxItems: 100
+                  items:
+                    type: string
+                    minLength: 1
+                    maxLength: 255
+      responses:
+        '200':
+          description: The people found.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [users]
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DirectoryUserStatus'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/v1/directory/users/by-email:
+    get:
+      operationId: findDirectoryUserByEmail
+      tags: [Directory]
+      summary: Find one person by their whole email address
+      description: |
+        Returns the person whose email address is exactly the one given, whatever the case, and nobody else. There is
+        no listing and no partial matching of addresses: part of an address finds nobody. A deactivated account is
+        not returned.
+      security:
+        - bearer: [directory]
+      x-planned: true
+      parameters:
+        - name: email
+          in: query
+          required: true
+          description: The whole email address.
+          schema:
+            type: string
+            minLength: 3
+            maxLength: 254
+      responses:
+        '200':
+          description: The person with that address.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectoryUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /.well-known/sovereign-instance:
+    get:
+      operationId: getInstanceBranding
+      tags: [Instance]
+      summary: The instance's name, logos and favicon
+      description: |
+        What an app needs to look like it belongs to this instance. It is public, needs no token, and always shows
+        what the operator has set now: a change in the Console is here at once. Addresses are absolute and carry the
+        picture's version, so a changed picture is a new address.
+      security: []
+      x-planned: true
+      responses:
+        '200':
+          description: The instance's branding.
+          headers:
+            ETag:
+              description: Changes whenever anything in the answer does.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstanceBranding'
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        An access token Core issued to the app for a signed-in person, requested with `resource=<origin>/api/v1`.
+        The scope each operation needs is named on it.
+  schemas:
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          description: What kind of failure, for a program to act on.
+          enum:
+            - invalid_request
+            - invalid_token
+            - insufficient_scope
+            - not_found
+            - rate_limited
+        message:
+          type: string
+          description: What happened, for a person to read.
+    DirectoryUser:
+      type: object
+      additionalProperties: false
+      required: [sub, name, picture]
+      properties:
+        sub:
+          type: string
+          description: The person's stable identifier, the same `sub` an ID token carries. Never reused.
+        name:
+          type: string
+        picture:
+          type: [string, 'null']
+          format: uri
+          description: The address of their picture, or null when they have none.
+    DirectoryUserStatus:
+      type: object
+      additionalProperties: false
+      required: [sub, name, picture, active]
+      properties:
+        sub:
+          type: string
+        name:
+          type: string
+        picture:
+          type: [string, 'null']
+          format: uri
+        active:
+          type: boolean
+          description: False for a deactivated account, which cannot sign in.
+    InstanceBranding:
+      type: object
+      additionalProperties: false
+      required: [name, url, logo, favicon]
+      properties:
+        name:
+          type: string
+          description: The instance's name.
+        url:
+          type: string
+          format: uri
+          description: The instance's own address, which is also its issuer.
+        logo:
+          type: object
+          additionalProperties: false
+          required: [light, dark]
+          properties:
+            light:
+              type: [string, 'null']
+              format: uri
+              description: A logo for a light page. When only one logo is set it is given for both.
+            dark:
+              type: [string, 'null']
+              format: uri
+              description: A logo for a dark page.
+        favicon:
+          type: [string, 'null']
+          format: uri
+  responses:
+    BadRequest:
+      description: The request was malformed, or a value is out of range.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: The token is missing, malformed, expired, revoked, or not addressed to this API.
+      headers:
+        WWW-Authenticate:
+          description: Says why, as RFC 6750 does.
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: The token is valid but does not carry the scope this operation needs.
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: There is nothing there.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Too many calls from this app or for this person. Wait and try again.
+      headers:
+        Retry-After:
+          description: Seconds to wait.
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

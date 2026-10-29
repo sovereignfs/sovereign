@@ -219,6 +219,10 @@ each: `docs/architecture-rules.md`.
 - **A person deletes their own account only through `AccountManager.deleteSelf`**
   (after the password; never an owner's, judged by the stored role); it shares
   the one transaction an operator's deletion uses.
+- **The Core API is defined only in `spec/core-api/openapi.yaml`**; the client in
+  `packages/api-client` is generated from it (`pnpm generate:api-client`, never
+  edited by hand) and every handler's answer is checked against it
+  (`expectMatchesContract`).
 - **Every Console page calls `requireConsole` itself** (a test fails when one does
   not), and answers someone who may not enter with a page that is not there.
 - **A client is written only by `ClientRegistry`** (validation, the provider's

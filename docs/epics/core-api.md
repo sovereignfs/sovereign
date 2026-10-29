@@ -21,7 +21,7 @@ account-deletion endpoints here.
 
 ## Tasks
 
-#### 📋 10.1 — Contract and generated client
+#### ✅ 10.1 — Contract and generated client
 
 **Goal:** The Core API has one canonical definition that both sides follow.
 
@@ -41,6 +41,10 @@ account-deletion endpoints here.
 **Review checklist:**
 
 - Changing a response shape without updating the contract fails CI
+
+**Not here:** serving any operation (the Directory API is 10.2 and the branding
+endpoint 10.3, which are in the contract already, marked `x-planned`), and
+publishing the client to npm (it is release-ready and private, like the bridge).
 
 #### 📋 10.2 — Directory API
 

@@ -731,6 +731,49 @@ share something with a person.
   addresses.
 - Calls are rate limited per client and per account.
 
+How it is held to those words (the contract is `spec/core-api/openapi.yaml`,
+§3.13.1):
+
+- The token is a JWT the provider issued with `resource=<SV_URL>/api/v1`: core
+  declares that address as a protected resource whose only scope is `directory`,
+  any app may ask for it (the scope is still the app's to be allowed and the
+  person's to grant), and a token asked for without it is opaque and is refused.
+  Core checks the signature against its **own** keys with EdDSA, that the type is
+  `at+jwt` (an ID token is not one), the issuer, the audience, the expiry, and
+  the scope. A missing or bad token is a `401` with `WWW-Authenticate`, the same
+  whichever way it is bad, except that an expired one says so; a token without
+  the scope is a `403` naming it.
+- It then checks what a signature cannot: the account exists and is active, the
+  app exists and is switched on, the session it was got with is still open, and
+  the token was not **revoked**. A signed token leaves no row to mark, so
+  revoking records when: deactivating or deleting an account, and Remove access
+  (§3.6.4), write the time into the same transaction (`token_revocations`, one
+  row for the account and one for each app), and a token issued up to that second
+  is refused. A token issued in the same second as a revocation counts as
+  revoked; the doubt goes against the token. Reactivating an account does not
+  bring its tokens back (§3.3.6).
+- **Search** matches names only, whatever the case, with `%`, `_` and `\` as the
+  characters they are; no part of an email address finds anyone. It returns at
+  most the `limit` (1 to 25, ten when not given), a name that is exactly the
+  text first, then those that start with it, then the rest in name order, and
+  an empty list when nobody matches. The text is 1 to 100 characters.
+- **Resolve** takes 1 to 100 `sub` values and returns each person found in the
+  order asked, once, with `active`; a deleted account is left out.
+- **By email** compares the whole address, whatever the case, and returns
+  nobody for part of one or for a wildcard. A deactivated account is not
+  returned, by search or by email.
+- Every person is `sub`, `name` and `picture` (an absolute address on the
+  instance, or null), and nothing else is ever returned, an email address
+  least of all.
+- Calls are counted in a one-minute window, against the app (600) and against
+  the person (120), in the database so every instance shares them; over either
+  is a `429` with `Retry-After`. A call with a bad token is never counted, so
+  it cannot use up a real caller's allowance. A refused call is counted, so
+  asking again does not make it pass.
+- The routes are `/api/v1/directory/...`. The proxy lets them through without a
+  cookie (a call carries a token and none), and each asks for its own token and
+  scope before it does anything.
+
 ### 3.10 Console: accounts and invites
 
 Operators manage accounts in the Console, within §3.2.
@@ -1110,3 +1153,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-29 | §3.3.6, §3.11: how a person deletes their own account (the password again, a question first, one whole step, the apps told), that the owner cannot and is told how to hand over first, and where they are sent afterwards.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | 2026-10-29 | §3.13.1: that the Core API is defined once, in an OpenAPI 3.1 contract; how its paths are versioned, how a call is authenticated, the one error body and its statuses; that the typed client is generated from it, and that core is tested against it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | 2026-10-29 | §3.13: where the branding document is, that it is public and readable from any origin, what it holds, that pictures are absolute and versioned, that one logo serves both themes, and that it is always current and revalidated.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-10-29 | §3.9: how the Directory API is held to its words: the resource and the checks made of a token (key, type, issuer, audience, expiry, scope), what a signature cannot say (account, app, session, revocation, recorded by time), what search, resolve and by-email match and return, and how calls are counted and refused.                                                                                                                                                                                                                                                                                                                                                                                                     |

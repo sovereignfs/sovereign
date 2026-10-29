@@ -319,6 +319,22 @@ pointing here.
   `force-dynamic`, revalidated with an ETag, and reads the settings and pictures
   through the same stores the Console writes, so nothing is cached past what those
   stores cache.
+- **A call into the Core API is let in only by `authenticate`, and a signed token
+  is revoked by time.** Every `/api/v1` route calls its guard
+  (`directoryGuard`) before anything else; the proxy lets `/api/v1/` through
+  without a cookie, so the route is the only check. `authenticate`
+  (`src/api/token.ts`) verifies against core's own keys with EdDSA and `typ`
+  `at+jwt`, issuer, audience and expiry, then the scope, then that the account
+  is active, the app is on, the session is open and `isTokenRevoked` says no.
+  A JWT access token leaves no `oauth_access_tokens` row, so `revoke`
+  (`src/oauth/revocation.ts`) also writes `token_revocations` in the same
+  transaction, and the account's rows go with the account (`removeAccount`, not
+  the cascade). A call with a bad token is not counted by `countCall`.
+- **The Directory returns `sub`, `name` and `picture` and nothing else, matches
+  names only, and matches an email only whole.** Its queries
+  (`src/directory/directory.ts`) are tested for `%`, `_` and wildcards in both
+  searches, for part of an address finding nobody, and for a deactivated account
+  never appearing.
 - **Every Console page checks for itself, and shows a page that is not there to
   someone who may not enter.** `requireConsole` (`src/console/guard.ts`) asks for
   a session, `console:access` and the capability the page needs, judged by the

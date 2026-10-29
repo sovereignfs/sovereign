@@ -85,6 +85,13 @@
       "when": 1793239404288,
       "tag": "0011_instance_images",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1793278443666,
+      "tag": "0012_token_revocations",
+      "breakpoints": true
     }
   ]
 }

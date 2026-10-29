@@ -62,7 +62,37 @@ async function revoke(
     NAMES.refresh.clientId,
     NAMES.refresh.revoked,
   );
+  // A signed JWT access token (the Core API's, core-app §3.9) leaves no row to mark, so the time is recorded:
+  // everything issued up to it is no longer good (`isTokenRevoked`). The same transaction, so it is whole
+  // with the rest, and only ever moves forward.
+  await tx.run(
+    `insert into token_revocations (user_id, client_id, revoked_before) values (?, ?, ?)
+     on conflict (user_id, client_id) do update set revoked_before =
+       case when excluded.revoked_before > token_revocations.revoked_before
+         then excluded.revoked_before else token_revocations.revoked_before end`,
+    [userId, clientId ?? '', at instanceof Date ? at.getTime() : at],
+  );
   return { accessTokens: access.rowsAffected, refreshTokens: refresh.rowsAffected };
+}
+
+/**
+ * Whether a token for `userId` from `clientId`, issued at `issuedAt` (the JWT's `iat`, in seconds), was revoked
+ * by `revokeAllTokens` or `revokeClientTokens` (core-app §3.9). The comparison is by the second, since that is
+ * all a token says of when it was issued, so a token issued in the same second as a revocation counts as
+ * revoked: the doubt goes against the token, never for it.
+ */
+export async function isTokenRevoked(
+  database: Pick<Database, 'run'>,
+  userId: string,
+  clientId: string,
+  issuedAt: number,
+): Promise<boolean> {
+  const { rows } = await database.run(
+    "select revoked_before from token_revocations where user_id = ? and client_id in ('', ?)",
+    [userId, clientId],
+  );
+  const cutoff = rows.reduce((latest, row) => Math.max(latest, Number(row.revoked_before)), 0);
+  return rows.length > 0 && issuedAt <= Math.floor(cutoff / 1000);
 }
 
 /**

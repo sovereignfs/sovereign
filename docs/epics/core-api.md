@@ -46,7 +46,7 @@ account-deletion endpoints here.
 endpoint 10.3, which are in the contract already, marked `x-planned`), and
 publishing the client to npm (it is release-ready and private, like the bridge).
 
-#### 📋 10.2 — Directory API
+#### ✅ 10.2 — Directory API
 
 **Goal:** Apps can find accounts to share with, without exposing the list of
 users.
@@ -76,6 +76,10 @@ users.
 - A token issued without `resource` is refused by the Directory API
 - A partial email address returns nothing
 - Exceeding the rate limit is refused
+
+**Not here:** cross-origin calls from a browser (the API is for an app's server;
+only the branding document allows any origin), listing or counting accounts, and
+searching by anything but name or whole email.
 
 #### ✅ 10.3 — Instance branding endpoint
 

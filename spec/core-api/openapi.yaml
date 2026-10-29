@@ -21,7 +21,7 @@ info:
     malformed, 401 the token is missing or no longer valid, 403 the token lacks the scope, 404 there is nothing
     there, 429 slow down (with `Retry-After`).
 
-    An operation marked `x-planned: true` is part of the contract but not served yet.
+    An operation marked `x-planned: true` is part of the contract but not served yet. None is, now.
   license:
     name: MPL-2.0
     identifier: MPL-2.0
@@ -44,7 +44,6 @@ paths:
         accounts are not returned. A text that matches nobody returns an empty list, not an error.
       security:
         - bearer: [directory]
-      x-planned: true
       parameters:
         - name: q
           in: query
@@ -96,7 +95,6 @@ paths:
         is gone. People are returned in the order they were asked for.
       security:
         - bearer: [directory]
-      x-planned: true
       requestBody:
         required: true
         content:
@@ -148,7 +146,6 @@ paths:
         not returned.
       security:
         - bearer: [directory]
-      x-planned: true
       parameters:
         - name: email
           in: query

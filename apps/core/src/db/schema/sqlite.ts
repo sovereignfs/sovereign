@@ -167,6 +167,25 @@ export const instanceImages = sqliteTable('instance_images', {
 });
 
 /**
+ * When an account's tokens, or one app's tokens for it, were last revoked (core-app §3.6.3, §3.9). The provider
+ * keeps a row for each token it issues except a signed JWT access token, which is checked by its signature and
+ * leaves nothing to mark; a token that nothing marks is revoked by saying that everything issued up to a time is
+ * no longer good. One row for each account and app, with an empty `client_id` for every app. The time is
+ * milliseconds since the epoch, an integer on both dialects, so a token's `iat` is compared with it directly.
+ */
+export const tokenRevocations = sqliteTable(
+  'token_revocations',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    clientId: text('client_id').notNull(),
+    revokedBefore: integer('revoked_before').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.clientId] })],
+);
+
+/**
  * The OpenID Connect provider's tables (core-app §3.6): better-auth's JWT plugin keeps the signing keys, and
  * `@better-auth/oauth-provider` keeps the registered apps ("clients" inside the protocol), the tokens it
  * has issued and what each person agreed to share. better-auth names them jwks, oauthClient, oauthResource,

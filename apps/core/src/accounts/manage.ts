@@ -289,7 +289,14 @@ async function removeAccount(tx: Executor, id: string): Promise<void> {
   await tx.run(`delete from ${NAMES.accessTokens} where ${NAMES.access.userId} = ?`, [id]);
   await tx.run(`delete from ${NAMES.refreshTokens} where ${NAMES.refresh.userId} = ?`, [id]);
   await tx.run(`delete from ${NAMES.consents} where ${NAMES.consent.userId} = ?`, [id]);
-  for (const table of ['two_factors', 'passkeys', 'avatars', 'sessions', 'accounts']) {
+  for (const table of [
+    'two_factors',
+    'passkeys',
+    'avatars',
+    'token_revocations',
+    'sessions',
+    'accounts',
+  ]) {
     await tx.run(`delete from ${table} where user_id = ?`, [id]);
   }
   await tx.run('update invites set invited_by = null where invited_by = ?', [id]);

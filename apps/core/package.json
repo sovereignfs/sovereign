@@ -25,6 +25,7 @@
     "@sovereignfs/ui": "workspace:*",
     "better-auth": "^1.7.13",
     "drizzle-orm": "catalog:",
+    "jose": "^6.2.13",
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",

@@ -1,6 +1,7 @@
 import { postgresBytes, postgresTimestampMs } from '@sovereignfs/database';
 import { sql } from 'drizzle-orm';
 import {
+  bigint,
   boolean,
   index,
   integer,
@@ -194,6 +195,18 @@ export const instanceImages = pgTable('instance_images', {
   updatedAt: postgresTimestampMs('updated_at').notNull(),
   updatedBy: text('updated_by'),
 });
+
+export const tokenRevocations = pgTable(
+  'token_revocations',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    clientId: text('client_id').notNull(),
+    revokedBefore: bigint('revoked_before', { mode: 'number' }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.clientId] })],
+);
 
 export const jwks = pgTable('jwks', {
   id: text('id').primaryKey(),

@@ -225,6 +225,11 @@ each: `docs/architecture-rules.md`.
   (`expectMatchesContract`).
 - **The branding document (`/.well-known/sovereign-instance`) is public, typed from
   the contract, and always current** (never cached past revalidation).
+- **Core API routes (`/api/v1`) call their guard first** (`directoryGuard` →
+  `authenticate`: key, type, audience, scope, then account, app, session and
+  revocation); a signed token is revoked by time (`token_revocations`, written
+  by `revoke`); the Directory returns only `sub`, `name`, `picture`, matches
+  names only and an email only whole.
 - **Every Console page calls `requireConsole` itself** (a test fails when one does
   not), and answers someone who may not enter with a page that is not there.
 - **A client is written only by `ClientRegistry`** (validation, the provider's

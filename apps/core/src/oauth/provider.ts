@@ -41,6 +41,9 @@ const SUPPORTED_CLAIMS = [
 
 /** Token lifetimes in seconds (core-app §3.6.1): access 15 minutes, ID 1 hour, refresh 30 days from last use. */
 export const ACCESS_TOKEN_SECONDS = 15 * 60;
+
+/** The address the Core API's tokens are addressed to (core-app §3.9): where an app's `resource` points. */
+export const coreApiResource = (origin: string): string => `${origin}/api/v1`;
 export const ID_TOKEN_SECONDS = 60 * 60;
 export const REFRESH_TOKEN_SECONDS = 30 * 24 * 60 * 60;
 
@@ -88,6 +91,21 @@ export function oidcPlugins(database: Database, settings: AuthSettings) {
       idTokenExpiresIn: ID_TOKEN_SECONDS,
       refreshTokenExpiresIn: REFRESH_TOKEN_SECONDS,
       validateRedirectUri: (uri, registered) => registered.includes(uri),
+      // The Core API is a protected resource (core-app §3.9). An app that asks for a token with
+      // `resource=<origin>/api/v1` is given a signed JWT addressed to it, limited to the `directory` scope; a
+      // token asked for without it stays opaque and is refused by the API. Any app may ask for the resource
+      // (the scope is still the app's to be allowed and the person's to grant), and the row is rewritten from
+      // this configuration at every start, since nothing else writes it.
+      resources: [
+        {
+          identifier: coreApiResource(issuer),
+          name: 'Core API',
+          allowedScopes: ['directory'],
+          accessTokenTtl: ACCESS_TOKEN_SECONDS,
+        },
+      ],
+      resourceSeedMode: 'overwrite',
+      enforcePerClientResources: false,
       clientReference: () => 'instance',
       clientPrivileges: async ({ user }) =>
         can(user?.role, 'client:manage', await loadMatrix(database)),

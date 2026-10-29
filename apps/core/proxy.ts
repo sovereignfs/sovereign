@@ -58,6 +58,8 @@ function isPublic(pathname: string): boolean {
     pathname === '/.well-known/oauth-authorization-server' ||
     // The instance's public branding for apps (core-app §3.13).
     pathname === '/.well-known/sovereign-instance' ||
+    // The Core API: a call carries a bearer token and no cookie, and every route asks for its own (core-app §3.9).
+    pathname.startsWith('/api/v1/') ||
     pathname.startsWith('/api/auth/') ||
     pathname.startsWith('/api/avatars/') ||
     pathname.startsWith('/api/branding/') ||

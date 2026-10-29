@@ -34,6 +34,13 @@ function files(directory: string): string[] {
 const relative = (file: string) => path.relative(APP, file).split(path.sep).join('/');
 const all = files(APP);
 const authorizes = (source: string) => /\brequire(Session|Capability)\(/.test(source);
+/**
+ * The Core API (`app/api/v1`) is called with a bearer token and no cookie, so its routes are not public to the
+ * proxy and not behind a session: each asks for its own token and the scope it needs (`directoryGuard`), before
+ * anything else. A token is not an ambient credential, so these routes are not held to the same-origin rule.
+ */
+const isTokenRoute = (file: string) => relative(file).startsWith('api/v1/');
+const guardsByToken = (source: string) => /\bdirectoryGuard\(/.test(source);
 
 describe('server actions and route handlers authorize inside', () => {
   const routes = all.filter((file) => /(^|\/)route\.ts$/.test(relative(file)));
@@ -50,9 +57,13 @@ describe('server actions and route handlers authorize inside', () => {
     routes
       .filter((file) => !PUBLIC_ROUTES.has(relative(file)))
       .map((file) => [relative(file), file]),
-  )('route %s checks the session or a capability', (_name, file) => {
-    expect(authorizes(readFileSync(String(file), 'utf8'))).toBe(true);
-  });
+  )(
+    'route %s checks the session or a capability, or the token it is called with',
+    (_name, file) => {
+      const source = readFileSync(String(file), 'utf8');
+      expect(isTokenRoute(String(file)) ? guardsByToken(source) : authorizes(source)).toBe(true);
+    },
+  );
 
   it.each(actions.map((file) => [relative(file), file]))(
     'server action file %s checks the session or a capability',
@@ -77,6 +88,7 @@ describe('server actions and route handlers authorize inside', () => {
   it.each(
     routes
       .filter((file) => !relative(file).startsWith('api/auth/'))
+      .filter((file) => !isTokenRoute(file))
       .filter((file) =>
         /export\s+(async\s+)?function\s+(POST|PUT|PATCH|DELETE)\b/.test(readFileSync(file, 'utf8')),
       )
@@ -89,6 +101,8 @@ describe('server actions and route handlers authorize inside', () => {
     expect(authorizes("await requireCapability('user:manage');")).toBe(true);
     expect(authorizes('const s = await requireSession();')).toBe(true);
     expect(authorizes('// requireSession is mentioned')).toBe(false);
+    expect(guardsByToken('await directoryGuard(request);')).toBe(true);
+    expect(guardsByToken('// directoryGuard is mentioned')).toBe(false);
     expect(authorizes('const session = await getSession();')).toBe(false);
   });
 });

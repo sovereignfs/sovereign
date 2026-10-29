@@ -1,6 +1,6 @@
 # Sovereign Core — Roadmap
 
-**Version:** 0.39.0 · **Last updated:** 2026-10-29
+**Version:** 0.40.0 · **Last updated:** 2026-10-29
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -79,7 +79,7 @@ _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked · �
 | ------- | ----------------------------- | ------ | ----------------------------------- |
 | 0.39.0  | Contract and generated client | ✅     | [10.1](docs/epics/core-api.md)      |
 | —       | Directory API                 | 📋     | [10.2](docs/epics/core-api.md)      |
-| —       | Instance branding endpoint    | 📋     | [10.3](docs/epics/core-api.md)      |
+| 0.40.0  | Instance branding endpoint    | ✅     | [10.3](docs/epics/core-api.md)      |
 | —       | Docker image and compose      | 📋     | [0.5](docs/epics/infrastructure.md) |
 | —       | Phase 1 acceptance            | 📋     | [0.6](docs/epics/infrastructure.md) |
 

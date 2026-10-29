@@ -83,23 +83,17 @@ vi.mock('../instance/service', () => ({
   getInstanceIdentity: () => identityNow() as unknown,
 }));
 const { InstanceLogo } = await import('../../app/instance-logo');
+const { AuthBrand } = await import('../../app/(auth)/auth-card');
 
-describe('the logo on the pages before sign-in', () => {
+describe('the logo in the header', () => {
   beforeEach(() => identityNow.mockReset());
 
-  it('draws the instance’s name when no logo is set, so a person can tell whose sign-in this is', async () => {
-    identityNow.mockResolvedValue({ ...PLAIN_IDENTITY, name: 'Acme' });
-    const html = renderToStaticMarkup(await InstanceLogo());
-    expect(html).toContain('Acme');
-    expect(html).not.toContain('<img');
-  });
-
-  it('draws nothing beside the name in the header when there is no logo', async () => {
+  it('draws nothing when no logo is set: the header has the name beside it', async () => {
     identityNow.mockResolvedValue(PLAIN_IDENTITY);
-    expect(renderToStaticMarkup(await InstanceLogo({ small: true }))).toBe('');
+    expect(renderToStaticMarkup(await InstanceLogo())).toBe('');
   });
 
-  it('draws both pictures, named for the instance, so the theme can show the right one', async () => {
+  it('draws both pictures, so the theme can show the right one, with no text of their own', async () => {
     identityNow.mockResolvedValue({
       ...PLAIN_IDENTITY,
       name: 'Acme',
@@ -107,6 +101,32 @@ describe('the logo on the pages before sign-in', () => {
       logoDark: '/api/branding/logo-dark?v=1',
     });
     const html = renderToStaticMarkup(await InstanceLogo());
+    expect(html).toContain('src="/api/branding/logo-light?v=1"');
+    expect(html).toContain('src="/api/branding/logo-dark?v=1"');
+    // The name is beside it, so a screen reader is not told it twice.
+    expect(html.match(/alt=""/g)).toHaveLength(2);
+  });
+});
+
+describe('the mark on the pages before sign-in', () => {
+  beforeEach(() => identityNow.mockReset());
+
+  it('is the first letter of the instance’s name in a badge when no logo is set', async () => {
+    identityNow.mockResolvedValue({ ...PLAIN_IDENTITY, name: 'acme' });
+    const html = renderToStaticMarkup(await AuthBrand());
+    expect(html).toContain('>A</div>');
+    expect(html).not.toContain('<img');
+    expect(html).toContain('aria-hidden="true"');
+  });
+
+  it('is the instance’s own logo when it has one, both pictures named for it, for the theme to choose', async () => {
+    identityNow.mockResolvedValue({
+      ...PLAIN_IDENTITY,
+      name: 'Acme',
+      logoLight: '/api/branding/logo-light?v=1',
+      logoDark: '/api/branding/logo-dark?v=1',
+    });
+    const html = renderToStaticMarkup(await AuthBrand());
     expect(html).toContain('src="/api/branding/logo-light?v=1"');
     expect(html).toContain('src="/api/branding/logo-dark?v=1"');
     expect(html.match(/alt="Acme"/g)).toHaveLength(2);

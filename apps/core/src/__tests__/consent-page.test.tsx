@@ -1,7 +1,12 @@
-import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { renderServer } from './render-server';
 
 const getSession = vi.fn();
+// The pages draw the instance's mark, which reads its settings; what it draws is tested with it (instance-identity.test.tsx).
+vi.mock('../instance/service', () => ({
+  getInstanceIdentity: () =>
+    Promise.resolve({ name: 'Acme', logoLight: undefined, logoDark: undefined }),
+}));
 vi.mock('../auth/session', () => ({ getSession: () => getSession() as unknown }));
 vi.mock('../auth/client', () => ({ authClient: { oauth2: { consent: vi.fn() } } }));
 
@@ -42,7 +47,7 @@ describe('the consent page', () => {
   });
 
   it('asks about the app that is asking, as the person who is signed in, and one level-one heading', async () => {
-    const html = renderToStaticMarkup(await ConsentPage({ searchParams: Promise.resolve(signed) }));
+    const html = await renderServer(await ConsentPage({ searchParams: Promise.resolve(signed) }));
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
     expect(html).toContain('Allow access to your account?');
     expect(html).toContain('Notes');
@@ -63,7 +68,7 @@ describe('the consent page', () => {
 
   it('never names an app or lists a permission that came from an address nobody signed', async () => {
     verify.mockResolvedValue(false);
-    const html = renderToStaticMarkup(
+    const html = await renderServer(
       await ConsentPage({ searchParams: Promise.resolve({ ...signed, client_id: 'evil' }) }),
     );
     expect(html).toContain('This request has expired');
@@ -72,7 +77,7 @@ describe('the consent page', () => {
   });
 
   it('says the request has expired for an address with no signature at all', async () => {
-    const html = renderToStaticMarkup(
+    const html = await renderServer(
       await ConsentPage({ searchParams: Promise.resolve({ client_id: 'abc', scope: 'openid' }) }),
     );
     expect(html).toContain('This request has expired');
@@ -81,18 +86,18 @@ describe('the consent page', () => {
 
   it('says it for a client that is gone, and offers a way back', async () => {
     findOne.mockResolvedValue(null);
-    const html = renderToStaticMarkup(await ConsentPage({ searchParams: Promise.resolve(signed) }));
+    const html = await renderServer(await ConsentPage({ searchParams: Promise.resolve(signed) }));
     expect(html).toContain('This request has expired');
     expect(html).toContain('href="/"');
   });
 
   it('does not offer roles to an untrusted app', async () => {
-    const html = renderToStaticMarkup(await ConsentPage({ searchParams: Promise.resolve(signed) }));
+    const html = await renderServer(await ConsentPage({ searchParams: Promise.resolve(signed) }));
     expect(html).not.toMatch(/role/i);
   });
 
   it('is drawn with the design system and carries no inline styling or scripts of its own', async () => {
-    const html = renderToStaticMarkup(await ConsentPage({ searchParams: Promise.resolve(signed) }));
+    const html = await renderServer(await ConsentPage({ searchParams: Promise.resolve(signed) }));
     expect(html).not.toMatch(/<script|<style|style="/);
   });
 });

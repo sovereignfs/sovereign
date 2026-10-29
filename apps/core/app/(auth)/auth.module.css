@@ -1,58 +1,304 @@
-.stage {
-  /* The card sits a little below the top, as a sign-in does, not hard against it. */
-  padding-top: clamp(0px, 8vh, 5rem);
+/* The pages before sign-in, and the pages that stand alone (a missing address, a failure, consent): one card,
+   centred on the screen, as the Sovereign sign-in pages have always been. */
+
+.page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  /* Centred when the card fits; from the top when a taller one (sign-up, consent) does not, so its top stays
+     reachable. */
+  align-items: safe center;
+  justify-content: center;
+  padding: var(--sv-space-4);
+  background: var(--sv-color-surface);
+  box-sizing: border-box;
 }
+
+.card {
+  width: 100%;
+  max-width: 360px;
+  background-color: var(--sv-color-surface);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-lg);
+  box-shadow: var(--sv-shadow-card, 0 1px 2px rgba(0, 0, 0, 0.04));
+  padding: var(--sv-space-8);
+  box-sizing: border-box;
+}
+
+/* ── Brand mark ──────────────────────────────────────────────────────────── */
+
+.brand {
+  width: 34px;
+  height: 34px;
+  margin-bottom: var(--sv-space-5);
+  border-radius: var(--sv-radius-md);
+  background-color: var(--sv-color-accent);
+  color: var(--sv-color-text-on-accent);
+  font-size: var(--sv-font-size-md);
+  font-weight: var(--sv-font-weight-semibold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* An instance's own logo is shown as it is, not in the badge. Both pictures are in the page and the theme shows
+   one, so the right one is there from the first paint. */
+.brandPicture {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  margin-bottom: var(--sv-space-5);
+}
+
+.brandPicture img {
+  max-width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.brandDark {
+  display: none;
+}
+
+:global([data-theme='dark']) .brandLight {
+  display: none;
+}
+
+:global([data-theme='dark']) .brandDark {
+  display: block;
+}
+
+/* ── Title and what it is for ────────────────────────────────────────────── */
+
+.title {
+  margin: 0;
+  font-size: 21px;
+  font-weight: var(--sv-font-weight-semibold);
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  color: var(--sv-color-text-primary);
+}
+
+.lead {
+  margin: var(--sv-space-2) 0 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+  line-height: 1.5;
+}
+
+/* ── Notices ─────────────────────────────────────────────────────────────── */
+
+.notice {
+  margin-top: var(--sv-space-3);
+  padding: var(--sv-space-3) var(--sv-space-4);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface-sunken);
+  border: 1px solid var(--sv-color-border);
+}
+
+.noticeText {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+  line-height: 1.5;
+}
+
+/* A notice that something is not as the person expects: amber, as the offline notice has always been. */
+.warning {
+  background: var(--sv-color-warning-surface);
+  border-color: var(--sv-color-warning-border);
+}
+
+.warning .noticeText {
+  color: var(--sv-color-warning-text);
+}
+
+/* ── Form ────────────────────────────────────────────────────────────────── */
 
 .form {
   display: flex;
   flex-direction: column;
   gap: var(--sv-space-4);
+  margin-top: var(--sv-space-6);
 }
 
-.title {
-  margin: 0;
-  font-size: var(--sv-font-size-2xl);
-  font-weight: var(--sv-font-weight-semibold);
+.field {
+  display: flex;
+  flex-direction: column;
 }
 
-.lead {
-  margin: 0;
-  color: var(--sv-color-text-muted);
-  font-size: var(--sv-font-size-md);
-}
-
-.footer {
-  margin: 0;
-  color: var(--sv-color-text-muted);
+.label {
+  display: block;
+  margin-bottom: var(--sv-space-2);
   font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-text-muted);
 }
 
-.link {
-  color: var(--sv-color-accent);
+.labelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--sv-space-2);
 }
 
-.submit {
-  width: 100%;
+.labelRow .label {
+  margin-bottom: 0;
+}
+
+.aside {
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--sv-color-border);
+}
+
+.hint {
+  margin: var(--sv-space-1) 0 0;
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-error-text);
+}
+
+.fieldError {
+  margin: var(--sv-space-1) 0 0;
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-error-text);
 }
 
 .terms {
   display: flex;
-  flex-direction: column;
   gap: var(--sv-space-2);
+  align-items: flex-start;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-primary);
 }
 
-.legal {
+.terms input {
+  margin-top: 3px;
+}
+
+/* ── Divider ─────────────────────────────────────────────────────────────── */
+
+.divider {
   display: flex;
-  justify-content: center;
-  margin-top: var(--sv-space-4);
+  align-items: center;
+  gap: var(--sv-space-3);
+  margin: var(--sv-space-4) 0;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-sm);
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--sv-color-border);
+}
+
+/* ── Buttons, links ──────────────────────────────────────────────────────── */
+
+.submit {
+  width: 100%;
+  margin-top: var(--sv-space-2);
+}
+
+.wide {
+  width: 100%;
+}
+
+.footer {
+  margin: var(--sv-space-5) 0 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+  text-align: center;
+}
+
+.link {
+  color: var(--sv-color-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .linkButton {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--sv-color-accent);
+  color: var(--sv-color-text-primary);
   font: inherit;
   cursor: pointer;
   text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── Invitation ──────────────────────────────────────────────────────────── */
+
+.invite {
+  margin-top: var(--sv-space-5);
+}
+
+.inviteTitle {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-text-primary);
+  line-height: 1.4;
+}
+
+.fromInvite {
+  font-family: var(--sv-font-family-mono);
+  font-size: 10px;
+  color: var(--sv-color-text-muted);
+  background-color: var(--sv-color-surface-sunken);
+  border-radius: var(--sv-radius-sm);
+  padding: 2px 7px;
+}
+
+/* ── Second step: one box for each digit of a code ───────────────────────── */
+
+.codeRow {
+  display: flex;
+  gap: var(--sv-space-2);
+}
+
+.codeCell {
+  width: 100%;
+  min-width: 0;
+  height: 52px;
+  text-align: center;
+  font-family: var(--sv-font-family-mono);
+  font-size: 21px;
+  font-weight: var(--sv-font-weight-semibold);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface);
+  color: var(--sv-color-text-primary);
+  outline: none;
+  caret-color: transparent;
+}
+
+.codeCell:focus {
+  border-color: var(--sv-color-accent);
+  box-shadow: 0 0 0 3px var(--sv-color-focus-ring);
+}
+
+.codeCellError {
+  border-color: var(--sv-color-error-text);
+}
+
+.backupInput {
+  font-family: var(--sv-font-family-mono);
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 400px) {
+  .card {
+    padding: var(--sv-space-6);
+  }
 }

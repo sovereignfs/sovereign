@@ -20,9 +20,10 @@ export async function signUp(page: Page, who: Who, path = '/sign-up'): Promise<v
   const email = page.getByLabel('Email');
   // An invitation fills the address in, and it is what was invited.
   if ((await email.inputValue()) === '') await email.fill(who.email);
-  await page.getByLabel('Password').fill(who.password);
-  await page.getByLabel(/I agree to the Terms of Service/).check();
-  await page.getByRole('button', { name: 'Create account' }).click();
+  await page.getByLabel('Password', { exact: true }).fill(who.password);
+  await page.getByLabel('Confirm password').fill(who.password);
+  await page.getByLabel(/I agree to the/).check();
+  await page.getByRole('button', { name: /^(Create account|Accept invitation)$/ }).click();
 }
 
 export async function signIn(
@@ -56,6 +57,13 @@ export async function join(
   await signUp(person.page, who, person.page.url());
   await expect(heading(person.page)).toHaveText('Apps');
   return person;
+}
+
+/** The six boxes of the second step, one digit in each, replacing what a wrong try left there. */
+export async function enterCode(page: Page, code: string): Promise<void> {
+  for (const [at, digit] of [...code].entries()) {
+    await page.getByLabel(`Digit ${at + 1}`).fill(digit);
+  }
 }
 
 export async function signOut(page: Page): Promise<void> {

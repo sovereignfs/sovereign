@@ -153,20 +153,20 @@ describe('the passkeys panel', () => {
 
 describe('signing in with a passkey, on the sign-in form', () => {
   it('offers it in a browser that has passkeys', async () => {
-    render(<SignInForm returnTo="/" />);
+    render(<SignInForm instanceName="Acme" returnTo="/" />);
     expect(await screen.findByRole('button', { name: 'Sign in with a passkey' })).toBeTruthy();
   });
 
   it('does not offer it where the browser has none', async () => {
     vi.stubGlobal('PublicKeyCredential', undefined);
-    render(<SignInForm returnTo="/" />);
+    render(<SignInForm instanceName="Acme" returnTo="/" />);
     await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in' })).toBeTruthy());
     expect(screen.queryByRole('button', { name: /passkey/ })).toBeNull();
   });
 
   it('goes where the person was headed once the device answers', async () => {
     signInPasskey.mockResolvedValue({ data: { session: {} }, error: null });
-    render(<SignInForm returnTo="/settings" />);
+    render(<SignInForm instanceName="Acme" returnTo="/settings" />);
     fireEvent.click(await screen.findByRole('button', { name: 'Sign in with a passkey' }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/settings'));
     expect(signInEmail).not.toHaveBeenCalled();
@@ -177,14 +177,14 @@ describe('signing in with a passkey, on the sign-in form', () => {
       data: { redirect: true, url: 'https://rp.example.com/cb?code=one' },
       error: null,
     });
-    render(<SignInForm returnTo="/" />);
+    render(<SignInForm instanceName="Acme" returnTo="/" />);
     fireEvent.click(await screen.findByRole('button', { name: 'Sign in with a passkey' }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith('https://rp.example.com/cb?code=one'));
   });
 
   it('says what to check when the device gives no passkey, and stays put', async () => {
     signInPasskey.mockResolvedValue({ data: null, error: { status: 400, code: 'AUTH_CANCELLED' } });
-    render(<SignInForm returnTo="/" />);
+    render(<SignInForm instanceName="Acme" returnTo="/" />);
     fireEvent.click(await screen.findByRole('button', { name: 'Sign in with a passkey' }));
     expect((await screen.findByRole('alert')).textContent).toContain('this device has a passkey');
     expect(assign).not.toHaveBeenCalled();
@@ -195,7 +195,7 @@ describe('signing in with a passkey, on the sign-in form', () => {
       data: null,
       error: { status: 403, code: 'EMAIL_NOT_VERIFIED' },
     });
-    render(<SignInForm returnTo="/" />);
+    render(<SignInForm instanceName="Acme" returnTo="/" />);
     fireEvent.click(await screen.findByRole('button', { name: 'Sign in with a passkey' }));
     expect((await screen.findByRole('alert')).textContent).toContain('Verify your email address');
   });
@@ -205,14 +205,14 @@ describe('signing in with a passkey, on the sign-in form', () => {
       data: null,
       error: { status: 403, code: 'ACCOUNT_DEACTIVATED' },
     });
-    render(<SignInForm returnTo="/" />);
+    render(<SignInForm instanceName="Acme" returnTo="/" />);
     fireEvent.click(await screen.findByRole('button', { name: 'Sign in with a passkey' }));
     expect((await screen.findByRole('alert')).textContent).toContain('has been deactivated');
   });
 
   it('says to wait when the limit is reached', async () => {
     signInPasskey.mockResolvedValue({ data: null, error: { status: 429 } });
-    render(<SignInForm returnTo="/" />);
+    render(<SignInForm instanceName="Acme" returnTo="/" />);
     fireEvent.click(await screen.findByRole('button', { name: 'Sign in with a passkey' }));
     expect(await screen.findByText(/Too many attempts/)).toBeTruthy();
   });

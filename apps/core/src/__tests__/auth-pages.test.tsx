@@ -1,7 +1,12 @@
-import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { renderServer } from './render-server';
 
 const getSession = vi.fn();
+// The pages draw the instance's mark, which reads its settings; what it draws is tested with it (instance-identity.test.tsx).
+vi.mock('../instance/service', () => ({
+  getInstanceIdentity: () =>
+    Promise.resolve({ name: 'Acme', logoLight: undefined, logoDark: undefined }),
+}));
 vi.mock('../auth/session', () => ({ getSession: () => getSession() as unknown }));
 vi.mock('../auth/client', () => ({
   authClient: {
@@ -22,8 +27,6 @@ vi.mock('../invites/manage', () => ({
   lookupInvite: (...args: unknown[]) => lookupInvite(...args) as unknown,
 }));
 vi.mock('../database', () => ({ getDatabase: () => Promise.resolve({}) }));
-// The logo reads the database; what it draws is tested with it (instance-identity.test.tsx).
-vi.mock('../../app/instance-logo', () => ({ InstanceLogo: () => null }));
 
 async function pages(env: Record<string, string> = {}) {
   vi.resetModules();
@@ -50,7 +53,7 @@ afterEach(() => vi.unstubAllEnvs());
 describe('the sign-in page', () => {
   it('has one heading, an email field and a password field, and a way to sign up', async () => {
     const { signIn } = await pages();
-    const html = renderToStaticMarkup(await signIn({ searchParams: search() }));
+    const html = await renderServer(await signIn({ searchParams: search() }));
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
     expect(html).toContain('Sign in');
     expect(html).toMatch(/<input[^>]*type="email"/);
@@ -60,15 +63,13 @@ describe('the sign-in page', () => {
 
   it('carries the page the person was after through to the sign-up link', async () => {
     const { signIn } = await pages();
-    const html = renderToStaticMarkup(await signIn({ searchParams: search('/settings?tab=mail') }));
+    const html = await renderServer(await signIn({ searchParams: search('/settings?tab=mail') }));
     expect(html).toContain('href="/sign-up?returnTo=%2Fsettings%3Ftab%3Dmail"');
   });
 
   it('does not carry an address on another site', async () => {
     const { signIn } = await pages();
-    const html = renderToStaticMarkup(
-      await signIn({ searchParams: search('https://evil.example') }),
-    );
+    const html = await renderServer(await signIn({ searchParams: search('https://evil.example') }));
     expect(html).not.toContain('evil.example');
   });
 
@@ -83,7 +84,7 @@ describe('the sign-in page', () => {
   it('shows the form to someone who is signed in when an app asked for a fresh sign-in', async () => {
     const { signIn } = await pages();
     getSession.mockResolvedValue({ user: { id: 'u1' } });
-    const html = renderToStaticMarkup(
+    const html = await renderServer(
       await signIn({ searchParams: search(undefined, { sig: 'signed', client_id: 'abc' }) }),
     );
     expect(html).toContain('Sign in');
@@ -100,7 +101,7 @@ describe('the sign-in page', () => {
 
   it('is drawn with the design system and carries no inline styling or scripts of its own', async () => {
     const { signIn } = await pages();
-    expect(renderToStaticMarkup(await signIn({ searchParams: search() }))).not.toMatch(
+    expect(await renderServer(await signIn({ searchParams: search() }))).not.toMatch(
       /<script|<style|style="/,
     );
   });
@@ -110,24 +111,29 @@ describe('the legal links', () => {
   // The sign-up form carries its own, beside the box to tick.
   it.each(['signIn', 'signUp'] as const)('are on the %s page', async (page) => {
     const pagesNow = await pages();
-    const html = renderToStaticMarkup(await pagesNow[page]({ searchParams: search() }));
+    const html = await renderServer(await pagesNow[page]({ searchParams: search() }));
     expect(html).toContain('href="/privacy"');
     expect(html).toContain('href="/tos"');
   });
 
-  it('are not repeated on the sign-up page', async () => {
+  it('are beside the box to tick on the sign-up page, which opens them in a new tab', async () => {
     const { signUp } = await pages();
-    const html = renderToStaticMarkup(await signUp({ searchParams: search() }));
-    expect(html.match(/href="\/privacy"/g)).toHaveLength(1);
+    const html = await renderServer(await signUp({ searchParams: search() }));
+    expect(html).toMatch(
+      /<label class="terms">[\s\S]*href="\/privacy"[\s\S]*href="\/tos"[\s\S]*<\/label>/,
+    );
+    expect(html).toMatch(
+      /href="\/privacy"[^>]*target="_blank"[^>]*rel="noopener noreferrer"|target="_blank"[^>]*rel="noopener noreferrer"[^>]*href="\/privacy"/,
+    );
   });
 });
 
 describe('the sign-up page', () => {
   it('asks for a name, an email and a password', async () => {
     const { signUp } = await pages();
-    const html = renderToStaticMarkup(await signUp({ searchParams: search() }));
+    const html = await renderServer(await signUp({ searchParams: search() }));
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
-    expect(html).toContain('Create an account');
+    expect(html).toContain('Create your account');
     expect(html).toMatch(/<input[^>]*name="name"/);
     expect(html).toMatch(/<input[^>]*type="email"/);
     expect(html).toMatch(/<input[^>]*type="password"/);
@@ -136,9 +142,9 @@ describe('the sign-up page', () => {
 
   it('asks for the terms to be accepted, beside links to read them', async () => {
     const { signUp } = await pages();
-    const html = renderToStaticMarkup(await signUp({ searchParams: search() }));
+    const html = await renderServer(await signUp({ searchParams: search() }));
     expect(html).toMatch(/<input[^>]*type="checkbox"/);
-    expect(html).toContain('I agree to the Terms of Service and the Privacy Policy');
+    expect(html).toContain('I agree to the');
     expect(html).toContain('target="_blank"');
   });
 
@@ -147,20 +153,20 @@ describe('the sign-up page', () => {
       SV_AUTH_PASSWORD_MIN_LENGTH: '12',
       SV_AUTH_PASSWORD_REQUIRE_NUMBER: 'true',
     });
-    const html = renderToStaticMarkup(await signUp({ searchParams: search() }));
+    const html = await renderServer(await signUp({ searchParams: search() }));
     expect(html).toContain('At least 12 characters, with a number.');
   });
 
   it('says nothing about invitations when anyone can sign up', async () => {
     const { signUp } = await pages();
-    const html = renderToStaticMarkup(await signUp({ searchParams: search() }));
+    const html = await renderServer(await signUp({ searchParams: search() }));
     expect(html).not.toMatch(/invitation|owner/i);
   });
 
   it('says sign-up is by invitation when it is, and for which address', async () => {
     getRegistrationMode.mockResolvedValue('invite-only');
     const { signUp } = await pages();
-    const html = renderToStaticMarkup(await signUp({ searchParams: search() }));
+    const html = await renderServer(await signUp({ searchParams: search() }));
     expect(html).toContain('Sign-up here is by invitation');
     expect(html).toContain('the email address your invitation was sent to');
   });
@@ -168,7 +174,7 @@ describe('the sign-up page', () => {
   it('tells the first visitor that the account they make is the owner', async () => {
     getRegistrationMode.mockResolvedValue('first-account');
     const { signUp } = await pages();
-    const html = renderToStaticMarkup(await signUp({ searchParams: search() }));
+    const html = await renderServer(await signUp({ searchParams: search() }));
     expect(html).toContain('no accounts yet');
     expect(html).toContain('is its owner');
     expect(html).not.toContain('by invitation');
@@ -184,9 +190,20 @@ describe('the sign-up page', () => {
 });
 
 describe('the sign-in page, when an email link sends the person back', () => {
+  it('tells someone who has just signed out that they have, and says nothing of it otherwise', async () => {
+    const { signIn } = await pages();
+    const after = await renderServer(
+      await signIn({ searchParams: search(undefined, { signedout: '1' }) }),
+    );
+    expect(after).toContain('You’ve been signed out.');
+    expect(await renderServer(await signIn({ searchParams: search() }))).not.toContain(
+      'signed out',
+    );
+  });
+
   it('tells someone who has just reset their password to sign in', async () => {
     const { signIn } = await pages();
-    const html = renderToStaticMarkup(
+    const html = await renderServer(
       await signIn({ searchParams: search(undefined, { reset: '1' }) }),
     );
     expect(html).toContain('Your password is changed');
@@ -194,7 +211,7 @@ describe('the sign-in page, when an email link sends the person back', () => {
 
   it('tells someone who has just deleted their account that it is gone', async () => {
     const { signIn } = await pages();
-    const html = renderToStaticMarkup(
+    const html = await renderServer(
       await signIn({ searchParams: search(undefined, { deleted: '1' }) }),
     );
     expect(html).toContain('Your account is deleted');
@@ -202,7 +219,7 @@ describe('the sign-in page, when an email link sends the person back', () => {
 
   it('explains a verification link that did not work', async () => {
     const { signIn } = await pages();
-    const html = renderToStaticMarkup(
+    const html = await renderServer(
       await signIn({ searchParams: search(undefined, { error: 'TOKEN_EXPIRED' }) }),
     );
     expect(html).toContain('expired or was already used');
@@ -210,7 +227,7 @@ describe('the sign-in page, when an email link sends the person back', () => {
 
   it('says nothing of the sort on an ordinary visit, and offers a way to reset a password', async () => {
     const { signIn } = await pages();
-    const html = renderToStaticMarkup(await signIn({ searchParams: search() }));
+    const html = await renderServer(await signIn({ searchParams: search() }));
     expect(html).not.toContain('expired');
     expect(html).not.toContain('password is changed');
     expect(html).not.toContain('account is deleted');
@@ -221,9 +238,9 @@ describe('the sign-in page, when an email link sends the person back', () => {
 describe('the forgot-password page', () => {
   it('asks for an email address and says how long the link works', async () => {
     const { forgot } = await pages();
-    const html = renderToStaticMarkup(await forgot());
+    const html = await renderServer(await forgot());
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
-    expect(html).toContain('Reset your password');
+    expect(html).toContain('Reset password');
     expect(html).toMatch(/<input[^>]*type="email"/);
     expect(html).toContain('works for an hour');
   });
@@ -240,7 +257,7 @@ describe('the forgot-password page', () => {
 describe('the reset-password page', () => {
   it('asks for a new password when the link brought a token, and shows the rules', async () => {
     const { reset } = await pages({ SV_AUTH_PASSWORD_MIN_LENGTH: '12' });
-    const html = renderToStaticMarkup(
+    const html = await renderServer(
       await reset({ searchParams: Promise.resolve({ token: 'tok' }) }),
     );
     expect(html).toMatch(/<input[^>]*type="password"/);
@@ -255,7 +272,7 @@ describe('the reset-password page', () => {
     ['a token beside an error', { token: 'tok', error: 'INVALID_TOKEN' }],
   ])('offers a new link, not a form, for %s', async (_name, query) => {
     const { reset } = await pages();
-    const html = renderToStaticMarkup(await reset({ searchParams: Promise.resolve(query) }));
+    const html = await renderServer(await reset({ searchParams: Promise.resolve(query) }));
     expect(html).not.toMatch(/<input/);
     expect(html).toContain('expired or was already used');
     expect(html).toContain('href="/forgot-password"');
@@ -271,7 +288,7 @@ describe('the sign-up page, reached from an invitation link', () => {
   it('starts with the address the invitation was sent to', async () => {
     lookupInvite.mockResolvedValue({ state: 'valid', email: 'invited@example.com' });
     const { signUp } = await pages();
-    const html = renderToStaticMarkup(
+    const html = await renderServer(
       await signUp({ searchParams: search(undefined, { invite: 'abc' }) }),
     );
     expect(lookupInvite).toHaveBeenCalledWith({}, 'abc', expect.any(Number));
@@ -280,7 +297,7 @@ describe('the sign-up page, reached from an invitation link', () => {
 
   it('leaves the address empty for a link that no longer works, and says nothing about why', async () => {
     const { signUp } = await pages();
-    const html = renderToStaticMarkup(
+    const html = await renderServer(
       await signUp({ searchParams: search(undefined, { invite: 'abc' }) }),
     );
     expect(html).not.toMatch(/value="[^"]*@/);
@@ -289,14 +306,14 @@ describe('the sign-up page, reached from an invitation link', () => {
 
   it('does not look anything up when there is no invitation in the address', async () => {
     const { signUp } = await pages();
-    renderToStaticMarkup(await signUp({ searchParams: search() }));
+    await renderServer(await signUp({ searchParams: search() }));
     expect(lookupInvite).not.toHaveBeenCalled();
   });
 
   it('keeps the address out of the markup as markup', async () => {
     lookupInvite.mockResolvedValue({ state: 'valid', email: '"><script>alert(1)</script>@x.io' });
     const { signUp } = await pages();
-    const html = renderToStaticMarkup(
+    const html = await renderServer(
       await signUp({ searchParams: search(undefined, { invite: 'abc' }) }),
     );
     expect(html).not.toContain('<script>alert');

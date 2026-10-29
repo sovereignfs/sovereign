@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Alert, Button } from '@sovereignfs/ui';
+import { Button } from '@sovereignfs/ui';
 import { authClient } from '../../src/auth/client';
 import { continuationUrl } from '../../src/auth/oauth-continuation';
+import { AuthError } from '../(auth)/auth-notice';
 import styles from '../(auth)/auth.module.css';
 import list from './consent.module.css';
 
@@ -49,7 +50,7 @@ export function ConsentForm({ appName, returnHost, email, permissions, scopes }:
       <p className={styles.lead}>
         <strong>{appName ?? 'An app'}</strong> wants to sign you in as {email}. It would be able to:
       </p>
-      {error ? <Alert variant="error">{error}</Alert> : null}
+      {error ? <AuthError>{error}</AuthError> : null}
       <ul className={list.permissions}>
         {permissions.map((permission) => (
           <li key={permission}>{permission}</li>

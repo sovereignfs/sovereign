@@ -44,7 +44,7 @@ const type = (label: string, value: string) =>
 describe('the sign-in form', () => {
   it('sends the email and password, then goes where the person was headed', async () => {
     signIn.mockResolvedValue({ data: {}, error: null });
-    render(<SignInForm returnTo="/settings" />);
+    render(<SignInForm instanceName="Acme" returnTo="/settings" />);
     type('Email', 'ada@example.com');
     type('Password', 'correct horse battery');
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
@@ -57,7 +57,7 @@ describe('the sign-in form', () => {
 
   it('says only that the email or password is incorrect, whatever the reason', async () => {
     signIn.mockResolvedValue({ data: null, error: { status: 401, code: 'USER_NOT_FOUND' } });
-    render(<SignInForm returnTo="/" />);
+    render(<SignInForm instanceName="Acme" returnTo="/" />);
     type('Email', 'nobody@example.com');
     type('Password', 'whatever');
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
@@ -70,7 +70,7 @@ describe('the sign-in form', () => {
 
   it('says to wait when the limit is reached', async () => {
     signIn.mockResolvedValue({ data: null, error: { status: 429 } });
-    render(<SignInForm returnTo="/" />);
+    render(<SignInForm instanceName="Acme" returnTo="/" />);
     type('Email', 'ada@example.com');
     type('Password', 'whatever');
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
@@ -79,7 +79,7 @@ describe('the sign-in form', () => {
 
   it('keeps what was typed after a failure', async () => {
     signIn.mockResolvedValue({ data: null, error: { status: 401 } });
-    render(<SignInForm returnTo="/" />);
+    render(<SignInForm instanceName="Acme" returnTo="/" />);
     type('Email', 'ada@example.com');
     type('Password', 'wrong');
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
@@ -93,22 +93,24 @@ describe('the sign-up form', () => {
     type('Name', 'Ada Lovelace');
     type('Email', 'ada@example.com');
     type('Password', 'correct horse battery');
-    fireEvent.click(screen.getByLabelText(/I agree to the Terms of Service/));
+    type('Confirm password', 'correct horse battery');
+    fireEvent.click(screen.getByLabelText(/I agree to the/));
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
   };
 
   it('will not send the sign-up until the terms are accepted, and says why', () => {
-    render(<SignUpForm returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
     type('Name', 'Ada Lovelace');
     type('Email', 'ada@example.com');
     type('Password', 'correct horse battery');
+    type('Confirm password', 'correct horse battery');
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
     expect(screen.getByRole('alert').textContent).toContain('Accept the Terms of Service');
     expect(signUp).not.toHaveBeenCalled();
   });
 
   it('links to both documents, in a new tab so the form is not lost', () => {
-    render(<SignUpForm returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
     for (const [name, href] of [
       ['Terms of Service', '/tos'],
       ['Privacy Policy', '/privacy'],
@@ -120,14 +122,26 @@ describe('the sign-up form', () => {
     }
   });
 
+  it('will not send the sign-up when the two passwords differ, and says so', () => {
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
+    type('Name', 'Ada Lovelace');
+    type('Email', 'ada@example.com');
+    type('Password', 'correct horse battery');
+    type('Confirm password', 'correct horse batteri');
+    fireEvent.click(screen.getByLabelText(/I agree to the/));
+    fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    expect(screen.getByRole('alert').textContent).toContain('do not match');
+    expect(signUp).not.toHaveBeenCalled();
+  });
+
   it('shows the password rules beside the field', () => {
-    render(<SignUpForm returnTo="/" passwordHint="At least 12 characters." />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="At least 12 characters." />);
     expect(screen.getByText('At least 12 characters.')).toBeTruthy();
   });
 
   it('sends the name, email and password, then goes where the person was headed', async () => {
     signUp.mockResolvedValue({ data: { token: 'abc' }, error: null });
-    render(<SignUpForm returnTo="/settings" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/settings" passwordHint="" />);
     fill();
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/settings'));
     expect(signUp).toHaveBeenCalledWith({
@@ -149,7 +163,7 @@ describe('the sign-up form', () => {
         message: 'The password must include a number.',
       },
     });
-    render(<SignUpForm returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
     fill();
     expect(await screen.findByText('The password must include a number.')).toBeTruthy();
     expect(assign).not.toHaveBeenCalled();
@@ -157,7 +171,7 @@ describe('the sign-up form', () => {
 
   it('suggests signing in when the address already has an account', async () => {
     signUp.mockResolvedValue({ data: null, error: { status: 422, code: 'USER_ALREADY_EXISTS' } });
-    render(<SignUpForm returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
     fill();
     expect(await screen.findByText(/already exists/)).toBeTruthy();
   });
@@ -167,7 +181,7 @@ describe('the sign-up form', () => {
       data: null,
       error: { status: 422, code: 'INVITE_REQUIRED', message: 'Sign-up needs an invitation.' },
     });
-    render(<SignUpForm returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
     fill();
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain('no valid invitation for this email address');
@@ -184,7 +198,7 @@ describe('the sign-up form', () => {
         message: 'SQLITE_CONSTRAINT: users.email',
       },
     });
-    render(<SignUpForm returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
     fill();
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain('could not be created');
@@ -201,7 +215,7 @@ describe('the sign-in form, around verification and reset', () => {
 
   it('goes to the second step, not home, when the password was right but a code is wanted', async () => {
     signIn.mockResolvedValue({ data: { twoFactorRedirect: true }, error: null });
-    render(<SignInForm returnTo="/settings?tab=mail" />);
+    render(<SignInForm instanceName="Acme" returnTo="/settings?tab=mail" />);
     submit();
     await waitFor(() =>
       expect(assign).toHaveBeenCalledWith('/sign-in/two-factor?returnTo=%2Fsettings%3Ftab%3Dmail'),
@@ -211,7 +225,7 @@ describe('the sign-in form, around verification and reset', () => {
 
   it('says the account is deactivated, in plain words, after the right password', async () => {
     signIn.mockResolvedValue({ data: null, error: { status: 403, code: 'ACCOUNT_DEACTIVATED' } });
-    render(<SignInForm returnTo="/" />);
+    render(<SignInForm instanceName="Acme" returnTo="/" />);
     submit();
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain('has been deactivated');
@@ -221,8 +235,8 @@ describe('the sign-in form, around verification and reset', () => {
   });
 
   it('offers a way to reset a forgotten password', () => {
-    render(<SignInForm returnTo="/" />);
-    expect(screen.getByRole('link', { name: 'Forgot your password?' }).getAttribute('href')).toBe(
+    render(<SignInForm instanceName="Acme" returnTo="/" />);
+    expect(screen.getByRole('link', { name: 'Forgot password?' }).getAttribute('href')).toBe(
       '/forgot-password',
     );
   });
@@ -233,7 +247,7 @@ describe('the sign-in form, around verification and reset', () => {
       error: { status: 403, code: 'EMAIL_NOT_VERIFIED', message: 'Email not verified' },
     });
     sendVerificationEmail.mockResolvedValue({ data: { status: true }, error: null });
-    render(<SignInForm returnTo="/settings" />);
+    render(<SignInForm instanceName="Acme" returnTo="/settings" />);
     submit();
     expect(await screen.findByText(/Verify your email address before signing in/)).toBeTruthy();
     expect(screen.queryByText('The email or password is incorrect.')).toBeNull();
@@ -253,24 +267,29 @@ describe('the sign-in form, around verification and reset', () => {
       data: null,
       error: { status: 503, code: 'EMAIL_NOT_AVAILABLE' },
     });
-    render(<SignInForm returnTo="/" />);
+    render(<SignInForm instanceName="Acme" returnTo="/" />);
     submit();
     fireEvent.click(await screen.findByRole('button', { name: 'Send a new link' }));
     expect(await screen.findByText(/Email isn't set up on this instance/)).toBeTruthy();
   });
 
+  it('tells the person who has just signed out that they have', () => {
+    render(<SignInForm instanceName="Acme" returnTo="/" notice="signed-out" />);
+    expect(screen.getByRole('status').textContent).toContain('You’ve been signed out.');
+  });
+
   it('tells the person who just changed their password to sign in', () => {
-    render(<SignInForm returnTo="/" notice="password-changed" />);
+    render(<SignInForm instanceName="Acme" returnTo="/" notice="password-changed" />);
     expect(screen.getByText(/Your password is changed/)).toBeTruthy();
   });
 
   it('tells the person who has just deleted their account that nothing of it is kept', () => {
-    render(<SignInForm returnTo="/" notice="account-deleted" />);
+    render(<SignInForm instanceName="Acme" returnTo="/" notice="account-deleted" />);
     expect(screen.getByText(/Your account is deleted. Nothing of it is kept./)).toBeTruthy();
   });
 
   it('explains a link that did not work, and what to do', () => {
-    render(<SignInForm returnTo="/" notice="link-invalid" />);
+    render(<SignInForm instanceName="Acme" returnTo="/" notice="link-invalid" />);
     expect(screen.getByText(/expired or was already used/)).toBeTruthy();
   });
 });
@@ -289,7 +308,7 @@ describe('the sign-in form, when an app sent the person here', () => {
 
   it('goes back to the app, with its code, rather than to where the person was headed', async () => {
     signIn.mockResolvedValue({ data: { redirect: true, url: APP }, error: null });
-    render(<SignInForm returnTo="/" />);
+    render(<SignInForm instanceName="Acme" returnTo="/" />);
     submit();
     await waitFor(() => expect(assign).toHaveBeenCalledWith(APP));
     expect(assign).not.toHaveBeenCalledWith('/');
@@ -297,14 +316,14 @@ describe('the sign-in form, when an app sent the person here', () => {
 
   it('carries the app’s request to the second step, so that step can carry on with it', async () => {
     signIn.mockResolvedValue({ data: { twoFactorRedirect: true }, error: null });
-    render(<SignInForm returnTo="/" />);
+    render(<SignInForm instanceName="Acme" returnTo="/" />);
     submit();
     await waitFor(() => expect(assign).toHaveBeenCalledWith(`/sign-in/two-factor${REQUEST}`));
   });
 
   it('is the ordinary sign-in when the provider says nothing', async () => {
     signIn.mockResolvedValue({ data: {}, error: null });
-    render(<SignInForm returnTo="/settings" />);
+    render(<SignInForm instanceName="Acme" returnTo="/settings" />);
     submit();
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/settings'));
   });
@@ -312,7 +331,7 @@ describe('the sign-in form, when an app sent the person here', () => {
   it('does not carry anything to the second step on an ordinary visit', async () => {
     vi.stubGlobal('location', { ...window.location, assign, search: '?returnTo=%2Fsettings' });
     signIn.mockResolvedValue({ data: { twoFactorRedirect: true }, error: null });
-    render(<SignInForm returnTo="/settings" />);
+    render(<SignInForm instanceName="Acme" returnTo="/settings" />);
     submit();
     await waitFor(() =>
       expect(assign).toHaveBeenCalledWith('/sign-in/two-factor?returnTo=%2Fsettings'),
@@ -325,13 +344,14 @@ describe('the sign-up form, while the address is not verified', () => {
     type('Name', 'Ada Lovelace');
     type('Email', 'ada@example.com');
     type('Password', 'correct horse battery');
-    fireEvent.click(screen.getByLabelText(/I agree to the Terms of Service/));
+    type('Confirm password', 'correct horse battery');
+    fireEvent.click(screen.getByLabelText(/I agree to the/));
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
   };
 
   it('points to the inbox when the server made no session, and asks for the link to land on sign-in', async () => {
     signUp.mockResolvedValue({ data: { token: null, user: {} }, error: null });
-    render(<SignUpForm returnTo="/settings" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/settings" passwordHint="" />);
     fill();
     expect(await screen.findByText(/We have sent a link to ada@example.com/)).toBeTruthy();
     expect(screen.queryByLabelText(/^Password/)).toBeNull();
@@ -345,7 +365,7 @@ describe('the sign-up form, while the address is not verified', () => {
   it('asks for a new link on request', async () => {
     signUp.mockResolvedValue({ data: { token: null, user: {} }, error: null });
     sendVerificationEmail.mockResolvedValue({ data: { status: true }, error: null });
-    render(<SignUpForm returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
     fill();
     fireEvent.click(await screen.findByRole('button', { name: 'Send a new link' }));
     expect(await screen.findByText(/A new link is on its way/)).toBeTruthy();
@@ -357,7 +377,7 @@ describe('the sign-up form, while the address is not verified', () => {
 
   it('goes straight on when the server signed the person in', async () => {
     signUp.mockResolvedValue({ data: { token: 'abc', user: {} }, error: null });
-    render(<SignUpForm returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
     fill();
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/'));
   });
@@ -367,21 +387,21 @@ describe('the sign-up form, while the address is not verified', () => {
       data: null,
       error: { status: 400, code: 'TERMS_NOT_ACCEPTED', message: 'You must accept the terms.' },
     });
-    render(<SignUpForm returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
     fill();
     expect(await screen.findByText('You must accept the terms.')).toBeTruthy();
   });
 
   it('says so, plainly, when the browser’s time zone is refused', async () => {
     signUp.mockResolvedValue({ data: null, error: { status: 400, code: 'INVALID_TIMEZONE' } });
-    render(<SignUpForm returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
     fill();
     expect((await screen.findByRole('alert')).textContent).toContain('time zone');
   });
 
   it('says when email is not set up, instead of a vague failure', async () => {
     signUp.mockResolvedValue({ data: null, error: { status: 503, code: 'EMAIL_NOT_AVAILABLE' } });
-    render(<SignUpForm returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
     fill();
     expect((await screen.findByRole('alert')).textContent).toContain("Email isn't set up");
   });
@@ -390,7 +410,7 @@ describe('the sign-up form, while the address is not verified', () => {
 describe('the forgot-password form', () => {
   const submit = () => {
     type('Email', 'ada@example.com');
-    fireEvent.click(screen.getByRole('button', { name: 'Send the link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Send reset link' }));
   };
 
   it('asks for the link to land on core’s reset page, and says the same whoever the address is', async () => {
@@ -423,9 +443,10 @@ describe('the forgot-password form', () => {
 });
 
 describe('the reset-password form', () => {
-  const submit = (password = 'a different long passphrase') => {
+  const submit = (password = 'a different long passphrase', confirm = password) => {
     type('New password', password);
-    fireEvent.click(screen.getByRole('button', { name: 'Change password' }));
+    type('Confirm new password', confirm);
+    fireEvent.click(screen.getByRole('button', { name: 'Set new password' }));
   };
 
   it('sends the token with the new password, then goes to sign-in', async () => {
@@ -456,12 +477,19 @@ describe('the reset-password form', () => {
     expect((screen.getByLabelText(/^New password/) as HTMLInputElement).value).toBe('weak');
   });
 
+  it('does not send the new password when the two differ, and says so', () => {
+    render(<ResetPasswordForm token="tok123" passwordHint="" />);
+    submit('a different long passphrase', 'another long passphrase');
+    expect(screen.getByRole('alert').textContent).toContain('do not match');
+    expect(resetPassword).not.toHaveBeenCalled();
+  });
+
   it('says the link is no longer good, and where to ask for another', async () => {
     resetPassword.mockResolvedValue({ data: null, error: { status: 400, code: 'INVALID_TOKEN' } });
     render(<ResetPasswordForm token="old" passwordHint="" />);
     submit();
     expect(await screen.findByText(/expired or was already used/)).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Ask for a new link' }).getAttribute('href')).toBe(
+    expect(screen.getByRole('link', { name: 'Request a new link' }).getAttribute('href')).toBe(
       '/forgot-password',
     );
   });

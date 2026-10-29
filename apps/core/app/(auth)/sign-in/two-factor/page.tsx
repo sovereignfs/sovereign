@@ -1,12 +1,11 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { Card, PageContainer } from '@sovereignfs/ui';
 import { safeReturnTo } from '../../../../src/auth/return-to';
 import { getSession } from '../../../../src/auth/session';
-import styles from '../../auth.module.css';
+import { AuthCard } from '../../auth-card';
 import { TwoFactorForm } from './two-factor-form';
 
-export const metadata: Metadata = { title: 'Confirm it is you' };
+export const metadata: Metadata = { title: 'Two-factor verification' };
 
 export default async function TwoFactorPage({
   searchParams,
@@ -18,13 +17,8 @@ export default async function TwoFactorPage({
   if (query.sig === undefined && (await getSession())) redirect(returnTo);
 
   return (
-    <PageContainer maxWidth="sm">
-      <Card padding="lg">
-        <div className={styles.form}>
-          <h1 className={styles.title}>Confirm it is you</h1>
-          <TwoFactorForm returnTo={returnTo} />
-        </div>
-      </Card>
-    </PageContainer>
+    <AuthCard title="Two-factor verification" legal={false}>
+      <TwoFactorForm returnTo={returnTo} />
+    </AuthCard>
   );
 }

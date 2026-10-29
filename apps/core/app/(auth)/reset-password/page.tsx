@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Alert, Card, PageContainer } from '@sovereignfs/ui';
 import { describePasswordPolicy } from '../../../src/auth/password-policy';
 import { getAuthSettings } from '../../../src/auth/settings';
+import { AuthCard } from '../auth-card';
+import { AuthNotice } from '../auth-notice';
 import styles from '../auth.module.css';
 import { ResetPasswordForm } from './reset-password-form';
 
@@ -18,30 +19,27 @@ export default async function ResetPasswordPage({
   // better-auth sends a link that did not check out here with `error`, and one that did with `token`.
   const usable = typeof token === 'string' && token !== '' && error === undefined;
 
+  if (!usable) {
+    return (
+      <AuthCard title="Invalid link" legal={false}>
+        <AuthNotice tone="warning">
+          This link has expired or was already used. A link works once, for an hour.
+        </AuthNotice>
+        <p className={styles.footer}>
+          <Link className={styles.link} href="/forgot-password">
+            Request a new link
+          </Link>
+        </p>
+      </AuthCard>
+    );
+  }
+
   return (
-    <PageContainer maxWidth="sm">
-      <Card padding="lg">
-        <div className={styles.form}>
-          <h1 className={styles.title}>Choose a new password</h1>
-          {usable ? (
-            <ResetPasswordForm
-              token={token}
-              passwordHint={describePasswordPolicy(getAuthSettings().passwordPolicy)}
-            />
-          ) : (
-            <>
-              <Alert variant="error">
-                This link has expired or was already used. A link works once, for an hour.
-              </Alert>
-              <p className={styles.footer}>
-                <Link className={styles.link} href="/forgot-password">
-                  Ask for a new link
-                </Link>
-              </p>
-            </>
-          )}
-        </div>
-      </Card>
-    </PageContainer>
+    <AuthCard title="Choose a new password" legal={false}>
+      <ResetPasswordForm
+        token={token}
+        passwordHint={describePasswordPolicy(getAuthSettings().passwordPolicy)}
+      />
+    </AuthCard>
   );
 }

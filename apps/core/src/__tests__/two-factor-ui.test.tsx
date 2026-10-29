@@ -42,6 +42,12 @@ afterEach(() => {
 
 const type = (label: string, value: string) =>
   fireEvent.change(screen.getByLabelText(new RegExp(`^${label}`)), { target: { value } });
+/** The six boxes, one digit in each, as someone typing or an authenticator's autofill would fill them. */
+const typeCode = (code: string) => {
+  for (const [at, digit] of [...code].entries()) {
+    fireEvent.change(screen.getByLabelText(`Digit ${at + 1}`), { target: { value: digit } });
+  }
+};
 const click = (name: string | RegExp) => fireEvent.click(screen.getByRole('button', { name }));
 
 describe('the two-factor panel, while it is off', () => {
@@ -189,8 +195,8 @@ describe('the second sign-in step', () => {
   it('sends the code and goes where the person was headed', async () => {
     verifyTotp.mockResolvedValue({ data: {}, error: null });
     render(<TwoFactorForm returnTo="/settings" />);
-    type('Code', ' 123456');
-    click('Continue');
+    typeCode('123456');
+    click('Verify');
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/settings'));
     expect(verifyTotp).toHaveBeenCalledWith({ code: '123456' });
     expect(verifyBackupCode).not.toHaveBeenCalled();
@@ -202,8 +208,8 @@ describe('the second sign-in step', () => {
       error: null,
     });
     render(<TwoFactorForm returnTo="/" />);
-    type('Code', '123456');
-    click('Continue');
+    typeCode('123456');
+    click('Verify');
     await waitFor(() => expect(assign).toHaveBeenCalledWith('https://rp.example.com/cb?code=one'));
     expect(assign).not.toHaveBeenCalledWith('/');
   });
@@ -222,16 +228,26 @@ describe('the second sign-in step', () => {
   it('goes back to plain sign-in on an ordinary visit', () => {
     render(<TwoFactorForm returnTo="/" />);
     expect(screen.getByRole('link', { name: 'Back to sign in' }).getAttribute('href')).toBe(
-      '/sign-in',
+      '/sign-in?returnTo=%2F',
     );
+  });
+
+  it('takes the code a digit at a time, and as a whole when it is pasted', () => {
+    render(<TwoFactorForm returnTo="/" />);
+    fireEvent.paste(screen.getByLabelText('Digit 1'), {
+      clipboardData: { getData: () => '12 34-56' },
+    });
+    for (const [at, digit] of [...'123456'].entries()) {
+      expect((screen.getByLabelText(`Digit ${at + 1}`) as HTMLInputElement).value).toBe(digit);
+    }
   });
 
   it('takes a backup code instead, when the person asks to', async () => {
     verifyBackupCode.mockResolvedValue({ data: {}, error: null });
     render(<TwoFactorForm returnTo="/" />);
-    click('Use a backup code instead');
+    click('Use a backup code');
     type('Backup code', 'aaaaa-11111');
-    click('Continue');
+    click('Verify');
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/'));
     expect(verifyBackupCode).toHaveBeenCalledWith({ code: 'aaaaa-11111' });
     expect(verifyTotp).not.toHaveBeenCalled();
@@ -239,10 +255,12 @@ describe('the second sign-in step', () => {
 
   it('goes back to the app code, with nothing typed carried over', () => {
     render(<TwoFactorForm returnTo="/" />);
-    click('Use a backup code instead');
+    click('Use a backup code');
     type('Backup code', 'aaaaa-11111');
     click('Use the authenticator app instead');
-    expect((screen.getByLabelText(/^Code/) as HTMLInputElement).value).toBe('');
+    for (let digit = 1; digit <= 6; digit++) {
+      expect((screen.getByLabelText(`Digit ${digit}`) as HTMLInputElement).value).toBe('');
+    }
   });
 
   it.each([
@@ -254,9 +272,10 @@ describe('the second sign-in step', () => {
       error: { status: 401, code: 'INVALID_CODE' },
     });
     render(<TwoFactorForm returnTo="/" />);
-    if (backup) click('Use a backup code instead');
-    type(backup ? 'Backup code' : 'Code', 'nope');
-    click('Continue');
+    if (backup) click('Use a backup code');
+    if (backup) type('Backup code', 'nope');
+    else typeCode('123456');
+    click('Verify');
     expect((await screen.findByRole('alert')).textContent).toContain(words);
     expect(assign).not.toHaveBeenCalled();
   });
@@ -266,13 +285,13 @@ describe('the second sign-in step', () => {
     async (code) => {
       verifyTotp.mockResolvedValue({ data: null, error: { status: 401, code } });
       render(<TwoFactorForm returnTo="/settings" />);
-      type('Code', '123456');
-      click('Continue');
+      typeCode('123456');
+      click('Verify');
       expect(await screen.findByText(/can no longer be finished/)).toBeTruthy();
       expect(screen.getByRole('link', { name: 'Sign in again' }).getAttribute('href')).toBe(
         '/sign-in?returnTo=%2Fsettings',
       );
-      expect(screen.queryByLabelText(/^Code/)).toBeNull();
+      expect(screen.queryByLabelText('Digit 1')).toBeNull();
     },
   );
 
@@ -282,8 +301,8 @@ describe('the second sign-in step', () => {
       error: { status: 429, code: 'ACCOUNT_TEMPORARILY_LOCKED' },
     });
     render(<TwoFactorForm returnTo="/" />);
-    type('Code', '123456');
-    click('Continue');
+    typeCode('123456');
+    click('Verify');
     expect(await screen.findByText(/Wait a few minutes/)).toBeTruthy();
   });
 });

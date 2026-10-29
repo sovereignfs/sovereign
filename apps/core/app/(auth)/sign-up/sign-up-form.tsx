@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import { type FormEvent, useState } from 'react';
-import { Alert, Button, Checkbox, FormField, Input, LegalLinks } from '@sovereignfs/ui';
+import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../src/auth/client';
+import { AuthError, AuthNotice } from '../auth-notice';
+import { AuthField } from '../auth-field';
 import { afterVerification } from '../messages';
 import { ResendVerification } from '../resend-verification';
 import styles from '../auth.module.css';
@@ -11,16 +13,19 @@ import styles from '../auth.module.css';
 export function SignUpForm({
   returnTo,
   passwordHint,
+  instanceName,
   invitedEmail,
 }: {
   returnTo: string;
   passwordHint: string;
+  instanceName: string;
   /** The address an invitation link was sent to; the field starts with it. */
   invitedEmail?: string | undefined;
 }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState(invitedEmail ?? '');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [agreed, setAgreed] = useState(false);
   const [pending, setPending] = useState(false);
@@ -29,7 +34,11 @@ export function SignUpForm({
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(undefined);
-    // The server refuses it too; this only saves the person a round trip.
+    // The server refuses these too; this only saves the person a round trip.
+    if (password !== confirm) {
+      setError('The passwords do not match.');
+      return;
+    }
     if (!agreed) {
       setError('Accept the Terms of Service and the Privacy Policy to create an account.');
       return;
@@ -62,10 +71,10 @@ export function SignUpForm({
   if (waitingFor !== undefined) {
     return (
       <div className={styles.form}>
-        <Alert variant="info">
+        <AuthNotice>
           We have sent a link to {waitingFor} to verify it. It works for an hour. If it does not
           arrive, check your spam folder, or ask for a new one.
-        </Alert>
+        </AuthNotice>
         <ResendVerification email={waitingFor} returnTo={returnTo} />
         <p className={styles.footer}>
           <Link className={styles.link} href={`/sign-in?returnTo=${encodeURIComponent(returnTo)}`}>
@@ -76,69 +85,112 @@ export function SignUpForm({
     );
   }
 
+  const invited = invitedEmail !== undefined;
+
   return (
-    <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
-      {error ? <Alert variant="error">{error}</Alert> : null}
-      <FormField label="Name" required>
-        {(field) => (
-          <Input
-            {...field}
-            name="name"
-            autoComplete="name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-          />
-        )}
-      </FormField>
-      <FormField label="Email" required>
-        {(field) => (
-          <Input
-            {...field}
-            type="email"
-            name="email"
-            autoComplete="username"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-        )}
-      </FormField>
-      <FormField label="Password" hint={passwordHint} required>
-        {(field) => (
-          <Input
-            {...field}
-            type="password"
-            name="password"
-            autoComplete="new-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-        )}
-      </FormField>
-      <div className={styles.terms}>
-        <Checkbox
-          checked={agreed}
-          onChange={setAgreed}
-          label="I agree to the Terms of Service and the Privacy Policy"
-          name="agreedToTerms"
-        />
-        <LegalLinks
-          renderLink={(href, label) => (
-            <a className={styles.link} href={href} target="_blank" rel="noopener noreferrer">
-              {label}
-            </a>
+    <>
+      {invited ? (
+        <div className={styles.notice}>
+          <p className={styles.inviteTitle}>Invited to join {instanceName}</p>
+        </div>
+      ) : null}
+      <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
+        <AuthField label="Name">
+          {(control) => (
+            <Input
+              {...control}
+              name="name"
+              autoComplete="name"
+              required
+              disabled={pending}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
           )}
-        />
-      </div>
-      <Button type="submit" className={styles.submit} loading={pending}>
-        {pending ? 'Creating account…' : 'Create account'}
-      </Button>
+        </AuthField>
+        <AuthField
+          label="Email"
+          aside={invited ? <span className={styles.fromInvite}>from invite</span> : undefined}
+        >
+          {(control) => (
+            <Input
+              {...control}
+              type="email"
+              name="email"
+              autoComplete="username"
+              required
+              disabled={pending}
+              readOnly={invited}
+              value={email}
+              onChange={invited ? undefined : (event) => setEmail(event.target.value)}
+            />
+          )}
+        </AuthField>
+        <AuthField label="Password" hint={passwordHint}>
+          {(control) => (
+            <Input
+              {...control}
+              type="password"
+              name="password"
+              autoComplete="new-password"
+              required
+              disabled={pending}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          )}
+        </AuthField>
+        <AuthField label="Confirm password">
+          {(control) => (
+            <Input
+              {...control}
+              type="password"
+              name="confirm"
+              autoComplete="new-password"
+              required
+              disabled={pending}
+              value={confirm}
+              onChange={(event) => setConfirm(event.target.value)}
+            />
+          )}
+        </AuthField>
+        <label className={styles.terms}>
+          <input
+            type="checkbox"
+            name="agreedToTerms"
+            disabled={pending}
+            checked={agreed}
+            onChange={(event) => setAgreed(event.target.checked)}
+          />
+          <span>
+            I agree to the{' '}
+            <Link href="/privacy" className={styles.link} target="_blank" rel="noopener noreferrer">
+              Privacy Policy
+            </Link>{' '}
+            and{' '}
+            <Link href="/tos" className={styles.link} target="_blank" rel="noopener noreferrer">
+              Terms of Service
+            </Link>
+          </span>
+        </label>
+        {error ? <AuthError>{error}</AuthError> : null}
+        <Button type="submit" className={styles.submit} loading={pending}>
+          {pending
+            ? invited
+              ? 'Accepting…'
+              : 'Creating account…'
+            : invited
+              ? 'Accept invitation'
+              : 'Create account'}
+        </Button>
+      </form>
       <p className={styles.footer}>
         Already have an account?{' '}
         <Link className={styles.link} href={`/sign-in?returnTo=${encodeURIComponent(returnTo)}`}>
           Sign in
         </Link>
       </p>
-    </form>
+    </>
   );
 }
 

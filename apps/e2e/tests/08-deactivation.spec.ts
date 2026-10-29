@@ -37,7 +37,7 @@ test('§3.17.8: deactivating an account ends its sessions and every token issued
 
   // Her session at core is over, at once.
   await uma.page.goto('/');
-  await expect(heading(uma.page)).toHaveText('Sign in');
+  await expect(heading(uma.page)).toHaveText(/^Sign in/);
   // Everything an app was given for her stops working: access, refresh (with offline_access), and the Core API.
   expect(await rpApi('/api/userinfo')).toMatchObject({ ok: false });
   expect(await rpApi('/api/refresh')).toMatchObject({ ok: false });

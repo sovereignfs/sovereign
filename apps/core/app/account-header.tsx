@@ -22,7 +22,7 @@ export async function AccountHeader({ bordered = false }: { bordered?: boolean }
   return (
     <header className={bordered ? `${styles.header} ${styles.bordered}` : styles.header}>
       <Link href="/" className={styles.brand}>
-        <InstanceLogo small />
+        <InstanceLogo />
         <span className={styles.brandName}>{identity.name}</span>
       </Link>
       <div className={styles.right}>

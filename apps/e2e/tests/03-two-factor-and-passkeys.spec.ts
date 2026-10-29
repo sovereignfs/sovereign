@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { person } from '../support/env';
 import { verifyEmail } from '../support/database';
 import { totpCode } from '../support/totp';
-import { alert, heading, join, signIn, signOut } from '../support/ui';
+import { alert, enterCode, heading, join, signIn, signOut } from '../support/ui';
 import { world } from '../support/world';
 
 /** How long core's limit on checking codes remembers an attempt (ten seconds), with a margin. */
@@ -68,11 +68,11 @@ test('§3.17.5: a person enrols TOTP and a passkey, signs in with each, and reco
   await her.getByLabel('Password').fill(member.password);
   await her.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(her).toHaveURL(/\/sign-in\/two-factor/);
-  await her.getByLabel('Code').fill('000000');
-  await her.getByRole('button', { name: 'Continue' }).click();
+  await enterCode(her, '000000');
+  await her.getByRole('button', { name: 'Verify' }).click();
   await expect(alert(her)).toBeVisible();
-  await her.getByLabel('Code').fill(totpCode(key));
-  await her.getByRole('button', { name: 'Continue' }).click();
+  await enterCode(her, totpCode(key));
+  await her.getByRole('button', { name: 'Verify' }).click();
   await expect(heading(her)).toHaveText('Apps');
 
   // A passkey signs in on its own.
@@ -89,9 +89,9 @@ test('§3.17.5: a person enrols TOTP and a passkey, signs in with each, and reco
     await her.getByLabel('Email').fill(member.email);
     await her.getByLabel('Password').fill(member.password);
     await her.getByRole('button', { name: 'Sign in', exact: true }).click();
-    await her.getByRole('button', { name: 'Use a backup code instead' }).click();
+    await her.getByRole('button', { name: 'Use a backup code' }).click();
     await her.getByLabel('Backup code').fill(code);
-    await her.getByRole('button', { name: 'Continue' }).click();
+    await her.getByRole('button', { name: 'Verify' }).click();
   };
   await withBackupCode(spent);
   await expect(heading(her)).toHaveText('Apps');

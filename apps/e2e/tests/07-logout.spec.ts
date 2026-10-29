@@ -52,7 +52,7 @@ test('§3.17.10: signing out of core sends a back-channel notice and revokes tha
   await expect(uma.page.getByText('Notes: signed out')).toBeVisible();
   // Her session with core ended too.
   await uma.page.goto('/');
-  await expect(heading(uma.page)).toHaveText('Sign in');
+  await expect(heading(uma.page)).toHaveText(/^Sign in/);
 
   // An address that is not registered is never followed, whatever the app asks for.
   await signIn(uma.page, member);

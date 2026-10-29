@@ -1,9 +1,3 @@
-.logo {
-  display: flex;
-  justify-content: center;
-  margin-bottom: var(--sv-space-4);
-}
-
 .small {
   display: flex;
   align-items: center;
@@ -34,11 +28,4 @@
 
 :global([data-theme='dark']) .dark {
   display: block;
-}
-
-.name {
-  margin: 0;
-  color: var(--sv-color-text-muted);
-  font-size: var(--sv-font-size-md);
-  font-weight: var(--sv-font-weight-semibold);
 }

@@ -2,11 +2,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { verifyOAuthQueryParams } from '@better-auth/oauth-provider';
 import { redirect } from 'next/navigation';
-import { Card, PageContainer } from '@sovereignfs/ui';
 import { getAuth, getAuthSettings } from '../../src/auth';
 import { getSession } from '../../src/auth/session';
 import { readConsentRequest } from '../../src/oauth/consent';
 import { queryOf, signedQueryOf } from '../../src/oauth/signed-query';
+import { AuthCard } from '../(auth)/auth-card';
 import styles from '../(auth)/auth.module.css';
 import { ConsentForm } from './consent-form';
 
@@ -34,37 +34,31 @@ export default async function ConsentPage({
       ),
   });
 
+  if (!request) {
+    return (
+      <AuthCard
+        title="This request has expired"
+        lead="Go back to the app and sign in again. If this keeps happening, tell whoever runs this instance."
+        legal={false}
+      >
+        <p className={styles.footer}>
+          <Link className={styles.link} href="/">
+            Back to the home page
+          </Link>
+        </p>
+      </AuthCard>
+    );
+  }
+
   return (
-    <PageContainer maxWidth="sm">
-      <Card padding="lg">
-        <div className={styles.form}>
-          {request ? (
-            <>
-              <h1 className={styles.title}>Allow access to your account?</h1>
-              <ConsentForm
-                appName={request.appName}
-                returnHost={request.returnHost}
-                email={session.user.email}
-                permissions={request.permissions}
-                scopes={request.scopes}
-              />
-            </>
-          ) : (
-            <>
-              <h1 className={styles.title}>This request has expired</h1>
-              <p className={styles.lead}>
-                Go back to the app and sign in again. If this keeps happening, tell whoever runs
-                this instance.
-              </p>
-              <p className={styles.footer}>
-                <Link className={styles.link} href="/">
-                  Back to the home page
-                </Link>
-              </p>
-            </>
-          )}
-        </div>
-      </Card>
-    </PageContainer>
+    <AuthCard title="Allow access to your account?" legal={false}>
+      <ConsentForm
+        appName={request.appName}
+        returnHost={request.returnHost}
+        email={session.user.email}
+        permissions={request.permissions}
+        scopes={request.scopes}
+      />
+    </AuthCard>
   );
 }

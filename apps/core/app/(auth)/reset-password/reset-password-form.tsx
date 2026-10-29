@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import { type FormEvent, useState } from 'react';
-import { Alert, Button, FormField, Input } from '@sovereignfs/ui';
+import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../src/auth/client';
+import { AuthField } from '../auth-field';
+import { AuthError, AuthNotice } from '../auth-notice';
 import { emailRequestProblem } from '../messages';
 import styles from '../auth.module.css';
 
@@ -15,12 +17,17 @@ export function ResetPasswordForm({
   passwordHint: string;
 }) {
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [expired, setExpired] = useState(false);
   const [pending, setPending] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (password !== confirm) {
+      setError('The passwords do not match.');
+      return;
+    }
     setPending(true);
     setError(undefined);
     const result = await authClient.resetPassword({ newPassword: password, token });
@@ -37,12 +44,12 @@ export function ResetPasswordForm({
   if (expired) {
     return (
       <>
-        <Alert variant="error">
+        <AuthNotice tone="warning">
           This link has expired or was already used. A link works once, for an hour.
-        </Alert>
+        </AuthNotice>
         <p className={styles.footer}>
           <Link className={styles.link} href="/forgot-password">
-            Ask for a new link
+            Request a new link
           </Link>
         </p>
       </>
@@ -50,24 +57,47 @@ export function ResetPasswordForm({
   }
 
   return (
-    <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
-      {error ? <Alert variant="error">{error}</Alert> : null}
-      <FormField label="New password" hint={passwordHint} required>
-        {(field) => (
-          <Input
-            {...field}
-            type="password"
-            name="password"
-            autoComplete="new-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-        )}
-      </FormField>
-      <Button type="submit" className={styles.submit} loading={pending}>
-        {pending ? 'Saving…' : 'Change password'}
-      </Button>
-    </form>
+    <>
+      <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
+        <AuthField label="New password" hint={passwordHint}>
+          {(control) => (
+            <Input
+              {...control}
+              type="password"
+              name="password"
+              autoComplete="new-password"
+              required
+              disabled={pending}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          )}
+        </AuthField>
+        <AuthField label="Confirm new password">
+          {(control) => (
+            <Input
+              {...control}
+              type="password"
+              name="confirm"
+              autoComplete="new-password"
+              required
+              disabled={pending}
+              value={confirm}
+              onChange={(event) => setConfirm(event.target.value)}
+            />
+          )}
+        </AuthField>
+        {error ? <AuthError>{error}</AuthError> : null}
+        <Button type="submit" className={styles.submit} loading={pending}>
+          {pending ? 'Saving…' : 'Set new password'}
+        </Button>
+      </form>
+      <p className={styles.footer}>
+        <Link className={styles.link} href="/sign-in">
+          Back to sign in
+        </Link>
+      </p>
+    </>
   );
 }
 

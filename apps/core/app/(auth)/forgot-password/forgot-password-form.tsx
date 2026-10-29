@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import { type FormEvent, useState } from 'react';
-import { Alert, Button, FormField, Input } from '@sovereignfs/ui';
+import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../src/auth/client';
+import { AuthField } from '../auth-field';
+import { AuthError, AuthNotice } from '../auth-notice';
 import { emailRequestProblem } from '../messages';
 import styles from '../auth.module.css';
 
@@ -33,35 +35,49 @@ export function ForgotPasswordForm() {
     setSentTo(email);
   }
 
-  return (
-    <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
-      {error ? <Alert variant="error">{error}</Alert> : null}
-      {sentTo !== undefined ? (
-        <Alert variant="success">
+  if (sentTo !== undefined) {
+    return (
+      <>
+        <AuthNotice>
           If {sentTo} has an account, a link to reset the password is on its way. It works for an
           hour.
-        </Alert>
-      ) : null}
-      <FormField label="Email" required>
-        {(field) => (
-          <Input
-            {...field}
-            type="email"
-            name="email"
-            autoComplete="username"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-        )}
-      </FormField>
-      <Button type="submit" className={styles.submit} loading={pending}>
-        {pending ? 'Sending…' : 'Send the link'}
-      </Button>
+        </AuthNotice>
+        <p className={styles.footer}>
+          <Link className={styles.link} href="/sign-in">
+            Back to sign in
+          </Link>
+        </p>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
+        <AuthField label="Email address">
+          {(control) => (
+            <Input
+              {...control}
+              type="email"
+              name="email"
+              autoComplete="username"
+              required
+              disabled={pending}
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          )}
+        </AuthField>
+        {error ? <AuthError>{error}</AuthError> : null}
+        <Button type="submit" className={styles.submit} loading={pending}>
+          {pending ? 'Sending…' : 'Send reset link'}
+        </Button>
+      </form>
       <p className={styles.footer}>
         <Link className={styles.link} href="/sign-in">
           Back to sign in
         </Link>
       </p>
-    </form>
+    </>
   );
 }

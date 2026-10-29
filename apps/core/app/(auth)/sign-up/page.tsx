@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { Alert, Card, PageContainer } from '@sovereignfs/ui';
 import { describePasswordPolicy } from '../../../src/auth/password-policy';
 import { getAuthSettings } from '../../../src/auth/settings';
 import { getRegistrationMode } from '../../../src/auth/mode';
@@ -8,11 +7,15 @@ import { safeReturnTo } from '../../../src/auth/return-to';
 import { getSession } from '../../../src/auth/session';
 import { getDatabase } from '../../../src/database';
 import { lookupInvite } from '../../../src/invites/manage';
-import { InstanceLogo } from '../../instance-logo';
-import styles from '../auth.module.css';
+import { getInstanceIdentity } from '../../../src/instance/service';
+import { AuthCard } from '../auth-card';
+import { AuthNotice } from '../auth-notice';
 import { SignUpForm } from './sign-up-form';
 
-export const metadata: Metadata = { title: 'Create an account' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { name } = await getInstanceIdentity();
+  return { title: `Create your ${name} account` };
+}
 
 export default async function SignUpPage({
   searchParams,
@@ -28,29 +31,26 @@ export default async function SignUpPage({
   const invite = Array.isArray(params.invite) ? params.invite[0] : params.invite;
   const invited = invite ? await lookupInvite(await getDatabase(), invite, Date.now()) : undefined;
 
+  const { name } = await getInstanceIdentity();
+
   return (
-    <PageContainer maxWidth="sm">
-      <Card padding="lg">
-        <div className={styles.form}>
-          <InstanceLogo />
-          <h1 className={styles.title}>Create an account</h1>
-          {mode === 'first-account' ? (
-            <Alert variant="info">
-              This instance has no accounts yet. The account you create now is its owner.
-            </Alert>
-          ) : null}
-          {mode === 'invite-only' ? (
-            <Alert variant="info">
-              Sign-up here is by invitation. Use the email address your invitation was sent to.
-            </Alert>
-          ) : null}
-          <SignUpForm
-            returnTo={returnTo}
-            invitedEmail={invited?.state === 'valid' ? invited.email : undefined}
-            passwordHint={describePasswordPolicy(getAuthSettings().passwordPolicy)}
-          />
-        </div>
-      </Card>
-    </PageContainer>
+    <AuthCard title="Create your account">
+      {mode === 'first-account' ? (
+        <AuthNotice>
+          This instance has no accounts yet. The account you create now is its owner.
+        </AuthNotice>
+      ) : null}
+      {mode === 'invite-only' && invited?.state !== 'valid' ? (
+        <AuthNotice>
+          Sign-up here is by invitation. Use the email address your invitation was sent to.
+        </AuthNotice>
+      ) : null}
+      <SignUpForm
+        returnTo={returnTo}
+        instanceName={name}
+        invitedEmail={invited?.state === 'valid' ? invited.email : undefined}
+        passwordHint={describePasswordPolicy(getAuthSettings().passwordPolicy)}
+      />
+    </AuthCard>
   );
 }

@@ -10,7 +10,7 @@ export function SignOutButton() {
   async function signOut() {
     setPending(true);
     await authClient.signOut();
-    window.location.assign('/sign-in');
+    window.location.assign('/sign-in?signedout=1');
   }
 
   return (

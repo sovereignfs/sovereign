@@ -2,17 +2,27 @@
 
 import Link from 'next/link';
 import { type FormEvent, useEffect, useState } from 'react';
-import { Alert, Button, FormField, Input } from '@sovereignfs/ui';
+import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../src/auth/client';
 import { continuationUrl, isContinuation } from '../../../src/auth/oauth-continuation';
 import { DEACTIVATED, passkeyProblem } from '../messages';
+import { AuthError, AuthNotice } from '../auth-notice';
+import { AuthField } from '../auth-field';
 import { ResendVerification } from '../resend-verification';
 import styles from '../auth.module.css';
 
-/** Something the person arrived to be told: they changed their password, or a link did not work. */
-export type SignInNotice = 'password-changed' | 'link-invalid' | 'account-deleted';
+/** Something the person arrived to be told: they signed out, changed their password, or a link did not work. */
+export type SignInNotice = 'password-changed' | 'link-invalid' | 'account-deleted' | 'signed-out';
 
-export function SignInForm({ returnTo, notice }: { returnTo: string; notice?: SignInNotice }) {
+export function SignInForm({
+  returnTo,
+  notice,
+  instanceName,
+}: {
+  returnTo: string;
+  notice?: SignInNotice;
+  instanceName: string;
+}) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | undefined>();
@@ -80,75 +90,91 @@ export function SignInForm({ returnTo, notice }: { returnTo: string; notice?: Si
   }
 
   return (
-    <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
+    <>
+      {notice === 'signed-out' ? <AuthNotice>You’ve been signed out.</AuthNotice> : null}
       {notice === 'password-changed' ? (
-        <Alert variant="success">Your password is changed. Sign in with the new one.</Alert>
+        <AuthNotice>Your password is changed. Sign in with the new one.</AuthNotice>
       ) : null}
       {notice === 'account-deleted' ? (
-        <Alert variant="success">Your account is deleted. Nothing of it is kept.</Alert>
+        <AuthNotice>Your account is deleted. Nothing of it is kept.</AuthNotice>
       ) : null}
       {notice === 'link-invalid' ? (
-        <Alert variant="warning">
+        <AuthNotice tone="warning">
           That link has expired or was already used. Sign in, and we can send you a new one.
-        </Alert>
+        </AuthNotice>
       ) : null}
-      {error ? <Alert variant="error">{error}</Alert> : null}
-      {unverified ? (
-        <Alert variant="warning">
-          Verify your email address before signing in: follow the link we sent when you made the
-          account.
-        </Alert>
-      ) : null}
-      {unverified ? <ResendVerification email={email} returnTo={returnTo} /> : null}
-      <FormField label="Email" required>
-        {(field) => (
-          <Input
-            {...field}
-            type="email"
-            name="email"
-            autoComplete="username"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-        )}
-      </FormField>
-      <FormField label="Password" required>
-        {(field) => (
-          <Input
-            {...field}
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-        )}
-      </FormField>
-      <p className={styles.footer}>
-        <Link className={styles.link} href="/forgot-password">
-          Forgot your password?
-        </Link>
-      </p>
-      <Button type="submit" className={styles.submit} loading={pending}>
-        {pending ? 'Signing in…' : 'Sign in'}
-      </Button>
-      {passkeysSupported ? (
-        <Button
-          type="button"
-          variant="secondary"
-          className={styles.submit}
-          loading={passkeyPending}
-          onClick={() => void signInWithPasskey()}
+      <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
+        <AuthField label="Email">
+          {(control) => (
+            <Input
+              {...control}
+              type="email"
+              name="email"
+              autoComplete="username"
+              required
+              disabled={pending}
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          )}
+        </AuthField>
+        <AuthField
+          label="Password"
+          aside={
+            <Link className={styles.aside} href="/forgot-password">
+              Forgot password?
+            </Link>
+          }
         >
-          {passkeyPending ? 'Waiting for your device…' : 'Sign in with a passkey'}
+          {(control) => (
+            <Input
+              {...control}
+              type="password"
+              name="password"
+              autoComplete="current-password"
+              required
+              disabled={pending}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          )}
+        </AuthField>
+        {error ? <AuthError>{error}</AuthError> : null}
+        {unverified ? (
+          <>
+            <AuthNotice tone="warning">
+              Verify your email address before signing in: follow the link we sent when you made the
+              account.
+            </AuthNotice>
+            <ResendVerification email={email} returnTo={returnTo} />
+          </>
+        ) : null}
+        <Button type="submit" className={styles.submit} loading={pending}>
+          {pending ? 'Signing in…' : 'Sign in'}
         </Button>
+      </form>
+      {passkeysSupported ? (
+        <>
+          <div className={styles.divider} aria-hidden="true">
+            or
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            className={styles.wide}
+            loading={passkeyPending}
+            onClick={() => void signInWithPasskey()}
+          >
+            {passkeyPending ? 'Waiting for your device…' : 'Sign in with a passkey'}
+          </Button>
+        </>
       ) : null}
       <p className={styles.footer}>
-        New here?{' '}
+        New to {instanceName}?{' '}
         <Link className={styles.link} href={`/sign-up?returnTo=${encodeURIComponent(returnTo)}`}>
-          Create an account
+          Create account
         </Link>
       </p>
-    </form>
+    </>
   );
 }

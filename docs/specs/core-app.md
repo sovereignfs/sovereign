@@ -64,6 +64,17 @@ backups) that apps may use.
   | Identity pages                                                                            | Account, opened as an overlay above the current page |
   | Privacy Policy and Terms of Service                                                       | legal pages                                          |
 
+- The pages before sign-in (sign-in, sign-up, forgot and reset password, the
+  second step, an invitation link that does not work) and the pages that stand
+  alone (consent, a missing address, a failure) are one card, 360 pixels wide
+  and centred on the screen, with the instance's mark above its title: its logo,
+  or the first letter of its name in a badge. The sign-in page is titled "Sign
+  in to" the instance's name and offers "Forgot password?" beside the password,
+  a passkey below an "or", and the legal links at the foot; a person who has just
+  signed out is told so. Labels sit above the boxes, small and muted, with no
+  asterisk. Sign-up and a new password ask for the password twice; the second
+  step is one box for each digit of the code (pasting fills them), and offers a
+  passkey instead.
 - Every signed-in page, the launcher, the identity pages and the Console alike,
   has the same header: the instance's name (which leads home), Apps, Account
   and, for an operator, Console, with the part the person is in marked, and
@@ -1205,3 +1216,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-30 | §3.5: every response carries `nosniff`, `X-Frame-Options`, a referrer policy that sends other sites an origin and never a path, a permissions policy that withholds the camera, microphone, location, payment and USB, and, over https only, `Strict-Transport-Security`; found by the Phase 1 security review.                                                                                                                                                                                                                                                                                                                                                                                                               |
 | 2026-10-30 | §3.9: how an app gets a Directory token: a token asked for with a resource is for that resource alone and carries no ID token, so an app signs in as usual and then asks for it, with its refresh token or a second authorization request; found by the acceptance suite.                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | 2026-10-30 | §1.3: every signed-in page has one header (name, Apps, Account, Console, sign out) with the current part marked; the pages before sign-in show the logo or else the name; a missing address and a failed page have pages of the design system's own; going to another page is a `ButtonLink`. Found by looking at every screen.                                                                                                                                                                                                                                                                                                                                                                                               |
+| 2026-10-30 | §1.3: the pages before sign-in and the pages that stand alone are one centred card with the instance's mark (its logo, or its initial), titled for the instance on sign-in; labels above the boxes with no asterisk; the password asked twice at sign-up and reset; the second step as one box for each digit, with a passkey offered instead; a person who has signed out is told so. Matches the established Sovereign sign-in pages.                                                                                                                                                                                                                                                                                       |

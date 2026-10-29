@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Card, PageContainer } from '@sovereignfs/ui';
 import { getDatabase } from '../../../../src/database';
 import { lookupInvite } from '../../../../src/invites/manage';
+import { AuthCard } from '../../auth-card';
 import styles from '../../auth.module.css';
 
 export const metadata: Metadata = { title: 'Invitation link not valid' };
@@ -19,22 +19,17 @@ export default async function InvitePage({ params }: { params: Promise<{ id: str
   if (found.state === 'valid') redirect(`/sign-up?invite=${encodeURIComponent(id)}`);
 
   return (
-    <PageContainer maxWidth="sm">
-      <Card padding="lg">
-        <div className={styles.form}>
-          <h1 className={styles.title}>This invitation link does not work</h1>
-          <p className={styles.lead}>
-            It may have expired, been cancelled or already been used. Ask whoever invited you to
-            send a new one.
-          </p>
-          <p className={styles.footer}>
-            Already have an account?{' '}
-            <Link className={styles.link} href="/sign-in">
-              Sign in
-            </Link>
-          </p>
-        </div>
-      </Card>
-    </PageContainer>
+    <AuthCard
+      title="This invitation link does not work"
+      lead="It may have expired, been cancelled or already been used. Ask whoever invited you to send a new one."
+      legal={false}
+    >
+      <p className={styles.footer}>
+        Already have an account?{' '}
+        <Link className={styles.link} href="/sign-in">
+          Sign in
+        </Link>
+      </p>
+    </AuthCard>
   );
 }

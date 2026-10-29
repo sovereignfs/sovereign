@@ -1,6 +1,6 @@
 # Sovereign Core — Roadmap
 
-**Version:** 0.42.0 · **Last updated:** 2026-10-29
+**Version:** 0.43.0 · **Last updated:** 2026-10-29
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -87,4 +87,4 @@ _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked · �
 
 | Version | Task                               | Status | Epic task                          |
 | ------- | ---------------------------------- | ------ | ---------------------------------- |
-| —       | Components core needs `[parallel]` | 📋     | [2.3](docs/epics/design-system.md) |
+| 0.43.0  | Components core needs `[parallel]` | ✅     | [2.3](docs/epics/design-system.md) |

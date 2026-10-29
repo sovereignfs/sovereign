@@ -65,9 +65,12 @@
     color 0.1s ease;
 }
 
+/* The sidebar this sits in is the raised surface, which in a dark theme is the sunken surface's own colour, so
+   neither the hover nor the current row could be told from the rest with it: both are a tint of the accent,
+   which shows on either. */
 @media (hover: hover) {
   .static .row:hover {
-    background-color: var(--sv-color-surface-sunken);
+    background-color: color-mix(in srgb, var(--sv-color-accent) 6%, transparent);
     color: var(--sv-color-text-primary);
   }
 }
@@ -78,7 +81,7 @@
 }
 
 .static .rowActive {
-  background-color: var(--sv-color-surface-sunken);
+  background-color: var(--sv-color-accent-subtle);
   color: var(--sv-color-text-primary);
   font-weight: var(--sv-font-weight-semibold);
 }

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  APP_ICON_SIDES,
   CONTENT_TYPES,
   ImageError,
+  inspectAppIcon,
   inspectImage,
   MAX_IMAGE_BYTES,
   MAX_IMAGE_SIDE,
@@ -143,5 +145,45 @@ describe('what core refuses', () => {
         expect(error).toBeInstanceOf(ImageError);
       }
     }
+  });
+});
+
+describe('an app icon core accepts', () => {
+  const iconCode = (bytes: Buffer): string | undefined => {
+    try {
+      inspectAppIcon(bytes);
+    } catch (error) {
+      if (error instanceof ImageError) return error.code;
+      throw error;
+    }
+    return undefined;
+  };
+
+  it.each([APP_ICON_SIDES.min, 600, APP_ICON_SIDES.max])(
+    'is a PNG, square, %i pixels on a side',
+    (side) => {
+      expect(inspectAppIcon(png(side, side))).toMatchObject({
+        kind: 'png',
+        width: side,
+        height: side,
+      });
+    },
+  );
+
+  it.each([
+    ['smaller than a device’s largest icon', png(511, 511)],
+    ['larger than is kept', png(1025, 1025)],
+    ['not square', png(512, 640)],
+    ['a JPEG', JPEG_1X1],
+    ['a WebP', WEBP_LOSSY_1X1],
+    ['an SVG', Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>')],
+    ['not a picture at all', Buffer.from('not an image at all')],
+  ])('is not %s', (_name, bytes) => {
+    expect(iconCode(bytes)).toBe('icon-shape');
+  });
+
+  it('is still judged by its bytes first: nothing, or too large in pixels, is refused as that', () => {
+    expect(iconCode(Buffer.alloc(0))).toBe('empty');
+    expect(iconCode(png(MAX_IMAGE_SIDE + 1, 512))).toBe('too-big');
   });
 });

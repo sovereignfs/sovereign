@@ -12,6 +12,9 @@ export type InstanceIdentity = {
   /** The logo for a dark page, or for both when only one was given. */
   logoDark: string | undefined;
   favicon: string | undefined;
+  /** The icon an installed app takes, a square PNG (RFC 0001), and the one drawn to be masked, if there is one. */
+  appIcon: string | undefined;
+  appIconMaskable: string | undefined;
   /**
    * The logo for an email, as an absolute address: a mail client shows a picture from the open web, and shows
    * only the kinds it can be trusted with, so an SVG is never one.
@@ -25,6 +28,8 @@ export const PLAIN_IDENTITY: InstanceIdentity = {
   logoLight: undefined,
   logoDark: undefined,
   favicon: undefined,
+  appIcon: undefined,
+  appIconMaskable: undefined,
   emailLogo: undefined,
 };
 
@@ -45,6 +50,8 @@ export async function loadIdentity(
     logoLight: (light ?? dark)?.path,
     logoDark: (dark ?? light)?.path,
     favicon: images.favicon?.path,
+    appIcon: images['app-icon']?.path,
+    appIconMaskable: images['app-icon-maskable']?.path,
     emailLogo: raster ? new URL(raster.path, baseUrl).toString() : undefined,
   };
 }

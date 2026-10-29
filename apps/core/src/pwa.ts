@@ -22,3 +22,34 @@ export function shortName(name: string): string {
   const space = cut.lastIndexOf(' ');
   return (space >= 4 ? cut.slice(0, space) : cut).trim();
 }
+
+export type ManifestIcon = {
+  src: string;
+  sizes: string;
+  type: string;
+  purpose: 'any' | 'maskable';
+};
+
+/**
+ * The icons a manifest names. An instance that has set its own app icon gets it, for both the sizes a device asks
+ * for (the picture is at least 512 pixels, and the device scales it down), and a maskable one only if the operator
+ * supplied one drawn for masking: the Sovereign maskable icon would put another mark on an Android home screen. An
+ * instance that has set none has the Sovereign mark.
+ */
+export function manifestIcons(own: {
+  appIcon?: string | undefined;
+  appIconMaskable?: string | undefined;
+}): ManifestIcon[] {
+  if (!own.appIcon) return MANIFEST_ICONS.map((icon) => ({ ...icon }));
+  const png = (src: string, sizes: string, purpose: ManifestIcon['purpose']): ManifestIcon => ({
+    src,
+    sizes,
+    type: 'image/png',
+    purpose,
+  });
+  return [
+    png(own.appIcon, '192x192', 'any'),
+    png(own.appIcon, '512x512', 'any'),
+    ...(own.appIconMaskable ? [png(own.appIconMaskable, '512x512', 'maskable')] : []),
+  ];
+}

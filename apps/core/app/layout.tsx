@@ -27,16 +27,16 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: identity.name, template: `%s · ${identity.name}` },
     // An iPhone reads this, not the manifest, to open a page added to the home screen without Safari's bars.
     appleWebApp: { capable: true, title: identity.name, statusBarStyle: 'black-translucent' },
-    // The instance's own favicon, or the Sovereign one until it sets one.
-    icons: identity.favicon
-      ? { icon: identity.favicon }
-      : {
-          icon: [
+    // The instance's own favicon and app icon, or the Sovereign ones until it sets them.
+    icons: {
+      icon: identity.favicon
+        ? identity.favicon
+        : [
             { url: '/icons/favicon.svg', type: 'image/svg+xml' },
             { url: '/favicon.ico', sizes: 'any' },
           ],
-          apple: '/icons/apple-touch-icon.png',
-        },
+      apple: identity.appIcon ?? '/icons/apple-touch-icon.png',
+    },
   };
 }
 

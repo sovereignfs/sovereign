@@ -1,11 +1,23 @@
 import { createHash } from 'node:crypto';
 import { toBuffer, type Database } from '@sovereignfs/database';
 import { sanitiseSvg } from '../images/svg';
-import { ImageError, inspectImage } from '../images/validate';
+import { ImageError, inspectAppIcon, inspectImage } from '../images/validate';
 
-/** The instance's three pictures (core-app §3.12): its logo for a light page and for a dark one, and its favicon. */
-export const BRANDING_KINDS = ['logo-light', 'logo-dark', 'favicon'] as const;
+/**
+ * The instance's pictures (core-app §3.12): its logo for a light page and for a dark one, its favicon, and the icon
+ * an installed app takes, with an optional one drawn to be masked (RFC 0001).
+ */
+export const BRANDING_KINDS = [
+  'logo-light',
+  'logo-dark',
+  'favicon',
+  'app-icon',
+  'app-icon-maskable',
+] as const;
 export type BrandingKind = (typeof BRANDING_KINDS)[number];
+
+/** The two icons an installed app takes: each must be a square PNG of a size a device can scale down from. */
+export const isAppIconKind = (kind: BrandingKind): boolean => kind.startsWith('app-icon');
 
 export const isBrandingKind = (value: unknown): value is BrandingKind =>
   typeof value === 'string' && (BRANDING_KINDS as readonly string[]).includes(value);
@@ -40,12 +52,17 @@ export class BrandingStore {
   async set(kind: BrandingKind, bytes: Buffer, actor?: string): Promise<BrandingSummary> {
     let stored = bytes;
     let contentType: string;
-    try {
-      contentType = inspectImage(bytes).contentType;
-    } catch (error) {
-      if (!(error instanceof ImageError) || error.code !== 'svg') throw error;
-      stored = sanitiseSvg(bytes);
-      contentType = 'image/svg+xml';
+    if (isAppIconKind(kind)) {
+      // Only a PNG of the right shape, as it is: never an SVG, which the other pictures may be.
+      contentType = inspectAppIcon(bytes).contentType;
+    } else {
+      try {
+        contentType = inspectImage(bytes).contentType;
+      } catch (error) {
+        if (!(error instanceof ImageError) || error.code !== 'svg') throw error;
+        stored = sanitiseSvg(bytes);
+        contentType = 'image/svg+xml';
+      }
     }
     const version = createHash('sha256').update(stored).digest('hex').slice(0, 16);
     await this.#database.run(
@@ -92,6 +109,8 @@ export class BrandingStore {
       'logo-light': undefined,
       'logo-dark': undefined,
       favicon: undefined,
+      'app-icon': undefined,
+      'app-icon-maskable': undefined,
     };
     for (const row of rows) {
       const kind = row.kind;

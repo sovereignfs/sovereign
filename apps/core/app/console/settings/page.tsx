@@ -61,6 +61,8 @@ export default async function SettingsPage() {
             'logo-light': instance.images['logo-light']?.path,
             'logo-dark': instance.images['logo-dark']?.path,
             favicon: instance.images.favicon?.path,
+            'app-icon': instance.images['app-icon']?.path,
+            'app-icon-maskable': instance.images['app-icon-maskable']?.path,
           }}
         />
       </section>

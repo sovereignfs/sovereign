@@ -7,6 +7,6 @@ was rejected. A decision that changes what core does is also reflected in
 Files are named `NNNN-short-slug.md`, numbered in order. A decision is never
 edited after it is accepted; a later ADR supersedes it and says so.
 
-| ADR | Decision | Status |
-| --- | -------- | ------ |
-| —   | None yet | —      |
+| ADR                                                  | Decision                                                                                  | Status   |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------- | -------- |
+| [0001](0001-app-icons-are-supplied-not-generated.md) | The icons of an installed app are supplied by the operator, not generated from their logo | Accepted |

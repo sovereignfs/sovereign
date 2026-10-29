@@ -15,7 +15,7 @@ import { ROLE_ADMIN, ROLE_OWNER, ROLE_USER } from '../auth/roles';
 import { BrandingStore, BRANDING_KINDS } from '../branding/store';
 import { config } from '../config';
 import { migrateCore } from '../db/migrate';
-import { ImageError } from '../images/validate';
+import { ImageError, MAX_IMAGE_SIDE } from '../images/validate';
 import { InstanceError, InstanceManager, type SmtpInput } from '../instance/manage';
 import { changeCapabilities } from '../roles/configure';
 import { SETTINGS } from '../settings/definitions';
@@ -123,14 +123,41 @@ export function instanceManageSuite(createDatabase: () => Promise<TestDatabase>)
       expect(b.version).toBe(a.version);
     });
 
-    it('keeps the three kinds apart', async () => {
+    it('keeps the kinds apart', async () => {
       const store = branding();
-      for (const kind of BRANDING_KINDS) await store.set(kind, png(8, 8));
+      for (const kind of BRANDING_KINDS) {
+        await store.set(kind, kind.startsWith('app-icon') ? png(512, 512) : png(8, 8));
+      }
       await store.remove('logo-dark');
       const described = await store.describe();
       expect(described['logo-light']).toBeDefined();
       expect(described['logo-dark']).toBeUndefined();
       expect(described.favicon).toBeDefined();
+    });
+
+    it('keeps an app icon only if it is a square PNG of a size a device can scale down from', async () => {
+      const store = branding();
+      for (const kind of ['app-icon', 'app-icon-maskable'] as const) {
+        await expect(store.set(kind, png(256, 256))).rejects.toMatchObject({ code: 'icon-shape' });
+        await expect(store.set(kind, png(512, 1024))).rejects.toMatchObject({ code: 'icon-shape' });
+        await expect(store.set(kind, png(MAX_IMAGE_SIDE + 1, 512))).rejects.toMatchObject({
+          code: 'too-big',
+        });
+        expect(await store.get(kind)).toBeUndefined();
+        const kept = await store.set(kind, png(512, 512));
+        expect(kept.contentType).toBe('image/png');
+        expect((await store.get(kind))?.bytes.equals(png(512, 512))).toBe(true);
+        expect(kept.path).toBe(`/api/branding/${kind}?v=${kept.version}`);
+      }
+    });
+
+    it('refuses an SVG for an app icon, though it takes one for a logo', async () => {
+      const store = branding();
+      const svg = Buffer.from(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"><rect width="512" height="512"/></svg>',
+      );
+      await expect(store.set('app-icon', svg)).rejects.toMatchObject({ code: 'icon-shape' });
+      expect((await store.set('logo-light', svg)).contentType).toBe('image/svg+xml');
     });
 
     it('removes a picture, and says whether there was one', async () => {

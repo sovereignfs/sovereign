@@ -31,6 +31,18 @@ describe('what the root layout tells a device', () => {
     identity.mockResolvedValue({ name: 'Acme', favicon: '/api/branding/favicon?v=1' });
     const metadata = await generateMetadata();
     expect(metadata.appleWebApp).toMatchObject({ capable: true, title: 'Acme' });
-    expect(metadata.icons).toEqual({ icon: '/api/branding/favicon?v=1' });
+    expect(metadata.icons).toEqual({
+      icon: '/api/branding/favicon?v=1',
+      apple: '/icons/apple-touch-icon.png',
+    });
+  });
+
+  it('has an iPhone’s home-screen icon from the instance’s app icon when it has one', async () => {
+    identity.mockResolvedValue({
+      name: 'Acme',
+      favicon: undefined,
+      appIcon: '/api/branding/app-icon?v=1',
+    });
+    expect((await generateMetadata()).icons).toMatchObject({ apple: '/api/branding/app-icon?v=1' });
   });
 });

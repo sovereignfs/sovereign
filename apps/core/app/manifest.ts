@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { getInstanceIdentity } from '../src/instance/service';
-import { MANIFEST_ICONS, shortName, THEME_COLORS } from '../src/pwa';
+import { manifestIcons, shortName, THEME_COLORS } from '../src/pwa';
 
 // The instance's name is read on every request: renaming it in the Console renames the app. Next would otherwise
 // build this once and keep it.
@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
  * The scope is core's origin and no wider: the apps in the launcher are other origins and open outside the window.
  */
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
-  const { name } = await getInstanceIdentity();
+  const { name, appIcon, appIconMaskable } = await getInstanceIdentity();
   return {
     id: '/',
     name,
@@ -24,6 +24,6 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     display_override: ['standalone', 'minimal-ui'],
     background_color: THEME_COLORS.light,
     theme_color: THEME_COLORS.light,
-    icons: MANIFEST_ICONS.map((icon) => ({ ...icon })),
+    icons: manifestIcons({ appIcon, appIconMaskable }),
   };
 }

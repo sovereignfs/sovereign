@@ -22,7 +22,7 @@ export const CONTENT_TYPES: Record<ImageKind, string> = {
 };
 
 export type ImageErrorCode =
-  'empty' | 'too-large' | 'svg' | 'bad-svg' | 'unsupported' | 'corrupt' | 'too-big';
+  'empty' | 'too-large' | 'svg' | 'bad-svg' | 'unsupported' | 'corrupt' | 'too-big' | 'icon-shape';
 
 export class ImageError extends Error {
   override name = 'ImageError';
@@ -51,6 +51,8 @@ export const IMAGE_MESSAGES: Record<ImageErrorCode, string> = {
   unsupported: 'Use a PNG, JPEG or WebP picture.',
   corrupt: 'That picture could not be read.',
   'too-big': 'That picture is too large in pixels.',
+  'icon-shape':
+    'An app icon must be a square PNG, between 512 and 1024 pixels on each side. A device scales it down, so the file is the size the largest one needs.',
 };
 
 const fail = (code: ImageErrorCode): never => {
@@ -155,4 +157,36 @@ export function inspectImage(bytes: Buffer): InspectedImage {
   if (width < 1 || height < 1) return fail('corrupt');
   if (width > MAX_IMAGE_SIDE || height > MAX_IMAGE_SIDE) return fail('too-big');
   return { kind, contentType: CONTENT_TYPES[kind], width, height };
+}
+
+/** The smallest and largest side of an app icon: the largest size a device asks for, and the most that is kept. */
+export const APP_ICON_SIDES = { min: 512, max: 1024 } as const;
+
+/**
+ * An icon for an installed app (RFC 0001): a PNG, square, between 512 and 1024 pixels. Core does not resize
+ * pictures, so what is kept is what a device is given and it scales it down itself; a device cannot scale one up,
+ * so a smaller picture is refused. SVG, JPEG and WebP are not offered by every device for an icon, so they are
+ * refused too.
+ */
+export function inspectAppIcon(bytes: Buffer): InspectedImage {
+  let inspected: InspectedImage;
+  try {
+    inspected = inspectImage(bytes);
+  } catch (error) {
+    // An SVG, or a file that is no picture, is the wrong kind of file for an icon; say what an icon must be.
+    if (error instanceof ImageError && ['svg', 'bad-svg', 'unsupported'].includes(error.code)) {
+      return fail('icon-shape');
+    }
+    throw error;
+  }
+  const { kind, width, height } = inspected;
+  if (
+    kind !== 'png' ||
+    width !== height ||
+    width < APP_ICON_SIDES.min ||
+    width > APP_ICON_SIDES.max
+  ) {
+    return fail('icon-shape');
+  }
+  return inspected;
 }

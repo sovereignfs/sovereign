@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { DEFAULT_ICONS } from '../branding/default-icons';
-import { MANIFEST_ICONS, shortName, THEME_COLORS } from '../pwa';
+import { MANIFEST_ICONS, manifestIcons, shortName, THEME_COLORS } from '../pwa';
 
 const identity = vi.fn();
 vi.mock('../instance/service', () => ({ getInstanceIdentity: () => identity() as unknown }));
@@ -90,5 +90,43 @@ describe('the web app manifest', () => {
     const made = await manifest();
     for (const address of [made.start_url, made.scope, made.id]) expect(address).toBe('/');
     for (const icon of made.icons ?? []) expect(icon.src).toMatch(/^\/icons\//);
+  });
+});
+
+describe('the icons of an instance with its own app icon', () => {
+  const OWN = '/api/branding/app-icon?v=abc';
+  const MASKABLE = '/api/branding/app-icon-maskable?v=def';
+
+  it('are the Sovereign ones when it has set none', () => {
+    expect(manifestIcons({})).toEqual(MANIFEST_ICONS.map((icon) => ({ ...icon })));
+  });
+
+  it('are its own, for both the sizes a device asks for, and not the Sovereign mark', () => {
+    const icons = manifestIcons({ appIcon: OWN });
+    expect(icons).toEqual([
+      { src: OWN, sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: OWN, sizes: '512x512', type: 'image/png', purpose: 'any' },
+    ]);
+  });
+
+  it('are masked only by an icon drawn for it: the Sovereign maskable one would put another mark on a home screen', () => {
+    expect(manifestIcons({ appIcon: OWN }).some((icon) => icon.purpose === 'maskable')).toBe(false);
+    expect(manifestIcons({ appIcon: OWN, appIconMaskable: MASKABLE }).at(-1)).toEqual({
+      src: MASKABLE,
+      sizes: '512x512',
+      type: 'image/png',
+      purpose: 'maskable',
+    });
+  });
+
+  it('are the Sovereign ones when only a maskable icon is set: a device needs one that is not masked', () => {
+    expect(manifestIcons({ appIconMaskable: MASKABLE })).toEqual(
+      MANIFEST_ICONS.map((icon) => ({ ...icon })),
+    );
+  });
+
+  it('reach the manifest', async () => {
+    identity.mockResolvedValue({ name: 'Acme', appIcon: OWN, appIconMaskable: undefined });
+    expect((await manifest()).icons?.map((icon) => icon.src)).toEqual([OWN, OWN]);
   });
 });

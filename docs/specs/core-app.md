@@ -108,7 +108,8 @@ Roboto, Helvetica, Arial, sans-serif`. A page or component names a family only
   other origins and open outside the window), `standalone` display, the page
   colour of the light theme, and the Sovereign mark as 192 and 512 pixel icons
   and a maskable one (`/icons/icon-192.png`, `/icons/icon-512.png`,
-  `/icons/icon-maskable-512.png`, served with no session). Every page tells a
+  `/icons/icon-maskable-512.png`, served with no session), or the operator's own
+  app icons when they have set them (§3.12). Every page tells a
   device how to meet its screen: it runs to the edges (`viewport-fit: cover`),
   what matters stays clear of a notch and a home bar by the safe-area insets, the
   browser's bar takes the page's colour in the system's colour scheme, and an
@@ -975,6 +976,7 @@ closing them returns there (§1.3).
 | ---------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------- |
 | Instance name                                  | `instance:configure`         | Shown in pages and emails                                                                   |
 | Logo (light and dark), favicon                 | `instance:configure`         | Used by core's pages, the launcher and emails, and published for apps (§3.13)               |
+| App icon, and one for masking (optional)       | `instance:configure`         | The icon an installed core takes (§1.3); the Sovereign mark until one is set                |
 | Invite-only                                    | `instance:configure`         | Overrides `SV_AUTH_INVITE_ONLY` (§3.3.1)                                                    |
 | SMTP: host, port, user, from address, password | `instance:configure-secrets` | Overrides the `SV_SMTP_*` variables; the password is stored encrypted and never shown again |
 
@@ -1011,6 +1013,16 @@ without it the page does not load them at all.
   An email shows the light logo only when it is PNG, JPEG or WebP: an SVG is
   never put in an email. Pictures are public (§3.13): they are read with no
   session, by pages, emails and apps.
+- **App icon and App icon for masking** (ADR 0001): the icons an installed core
+  takes (§1.3). Each is a **square PNG between 512 and 1024 pixels on a side**,
+  judged by its bytes and kept as it is; a picture that is not that, an SVG
+  included, is refused with the same words the Console shows beside the upload.
+  Core does not resize, crop or convert them. The manifest names the app icon
+  for both the 192 and the 512 pixel sizes and the masking one as `maskable`
+  only if there is one; with no app icon set, the Sovereign icons are named, and
+  an operator's masking icon is never mixed with the Sovereign one. The same
+  icon is an iPhone's home-screen icon. They are served like the other
+  pictures, public and at a versioned address.
 - **SMTP**: a host is a host name, the port is a whole number from 1 to 65535,
   the user name is one line of at most 255 characters, the from address is an
   address or a name followed by one in angle brackets, and the password is at most
@@ -1092,6 +1104,7 @@ What an app may call on core is defined once, in `spec/core-api/openapi.yaml`
 - **Images** (avatars, logos, favicon) are stored in core's database, so core's
   containers hold no state of their own:
   - at most 1 MB each; PNG, JPEG or WebP;
+  - an app icon is a square PNG, 512 to 1024 pixels on a side, and nothing else;
   - SVG is accepted for logos and the favicon only, and is sanitised before it
     is stored; it is never accepted for avatars;
   - an SVG is not scanned for what is dangerous: it is read and a new document
@@ -1260,3 +1273,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-30 | §1.3: the header has the instance's mark (larger than on the sign-in pages) and name on the left and the person's avatar on the right, whose menu holds their account, the Console for an operator, and sign out; until an operator sets a favicon an instance has the Sovereign one, served with no session.                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | 2026-10-30 | §1.3, §3.5: core installs as an app (a public manifest naming the instance, the Sovereign icons, how a page meets a device's screen), and what its service worker may keep (only files that are the same for everyone, on an allow-list, never a page), with the offline page it builds itself. The outcome of RFC 0001.                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 2026-10-30 | §3.5: how the service worker is held to its words: the allow-list (built files and icons, a `GET`, no query string, no `Authorization` header), one bounded versioned cache, no handler for anything else, the offline page it builds itself with a policy of its own, and the policy's `worker-src`.                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 2026-10-30 | §1.3, §3.12, §3.15: an operator may set an app icon, and one for masking, which an installed core and an iPhone's home screen take in place of the Sovereign mark: a square PNG, 512 to 1024 pixels, kept as it is (ADR 0001: supplied, not generated).                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |

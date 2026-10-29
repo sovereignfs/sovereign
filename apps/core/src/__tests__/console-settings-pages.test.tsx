@@ -34,7 +34,13 @@ const { default: SettingsPage } = await import('../../app/console/settings/page'
 const shown = (overrides: Partial<ShownInstance> = {}): ShownInstance => ({
   name: { value: 'Acme Co', source: 'saved' },
   inviteOnly: { value: true, source: 'default' },
-  images: { 'logo-light': undefined, 'logo-dark': undefined, favicon: undefined },
+  images: {
+    'logo-light': undefined,
+    'logo-dark': undefined,
+    favicon: undefined,
+    'app-icon': undefined,
+    'app-icon-maskable': undefined,
+  },
   smtp: undefined,
   ...overrides,
 });
@@ -161,6 +167,8 @@ describe('the settings page', () => {
           },
           'logo-dark': undefined,
           favicon: undefined,
+          'app-icon': undefined,
+          'app-icon-maskable': undefined,
         },
       }),
     );

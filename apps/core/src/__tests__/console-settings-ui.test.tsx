@@ -108,7 +108,13 @@ describe('the sign-up form', () => {
 });
 
 describe('the pictures', () => {
-  const none = { 'logo-light': undefined, 'logo-dark': undefined, favicon: undefined };
+  const none = {
+    'logo-light': undefined,
+    'logo-dark': undefined,
+    favicon: undefined,
+    'app-icon': undefined,
+    'app-icon-maskable': undefined,
+  };
   const png = () => new File([new Uint8Array([1, 2, 3])], 'logo.png', { type: 'image/png' });
 
   it('sends the file itself to the picture’s address and shows what comes back', async () => {
@@ -170,6 +176,32 @@ describe('the pictures', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
     await waitFor(() => expect(screen.queryByAltText('Favicon, as set')).toBeNull());
     expect((fetchMock.mock.calls[0] as [string, RequestInit])[1].method).toBe('DELETE');
+  });
+
+  it('offers the app icons as PNG only, since a device takes nothing else for one', () => {
+    render(<Pictures images={none} canEdit />);
+    const accepted = (label: string) =>
+      (screen.getByLabelText(label) as HTMLInputElement).getAttribute('accept');
+    expect(accepted('App icon')).toBe('image/png');
+    expect(accepted('App icon for masking')).toBe('image/png');
+    expect(accepted('Favicon')).toContain('image/svg+xml');
+  });
+
+  it('sets an app icon like any other picture, to its own address', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ image: '/api/branding/app-icon?v=abc' }), { status: 200 }),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+    render(<Pictures images={none} canEdit />);
+    fireEvent.change(screen.getByLabelText('App icon'), { target: { files: [png()] } });
+    await waitFor(() =>
+      expect(screen.getByAltText('App icon, as set').getAttribute('src')).toBe(
+        '/api/branding/app-icon?v=abc',
+      ),
+    );
+    expect((fetchMock.mock.calls[0] as [string])[0]).toBe('/api/console/branding/app-icon');
   });
 
   it('offers nothing to someone who may only look', () => {

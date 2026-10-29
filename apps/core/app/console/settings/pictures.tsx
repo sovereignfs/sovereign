@@ -4,9 +4,9 @@ import { useRef, useState } from 'react';
 import { Alert, Button } from '@sovereignfs/ui';
 import styles from './settings.module.css';
 
-type Kind = 'logo-light' | 'logo-dark' | 'favicon';
+type Kind = 'logo-light' | 'logo-dark' | 'favicon' | 'app-icon' | 'app-icon-maskable';
 
-const PICTURES: { kind: Kind; label: string; hint: string; dark?: boolean }[] = [
+const PICTURES: { kind: Kind; label: string; hint: string; dark?: boolean; png?: boolean }[] = [
   {
     kind: 'logo-light',
     label: 'Logo for light pages',
@@ -22,6 +22,18 @@ const PICTURES: { kind: Kind; label: string; hint: string; dark?: boolean }[] = 
     kind: 'favicon',
     label: 'Favicon',
     hint: 'The small icon in the browser tab. A square picture works best.',
+  },
+  {
+    kind: 'app-icon',
+    label: 'App icon',
+    hint: 'The icon when someone installs this instance as an app on a phone or a computer. A square PNG, 512 to 1024 pixels on a side. Until you set one, the Sovereign mark is used.',
+    png: true,
+  },
+  {
+    kind: 'app-icon-maskable',
+    label: 'App icon for masking',
+    hint: 'Optional. For phones that cut icons to a shape: the same kind of PNG, with the picture kept to the middle 80% and the background filled to the edges. Without it, the app icon is not masked.',
+    png: true,
   },
 ];
 
@@ -71,7 +83,7 @@ export function Pictures({ images, canEdit }: { images: Shown; canEdit: boolean 
 
   return (
     <div className={styles.pictures}>
-      {PICTURES.map(({ kind, label, hint, dark }) => {
+      {PICTURES.map(({ kind, label, hint, dark, png }) => {
         const image = current[kind];
         const id = `picture-${kind}`;
         return (
@@ -97,7 +109,7 @@ export function Pictures({ images, canEdit }: { images: Shown; canEdit: boolean 
                     id={id}
                     className={styles.fileInput}
                     type="file"
-                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    accept={png ? 'image/png' : 'image/png,image/jpeg,image/webp,image/svg+xml'}
                     disabled={busy !== undefined}
                     onChange={(event) => {
                       const file = event.target.files?.[0];

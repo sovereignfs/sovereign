@@ -21,7 +21,6 @@ vi.mock('next/link', () => ({
 }));
 
 const { AccountActions } = await import('../../app/console/accounts/[id]/account-actions');
-const { CopyButton } = await import('../../app/console/accounts/[id]/copy-button');
 const { SearchForm } = await import('../../app/console/accounts/search-form');
 const { AccountsPagination } = await import('../../app/console/accounts/accounts-pagination');
 
@@ -158,33 +157,6 @@ describe('the actions on one account', () => {
 });
 
 import { within } from '@testing-library/react';
-
-describe('copying the account ID', () => {
-  it('puts the text on the clipboard and says it was copied', async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal('navigator', { clipboard: { writeText } });
-    render(<CopyButton text="abc123" label="Copy" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
-    expect(await screen.findByRole('button', { name: 'Copied' })).toBeTruthy();
-    expect(writeText).toHaveBeenCalledWith('abc123');
-  });
-
-  it('says so when the browser will not let it', async () => {
-    vi.stubGlobal('navigator', {
-      clipboard: { writeText: vi.fn().mockRejectedValue(new Error('no')) },
-    });
-    render(<CopyButton text="abc123" label="Copy" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
-    expect(await screen.findByRole('button', { name: 'Could not copy' })).toBeTruthy();
-  });
-
-  it('does not touch the clipboard until asked', () => {
-    const writeText = vi.fn();
-    vi.stubGlobal('navigator', { clipboard: { writeText } });
-    render(<CopyButton text="abc123" label="Copy" />);
-    expect(writeText).not.toHaveBeenCalled();
-  });
-});
 
 describe('the search form', () => {
   it('is a plain form that gets the list, with what was searched for in the box', () => {

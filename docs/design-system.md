@@ -1773,7 +1773,9 @@ Stories live under two roots inside `packages/ui/src/`:
 
 | Story file                         | What it documents                                                                                                                                                                                                                   |
 | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CopyButton.stories.tsx`           | Default; custom labels; ghost. Copies on press; says so when the browser refuses                                                                                                                                                    |
 | `DesignSystemOverview.stories.tsx` | Full component gallery with live demos and import lines; colour palette; type scale; shadow scale; design rules                                                                                                                     |
+| `QrCode.stories.tsx`               | A module matrix drawn black on white in both themes; labelled for a screen reader                                                                                                                                                   |
 | `TokenGallery.stories.tsx`         | Live gallery of every `--sv-*` token tier — colours, space, typography, radius, icon sizes, shadows — read from computed styles                                                                                                     |
 | `MobilePatterns.stories.tsx`       | Mobile layout reference: breakpoints (640/768 px), constrained column, auto-adapting components, shell chrome anatomy (header/footer/drawer/search overlay), touch targets, safe-area insets, typography scale, readiness checklist |
 

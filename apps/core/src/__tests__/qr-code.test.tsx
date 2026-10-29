@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { encode } from 'uqr';
 import { describe, expect, it } from 'vitest';
-import { QrCode } from '../../app/security/qr-code';
+import { QrCode } from '@sovereignfs/ui';
 
 const URI = 'otpauth://totp/Sovereign:ada%40example.com?secret=GEZDGNBVGY3TQOJQ&issuer=Sovereign';
 
@@ -16,7 +16,9 @@ function squaresOf(html: string, quiet: number): Set<string> {
 }
 
 describe('the QR code', () => {
-  const html = renderToStaticMarkup(<QrCode text={URI} label="QR code for an app" />);
+  const html = renderToStaticMarkup(
+    <QrCode modules={encode(URI, { ecc: 'M', border: 0 }).data} label="QR code for an app" />,
+  );
   const { data } = encode(URI, { ecc: 'M', border: 0 });
 
   it('is an image with a label, so a screen reader says what it is', () => {
@@ -32,10 +34,20 @@ describe('the QR code', () => {
   });
 
   it('is the same every time for the same text, and different for different text', () => {
-    expect(renderToStaticMarkup(<QrCode text={URI} label="a" />)).toBe(
-      renderToStaticMarkup(<QrCode text={URI} label="a" />),
+    expect(
+      renderToStaticMarkup(
+        <QrCode modules={encode(URI, { ecc: 'M', border: 0 }).data} label="a" />,
+      ),
+    ).toBe(
+      renderToStaticMarkup(
+        <QrCode modules={encode(URI, { ecc: 'M', border: 0 }).data} label="a" />,
+      ),
     );
-    expect(renderToStaticMarkup(<QrCode text={`${URI}x`} label="a" />)).not.toBe(html);
+    expect(
+      renderToStaticMarkup(
+        <QrCode modules={encode(`${URI}x`, { ecc: 'M', border: 0 }).data} label="a" />,
+      ),
+    ).not.toBe(html);
   });
 
   it('carries no script, style or colour of its own: it is drawn from the stylesheet', () => {

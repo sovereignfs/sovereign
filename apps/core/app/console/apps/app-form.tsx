@@ -7,6 +7,7 @@ import {
   Button,
   Checkbox,
   Collapsible,
+  CopyButton,
   FormField,
   Input,
   Select,
@@ -14,7 +15,6 @@ import {
 } from '@sovereignfs/ui';
 import { SCOPE_TEXT } from '../../../src/clients/form';
 import type { ClientView } from '../../../src/clients/registry';
-import { CopyButton } from '../accounts/[id]/copy-button';
 import { registerAppAction, updateAppAction, type AppFormResult } from './actions';
 import styles from './apps.module.css';
 import { SecretBox } from './secret-box';

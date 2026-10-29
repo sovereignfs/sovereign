@@ -1,9 +1,9 @@
 'use client';
 
 import { type FormEvent, useState } from 'react';
-import { Alert, Button, FormField, Input } from '@sovereignfs/ui';
+import { Alert, Button, FormField, Input, QrCode } from '@sovereignfs/ui';
+import { encode } from 'uqr';
 import { authClient } from '../../../src/auth/client';
-import { QrCode } from '../qr-code';
 import styles from '../security.module.css';
 
 type Action = 'enable' | 'regenerate' | 'disable';
@@ -224,9 +224,10 @@ function ConfirmStep({ uri, onConfirmed }: { uri: string; onConfirmed: () => voi
         </li>
         <li>Enter the 6-digit code the app shows, to confirm it works.</li>
       </ol>
-      <div className={styles.qr}>
-        <QrCode text={uri} label="QR code for your authenticator app" />
-      </div>
+      <QrCode
+        modules={encode(uri, { ecc: 'M', border: 0 }).data}
+        label="QR code for your authenticator app"
+      />
       {key ? (
         <p className={styles.text}>
           Or type this key: <span className={styles.key}>{key}</span>

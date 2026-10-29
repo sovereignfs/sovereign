@@ -46,24 +46,6 @@
   gap: var(--sv-space-2);
 }
 
-/* A QR code is read by a camera, not a person, so it is black on white in every theme. */
-.qr {
-  align-self: flex-start;
-  padding: var(--sv-space-2);
-  border-radius: var(--sv-radius-md);
-  background: var(--sv-white);
-  line-height: 0;
-}
-
-.qr svg {
-  width: 11rem;
-  height: 11rem;
-}
-
-.qr path {
-  fill: var(--sv-black);
-}
-
 .key {
   margin: 0;
   font-family: var(--sv-font-family-mono);

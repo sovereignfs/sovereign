@@ -57,6 +57,8 @@ import { SystemBanner } from '../components/SystemBanner/SystemBanner';
 import { Tabs } from '../components/Tabs/Tabs';
 import { ToastProvider, useToast } from '../components/Toast/Toast';
 import { Toggle } from '../components/Toggle/Toggle';
+import { CopyButton } from '../components/CopyButton/CopyButton';
+import { QrCode } from '../components/QrCode/QrCode';
 import { Tooltip } from '../components/Tooltip/Tooltip';
 import { Checkbox } from '../components/Checkbox/Checkbox';
 import { RadioGroup } from '../components/RadioGroup/RadioGroup';
@@ -508,6 +510,21 @@ function ComponentCard({
     </div>
   );
 }
+
+// A small pattern with the three finder squares: enough to look like a code (real ones come from an encoder).
+const DEMO_QR = Array.from({ length: 21 }, (_, y) =>
+  Array.from({ length: 21 }, (_, x) => {
+    const finder = (cx: number, cy: number) =>
+      x >= cx && x < cx + 7 && y >= cy && y < cy + 7
+        ? x === cx ||
+          x === cx + 6 ||
+          y === cy ||
+          y === cy + 6 ||
+          (x >= cx + 2 && x <= cx + 4 && y >= cy + 2 && y <= cy + 4)
+        : undefined;
+    return finder(0, 0) ?? finder(14, 0) ?? finder(0, 14) ?? (x * 7 + y * 13) % 5 < 2;
+  }),
+);
 
 // Interactive wrappers
 
@@ -2061,6 +2078,24 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               >
                 Click to toggle
               </span>
+            </ComponentCard>
+
+            {/* CopyButton */}
+            <ComponentCard
+              name="CopyButton"
+              importLine="import { CopyButton } from '@sovereignfs/ui';"
+              usage="Copies text to the clipboard and says so. Says plainly when the browser refuses, instead of pretending."
+            >
+              <CopyButton text="https://core.example.com/invite/abc123" label="Copy link" />
+            </ComponentCard>
+
+            {/* QrCode */}
+            <ComponentCard
+              name="QrCode"
+              importLine="import { QrCode } from '@sovereignfs/ui';"
+              usage="Draws a QR code from its module matrix, black on white in every theme. The encoder is the caller's."
+            >
+              <QrCode modules={DEMO_QR} label="Example QR code" />
             </ComponentCard>
 
             {/* SegmentedControl */}

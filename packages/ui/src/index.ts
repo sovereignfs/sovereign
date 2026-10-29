@@ -308,3 +308,7 @@ export type {
 // generated '@sovereignfs/ui/tokens/theme-presets.css'.
 export { THEME_PRESETS, THEME_PRESET_NAMES } from './tokens/theme-presets';
 export type { ThemePresetName, ThemePresetTokens } from './tokens/theme-presets';
+export { CopyButton } from './components/CopyButton/CopyButton';
+export type { CopyButtonProps } from './components/CopyButton/CopyButton';
+export { QrCode } from './components/QrCode/QrCode';
+export type { QrCodeProps } from './components/QrCode/QrCode';

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import {
+  CopyButton,
   EmptyState,
   StatusBadge,
   Table,
@@ -15,7 +16,6 @@ import { listInvites } from '../../../src/invites/manage';
 import { inviteLink } from '../../../src/invites/service';
 import { getMailService } from '../../../src/mail';
 import { formatTime } from '../accounts/format';
-import { CopyButton } from '../accounts/[id]/copy-button';
 import { CancelButton } from './cancel-button';
 import { InviteForm } from './invite-form';
 import styles from './invites.module.css';

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Avatar, Card, StatusBadge } from '@sovereignfs/ui';
+import { Avatar, Card, CopyButton, StatusBadge } from '@sovereignfs/ui';
 import { getAccount } from '../../../../src/accounts';
 import { isRole, ROLE_OWNER } from '../../../../src/auth/roles';
 import { requireConsole } from '../../../../src/console/guard';
@@ -12,7 +12,6 @@ import { mayActOn } from '../../../../src/roles/people';
 import { formatTime, roleLabel } from '../format';
 import styles from '../accounts.module.css';
 import { AccountActions } from './account-actions';
-import { CopyButton } from './copy-button';
 
 export const metadata: Metadata = { title: 'Account' };
 

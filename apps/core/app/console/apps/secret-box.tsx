@@ -1,7 +1,6 @@
 'use client';
 
-import { Alert } from '@sovereignfs/ui';
-import { CopyButton } from '../accounts/[id]/copy-button';
+import { Alert, CopyButton } from '@sovereignfs/ui';
 import styles from './apps.module.css';
 
 /**

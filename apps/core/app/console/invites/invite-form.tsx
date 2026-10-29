@@ -1,9 +1,8 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import { Alert, Button, FormField, Input } from '@sovereignfs/ui';
+import { Alert, Button, CopyButton, FormField, Input } from '@sovereignfs/ui';
 import { inviteAction, type InviteResult } from './actions';
-import { CopyButton } from '../accounts/[id]/copy-button';
 import styles from './invites.module.css';
 
 /**

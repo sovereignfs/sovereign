@@ -126,7 +126,7 @@ retired before the first release from here.
 - actionlint is clean on the new workflow, and zizmor reports only the `./` style finding
   kept on purpose; the deploy runs with the token configured
 
-#### 📋 2.3 — Components core needs `[parallel]`
+#### ✅ 2.3 — Components core needs `[parallel]`
 
 **Goal:** Anything a core page needs that the design system lacks is added to
 `packages/ui` first.
@@ -144,3 +144,15 @@ retired before the first release from here.
 
 - No component used by core is defined inside `apps/core`
 - Each new component has a story and passes the a11y lint
+
+**As built:** the pages of epics 4 to 9 turned out to need almost nothing that
+the design system lacked: they are made of `Alert`, `Button`, `Checkbox`,
+`Collapsible`, `ConfirmDialog`, `EmptyState`, `FormField`, `Input`, `Select`,
+`Table`, `Textarea` and the rest. Two generic controls had been written inside
+`apps/core` and are now in `packages/ui` (0.86.0), each with a story, a gallery
+entry and tests: **`CopyButton`** (copies text and says so, or says plainly that
+the browser refused) and **`QrCode`** (draws a module matrix black on white in
+every theme; the encoder stays in core, so the design system takes on no new
+dependency). What remains in `apps/core` is wiring specific to core (the matrix
+editor, the app form, the launcher grid, the picture uploader), each composed
+only of design-system parts.

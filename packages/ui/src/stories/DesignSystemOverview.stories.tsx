@@ -57,6 +57,7 @@ import { SystemBanner } from '../components/SystemBanner/SystemBanner';
 import { Tabs } from '../components/Tabs/Tabs';
 import { ToastProvider, useToast } from '../components/Toast/Toast';
 import { Toggle } from '../components/Toggle/Toggle';
+import { ButtonLink } from '../components/ButtonLink/ButtonLink';
 import { CopyButton } from '../components/CopyButton/CopyButton';
 import { QrCode } from '../components/QrCode/QrCode';
 import { Tooltip } from '../components/Tooltip/Tooltip';
@@ -2078,6 +2079,18 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               >
                 Click to toggle
               </span>
+            </ComponentCard>
+
+            {/* ButtonLink */}
+            <ComponentCard
+              name="ButtonLink"
+              importLine="import { ButtonLink } from '@sovereignfs/ui';"
+              usage="A link that looks like a Button, for an action that goes to another page. Pass renderLink to use a router's link."
+            >
+              <ButtonLink href="#add">Add an app</ButtonLink>
+              <ButtonLink href="#back" variant="secondary">
+                Back to apps
+              </ButtonLink>
             </ComponentCard>
 
             {/* CopyButton */}

@@ -142,6 +142,8 @@ export { Accordion } from './components/Accordion/Accordion';
 export type { AccordionProps, AccordionItem } from './components/Accordion/Accordion';
 export { AspectRatio } from './components/AspectRatio/AspectRatio';
 export type { AspectRatioProps } from './components/AspectRatio/AspectRatio';
+export { ButtonLink } from './components/ButtonLink/ButtonLink';
+export type { ButtonLinkProps } from './components/ButtonLink/ButtonLink';
 export { ButtonGroup } from './components/ButtonGroup/ButtonGroup';
 export type { ButtonGroupProps } from './components/ButtonGroup/ButtonGroup';
 export { Item } from './components/Item/Item';

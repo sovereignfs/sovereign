@@ -167,3 +167,8 @@
 .destructive:active:not(:disabled) {
   background-color: color-mix(in srgb, var(--sv-color-error-surface) 85%, black);
 }
+
+/* A `ButtonLink` is an anchor in a button's clothes: no underline, and the same height as the button beside it. */
+.link {
+  text-decoration: none;
+}

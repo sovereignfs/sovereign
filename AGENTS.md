@@ -203,6 +203,10 @@ each: `docs/architecture-rules.md`.
   fresh; SMTP needs the owner-only `instance:configure-secrets` and is never loaded
   for anyone else); **an uploaded SVG is rebuilt by `sanitiseSvg`, never passed
   through**.
+- **The matrix editor saves the whole table it showed, and a form whose checkboxes
+  a refusal must leave is sent from `onSubmit`, not as a form action** (an action
+  resets the form); **ownership is handed over only by `transferOwnershipAction`**,
+  which asks for the password and leaves the page.
 - **Every Console page calls `requireConsole` itself** (a test fails when one does
   not), and answers someone who may not enter with a page that is not there.
 - **A client is written only by `ClientRegistry`** (validation, the provider's

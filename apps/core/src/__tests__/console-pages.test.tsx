@@ -76,6 +76,17 @@ describe('the Console’s own page', () => {
     expect(html).not.toContain('There is nothing to manage here yet.');
   });
 
+  it('offers the owner the two sections only the owner holds, and an admin neither', async () => {
+    as(ROLE_OWNER);
+    const forOwner = renderToStaticMarkup(await ConsolePage());
+    expect(forOwner).toContain('href="/console/permissions"');
+    expect(forOwner).toContain('href="/console/ownership"');
+    as(ROLE_ADMIN);
+    const forAdmin = renderToStaticMarkup(await ConsolePage());
+    expect(forAdmin).not.toContain('/console/permissions');
+    expect(forAdmin).not.toContain('/console/ownership');
+  });
+
   it('says so when there is nothing to open, rather than leaving an empty page', async () => {
     as(ROLE_ADMIN);
     matrixInForce.mockResolvedValue({

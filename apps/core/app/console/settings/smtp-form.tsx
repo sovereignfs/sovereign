@@ -58,7 +58,15 @@ export function SmtpForm({ smtp, encryptionReady }: { smtp: ShownSmtp; encryptio
     smtp.password.source === 'saved';
 
   return (
-    <form className={styles.form} action={save}>
+    <form
+      className={styles.form}
+      onSubmit={(event) => {
+        // A form action would reset the checkbox when it finished, undoing what a refusal should leave.
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+        startTransition(() => save(data));
+      }}
+    >
       <div className={styles.grid}>
         <FormField label="Mail server" hint={sourceNote(smtp.host.source)}>
           {(field) => (

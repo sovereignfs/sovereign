@@ -36,7 +36,15 @@ export function RegistrationForm({
   const shown = resetState ?? state;
 
   return (
-    <form className={styles.form} action={save}>
+    <form
+      className={styles.form}
+      onSubmit={(event) => {
+        // A form action would reset the checkbox when it finished, undoing what a refusal should leave.
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+        startTransition(() => save(data));
+      }}
+    >
       <input type="hidden" name="inviteOnly" value={String(checked)} />
       <Checkbox
         label="Only people I invite can sign up"

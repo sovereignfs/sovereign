@@ -254,6 +254,20 @@ pointing here.
   missed. SVG is accepted for the instance's logos and favicon only, never for
   avatars; the public picture route serves it with `nosniff` and
   `default-src 'none'; sandbox`, and it is kept out of emails.
+- **The matrix editor sends the whole table, and a form whose checkboxes a refusal
+  must leave is sent from `onSubmit`.** `saveMatrixAction` builds a change for
+  every capability the owner may edit from which boxes were ticked, never from
+  what the request names, so an owner-only capability, the owner's row or an
+  unknown role cannot be reached by forging a field; `changeCapabilities` refuses
+  them again. A React form action resets the form's fields when it finishes,
+  which would un-tick the boxes a refusal should leave, so such forms (the matrix,
+  the sign-up and mail settings) call the action from `onSubmit` with the form's
+  `FormData` and nothing is reset.
+- **Ownership is handed over from one action that asks for the password, and
+  leaves the page.** `transferOwnershipAction` asks for `ownership:transfer`
+  itself, passes `confirmPassword` to `transferOwnership` (which holds every rule
+  about who may receive it), returns a refusal for the dialog to show, and on
+  success redirects: the previous owner may no longer open the page they were on.
 - **Every Console page checks for itself, and shows a page that is not there to
   someone who may not enter.** `requireConsole` (`src/console/guard.ts`) asks for
   a session, `console:access` and the capability the page needs, judged by the

@@ -188,6 +188,28 @@ them.
   that saved it and within a few seconds on another; there is no per-session
   version to carry. If the matrix cannot be read, the check fails.
 
+The Console edits the matrix on **Permissions** (`/console/permissions`, needing
+`capability:configure`, so the owner alone) and hands the instance over on
+**Ownership** (`/console/ownership`, needing `ownership:transfer`). Neither is
+listed for, or opens for, anyone else.
+
+- **Permissions** lists every capability in words, never by its name in code, with
+  a box for admins and a box for users. A capability only the owner may hold is
+  listed with no boxes, marked "Only the owner". Nothing is saved until the owner
+  saves the whole table, and what is saved is what was shown: every box the owner
+  may edit is sent, ticked or not, so an owner-only capability or an unknown role
+  in a forged request is never reached. The page is read from the database, not
+  from the matrix cache, since it is the table being edited. Saving says how many
+  changes it made; "Back to the defaults" asks first and is offered only while
+  the table differs from them. The owner has no boxes: the owner's row is fixed.
+- **Ownership** offers the active admins other than the owner, what the owner
+  becomes (an admin or an ordinary user), and asks for the owner's password; a
+  question names who will own the instance before anything is sent. A wrong or
+  limited password is shown in that question with what was typed kept. When the
+  hand-over succeeds the page leaves for the Console, where the previous owner
+  now sees what an admin sees. With no admin to hand it to, the page says to make
+  someone an admin first and sends nothing.
+
 ### 3.3 Accounts: sign-up and sign-in
 
 #### 3.3.1 Registration policy
@@ -975,3 +997,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-29 | §3.10: how accounts are listed and searched, what an account's page shows, and the rules every operator action is held to by the server: capability, who may act on whom, not on oneself; what deleting removes and tells; what resetting two-factor sign-in does and does not do.                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 2026-10-29 | §3.10: how an invitation is made, replaced, sent, listed and cancelled; what an operator is shown when email is not set up; that the invitation link is public and shows one page for every link that does not work.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | 2026-10-29 | §3.12, §3.15: what the instance settings page shows and who sees what, where each value comes from, what each setting accepts and refuses, how pictures are used on pages and in emails, that a missing sign-up choice never opens sign-up, and how an SVG is rebuilt rather than scanned.                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| 2026-10-29 | §3.2.3, §3.2.1: where the owner edits the matrix and hands over ownership, that the owner has no boxes, that owner-only capabilities are listed but never offered, that the whole table is saved as it was shown, and what the hand-over page asks and shows.                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |

@@ -46,6 +46,20 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
     icon: 'settings',
     capability: 'instance:view',
   },
+  {
+    id: 'permissions',
+    label: 'Permissions',
+    href: '/console/permissions',
+    icon: 'shield',
+    capability: 'capability:configure',
+  },
+  {
+    id: 'ownership',
+    label: 'Ownership',
+    href: '/console/ownership',
+    icon: 'arrow-left-right',
+    capability: 'ownership:transfer',
+  },
 ];
 
 /**

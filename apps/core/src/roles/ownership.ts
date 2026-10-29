@@ -107,3 +107,27 @@ export async function transferOwnership(
   });
   return { newOwnerId: targetId, previousOwnerRole: newRole };
 }
+
+/** An account ownership could go to, as the Console lists it. */
+export type TransferTarget = { id: string; name: string; email: string };
+
+/**
+ * The admins ownership may be handed to (core-app §3.2.1): active `platform:admin` accounts other than
+ * the asker. The transfer itself holds the same rule again, so this only decides what is offered.
+ */
+export async function listTransferTargets(
+  database: Database,
+  exceptId: string,
+): Promise<TransferTarget[]> {
+  const { rows } = await database.run(
+    `select id, name, email from users
+     where role = ? and deactivated_at is null and id <> ?
+     order by lower(name), id`,
+    [ROLE_ADMIN, exceptId],
+  );
+  return rows.map((row) => ({
+    id: String(row.id),
+    name: String(row.name),
+    email: String(row.email),
+  }));
+}

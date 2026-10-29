@@ -120,7 +120,7 @@ and mail.
 launcher's use of the logo (the launcher task, 7.2), and the well-known address
 that publishes the name and pictures to apps (§3.13, the Core API tasks).
 
-#### 📋 8.5 — Capability matrix and ownership
+#### ✅ 8.5 — Capability matrix and ownership
 
 **Goal:** The owner can edit the matrix and transfer ownership from the
 Console.
@@ -138,6 +138,9 @@ Console.
 **Review checklist:**
 
 - Only the owner sees and uses either screen
+
+**Not here:** changing a person's role (that is on the account's page, 8.2), and
+adding capabilities or roles of one's own (the set is defined in code, §3.2.3).
 
 #### 📋 8.6 — Apps
 

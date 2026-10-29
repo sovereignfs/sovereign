@@ -13,7 +13,7 @@ import { CONFIRM_LIMIT, confirmPassword, type PasswordCheck } from '../auth/conf
 import { ROLE_ADMIN, ROLE_OWNER, ROLE_USER } from '../auth/roles';
 import { migrateCore } from '../db/migrate';
 import { can } from '../roles/capabilities';
-import { OwnershipTransferError, transferOwnership } from '../roles/ownership';
+import { listTransferTargets, OwnershipTransferError, transferOwnership } from '../roles/ownership';
 import { RoleChangeError, changeRole } from '../roles/people';
 import { makeAuth, PASSWORD, signUp } from './auth-harness';
 
@@ -374,6 +374,29 @@ export function ownershipSuite(createDatabase: () => Promise<TestDatabase>): voi
         ),
       ).toBe('limited');
       expect(await owners()).toEqual([ids.owner]);
+    });
+  });
+
+  describe('who ownership can go to', () => {
+    it('lists the active admins other than the asker, by name', async () => {
+      const { ids } = await instance();
+      const targets = await listTransferTargets(db, ids.owner);
+      expect(targets.map((t) => t.id).sort()).toEqual([ids.admin, ids.otherAdmin].sort());
+      expect(targets.every((t) => t.name !== '' && t.email.includes('@'))).toBe(true);
+    });
+
+    it('leaves out ordinary accounts, the asker, and an admin who is deactivated', async () => {
+      const { ids } = await instance();
+      await new AccountStates(db).deactivate(ids.otherAdmin);
+      expect((await listTransferTargets(db, ids.owner)).map((t) => t.id)).toEqual([ids.admin]);
+      expect((await listTransferTargets(db, ids.admin)).map((t) => t.id)).toEqual([]);
+    });
+
+    it('is empty when there is no admin to hand it to', async () => {
+      const { ids } = await instance();
+      await changeRole(db, { id: ids.owner, role: ROLE_OWNER }, ids.admin, ROLE_USER);
+      await changeRole(db, { id: ids.owner, role: ROLE_OWNER }, ids.otherAdmin, ROLE_USER);
+      expect(await listTransferTargets(db, ids.owner)).toEqual([]);
     });
   });
 }

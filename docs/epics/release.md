@@ -112,7 +112,7 @@ acceptance, in [epic 13](operator-cli.md).
 - Every decision that changes core is written as a change to the spec
 - Core still names no app, and holds no database credential for one
 
-#### 📋 12.5 — Host-only cookies
+#### ✅ 12.5 — Host-only cookies
 
 **Goal:** An app on a subdomain cannot set a cookie that core reads as its own.
 

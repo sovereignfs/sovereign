@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { Card, LegalLinks, PageContainer } from '@sovereignfs/ui';
 import { getSession } from '../../../src/auth/session';
 import { safeReturnTo } from '../../../src/auth/return-to';
+import { InstanceLogo } from '../../instance-logo';
 import styles from '../auth.module.css';
 import { SignInForm, type SignInNotice } from './sign-in-form';
 
@@ -28,6 +29,7 @@ export default async function SignInPage({
     <PageContainer maxWidth="sm">
       <Card padding="lg">
         <div className={styles.form}>
+          <InstanceLogo />
           <h1 className={styles.title}>Sign in</h1>
           <SignInForm returnTo={returnTo} notice={noticeFor(query)} />
         </div>

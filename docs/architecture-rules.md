@@ -239,6 +239,21 @@ pointing here.
   `InviteManager` (`src/invites/manage.ts`), which checks `user:manage` fresh and
   keeps one open invitation per address; when the email cannot be sent the
   invitation still exists and the operator gets the link.
+- **The instance's settings are changed only by `InstanceManager`
+  (`src/instance/manage.ts`), and the mail settings are never loaded for someone
+  who may not see them.** Each change asks for its capability in the matrix read
+  fresh (`instance:configure`; `instance:configure-secrets`, which is owner-only,
+  for SMTP), validates before it saves, and saves the password first, since that
+  is the one that can be refused for want of an encryption key. A page for
+  someone without `instance:configure-secrets` calls `describeInstance` with
+  `withMail: false`, so what they may not see is never read into what is
+  rendered; a saved secret is described (that one is saved), never returned.
+- **An uploaded SVG is rebuilt, never passed through.** `sanitiseSvg`
+  (`src/images/svg.ts`) writes a new document from an allowlist of elements and
+  attributes, so a handler, a script or a link out cannot survive by being
+  missed. SVG is accepted for the instance's logos and favicon only, never for
+  avatars; the public picture route serves it with `nosniff` and
+  `default-src 'none'; sandbox`, and it is kept out of emails.
 - **Every Console page checks for itself, and shows a page that is not there to
   someone who may not enter.** `requireConsole` (`src/console/guard.ts`) asks for
   a session, `console:access` and the capability the page needs, judged by the

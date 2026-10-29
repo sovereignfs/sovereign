@@ -93,7 +93,7 @@ the role an invitation gives (a role is set by core and never by a request,
 §3.3.1; the owner changes it afterwards), and resending an invitation as a
 separate action (inviting the address again does it).
 
-#### 📋 8.4 — Instance settings `[parallel]`
+#### ✅ 8.4 — Instance settings `[parallel]`
 
 **Goal:** Operators can name and brand the instance and configure registration
 and mail.
@@ -115,6 +115,10 @@ and mail.
 - An admin cannot read or change SMTP settings
 - Uploaded images outside the allowed types or size are refused
 - An SVG carrying a script is sanitised before it is stored
+
+**Not here:** a Console brand of its own (the Console keeps its own title), the
+launcher's use of the logo (the launcher task, 7.2), and the well-known address
+that publishes the name and pictures to apps (§3.13, the Core API tasks).
 
 #### 📋 8.5 — Capability matrix and ownership
 

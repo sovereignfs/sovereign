@@ -1,4 +1,5 @@
 import { getConfig } from '../config';
+import { getInstanceIdentity } from '../instance/service';
 import { getSettings } from '../settings';
 import { EmailService } from './emails';
 import { MailService } from './service';
@@ -24,7 +25,15 @@ let openedEmails: Promise<EmailService> | undefined;
 /** Core's emails (rendering and sending), for the life of the process. */
 export function getEmailService(): Promise<EmailService> {
   openedEmails ??= Promise.all([getMailService(), getSettings()])
-    .then(([mail, settings]) => new EmailService({ mail, settings, config: getConfig() }))
+    .then(
+      ([mail, settings]) =>
+        new EmailService({
+          mail,
+          settings,
+          config: getConfig(),
+          logoUrl: async () => (await getInstanceIdentity()).emailLogo,
+        }),
+    )
     .catch((error: unknown) => {
       openedEmails = undefined;
       throw error;

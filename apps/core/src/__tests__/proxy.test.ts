@@ -154,6 +154,7 @@ describe('proxy', () => {
       '/invite',
       '/invites/abc',
       '/console/invites',
+      '/console/settings',
       '/forgot-passwords',
       '/privacy/extra',
       '/terms',

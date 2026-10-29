@@ -377,7 +377,7 @@ export function instanceManageSuite(createDatabase: () => Promise<TestDatabase>)
         SETTINGS.smtpFrom,
         SETTINGS.smtpPassword,
       ]) {
-        expect(await store.get(setting)).toMatchObject({ source: 'unset' });
+        expect(await store.describe(setting)).toMatchObject({ source: 'unset' });
       }
     });
 

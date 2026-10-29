@@ -22,6 +22,8 @@ vi.mock('../invites/manage', () => ({
   lookupInvite: (...args: unknown[]) => lookupInvite(...args) as unknown,
 }));
 vi.mock('../database', () => ({ getDatabase: () => Promise.resolve({}) }));
+// The logo reads the database; what it draws is tested with it (instance-identity.test.tsx).
+vi.mock('../../app/instance-logo', () => ({ InstanceLogo: () => null }));
 
 async function pages(env: Record<string, string> = {}) {
   vi.resetModules();

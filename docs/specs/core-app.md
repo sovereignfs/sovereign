@@ -781,6 +781,38 @@ saved secret that cannot be decrypted (its key left the key ring) is reported
 as unreadable and is **not** replaced by the environment's value; the Console
 asks for it again.
 
+The Console's **Settings** page (`/console/settings`, needing
+`instance:view`) shows and changes these. Someone who can view but not configure
+sees the values and no controls. Each value says where it comes from (saved
+here, the environment, or the default), and a value saved here can be cleared
+back to the environment's. Every change is made by `InstanceManager`, which asks
+for the capability in the matrix in force, so a direct request is held to it as
+the page is; the SMTP settings need `instance:configure-secrets`, and for anyone
+without it the page does not load them at all.
+
+- **Name**: 1 to 100 characters on one line, trimmed. A line break is refused,
+  since the name reaches page titles and email subjects. It is the title of every
+  page (`<page> · <name>`), and appears in emails.
+- **Invite-only**: saved as true or false only; a request that says neither saves
+  nothing, so a missing field never opens sign-up. The first account is exempt
+  whatever it says (§3.3.1).
+- **Logo (light and dark) and favicon**: each is judged by its bytes (§3.15) and
+  kept in the database. A new picture replaces the old and is served at a new
+  address, so nothing stale is cached. When only one logo is set it is used for
+  both light and dark pages; the logo is shown on the sign-in and sign-up pages.
+  An email shows the light logo only when it is PNG, JPEG or WebP: an SVG is
+  never put in an email. Pictures are public (§3.13): they are read with no
+  session, by pages, emails and apps.
+- **SMTP**: a host is a host name, the port is a whole number from 1 to 65535,
+  the user name is one line of at most 255 characters, the from address is an
+  address or a name followed by one in angle brackets, and the password is at most
+  1024 characters. A blank field returns that value to the environment's. A blank
+  password keeps the one saved; typing replaces it; removing it is its own choice.
+  The password is stored encrypted and is never sent to the page. Without a field
+  encryption key a password cannot be saved, and the operator is told to set the
+  key or use `SV_SMTP_PASSWORD`; the other fields still save. A refusal saves
+  nothing.
+
 ### 3.13 Instance branding for apps
 
 Core publishes the instance name, logos and favicon at a well-known address so
@@ -818,6 +850,12 @@ that apps can show the same branding. The address and format are defined in
   - at most 1 MB each; PNG, JPEG or WebP;
   - SVG is accepted for logos and the favicon only, and is sanitised before it
     is stored; it is never accepted for avatars;
+  - an SVG is not scanned for what is dangerous: it is read and a new document
+    is written holding only what is known to be a picture (shapes, paths,
+    gradients, text, clipping and the attributes that style them). A script, a
+    handler, anything that would fetch another address, a style sheet, an
+    external entity or a document type declaration is dropped or refused, and what
+    cannot be read as a picture is refused with a message;
   - served from core with `X-Content-Type-Options: nosniff`, an ETag and long
     cache lifetimes;
   - not resized on the server. Avatars are cropped and scaled in the browser,
@@ -936,3 +974,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-29 | §3.10: where the Console is, who may enter and what they are shown when they may not, that each page checks for itself, and how the sections are laid out on a wide screen and on a phone.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | 2026-10-29 | §3.10: how accounts are listed and searched, what an account's page shows, and the rules every operator action is held to by the server: capability, who may act on whom, not on oneself; what deleting removes and tells; what resetting two-factor sign-in does and does not do.                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 2026-10-29 | §3.10: how an invitation is made, replaced, sent, listed and cancelled; what an operator is shown when email is not set up; that the invitation link is public and shows one page for every link that does not work.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 2026-10-29 | §3.12, §3.15: what the instance settings page shows and who sees what, where each value comes from, what each setting accepts and refuses, how pictures are used on pages and in emails, that a missing sign-up choice never opens sign-up, and how an SVG is rebuilt rather than scanned.                                                                                                                                                                                                                                                                                                                                                                                                                                    |

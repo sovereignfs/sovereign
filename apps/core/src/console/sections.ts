@@ -39,6 +39,13 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
     icon: 'mail',
     capability: 'user:manage',
   },
+  {
+    id: 'settings',
+    label: 'Settings',
+    href: '/console/settings',
+    icon: 'settings',
+    capability: 'instance:view',
+  },
 ];
 
 /**

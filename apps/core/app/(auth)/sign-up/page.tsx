@@ -8,6 +8,7 @@ import { safeReturnTo } from '../../../src/auth/return-to';
 import { getSession } from '../../../src/auth/session';
 import { getDatabase } from '../../../src/database';
 import { lookupInvite } from '../../../src/invites/manage';
+import { InstanceLogo } from '../../instance-logo';
 import styles from '../auth.module.css';
 import { SignUpForm } from './sign-up-form';
 
@@ -31,6 +32,7 @@ export default async function SignUpPage({
     <PageContainer maxWidth="sm">
       <Card padding="lg">
         <div className={styles.form}>
+          <InstanceLogo />
           <h1 className={styles.title}>Create an account</h1>
           {mode === 'first-account' ? (
             <Alert variant="info">

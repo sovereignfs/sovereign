@@ -199,6 +199,10 @@ each: `docs/architecture-rules.md`.
 - **An invitation link is public and decides nothing**: sign-up checks the address
   (`hasValidInvite`); `InviteManager` makes and cancels invitations, and every
   link that does not work shows the same page.
+- **Instance settings are changed only by `InstanceManager`** (capability read
+  fresh; SMTP needs the owner-only `instance:configure-secrets` and is never loaded
+  for anyone else); **an uploaded SVG is rebuilt by `sanitiseSvg`, never passed
+  through**.
 - **Every Console page calls `requireConsole` itself** (a test fails when one does
   not), and answers someone who may not enter with a page that is not there.
 - **A client is written only by `ClientRegistry`** (validation, the provider's

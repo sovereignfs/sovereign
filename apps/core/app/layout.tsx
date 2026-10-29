@@ -2,13 +2,16 @@ import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
 import { getConfig } from '../src/config';
+import { getInstanceIdentity } from '../src/instance/service';
 import { THEME_SCRIPT } from '../src/theme-script';
 import './globals.css';
 
 export async function generateMetadata(): Promise<Metadata> {
+  const identity = await getInstanceIdentity();
   return {
     metadataBase: new URL(getConfig().url),
-    title: { default: 'Sovereign Core', template: '%s · Sovereign Core' },
+    title: { default: identity.name, template: `%s · ${identity.name}` },
+    ...(identity.favicon ? { icons: { icon: identity.favicon } } : {}),
   };
 }
 

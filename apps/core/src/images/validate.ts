@@ -3,7 +3,7 @@
  * reading the bytes, never taken from the name or the type the client claimed, and the image is served
  * as that kind (with `nosniff`), so a file that is something else dressed as an image is not one.
  * SVG is refused here: it is a document that can carry script, accepted only for the instance's logos
- * and favicon, where it is sanitised first (a later task).
+ * and favicon, where it is sanitised first (`sanitiseSvg`).
  *
  * Images are not resized on the server; the browser crops and scales an avatar before it is sent. The
  * dimensions are read from the header only to refuse a nonsense or enormous picture.
@@ -21,7 +21,8 @@ export const CONTENT_TYPES: Record<ImageKind, string> = {
   webp: 'image/webp',
 };
 
-export type ImageErrorCode = 'empty' | 'too-large' | 'svg' | 'unsupported' | 'corrupt' | 'too-big';
+export type ImageErrorCode =
+  'empty' | 'too-large' | 'svg' | 'bad-svg' | 'unsupported' | 'corrupt' | 'too-big';
 
 export class ImageError extends Error {
   override name = 'ImageError';
@@ -41,17 +42,19 @@ export type InspectedImage = {
   height: number;
 };
 
-const MESSAGES: Record<ImageErrorCode, string> = {
+export const IMAGE_MESSAGES: Record<ImageErrorCode, string> = {
   empty: 'That file is empty.',
   'too-large': 'That picture is larger than 1 MB.',
   svg: 'SVG pictures are not accepted here. Use a PNG, JPEG or WebP picture.',
+  'bad-svg':
+    'That SVG could not be read as a picture. Export it again as plain SVG, or use a PNG, JPEG or WebP picture.',
   unsupported: 'Use a PNG, JPEG or WebP picture.',
   corrupt: 'That picture could not be read.',
   'too-big': 'That picture is too large in pixels.',
 };
 
 const fail = (code: ImageErrorCode): never => {
-  throw new ImageError(code, MESSAGES[code]);
+  throw new ImageError(code, IMAGE_MESSAGES[code]);
 };
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);

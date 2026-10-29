@@ -152,6 +152,21 @@ export const rateLimits = sqliteTable('rate_limits', {
 });
 
 /**
+ * The instance's own pictures (core-app §3.12, §3.15): its logo for a light and for a dark page, and its favicon.
+ * One row for each. Like an avatar, a picture is judged by its bytes before it is kept, and its version (a digest
+ * of the bytes) is part of the address it is served from, so a changed picture is a new address.
+ */
+export const instanceImages = sqliteTable('instance_images', {
+  kind: text('kind').primaryKey(),
+  contentType: text('content_type').notNull(),
+  bytes: sqliteBytes('bytes').notNull(),
+  size: integer('size').notNull(),
+  version: text('version').notNull(),
+  updatedAt: sqliteTimestampMs('updated_at').notNull(),
+  updatedBy: text('updated_by'),
+});
+
+/**
  * The OpenID Connect provider's tables (core-app §3.6): better-auth's JWT plugin keeps the signing keys, and
  * `@better-auth/oauth-provider` keeps the registered apps ("clients" inside the protocol), the tokens it
  * has issued and what each person agreed to share. better-auth names them jwks, oauthClient, oauthResource,

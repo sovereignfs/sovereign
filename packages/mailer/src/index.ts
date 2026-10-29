@@ -7,7 +7,7 @@ export { DEFAULT_SMTP_PORT, describeSmtpProblem, resolveSmtp } from './smtp-conf
 export type { SmtpInput, SmtpStatus } from './smtp-config.js';
 export { isMailError, MailError } from './errors.js';
 export type { MailErrorCode } from './errors.js';
-export { isEmailAddress } from './address.js';
+export { isEmailAddress, isSender } from './address.js';
 export type {
   ComposedMessage,
   Mailer,

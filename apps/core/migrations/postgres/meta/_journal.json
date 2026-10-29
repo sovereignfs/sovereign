@@ -78,6 +78,13 @@
       "when": 1793231148374,
       "tag": "0010_oidc_provider",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793239404735,
+      "tag": "0011_instance_images",
+      "breakpoints": true
     }
   ]
 }

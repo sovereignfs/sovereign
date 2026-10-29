@@ -185,6 +185,16 @@ export const avatars = pgTable('avatars', {
   updatedAt: postgresTimestampMs('updated_at').notNull(),
 });
 
+export const instanceImages = pgTable('instance_images', {
+  kind: text('kind').primaryKey(),
+  contentType: text('content_type').notNull(),
+  bytes: postgresBytes('bytes').notNull(),
+  size: integer('size').notNull(),
+  version: text('version').notNull(),
+  updatedAt: postgresTimestampMs('updated_at').notNull(),
+  updatedBy: text('updated_by'),
+});
+
 export const jwks = pgTable('jwks', {
   id: text('id').primaryKey(),
   publicKey: text('public_key').notNull(),

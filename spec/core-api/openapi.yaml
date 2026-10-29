@@ -13,9 +13,11 @@ info:
 
     **Authentication.** A call that needs it carries an access token Core issued to the app for a signed-in person:
     `Authorization: Bearer <token>`. The app asks for the token with `resource=<origin>/api/v1` and the scope the
-    call needs, which makes it a signed JWT addressed to this API. Core accepts a call only when the token's
-    signature, audience and scope are valid **and** the token has not been revoked: a signature alone is not
-    enough, because a revoked token would otherwise keep working until it expires.
+    call needs, which makes it a signed JWT addressed to this API. A token asked for with a resource is only for
+    that resource and comes with no ID token, so an app signs its people in as usual and then asks for this one: with
+    its refresh token (the `offline_access` scope), or with a second authorization request that names the resource.
+    Core accepts a call only when the token's signature, audience and scope are valid **and** the token has not been
+    revoked: a signature alone is not enough, because a revoked token would otherwise keep working until it expires.
 
     **Errors.** Every failure has the same body, `ErrorResponse`, and a status that says what kind: 400 the request was
     malformed, 401 the token is missing or no longer valid, 403 the token lacks the scope, 404 there is nothing

@@ -1,6 +1,6 @@
 # Sovereign Core — Roadmap
 
-**Version:** 0.48.0 · **Last updated:** 2026-10-29
+**Version:** 0.49.0 · **Last updated:** 2026-10-29
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -126,7 +126,7 @@ be argued before anything is built.
 
 | Version | Priority | Task                               | Status | Epic task                           |
 | ------- | -------- | ---------------------------------- | ------ | ----------------------------------- |
-| —       | 1        | The contracts                      | 📋     | [13.1](docs/epics/operator-cli.md)  |
+| 0.49.0  | 1        | The specifications                 | ✅     | [13.1](docs/epics/operator-cli.md)  |
 | —       | 2        | `sovereign-admin` in the image     | 📋     | [13.2](docs/epics/operator-cli.md)  |
 | —       | 3        | `sv apply`: the base               | 📋     | [13.3](docs/epics/operator-cli.md)  |
 | —       | 4        | `sv apply`: apps                   | 📋     | [13.4](docs/epics/operator-cli.md)  |

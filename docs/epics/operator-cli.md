@@ -25,7 +25,7 @@ and the hardest part, `sv apply`, comes before the commands that drive it.
 
 ## Tasks
 
-#### ⏳ 13.1 — The specifications
+#### ✅ 13.1 — The specifications
 
 **Goal:** What the CLI must do, what an instance repository holds and what an app must provide are written down before any
 of it is built.

@@ -43,7 +43,7 @@ the task is corrected.
 | 10  | [Core API](core-api.md)                       | 📋 Planned     | `spec/core-api`, `packages/api-client`, Directory API, branding                                                               |
 | 11  | [Installable app (PWA)](pwa.md)               | ⏳ In Progress | Manifest, mobile metadata, service worker, offline page ([RFC 0001](../rfcs/0001-installable-core.md))                        |
 | 12  | [Release and deployment](release.md)          | ⏳ In Progress | The published image, guides for operators, the deployment design ([RFC 0002](../rfcs/0002-deployment-strategies.md))          |
-| 13  | [Operator CLI](operator-cli.md)               | 📋 Planned     | `sv`, `sv apply` and `sovereign-admin`: deploying and running an instance ([RFC 0002](../rfcs/0002-deployment-strategies.md)) |
+| 13  | [Operator CLI](operator-cli.md)               | ⏳ In Progress | `sv`, `sv apply` and `sovereign-admin`: deploying and running an instance ([RFC 0002](../rfcs/0002-deployment-strategies.md)) |
 
 _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked · ❌ Rejected_
 

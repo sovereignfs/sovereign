@@ -1,13 +1,13 @@
 # RFC 0001 — An installable core (PWA)
 
-|                |                                                                                                                          |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| **Status**     | Accepted; partially implemented (the manifest, metadata and service worker)                                              |
-| **Date**       | October 2026                                                                                                             |
-| **Author**     | Claude Code, for review                                                                                                  |
-| **Scope**      | `apps/core`: a web app manifest, a service worker, an offline page, mobile metadata; `docs/specs/core-app.md` §1.3, §3.5 |
-| **Tasks**      | [Epic 11](../epics/pwa.md)                                                                                               |
-| **Supersedes** | Nothing. The established Sovereign app had a PWA (manifest, Workbox, offline page, Apple splash images); core has none   |
+|                |                                                                                                                                    |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**     | Accepted; partially implemented (the manifest, metadata, service worker and app icons; the device checks of task 11.3 are not run) |
+| **Date**       | October 2026                                                                                                                       |
+| **Author**     | Claude Code, for review                                                                                                            |
+| **Scope**      | `apps/core`: a web app manifest, a service worker, an offline page, mobile metadata; `docs/specs/core-app.md` §1.3, §3.5           |
+| **Tasks**      | [Epic 11](../epics/pwa.md)                                                                                                         |
+| **Supersedes** | Nothing. The established Sovereign app had a PWA (manifest, Workbox, offline page, Apple splash images); core has none             |
 
 ## Summary
 
@@ -242,7 +242,8 @@ Accepted as proposed, with the open questions answered as leaned:
 
 1. **Theme colour:** the `theme-color` tags also follow a saved theme choice, set by the pre-paint script. Core has no
    theme preference yet, so today the system's colour scheme decides both; the script is ready for when it has.
-2. **Instance icons:** the default Sovereign icons are in every instance's manifest until task 11.4.
+2. **Instance icons:** the default Sovereign icons are in every instance's manifest until the operator sets their own
+   (task 11.4, decided in [ADR 0001](../adrs/0001-app-icons-are-supplied-not-generated.md): supplied, not generated).
 3. **An install hint:** not in this RFC.
 4. **Worker and `strict-dynamic`:** settled by the browser test of task 11.2: Chromium registers the worker with and
    without `worker-src` (the fallback to `script-src` does not refuse it there). The directive stays, explicit, for the

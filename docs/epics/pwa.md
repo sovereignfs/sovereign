@@ -146,7 +146,7 @@ review checklist above is not met until it has.
 | After signing out, no page of the person can be opened offline                                   |                         |                |               |
 | Renaming the instance renames the installed app (after the next launch)                          |                         |                |               |
 
-#### 📋 11.4 — Icons made from the instance's own logo `[parallel]`
+#### ✅ 11.4 — Icons made from the instance's own logo `[parallel]`
 
 **Goal:** An instance with its own logo installs with its own icon, not the Sovereign one.
 
@@ -163,11 +163,16 @@ review checklist above is not met until it has.
 
 **Dependencies:** 11.1, 8.4
 
-**Spec reference:** §3.12, §3.13; RFC 0001
+**Spec reference:** §3.12, §3.13; RFC 0001; ADR 0001
 
 **Review checklist:**
 
 - An instance with a logo has a manifest whose icons are its own, and one without has the defaults
 - If a native dependency was chosen, the image builds and boots on all three databases (`pnpm docker:smoke`)
+
+**Done:** decided in [ADR 0001](../adrs/0001-app-icons-are-supplied-not-generated.md): the operator supplies a square PNG
+(512 to 1024 pixels) as an App icon, and optionally one for masking; core resizes nothing, so there is no native
+dependency and the image is unchanged. The manifest and an iPhone's home-screen icon take them, and fall back to the
+Sovereign icons.
 
 **Not here:** anything for an instance that has set no logo.

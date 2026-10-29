@@ -1,6 +1,6 @@
 # Sovereign Core — Roadmap
 
-**Version:** 0.46.0 · **Last updated:** 2026-10-29
+**Version:** 0.47.0 · **Last updated:** 2026-10-29
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -106,4 +106,4 @@ be argued before anything is built.
 | 0.45.0  | 1        | Manifest, icons and mobile metadata             | ✅     | [11.1](docs/epics/pwa.md) |
 | 0.46.0  | 2        | Service worker and offline page                 | ✅     | [11.2](docs/epics/pwa.md) |
 | —       | 3        | Standalone polish, guide and checks             | ⏳     | [11.3](docs/epics/pwa.md) |
-| —       | 4        | Icons from the instance's own logo `[parallel]` | 📋     | [11.4](docs/epics/pwa.md) |
+| 0.47.0  | 4        | Icons from the instance's own logo `[parallel]` | ✅     | [11.4](docs/epics/pwa.md) |

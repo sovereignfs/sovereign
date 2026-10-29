@@ -96,7 +96,7 @@ belongs to a person.
 
 **Not here:** offline use of any signed-in page, push notifications and background sync (a later phase, with its own RFC), and caching anything of an app.
 
-#### 📋 11.3 — Standalone polish, guide and checks
+#### ⏳ 11.3 — Standalone polish, guide and checks
 
 **Goal:** An installed core behaves on the devices people use, and an operator knows what it needs.
 
@@ -123,6 +123,28 @@ belongs to a person.
 - The deployment guide states the https requirement and the two paths a proxy must not cache
 
 **Not here:** an install button in core (an RFC open question, not committed), and Apple splash images.
+
+**Done so far:** the `theme-color` follows a saved theme as well as the system's (the pre-paint script sets it, with
+tests; note that core has no theme preference yet, so today the system's scheme decides both); the deployment guide
+says what installing needs (https, a proxy that does not cache `/sw.js` or the manifest, what is and is not stored,
+that apps open outside the window); Chromium's registration, caches and offline page are covered by the acceptance
+suite.
+
+**Outstanding, which needs a person with the devices:** the checklist below. Nothing in it has been run, and the
+review checklist above is not met until it has.
+
+| Check                                                                                            | Chrome or Edge, desktop | Android Chrome | iPhone Safari |
+| ------------------------------------------------------------------------------------------------ | ----------------------- | -------------- | ------------- |
+| An "Install" or "Add to Home Screen" offer is made, over https                                   |                         |                |               |
+| The installed icon is the Sovereign mark (or masked cleanly), named for the instance             |                         |                |               |
+| It opens in a window of its own, with no browser bars (iPhone: no Safari bars)                   |                         |                |               |
+| The title or status bar takes the page's colour, in the light and the dark theme                 |                         |                |               |
+| Nothing is hidden by a notch, a rounded corner or the home bar; no strip below the page          |                         |                |               |
+| The viewport height is right at launch (iPhone standalone: the legacy viewport sync only if not) |                         |                |               |
+| Sign in, open the launcher, open an app on another address, and come back                        |                         |                |               |
+| With the network off, a page shows "You're offline"; back on, "Try again" loads it               |                         |                |               |
+| After signing out, no page of the person can be opened offline                                   |                         |                |               |
+| Renaming the instance renames the installed app (after the next launch)                          |                         |                |               |
 
 #### 📋 11.4 — Icons made from the instance's own logo `[parallel]`
 

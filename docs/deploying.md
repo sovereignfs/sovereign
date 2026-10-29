@@ -65,6 +65,24 @@ should print `200`.
 `pnpm docker:smoke` builds the image and boots each of the three setups from it, signs the first account up and checks
 the address above from inside; CI runs it on every change.
 
+## Installing core as an app
+
+A browser can install core as an app: its own window, the instance's name and icon, a page of its own saying so when the
+network is down. Nothing needs setting up beyond what sign-in already needs.
+
+- **It needs https.** A browser offers to install a site, and lets it keep a service worker, only over https (or on
+  `localhost`). Put the reverse proxy with TLS in front of core and set `SV_URL` to the `https` address, as above.
+- **The proxy must not cache `/sw.js` or `/manifest.webmanifest`.** Core answers `/sw.js` with `Cache-Control: no-cache`
+  so a new release reaches a browser on its next visit; a proxy that caches it holds an old worker for as long as it
+  likes. Leave both paths alone (most proxies cache nothing unless told to).
+- **Nothing of a person is stored for it.** The worker keeps only the built scripts, styles and fonts and the icons, which
+  are the same for everyone; no page, no answer to an API call. Signing out, or lending the device, leaves nothing
+  behind, and there is no setting for it.
+- **The installed name follows the instance's name** in the Console's settings. Its icon is the Sovereign mark.
+- **Apps open outside the window.** An installed core's window covers core's own address only. A tile in the launcher goes to
+  an app on another address, which the device opens in the browser or in a view over the window, as it chooses; the
+  sign-in the app starts with core comes back to the app the same way.
+
 ## Backing up and upgrading
 
 - **sqld**: copy the `sqld-data` volume while sqld is stopped. **PostgreSQL**: `pg_dump` the `sovereign` database.

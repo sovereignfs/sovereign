@@ -240,8 +240,8 @@ approval the first task writes the outcome into the spec before any code.
 
 Accepted as proposed, with the open questions answered as leaned:
 
-1. **Theme colour:** the `theme-color` tag also follows a theme chosen in core's preferences, set by the pre-paint
-   script (task 11.3). Until then it follows the system's colour scheme.
+1. **Theme colour:** the `theme-color` tags also follow a saved theme choice, set by the pre-paint script. Core has no
+   theme preference yet, so today the system's colour scheme decides both; the script is ready for when it has.
 2. **Instance icons:** the default Sovereign icons are in every instance's manifest until task 11.4.
 3. **An install hint:** not in this RFC.
 4. **Worker and `strict-dynamic`:** settled by the browser test of task 11.2: Chromium registers the worker with and

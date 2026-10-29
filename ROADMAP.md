@@ -121,6 +121,7 @@ be argued before anything is built.
 | 0.48.0  | 5        | Host-only cookies                  | ✅     | [12.5](docs/epics/release.md) |
 | —       | 6        | Try real third-party apps          | 📋     | [12.6](docs/epics/release.md) |
 | —       | 7        | Compatibility settings             | 📋     | [12.7](docs/epics/release.md) |
+| —       | 8        | Try two more app families          | ⏳     | [12.8](docs/epics/release.md) |
 
 ### M6 — Operators run core with one tool
 

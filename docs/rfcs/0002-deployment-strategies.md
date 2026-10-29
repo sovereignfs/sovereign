@@ -464,7 +464,7 @@ to the published contract, and it can wait until an app wants it.
 
 ## Rollout
 
-1. Try real third-party apps and release core (tasks 12.1 to 12.3, and 12.6). Scenario 1 needs nothing more.
+1. Try real third-party apps and release core (tasks 12.1 to 12.3, 12.6 and 12.8). Scenario 1 needs nothing more.
 2. Write this RFC's outcome into the spec, with `spec/suite.md` and `spec/app-manifest.md`.
 3. `sovereign-admin` in the image.
 4. `sv apply` on a hand-written `suite.yml`: core, the proxy and the database.
@@ -494,8 +494,10 @@ the outcome goes into the spec before any code.
 Accepted as proposed, with the open questions answered as leaned:
 
 1. **`__Host-` cookies:** done before the first release, while no instance exists to sign out (task 12.5).
-2. **RS256:** added only when testing shows an app needs it. Task 12.6's testing against real apps decides, and it would be
-   done in task 12.7.
+2. **RS256:** added only when testing shows an app needs it. Tasks 12.6 and 12.8 tried six apps ([research
+   0002](../research/0002-third-party-app-compatibility.md)): two cannot verify EdDSA at all, and one of those needs the secret accepted
+   in the request body as well. Both are task 12.7, which also ignores a scope core does not offer, where it now refuses the sign-in. A PKCE opt-out is not
+   needed, since no app tried needed one.
 3. **An app catalogue:** not at first. `--image` and `--manifest` are enough, and a catalogue, if one comes, lives outside
    this repository.
 4. **Moving a server:** `sv backup` and `sv restore` are enough, with no command of its own.

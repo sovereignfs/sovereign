@@ -83,7 +83,7 @@ acceptance, in [epic 13](operator-cli.md).
   workflows are retired
 - A `vX.Y.Z` tag, and the package public on GHCR
 
-**Dependencies:** 12.1, 12.2, 12.5, 12.6
+**Dependencies:** 12.1, 12.2, 12.5, 12.6, 12.8
 
 **Spec reference:** §3.15
 
@@ -155,7 +155,8 @@ acceptance, in [epic 13](operator-cli.md).
 
 **Review checklist:**
 
-- At least one app that uses each common kind of library was tried
+- Three apps were tried (two Go stacks and a Django app). The Auth.js and PHP families were tried in 12.8, and
+  [research 0002](../research/0002-third-party-app-compatibility.md) records both passes
 - Each failure is traced to a cause, and either goes into 12.7 or is stated in the guide as a limit
 - Core's documents describe what an app needs, and do not depend on any one app
 
@@ -167,16 +168,58 @@ acceptance, in [epic 13](operator-cli.md).
 
 **Deliverables:**
 
-- Whichever of these 12.6 calls for: RS256 as an additional signing algorithm, "this app can't send PKCE" for confidential apps,
-  and sending the secret in the request body. Each is off by default
-- §3.6.1 and §3.7.1 changed first, and the Console's technical settings saying what each gives up
+- What [research 0002](../research/0002-third-party-app-compatibility.md) decided (2026-10-30): a per-app choice to send the secret in
+  the request body (Basic stays the default), and RS256 as an additional ID-token algorithm, off unless chosen. Whether better-auth
+  can sign with a second algorithm for chosen apps only is part of the task. "This app can't send PKCE" is left out, since no app tried
+  needed it, until one shows otherwise
+- A scope core does not offer is ignored, not refused: it is dropped from the authorization request and the sign-in goes on with the
+  scopes core knows, as OpenID Connect Core says it SHOULD (research 0002, decision 4). `oauthGuards`
+  (`apps/core/src/oauth/guards.ts`) already rewrites the request's scopes for `roles` before the provider reads them, and is the likely place
+- §3.6.1, §3.6.2 and §3.7.1 changed first, and the Console's technical settings saying what each gives up
 
 **Dependencies:** 12.6
 
 **Spec reference:** core-app §3.6.1, §3.7.1; RFC 0002
 
+**Evidence after 12.8:** of six apps, two reject EdDSA outright (a Django app and a PHP app), one of them also needs the secret in the
+body, one asks for a scope core does not offer (`groups`) by default, and none needed a way to turn PKCE off.
+
 **Review checklist:**
 
-- A public app can never turn PKCE off
+- A public app is never given a secret method, and PKCE stays required
+- An ignored scope appears nowhere: not on the sign-in or consent page, not in what consent remembers, and not in the token's `scope`
+- The token response lists the scopes granted when they differ from those asked for (RFC 6749 §3.3), and a refresh that names an unknown
+  scope is handled the same way
+- A request for only `openid` plus unknown scopes still signs in, and a request with no `openid` is still refused
+- A scope core knows but the app is not allowed behaves as it does today
 - EdDSA stays the default, and no existing app changes behaviour
 - The security check is run
+
+#### ⏳ 12.8 — Try two more app families
+
+**Goal:** The guide's claim about what connects is checked against the two common families that 12.6 left out, before the first
+release makes it.
+
+**Priority:** 8, but before the first release.
+
+**Deliverables:**
+
+- One app built on Auth.js (Next.js), the family nearest to apps built for Sovereign, and one PHP app, each connected to a built image by
+  following `docs/connecting-an-app.md` as written, and tried as in 12.6
+- A follow-up in [research 0002](../research/0002-third-party-app-compatibility.md): the same results table, what stopped each and why,
+  and what it changes in the recommendation (12.7's scope in particular)
+- The guide corrected where either shows it wrong
+
+**Dependencies:** 12.6
+
+**Spec reference:** core-app §3.6, §3.7
+
+**Review checklist:**
+
+- Each failure is traced to a cause taken from the app's own log or code
+- The research note says which of the four common families (Go, Python, Auth.js, PHP) are now covered, and which are not
+- Core's documents still name no app
+
+**As run:** Homarr (Auth.js v5), BookStack (PHP) and, as the stack nearest to Sovereign's own apps, Karakeep (better-auth, which turned out
+not to be Auth.js). Two of the three connect, one after two settings. Auth.js is covered by Homarr alone, and Java, .NET, Ruby and Rust
+apps remain untried.

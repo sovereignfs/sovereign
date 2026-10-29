@@ -64,7 +64,7 @@ right effects on tokens and the launcher.
 in the Console epic) and the launcher page (7.2); the registry offers
 `list`, which the launcher will filter to enabled apps shown in it.
 
-#### 📋 7.2 — Launcher
+#### ✅ 7.2 — Launcher
 
 **Goal:** Signed-in people land on a page listing the apps they can open.
 
@@ -86,3 +86,7 @@ in the Console epic) and the launcher page (7.2); the registry offers
 - Opening an app with an existing session completes sign-in without a prompt
   (trusted client)
 - The page works at phone width and in both themes
+
+**Not here:** restricting which people see which apps (the launcher is not
+access control, §3.8), the launcher as an overlay above other pages, and
+ordering or grouping apps.

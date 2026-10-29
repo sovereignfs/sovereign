@@ -76,6 +76,26 @@ describe('proxy', () => {
     ).toContain('upgrade-insecure-requests');
   });
 
+  it('lets only the launcher show pictures from other addresses', async () => {
+    const { proxy } = await loadProxy('https://core.example.com');
+    const imgSrc = (path: string) =>
+      /img-src ([^;]*)/.exec(
+        proxy(signedIn(`https://core.example.com${path}`)).headers.get('content-security-policy') ??
+          '',
+      )?.[1];
+    expect(imgSrc('/')).toBe("'self' blob: data: https:");
+    for (const path of [
+      '/profile',
+      '/console',
+      '/console/apps',
+      '/consent',
+      '/api/health',
+      '/sign-in',
+    ]) {
+      expect(imgSrc(path)).toBe("'self' blob: data:");
+    }
+  });
+
   it('matches every path, so API routes and static files carry the policy too', async () => {
     const { config } = await loadProxy('http://localhost:3000');
     expect(config.matcher).toBe('/:path*');

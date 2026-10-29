@@ -210,6 +210,9 @@ each: `docs/architecture-rules.md`.
 - **Apps are written only through `ClientRegistry`, as the person with the
   request's headers; an app's secret is returned once, to the page that asked**,
   and the Console says "app" except in the technical settings.
+- **The launcher (`/`) reads apps through `listLauncherApps`** (tile fields only)
+  after checking `launcher:access`; **only `/` may load pictures from other
+  addresses** (`remoteImages` in `buildCsp`).
 - **Every Console page calls `requireConsole` itself** (a test fails when one does
   not), and answers someone who may not enter with a page that is not there.
 - **A client is written only by `ClientRegistry`** (validation, the provider's

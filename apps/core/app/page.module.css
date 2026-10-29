@@ -1,7 +1,33 @@
-.content {
+.page {
   display: flex;
   flex-direction: column;
+  gap: var(--sv-space-4);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--sv-space-3);
+  flex-wrap: wrap;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+}
+
+.brandName {
+  font-weight: var(--sv-font-weight-semibold);
+  font-size: var(--sv-font-size-lg);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+  flex-wrap: wrap;
 }
 
 .title {

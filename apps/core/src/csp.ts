@@ -27,12 +27,19 @@ export type CspOptions = {
    * upgrade requests to the same host and break the page.
    */
   upgradeInsecureRequests?: boolean;
+  /**
+   * Let the page show pictures from other addresses: the launcher draws each app's icon from the address an
+   * operator gave. An image cannot run script, so this is only for that page, and it is `https:` alone,
+   * with `http:` on `localhost` where core is itself a development instance.
+   */
+  remoteImages?: boolean;
 };
 
 export function buildCsp({
   nonce,
   development = false,
   upgradeInsecureRequests = false,
+  remoteImages = false,
 }: CspOptions): string {
   const directives: Record<string, string[]> = {
     'default-src': ["'self'"],
@@ -46,7 +53,13 @@ export function buildCsp({
     // A `style=""` attribute cannot run script, and the design system sets CSS custom
     // properties through them. Style *elements* still need the nonce.
     'style-src-attr': ["'unsafe-inline'"],
-    'img-src': ["'self'", 'blob:', 'data:'],
+    'img-src': [
+      "'self'",
+      'blob:',
+      'data:',
+      ...(remoteImages ? ['https:'] : []),
+      ...(remoteImages && development ? ['http://localhost:*', 'http://*.localhost:*'] : []),
+    ],
     'font-src': ["'self'"],
     'connect-src': ["'self'"],
     'object-src': ["'none'"],

@@ -4,6 +4,19 @@
   margin-bottom: var(--sv-space-4);
 }
 
+.small {
+  display: flex;
+  align-items: center;
+}
+
+/* The header is as wide as its contents, so a percentage width has nothing to be a percentage of. */
+.small .light,
+.small .dark {
+  width: auto;
+  max-width: none;
+  height: 2rem;
+}
+
 .light,
 .dark {
   max-width: 100%;

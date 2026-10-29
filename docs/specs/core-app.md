@@ -677,6 +677,23 @@ appears only as the app's **Client ID** and in its technical settings.
 - In Phase 1 every signed-in person sees every listed app. **The launcher is
   not access control:** an app that should be restricted decides that itself,
   for example from the `roles` claim.
+- The page has the instance's name and logo, a way to each of the person's
+  own account pages (and the Console, for an operator), and one tile for each
+  app: a link, so it works with the keyboard and opens in a new tab on request.
+  Search matches the app's name, whatever the case, and says so when nothing
+  matches. An app with no launch address has nothing to open and is not listed.
+  A person without `launcher:access` sees no apps and is told so, with their
+  account links.
+- A tile's icon is the address an operator gave, or a drawn one from the name
+  when there is none or it will not load. Only this page may load pictures from
+  other addresses (`https`, and `http` on `localhost` on a development
+  instance); every other page keeps to core's own, since a picture cannot run
+  script but should still not be loadable from anywhere.
+- With no apps, an operator who may add apps is offered to add the first one,
+  and anyone else is told to ask whoever runs the instance.
+- Only the fields of a tile leave the server for the launcher: name,
+  description, icon address and launch address. It is a read of what the person
+  is meant to see and is not the registry, which needs `client:manage` (§3.7.3).
 
 ### 3.9 Directory API
 
@@ -1025,3 +1042,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-29 | §3.12, §3.15: what the instance settings page shows and who sees what, where each value comes from, what each setting accepts and refuses, how pictures are used on pages and in emails, that a missing sign-up choice never opens sign-up, and how an SVG is rebuilt rather than scanned.                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | 2026-10-29 | §3.2.3, §3.2.1: where the owner edits the matrix and hands over ownership, that the owner has no boxes, that owner-only capabilities are listed but never offered, that the whole table is saved as it was shown, and what the hand-over page asks and shows.                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | 2026-10-29 | §3.7.3: where apps are added, changed, switched off and on, given a new secret and deleted in the Console; that a secret is shown once and only in the answer to the request that made it; that each thing wrong is shown beside its field; what each action asks and says first; and that "client" appears only in the technical settings.                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-10-29 | §3.8: what the launcher page holds, that only a tile's own fields reach it, search by name, the icon drawn from the name, the empty states, and that only this page may load pictures from other addresses.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |

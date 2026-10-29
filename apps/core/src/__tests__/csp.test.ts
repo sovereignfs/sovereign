@@ -69,3 +69,40 @@ describe('buildCsp', () => {
     );
   });
 });
+
+describe('pictures from other addresses', () => {
+  const nonce = 'abc123==';
+  const imgSrc = (options: Parameters<typeof buildCsp>[0]) =>
+    directives(buildCsp(options)).get('img-src');
+
+  it('are not loaded by default: only core’s own, blobs and data', () => {
+    expect(imgSrc({ nonce })).toEqual(["'self'", 'blob:', 'data:']);
+  });
+
+  it('are allowed over https alone when a page asks for them, and nothing else is loosened', () => {
+    expect(imgSrc({ nonce, remoteImages: true })).toEqual(["'self'", 'blob:', 'data:', 'https:']);
+    const csp = buildCsp({ nonce, remoteImages: true });
+    const all = directives(csp);
+    expect(all.get('default-src')).toEqual(["'self'"]);
+    expect(all.get('script-src')).toEqual(["'self'", `'nonce-${nonce}'`, "'strict-dynamic'"]);
+    expect(all.get('connect-src')).toEqual(["'self'"]);
+    expect(all.get('form-action')).toEqual(["'self'"]);
+    expect(csp).not.toMatch(/img-src[^;]*\*(?!:)/);
+  });
+
+  it('allow http on localhost only on a development instance', () => {
+    expect(imgSrc({ nonce, remoteImages: true, development: true })).toEqual([
+      "'self'",
+      'blob:',
+      'data:',
+      'https:',
+      'http://localhost:*',
+      'http://*.localhost:*',
+    ]);
+    expect(imgSrc({ nonce, remoteImages: false, development: true })).toEqual([
+      "'self'",
+      'blob:',
+      'data:',
+    ]);
+  });
+});

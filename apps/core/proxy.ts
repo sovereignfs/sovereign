@@ -20,6 +20,8 @@ export function proxy(request: NextRequest): NextResponse {
     // SV_URL is validated at start-up (instrumentation.ts); the proxy only reads it, and
     // not through the configuration package, to keep to web-standard APIs.
     upgradeInsecureRequests: (process.env.SV_URL ?? '').trim().startsWith('https://'),
+    // The launcher draws each app's icon from the address an operator gave; no other page loads a remote picture.
+    remoteImages: request.nextUrl.pathname === '/',
   });
 
   if (!isPublic(request.nextUrl.pathname) && !hasSessionCookie(request)) {

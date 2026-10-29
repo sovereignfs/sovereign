@@ -695,13 +695,15 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
         )
         .map(({ file }) => file);
       expect(writers).toEqual(['src/clients/registry.ts']);
-      // Reading a client by the provider's adapter is allowed in two places; writing it is not.
+      // Reading a client by the provider's adapter is allowed in these places (the consent page, the launcher's
+      // tiles, the registry and the guards); writing it is allowed in one.
       const readers = sources
         .filter(({ text }) => /model: 'oauthClient'/.test(text))
         .map(({ file }) => file)
         .sort();
       expect(readers).toEqual([
         'app/consent/page.tsx',
+        'src/clients/launcher.ts',
         'src/clients/registry.ts',
         'src/oauth/guards.ts',
       ]);

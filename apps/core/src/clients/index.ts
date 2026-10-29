@@ -1,7 +1,9 @@
 import { getAuth, getAuthSettings } from '../auth';
 import { getDatabase } from '../database';
+import { listLauncherApps, type LauncherApp } from './launcher';
 import { ClientRegistry } from './registry';
 
+export { launcherApps, type LauncherApp } from './launcher';
 export {
   ClientRegistry,
   ClientRegistryError,
@@ -31,4 +33,9 @@ export function getClientRegistry(): Promise<ClientRegistry> {
       throw error;
     });
   return opened;
+}
+
+/** The apps to show in the launcher. The caller has checked `launcher:access`. */
+export async function getLauncherApps(): Promise<LauncherApp[]> {
+  return listLauncherApps(await getAuth());
 }

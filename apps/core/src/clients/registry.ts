@@ -54,7 +54,7 @@ export type UpdateInput = Omit<Partial<ClientSettings>, 'launcher'> & {
 };
 export type RegisterInput = UpdateInput & Pick<ClientSettings, 'name'>;
 
-type Row = {
+export type ClientRow = {
   clientId: string;
   name?: string | null;
   icon?: string | null;
@@ -107,10 +107,10 @@ export class ClientRegistry {
     return (await this.#auth.$context).adapter;
   }
 
-  async #row(clientId: string): Promise<Row | undefined> {
+  async #row(clientId: string): Promise<ClientRow | undefined> {
     const row = await (
       await this.#adapter()
-    ).findOne<Row>({
+    ).findOne<ClientRow>({
       model: 'oauthClient',
       where: [{ field: 'clientId', value: clientId }],
     });
@@ -146,7 +146,7 @@ export class ClientRegistry {
     await this.#require(actor);
     const current = await this.#row(clientId);
     if (!current) throw new ClientRegistryError('not-found', 'There is no such app.');
-    const before = this.#view(current);
+    const before = clientView(current);
     if (input.type !== undefined && input.type !== before.type) {
       throw new ClientRegistryError(
         'invalid',
@@ -169,7 +169,7 @@ export class ClientRegistry {
     await this.#require(actor);
     const row = await this.#row(clientId);
     if (!row) throw new ClientRegistryError('not-found', 'There is no such app.');
-    if (this.#view(row).type === 'public') {
+    if (clientView(row).type === 'public') {
       throw new ClientRegistryError('public-client', 'A public app has no secret to rotate.');
     }
     const rotated = (await this.#auth.api.rotateClientSecret({
@@ -208,14 +208,14 @@ export class ClientRegistry {
     await this.#require(actor);
     const row = await this.#row(clientId);
     if (!row) throw new ClientRegistryError('not-found', 'There is no such app.');
-    return this.#view(row);
+    return clientView(row);
   }
 
   async list(actor: RegistryActor): Promise<ClientView[]> {
     await this.#require(actor);
-    const rows = await (await this.#adapter()).findMany<Row>({ model: 'oauthClient' });
+    const rows = await (await this.#adapter()).findMany<ClientRow>({ model: 'oauthClient' });
     return rows
-      .map((row) => this.#view(row))
+      .map((row) => clientView(row))
       .sort((a, b) => a.name.localeCompare(b.name) || a.clientId.localeCompare(b.clientId));
   }
 
@@ -349,30 +349,31 @@ export class ClientRegistry {
       },
     });
   }
+}
 
-  #view(row: Row): ClientView {
-    const metadata = parseMetadata(row.metadata);
-    const launcher = (metadata.launcher ?? {}) as Record<string, unknown>;
-    return {
-      clientId: row.clientId,
-      name: row.name ?? '',
-      type: row.tokenEndpointAuthMethod === 'none' ? 'public' : 'confidential',
-      redirectUris: list(row.redirectUris),
-      postLogoutRedirectUris: list(row.postLogoutRedirectUris),
-      backchannelLogoutUri: blank(row.backchannelLogoutUri),
-      endSession: row.enableEndSession === true,
-      scopes: list(row.scopes),
-      trusted: row.skipConsent === true,
-      enabled: row.disabled !== true,
-      launcher: {
-        description: blank(launcher.description),
-        icon: blank(row.icon),
-        launchUrl: blank(launcher.launchUrl),
-        show: launcher.show !== false,
-      },
-      createdAt: row.createdAt ? new Date(row.createdAt) : undefined,
-    };
-  }
+/** One stored app as the Console and the launcher read it: lists and objects as the provider kept them. */
+export function clientView(row: ClientRow): ClientView {
+  const metadata = parseMetadata(row.metadata);
+  const launcher = (metadata.launcher ?? {}) as Record<string, unknown>;
+  return {
+    clientId: row.clientId,
+    name: row.name ?? '',
+    type: row.tokenEndpointAuthMethod === 'none' ? 'public' : 'confidential',
+    redirectUris: list(row.redirectUris),
+    postLogoutRedirectUris: list(row.postLogoutRedirectUris),
+    backchannelLogoutUri: blank(row.backchannelLogoutUri),
+    endSession: row.enableEndSession === true,
+    scopes: list(row.scopes),
+    trusted: row.skipConsent === true,
+    enabled: row.disabled !== true,
+    launcher: {
+      description: blank(launcher.description),
+      icon: blank(row.icon),
+      launchUrl: blank(launcher.launchUrl),
+      show: launcher.show !== false,
+    },
+    createdAt: row.createdAt ? new Date(row.createdAt) : undefined,
+  };
 }
 
 const blank = (value: unknown): string | undefined =>

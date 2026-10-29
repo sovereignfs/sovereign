@@ -277,6 +277,14 @@ pointing here.
   the form shows beside each field. The secret returned by `register` or
   `rotateSecret` goes to the page that asked, is never saved, logged or put in a
   URL, and cannot be read again.
+- **The launcher reads apps through `listLauncherApps`, not the registry, and only
+  its page may load remote pictures.** `/` checks `launcher:access` itself, and
+  `listLauncherApps` returns only a tile's fields (name, description, icon and
+  launch address) for apps that are enabled, shown and have a launch address;
+  nothing else about an app leaves the server for it. The proxy adds `https:`
+  (and `http://localhost:*` on a development instance) to `img-src` for the
+  path `/` alone, since the icon is an address an operator gave; every other
+  path keeps `'self' blob: data:`, and no other directive changes.
 - **Every Console page checks for itself, and shows a page that is not there to
   someone who may not enter.** `requireConsole` (`src/console/guard.ts`) asks for
   a session, `console:access` and the capability the page needs, judged by the

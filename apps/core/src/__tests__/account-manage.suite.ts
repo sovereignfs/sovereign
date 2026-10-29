@@ -550,6 +550,129 @@ export function accountManageSuite(createDatabase: () => Promise<TestDatabase>):
     });
   });
 
+  describe('deleting one’s own account', () => {
+    const own = (who: { id: string; role: string }) => ({ id: who.id, role: who.role });
+
+    it('removes the account and everything that belongs to it, and leaves everyone else', async () => {
+      const ctx = await instance();
+      const client = await app(ctx);
+      await signInTo(ctx.auth, ctx.people.pat.jar, client, { scope: 'openid offline_access' });
+      await signInTo(ctx.auth, ctx.people.quinn.jar, client, { scope: 'openid offline_access' });
+      await ctx.manager.deleteSelf(own(ctx.people.pat));
+      expect(await getAccount(db, ctx.people.pat.id)).toBeUndefined();
+      for (const table of [
+        'sessions',
+        'accounts',
+        'passkeys',
+        'two_factors',
+        'avatars',
+        'oauth_access_tokens',
+        'oauth_refresh_tokens',
+        'oauth_consents',
+      ]) {
+        expect(await count(table, 'where user_id = ?', [ctx.people.pat.id]), table).toBe(0);
+      }
+      expect(await count('users')).toBe(5);
+      expect(await count('oauth_access_tokens')).toBe(1);
+    });
+
+    it('stops every token it held, and its sign-in', async () => {
+      const ctx = await instance();
+      const client = await app(ctx);
+      const { tokens } = await signInTo(ctx.auth, ctx.people.pat.jar, client, {
+        scope: 'openid offline_access',
+      });
+      await ctx.manager.deleteSelf(own(ctx.people.pat));
+      expect(
+        (await userInfo(ctx.auth, String(tokens.body.access_token))).status,
+      ).toBeGreaterThanOrEqual(400);
+      expect(
+        (await refresh(ctx.auth, client, String(tokens.body.refresh_token))).status,
+      ).toBeGreaterThanOrEqual(400);
+      const signIn = await call(ctx.auth, 'POST', '/sign-in/email', {
+        jar: new Jar(),
+        body: { email: ctx.people.pat.email, password: PASSWORD },
+      });
+      expect(signIn.status).toBeGreaterThanOrEqual(400);
+    });
+
+    it('tells the apps, and one that does not answer does not undo it', async () => {
+      const told: unknown[] = [];
+      const ctx = await instance({
+        logoutNotices: async (notices) => {
+          told.push(...notices);
+          throw new Error('app is down');
+        },
+      });
+      const client = await app(ctx);
+      await signInTo(ctx.auth, ctx.people.pat.jar, client, { scope: 'openid' });
+      await ctx.manager.deleteSelf(own(ctx.people.pat));
+      expect(told).toHaveLength(1);
+      expect(await getAccount(db, ctx.people.pat.id)).toBeUndefined();
+    });
+
+    it('lets an admin delete their own account, which an admin could not do for anyone else’s operator account', async () => {
+      const ctx = await instance();
+      await ctx.manager.deleteSelf(own(ctx.people.admin));
+      expect(await getAccount(db, ctx.people.admin.id)).toBeUndefined();
+      expect(await getAccount(db, ctx.people.owner.id)).toBeDefined();
+    });
+
+    it('is refused for the owner, who is told to hand the instance over first, and nothing changes', async () => {
+      const ctx = await instance();
+      const client = await app(ctx);
+      await signInTo(ctx.auth, ctx.people.owner.jar, client, { scope: 'openid offline_access' });
+      const before = await count('oauth_access_tokens', 'where revoked is null');
+      let said = '';
+      try {
+        await ctx.manager.deleteSelf(own(ctx.people.owner));
+      } catch (error) {
+        expect(error).toMatchObject({ code: 'owner' });
+        said = (error as Error).message;
+      }
+      expect(said).toContain('Hand it to another admin first');
+      expect(await getAccount(db, ctx.people.owner.id)).toBeDefined();
+      expect(await count('sessions', 'where user_id = ?', [ctx.people.owner.id])).toBeGreaterThan(
+        0,
+      );
+      expect(await count('oauth_access_tokens', 'where revoked is null')).toBe(before);
+    });
+
+    it('goes by the role the database holds, not the one the caller says: an owner who claims to be a user is refused', async () => {
+      const ctx = await instance();
+      expect(
+        await refused(() => ctx.manager.deleteSelf({ id: ctx.people.owner.id, role: ROLE_USER })),
+      ).toBe('owner');
+      expect(await getAccount(db, ctx.people.owner.id)).toBeDefined();
+    });
+
+    it('says there is no such account for one already gone, and is whole or nothing', async () => {
+      const ctx = await instance();
+      await ctx.manager.deleteSelf(own(ctx.people.pat));
+      expect(await refused(() => ctx.manager.deleteSelf(own(ctx.people.pat)))).toBe('not-found');
+    });
+
+    it('is whole or not at all: a failure leaves the account as it was', async () => {
+      const ctx = await instance();
+      await db.run('alter table avatars rename to avatars_gone');
+      try {
+        await expect(ctx.manager.deleteSelf(own(ctx.people.pat))).rejects.toThrow();
+      } finally {
+        await db.run('alter table avatars_gone rename to avatars');
+      }
+      expect(await getAccount(db, ctx.people.pat.id)).toBeDefined();
+      expect(await count('sessions', 'where user_id = ?', [ctx.people.pat.id])).toBe(1);
+    });
+
+    it('never reuses the sub: the same address signing up again is a new account', async () => {
+      const ctx = await instance();
+      const before = ctx.people.pat.id;
+      await ctx.manager.deleteSelf(own(ctx.people.pat));
+      expect((await signUp(ctx.auth, { email: ctx.people.pat.email })).reply.status).toBe(200);
+      expect(await idOf(ctx.people.pat.email)).not.toBe(before);
+    });
+  });
+
   describe('resetting two-factor sign-in', () => {
     async function withTwoFactor(ctx: Awaited<ReturnType<typeof instance>>, who: Who) {
       await db.run('update users set email_verified = ? where id = ?', [bool(true), who.id]);

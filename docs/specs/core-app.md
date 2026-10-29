@@ -340,6 +340,21 @@ Editing them is not part of Phase 1.
   - Who may deactivate is the Console's (`user:manage`, within §3.2.1).
 - **Deleted:** the account and its credentials are removed. Its `sub` is never
   reused.
+  - A person deletes their own account on **Delete account** (`/delete-account`,
+    §3.11). It needs the password again, counted and limited like every other
+    time it is asked for (§3.2.1), and a question that says what is lost comes
+    before anything is sent; a wrong password is shown in that question with
+    what was typed kept. Deleting is the same single step an operator's deletion
+    is: the account, its credentials and its sessions, every token and consent
+    for it, in one transaction, then the apps that registered a back-channel
+    logout address are told. It is whole or not at all.
+  - **The owner cannot delete their account.** They are told to hand the
+    instance to another admin first, with the way to do it, and are not offered
+    the form; a request made by hand is refused the same way, by the role the
+    database holds and not the one the request says. No instance is ever left
+    without an owner.
+  - On success the person is sent to sign-in, which says their account is
+    deleted. The account to delete is always the session's own.
 
 ### 3.4 Two-factor authentication and passkeys
 
@@ -1056,3 +1071,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-29 | §3.7.3: where apps are added, changed, switched off and on, given a new secret and deleted in the Console; that a secret is shown once and only in the answer to the request that made it; that each thing wrong is shown beside its field; what each action asks and says first; and that "client" appears only in the technical settings.                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-10-29 | §3.8: what the launcher page holds, that only a tile's own fields reach it, search by name, the icon drawn from the name, the empty states, and that only this page may load pictures from other addresses.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-10-29 | §3.11: what Connected apps lists and for whom, that an app asked about twice is one app, that an app an operator trusts is not listed, and what Remove access asks and says.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 2026-10-29 | §3.3.6, §3.11: how a person deletes their own account (the password again, a question first, one whole step, the apps told), that the owner cannot and is told how to hand over first, and where they are sent afterwards.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |

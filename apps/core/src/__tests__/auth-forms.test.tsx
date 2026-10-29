@@ -264,6 +264,11 @@ describe('the sign-in form, around verification and reset', () => {
     expect(screen.getByText(/Your password is changed/)).toBeTruthy();
   });
 
+  it('tells the person who has just deleted their account that nothing of it is kept', () => {
+    render(<SignInForm returnTo="/" notice="account-deleted" />);
+    expect(screen.getByText(/Your account is deleted. Nothing of it is kept./)).toBeTruthy();
+  });
+
   it('explains a link that did not work, and what to do', () => {
     render(<SignInForm returnTo="/" notice="link-invalid" />);
     expect(screen.getByText(/expired or was already used/)).toBeTruthy();

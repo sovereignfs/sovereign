@@ -292,6 +292,14 @@ pointing here.
   text on SQLite and sqld, an array on PostgreSQL), and says them in the words
   consent used. `removeAccessAction` asks for `profile:manage` itself, first, and
   calls `removeAccess` with the session's account and the app named.
+- **A person deletes their own account only through `AccountManager.deleteSelf`,
+  after the password, and never an owner's.** `deleteAccountAction` asks for
+  `profile:manage` itself, first, then `confirmPassword` (counted and limited),
+  then `deleteSelf` with the session's own id; `deleteSelf` judges by the role the
+  database holds, not the one the caller passes, and refuses the owner before it
+  changes anything. It shares `#erase` with the operator's `delete`, so both are
+  one transaction that revokes every token and removes what belongs to the
+  account, and tell the apps afterwards.
 - **Every Console page checks for itself, and shows a page that is not there to
   someone who may not enter.** `requireConsole` (`src/console/guard.ts`) asks for
   a session, `console:access` and the capability the page needs, judged by the

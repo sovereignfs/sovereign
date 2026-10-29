@@ -211,6 +211,29 @@ export class AccountManager {
     if (account.role === ROLE_OWNER) {
       throw new AccountActionError('owner', 'The owner cannot be deleted.');
     }
+    await this.#erase(id);
+  }
+
+  /**
+   * A person deletes their own account (core-app §3.3.6, §3.11). It does what `delete` does, and the one rule
+   * that is a person's own: the owner cannot, since an instance is never left without one, and is told to hand
+   * ownership to an admin first. Asking for the password again is the caller's, before this: it takes no
+   * password, so what it does is the same whoever asks. It needs no capability of the matrix beyond being
+   * signed in; the caller asks for `profile:manage`.
+   */
+  async deleteSelf(actor: Actor): Promise<void> {
+    const account = await getAccount(this.#database, actor.id);
+    if (!account) throw new AccountActionError('not-found', 'There is no such account.');
+    if (account.role === ROLE_OWNER) {
+      throw new AccountActionError(
+        'owner',
+        'You own this instance. Hand it to another admin first, then you can delete your account.',
+      );
+    }
+    await this.#erase(actor.id);
+  }
+
+  async #erase(id: string): Promise<void> {
     const at = this.#database.family === 'postgres' ? new Date() : Date.now();
     const notices = await this.#database.transaction(async (tx) => {
       const found = await tx.run('select role from users where id = ?', [id]);

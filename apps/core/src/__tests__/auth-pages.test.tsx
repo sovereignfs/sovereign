@@ -192,6 +192,14 @@ describe('the sign-in page, when an email link sends the person back', () => {
     expect(html).toContain('Your password is changed');
   });
 
+  it('tells someone who has just deleted their account that it is gone', async () => {
+    const { signIn } = await pages();
+    const html = renderToStaticMarkup(
+      await signIn({ searchParams: search(undefined, { deleted: '1' }) }),
+    );
+    expect(html).toContain('Your account is deleted');
+  });
+
   it('explains a verification link that did not work', async () => {
     const { signIn } = await pages();
     const html = renderToStaticMarkup(
@@ -205,6 +213,7 @@ describe('the sign-in page, when an email link sends the person back', () => {
     const html = renderToStaticMarkup(await signIn({ searchParams: search() }));
     expect(html).not.toContain('expired');
     expect(html).not.toContain('password is changed');
+    expect(html).not.toContain('account is deleted');
     expect(html).toContain('href="/forgot-password"');
   });
 });

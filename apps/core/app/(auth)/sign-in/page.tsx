@@ -16,6 +16,7 @@ export default async function SignInPage({
     returnTo?: string | string[];
     error?: string | string[];
     reset?: string;
+    deleted?: string;
     /** Present when an app sent the person here: the provider's signed request. */
     sig?: string | string[];
   }>;
@@ -42,8 +43,13 @@ export default async function SignInPage({
 }
 
 /** What the address says happened: a reset just finished, or a link from an email did not work. */
-function noticeFor(query: { error?: string | string[]; reset?: string }): SignInNotice | undefined {
+function noticeFor(query: {
+  error?: string | string[];
+  reset?: string;
+  deleted?: string;
+}): SignInNotice | undefined {
   if (query.reset === '1') return 'password-changed';
+  if (query.deleted === '1') return 'account-deleted';
   if (query.error !== undefined) return 'link-invalid';
   return undefined;
 }

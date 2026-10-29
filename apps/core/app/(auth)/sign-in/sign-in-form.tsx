@@ -10,7 +10,7 @@ import { ResendVerification } from '../resend-verification';
 import styles from '../auth.module.css';
 
 /** Something the person arrived to be told: they changed their password, or a link did not work. */
-export type SignInNotice = 'password-changed' | 'link-invalid';
+export type SignInNotice = 'password-changed' | 'link-invalid' | 'account-deleted';
 
 export function SignInForm({ returnTo, notice }: { returnTo: string; notice?: SignInNotice }) {
   const [email, setEmail] = useState('');
@@ -83,6 +83,9 @@ export function SignInForm({ returnTo, notice }: { returnTo: string; notice?: Si
     <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
       {notice === 'password-changed' ? (
         <Alert variant="success">Your password is changed. Sign in with the new one.</Alert>
+      ) : null}
+      {notice === 'account-deleted' ? (
+        <Alert variant="success">Your account is deleted. Nothing of it is kept.</Alert>
       ) : null}
       {notice === 'link-invalid' ? (
         <Alert variant="warning">

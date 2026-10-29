@@ -115,7 +115,7 @@ access.
 nothing the person agreed to), narrowing what an app may do without removing it,
 and telling the app that its access was removed.
 
-#### 📋 9.5 — Delete account
+#### ✅ 9.5 — Delete account
 
 **Goal:** A person can delete their own account.
 
@@ -133,3 +133,6 @@ and telling the app that its access was removed.
 
 - The owner cannot delete their account while still owner
 - After deletion, no token for the account is accepted
+
+**Not here:** a waiting period before deletion, exporting one's data first, and
+deleting an account by email link (the password is the proof).

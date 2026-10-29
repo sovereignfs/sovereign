@@ -10,6 +10,7 @@ const PAGES = [
   { label: 'Security', href: '/security' },
   { label: 'Preferences', href: '/preferences' },
   { label: 'Connected apps', href: '/connected-apps' },
+  { label: 'Delete account', href: '/delete-account' },
 ];
 
 export function IdentityNav() {

@@ -20,6 +20,7 @@ describe('the identity pages navigation', () => {
       '/security',
       '/preferences',
       '/connected-apps',
+      '/delete-account',
     ]);
   });
 
@@ -30,6 +31,7 @@ describe('the identity pages navigation', () => {
     ['/security/two-factor', 'Security'],
     ['/preferences', 'Preferences'],
     ['/connected-apps', 'Connected apps'],
+    ['/delete-account', 'Delete account'],
   ])('marks the current page on %s as %s', (path, label) => {
     pathname = path;
     render(<IdentityNav />);

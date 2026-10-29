@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { getConfig } from '../src/config';
 import { getInstanceIdentity } from '../src/instance/service';
 import { THEME_COLORS } from '../src/pwa';
+import { ServiceWorkerRegistration } from './service-worker-registration';
 import { THEME_SCRIPT } from '../src/theme-script';
 import './globals.css';
 
@@ -49,7 +50,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <head>
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <ServiceWorkerRegistration />
+      </body>
     </html>
   );
 }

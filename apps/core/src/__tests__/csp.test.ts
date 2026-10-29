@@ -63,6 +63,12 @@ describe('buildCsp', () => {
     );
   });
 
+  it('lets only core’s own service worker run, named so that strict-dynamic cannot make a browser refuse it', () => {
+    const csp = directives(buildCsp({ nonce }));
+    expect(csp.get('worker-src')).toEqual(["'self'"]);
+    expect(csp.get('script-src')).toContain("'strict-dynamic'");
+  });
+
   it('lets only core’s own manifest be read', () => {
     expect(directives(buildCsp({ nonce })).get('manifest-src')).toEqual(["'self'"]);
   });

@@ -67,6 +67,9 @@ export function buildCsp({
     ],
     'font-src': ["'self'"],
     'connect-src': ["'self'"],
+    // Core's own service worker, named: a worker's policy otherwise falls back to `script-src`, where
+    // `'strict-dynamic'` makes a browser ignore `'self'`.
+    'worker-src': ["'self'"],
     // The web app manifest is core's own.
     'manifest-src': ["'self'"],
     'object-src': ["'none'"],

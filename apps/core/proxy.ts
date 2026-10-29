@@ -65,6 +65,8 @@ function isPublic(pathname: string): boolean {
     pathname.startsWith('/api/avatars/') ||
     pathname.startsWith('/api/branding/') ||
     pathname.startsWith('/_next/') ||
+    // The service worker: a browser fetches it with no session, and it is the same for everyone.
+    pathname === '/sw.js' ||
     // The web app manifest: a browser fetches it with no session, and it is the same for everyone.
     pathname === '/manifest.webmanifest' ||
     // The icons an instance has until it sets a favicon of its own.

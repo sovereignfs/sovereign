@@ -466,9 +466,15 @@ pointing here.
   (`/-+$/`). On untrusted input, use a manual index scan.
 - **A development-only bypass checks `NODE_ENV === 'development'` exactly**,
   never `!== 'production'`, which also disables the gate under test.
-- **The service worker never stores a per-user page.** Authenticated pages are
-  served network-only with a timeout and an offline fallback page; only neutral
-  shells are ever cached.
+- **The service worker never stores a per-user page.** It is `src/sw/source.ts`,
+  served at `/sw.js`, and keeps only an allow-list: `GET`s with no query string
+  and no `Authorization` header, to core's own origin, under `/_next/static/` or
+  `/icons/`, in one bounded, versioned cache. It has no handler for anything else,
+  so a page, an API call or a token is never stored, and a navigation that fails is
+  answered with a page the worker builds itself. A new path is cached only by being
+  added to the list, and the tests (the worker's source is evaluated; the
+  acceptance suite lists every cache after a signed-in tour) fail when something
+  else gets in.
 
 ## Data layer
 

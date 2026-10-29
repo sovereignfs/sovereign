@@ -198,6 +198,7 @@ describe('proxy', () => {
       '/_next/static/chunks/app.js',
       '/favicon.ico',
       '/manifest.webmanifest',
+      '/sw.js',
       '/icons/favicon.svg',
       '/icons/apple-touch-icon.png',
     ])('lets %s through', async (path) => {
@@ -234,6 +235,8 @@ describe('proxy', () => {
       '/terms',
       '/icons',
       '/manifest.json',
+      '/sw.js/extra',
+      '/sw.json',
       '/manifest.webmanifest/extra',
       '/iconsx/favicon.svg',
     ])('does not mistake %s for a public path', async (path) => {

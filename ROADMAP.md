@@ -81,7 +81,7 @@ _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked · �
 | 0.41.0  | Directory API                 | ✅     | [10.2](docs/epics/core-api.md)      |
 | 0.40.0  | Instance branding endpoint    | ✅     | [10.3](docs/epics/core-api.md)      |
 | 0.42.0  | Docker image and compose      | ✅     | [0.5](docs/epics/infrastructure.md) |
-| —       | Phase 1 acceptance            | 📋     | [0.6](docs/epics/infrastructure.md) |
+| 0.44.0  | Phase 1 acceptance            | ✅     | [0.6](docs/epics/infrastructure.md) |
 
 ### Throughout M1 and M2
 

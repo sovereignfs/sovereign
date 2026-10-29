@@ -231,7 +231,7 @@ release), a Kubernetes chart, and the infrastructure repository's own compose
 (`sovereign-infra`), which is told how to reach core's address in
 `docs/deploying.md`.
 
-#### 📋 0.6 — Phase 1 acceptance
+#### ✅ 0.6 — Phase 1 acceptance
 
 **Goal:** Prove Phase 1 is done, end to end, in a real browser.
 

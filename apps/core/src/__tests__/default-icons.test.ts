@@ -16,6 +16,9 @@ describe('the icons an instance has until it sets a favicon', () => {
     ['favicon.svg', 'image/svg+xml', '<svg'],
     ['favicon.ico', 'image/x-icon', ''],
     ['apple-touch-icon.png', 'image/png', '\x89PNG'],
+    ['icon-192.png', 'image/png', '\x89PNG'],
+    ['icon-512.png', 'image/png', '\x89PNG'],
+    ['icon-maskable-512.png', 'image/png', '\x89PNG'],
   ])('serves %s as what it is', async (name, type, start) => {
     const response = await named(name);
     expect(response.status).toBe(200);

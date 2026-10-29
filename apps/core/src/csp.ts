@@ -67,6 +67,8 @@ export function buildCsp({
     ],
     'font-src': ["'self'"],
     'connect-src': ["'self'"],
+    // The web app manifest is core's own.
+    'manifest-src': ["'self'"],
     'object-src': ["'none'"],
     'base-uri': ["'self'"],
     'form-action': ["'self'"],

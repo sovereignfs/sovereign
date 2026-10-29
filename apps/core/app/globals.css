@@ -12,6 +12,19 @@ body {
   padding: 0;
 }
 
+/* The page runs to the edges of the screen (`viewport-fit: cover`), so where a device has a notch, a rounded
+   corner or a home bar, or an installed app's status bar lies over the page, what matters stays clear of them.
+   Everywhere else the insets are zero and nothing changes. */
+body {
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+/* The height of the screen less those margins, for a page that fills it. */
+:root {
+  --page-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+}
+
 /* A form control does not take its font from the page by default: it falls back to the system's. The typeface
    is the design system's everywhere. */
 input,

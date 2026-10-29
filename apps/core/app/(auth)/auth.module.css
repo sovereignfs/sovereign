@@ -3,7 +3,7 @@
 
 .page {
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: var(--page-height);
   display: flex;
   /* Centred when the card fits; from the top when a taller one (sign-up, consent) does not, so its top stays
      reachable. */

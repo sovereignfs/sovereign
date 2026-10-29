@@ -101,6 +101,18 @@ Roboto, Helvetica, Arial, sans-serif`. A page or component names a family only
   `/icons/apple-touch-icon.png`, and `/favicon.ico`, which a browser asks for
   whatever a page links) with no session, and the operator's favicon replaces it
   as soon as it is set.
+- Core installs as an app (RFC 0001). A browser finds a web app manifest at
+  `/manifest.webmanifest`, which is public and the same for everyone: the
+  instance's name (so renaming it renames the app), core's launcher as its start
+  address and its scope (core's origin and no wider; the apps in the launcher are
+  other origins and open outside the window), `standalone` display, the page
+  colour of the light theme, and the Sovereign mark as 192 and 512 pixel icons
+  and a maskable one (`/icons/icon-192.png`, `/icons/icon-512.png`,
+  `/icons/icon-maskable-512.png`, served with no session). Every page tells a
+  device how to meet its screen: it runs to the edges (`viewport-fit: cover`),
+  what matters stays clear of a notch and a home bar by the safe-area insets, the
+  browser's bar takes the page's colour in the system's colour scheme, and an
+  iPhone opens a page added to its home screen as an app, named for the instance.
 - Core MUST NOT use another component library, Tailwind, or runtime CSS-in-JS.
   Its own styles are CSS Modules that reference the design system's semantic
   tokens; colours, spacing and radii are never hard-coded.
@@ -477,6 +489,18 @@ passkeys), subject to §3.2.1. The account holder is told by email.
   that withholds the camera, microphone, location, payment and USB, and, only
   when core is served over https, `Strict-Transport-Security` for a year
   without naming subdomains.
+- Core keeps nothing of a person on their device for the sake of an installed or
+  offline core (RFC 0001). Its service worker stores only files that are the same
+  for everyone and never change at their address (the built scripts, styles and
+  fonts under `/_next/static/`, and the icons under `/icons/`), on an allow-list
+  that a new path joins only by being added to it, and nothing else: no page, no
+  response to an API call, nothing for a request that carries a credential or
+  changes something. A navigation that fails because the network is down is
+  answered with a page the worker builds itself, saying so and offering to try
+  again; it needs no script and names no instance. The worker is served by core
+  with the same hardening headers as every response, is fetched afresh on every
+  start so a change is live on the next visit, and registers only in production
+  over https (or `localhost`). Nothing signed-in works offline.
 - Requests are accepted only from core's own origin and the origins in
   `SV_AUTH_TRUSTED_ORIGINS`.
 - `SV_AUTH_SECRET` is required (at least 32 characters, or read from
@@ -1233,3 +1257,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-30 | §1.3: the pages before sign-in and the pages that stand alone are one centred card with the instance's mark (its logo, or its initial), titled for the instance on sign-in; labels above the boxes with no asterisk; the password asked twice at sign-up and reset; the second step as one box for each digit, with a passkey offered instead; a person who has signed out is told so. Matches the established Sovereign sign-in pages.                                                                                                                                                                                                                                                                                       |
 | 2026-10-30 | §1.3: the typeface is Hanken Grotesk, shipped by the design system and served by core itself, with the stated fallback stack; no component or page may name another family, and the design-token check enforces it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | 2026-10-30 | §1.3: the header has the instance's mark (larger than on the sign-in pages) and name on the left and the person's avatar on the right, whose menu holds their account, the Console for an operator, and sign out; until an operator sets a favicon an instance has the Sovereign one, served with no session.                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 2026-10-30 | §1.3, §3.5: core installs as an app (a public manifest naming the instance, the Sovereign icons, how a page meets a device's screen), and what its service worker may keep (only files that are the same for everyone, on an allow-list, never a page), with the offline page it builds itself. The outcome of RFC 0001.                                                                                                                                                                                                                                                                                                                                                                                                      |

@@ -197,6 +197,7 @@ describe('proxy', () => {
       '/api/auth/jwks',
       '/_next/static/chunks/app.js',
       '/favicon.ico',
+      '/manifest.webmanifest',
       '/icons/favicon.svg',
       '/icons/apple-touch-icon.png',
     ])('lets %s through', async (path) => {
@@ -232,6 +233,8 @@ describe('proxy', () => {
       '/privacy/extra',
       '/terms',
       '/icons',
+      '/manifest.json',
+      '/manifest.webmanifest/extra',
       '/iconsx/favicon.svg',
     ])('does not mistake %s for a public path', async (path) => {
       const { proxy } = await loadProxy('http://localhost:3000');

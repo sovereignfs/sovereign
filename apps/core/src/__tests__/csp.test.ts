@@ -63,6 +63,10 @@ describe('buildCsp', () => {
     );
   });
 
+  it('lets only core’s own manifest be read', () => {
+    expect(directives(buildCsp({ nonce })).get('manifest-src')).toEqual(["'self'"]);
+  });
+
   it('denies plugins and framing, and pins base and form targets to core itself', () => {
     const csp = directives(buildCsp({ nonce }));
     expect(csp.get('default-src')).toEqual(["'self'"]);

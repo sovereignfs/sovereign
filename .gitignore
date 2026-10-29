@@ -41,3 +41,6 @@ CURRENT_TASK.md
 *.log
 .idea/
 .vscode/
+
+# The acceptance suite's state between its steps.
+apps/e2e/.world.json

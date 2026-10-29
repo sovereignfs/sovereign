@@ -223,6 +223,8 @@ each: `docs/architecture-rules.md`.
   `packages/api-client` is generated from it (`pnpm generate:api-client`, never
   edited by hand) and every handler's answer is checked against it
   (`expectMatchesContract`).
+- **The branding document (`/.well-known/sovereign-instance`) is public, typed from
+  the contract, and always current** (never cached past revalidation).
 - **Every Console page calls `requireConsole` itself** (a test fails when one does
   not), and answers someone who may not enter with a page that is not there.
 - **A client is written only by `ClientRegistry`** (validation, the provider's

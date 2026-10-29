@@ -17,6 +17,7 @@ export default defineConfig({
   oxc: { jsx: { runtime: 'automatic' } },
   resolve: {
     alias: [
+      source('api-client', './packages/api-client/src/index.ts'),
       source('config', './packages/config/src/index.ts'),
       source('crypto', './packages/crypto/src/index.ts'),
       source('database', './packages/database/src/index.ts'),

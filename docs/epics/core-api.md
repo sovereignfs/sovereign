@@ -77,7 +77,7 @@ users.
 - A partial email address returns nothing
 - Exceeding the rate limit is refused
 
-#### 📋 10.3 — Instance branding endpoint
+#### ✅ 10.3 — Instance branding endpoint
 
 **Goal:** Apps can show the instance's name and logos.
 
@@ -93,3 +93,6 @@ users.
 **Review checklist:**
 
 - A change in the Console appears at the endpoint without a restart
+
+**Not here:** a way for an app to be told when the branding changes (it
+revalidates), and per-app branding.

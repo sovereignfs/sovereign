@@ -185,7 +185,6 @@ paths:
         what the operator has set now: a change in the Console is here at once. Addresses are absolute and carry the
         picture's version, so a changed picture is a new address.
       security: []
-      x-planned: true
       responses:
         '200':
           description: The instance's branding.
@@ -194,10 +193,20 @@ paths:
               description: Changes whenever anything in the answer does.
               schema:
                 type: string
+            Cache-Control:
+              description: Always revalidated, so a change is seen at once.
+              schema:
+                type: string
+            Access-Control-Allow-Origin:
+              description: '`*`: a page on any origin may read it. It carries nothing private.'
+              schema:
+                type: string
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/InstanceBranding'
+        '304':
+          description: Not changed since the `If-None-Match` the app sent. No body.
 components:
   securitySchemes:
     bearer:

@@ -311,6 +311,14 @@ pointing here.
   Objects in the contract are closed (`additionalProperties: false`), so an
   answer cannot quietly grow a field. An operation not yet served is marked
   `x-planned: true`, and the task that serves it removes the mark.
+- **The branding document is typed from the contract and read on every request.**
+  `brandingDocument` (`src/instance/branding-document.ts`) returns the generated
+  `InstanceBranding`, so a field the contract lacks does not compile, and its
+  route is in the proxy's public list and the authorization-coverage test's
+  public routes on purpose (an app shows it with no credentials). It is
+  `force-dynamic`, revalidated with an ETag, and reads the settings and pictures
+  through the same stores the Console writes, so nothing is cached past what those
+  stores cache.
 - **Every Console page checks for itself, and shows a page that is not there to
   someone who may not enter.** `requireConsole` (`src/console/guard.ts`) asks for
   a session, `console:access` and the capability the page needs, judged by the

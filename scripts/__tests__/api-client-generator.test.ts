@@ -249,7 +249,7 @@ describe('the Core API contract', () => {
         responses: Record<string, { $ref?: string }>;
       };
       for (const [status, response] of Object.entries(found.responses)) {
-        if (status === '200') continue;
+        if (!status.startsWith('4') && !status.startsWith('5')) continue;
         const name = response.$ref?.split('/').pop() ?? '';
         const shared = spec.components.responses[name] as {
           content: Record<string, { schema: { $ref: string } }>;

@@ -911,6 +911,20 @@ Core publishes the instance name, logos and favicon at a well-known address so
 that apps can show the same branding. The address and format are defined in
 `spec/core-api/`.
 
+- The address is `/.well-known/sovereign-instance`. It is public: it needs no
+  account and no token, and any origin may read it, since an app's pages fetch
+  it from the browser and it carries nothing private.
+- It answers with the instance's name, its own address, a logo for light pages
+  and one for dark pages, and its favicon. Each picture is an absolute address
+  on the instance, carrying the picture's version, so a changed picture is a new
+  address; one that is not set is `null`; when only one logo is set it is given
+  for both.
+- It shows what the operator has set **now**: it is read on every request and
+  always revalidated, so a change in the Console is there at once, with no
+  restart (on another instance within a few seconds, as any setting, §3.12). It
+  carries an ETag, and a request whose `If-None-Match` matches is answered `304`
+  with no body.
+
 ### 3.13.1 The Core API contract
 
 What an app may call on core is defined once, in `spec/core-api/openapi.yaml`
@@ -1095,3 +1109,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-29 | §3.11: what Connected apps lists and for whom, that an app asked about twice is one app, that an app an operator trusts is not listed, and what Remove access asks and says.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | 2026-10-29 | §3.3.6, §3.11: how a person deletes their own account (the password again, a question first, one whole step, the apps told), that the owner cannot and is told how to hand over first, and where they are sent afterwards.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | 2026-10-29 | §3.13.1: that the Core API is defined once, in an OpenAPI 3.1 contract; how its paths are versioned, how a call is authenticated, the one error body and its statuses; that the typed client is generated from it, and that core is tested against it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 2026-10-29 | §3.13: where the branding document is, that it is public and readable from any origin, what it holds, that pictures are absolute and versioned, that one logo serves both themes, and that it is always current and revalidated.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |

@@ -56,6 +56,8 @@ function isPublic(pathname: string): boolean {
     // Discovery: an app finds the instance's endpoints here with no account and no cookie.
     pathname === '/.well-known/openid-configuration' ||
     pathname === '/.well-known/oauth-authorization-server' ||
+    // The instance's public branding for apps (core-app §3.13).
+    pathname === '/.well-known/sovereign-instance' ||
     pathname.startsWith('/api/auth/') ||
     pathname.startsWith('/api/avatars/') ||
     pathname.startsWith('/api/branding/') ||

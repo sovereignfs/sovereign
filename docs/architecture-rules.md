@@ -222,6 +222,19 @@ pointing here.
   turned off); the JWT plugin's own `/token`, which hands any session a signed
   JWT, is disabled. Claims are made by one function (`claimsFor`) for the ID token
   and userinfo alike and only from granted scopes.
+- **One routine revokes tokens, and a session is ended by better-auth.**
+  `revokeAllTokens` and `revokeClientTokens` (`src/oauth/revocation.ts`) update
+  the tokens' `revoked` time on the caller's own transaction, with table and
+  column names read from the generated schema (`schema-names.ts`); deactivation
+  (`revokeOnDeactivation`) and, later, deletion and Remove access use it, so an
+  operation that fails revokes nothing. Deleting a session row by hand leaves its
+  tokens alive (the pointer to the session is cleared, not the token) and tells
+  no app, so a session is ended through better-auth's own endpoints
+  (`revokeSession`, `revokeOtherSessions`, sign-out), whose hooks revoke the
+  session's tokens and send the logout tokens; deactivation, which deletes the
+  rows itself in one transaction, reads which apps to tell first
+  (`planLogoutNotices`) and sends after the commit. The provider's endpoints that
+  delete or narrow a consent are disabled: `removeAccess` is the only way.
 - **`roles` is for trusted clients, enforced in three places.** Trust is the
   plugin's `skipConsent`, empty meaning untrusted (`isTrusted`). A before-hook on
   the authorize endpoint takes `roles` out of an untrusted client's request, so

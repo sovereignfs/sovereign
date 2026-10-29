@@ -20,6 +20,10 @@ export type ClientOptions = {
   applicationType?: 'web' | 'native';
   /** The name shown on the consent page. */
   name?: string;
+  /** Lets the app send someone to core's end-session endpoint. */
+  enableEndSession?: boolean;
+  /** Where core tells the app that a session ended. */
+  backchannelLogoutUri?: string;
 };
 
 /** Registers a client the way an operator will: through the provider's own server API, as the owner. */
@@ -36,6 +40,10 @@ export async function registerClient(
       grant_types: options.grantTypes ?? ['authorization_code', 'refresh_token'],
       skip_consent: options.trusted ?? true,
       ...(options.name ? { client_name: options.name } : {}),
+      ...(options.enableEndSession ? { enable_end_session: true } : {}),
+      ...(options.backchannelLogoutUri
+        ? { backchannel_logout_uri: options.backchannelLogoutUri }
+        : {}),
       ...(options.applicationType ? { application_type: options.applicationType } : {}),
       ...(options.postLogoutRedirectUris
         ? { post_logout_redirect_uris: options.postLogoutRedirectUris }

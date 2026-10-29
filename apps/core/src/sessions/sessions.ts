@@ -1,4 +1,5 @@
 import type { Database } from '@sovereignfs/database';
+import type { Auth } from '../auth/auth';
 import { describeAddress, describeDevice } from './device';
 
 /** What the person sees of one of their sessions. It never carries the session's token. */
@@ -43,28 +44,46 @@ export async function listSessions(
     .sort((a, b) => b.lastActiveAt - a.lastActiveAt);
 }
 
-/** Ends one of the person's sessions. False when it is not theirs, or is already gone: it is never another person's. */
+/**
+ * Ends one of the person's sessions (core-app §3.11). It goes through better-auth's own endpoint, with the
+ * request's own cookies, and not through the table: better-auth is what tells the apps (a logout token to
+ * each one that registered a back-channel logout address) and revokes the session's access tokens
+ * (core-app §3.6.5), which deleting the row does not. False when the session is not theirs, or is already
+ * gone: it is never another person's, since the row is looked up by owner first.
+ */
 export async function endSession(
+  auth: Pick<Auth, 'api'>,
   database: Database,
   userId: string,
   sessionId: string,
+  headers: Headers,
 ): Promise<boolean> {
-  const { rowsAffected } = await database.run('delete from sessions where id = ? and user_id = ?', [
+  const { rows } = await database.run('select token from sessions where id = ? and user_id = ?', [
     sessionId,
     userId,
   ]);
-  return rowsAffected > 0;
+  const token = rows[0]?.token;
+  if (typeof token !== 'string') return false;
+  await auth.api.revokeSession({ headers, body: { token } });
+  return true;
 }
 
-/** Ends every session of the person's except the one in use, and says how many. */
+/**
+ * Ends every session of the person's except the one the request is made from, and says how many. The same
+ * route as `endSession`, so the apps are told and tokens revoked for each.
+ */
 export async function endOtherSessions(
+  auth: Pick<Auth, 'api'>,
   database: Database,
   userId: string,
   currentSessionId: string,
+  headers: Headers,
 ): Promise<number> {
-  const { rowsAffected } = await database.run(
-    'delete from sessions where user_id = ? and id <> ?',
+  const { rows } = await database.run(
+    'select count(*) as n from sessions where user_id = ? and id <> ?',
     [userId, currentSessionId],
   );
-  return rowsAffected;
+  const count = Number(rows[0]?.n ?? 0);
+  if (count > 0) await auth.api.revokeOtherSessions({ headers });
+  return count;
 }

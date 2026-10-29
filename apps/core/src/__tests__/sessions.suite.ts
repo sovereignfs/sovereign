@@ -44,6 +44,8 @@ export function sessionsSuite(createDatabase: () => Promise<TestDatabase>): void
     (await db.run('select id from sessions where user_id = ?', [userId])).rows.map((row) =>
       String(row.id),
     );
+  /** The request a browser makes: its cookies, which is what tells better-auth who is asking. */
+  const asked = (jar: Jar) => new Headers({ cookie: jar.header() ?? '' });
   const alive = async (a: ReturnType<typeof auth>, jar: Jar) =>
     signedInAs(await call(a, 'GET', '/get-session?disableCookieCache=true', { jar }));
   const signIn = async (a: ReturnType<typeof auth>, email: string, userAgent: string) => {
@@ -146,28 +148,30 @@ export function sessionsSuite(createDatabase: () => Promise<TestDatabase>): void
       const { a, userId, laptop, desktop } = await people();
       const target = await currentOf(userId, desktop);
       expect(await alive(a, desktop)).not.toBeNull();
-      expect(await endSession(db, userId, target)).toBe(true);
+      expect(await endSession(a, db, userId, target, asked(laptop))).toBe(true);
       expect(await alive(a, desktop)).toBeNull();
       expect(await alive(a, laptop)).not.toBeNull();
     });
 
     it('can end the one in use, which signs this browser out', async () => {
       const { a, userId, laptop } = await people();
-      expect(await endSession(db, userId, await currentOf(userId, laptop))).toBe(true);
+      expect(await endSession(a, db, userId, await currentOf(userId, laptop), asked(laptop))).toBe(
+        true,
+      );
       expect(await alive(a, laptop)).toBeNull();
     });
 
     it('never ends another person’s session, and says it was not found', async () => {
-      const { a, userId, stranger, strangerJar } = await people();
+      const { a, userId, laptop, stranger, strangerJar } = await people();
       const theirs = await sessionIdsOf(stranger);
-      expect(await endSession(db, userId, theirs[0] ?? '')).toBe(false);
+      expect(await endSession(a, db, userId, theirs[0] ?? '', asked(laptop))).toBe(false);
       expect(await sessionIdsOf(stranger)).toEqual(theirs);
       expect(await alive(a, strangerJar)).not.toBeNull();
     });
 
     it('says so when the session is already gone', async () => {
-      const { userId } = await people();
-      expect(await endSession(db, userId, 'no-such-session')).toBe(false);
+      const { a, userId, laptop } = await people();
+      expect(await endSession(a, db, userId, 'no-such-session', asked(laptop))).toBe(false);
     });
   });
 
@@ -175,16 +179,16 @@ export function sessionsSuite(createDatabase: () => Promise<TestDatabase>): void
     it('ends every session but the one in use, and says how many', async () => {
       const { a, userId, laptop, desktop } = await people();
       const current = await currentOf(userId, laptop);
-      expect(await endOtherSessions(db, userId, current)).toBe(2);
+      expect(await endOtherSessions(a, db, userId, current, asked(laptop))).toBe(2);
       expect(await sessionIdsOf(userId)).toEqual([current]);
       expect(await alive(a, laptop)).not.toBeNull();
       expect(await alive(a, desktop)).toBeNull();
     });
 
     it('leaves other people alone', async () => {
-      const { a, userId, stranger, strangerJar } = await people();
-      await endOtherSessions(db, userId, 'none');
-      expect(await sessionIdsOf(userId)).toEqual([]);
+      const { a, userId, laptop, stranger, strangerJar } = await people();
+      await endOtherSessions(a, db, userId, await currentOf(userId, laptop), asked(laptop));
+      expect(await sessionIdsOf(userId)).toHaveLength(1);
       expect(await sessionIdsOf(stranger)).toHaveLength(1);
       expect(await alive(a, strangerJar)).not.toBeNull();
     });

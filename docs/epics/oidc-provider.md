@@ -135,3 +135,8 @@ client's access, and clients are told when a session ends.
 - An end-session request to an unregistered post-logout redirect URI does not
   redirect there
 - The routine behaves the same on sqld, PostgreSQL and a SQLite file
+
+**Not here:** the Connected apps page that calls Remove access (9.4), account
+deletion, which will call the same revocation routine (8.2, 9.5), the Console
+control for the back-channel address and end-session switch (8.6), and CORS for
+single-page apps.

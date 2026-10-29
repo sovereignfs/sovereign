@@ -481,6 +481,18 @@ This includes refresh tokens obtained with `offline_access`: ending a session
 revokes that session's access tokens but, by design, leaves such refresh tokens
 alone, so revoking them is core's own step.
 
+- One routine does it, for deactivation now and deletion when it exists, and for
+  one app's tokens when a person removes its access (§3.6.4): it marks every
+  access and refresh token revoked on the same transaction as the rest of the
+  operation, on every database, so a deactivation that fails revokes nothing. A
+  revoked token is refused by core's token, introspection and userinfo
+  endpoints. An authorization code issued just before a deactivation gets no
+  token either.
+- Ending a session (not deactivating) revokes that session's access tokens and
+  the refresh tokens that were not obtained with `offline_access`; refresh
+  tokens obtained with `offline_access` outlive the browser session, as OpenID
+  Connect Back-Channel Logout says they may.
+
 #### 3.6.4 Consent
 
 - Every client is untrusted unless an operator marks it **trusted**. Users of a
@@ -510,6 +522,9 @@ alone, so revoking them is core's own step.
   access deletes the consent **and** revokes every access token and refresh
   token that client holds for the account, in one step; the next sign-in asks
   again.
+  Core's own routine does this in one transaction; the provider's endpoints
+  that delete or narrow a consent are switched off, because they leave the
+  app's refresh tokens alive.
 
 #### 3.6.5 Sign-out and logout notices
 
@@ -526,6 +541,20 @@ alone, so revoking them is core's own step.
   client that session was used with. A notice that fails is logged and not
   retried, so an app must also treat its own session as ending when its access
   tokens stop working.
+- When the session ended by deactivation, core tells the apps once the
+  deactivation has been committed: it reads which apps held tokens in each
+  session before deleting the sessions, since deleting a session clears that
+  link. A person ending a session in their identity pages, or all the others,
+  goes through the same route as signing out, so the same notices and
+  revocations follow.
+- The logout token is a JWT signed with the key that signs ID tokens, typed
+  `logout+jwt`, carrying `iss`, `aud`, `sub`, `sid`, `iat`, an `exp` two minutes
+  on, a `jti` and the back-channel logout event, and no `nonce`. It is sent once,
+  within five seconds, and a redirect is not followed.
+- An end-session request core cannot match to the person's session (no hint, a
+  hint core did not sign, or one for another browser's session) ends nothing: it
+  shows a confirmation. A client that has not enabled end-session cannot use the
+  endpoint at all.
 - A client that registers a back-channel logout URI or enables end-session
   receives a `sid` claim in its ID tokens.
 - Core's public URL (`SV_URL`) MUST be reachable from the core process itself,
@@ -831,3 +860,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-29 | §3.2.1: what a transfer of ownership requires (the password again, an active admin), that it is one conditional step so two transfers cannot make two owners or none, and the limit on wrong passwords.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | 2026-10-29 | §3.5: no signed cookie cache, so an ended session stops working at once everywhere, authorize included. §3.6.1: who may register a client, claims advertised in discovery, redirect addresses never followed when unregistered, the sign-in page carrying an app's request through every step, signing keys encrypted with `SV_AUTH_SECRET`, and what is not offered yet.                                                                                                                                                                                                                                                                                                                                                     |
 | 2026-10-29 | §3.6.4: where and how consent is asked, what the page shows and refuses to show, that refusing sends `access_denied`, and that `roles` is removed from an untrusted client's request and withheld from its tokens.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 2026-10-29 | §3.6.3–§3.6.5: one revocation routine on the operation's own transaction, that an authorization code issued before a deactivation gets no token, what ending a session revokes, Remove access as the only way consent is removed, how apps are told on deactivation and on ending a session in the identity pages, what the logout token carries, and what end-session refuses.                                                                                                                                                                                                                                                                                                                                               |

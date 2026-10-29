@@ -37,6 +37,32 @@ export const makeAuth = (
   registration: RegistrationPolicy = OPEN,
 ): Auth => createAuth(database, authSettings(env), { registration, mail: NO_MAIL });
 
+/**
+ * An instance that keeps what better-auth hands to its background (a notice to an app that its person
+ * signed out, say), so a test can wait for it: in the running server it simply runs after the answer.
+ */
+export function makeAuthWithTasks(
+  database: Database,
+  env: Record<string, string> = {},
+  registration: RegistrationPolicy = OPEN,
+) {
+  const tasks: Promise<unknown>[] = [];
+  const auth = createAuth(database, authSettings(env), {
+    registration,
+    mail: NO_MAIL,
+    background: (task) => {
+      tasks.push(task.catch(() => undefined));
+    },
+  });
+  return {
+    auth,
+    /** Resolves when everything handed to the background so far has finished. */
+    settled: async () => {
+      while (tasks.length > 0) await Promise.all(tasks.splice(0));
+    },
+  };
+}
+
 /** The parts of better-auth's JSON answers the tests read. */
 export type AuthBody = {
   code?: string;

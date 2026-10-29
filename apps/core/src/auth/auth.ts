@@ -313,7 +313,13 @@ export function createAuth(
     },
     // The JWT plugin's own `/token` hands any session a signed JWT. Core signs nothing for a session: only
     // the OAuth provider's token endpoint issues tokens.
-    disabledPaths: ['/token'],
+    disabledPaths: [
+      '/token',
+      // Consent is removed only by `removeAccess`, which also revokes the app's tokens; the provider's own
+      // endpoints delete or narrow it and leave the app's refresh tokens alive.
+      '/oauth2/delete-consent',
+      '/oauth2/update-consent',
+    ],
     plugins: [
       // Authenticator app (TOTP) with backup codes. The code sent by email or text is not offered:
       // no `sendOTP` is given, so those endpoints answer that they are not configured. The secret and

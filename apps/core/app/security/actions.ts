@@ -1,6 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
+import { getAuth } from '../../src/auth';
 import { requireCapability } from '../../src/auth/authorize';
 import { getDatabase } from '../../src/database';
 import { endOtherSessions, endSession } from '../../src/sessions/sessions';
@@ -19,7 +21,13 @@ export async function endSessionAction(
   _form: FormData,
 ): Promise<ActionResult> {
   const session = await requireCapability('profile:manage');
-  const ended = await endSession(await getDatabase(), session.user.id, sessionId);
+  const ended = await endSession(
+    await getAuth(),
+    await getDatabase(),
+    session.user.id,
+    sessionId,
+    await headers(),
+  );
   if (!ended) return { ok: false, error: 'That session has already ended.' };
   revalidatePath('/security');
   return { ok: true };
@@ -31,7 +39,13 @@ export async function endOtherSessionsAction(
   _form: FormData,
 ): Promise<ActionResult> {
   const session = await requireCapability('profile:manage');
-  const count = await endOtherSessions(await getDatabase(), session.user.id, session.session.id);
+  const count = await endOtherSessions(
+    await getAuth(),
+    await getDatabase(),
+    session.user.id,
+    session.session.id,
+    await headers(),
+  );
   revalidatePath('/security');
   return {
     ok: true,

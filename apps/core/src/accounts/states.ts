@@ -19,7 +19,24 @@ export class AccountStateError extends Error {
  * transaction that ends the account's sessions. Revoking the tokens issued to apps (and their refresh
  * tokens) joins here, so an account is never deactivated with a token still alive (core-app §3.6.3).
  */
-export type DeactivationStep = (transaction: Executor, userId: string) => Promise<void>;
+export type DeactivationStep = (
+  transaction: Executor,
+  userId: string,
+  /** The moment of the deactivation, as this dialect stores a timestamp. */
+  at: number | Date,
+) => Promise<void>;
+
+/**
+ * Work that has to look at the account's sessions before they are deleted, because deleting a session
+ * clears what points to it (an app's tokens lose their session). It runs in the same transaction, first,
+ * and may return a notice to send once the deactivation has been committed (such as telling the apps
+ * that registered a back-channel logout address, §3.6.5); a notice that fails is logged and never undoes
+ * the deactivation.
+ */
+export type DeactivationPreparation = (
+  transaction: Executor,
+  userId: string,
+) => Promise<(() => Promise<void> | void) | undefined>;
 
 /**
  * Work that follows a deactivation once it has been committed, such as telling apps that registered a
@@ -51,6 +68,7 @@ export class AccountStates {
   readonly #database: Database;
   readonly #now: () => number;
   readonly #steps: DeactivationStep[] = [];
+  readonly #preparations: DeactivationPreparation[] = [];
   readonly #listeners: AfterDeactivation[] = [];
   readonly #log: (message: string) => void;
 
@@ -66,6 +84,11 @@ export class AccountStates {
   /** Adds work that runs inside the deactivating transaction. */
   addStep(step: DeactivationStep): void {
     this.#steps.push(step);
+  }
+
+  /** Adds work that runs in the deactivating transaction before the sessions are deleted. */
+  addPreparation(preparation: DeactivationPreparation): void {
+    this.#preparations.push(preparation);
   }
 
   /** Adds work that runs after a deactivation has been committed. */
@@ -98,14 +121,30 @@ export class AccountStates {
           [stamp, stamp, userId],
         );
       }
+      const notices: (() => Promise<void> | void)[] = [];
+      for (const prepare of this.#preparations) {
+        const notice = await prepare(transaction, userId);
+        if (notice) notices.push(notice);
+      }
       const { rows: sessions } = await transaction.run(
         'select token from sessions where user_id = ?',
         [userId],
       );
       await transaction.run('delete from sessions where user_id = ?', [userId]);
-      for (const step of this.#steps) await step(transaction, userId);
-      return { changed, tokens: sessions.map((row) => String(row.token)) };
+      const at = this.#stamp();
+      for (const step of this.#steps) await step(transaction, userId, at);
+      return { changed, tokens: sessions.map((row) => String(row.token)), notices };
     });
+
+    for (const notice of outcome.notices) {
+      try {
+        await notice();
+      } catch (error) {
+        this.#log(
+          `A notice after deactivating an account failed: ${error instanceof Error ? error.message : 'unknown error'}`,
+        );
+      }
+    }
 
     for (const listener of this.#listeners) {
       try {

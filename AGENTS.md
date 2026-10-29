@@ -193,6 +193,10 @@ each: `docs/architecture-rules.md`.
   is the issuer, only the code flow with PKCE `S256` exists, no client registers
   itself, redirect addresses match exactly, and its tables are checked against the
   installed plugins.
+- **One routine revokes tokens, on the caller's own transaction; a session is
+  ended through better-auth's endpoints, never by deleting its row** (the row's
+  tokens would stay alive and no app would be told). Remove access is
+  `removeAccess`, the provider's consent-deleting endpoints are off.
 - **`roles` is for trusted clients only** (stripped from the request, not offered
   at consent, withheld from tokens), and the consent page believes only what the
   provider signed.

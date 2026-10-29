@@ -8,6 +8,29 @@ let folder: string;
 
 const getSession = vi.fn();
 vi.mock('../auth/session', () => ({ getSession: () => getSession() as unknown }));
+// better-auth is what ends a session in the real thing (see sessions.suite.ts); here it is a stand-in that
+// deletes the row, since these tests are about who may ask and whose session it is.
+vi.mock('next/headers', () => ({ headers: () => Promise.resolve(new Headers()) }));
+vi.mock('../auth', () => ({
+  getAuth: () =>
+    Promise.resolve({
+      api: {
+        revokeSession: async ({ body }: { body: { token: string } }) => {
+          await db.run('delete from sessions where token = ?', [body.token]);
+        },
+        revokeOtherSessions: async () => {
+          const signedIn = (await getSession()) as {
+            user: { id: string };
+            session: { id: string };
+          };
+          await db.run('delete from sessions where user_id = ? and id <> ?', [
+            signedIn.user.id,
+            signedIn.session.id,
+          ]);
+        },
+      },
+    }),
+}));
 const revalidatePath = vi.fn();
 vi.mock('next/cache', () => ({
   revalidatePath: (path: string) => revalidatePath(path) as unknown,

@@ -664,6 +664,17 @@ Operators manage accounts in the Console, within §3.2.
   link invalid" page.
 - **Ownership:** the owner can transfer ownership to an admin.
 
+The Console is at `/console`, and entering it takes `console:access`. Its
+navigation lists only the sections the person's role may open, judged by the
+matrix in force, and a role that cannot enter sees none. Someone who is not
+signed in is sent to sign in and back; someone who is signed in but may not
+enter is shown a page that is not there, not one that says what is missing.
+Every page checks again for itself, since the frame is not rendered again when
+someone moves between its pages, and every action checks its own capability. On
+a wide screen the sections are a list beside the page; on a phone the Console's
+own page lists them and every other page has a way back to it. A section is
+listed only when its page exists. Operators reach the Console from the home page.
+
 ### 3.11 Identity pages
 
 Every person manages their own account here (capability `profile:manage`).
@@ -877,3 +888,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-29 | §3.6.4: where and how consent is asked, what the page shows and refuses to show, that refusing sends `access_denied`, and that `roles` is removed from an untrusted client's request and withheld from its tokens.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 2026-10-29 | §3.6.3–§3.6.5: one revocation routine on the operation's own transaction, that an authorization code issued before a deactivation gets no token, what ending a session revokes, Remove access as the only way consent is removed, how apps are told on deactivation and on ending a session in the identity pages, what the logout token carries, and what end-session refuses.                                                                                                                                                                                                                                                                                                                                               |
 | 2026-10-29 | §3.7: the registry is the only writer and needs `client:manage`; the provider's own client routes are off; what an address may be; the limits on lists; public and confidential cannot be exchanged; stopping trust takes `roles` away; deleting removes tokens and consents explicitly.                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 2026-10-29 | §3.10: where the Console is, who may enter and what they are shown when they may not, that each page checks for itself, and how the sections are laid out on a wide screen and on a phone.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |

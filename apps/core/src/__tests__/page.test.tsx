@@ -1,17 +1,25 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_MATRIX } from '../roles/capabilities';
 
 const getSession = vi.fn();
 vi.mock('../auth/session', () => ({ getSession: () => getSession() as unknown }));
 vi.mock('../auth/client', () => ({ authClient: { signOut: vi.fn() } }));
+const matrix = vi.fn();
+vi.mock('../roles/matrix', () => ({ getCapabilityMatrix: () => matrix() as unknown }));
 
 const { default: Page } = await import('../../app/page');
 
-beforeEach(() => getSession.mockReset());
+beforeEach(() => {
+  getSession.mockReset();
+  matrix.mockReset().mockResolvedValue(DEFAULT_MATRIX);
+});
 
 describe('the home page', () => {
   async function render() {
-    getSession.mockResolvedValue({ user: { name: 'Ada Lovelace', email: 'ada@example.com' } });
+    getSession.mockResolvedValue({
+      user: { name: 'Ada Lovelace', email: 'ada@example.com', role: 'platform:user' },
+    });
     return renderToStaticMarkup(await Page());
   }
 
@@ -27,6 +35,18 @@ describe('the home page', () => {
     const html = await render();
     const hrefs = [...html.matchAll(/<a [^>]*href="([^"]+)"/g)].map((match) => match[1]);
     expect(hrefs).toEqual(['/profile', '/security', '/preferences']);
+  });
+
+  it('links to the Console for an operator, and for nobody else', async () => {
+    getSession.mockResolvedValue({
+      user: { name: 'Ada', email: 'ada@example.com', role: 'platform:admin' },
+    });
+    expect(renderToStaticMarkup(await Page())).toContain('href="/console"');
+    expect(await render()).not.toContain('/console');
+    getSession.mockResolvedValue({
+      user: { name: 'Ada', email: 'ada@example.com', role: 'platform:owner' },
+    });
+    expect(renderToStaticMarkup(await Page())).toContain('href="/console"');
   });
 
   it('offers to sign out', async () => {

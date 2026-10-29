@@ -222,6 +222,14 @@ pointing here.
   turned off); the JWT plugin's own `/token`, which hands any session a signed
   JWT, is disabled. Claims are made by one function (`claimsFor`) for the ID token
   and userinfo alike and only from granted scopes.
+- **Every Console page checks for itself, and shows a page that is not there to
+  someone who may not enter.** `requireConsole` (`src/console/guard.ts`) asks for
+  a session, `console:access` and the capability the page needs, judged by the
+  matrix read on this request, and answers with `notFound()`, never with what is
+  missing. The layout calls it too, but a layout is not rendered again when
+  someone moves between the pages beneath it, so a test fails when a Console
+  `page.tsx` or `layout.tsx` does not call it. The navigation lists a section
+  only when its page exists and the role holds its capability.
 - **A client row is written by the registry and nothing else.**
   `ClientRegistry` (`src/clients`) validates everything (`validate.ts`: addresses,
   scopes, text), makes the client through the provider so the secret is hashed

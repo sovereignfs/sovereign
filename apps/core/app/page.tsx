@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Card, PageContainer, StatusBadge } from '@sovereignfs/ui';
 import { getSession } from '../src/auth/session';
+import { can } from '../src/roles/capabilities';
+import { getCapabilityMatrix } from '../src/roles/matrix';
 import styles from './page.module.css';
 import { SignOutButton } from './sign-out-button';
 
@@ -9,6 +11,7 @@ export default async function Page() {
   // The proxy turns away a request with no session cookie; this is the check that counts.
   const session = await getSession();
   if (!session) redirect('/sign-in');
+  const operator = can(session.user.role, 'console:access', await getCapabilityMatrix());
 
   return (
     <PageContainer maxWidth="sm">
@@ -37,6 +40,13 @@ export default async function Page() {
               Preferences
             </Link>
           </div>
+          {operator ? (
+            <div>
+              <Link className={styles.link} href="/console">
+                Console
+              </Link>
+            </div>
+          ) : null}
           <div>
             <SignOutButton />
           </div>

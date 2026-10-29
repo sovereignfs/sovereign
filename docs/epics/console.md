@@ -5,7 +5,7 @@
 
 ## Status
 
-📋 Planned
+⏳ In Progress
 
 ## Overview
 
@@ -35,6 +35,11 @@ only at the page. All pages are built from `@sovereignfs/ui`.
 **Review checklist:**
 
 - A `platform:user` cannot reach any Console page or action
+
+**Not here:** the sections themselves (8.2 onward), each of which adds its entry
+to `src/console/sections.ts` with its page, so the navigation never lists a page
+that does not exist; until then the Console's own page says there is nothing to
+manage yet.
 
 #### 📋 8.2 — Accounts
 

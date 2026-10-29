@@ -88,3 +88,22 @@ describe('server actions and route handlers authorize inside', () => {
     expect(authorizes('const session = await getSession();')).toBe(false);
   });
 });
+
+describe('every Console page checks for itself', () => {
+  // A layout is not rendered again when someone moves between the pages beneath it, so the check made
+  // there is not enough: each page asks `requireConsole` first (core-app §3.2.2).
+  const consoleFiles = all.filter((file) => /^console\/.*(page|layout)\.tsx$/.test(relative(file)));
+
+  it('finds the pages there are, or this test would pass on nothing', () => {
+    expect(consoleFiles.map(relative)).toEqual(
+      expect.arrayContaining(['console/layout.tsx', 'console/page.tsx']),
+    );
+  });
+
+  it.each(consoleFiles.map((file) => [relative(file), file]))(
+    '%s asks requireConsole before anything else',
+    (_name, file) => {
+      expect(/\brequireConsole\(/.test(readFileSync(String(file), 'utf8'))).toBe(true);
+    },
+  );
+});

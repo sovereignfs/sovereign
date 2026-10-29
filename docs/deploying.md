@@ -1,6 +1,6 @@
 # Deploying core
 
-Core ships as one image, `ghcr.io/sovereignfs/sovereign-core`, and three ways to run it with a database. Nothing is
+Core ships as one image, `ghcr.io/sovereignfs/sovereign`, and three ways to run it with a database. Nothing is
 baked into the image: it holds no environment file, and it refuses to start, saying what is missing, until it is
 given `SV_URL` and `SV_AUTH_SECRET`. Every variable core reads is in
 [`apps/core/.env.example`](../apps/core/.env.example), and [`spec/env.md`](../spec/env.md) says how they work.
@@ -14,7 +14,8 @@ docker compose up -d
 ```
 
 That is sqld, the default. The first account to sign up becomes the owner. Core listens on `3000` (change the published
-port with `SV_PORT`); put a reverse proxy with TLS in front of it and set `SV_URL` to the public address, with no path.
+port with `SV_PORT`); [put a reverse proxy with TLS in front of it](#putting-a-proxy-in-front) and set `SV_URL` to the
+public address, with no path.
 
 | Database                     | Command                                                                     | Needs                                |
 | ---------------------------- | --------------------------------------------------------------------------- | ------------------------------------ |
@@ -29,6 +30,62 @@ suits Docker and Kubernetes secrets.
 
 The database servers are not published: only core is reachable from outside the compose network. Their data lives in
 named volumes (`sqld-data`, `postgres-data`, `core-data`), and so does anything you would want to back up.
+
+To use core as the sign-in server for your apps, of any kind, see [Connecting an app](connecting-an-app.md).
+
+## Putting a proxy in front
+
+A public instance needs TLS, which core leaves to a reverse proxy. This is the whole of it with Caddy, which gets and
+renews its own certificates. Point the name's DNS at the machine, open ports 80 and 443, and add two files beside the
+compose file.
+
+`Caddyfile`:
+
+```text
+core.example.com {
+	reverse_proxy core:3000
+}
+```
+
+`docker-compose.override.yml`, which `docker compose up -d` reads by itself:
+
+```yaml
+services:
+  core:
+    # Reached through the proxy only.
+    ports: !reset []
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    networks:
+      default:
+        # Core's public name reaches the proxy from inside the network too (see below).
+        aliases:
+          - core.example.com
+
+volumes:
+  caddy-data:
+```
+
+Then, in `.env`:
+
+- `SV_URL=https://core.example.com`
+- `SV_AUTH_TRUSTED_PROXIES` set to the compose network's range, shown by `docker network inspect sovereign_default`.
+  Sign-in limits count attempts per address, and without this they can count everyone behind the proxy as one.
+
+**Leave `SV_AUTH_COOKIE_DOMAIN` unset**, also when apps run on subdomains of core's name. Apps sign in through core and
+need no shared cookie. Setting a parent domain sends core's session cookie, which signs a person in to core, to every
+host under that domain, whoever runs it.
+
+With another proxy the same things apply: forward to port 3000, pass `Host` and `X-Forwarded-For`, and leave `/sw.js` and
+`/manifest.webmanifest` uncached.
 
 ## Core must be able to reach its own address
 
@@ -47,23 +104,27 @@ as from your browser:
         - 'core.example.com:host-gateway'
   ```
 
-  When the proxy is another container, give it a network alias of the name on core's network instead.
+  When the proxy is another container, give it a network alias of the name on core's network instead, as the example
+  above does.
 
 `docker compose exec core node -e "fetch(process.env.SV_URL + '/api/auth/jwks').then(r => console.log(r.status))"`
 should print `200`.
 
 ## The image
 
-- Built from [`Dockerfile`](../Dockerfile) at the repository root: `docker build -t sovereign-core .`
+- Built from [`Dockerfile`](../Dockerfile) at the repository root: `docker build -t sovereign .`
 - Multi-stage on `node:24-alpine`. The last stage holds only the server Next traced, its static files and the
   migrations, which core applies when it starts; there is no source, no dev dependency and no package manager in it.
 - Runs as the unprivileged `node` user, listens on `3000`, and reports `/api/health` (the app and the database) to
   Docker. `/data` is a volume, for a SQLite file.
 - `docker-compose.yml` and `docker-compose.sqlite.yml` can build it themselves (`docker compose build`), or pull
   the published one; `SV_IMAGE` names the image to use.
+- It is published for `linux/amd64` and `linux/arm64`, tagged by version (`1.2.3`), by minor version (`1.2`) and
+  `latest`. The compose files use `latest`, which moves only when you pull. To stay on a version until you choose to
+  move, set `SV_IMAGE=ghcr.io/sovereignfs/sovereign:1.2.3` in `.env`.
 
 `pnpm docker:smoke` builds the image and boots each of the three setups from it, signs the first account up and checks
-the address above from inside; CI runs it on every change.
+the address above from inside; CI runs it on every pull request that changes code, and before every release.
 
 ## Installing core as an app
 

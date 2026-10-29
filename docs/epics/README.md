@@ -41,7 +41,7 @@ the task is corrected.
 | 8   | [Console](console.md)                         | ⏳ In Progress | Operators' administration area                                                                         |
 | 9   | [Identity Pages](identity-pages.md)           | ⏳ In Progress | A person's own account pages                                                                           |
 | 10  | [Core API](core-api.md)                       | 📋 Planned     | `spec/core-api`, `packages/api-client`, Directory API, branding                                        |
-| 11  | [Installable app (PWA)](pwa.md)               | 📋 Planned     | Manifest, mobile metadata, service worker, offline page ([RFC 0001](../rfcs/0001-installable-core.md)) |
+| 11  | [Installable app (PWA)](pwa.md)               | ⏳ In Progress | Manifest, mobile metadata, service worker, offline page ([RFC 0001](../rfcs/0001-installable-core.md)) |
 
 _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked · ❌ Rejected_
 

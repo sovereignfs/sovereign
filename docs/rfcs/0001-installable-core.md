@@ -2,7 +2,7 @@
 
 |                |                                                                                                                          |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| **Status**     | Proposed                                                                                                                 |
+| **Status**     | Accepted; partially implemented (the manifest and metadata)                                                              |
 | **Date**       | October 2026                                                                                                             |
 | **Author**     | Claude Code, for review                                                                                                  |
 | **Scope**      | `apps/core`: a web app manifest, a service worker, an offline page, mobile metadata; `docs/specs/core-app.md` §1.3, §3.5 |
@@ -235,3 +235,13 @@ the first task, and its `Status:` becomes _Implemented_ when the fourth is done 
 
 Approve the design above, answer the open questions (or accept the leanings), and confirm the order of the tasks. On
 approval the first task writes the outcome into the spec before any code.
+
+## Outcome
+
+Accepted as proposed, with the open questions answered as leaned:
+
+1. **Theme colour:** the `theme-color` tag also follows a theme chosen in core's preferences, set by the pre-paint
+   script (task 11.3). Until then it follows the system's colour scheme.
+2. **Instance icons:** the default Sovereign icons are in every instance's manifest until task 11.4.
+3. **An install hint:** not in this RFC.
+4. **Worker and `strict-dynamic`:** settled by the first browser test of task 11.2.

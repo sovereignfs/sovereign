@@ -26,7 +26,7 @@ useful alone.
 
 ## Tasks
 
-#### 📋 11.1 — Manifest, icons and mobile metadata
+#### ✅ 11.1 — Manifest, icons and mobile metadata
 
 **Goal:** A browser offers to install core, and an installed core is named, iconed and coloured as the instance.
 

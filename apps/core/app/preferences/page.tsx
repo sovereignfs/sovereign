@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Card } from '@sovereignfs/ui';
 import { getSession } from '../../src/auth/session';
@@ -25,11 +24,6 @@ export default async function PreferencesPage() {
           timezones={timezoneOptions(timezone)}
           locales={localeOptions(locale)}
         />
-        <p className={styles.footer}>
-          <Link className={styles.link} href="/">
-            Back
-          </Link>
-        </p>
       </div>
     </Card>
   );

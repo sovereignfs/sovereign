@@ -11,10 +11,8 @@ const matrix = vi.fn();
 vi.mock('../roles/matrix', () => ({ getCapabilityMatrix: () => matrix() as unknown }));
 const getLauncherApps = vi.fn();
 vi.mock('../clients', () => ({ getLauncherApps: () => getLauncherApps() as unknown }));
-const identity = vi.fn();
-vi.mock('../instance/service', () => ({ getInstanceIdentity: () => identity() as unknown }));
-// The logo reads the database; what it draws is tested with it (instance-identity.test.tsx).
-vi.mock('../../app/instance-logo', () => ({ InstanceLogo: () => null }));
+// The header reads the session, the matrix and the instance itself; it is tested on its own (account-header.test.tsx).
+vi.mock('../../app/account-header', () => ({ AccountHeader: () => <header>the header</header> }));
 vi.mock('next/link', () => ({
   default: ({ children, ...props }: React.ComponentProps<'a'>) => <a {...props}>{children}</a>,
 }));
@@ -39,23 +37,16 @@ beforeEach(() => {
   getSession.mockReset();
   matrix.mockReset().mockResolvedValue(DEFAULT_MATRIX);
   getLauncherApps.mockReset().mockResolvedValue([]);
-  identity.mockReset().mockResolvedValue({
-    name: 'Acme',
-    logoLight: undefined,
-    logoDark: undefined,
-    favicon: undefined,
-    emailLogo: undefined,
-  });
 });
 
 describe('the home page, which is the launcher', () => {
-  it('says what it is, in one level-one heading, and who is signed in, under the instance’s name', async () => {
+  it('says what it is, in one level-one heading, and who is signed in, under the header', async () => {
     as(ROLE_USER);
     const html = renderToStaticMarkup(await Page());
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
     expect(html).toContain('>Apps</h1>');
     expect(html).toContain('Ada Lovelace');
-    expect(html).toContain('Acme');
+    expect(html.indexOf('the header')).toBeLessThan(html.indexOf('>Apps</h1>'));
   });
 
   it('lists the apps, each an ordinary link to its launch address in the same tab', async () => {
@@ -70,26 +61,6 @@ describe('the home page, which is the launcher', () => {
     expect(html).not.toMatch(/target="_blank"/);
   });
 
-  it('links to each of the identity pages, and only those that exist', async () => {
-    as(ROLE_USER);
-    const hrefs = links(renderToStaticMarkup(await Page()));
-    expect(hrefs).toEqual(['/profile', '/security', '/preferences']);
-  });
-
-  it('links to the Console for an operator, and for nobody else', async () => {
-    as(ROLE_USER);
-    expect(renderToStaticMarkup(await Page())).not.toContain('/console');
-    as(ROLE_ADMIN);
-    expect(renderToStaticMarkup(await Page())).toContain('href="/console"');
-    as(ROLE_OWNER);
-    expect(renderToStaticMarkup(await Page())).toContain('href="/console"');
-  });
-
-  it('offers to sign out', async () => {
-    as(ROLE_USER);
-    expect(renderToStaticMarkup(await Page())).toContain('Sign out');
-  });
-
   it('is for those who hold launcher:access: someone without it sees no apps and no list is read', async () => {
     as(ROLE_USER);
     matrix.mockResolvedValue({
@@ -101,7 +72,7 @@ describe('the home page, which is the launcher', () => {
     expect(getLauncherApps).not.toHaveBeenCalled();
     expect(html).not.toContain('App one');
     expect(html).toContain('You do not have access to the apps on this instance.');
-    expect(links(html)).toEqual(['/profile', '/security', '/preferences']);
+    expect(links(html)).toEqual([]);
   });
 
   it('judges by the matrix in force: an owner is always let in, an admin who lost it is not', async () => {

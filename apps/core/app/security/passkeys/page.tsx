@@ -32,8 +32,8 @@ export default async function PasskeysPage() {
         </p>
         <PasskeyPanel passkeys={passkeys} />
         <p className={styles.footer}>
-          <Link className={styles.link} href="/">
-            Back
+          <Link className={styles.link} href="/security">
+            Back to security
           </Link>
         </p>
       </div>

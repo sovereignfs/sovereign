@@ -5,7 +5,7 @@
 }
 
 .heading {
-  margin: 0;
-  font-size: var(--sv-font-size-xl);
+  margin: var(--sv-space-4) 0 0;
+  font-size: var(--sv-font-size-2xl);
   font-weight: var(--sv-font-weight-semibold);
 }

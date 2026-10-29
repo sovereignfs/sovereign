@@ -36,8 +36,8 @@ function groupsOf(sections: readonly Section[], activeId: string | undefined): N
 
 /**
  * The Console beside its page: on a wide screen a list of the sections down the side; on a phone the list is
- * the first page (the Console's own page), and every other page has a way back to it, as a settings
- * app does. `sections` are only those the person may open.
+ * the first page (the Console's own page, which lists each section with what it is for), and every other page has
+ * a way back to it, as a settings app does. `sections` are only those the person may open.
  */
 export function ConsoleShell({
   sections,
@@ -49,7 +49,6 @@ export function ConsoleShell({
   const pathname = usePathname();
   const activeId = activeSection(pathname, sections);
   const atOverview = pathname === '/console';
-  const others = sections.filter((section) => section.href !== '/console');
 
   return (
     <ResponsiveSurface
@@ -78,14 +77,6 @@ export function ConsoleShell({
             </Link>
           )}
           {children}
-          {atOverview && others.length > 0 ? (
-            <NavList
-              groups={groupsOf(others, undefined)}
-              variant="drilldown"
-              aria-label="Console sections"
-              renderLink={renderLink}
-            />
-          ) : null}
         </div>
       }
     />

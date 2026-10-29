@@ -64,6 +64,18 @@ backups) that apps may use.
   | Identity pages                                                                            | Account, opened as an overlay above the current page |
   | Privacy Policy and Terms of Service                                                       | legal pages                                          |
 
+- Every signed-in page, the launcher, the identity pages and the Console alike,
+  has the same header: the instance's name (which leads home), Apps, Account
+  and, for an operator, Console, with the part the person is in marked, and
+  sign out. No page is a dead end, and none repeats the header's links of its
+  own. The pages before sign-in show the instance's logo, or its name when it
+  has none, so a person can tell whose sign-in it is.
+- An address that leads nowhere, and a page that fails, show a page of the same
+  design (a plain sentence and one way onward), never the framework's own. A
+  Console page someone may not open shows the first, saying nothing of what is
+  there.
+- An action that goes to another page ("Add an app") is a link made to look like
+  a button (`ButtonLink`), not an unstyled link and not a button that navigates.
 - Core MUST NOT use another component library, Tailwind, or runtime CSS-in-JS.
   Its own styles are CSS Modules that reference the design system's semantic
   tokens; colours, spacing and radii are never hard-coded.
@@ -1192,3 +1204,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-29 | §3.15: how core is run: the one image (no environment baked in, a non-root process, migrations shipped, a health check), the three compose setups, the address core must be able to reach from inside its container, and the development seed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | 2026-10-30 | §3.5: every response carries `nosniff`, `X-Frame-Options`, a referrer policy that sends other sites an origin and never a path, a permissions policy that withholds the camera, microphone, location, payment and USB, and, over https only, `Strict-Transport-Security`; found by the Phase 1 security review.                                                                                                                                                                                                                                                                                                                                                                                                               |
 | 2026-10-30 | §3.9: how an app gets a Directory token: a token asked for with a resource is for that resource alone and carries no ID token, so an app signs in as usual and then asks for it, with its refresh token or a second authorization request; found by the acceptance suite.                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| 2026-10-30 | §1.3: every signed-in page has one header (name, Apps, Account, Console, sign out) with the current part marked; the pages before sign-in show the logo or else the name; a missing address and a failed page have pages of the design system's own; going to another page is a `ButtonLink`. Found by looking at every screen.                                                                                                                                                                                                                                                                                                                                                                                               |

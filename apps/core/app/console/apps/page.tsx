@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import {
+  ButtonLink,
   EmptyState,
   StatusBadge,
   Table,
@@ -18,6 +19,14 @@ import styles from './apps.module.css';
 
 export const metadata: Metadata = { title: 'Apps' };
 
+function AddAppLink() {
+  return (
+    <ButtonLink href="/console/apps/new" renderLink={(props) => <Link {...props} />}>
+      Add an app
+    </ButtonLink>
+  );
+}
+
 export default async function AppsPage() {
   const { session } = await requireConsole('client:manage', { returnTo: '/console/apps' });
   const apps = await (
@@ -28,9 +37,7 @@ export default async function AppsPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.heading}>Apps</h1>
-        <Link className={styles.link} href="/console/apps/new">
-          Add an app
-        </Link>
+        <AddAppLink />
       </div>
       <p className={styles.lead}>
         The apps people can sign in to with this instance. Add one here, then give the app its
@@ -41,7 +48,7 @@ export default async function AppsPage() {
           icon="layout-grid"
           heading="No apps yet"
           description="When you add an app, it is listed here, and appears in the launcher for the people who can use it."
-          action={<Link href="/console/apps/new">Add an app</Link>}
+          action={<AddAppLink />}
         />
       ) : (
         <Table>

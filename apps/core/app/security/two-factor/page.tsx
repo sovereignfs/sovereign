@@ -29,8 +29,8 @@ export default async function TwoFactorSettingsPage() {
           verified={session.user.emailVerified}
         />
         <p className={styles.footer}>
-          <Link className={styles.link} href="/">
-            Back
+          <Link className={styles.link} href="/security">
+            Back to security
           </Link>
         </p>
       </div>

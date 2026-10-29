@@ -102,14 +102,15 @@ describe('the Console on a wide screen', () => {
 describe('the Console on a phone', () => {
   beforeEach(() => viewport(true));
 
-  it('starts with the page and an index of the other sections, with no way back to itself', async () => {
+  it('starts with the Console’s own page, which lists the sections itself, and has no way back to itself', async () => {
     render(
       <ConsoleShell sections={sections}>
         <p>the page</p>
       </ConsoleShell>,
     );
-    const nav = await screen.findByRole('navigation', { name: 'Console sections' });
-    expect(hrefs(nav)).toEqual(['/console/accounts', '/console/settings']);
+    expect(await screen.findByText('the page')).toBeDefined();
+    // A second list of the same sections under the page would say everything twice.
+    expect(screen.queryByRole('navigation', { name: 'Console sections' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Console' })).toBeNull();
   });
 

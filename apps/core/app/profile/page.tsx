@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Card } from '@sovereignfs/ui';
 import { getSession } from '../../src/auth/session';
@@ -22,11 +21,6 @@ export default async function ProfilePage() {
           email={session.user.email}
           image={session.user.image ?? null}
         />
-        <p className={styles.footer}>
-          <Link className={styles.link} href="/">
-            Back
-          </Link>
-        </p>
       </div>
     </Card>
   );

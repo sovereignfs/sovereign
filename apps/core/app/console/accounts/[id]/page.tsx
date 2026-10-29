@@ -94,18 +94,20 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
 
       {manage || assignRole ? (
         <Card padding="lg">
-          <h2 className={styles.subheading}>Manage</h2>
-          <AccountActions
-            id={account.id}
-            name={account.name}
-            currentRole={account.role}
-            deactivated={account.deactivatedAt !== undefined}
-            may={{
-              manage,
-              assignRole,
-              resetMfa: account.twoFactorEnabled || account.passkeys > 0,
-            }}
-          />
+          <div className={styles.manage}>
+            <h2 className={styles.subheading}>Manage</h2>
+            <AccountActions
+              id={account.id}
+              name={account.name}
+              currentRole={account.role}
+              deactivated={account.deactivatedAt !== undefined}
+              may={{
+                manage,
+                assignRole,
+                resetMfa: account.twoFactorEnabled || account.passkeys > 0,
+              }}
+            />
+          </div>
         </Card>
       ) : null}
       {operator ? (

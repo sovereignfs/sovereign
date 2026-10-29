@@ -5,6 +5,7 @@ import { startTransition, useActionState, useState } from 'react';
 import {
   Alert,
   Button,
+  ButtonLink,
   Checkbox,
   Collapsible,
   CopyButton,
@@ -102,12 +103,19 @@ export function AppForm({ id, initial }: { id?: string; initial: Initial }) {
           <CopyButton text={created.id ?? ''} label="Copy ID" />
         </p>
         <div className={styles.buttons}>
-          <Link className={styles.link} href={`/console/apps/${created.id}`}>
+          <ButtonLink
+            href={`/console/apps/${created.id}`}
+            renderLink={(props) => <Link {...props} />}
+          >
             Open the app
-          </Link>
-          <Link className={styles.link} href="/console/apps">
+          </ButtonLink>
+          <ButtonLink
+            href="/console/apps"
+            variant="secondary"
+            renderLink={(props) => <Link {...props} />}
+          >
             Back to apps
-          </Link>
+          </ButtonLink>
         </div>
       </div>
     );

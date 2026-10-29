@@ -97,7 +97,7 @@ export function AccountActions({ id, name, may, deactivated, currentRole }: Prop
     <div className={styles.actions}>
       {done ? <Alert variant="success">{done}</Alert> : null}
       {may.assignRole ? (
-        <form className={styles.actionRow} action={changeRole}>
+        <form className={`${styles.actionRow} ${styles.roleForm}`} action={changeRole}>
           <Select name="role" defaultValue={currentRole} aria-label="Role">
             <option value="platform:user">User</option>
             <option value="platform:admin">Admin</option>

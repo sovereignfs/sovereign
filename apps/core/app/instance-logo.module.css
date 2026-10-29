@@ -35,3 +35,10 @@
 :global([data-theme='dark']) .dark {
   display: block;
 }
+
+.name {
+  margin: 0;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-md);
+  font-weight: var(--sv-font-weight-semibold);
+}

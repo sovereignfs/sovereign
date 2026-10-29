@@ -12,6 +12,9 @@ vi.mock('next/navigation', async (original) => ({
   usePathname: () => '/console',
 }));
 
+// The header reads the session and the instance itself; it is tested on its own (account-header.test.tsx).
+vi.mock('../../app/account-header', () => ({ AccountHeader: () => <header>the header</header> }));
+
 const { default: ConsoleLayout } = await import('../../app/console/layout');
 const { default: ConsolePage } = await import('../../app/console/page');
 
@@ -35,6 +38,7 @@ describe('the Console’s frame', () => {
     as(ROLE_ADMIN);
     const html = renderToStaticMarkup(await ConsoleLayout({ children: <p>the page</p> }));
     expect(html).toContain('the page');
+    expect(html).toContain('the header');
     expect(html).toContain('aria-label="Console sections"');
     expect(html).toContain('href="/console"');
   });

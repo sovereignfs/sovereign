@@ -30,7 +30,7 @@ export default async function AppPage({ params }: { params: Promise<{ id: string
       <Link className={styles.back} href="/console/apps">
         ‹ Apps
       </Link>
-      <div className={styles.header}>
+      <div className={styles.titleRow}>
         <h1 className={styles.heading}>{app.name}</h1>
         {app.enabled ? (
           <StatusBadge status="synced">On</StatusBadge>

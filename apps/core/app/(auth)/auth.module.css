@@ -1,3 +1,8 @@
+.stage {
+  /* The card sits a little below the top, as a sign-in does, not hard against it. */
+  padding-top: clamp(0px, 8vh, 5rem);
+}
+
 .form {
   display: flex;
   flex-direction: column;

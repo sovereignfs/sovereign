@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { PageContainer } from '@sovereignfs/ui';
+import { AccountHeader } from './account-header';
 import { IdentityNav } from './identity-nav';
 import styles from './identity-layout.module.css';
 
@@ -9,10 +10,11 @@ import styles from './identity-layout.module.css';
  * signed-in shell; until that exists they are pages of their own, and this is the one place that will
  * change when they are not.
  */
-export default function IdentityLayout({ children }: { children: ReactNode }) {
+export default async function IdentityLayout({ children }: { children: ReactNode }) {
   return (
     <PageContainer maxWidth="md">
       <div className={styles.frame}>
+        <AccountHeader />
         <p className={styles.heading}>Your account</p>
         <IdentityNav />
         {children}

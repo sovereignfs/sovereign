@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { requireConsole } from '../../src/console/guard';
+import { AccountHeader } from '../account-header';
 import { ConsoleShell } from './console-shell';
 
 /**
@@ -10,16 +11,19 @@ import { ConsoleShell } from './console-shell';
 export default async function ConsoleLayout({ children }: { children: ReactNode }) {
   const { sections } = await requireConsole();
   return (
-    <ConsoleShell
-      sections={sections.map(({ id, label, href, icon, group }) => ({
-        id,
-        label,
-        href,
-        icon,
-        group,
-      }))}
-    >
-      {children}
-    </ConsoleShell>
+    <>
+      <AccountHeader bordered />
+      <ConsoleShell
+        sections={sections.map(({ id, label, href, icon, group }) => ({
+          id,
+          label,
+          href,
+          icon,
+          group,
+        }))}
+      >
+        {children}
+      </ConsoleShell>
+    </>
   );
 }

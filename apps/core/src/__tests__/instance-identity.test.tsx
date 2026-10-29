@@ -87,9 +87,16 @@ const { InstanceLogo } = await import('../../app/instance-logo');
 describe('the logo on the pages before sign-in', () => {
   beforeEach(() => identityNow.mockReset());
 
-  it('draws nothing when no logo is set', async () => {
+  it('draws the instance’s name when no logo is set, so a person can tell whose sign-in this is', async () => {
+    identityNow.mockResolvedValue({ ...PLAIN_IDENTITY, name: 'Acme' });
+    const html = renderToStaticMarkup(await InstanceLogo());
+    expect(html).toContain('Acme');
+    expect(html).not.toContain('<img');
+  });
+
+  it('draws nothing beside the name in the header when there is no logo', async () => {
     identityNow.mockResolvedValue(PLAIN_IDENTITY);
-    expect(renderToStaticMarkup(await InstanceLogo())).toBe('');
+    expect(renderToStaticMarkup(await InstanceLogo({ small: true }))).toBe('');
   });
 
   it('draws both pictures, named for the instance, so the theme can show the right one', async () => {

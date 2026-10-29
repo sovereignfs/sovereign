@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Card, EmptyState } from '@sovereignfs/ui';
 import { getSession } from '../../src/auth/session';
@@ -34,11 +33,6 @@ export default async function ConnectedAppsPage() {
         ) : (
           <ConnectedAppsList apps={apps} />
         )}
-        <p className={styles.footer}>
-          <Link className={styles.link} href="/">
-            Back
-          </Link>
-        </p>
       </div>
     </Card>
   );

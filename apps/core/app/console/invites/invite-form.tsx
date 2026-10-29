@@ -47,7 +47,7 @@ export function InviteForm({ mailReady }: { mailReady: boolean }) {
           </FormField>
         </div>
         <div className={styles.daysField}>
-          <FormField label="Expires after (days)" hint="Leave empty for no expiry.">
+          <FormField label="Expires after (days)">
             {(field) => (
               <Input
                 {...field}
@@ -55,6 +55,7 @@ export function InviteForm({ mailReady }: { mailReady: boolean }) {
                 name="days"
                 min={1}
                 max={365}
+                placeholder="No expiry"
                 value={days}
                 onChange={(event) => setDays(event.target.value)}
               />

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { Avatar, CardTile, CardTileGrid, EmptyState, Input } from '@sovereignfs/ui';
+import { Avatar, ButtonLink, CardTile, CardTileGrid, EmptyState, Input } from '@sovereignfs/ui';
 import type { LauncherApp } from '../src/clients/launcher';
 import styles from './launcher.module.css';
 
@@ -28,7 +28,13 @@ export function Launcher({ apps, canAddApps }: { apps: LauncherApp[]; canAddApps
             ? 'Add the first app and it appears here for everyone who can use the launcher.'
             : 'When someone adds an app to this instance, it appears here. Ask whoever runs it.'
         }
-        action={canAddApps ? <Link href="/console/apps/new">Add an app</Link> : undefined}
+        action={
+          canAddApps ? (
+            <ButtonLink href="/console/apps/new" renderLink={(props) => <Link {...props} />}>
+              Add an app
+            </ButtonLink>
+          ) : undefined
+        }
       />
     );
   }

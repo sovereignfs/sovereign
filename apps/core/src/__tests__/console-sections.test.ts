@@ -40,6 +40,15 @@ describe('the sections the Console offers', () => {
   });
 });
 
+describe('the Console’s overview', () => {
+  it('says what every section other than itself is for, in a line, with no jargon', () => {
+    for (const section of CONSOLE_SECTIONS.filter((section) => section.href !== '/console')) {
+      expect(section.description, section.id).toBeTruthy();
+      expect(section.description, section.id).not.toMatch(/\b(client|oauth|oidc|scope|token)\b/i);
+    }
+  });
+});
+
 describe('which sections a role may see', () => {
   it('shows an ordinary person none, however many there are', () => {
     expect(visibleSections(ROLE_USER, DEFAULT_MATRIX, SECTIONS)).toEqual([]);

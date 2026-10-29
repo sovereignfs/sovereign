@@ -108,10 +108,15 @@
   flex-wrap: wrap;
 }
 
-.roleForm {
+.manage {
   display: flex;
-  align-items: center;
-  gap: var(--sv-space-2);
+  flex-direction: column;
+  gap: var(--sv-space-4);
+}
+
+/* A role is one of two words: the box need not span the card. */
+.roleForm > div:first-of-type {
+  flex: 0 1 14rem;
 }
 
 .subheading {

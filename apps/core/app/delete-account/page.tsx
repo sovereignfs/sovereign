@@ -36,11 +36,6 @@ export default async function DeleteAccountPage() {
         ) : (
           <DeleteForm />
         )}
-        <p className={styles.footer}>
-          <Link className={styles.link} href="/">
-            Back
-          </Link>
-        </p>
       </div>
     </Card>
   );

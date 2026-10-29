@@ -11,6 +11,8 @@ export type ConsoleSection = {
   label: string;
   href: string;
   icon: IconName;
+  /** A line on the overview saying what the section is for. */
+  description?: string;
   /** What it takes to see the section and to open its page. */
   capability: Capability;
   /** A heading the section is listed under, or none for a leading, ungrouped one. */
@@ -27,6 +29,7 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
   },
   {
     id: 'accounts',
+    description: 'See who has an account, and deactivate or remove one.',
     label: 'Accounts',
     href: '/console/accounts',
     icon: 'users',
@@ -34,6 +37,7 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
   },
   {
     id: 'invites',
+    description: 'Invite people by email, and see who is still waiting.',
     label: 'Invites',
     href: '/console/invites',
     icon: 'mail',
@@ -41,6 +45,7 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
   },
   {
     id: 'apps',
+    description: 'Add the apps that sign people in through this instance.',
     label: 'Apps',
     href: '/console/apps',
     icon: 'layout-grid',
@@ -48,6 +53,7 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
   },
   {
     id: 'settings',
+    description: 'The instance’s name, logo, sign-up rule and email.',
     label: 'Settings',
     href: '/console/settings',
     icon: 'settings',
@@ -55,6 +61,7 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
   },
   {
     id: 'permissions',
+    description: 'Choose what admins and ordinary users can do.',
     label: 'Permissions',
     href: '/console/permissions',
     icon: 'shield',
@@ -62,6 +69,7 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
   },
   {
     id: 'ownership',
+    description: 'Hand this instance to another admin.',
     label: 'Ownership',
     href: '/console/ownership',
     icon: 'arrow-left-right',

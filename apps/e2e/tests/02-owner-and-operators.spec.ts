@@ -88,7 +88,11 @@ test('§3.17.4: the owner edits the capability matrix, and no admin can change t
   await signIn(operator.page, admin);
   // The change is theirs at once: the Apps section is gone and its page is not there.
   await operator.page.goto('/console');
-  await expect(operator.page.getByRole('link', { name: 'Apps' })).toHaveCount(0);
+  await expect(
+    operator.page
+      .getByRole('navigation', { name: 'Console sections' })
+      .getByRole('link', { name: 'Apps' }),
+  ).toHaveCount(0);
   expect((await operator.page.goto('/console/apps'))?.status()).toBe(404);
 
   // An admin has neither the matrix nor ownership, and cannot see anyone's role to change.

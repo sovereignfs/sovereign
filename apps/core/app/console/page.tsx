@@ -22,7 +22,12 @@ export default async function ConsolePage() {
             <li key={section.id}>
               <Link href={section.href} className={styles.section}>
                 <Icon name={section.icon} size="md" aria-hidden />
-                {section.label}
+                <span className={styles.sectionText}>
+                  <span className={styles.sectionName}>{section.label}</span>
+                  {section.description ? (
+                    <span className={styles.sectionDescription}>{section.description}</span>
+                  ) : null}
+                </span>
               </Link>
             </li>
           ))}

@@ -5,7 +5,7 @@
 
 ## Status
 
-📋 Planned
+⏳ In Progress
 
 ## Overview
 
@@ -19,7 +19,7 @@ people in through core without knowing anything about Sovereign.
 
 ## Tasks
 
-#### 📋 6.1 — Provider, flows, scopes and claims
+#### ✅ 6.1 — Provider, flows, scopes and claims
 
 **Goal:** Registered clients can sign people in with the authorization code
 flow and receive exactly the claims their scopes allow.

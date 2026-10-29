@@ -36,7 +36,7 @@ the task is corrected.
 | 3   | [Mail](mail.md)                               | ✅ Complete    | `packages/mailer`, SMTP configuration, templates                                  |
 | 4   | [Identity & Auth](identity-auth.md)           | ✅ Complete    | Sign-up, sign-in, verification, reset, TOTP, passkeys, sessions                   |
 | 5   | [Roles & Capabilities](roles-capabilities.md) | ✅ Complete    | Platform roles, capability matrix, ownership                                      |
-| 6   | [OIDC Provider](oidc-provider.md)             | 📋 Planned     | Sign-in server for apps: flows, claims, consent, logout                           |
+| 6   | [OIDC Provider](oidc-provider.md)             | ⏳ In Progress | Sign-in server for apps: flows, claims, consent, logout                           |
 | 7   | [Apps & Launcher](apps-launcher.md)           | 📋 Planned     | Client registry with launcher entries, the launcher                               |
 | 8   | [Console](console.md)                         | 📋 Planned     | Operators' administration area                                                    |
 | 9   | [Identity Pages](identity-pages.md)           | ⏳ In Progress | A person's own account pages                                                      |

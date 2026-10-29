@@ -159,7 +159,7 @@ dependency). What remains in `apps/core` is wiring specific to core (the matrix
 editor, the app form, the launcher grid, the picture uploader), each composed
 only of design-system parts.
 
-#### ⏳ 2.4 — The specification
+#### ✅ 2.4 — The specification
 
 **Goal:** What `@sovereignfs/ui` promises to the apps that depend on it is written down, and held to what the package does.
 

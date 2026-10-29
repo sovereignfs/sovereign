@@ -1,6 +1,6 @@
 # Sovereign Core — Roadmap
 
-**Version:** 0.49.0 · **Last updated:** 2026-10-29
+**Version:** 0.50.0 · **Last updated:** 2026-10-29
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -136,3 +136,12 @@ be argued before anything is built.
 | —       | 8        | Backup, restore and rollback       | 📋     | [13.8](docs/epics/operator-cli.md)  |
 | —       | 9        | Deploying from GitHub `[parallel]` | 📋     | [13.9](docs/epics/operator-cli.md)  |
 | —       | 10       | The operator's guide               | 📋     | [13.10](docs/epics/operator-cli.md) |
+
+### M7 — The design system has a contract
+
+[Specification](docs/specs/design-system.md) · epic [2](docs/epics/design-system.md)
+
+| Version | Priority | Task                                  | Status | Epic task                          |
+| ------- | -------- | ------------------------------------- | ------ | ---------------------------------- |
+| 0.50.0  | 1        | The specification                     | ✅     | [2.4](docs/epics/design-system.md) |
+| —       | 2        | Audit the public surface `[parallel]` | 📋     | [2.5](docs/epics/design-system.md) |

@@ -1,5 +1,20 @@
-.frame {
+.layout {
   min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The page below the header: the sidebar runs the whole way down beside the page, not just as far as its links. */
+.frame {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.frame .fill {
+  flex: 1;
+  height: auto;
 }
 
 .sidebar {
@@ -8,6 +23,7 @@
   gap: var(--sv-space-4);
   padding: var(--sv-space-6) var(--sv-space-3) var(--sv-space-5);
   box-sizing: border-box;
+  min-height: 100%;
 }
 
 .title {

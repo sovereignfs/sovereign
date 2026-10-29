@@ -54,7 +54,7 @@ export function ConsoleShell({
     <ResponsiveSurface
       web={
         <div className={styles.frame}>
-          <ThreeColumnLayout sidebarWidth={240}>
+          <ThreeColumnLayout sidebarWidth={240} className={styles.fill}>
             <div className={styles.sidebar}>
               <p className={styles.title}>Console</p>
               <NavList

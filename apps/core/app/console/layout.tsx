@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { requireConsole } from '../../src/console/guard';
 import { AccountHeader } from '../account-header';
 import { ConsoleShell } from './console-shell';
+import styles from './console.module.css';
 
 /**
  * The Console's frame (core-app §3.10): its sections beside the page. Entering it takes `console:access`;
@@ -11,7 +12,7 @@ import { ConsoleShell } from './console-shell';
 export default async function ConsoleLayout({ children }: { children: ReactNode }) {
   const { sections } = await requireConsole();
   return (
-    <>
+    <div className={styles.layout}>
       <AccountHeader bordered />
       <ConsoleShell
         sections={sections.map(({ id, label, href, icon, group }) => ({
@@ -24,6 +25,6 @@ export default async function ConsoleLayout({ children }: { children: ReactNode 
       >
         {children}
       </ConsoleShell>
-    </>
+    </div>
   );
 }

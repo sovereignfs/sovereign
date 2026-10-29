@@ -18,6 +18,8 @@ export type ClientOptions = {
   grantTypes?: string[];
   postLogoutRedirectUris?: string[];
   applicationType?: 'web' | 'native';
+  /** The name shown on the consent page. */
+  name?: string;
 };
 
 /** Registers a client the way an operator will: through the provider's own server API, as the owner. */
@@ -33,6 +35,7 @@ export async function registerClient(
       token_endpoint_auth_method: options.authMethod ?? 'client_secret_basic',
       grant_types: options.grantTypes ?? ['authorization_code', 'refresh_token'],
       skip_consent: options.trusted ?? true,
+      ...(options.name ? { client_name: options.name } : {}),
       ...(options.applicationType ? { application_type: options.applicationType } : {}),
       ...(options.postLogoutRedirectUris
         ? { post_logout_redirect_uris: options.postLogoutRedirectUris }

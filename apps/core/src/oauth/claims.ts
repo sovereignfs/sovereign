@@ -15,6 +15,15 @@ const text = (value: unknown): string | undefined =>
   typeof value === 'string' && value !== '' ? value : undefined;
 
 /**
+ * The account's role as the `roles` claim. It is not made by `claimsFor`: whether a client may have it
+ * depends on the client (core-app §3.6.4), which the plugin's custom claims do not see, so an extension
+ * adds it (`provider.ts`) only for a trusted client that was granted the scope.
+ */
+export function rolesClaim(user: ClaimsUser): { roles: string[] } {
+  return { roles: isRole(user.role) ? [user.role] : [] };
+}
+
+/**
  * The claims a granted set of scopes allows (core-app §3.6.2), for the ID token and for the userinfo
  * endpoint alike, so an ordinary relying party can read them from either:
  *
@@ -22,10 +31,8 @@ const text = (value: unknown): string | undefined =>
  *   one is core's own path, which means nothing on another site); `locale` and `zoneinfo` are the
  *   person's saved preferences and are left out when none is saved, never sent empty.
  * - `email`: `email` and `email_verified`.
- * - `roles`: `roles`, the account's platform role. Whether a client may ask for it at all is decided
- *   by the scopes it is allowed (§3.6.4): this only says what a granted `roles` scope shows.
  *
- * A claim of a scope that was not granted is never added.
+ * A claim of a scope that was not granted is never added. `roles` is left to `rolesClaim`.
  */
 export function claimsFor(
   user: ClaimsUser,
@@ -47,9 +54,6 @@ export function claimsFor(
     const email = text(user.email);
     if (email) claims.email = email;
     claims.email_verified = user.emailVerified === true;
-  }
-  if (scopes.includes('roles')) {
-    claims.roles = isRole(user.role) ? [user.role] : [];
   }
   return claims;
 }

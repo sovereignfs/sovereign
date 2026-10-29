@@ -222,6 +222,20 @@ pointing here.
   turned off); the JWT plugin's own `/token`, which hands any session a signed
   JWT, is disabled. Claims are made by one function (`claimsFor`) for the ID token
   and userinfo alike and only from granted scopes.
+- **`roles` is for trusted clients, enforced in three places.** Trust is the
+  plugin's `skipConsent`, empty meaning untrusted (`isTrusted`). A before-hook on
+  the authorize endpoint takes `roles` out of an untrusted client's request, so
+  the signed request that goes through sign-in and consent never carries it and
+  consent is not asked again each time; the consent page offers only what
+  `scopesAllowedFor` leaves; and an extension adds the `roles` claim to the ID
+  token and userinfo only for a trusted client, reading the client as it is now.
+  The last one is what stops an operator-revoked client at once.
+- **The consent page believes only what the provider signed.**
+  `readConsentRequest` verifies the signature (`verifyOAuthQueryParams`) of the
+  signed part of the address (`signedQueryOf`, the same rule as the provider's
+  own client) before it reads a client id or a scope, so a link someone wrote
+  cannot make core name an app or list a permission. Each scope has one plain
+  sentence (`SCOPE_COPY`); a scope with none is not shown.
 - **The provider's tables are written by hand in both dialects and checked
   against the installed plugins.** A list or object is JSON text on SQLite and a
   native array or jsonb on PostgreSQL, and the schema-parity check treats the two

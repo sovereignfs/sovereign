@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import {
   oauthProviderAuthServerMetadata,
   oauthProviderOpenIdConfigMetadata,
+  verifyOAuthQueryParams,
 } from '@better-auth/oauth-provider';
 import type { Database } from '@sovereignfs/database';
 import type { TestDatabase } from '@sovereignfs/database/testing';
@@ -27,9 +28,11 @@ import {
   REFRESH_TOKEN_SECONDS,
 } from '../oauth/provider';
 import { changeCapabilities } from '../roles/configure';
+import { SCOPE_COPY, readConsentRequest } from '../oauth/consent';
+import { signedQueryOf } from '../oauth/signed-query';
 import { changeRole } from '../roles/people';
 import { secretOf, totp } from './totp';
-import { BASE_URL, Jar, PASSWORD, call, makeAuth, signUp } from './auth-harness';
+import { BASE_URL, Jar, PASSWORD, authSettings, call, makeAuth, signUp } from './auth-harness';
 import {
   REDIRECT,
   authorize,
@@ -102,6 +105,33 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
     const flow = await signInTo(auth, jar, client, { scope });
     return flow.tokens.body as Record<string, string>;
   }
+
+  // The consent page's side of a request: ask, read what the provider signed, answer.
+  const asked = async (
+    auth: Auth,
+    jar: Jar,
+    client: RegisteredClient,
+    scope: string,
+    challenge = pkce().challenge,
+  ) => {
+    const result = await authorize(auth, jar, client, { scope, challenge });
+    const url = result.url as URL;
+    return { ...result, signed: signedQueryOf(url.searchParams) as string, url };
+  };
+  const answer = (auth: Auth, jar: Jar, signed: string, body: Record<string, unknown>) =>
+    call(auth, 'POST', '/oauth2/consent', { jar, body: { ...body, oauth_query: signed } });
+  const findClient = (auth: Auth) => (clientId: string) =>
+    auth.$context.then((context) =>
+      context.adapter.findOne<{ name?: string; skipConsent?: boolean }>({
+        model: 'oauthClient',
+        where: [{ field: 'clientId', value: clientId }],
+      }),
+    );
+  const readRequest = (auth: Auth, signed: string) =>
+    readConsentRequest(signed, {
+      verify: (query) => verifyOAuthQueryParams(query, authSettings().secret),
+      findClient: findClient(auth),
+    });
 
   describe('discovery', () => {
     it('names the instance URL as the issuer, with the endpoints under /api/auth', async () => {
@@ -397,6 +427,256 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
       });
       expect(reply.status).toBeGreaterThanOrEqual(400);
       expect(reply.body.redirect).not.toBe(true);
+    });
+  });
+
+  describe('consent', () => {
+    it('is asked of an untrusted client’s person the first time, on core’s consent page, and never of a trusted client’s', async () => {
+      const { auth, owner, person } = await instance();
+      const untrusted = await registerClient(auth, owner, { trusted: false });
+      const trusted = await registerClient(auth, owner, { trusted: true });
+
+      const first = await asked(auth, person, untrusted, 'openid profile');
+      expect(first.code).toBeUndefined();
+      expect(first.url.pathname).toBe('/consent');
+      expect(first.url.searchParams.get('client_id')).toBe(untrusted.clientId);
+
+      const skipped = await authorize(auth, person, trusted, { challenge: pkce().challenge });
+      expect(skipped.code).toBeTruthy();
+    });
+
+    it('reads, through the page’s own checks, the request the provider signed, and nothing it did not', async () => {
+      const { auth, owner, person } = await instance();
+      const client = await registerClient(auth, owner, { trusted: false, name: 'Notes' });
+      const { signed } = await asked(auth, person, client, 'openid profile email');
+      expect(await readRequest(auth, signed)).toEqual({
+        appName: 'Notes',
+        returnHost: 'rp.example.com',
+        scopes: ['openid', 'profile', 'email'],
+        permissions: [SCOPE_COPY.openid, SCOPE_COPY.profile, SCOPE_COPY.email],
+      });
+
+      const params = new URLSearchParams(signed);
+      params.set('scope', 'openid profile email directory');
+      expect(await readRequest(auth, params.toString())).toBeUndefined();
+      params.set('scope', 'openid profile email');
+      params.set('client_id', 'someone-else');
+      expect(await readRequest(auth, params.toString())).toBeUndefined();
+    });
+
+    it('is answered by allowing, which sends the person back to the app with a code and gives it what was agreed', async () => {
+      const { auth, owner, person } = await instance();
+      const client = await registerClient(auth, owner, { trusted: false });
+      const { verifier, challenge } = pkce();
+      const { signed } = await asked(auth, person, client, 'openid profile email', challenge);
+
+      const reply = await answer(auth, person, signed, { accept: true, scope: 'openid profile' });
+      expect(reply.status).toBe(200);
+      expect(reply.body.redirect).toBe(true);
+      const url = new URL(String(reply.body.url));
+      expect(`${url.origin}${url.pathname}`).toBe(REDIRECT);
+
+      const tokens = await exchangeCode(
+        auth,
+        client,
+        url.searchParams.get('code') as string,
+        verifier,
+      );
+      expect(tokens.status).toBe(200);
+      expect(tokens.body.scope).toBe('openid profile');
+      const claims = verifyJwt(String(tokens.body.id_token), await publishedKeys(auth)).payload;
+      expect(claims.name).toBe('Ada Lovelace');
+      expect(claims.email).toBeUndefined();
+    });
+
+    it('is remembered for that person, that client and those scopes, and not asked again', async () => {
+      const { auth, owner, person } = await instance();
+      const client = await registerClient(auth, owner, { trusted: false });
+      const { signed } = await asked(auth, person, client, 'openid profile');
+      await answer(auth, person, signed, { accept: true });
+
+      const again = await authorize(auth, person, client, {
+        scope: 'openid profile',
+        challenge: pkce().challenge,
+      });
+      expect(again.code).toBeTruthy();
+      const narrower = await authorize(auth, person, client, {
+        scope: 'openid',
+        challenge: pkce().challenge,
+      });
+      expect(narrower.code).toBeTruthy();
+    });
+
+    it('is not carried over to another person, or another client', async () => {
+      const { auth, owner, person } = await instance();
+      const client = await registerClient(auth, owner, { trusted: false });
+      const other = await registerClient(auth, owner, { trusted: false });
+      const { signed } = await asked(auth, person, client, 'openid profile');
+      await answer(auth, person, signed, { accept: true });
+
+      expect((await asked(auth, owner, client, 'openid profile')).url.pathname).toBe('/consent');
+      expect((await asked(auth, person, other, 'openid profile')).url.pathname).toBe('/consent');
+    });
+
+    it('is asked again when the app asks for something the person has not agreed to', async () => {
+      const { auth, owner, person } = await instance();
+      const client = await registerClient(auth, owner, { trusted: false });
+      const { signed } = await asked(auth, person, client, 'openid profile');
+      await answer(auth, person, signed, { accept: true });
+
+      const wider = await asked(auth, person, client, 'openid profile email');
+      expect(wider.code).toBeUndefined();
+      expect(wider.url.pathname).toBe('/consent');
+      expect((await readRequest(auth, wider.signed))?.scopes).toEqual([
+        'openid',
+        'profile',
+        'email',
+      ]);
+    });
+
+    it('can be refused, which sends the person back to the app with a refusal and no code, and remembers nothing', async () => {
+      const { auth, owner, person } = await instance();
+      const client = await registerClient(auth, owner, { trusted: false });
+      const { signed } = await asked(auth, person, client, 'openid profile');
+      const reply = await answer(auth, person, signed, { accept: false });
+      expect(reply.body.redirect).toBe(true);
+      const url = new URL(String(reply.body.url));
+      expect(url.searchParams.get('error')).toBe('access_denied');
+      expect(url.searchParams.get('code')).toBeNull();
+      expect(url.searchParams.get('state')).toBe('state-1');
+      expect((await db.run('select count(*) as n from oauth_consents')).rows[0]?.n).toBe(0);
+      expect((await asked(auth, person, client, 'openid profile')).url.pathname).toBe('/consent');
+    });
+
+    it('cannot be given for more than was asked', async () => {
+      const { auth, owner, person } = await instance();
+      const client = await registerClient(auth, owner, { trusted: false });
+      const { signed } = await asked(auth, person, client, 'openid profile');
+      const reply = await answer(auth, person, signed, {
+        accept: true,
+        scope: 'openid profile email',
+      });
+      expect(reply.status).toBeGreaterThanOrEqual(400);
+      expect((await db.run('select count(*) as n from oauth_consents')).rows[0]?.n).toBe(0);
+    });
+
+    it('is answered only for a request core signed, and only by someone signed in', async () => {
+      const { auth, owner, person } = await instance();
+      const client = await registerClient(auth, owner, { trusted: false });
+      const { signed } = await asked(auth, person, client, 'openid profile');
+
+      const tampered = new URLSearchParams(signed);
+      tampered.set('scope', 'openid profile email');
+      expect(
+        (await answer(auth, person, tampered.toString(), { accept: true })).status,
+      ).toBeGreaterThanOrEqual(400);
+      expect(
+        (await call(auth, 'POST', '/oauth2/consent', { jar: person, body: { accept: true } }))
+          .status,
+      ).toBeGreaterThanOrEqual(400);
+      expect(
+        (await answer(auth, new Jar(), signed, { accept: true })).status,
+      ).toBeGreaterThanOrEqual(400);
+      expect((await db.run('select count(*) as n from oauth_consents')).rows[0]?.n).toBe(0);
+    });
+
+    it('comes after the password when an app asked and its person has not agreed yet: sign-in goes on to the consent page', async () => {
+      const { auth, owner } = await instance();
+      const client = await registerClient(auth, owner, { trusted: false });
+      const other = await signUp(auth);
+      const { location } = await authorize(auth, new Jar(), client, {
+        scope: 'openid profile',
+        challenge: pkce().challenge,
+      });
+      const query = signedQueryOf(new URL(location as string, BASE_URL).searchParams);
+      const reply = await call(auth, 'POST', '/sign-in/email', {
+        jar: new Jar(),
+        body: { email: other.email, password: PASSWORD, oauth_query: query },
+      });
+      expect(reply.body.redirect).toBe(true);
+      expect(new URL(String(reply.body.url), BASE_URL).pathname).toBe('/consent');
+    });
+  });
+
+  describe('roles', () => {
+    const grantsRoles = async (auth: Auth, accessToken: string, idToken: string) => ({
+      idToken: verifyJwt(idToken, await publishedKeys(auth)).payload.roles,
+      userInfo: (await userInfo(auth, accessToken)).body.roles,
+    });
+
+    it('go to a trusted client that asks for them, in the ID token and from userinfo', async () => {
+      const { auth, owner, person } = await instance();
+      const client = await registerClient(auth, owner, { trusted: true });
+      const { tokens } = await signInTo(auth, person, client, { scope: 'openid roles' });
+      const body = tokens.body as Record<string, string>;
+      expect(await grantsRoles(auth, body.access_token as string, body.id_token as string)).toEqual(
+        {
+          idToken: ['platform:user'],
+          userInfo: ['platform:user'],
+        },
+      );
+      expect(body.scope).toBe('openid roles');
+    });
+
+    it('never go to an untrusted client: they are taken out of the request before anyone is asked', async () => {
+      const { auth, owner, person } = await instance();
+      const client = await registerClient(auth, owner, { trusted: false });
+      const { verifier, challenge } = pkce();
+      const { signed, url } = await asked(auth, person, client, 'openid profile roles', challenge);
+      expect(url.searchParams.get('scope')).toBe('openid profile');
+      expect((await readRequest(auth, signed))?.scopes).toEqual(['openid', 'profile']);
+
+      const reply = await answer(auth, person, signed, { accept: true });
+      const code = new URL(String(reply.body.url)).searchParams.get('code') as string;
+      const tokens = await exchangeCode(auth, client, code, verifier);
+      const body = tokens.body as Record<string, string>;
+      expect(body.scope).toBe('openid profile');
+      expect(await grantsRoles(auth, body.access_token as string, body.id_token as string)).toEqual(
+        {
+          idToken: undefined,
+          userInfo: undefined,
+        },
+      );
+    });
+
+    it('do not make an untrusted client ask again every time it asks for them', async () => {
+      const { auth, owner, person } = await instance();
+      const client = await registerClient(auth, owner, { trusted: false });
+      const { signed } = await asked(auth, person, client, 'openid profile roles');
+      await answer(auth, person, signed, { accept: true });
+      const again = await authorize(auth, person, client, {
+        scope: 'openid profile roles',
+        challenge: pkce().challenge,
+      });
+      expect(again.code).toBeTruthy();
+    });
+
+    it('stop going to a client the operator stops trusting, even with tokens it already holds', async () => {
+      const { auth, owner, person } = await instance();
+      const client = await registerClient(auth, owner, { trusted: true });
+      const { tokens } = await signInTo(auth, person, client, {
+        scope: 'openid roles offline_access',
+      });
+      const before = tokens.body as Record<string, string>;
+      expect(
+        (await grantsRoles(auth, before.access_token as string, before.id_token as string))
+          .userInfo,
+      ).toEqual(['platform:user']);
+
+      await db.run('update oauth_clients set skip_consent = ?', [
+        db.family === 'postgres' ? false : 0,
+      ]);
+      const refreshed = await refresh(auth, client, before.refresh_token as string);
+      expect(refreshed.status).toBe(200);
+      expect(
+        await grantsRoles(
+          auth,
+          refreshed.body.access_token as string,
+          refreshed.body.id_token as string,
+        ),
+      ).toEqual({ idToken: undefined, userInfo: undefined });
+      // The access token already issued reads the client as it is now, too.
+      expect((await userInfo(auth, before.access_token as string)).body.roles).toBeUndefined();
     });
   });
 

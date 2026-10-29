@@ -67,7 +67,7 @@ flow and receive exactly the claims their scopes allow.
 **Not here:** the consent page (6.2), the end-session and revocation work (6.3),
 the client registry and its Console page (7.1, 8.6), the Directory API's resource
 (10.2), and CORS for single-page apps. Clients are registered meanwhile through
-the provider's own server API, and must be trusted.
+the provider's own server API.
 
 #### 📋 6.2 — Consent
 
@@ -91,6 +91,10 @@ their mind.
 - An untrusted client shows consent once, then not again for the same scopes
 - A trusted client never shows consent
 - An untrusted client requesting `roles` does not receive it
+
+**Not here:** the Console control for the trusted flag (the Apps task in the
+Console epic), the list of apps a person has allowed and removing their access
+(9.4 and 6.3), and CORS for single-page apps.
 
 #### 📋 6.3 — Logout and revocation
 

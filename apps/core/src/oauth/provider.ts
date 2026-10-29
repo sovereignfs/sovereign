@@ -4,7 +4,9 @@ import { jwt } from 'better-auth/plugins/jwt';
 import type { AuthSettings } from '../auth/settings';
 import { can } from '../roles/capabilities';
 import { loadMatrix } from '../roles/matrix';
-import { claimsFor } from './claims';
+import { claimsFor, rolesClaim } from './claims';
+import { oauthGuards } from './guards';
+import { isTrusted } from './trust';
 
 /** The scopes core knows (core-app §3.6.2). A client is allowed some of them; it can never ask for another. */
 export const OAUTH_SCOPES = [
@@ -65,6 +67,7 @@ export const KEY_GRACE_SECONDS = 30 * 24 * 60 * 60;
 export function oidcPlugins(database: Database, settings: AuthSettings) {
   const issuer = new URL(settings.baseUrl).origin;
   return [
+    oauthGuards(),
     jwt({
       jwks: {
         keyPairConfig: { alg: 'EdDSA', crv: 'Ed25519' },
@@ -92,6 +95,18 @@ export function oidcPlugins(database: Database, settings: AuthSettings) {
       advertisedMetadata: { claims_supported: [...SUPPORTED_CLAIMS] },
       customIdTokenClaims: ({ user, scopes }) => claimsFor(user, scopes, issuer),
       customUserInfoClaims: ({ user, scopes }) => claimsFor(user, scopes, issuer),
+      // `roles` is for a trusted client that was granted the scope, and no other (core-app §3.6.4). Only
+      // an extension sees the client, so it is added here, in both places a claim can be read.
+      extensions: [
+        {
+          claims: {
+            idToken: ({ user, scopes, client }) =>
+              user && scopes.includes('roles') && isTrusted(client) ? rolesClaim(user) : {},
+            userInfo: ({ user, scopes, client }) =>
+              scopes.includes('roles') && isTrusted(client) ? rolesClaim(user) : {},
+          },
+        },
+      ],
     }),
   ];
 }

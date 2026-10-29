@@ -193,6 +193,9 @@ each: `docs/architecture-rules.md`.
   is the issuer, only the code flow with PKCE `S256` exists, no client registers
   itself, redirect addresses match exactly, and its tables are checked against the
   installed plugins.
+- **`roles` is for trusted clients only** (stripped from the request, not offered
+  at consent, withheld from tokens), and the consent page believes only what the
+  provider signed.
 - **A route handler that changes something calls `requireSameOrigin`** (a test
   fails when it does not); **an image is judged by its bytes**; **`users.image`
   is set only by uploading a picture.**

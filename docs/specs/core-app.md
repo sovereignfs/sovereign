@@ -451,9 +451,6 @@ passkeys), subject to §3.2.1. The account holder is told by email.
 - Not offered in Phase 1: cross-origin requests from a browser to the token and
   userinfo endpoints (CORS), which a single-page app calling them directly
   would need.
-- Until the consent page exists, a client that is not trusted cannot complete a
-  sign-in (§3.6.4); every client an operator registers in the meantime must be
-  trusted.
 
 #### 3.6.2 Scopes and claims
 
@@ -493,6 +490,22 @@ alone, so revoking them is core's own step.
 - Consent is remembered per account, per client and per set of scopes. A
   client asking for a scope the person has not granted asks again.
 - Only trusted clients may receive the `roles` scope.
+- The trusted flag is the operator's, and a client has it only if an operator
+  set it: nothing a client or a person sends can. A client nobody marked is
+  untrusted.
+- Consent is asked on core's own page (`/consent`), after sign-in and before the
+  app gets anything. It shows the app's name, who is signed in, one plain
+  sentence for each permission, and the address the person is sent back to, with
+  **Allow** and **Don't allow**. It shows only what core signed: an address
+  someone altered or let expire says the request has expired, and names nothing.
+  Refusing sends the person back to the app with `access_denied` and no code,
+  and remembers nothing.
+- `roles` is taken out of an untrusted client's request when it is made, so it
+  is never shown, never asked about, never remembered as consent, and the
+  client is not asked again each time it asks for it. A trusted client keeps it.
+  The claim is also withheld from an untrusted client's ID token and userinfo
+  answer, even for tokens already issued: an operator who stops trusting a
+  client takes `roles` from it at once.
 - A person can remove an app's access in Connected apps (§3.11). Removing
   access deletes the consent **and** revokes every access token and refresh
   token that client holds for the account, in one step; the next sign-in asks
@@ -817,3 +830,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-29 | §3.2.3: the matrix is stored as differences from the default, what can never be stored, that a change shows within seconds without a per-session version, and that an unreadable matrix fails the check.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 2026-10-29 | §3.2.1: what a transfer of ownership requires (the password again, an active admin), that it is one conditional step so two transfers cannot make two owners or none, and the limit on wrong passwords.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | 2026-10-29 | §3.5: no signed cookie cache, so an ended session stops working at once everywhere, authorize included. §3.6.1: who may register a client, claims advertised in discovery, redirect addresses never followed when unregistered, the sign-in page carrying an app's request through every step, signing keys encrypted with `SV_AUTH_SECRET`, and what is not offered yet.                                                                                                                                                                                                                                                                                                                                                     |
+| 2026-10-29 | §3.6.4: where and how consent is asked, what the page shows and refuses to show, that refusing sends `access_denied`, and that `roles` is removed from an untrusted client's request and withheld from its tokens.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |

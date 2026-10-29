@@ -639,6 +639,32 @@ Operators with `client:manage` register clients in the Console.
 - Deleting an app removes its tokens and consents first, explicitly, then the
   app, so the result does not depend on a database's cascade.
 
+The Console lists apps on **Apps** (`/console/apps`, needing `client:manage`), where
+an operator adds, changes, switches off and on, gives a new secret to, and
+deletes an app. In the Console an app is an "app"; the protocol's word "client"
+appears only as the app's **Client ID** and in its technical settings.
+
+- **Adding** asks for the name and the sign-in addresses (one per line), and
+  offers the launcher entry (§3.7.2: description, launch address, icon,
+  whether it shows) and the kind of app, which cannot be changed afterwards. The
+  settings an app author needs (the addresses after sign-out, the back-channel
+  logout address, whether the app may send people to core's sign-out, what the
+  app may ask to see, and whether it is trusted) are folded away under
+  "Technical settings", each with a line saying what it does. Asking for the
+  `roles` scope is possible only while the app is trusted, and unticking trust
+  unticks it.
+- **Every thing wrong is shown at once, each beside its field**, with what was
+  typed kept; the registry's refusal (§3.7.3) is shown, never replaced.
+- **A secret is shown once**, in the answer to the request that made it: when an
+  app is added and when a new one is made, with a line saying only a scrambled
+  copy is kept. Making a new secret asks first and says the old one stops
+  working at once; a public app has no secret and is not offered one.
+- **Switching off** asks first and says what it does (the app stops signing
+  people in and refreshing, and leaves the launcher); switching on does not ask.
+  **Deleting** asks first and says that what the app was given is taken back.
+- The list shows each app's name, whether it is on, whether it appears in the
+  launcher, and when it was added.
+
 ### 3.8 Launcher
 
 - The launcher is core's `/` for signed-in people with `launcher:access`.
@@ -998,3 +1024,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-29 | §3.10: how an invitation is made, replaced, sent, listed and cancelled; what an operator is shown when email is not set up; that the invitation link is public and shows one page for every link that does not work.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | 2026-10-29 | §3.12, §3.15: what the instance settings page shows and who sees what, where each value comes from, what each setting accepts and refuses, how pictures are used on pages and in emails, that a missing sign-up choice never opens sign-up, and how an SVG is rebuilt rather than scanned.                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | 2026-10-29 | §3.2.3, §3.2.1: where the owner edits the matrix and hands over ownership, that the owner has no boxes, that owner-only capabilities are listed but never offered, that the whole table is saved as it was shown, and what the hand-over page asks and shows.                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 2026-10-29 | §3.7.3: where apps are added, changed, switched off and on, given a new secret and deleted in the Console; that a secret is shown once and only in the answer to the request that made it; that each thing wrong is shown beside its field; what each action asks and says first; and that "client" appears only in the technical settings.                                                                                                                                                                                                                                                                                                                                                                                   |

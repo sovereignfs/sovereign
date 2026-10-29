@@ -71,6 +71,8 @@ describe('the Console’s own page', () => {
     expect(html).toContain('Accounts');
     expect(html).toContain('href="/console/invites"');
     expect(html).toContain('Invites');
+    expect(html).toContain('href="/console/apps"');
+    expect(html).toContain('Apps');
     expect(html).toContain('href="/console/settings"');
     expect(html).toContain('Settings');
     expect(html).not.toContain('There is nothing to manage here yet.');

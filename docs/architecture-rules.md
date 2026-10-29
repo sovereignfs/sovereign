@@ -268,6 +268,15 @@ pointing here.
   itself, passes `confirmPassword` to `transferOwnership` (which holds every rule
   about who may receive it), returns a refusal for the dialog to show, and on
   success redirects: the previous owner may no longer open the page they were on.
+- **The Console reaches an app's settings only through `ClientRegistry`, as the
+  person and with the request's own headers, and a secret is in the answer to
+  the call that made it and nowhere else.** Every action in
+  `app/console/apps/actions.ts` asks for `client:manage` first, then hands the
+  registry `{ user, headers: await headers() }` so the provider sees who is asking;
+  the registry holds every rule (§3.7.3) and says all that is wrong at once, which
+  the form shows beside each field. The secret returned by `register` or
+  `rotateSecret` goes to the page that asked, is never saved, logged or put in a
+  URL, and cannot be read again.
 - **Every Console page checks for itself, and shows a page that is not there to
   someone who may not enter.** `requireConsole` (`src/console/guard.ts`) asks for
   a session, `console:access` and the capability the page needs, judged by the

@@ -142,7 +142,7 @@ Console.
 **Not here:** changing a person's role (that is on the account's page, 8.2), and
 adding capabilities or roles of one's own (the set is defined in code, §3.2.3).
 
-#### 📋 8.6 — Apps
+#### ✅ 8.6 — Apps
 
 **Goal:** Operators can register and manage clients in the Console.
 
@@ -164,3 +164,7 @@ adding capabilities or roles of one's own (the set is defined in code, §3.2.3).
 - A newly registered client signs a person in through core
 - Setting a back-channel logout URI makes the client receive a logout notice
   when a session ends
+
+**Not here:** choosing which people may see an app in the launcher (an app is
+shown to everyone who can use the launcher, §3.8), and the app's own consent
+wording.

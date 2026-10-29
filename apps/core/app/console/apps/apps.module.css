@@ -1,0 +1,152 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sv-space-3);
+  flex-wrap: wrap;
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--sv-font-size-2xl);
+  font-weight: var(--sv-font-weight-semibold);
+}
+
+.subheading {
+  margin: var(--sv-space-2) 0 0;
+  font-size: var(--sv-font-size-lg);
+  font-weight: var(--sv-font-weight-semibold);
+}
+
+.lead {
+  margin: 0;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-md);
+}
+
+.back {
+  color: var(--sv-color-accent);
+  text-decoration: none;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+  max-width: 40rem;
+}
+
+.technical {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+  padding-top: var(--sv-space-3);
+}
+
+.scopes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  padding: 0;
+  font-weight: var(--sv-font-weight-medium);
+}
+
+.scope {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-1);
+}
+
+.hint {
+  margin: 0;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-sm);
+}
+
+.error {
+  margin: 0;
+  color: var(--sv-color-error-text);
+  font-size: var(--sv-font-size-sm);
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  flex-wrap: wrap;
+}
+
+.link {
+  color: var(--sv-color-accent);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+}
+
+.secretMessage {
+  margin: 0 0 var(--sv-space-2);
+}
+
+.secret {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  flex-wrap: wrap;
+}
+
+.code {
+  font-family: var(--sv-font-family-mono);
+  font-size: var(--sv-font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--sv-space-2) var(--sv-space-4);
+  margin: 0;
+}
+
+.facts dt {
+  color: var(--sv-color-text-muted);
+}
+
+.facts dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.name {
+  color: var(--sv-color-accent);
+  font-weight: var(--sv-font-weight-medium);
+  text-decoration: none;
+}
+
+.muted {
+  color: var(--sv-color-text-muted);
+}
+
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

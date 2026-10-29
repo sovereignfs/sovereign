@@ -207,6 +207,9 @@ each: `docs/architecture-rules.md`.
   a refusal must leave is sent from `onSubmit`, not as a form action** (an action
   resets the form); **ownership is handed over only by `transferOwnershipAction`**,
   which asks for the password and leaves the page.
+- **Apps are written only through `ClientRegistry`, as the person with the
+  request's headers; an app's secret is returned once, to the page that asked**,
+  and the Console says "app" except in the technical settings.
 - **Every Console page calls `requireConsole` itself** (a test fails when one does
   not), and answers someone who may not enter with a page that is not there.
 - **A client is written only by `ClientRegistry`** (validation, the provider's

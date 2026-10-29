@@ -40,6 +40,13 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
     capability: 'user:manage',
   },
   {
+    id: 'apps',
+    label: 'Apps',
+    href: '/console/apps',
+    icon: 'layout-grid',
+    capability: 'client:manage',
+  },
+  {
     id: 'settings',
     label: 'Settings',
     href: '/console/settings',

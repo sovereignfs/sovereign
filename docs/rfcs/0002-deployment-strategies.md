@@ -96,8 +96,8 @@ Core is stricter than many providers, on purpose. This is what keeps some ordina
 - **"This app can't send PKCE"**, a technical setting for confidential apps only, which better-auth supports per client
   (`require_pkce`). A public app can never have it, and the Console says what it gives up.
 
-Both change §3.6.1 and need a test against real apps first. After the first release, a few widely used self-hosted apps
-are tried, which shows whether both are needed. If the secret must also go in the body, that is a third per-app setting.
+Both change §3.6.1 and need a test against real apps first. Before the first release, a few widely used self-hosted apps
+are tried (task 12.6), which shows whether both are needed. If the secret must also go in the body, that is a third per-app setting.
 
 ### One image, no mode
 
@@ -464,7 +464,7 @@ to the published contract, and it can wait until an app wants it.
 
 ## Rollout
 
-1. Release core, and try real third-party apps (tasks 12.1 to 12.3). Scenario 1 needs nothing more.
+1. Try real third-party apps and release core (tasks 12.1 to 12.3, and 12.6). Scenario 1 needs nothing more.
 2. Write this RFC's outcome into the spec, with `spec/suite.md` and `spec/app-manifest.md`.
 3. `sovereign-admin` in the image.
 4. `sv apply` on a hand-written `suite.yml`: core, the proxy and the database.
@@ -494,8 +494,8 @@ the outcome goes into the spec before any code.
 Accepted as proposed, with the open questions answered as leaned:
 
 1. **`__Host-` cookies:** done before the first release, while no instance exists to sign out (task 12.5).
-2. **RS256:** added only when testing shows an app needs it. Task 12.3's testing against real apps decides, and it would be
-   a task of its own.
+2. **RS256:** added only when testing shows an app needs it. Task 12.6's testing against real apps decides, and it would be
+   done in task 12.7.
 3. **An app catalogue:** not at first. `--image` and `--manifest` are enough, and a catalogue, if one comes, lives outside
    this repository.
 4. **Moving a server:** `sv backup` and `sv restore` are enough, with no command of its own.

@@ -85,6 +85,8 @@ of it is built.
 - Steps 1 to 5, 8 and 9 of the RFC's `sv apply`: checks, a lock, rendering, networks, PostgreSQL, Caddy, core, verifying,
   releases and `state.json`
 - Generated secrets on the server, and the refusals of operator-cli §6.5
+- Certificates in both `tls` modes, `per-host` and `internal`
+- `overrides/` for core, the proxy and the database (`spec/suite.md` §5)
 - A small test app, with a manifest, for this task and 13.4 to deploy
 - A CI job that runs it against real Docker, twice, and stops it after each step and resumes
 
@@ -110,6 +112,8 @@ of it is built.
 - One network per app, with every public name aliased to the proxy
 - External apps, which get only a client
 - Reading the manifest from an image's label, or a given address
+- Purging: `--purge`, its typed confirmation, and step 7 deleting the app's data after backing it up (operator-cli §6.2)
+- `overrides/` for each app
 - The two-app acceptance test: moving between apps with no second password, signing out of core ending both
 
 **Dependencies:** 13.2, 13.3
@@ -120,7 +124,7 @@ of it is built.
 
 - An app cannot reach another app's container or database
 - A failing app stops only itself
-- Removing an app keeps its data
+- Removing an app keeps its data, and only a purge deletes it
 - A run stopped between making a client and saving its secret gives the app a new secret
 
 #### 📋 13.5 — Commands on the operator's machine
@@ -134,6 +138,7 @@ of it is built.
 - `@sovereignfs/create`: `instance <dir>`, `git init`, `--remote`, the toolkit pinned and installed, the `./sv` script
 - `sv setup`, `sv app add|update|remove|list`, `sv secret set|remove|list|rekey`, `sv push`
 - Secrets encrypted to the operator's key and the server's, and a plain text check on push
+- `--json` on read commands, and the exit codes of operator-cli §11
 
 **Dependencies:** 13.1
 
@@ -144,7 +149,7 @@ of it is built.
 - These commands change only files
 - `./sv` never fetches anything but what the lockfile names
 
-**Not here:** `app <dir>`, the Next.js app template, which needs its own design once the manifest exists.
+**Not here:** `app <dir>`, the Next.js app template (13.11).
 
 - A plain value never reaches the disk or the command history
 - `sv push` stages only known files
@@ -253,3 +258,26 @@ of it is built.
 **Review checklist:**
 
 - Walked through as written on a new machine
+
+#### 📋 13.11 — The app template
+
+**Goal:** `npm create @sovereignfs app <dir>` makes a Next.js app that can be hosted as it stands.
+
+**Priority:** 11.
+
+**Deliverables:**
+
+- Its design, in `docs/specs/operator-cli.md`, replacing the line that reserves it. `support/sovereign-plugin-template` is a possible
+  starting point, though it was built for the plugin model
+- A template that meets `spec/app-manifest.md`: sign-in through the SDK, `@sovereignfs/ui`, a health route, a back-channel logout
+  route, its own migrations, an image, and the manifest label
+- CI that creates an app from it, builds it, and hosts it with `sv apply`
+
+**Dependencies:** 13.4, 14.3
+
+**Spec reference:** operator-cli §2; `spec/app-manifest.md`
+
+**Review checklist:**
+
+- A new app is hosted with no change to what the template made
+- The template stays in step with the manifest and the SDK, by that CI job

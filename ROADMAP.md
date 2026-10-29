@@ -119,6 +119,8 @@ be argued before anything is built.
 | —       | 3        | First release                      | 📋     | [12.3](docs/epics/release.md) |
 | —       | 4        | The deployment design `[parallel]` | ⏳     | [12.4](docs/epics/release.md) |
 | 0.48.0  | 5        | Host-only cookies                  | ✅     | [12.5](docs/epics/release.md) |
+| —       | 6        | Try real third-party apps          | 📋     | [12.6](docs/epics/release.md) |
+| —       | 7        | Compatibility settings             | 📋     | [12.7](docs/epics/release.md) |
 
 ### M6 — Operators run core with one tool
 
@@ -136,6 +138,7 @@ be argued before anything is built.
 | —       | 8        | Backup, restore and rollback       | 📋     | [13.8](docs/epics/operator-cli.md)  |
 | —       | 9        | Deploying from GitHub `[parallel]` | 📋     | [13.9](docs/epics/operator-cli.md)  |
 | —       | 10       | The operator's guide               | 📋     | [13.10](docs/epics/operator-cli.md) |
+| —       | 11       | The app template                   | 📋     | [13.11](docs/epics/operator-cli.md) |
 
 ### M7 — The design system has a contract
 
@@ -145,3 +148,27 @@ be argued before anything is built.
 | ------- | -------- | ------------------------------------- | ------ | ---------------------------------- |
 | 0.50.0  | 1        | The specification                     | ✅     | [2.4](docs/epics/design-system.md) |
 | —       | 2        | Audit the public surface `[parallel]` | 📋     | [2.5](docs/epics/design-system.md) |
+
+### M8 — Apps have an SDK
+
+[Specification](docs/specs/sdk.md) · epic [14](docs/epics/sdk.md)
+
+| Version | Priority | Task                                     | Status | Epic task                 |
+| ------- | -------- | ---------------------------------------- | ------ | ------------------------- |
+| —       | 1        | The specification                        | ⏳     | [14.1](docs/epics/sdk.md) |
+| —       | 2        | Tokens, failure and today's capabilities | 📋     | [14.2](docs/epics/sdk.md) |
+| —       | 3        | Signing in, and the Next.js adapter      | 📋     | [14.3](docs/epics/sdk.md) |
+| —       | 4        | Publishing                               | 📋     | [14.4](docs/epics/sdk.md) |
+| —       | 5        | App tokens in core                       | 📋     | [14.5](docs/epics/sdk.md) |
+| —       | 6        | Account-deletion fan-out                 | 📋     | [14.6](docs/epics/sdk.md) |
+
+### M9 — Core's Phase 2 is specified
+
+Epic [15](docs/epics/core-services.md)
+
+| Version | Priority | Task                  | Status | Epic task                           |
+| ------- | -------- | --------------------- | ------ | ----------------------------------- |
+| —       | 1        | Notifications         | 📋     | [15.1](docs/epics/core-services.md) |
+| —       | 2        | Mail for apps         | 📋     | [15.2](docs/epics/core-services.md) |
+| —       | 3        | Activity `[parallel]` | 📋     | [15.3](docs/epics/core-services.md) |
+| —       | 4        | Backups `[parallel]`  | 📋     | [15.4](docs/epics/core-services.md) |

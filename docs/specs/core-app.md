@@ -18,7 +18,8 @@ The wire contract for anything an app calls over HTTP is in
 [`spec/core-api/`](../../spec/core-api/), and the environment variable
 convention is in [`spec/env.md`](../../spec/env.md). This document describes
 behaviour; those define the exact shapes. How operators deploy core is in
-[`operator-cli.md`](operator-cli.md).
+[`operator-cli.md`](operator-cli.md), and how a JavaScript app calls it in
+[`sdk.md`](sdk.md).
 
 ---
 
@@ -532,10 +533,11 @@ passkeys), subject to §3.2.1. The account holder is told by email.
   authorization, token, userinfo, JWKS and end-session endpoints, so an app can
   be configured with the instance URL alone. Every token's `iss` equals the
   issuer.
-- The authorization code flow, with refresh tokens, is the only flow. PKCE with
-  `S256` is **required for every client**, confidential or public; `plain` is
-  not accepted. The implicit, password and client-credentials grants are not
-  offered.
+- The authorization code flow, with refresh tokens, is the flow for people. PKCE
+  with `S256` is **required for every client**, confidential or public; `plain`
+  is not accepted. The implicit and password grants are not offered. The
+  client-credentials grant is for an app acting for itself (§3.6.6), which is not
+  built: until it is, that grant is not offered either.
 - Refresh tokens are issued when the client requests `offline_access`.
 - Token lifetimes: access tokens 15 minutes, ID tokens 1 hour, refresh tokens
   30 days from their last use. A refresh token is rotated on every use. If a
@@ -679,6 +681,36 @@ alone, so revoking them is core's own step.
 - Core's public URL (`SV_URL`) MUST be reachable from the core process itself,
   because checking an `id_token_hint` fetches core's own signing keys from it.
 
+#### 3.6.6 App tokens
+
+Not built yet (task 14.5). A scheduled reminder has no person present, and a
+token for a person is the wrong thing for it: it fails when that person's token
+lapses, and it says the person did what the app did. So an app MAY get a token
+for itself, with the client-credentials grant.
+
+- **Confidential apps only.** A public app has no secret to prove who it is, and
+  never gets one.
+- **Nothing by default.** An app may hold only the app scopes an operator gave it
+  (§3.7.1). There is no consent, because no person is involved, so that is the only
+  gate.
+- **App scopes are a separate, short list.** A capability says whether it can be
+  used by an app, in its own section. `directory` and `offline_access` can never be
+  one: looking people up needs a person, and an app token has no refresh token. No
+  scope is an app scope yet, so until a capability needs one, the grant is refused
+  for every app.
+- **What it is.** A signed JWT addressed to the Core API (§3.9), lasting 15 minutes
+  like an access token, with the app as its subject, and no person, no session and
+  no refresh token. Nothing marks it as being on a person's behalf.
+- **What a call checks.** The signature, audience, expiry and scope, as for a
+  person's token; that the app exists and is switched on; and that the token was
+  not revoked. There is no account or session to check.
+- **Ending one.** Rotating an app's secret, switching it off and deleting it each
+  stop its app tokens at once, by recording the time as Remove access does (§3.9).
+- **Limits.** Calls count against the app's limit (§3.9). An app token has no
+  person's limit to count against.
+- **A call made as the app says so.** What core records of it names the app, and
+  never a person.
+
 ### 3.7 App registration
 
 Operators with `client:manage` register clients in the Console.
@@ -695,6 +727,7 @@ Operators with `client:manage` register clients in the Console.
 | Allowed scopes            | Any of §3.6.2; `roles` only when trusted                                                                                                                                                |
 | Trusted                   | Off by default                                                                                                                                                                          |
 | Enabled                   | On by default                                                                                                                                                                           |
+| App scopes                | Not built yet. What a confidential app may do for itself (§3.6.6). None by default                                                                                                      |
 
 #### 3.7.2 Launcher entry
 
@@ -1104,6 +1137,10 @@ that apps can show the same branding. The address and format are defined in
 - The address is `/.well-known/sovereign-instance`. It is public: it needs no
   account and no token, and any origin may read it, since an app's pages fetch
   it from the browser and it carries nothing private.
+- Not built yet (task 14.2): it also says what this core serves, as `api`, with
+  `versions` (such as `["v1"]`) and `capabilities` (such as `["directory"]`), so
+  that an app can tell a capability this core lacks from a failure
+  ([sdk §7](sdk.md)). A capability is listed when every call of it is served.
 - It answers with the instance's name, its own address, a logo for light pages
   and one for dark pages, and its favicon. Each picture is an absolute address
   on the instance, carrying the picture's version, so a changed picture is a new
@@ -1124,8 +1161,8 @@ What an app may call on core is defined once, in `spec/core-api/openapi.yaml`
   already calls them is a new version, never an edit. The one unversioned path
   is a public document under `/.well-known/`.
 - A call that needs authentication carries a bearer access token that core
-  issued to the app for a signed-in person (§3.9); the scope each operation
-  needs is on it in the contract.
+  issued to the app for a signed-in person (§3.9), or for itself (§3.6.6); the
+  scope each operation needs is on it in the contract.
 - Every failure has one body (`error` and `message`) and a status that says what
   kind: 400, 401 (missing, expired, revoked or not for this API; with
   `WWW-Authenticate`), 403 (no scope), 404, 429 (with `Retry-After`).
@@ -1347,3 +1384,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-30 | §3.15: the image is published to the GitHub Container Registry for `linux/amd64` and `linux/arm64` from a `vX.Y.Z` tag on `main`, once the full CI passes on that commit.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | 2026-10-30 | §3.5: session cookies are host-only (`__Host-`) over https when no cookie domain is set, so an app on a subdomain cannot plant a cookie core reads as its own; with a cookie domain they are `__Secure-` and shared; the proxy looks for the one name the instance sets; the names are decided in `src/auth/cookies.ts`. §3.15: the cookie domain's row says to leave it unset when apps run on subdomains.                                                                                                                                                                                                                                                                                                                   |
 | 2026-10-30 | §3.7.3, §3.7.4: `sovereign-admin` in the image, a managed key on clients, and a system actor for the registry, from RFC 0002. §3.15: the image ships it. §3.16: the operator CLI, not core, provisions apps' databases.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 2026-10-30 | §3.6.1, §3.6.6, §3.7.1, §3.13.1: app tokens, with the client-credentials grant, for an app acting with no person present. §3.13: the instance document says what this core serves. Neither is built.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |

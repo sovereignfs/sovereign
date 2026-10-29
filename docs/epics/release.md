@@ -83,7 +83,7 @@ acceptance, in [epic 13](operator-cli.md).
   workflows are retired
 - A `vX.Y.Z` tag, and the package public on GHCR
 
-**Dependencies:** 12.1, 12.2, 12.5
+**Dependencies:** 12.1, 12.2, 12.5, 12.6
 
 **Spec reference:** §3.15
 
@@ -133,4 +133,50 @@ acceptance, in [epic 13](operator-cli.md).
 
 - A cookie set for the parent domain from a subdomain is not taken as a session
 - Sign-out clears the cookies under both names
+- The security check is run
+
+#### 📋 12.6 — Try real third-party apps
+
+**Goal:** What "any OpenID Connect app" means is known from trying it, before the first release says so.
+
+**Priority:** 6, but before the first release, so the guide is true when people first read it.
+
+**Deliverables:**
+
+- A few widely used self-hosted apps, chosen to differ in language and sign-in library, each connected to a built image by following
+  `docs/connecting-an-app.md` as written
+- What each one needed and what stopped it, recorded, and the guide corrected to match: EdDSA, PKCE, how the secret is sent, and
+  anything else that came up
+- Whether `client_secret_post` works, which RFC 0002 left untested
+
+**Dependencies:** 12.2
+
+**Spec reference:** core-app §3.6, §3.7; RFC 0002
+
+**Review checklist:**
+
+- At least one app that uses each common kind of library was tried
+- Each failure is traced to a cause, and either goes into 12.7 or is stated in the guide as a limit
+- Core's documents describe what an app needs, and do not depend on any one app
+
+#### 📋 12.7 — Compatibility settings
+
+**Goal:** An ordinary app that 12.6 found could not connect can, without weakening anything for the others.
+
+**Priority:** 7. Only what 12.6 shows is needed, and this does not hold up the first release.
+
+**Deliverables:**
+
+- Whichever of these 12.6 calls for: RS256 as an additional signing algorithm, "this app can't send PKCE" for confidential apps,
+  and sending the secret in the request body. Each is off by default
+- §3.6.1 and §3.7.1 changed first, and the Console's technical settings saying what each gives up
+
+**Dependencies:** 12.6
+
+**Spec reference:** core-app §3.6.1, §3.7.1; RFC 0002
+
+**Review checklist:**
+
+- A public app can never turn PKCE off
+- EdDSA stays the default, and no existing app changes behaviour
 - The security check is run

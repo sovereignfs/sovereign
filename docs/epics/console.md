@@ -41,7 +41,7 @@ to `src/console/sections.ts` with its page, so the navigation never lists a page
 that does not exist; until then the Console's own page says there is nothing to
 manage yet.
 
-#### 📋 8.2 — Accounts
+#### ✅ 8.2 — Accounts
 
 **Goal:** Operators can find and manage accounts within the role rules.
 

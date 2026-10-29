@@ -1,6 +1,6 @@
 # Sovereign Core — Roadmap
 
-**Version:** 0.33.0 · **Last updated:** 2026-10-29
+**Version:** 0.34.0 · **Last updated:** 2026-10-29
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -67,7 +67,7 @@ _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked · �
 | 0.31.0  | Accounts                           | ✅     | [8.2](docs/epics/console.md)            |
 | 0.32.0  | Invites `[parallel]`               | ✅     | [8.3](docs/epics/console.md)            |
 | 0.33.0  | Instance settings `[parallel]`     | ✅     | [8.4](docs/epics/console.md)            |
-| —       | Capability matrix and ownership    | 📋     | [8.5](docs/epics/console.md)            |
+| 0.34.0  | Capability matrix and ownership    | ✅     | [8.5](docs/epics/console.md)            |
 | —       | Apps                               | 📋     | [8.6](docs/epics/console.md)            |
 | —       | Launcher                           | 📋     | [7.2](docs/epics/apps-launcher.md)      |
 | —       | Connected apps                     | 📋     | [9.4](docs/epics/identity-pages.md)     |

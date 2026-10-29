@@ -19,7 +19,7 @@ clients are task 8.6; this epic owns the model and the launcher.
 
 ## Tasks
 
-#### 📋 7.1 — Client registry
+#### ✅ 7.1 — Client registry
 
 **Goal:** Clients can be registered, changed, disabled and deleted with the
 right effects on tokens and the launcher.

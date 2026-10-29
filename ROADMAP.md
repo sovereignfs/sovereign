@@ -1,6 +1,6 @@
 # Sovereign Core — Roadmap
 
-**Version:** 0.43.0 · **Last updated:** 2026-10-29
+**Version:** 0.44.0 · **Last updated:** 2026-10-29
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -88,3 +88,22 @@ _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked · �
 | Version | Task                               | Status | Epic task                          |
 | ------- | ---------------------------------- | ------ | ---------------------------------- |
 | 0.43.0  | Components core needs `[parallel]` | ✅     | [2.3](docs/epics/design-system.md) |
+
+---
+
+## After Phase 1
+
+Work that follows the acceptance suite, in priority order: a task is picked up only when the ones above it are
+merged, and the human assigns it (`docs/multi-agent.md`). An unaccepted RFC is listed with its tasks so the order can
+be argued before anything is built.
+
+### M4 — Core installs as an app (PWA)
+
+[RFC 0001](docs/rfcs/0001-installable-core.md) (Proposed) · epic [11](docs/epics/pwa.md)
+
+| Version | Priority | Task                                            | Status | Epic task                 |
+| ------- | -------- | ----------------------------------------------- | ------ | ------------------------- |
+| —       | 1        | Manifest, icons and mobile metadata             | 📋     | [11.1](docs/epics/pwa.md) |
+| —       | 2        | Service worker and offline page                 | 📋     | [11.2](docs/epics/pwa.md) |
+| —       | 3        | Standalone polish, guide and checks             | 📋     | [11.3](docs/epics/pwa.md) |
+| —       | 4        | Icons from the instance's own logo `[parallel]` | 📋     | [11.4](docs/epics/pwa.md) |

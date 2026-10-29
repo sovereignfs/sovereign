@@ -2,7 +2,7 @@
 
 |                |                                                                                                                          |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| **Status**     | Accepted; partially implemented (the manifest and metadata)                                                              |
+| **Status**     | Accepted; partially implemented (the manifest, metadata and service worker)                                              |
 | **Date**       | October 2026                                                                                                             |
 | **Author**     | Claude Code, for review                                                                                                  |
 | **Scope**      | `apps/core`: a web app manifest, a service worker, an offline page, mobile metadata; `docs/specs/core-app.md` §1.3, §3.5 |
@@ -244,4 +244,6 @@ Accepted as proposed, with the open questions answered as leaned:
    script (task 11.3). Until then it follows the system's colour scheme.
 2. **Instance icons:** the default Sovereign icons are in every instance's manifest until task 11.4.
 3. **An install hint:** not in this RFC.
-4. **Worker and `strict-dynamic`:** settled by the first browser test of task 11.2.
+4. **Worker and `strict-dynamic`:** settled by the browser test of task 11.2: Chromium registers the worker with and
+   without `worker-src` (the fallback to `script-src` does not refuse it there). The directive stays, explicit, for the
+   browsers that follow the fallback strictly.

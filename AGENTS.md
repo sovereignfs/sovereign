@@ -238,6 +238,9 @@ each: `docs/architecture-rules.md`.
 - **The typeface is Hanken Grotesk, shipped by `@sovereignfs/ui`** (`tokens/fonts.css`,
   loaded by `tokens.css`; never fetched from another site), and CSS names a family only
   through `var(--sv-font-family…)` or `inherit` (`pnpm design:tokens:check` fails otherwise).
+- **The service worker (`src/sw/source.ts`, at `/sw.js`) keeps only an allow-list of
+  files the same for everyone** (built files and icons), has no handler for anything
+  else, and builds its own offline page; nothing of a person is ever stored.
 - **Every signed-in page has the one `AccountHeader`** (from its layout: the launcher,
   the identity pages, the Console; the mark and name left, the avatar menu right), a missing or failed page has `not-found.tsx` /
   `error.tsx`, and going to another page is a `ButtonLink`: no page is a dead end
@@ -416,7 +419,7 @@ them (0.5, 1.2).
 
 ## Status
 
-Current platform version: **`0.45.0`**. `ROADMAP.md` is the canonical task queue
+Current platform version: **`0.46.0`**. `ROADMAP.md` is the canonical task queue
 and completion record.
 
 **The next task is assigned by the developer at session start.** Read

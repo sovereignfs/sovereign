@@ -59,7 +59,7 @@ useful alone.
 
 **Not here:** the service worker (11.2), an install button inside core, and icons made from an operator's own logo (11.4).
 
-#### 📋 11.2 — Service worker and offline page
+#### ✅ 11.2 — Service worker and offline page
 
 **Goal:** Core says "you're offline" in its own words, and keeps its built files, without ever storing a page that
 belongs to a person.

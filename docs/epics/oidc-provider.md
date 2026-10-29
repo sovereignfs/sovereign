@@ -5,7 +5,7 @@
 
 ## Status
 
-⏳ In Progress
+✅ Complete
 
 ## Overview
 
@@ -96,7 +96,7 @@ their mind.
 Console epic), the list of apps a person has allowed and removing their access
 (9.4 and 6.3), and CORS for single-page apps.
 
-#### 📋 6.3 — Logout and revocation
+#### ✅ 6.3 — Logout and revocation
 
 **Goal:** Signing out, deactivation, deletion and removed access all end a
 client's access, and clients are told when a session ends.

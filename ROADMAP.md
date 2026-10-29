@@ -1,6 +1,6 @@
 # Sovereign Core — Roadmap
 
-**Version:** 0.27.0 · **Last updated:** 2026-10-29
+**Version:** 0.28.0 · **Last updated:** 2026-10-29
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -61,7 +61,7 @@ _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked · �
 | 0.25.0  | Ownership transfer                 | ✅     | [5.3](docs/epics/roles-capabilities.md) |
 | 0.26.0  | Provider, flows, scopes and claims | ✅     | [6.1](docs/epics/oidc-provider.md)      |
 | 0.27.0  | Consent                            | ✅     | [6.2](docs/epics/oidc-provider.md)      |
-| —       | Logout and revocation              | 📋     | [6.3](docs/epics/oidc-provider.md)      |
+| 0.28.0  | Logout and revocation              | ✅     | [6.3](docs/epics/oidc-provider.md)      |
 | —       | Client registry                    | 📋     | [7.1](docs/epics/apps-launcher.md)      |
 | —       | Console shell                      | 📋     | [8.1](docs/epics/console.md)            |
 | —       | Accounts                           | 📋     | [8.2](docs/epics/console.md)            |

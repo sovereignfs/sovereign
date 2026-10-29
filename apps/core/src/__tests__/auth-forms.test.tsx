@@ -270,6 +270,51 @@ describe('the sign-in form, around verification and reset', () => {
   });
 });
 
+describe('the sign-in form, when an app sent the person here', () => {
+  const REQUEST = '?client_id=abc&response_type=code&scope=openid&sig=signed';
+  const APP = 'https://rp.example.com/cb?code=one&state=two';
+  const submit = () => {
+    type('Email', 'ada@example.com');
+    type('Password', 'correct horse battery');
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+  };
+  beforeEach(() => {
+    vi.stubGlobal('location', { ...window.location, assign, search: REQUEST });
+  });
+
+  it('goes back to the app, with its code, rather than to where the person was headed', async () => {
+    signIn.mockResolvedValue({ data: { redirect: true, url: APP }, error: null });
+    render(<SignInForm returnTo="/" />);
+    submit();
+    await waitFor(() => expect(assign).toHaveBeenCalledWith(APP));
+    expect(assign).not.toHaveBeenCalledWith('/');
+  });
+
+  it('carries the app’s request to the second step, so that step can carry on with it', async () => {
+    signIn.mockResolvedValue({ data: { twoFactorRedirect: true }, error: null });
+    render(<SignInForm returnTo="/" />);
+    submit();
+    await waitFor(() => expect(assign).toHaveBeenCalledWith(`/sign-in/two-factor${REQUEST}`));
+  });
+
+  it('is the ordinary sign-in when the provider says nothing', async () => {
+    signIn.mockResolvedValue({ data: {}, error: null });
+    render(<SignInForm returnTo="/settings" />);
+    submit();
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('/settings'));
+  });
+
+  it('does not carry anything to the second step on an ordinary visit', async () => {
+    vi.stubGlobal('location', { ...window.location, assign, search: '?returnTo=%2Fsettings' });
+    signIn.mockResolvedValue({ data: { twoFactorRedirect: true }, error: null });
+    render(<SignInForm returnTo="/settings" />);
+    submit();
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith('/sign-in/two-factor?returnTo=%2Fsettings'),
+    );
+  });
+});
+
 describe('the sign-up form, while the address is not verified', () => {
   const fill = () => {
     type('Name', 'Ada Lovelace');

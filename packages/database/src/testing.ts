@@ -34,10 +34,14 @@ type AnyColumn = {
   getSQLType?: () => string;
 };
 
-/** The type two dialects must agree on: binary data is `blob` on one and `bytea` on the other. */
+/**
+ * The type two dialects must agree on: binary data is `blob` on one and `bytea` on the other, and a list
+ * is text holding JSON on SQLite and a native array on PostgreSQL.
+ */
 function logicalType(column: AnyColumn): string {
   if (column.dataType === 'buffer') return 'bytes';
   if (column.dataType === 'custom' && column.getSQLType?.() === 'bytea') return 'bytes';
+  if (column.dataType === 'array') return 'json';
   return column.dataType;
 }
 

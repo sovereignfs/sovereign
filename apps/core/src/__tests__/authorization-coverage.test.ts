@@ -11,9 +11,12 @@ const APP = path.join(import.meta.dirname, '../../app');
 
 /**
  * Routes that are public on purpose: better-auth's own (it checks sessions and tokens itself), a person's
- * picture (shown by apps with no credentials, read only), and health.
+ * picture (shown by apps with no credentials, read only), the two discovery documents (an app finds the
+ * instance there with no account), and health.
  */
 const PUBLIC_ROUTES = new Set([
+  '.well-known/oauth-authorization-server/route.ts',
+  '.well-known/openid-configuration/route.ts',
   'api/auth/[...all]/route.ts',
   'api/avatars/[userId]/route.ts',
   'api/health/route.ts',
@@ -56,9 +59,11 @@ describe('server actions and route handlers authorize inside', () => {
     },
   );
 
-  it('keeps the public routes to the three that are public on purpose', () => {
+  it('keeps the public routes to the five that are public on purpose', () => {
     // Adding to the list is a decision to make in review, not a way to make this pass.
     expect([...PUBLIC_ROUTES].sort()).toEqual([
+      '.well-known/oauth-authorization-server/route.ts',
+      '.well-known/openid-configuration/route.ts',
       'api/auth/[...all]/route.ts',
       'api/avatars/[userId]/route.ts',
       'api/health/route.ts',

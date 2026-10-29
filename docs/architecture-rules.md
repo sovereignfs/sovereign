@@ -127,11 +127,15 @@ pointing here.
   when verification is required** (its anti-enumeration design), so a refusal
   that must reach the person uses another status: an uninvited sign-up is a
   `422` (`INVITE_REQUIRED`).
-- **Core's own session check bypasses the signed cookie cache**
-  (`disableCookieCache` in `src/auth/session.ts`). The cache keeps answering for
-  up to 300 seconds after the session row is gone, so a password reset, a
-  deactivation or a sign-out elsewhere would not end what core guards until it
-  expired. Cost: one primary-key lookup per request.
+- **better-auth's signed cookie cache is off, so every session check reads the
+  database.** With it on, a session that had ended (a password reset, a
+  deactivation, a sign-out elsewhere) kept working for up to 300 seconds for
+  every better-auth endpoint, and the OAuth provider's authorize endpoint went on
+  issuing authorization codes to it: a deactivated person could still obtain
+  tokens just after their tokens were revoked. A test signs in, removes the
+  session row and asks to authorize with the same cookie. Core's own pages call
+  `getSession`, which also passes `disableCookieCache`, so the rule holds if the
+  cache were ever turned on. Cost: one primary-key lookup per request.
 - **What sign-up must carry is checked in the user-create hook, and the record of
   it is set by the server.** The terms must be accepted (`TERMS_NOT_ACCEPTED`)
   and a time zone, if given, must be a real IANA name (`INVALID_TIMEZONE`) and
@@ -206,6 +210,31 @@ pointing here.
   nothing is carried in the session, since no check reads the cookie. When the
   matrix cannot be read, a check fails; it does not fall back to a more
   generous one.
+- **Core's OpenID Connect provider is better-auth's JWT and OAuth provider
+  plugins, configured and never forked** (`src/oauth/provider.ts`, research 0001).
+  The issuer is the bare instance URL, so the discovery documents are served at
+  the root by two route handlers that delegate to the plugin's helpers while the
+  endpoints stay under `/api/auth`. Only the authorization code grant and refresh
+  tokens exist; PKCE `S256` is required of every client; no client registers
+  itself, and `clientPrivileges` lets only a role that holds `client:manage` in
+  the matrix in force create, change or list one; a redirect address must match a
+  registered one character for character (the plugin's loopback-port allowance is
+  turned off); the JWT plugin's own `/token`, which hands any session a signed
+  JWT, is disabled. Claims are made by one function (`claimsFor`) for the ID token
+  and userinfo alike and only from granted scopes.
+- **The provider's tables are written by hand in both dialects and checked
+  against the installed plugins.** A list or object is JSON text on SQLite and a
+  native array or jsonb on PostgreSQL, and the schema-parity check treats the two
+  as one logical type. `oauth-schema.test.ts` reads what the plugins declare and
+  fails when a field has no column of that name or a column is left over, so a
+  better-auth bump that changes the schema is found by a test, not by a request.
+  Verified on sqld, PostgreSQL and a SQLite file.
+- **A sign-in page opened by the provider carries the app's signed request
+  through every step.** Its address has the provider's `sig`; the client plugin
+  adds the signed request to each sign-in step, the provider answers
+  `{ redirect: true, url }`, and the forms go to that address, carrying the
+  request to the second step. The page does not send someone already signed in
+  away while the request is there, or `prompt=login` could never show the form.
 - **Handing over ownership is one transaction of two conditional updates.**
   `transferOwnership` demotes the previous owner `where role = owner` and
   promotes the new one `where role = admin and deactivated_at is null`, in that
@@ -253,7 +282,8 @@ pointing here.
   is left.
 - **Self-mutations of the profile clear both session-data cookie variants**
   (`better-auth.session_data` and `__Secure-better-auth.session_data`), or the
-  cookie cache keeps serving the old values.
+  cookie cache keeps serving the old values. The cache is off now and none is set,
+  but the clearing stays, so turning it on cannot bring stale values back.
 - **Server-to-server calls to better-auth send an `Origin` equal to the auth
   base URL**, or its CSRF check answers 403.
 - **Timing-safe comparison for every key or token**: `timingSafeEqual` on

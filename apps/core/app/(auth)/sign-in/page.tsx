@@ -15,11 +15,14 @@ export default async function SignInPage({
     returnTo?: string | string[];
     error?: string | string[];
     reset?: string;
+    /** Present when an app sent the person here: the provider's signed request. */
+    sig?: string | string[];
   }>;
 }) {
   const query = await searchParams;
   const returnTo = safeReturnTo(query.returnTo);
-  if (await getSession()) redirect(returnTo);
+  // Someone already signed in is sent on, unless an app asked for a fresh sign-in (`prompt=login`).
+  if (query.sig === undefined && (await getSession())) redirect(returnTo);
 
   return (
     <PageContainer maxWidth="sm">

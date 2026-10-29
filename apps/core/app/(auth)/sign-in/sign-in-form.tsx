@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { type FormEvent, useEffect, useState } from 'react';
 import { Alert, Button, FormField, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../src/auth/client';
+import { continuationUrl, isContinuation } from '../../../src/auth/oauth-continuation';
 import { DEACTIVATED, passkeyProblem } from '../messages';
 import { ResendVerification } from '../resend-verification';
 import styles from '../auth.module.css';
@@ -33,8 +34,9 @@ export function SignInForm({ returnTo, notice }: { returnTo: string; notice?: Si
       setError(passkeyProblem(result.error));
       return;
     }
-    // A full navigation, so the next page is rendered with the new session cookie.
-    window.location.assign(returnTo);
+    // A full navigation, so the next page is rendered with the new session cookie. An app's sign-in goes
+    // back to the app; anything else goes where the person was headed.
+    window.location.assign(continuationUrl(result?.data) ?? returnTo);
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -64,11 +66,17 @@ export function SignInForm({ returnTo, notice }: { returnTo: string; notice?: Si
     }
     // The password was right but a second step is asked for: no session exists yet.
     if (result.data && 'twoFactorRedirect' in result.data && result.data.twoFactorRedirect) {
-      window.location.assign(`/sign-in/two-factor?returnTo=${encodeURIComponent(returnTo)}`);
+      // An app's request goes along, so the second step can carry on with it.
+      const search = window.location.search;
+      window.location.assign(
+        isContinuation(search)
+          ? `/sign-in/two-factor${search}`
+          : `/sign-in/two-factor?returnTo=${encodeURIComponent(returnTo)}`,
+      );
       return;
     }
     // A full navigation, so the next page is rendered with the new session cookie.
-    window.location.assign(returnTo);
+    window.location.assign(continuationUrl(result.data) ?? returnTo);
   }
 
   return (

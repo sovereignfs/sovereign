@@ -11,6 +11,7 @@ import { hasValidInvite, markInvitesAccepted } from '../invites';
 import { passwordPolicyMessage, passwordProblems, type PasswordPolicy } from './password-policy';
 import type { AuthMail } from './mail';
 import { isFirstAccount, type RegistrationPolicy } from './registration';
+import { oidcPlugins } from '../oauth/provider';
 import { assertMayOpenSession } from './session-gate';
 import { ROLE_OWNER, ROLE_USER } from './roles';
 import type { AuthSettings } from './settings';
@@ -34,6 +35,14 @@ function adapterFor(database: Database) {
           rateLimit: postgresSchema.rateLimits,
           twoFactor: postgresSchema.twoFactors,
           passkey: postgresSchema.passkeys,
+          jwks: postgresSchema.jwks,
+          oauthClient: postgresSchema.oauthClients,
+          oauthResource: postgresSchema.oauthResources,
+          oauthClientResource: postgresSchema.oauthClientResources,
+          oauthRefreshToken: postgresSchema.oauthRefreshTokens,
+          oauthAccessToken: postgresSchema.oauthAccessTokens,
+          oauthConsent: postgresSchema.oauthConsents,
+          oauthClientAssertion: postgresSchema.oauthClientAssertions,
         }
       : {
           user: sqliteSchema.users,
@@ -43,6 +52,14 @@ function adapterFor(database: Database) {
           rateLimit: sqliteSchema.rateLimits,
           twoFactor: sqliteSchema.twoFactors,
           passkey: sqliteSchema.passkeys,
+          jwks: sqliteSchema.jwks,
+          oauthClient: sqliteSchema.oauthClients,
+          oauthResource: sqliteSchema.oauthResources,
+          oauthClientResource: sqliteSchema.oauthClientResources,
+          oauthRefreshToken: sqliteSchema.oauthRefreshTokens,
+          oauthAccessToken: sqliteSchema.oauthAccessTokens,
+          oauthConsent: sqliteSchema.oauthConsents,
+          oauthClientAssertion: sqliteSchema.oauthClientAssertions,
         };
   return drizzleAdapter(database.drizzle as never, {
     provider: database.family === 'postgres' ? 'pg' : 'sqlite',
@@ -294,6 +311,9 @@ export function createAuth(
         });
       }),
     },
+    // The JWT plugin's own `/token` hands any session a signed JWT. Core signs nothing for a session: only
+    // the OAuth provider's token endpoint issues tokens.
+    disabledPaths: ['/token'],
     plugins: [
       // Authenticator app (TOTP) with backup codes. The code sent by email or text is not offered:
       // no `sendOTP` is given, so those endpoints answer that they are not configured. The secret and
@@ -330,10 +350,16 @@ export function createAuth(
           },
         },
       }),
+      // Core as a sign-in server for other apps (core-app §3.6).
+      ...oidcPlugins(database, settings),
     ],
     session: {
       freshAge: 0,
-      cookieCache: { enabled: true, maxAge: 300 },
+      // No signed cookie cache: with one, a session that had ended (a sign-out elsewhere, a password
+      // reset, a deactivation) went on working for up to 300 seconds for every better-auth endpoint, and
+      // the OAuth provider's authorize endpoint would still have issued a code to it. Each check reads
+      // the session from the database instead: one primary-key lookup.
+      cookieCache: { enabled: false },
     },
     rateLimit: {
       enabled: true,

@@ -71,6 +71,16 @@ describe('the sign-in page', () => {
     });
   });
 
+  it('shows the form to someone who is signed in when an app asked for a fresh sign-in', async () => {
+    const { signIn } = await pages();
+    getSession.mockResolvedValue({ user: { id: 'u1' } });
+    const html = renderToStaticMarkup(
+      await signIn({ searchParams: search(undefined, { sig: 'signed', client_id: 'abc' }) }),
+    );
+    expect(html).toContain('Sign in');
+    expect(html).toContain('type="password"');
+  });
+
   it('never sends someone signed in to another site', async () => {
     const { signIn } = await pages();
     getSession.mockResolvedValue({ user: { id: 'u1' } });

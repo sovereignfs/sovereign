@@ -64,6 +64,11 @@ flow and receive exactly the claims their scopes allow.
   tokens for that account stop working
 - The discovery `issuer`, every ID token `iss` and the JWKS agree
 
+**Not here:** the consent page (6.2), the end-session and revocation work (6.3),
+the client registry and its Console page (7.1, 8.6), the Directory API's resource
+(10.2), and CORS for single-page apps. Clients are registered meanwhile through
+the provider's own server API, and must be trusted.
+
 #### 📋 6.2 — Consent
 
 **Goal:** People decide what untrusted clients may know, once, and can change

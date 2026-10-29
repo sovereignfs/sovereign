@@ -270,3 +270,17 @@ All seven were accepted as recommended on 2026-10-27.
 | Task 8.6                     | Rotation dialog without the overlap choice; back-channel logout URI field                                                                                                                                              |
 | Task 10.2                    | Resource-scoped JWT plus a revocation check                                                                                                                                                                            |
 | Task 0.5 / `sovereign-infra` | Make core's public URL reachable from inside its container                                                                                                                                                             |
+
+## Follow-up findings (task 6.1, `@better-auth/oauth-provider` 1.7.13)
+
+Built against 1.7.13, the version core pins with better-auth 1.7.13, and checked
+on sqld, PostgreSQL and a SQLite file. What changed from the findings above:
+
+| Earlier finding                                                | At 1.7.13                                                                                                                                                                                  |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| B3: `skip_consent` ignored when a client is created            | The server-only `adminCreateOAuthClient` accepts `skip_consent` and stores it, so the trusted flag no longer needs a second write                                                          |
+| B4: a `web` client cannot register an `http` loopback redirect | Still true: `invalid_redirect_uri`. A `native` client can, and by default may then change its port at authorize time; core turns that off with `validateRedirectUri`                       |
+| (new) The plugin's schema                                      | Eight tables, not four: `oauthResource`, `oauthClientResource` and `oauthClientAssertion` joined the client, token and consent tables, plus the JWT plugin's `jwks`                        |
+| (new) The signed cookie cache                                  | The authorize endpoint reads the session from the cache, so an ended or deactivated person's browser was still given an authorization code for up to 300 seconds. Core turns the cache off |
+| (new) Discovery `claims_supported`                             | Lacks `locale`, `zoneinfo` and `roles`; `advertisedMetadata.claims_supported` adds them                                                                                                    |
+| (new) `client_credentials` default                             | Still advertised and accepted unless `grantTypes` is set; set                                                                                                                              |

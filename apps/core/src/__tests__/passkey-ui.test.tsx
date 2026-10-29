@@ -172,6 +172,16 @@ describe('signing in with a passkey, on the sign-in form', () => {
     expect(signInEmail).not.toHaveBeenCalled();
   });
 
+  it('goes back to the app when it was an app that asked for the sign-in', async () => {
+    signInPasskey.mockResolvedValue({
+      data: { redirect: true, url: 'https://rp.example.com/cb?code=one' },
+      error: null,
+    });
+    render(<SignInForm returnTo="/" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign in with a passkey' }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('https://rp.example.com/cb?code=one'));
+  });
+
   it('says what to check when the device gives no passkey, and stays put', async () => {
     signInPasskey.mockResolvedValue({ data: null, error: { status: 400, code: 'AUTH_CANCELLED' } });
     render(<SignInForm returnTo="/" />);

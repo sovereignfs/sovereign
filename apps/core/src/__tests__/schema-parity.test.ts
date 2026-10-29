@@ -20,6 +20,14 @@ describe("core's schemas", () => {
       'passkeys',
       'avatars',
       'capabilityOverrides',
+      'jwks',
+      'oauthClients',
+      'oauthResources',
+      'oauthClientResources',
+      'oauthRefreshTokens',
+      'oauthAccessTokens',
+      'oauthConsents',
+      'oauthClientAssertions',
     ]) {
       expect(Object.keys(sqlite)).toContain(table);
       expect(Object.keys(postgres)).toContain(table);

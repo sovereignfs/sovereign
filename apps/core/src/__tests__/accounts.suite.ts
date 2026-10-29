@@ -140,12 +140,11 @@ export function accountsSuite(createDatabase: () => Promise<TestDatabase>): void
       expect(await signedIn(a, jar)).toBeNull();
     });
 
-    it('stops it working through better-auth’s own cache within the cache lifetime', async () => {
+    it('stops it working through better-auth’s own session endpoint at once: there is no signed cache to lag', async () => {
       const { a, jar, id } = await people();
-      expect(jar.get('better-auth.session_data')).toBeTruthy();
+      // Nothing is cached in the browser, so no endpoint can answer from a copy that has gone stale.
+      expect(jar.get('better-auth.session_data')).toBeUndefined();
       await states.deactivate(id);
-      vi.useFakeTimers({ toFake: ['Date'] });
-      vi.setSystemTime(Date.now() + 301 * 1000);
       expect(await signedIn(a, jar, true)).toBeNull();
     });
 

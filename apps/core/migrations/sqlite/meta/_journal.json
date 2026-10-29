@@ -71,6 +71,13 @@
       "when": 1793229639407,
       "tag": "0009_capability_overrides",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1793231147936,
+      "tag": "0010_oidc_provider",
+      "breakpoints": true
     }
   ]
 }

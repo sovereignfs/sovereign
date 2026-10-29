@@ -170,8 +170,8 @@ each: `docs/architecture-rules.md`.
   a role is never taken from a request.
 - **Email is sent in the background, and its availability is checked first,**
   so verification, resend and reset answer alike for known and unknown
-  addresses; core's own session check bypasses the signed cookie cache, so an
-  ended session stops working at once.
+  addresses; better-auth's signed cookie cache is off, so an
+  ended session stops working at once everywhere.
 - **Sign-up's terms and time zone are checked in the user-create hook and
   recorded by the server;** every page is rendered per request, for the nonce.
 - **Every way of opening a session must pass the second step** when TOTP is on,
@@ -189,6 +189,10 @@ each: `docs/architecture-rules.md`.
   **Handing over ownership is one transaction of two conditional updates, and a
   password asked for again goes through `confirmPassword`, which counts wrong
   answers.**
+- **The OIDC provider is better-auth's plugins, configured:** the bare instance URL
+  is the issuer, only the code flow with PKCE `S256` exists, no client registers
+  itself, redirect addresses match exactly, and its tables are checked against the
+  installed plugins.
 - **A route handler that changes something calls `requireSameOrigin`** (a test
   fails when it does not); **an image is judged by its bytes**; **`users.image`
   is set only by uploading a picture.**

@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import { Alert, Button, FormField, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../../src/auth/client';
+import { continuationUrl, isContinuation } from '../../../../src/auth/oauth-continuation';
 import styles from '../../auth.module.css';
 
 /** The second sign-in step: a code from the authenticator app, or one of the backup codes. */
@@ -14,6 +15,14 @@ export function TwoFactorForm({ returnTo }: { returnTo: string }) {
   /** The sign-in this step belongs to cannot go on: only signing in again helps. */
   const [over, setOver] = useState(false);
   const [pending, setPending] = useState(false);
+  // An app's request, when it sent the person here: sign-in starts again with it, not without. Known only
+  // in the browser, so it is read after the first render, never during it.
+  const [request, setRequest] = useState('');
+  useEffect(() => {
+    if (isContinuation(window.location.search)) setRequest(window.location.search);
+  }, []);
+  const signInAgain =
+    request === '' ? `/sign-in?returnTo=${encodeURIComponent(returnTo)}` : `/sign-in${request}`;
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -30,8 +39,9 @@ export function TwoFactorForm({ returnTo }: { returnTo: string }) {
       else setError(problem.message);
       return;
     }
-    // A full navigation, so the next page is rendered with the new session cookie.
-    window.location.assign(returnTo);
+    // A full navigation, so the next page is rendered with the new session cookie. An app's sign-in goes
+    // back to the app.
+    window.location.assign(continuationUrl(result.data) ?? returnTo);
   }
 
   if (over) {
@@ -41,7 +51,7 @@ export function TwoFactorForm({ returnTo }: { returnTo: string }) {
           This sign-in can no longer be finished: it timed out, or there were too many wrong codes.
         </Alert>
         <p className={styles.footer}>
-          <Link className={styles.link} href={`/sign-in?returnTo=${encodeURIComponent(returnTo)}`}>
+          <Link className={styles.link} href={signInAgain}>
             Sign in again
           </Link>
         </p>
@@ -86,7 +96,7 @@ export function TwoFactorForm({ returnTo }: { returnTo: string }) {
         </button>
       </p>
       <p className={styles.footer}>
-        <Link className={styles.link} href="/sign-in">
+        <Link className={styles.link} href={request === '' ? '/sign-in' : signInAgain}>
           Back to sign in
         </Link>
       </p>

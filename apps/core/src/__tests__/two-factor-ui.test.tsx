@@ -196,6 +196,36 @@ describe('the second sign-in step', () => {
     expect(verifyBackupCode).not.toHaveBeenCalled();
   });
 
+  it('goes back to the app, with its code, when an app asked for the sign-in', async () => {
+    verifyTotp.mockResolvedValue({
+      data: { redirect: true, url: 'https://rp.example.com/cb?code=one' },
+      error: null,
+    });
+    render(<TwoFactorForm returnTo="/" />);
+    type('Code', '123456');
+    click('Continue');
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('https://rp.example.com/cb?code=one'));
+    expect(assign).not.toHaveBeenCalledWith('/');
+  });
+
+  it('keeps the app’s request on the way back to sign in, so the app’s sign-in is not lost', async () => {
+    const request = '?client_id=abc&sig=signed';
+    vi.stubGlobal('location', { ...window.location, assign, reload, search: request });
+    render(<TwoFactorForm returnTo="/" />);
+    await waitFor(() =>
+      expect(screen.getByRole('link', { name: 'Back to sign in' }).getAttribute('href')).toBe(
+        `/sign-in${request}`,
+      ),
+    );
+  });
+
+  it('goes back to plain sign-in on an ordinary visit', () => {
+    render(<TwoFactorForm returnTo="/" />);
+    expect(screen.getByRole('link', { name: 'Back to sign in' }).getAttribute('href')).toBe(
+      '/sign-in',
+    );
+  });
+
   it('takes a backup code instead, when the person asks to', async () => {
     verifyBackupCode.mockResolvedValue({ data: {}, error: null });
     render(<TwoFactorForm returnTo="/" />);

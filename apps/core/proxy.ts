@@ -49,6 +49,9 @@ function isPublic(pathname: string): boolean {
     pathname === '/forgot-password' ||
     pathname === '/reset-password' ||
     pathname === '/api/health' ||
+    // Discovery: an app finds the instance's endpoints here with no account and no cookie.
+    pathname === '/.well-known/openid-configuration' ||
+    pathname === '/.well-known/oauth-authorization-server' ||
     pathname.startsWith('/api/auth/') ||
     pathname.startsWith('/api/avatars/') ||
     pathname.startsWith('/_next/') ||

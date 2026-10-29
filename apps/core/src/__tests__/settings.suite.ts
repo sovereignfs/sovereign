@@ -95,6 +95,7 @@ export function settingsSuite(createDatabase: () => Promise<TestDatabase>): void
         '0007_avatars',
         '0008_locale',
         '0009_capability_overrides',
+        '0010_oidc_provider',
       ]);
     });
   });

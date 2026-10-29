@@ -153,6 +153,34 @@ describe('binary columns', () => {
   });
 });
 
+describe('list columns', () => {
+  const pair = (
+    postgresColumn: ReturnType<typeof text> | ReturnType<ReturnType<typeof text>['array']>,
+  ) => ({
+    sqlite: {
+      apps: sqliteTable('apps', {
+        id: sqliteText('id').primaryKey(),
+        redirects: sqliteText('redirects', { mode: 'json' }).notNull(),
+      }),
+    },
+    postgres: {
+      apps: pgTable('apps', { id: text('id').primaryKey(), redirects: postgresColumn.notNull() }),
+    },
+  });
+
+  it('are a pair when one is JSON text and the other is a native array', () => {
+    const { sqlite, postgres } = pair(text('redirects').array());
+    expect(schemaDifferences(sqlite, postgres)).toEqual([]);
+  });
+
+  it('are not a pair when the other side stores plain text', () => {
+    const { sqlite, postgres } = pair(text('redirects'));
+    expect(schemaDifferences(sqlite, postgres)).toEqual([
+      expect.stringContaining('column "redirects" differs'),
+    ]);
+  });
+});
+
 describe('toBuffer', () => {
   const bytes = [1, 2, 3, 250];
 

@@ -11,10 +11,11 @@ export const metadata: Metadata = { title: 'Confirm it is you' };
 export default async function TwoFactorPage({
   searchParams,
 }: {
-  searchParams: Promise<{ returnTo?: string | string[] }>;
+  searchParams: Promise<{ returnTo?: string | string[]; sig?: string | string[] }>;
 }) {
-  const returnTo = safeReturnTo((await searchParams).returnTo);
-  if (await getSession()) redirect(returnTo);
+  const query = await searchParams;
+  const returnTo = safeReturnTo(query.returnTo);
+  if (query.sig === undefined && (await getSession())) redirect(returnTo);
 
   return (
     <PageContainer maxWidth="sm">

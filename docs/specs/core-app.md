@@ -384,12 +384,12 @@ passkeys), subject to §3.2.1. The account holder is told by email.
 
 - Session cookies are scoped to `SV_AUTH_COOKIE_DOMAIN` when it is set, so that
   core's subdomains share them.
-- Sessions are verified from a signed cookie cache valid for 300 seconds, with
-  a server-side verification fallback. Core's own pages and actions do not use
-  the cache: they check the database on every request, so a session that has
-  ended (a password reset, a sign-out elsewhere, a deactivation) stops working
-  for what core guards at once. The cache answers better-auth's own session
-  endpoint, which may therefore lag by up to its lifetime.
+- Sessions are verified against the database on every request: there is no
+  signed cookie cache. A session that has ended (a password reset, a sign-out
+  elsewhere, an operator ending it, a deactivation) stops working at once for
+  core's pages and for every better-auth endpoint, the OpenID Connect
+  authorize endpoint included, which would otherwise have gone on issuing
+  authorization codes to an ended session for a few minutes.
 - Sensitive actions do not depend on session age (no "fresh session"
   requirement); they ask for the password instead where this spec says so.
 - Authentication endpoints are rate limited, with the counters stored in the
@@ -430,6 +430,30 @@ passkeys), subject to §3.2.1. The account holder is told by email.
 - ID tokens are signed (EdDSA) with keys published at the JWKS endpoint. The
   signing keys rotate every 90 days; the previous key stays published for a
   30-day grace period so tokens already issued keep verifying.
+- Only an operator can register a client: creating, changing and listing them
+  needs the `client:manage` capability in the matrix in force, and every client
+  belongs to the instance, so any operator can manage any client. A client's
+  allowed grant types must include `refresh_token` for it to refresh.
+- Discovery lists the claims core can give (`name`, `picture`, `locale`,
+  `zoneinfo`, `email`, `email_verified`, `roles` and the standard ones), and the
+  `picture` claim is an absolute address on the instance, since the stored one
+  is core's own path.
+- A redirect address that is not registered is never followed: core answers on
+  its own error page. This holds for a registered `http` loopback address on
+  another port too.
+- When an app sends someone to sign in, core's sign-in page carries the app's
+  request through the password, the second step and a passkey, and sends the
+  browser back to the app with its code. Someone already signed in who is sent
+  back with `prompt=login` is shown the form.
+- Signing keys are stored with their private half encrypted by better-auth with
+  `SV_AUTH_SECRET`, so changing it makes the stored keys unreadable and new ones
+  must be made (open point, like the authenticator keys in §3.4.1).
+- Not offered in Phase 1: cross-origin requests from a browser to the token and
+  userinfo endpoints (CORS), which a single-page app calling them directly
+  would need.
+- Until the consent page exists, a client that is not trusted cannot complete a
+  sign-in (§3.6.4); every client an operator registers in the meantime must be
+  trusted.
 
 #### 3.6.2 Scopes and claims
 
@@ -792,3 +816,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-29 | §3.3.2, §3.11: the language is validated and kept like the time zone (`INVALID_LOCALE`); what the Preferences page offers and that "Not set" saves nothing.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-10-29 | §3.2.3: the matrix is stored as differences from the default, what can never be stored, that a change shows within seconds without a per-session version, and that an unreadable matrix fails the check.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 2026-10-29 | §3.2.1: what a transfer of ownership requires (the password again, an active admin), that it is one conditional step so two transfers cannot make two owners or none, and the limit on wrong passwords.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 2026-10-29 | §3.5: no signed cookie cache, so an ended session stops working at once everywhere, authorize included. §3.6.1: who may register a client, claims advertised in discovery, redirect addresses never followed when unregistered, the sign-in page carrying an app's request through every step, signing keys encrypted with `SV_AUTH_SECRET`, and what is not offered yet.                                                                                                                                                                                                                                                                                                                                                     |

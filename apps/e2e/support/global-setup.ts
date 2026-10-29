@@ -5,6 +5,7 @@ import {
   startCore,
   waitForHealth,
 } from './core';
+import { startApps } from './apps';
 import { world } from './world';
 
 /**
@@ -17,14 +18,17 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   // The steps reach the same database to do what only the instance's own mail would let them do.
   world.set('database', databaseEnvironment(database));
   const core = await startCore(coreEnvironment(database));
+  const stopApps = await startApps();
   try {
     await waitForHealth(core);
   } catch (error) {
+    await stopApps();
     await core.stop();
     await database.cleanup();
     throw error;
   }
   return async () => {
+    await stopApps();
     await core.stop();
     await database.cleanup();
   };

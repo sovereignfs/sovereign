@@ -230,6 +230,15 @@ pointing here.
   revokes every token and removes the account and what belongs to it, in an order
   that does not rely on a database's cascade; the apps are told after the commit.
   A search is matched as typed (`like` with `escape`), never as a pattern.
+- **An invitation link is public, carries a random id, and decides nothing.**
+  `/invite/<id>` is in the proxy's public list; it only forwards a link that can
+  still be used to sign-up, and shows one page for every link that cannot
+  (unknown, expired, cancelled, used), so it says nothing about other people's
+  invitations. Whether a sign-up is admitted stays the server's decision from the
+  address (`hasValidInvite`). Invitations are made and cancelled by
+  `InviteManager` (`src/invites/manage.ts`), which checks `user:manage` fresh and
+  keeps one open invitation per address; when the email cannot be sent the
+  invitation still exists and the operator gets the link.
 - **Every Console page checks for itself, and shows a page that is not there to
   someone who may not enter.** `requireConsole` (`src/console/guard.ts`) asks for
   a session, `console:access` and the capability the page needs, judged by the

@@ -8,9 +8,18 @@ import { afterVerification } from '../messages';
 import { ResendVerification } from '../resend-verification';
 import styles from '../auth.module.css';
 
-export function SignUpForm({ returnTo, passwordHint }: { returnTo: string; passwordHint: string }) {
+export function SignUpForm({
+  returnTo,
+  passwordHint,
+  invitedEmail,
+}: {
+  returnTo: string;
+  passwordHint: string;
+  /** The address an invitation link was sent to; the field starts with it. */
+  invitedEmail?: string | undefined;
+}) {
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(invitedEmail ?? '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [agreed, setAgreed] = useState(false);

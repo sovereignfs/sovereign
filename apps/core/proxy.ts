@@ -38,7 +38,7 @@ export function proxy(request: NextRequest): NextResponse {
   return withCsp(NextResponse.next({ request: { headers } }), csp);
 }
 
-/** The pages and routes anyone may reach: sign-in and its second step, sign-up, the password reset pages, the legal pages, better-auth's own routes, health, assets. */
+/** The pages and routes anyone may reach: sign-in and its second step, sign-up, invitation links, the password reset pages, the legal pages, better-auth's own routes, health, assets. */
 function isPublic(pathname: string): boolean {
   return (
     pathname === '/sign-in' ||
@@ -48,6 +48,8 @@ function isPublic(pathname: string): boolean {
     pathname === '/tos' ||
     pathname === '/forgot-password' ||
     pathname === '/reset-password' ||
+    // An invitation link: the person it was sent to has no account or cookie yet.
+    pathname.startsWith('/invite/') ||
     pathname === '/api/health' ||
     // Discovery: an app finds the instance's endpoints here with no account and no cookie.
     pathname === '/.well-known/openid-configuration' ||

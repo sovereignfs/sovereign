@@ -689,6 +689,26 @@ much as by the page that offers it:
   the holder. When email is not set up the reset still happens and the operator
   is told to tell the holder. Sessions are left open.
 
+An invitation is made by an operator who holds `user:manage`, for an email
+address and, optionally, a number of days from 1 to 365 (left empty, it does not
+expire). The address is kept in lower case and must look like an address; one
+that already has an account is refused, and the operator is told so. Only one
+invitation is open for an address: a new one cancels the one before, so a link
+sent earlier stops working. The invitation is emailed with a link on core's own
+address, `/invite/<id>`, where the id is random and unguessable. When email is
+not set up, or sending fails, the invitation still exists and the operator is
+shown the link to pass on, with a way to copy it. The Console lists the
+invitations that have been neither used nor cancelled, newest first, with who
+made them and when each ends; one past its expiry is listed as expired, so it
+can be seen and cancelled. Cancelling takes the link out of use at once; an
+invitation that was used cannot be cancelled.
+
+The link is public. One that can still be used goes on to sign-up, which starts
+with the address it was sent to; every other link (unknown, expired, cancelled,
+used) shows the same "this invitation link does not work" page, so it says nothing
+about invitations other people hold. The page and the link only help: whether a
+sign-up is admitted is decided by the server from the address (§3.3.1).
+
 The Console is at `/console`, and entering it takes `console:access`. Its
 navigation lists only the sections the person's role may open, judged by the
 matrix in force, and a role that cannot enter sees none. Someone who is not
@@ -915,3 +935,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-29 | §3.7: the registry is the only writer and needs `client:manage`; the provider's own client routes are off; what an address may be; the limits on lists; public and confidential cannot be exchanged; stopping trust takes `roles` away; deleting removes tokens and consents explicitly.                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 2026-10-29 | §3.10: where the Console is, who may enter and what they are shown when they may not, that each page checks for itself, and how the sections are laid out on a wide screen and on a phone.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | 2026-10-29 | §3.10: how accounts are listed and searched, what an account's page shows, and the rules every operator action is held to by the server: capability, who may act on whom, not on oneself; what deleting removes and tells; what resetting two-factor sign-in does and does not do.                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 2026-10-29 | §3.10: how an invitation is made, replaced, sent, listed and cancelled; what an operator is shown when email is not set up; that the invitation link is public and shows one page for every link that does not work.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |

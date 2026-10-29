@@ -196,6 +196,9 @@ each: `docs/architecture-rules.md`.
 - **An operator's action on an account holds the role rules in `AccountManager`**
   (capability, whom, not oneself), and deleting is one transaction; the Console's
   buttons are only a convenience.
+- **An invitation link is public and decides nothing**: sign-up checks the address
+  (`hasValidInvite`); `InviteManager` makes and cancels invitations, and every
+  link that does not work shows the same page.
 - **Every Console page calls `requireConsole` itself** (a test fails when one does
   not), and answers someone who may not enter with a page that is not there.
 - **A client is written only by `ClientRegistry`** (validation, the provider's

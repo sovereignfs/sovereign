@@ -70,7 +70,7 @@ are shown), ending an account's sessions without deactivating it, and invites
 (8.3); ownership transfer from the Console is the capability matrix and ownership
 task (8.5).
 
-#### 📋 8.3 — Invites `[parallel]`
+#### ✅ 8.3 — Invites `[parallel]`
 
 **Goal:** Operators can invite people by email.
 
@@ -87,6 +87,11 @@ task (8.5).
 
 - An invited person can sign up while invite-only is on; an expired invite is
   refused
+
+**Not here:** editing an invitation's expiry (cancel and invite again), choosing
+the role an invitation gives (a role is set by core and never by a request,
+§3.3.1; the owner changes it afterwards), and resending an invitation as a
+separate action (inviting the address again does it).
 
 #### 📋 8.4 — Instance settings `[parallel]`
 

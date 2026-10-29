@@ -1,0 +1,80 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--sv-font-size-2xl);
+  font-weight: var(--sv-font-weight-semibold);
+}
+
+.lead {
+  margin: 0;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-md);
+}
+
+.subheading {
+  margin: 0;
+  font-size: var(--sv-font-size-lg);
+  font-weight: var(--sv-font-weight-semibold);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+}
+
+.fields {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--sv-space-2);
+  flex-wrap: wrap;
+}
+
+.emailField {
+  flex: 2;
+  min-width: 14rem;
+}
+
+.daysField {
+  flex: 1;
+  min-width: 10rem;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  flex-wrap: wrap;
+  margin-top: var(--sv-space-2);
+}
+
+.code {
+  font-family: var(--sv-font-family-mono);
+  font-size: var(--sv-font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.muted {
+  color: var(--sv-color-text-muted);
+}
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  flex-wrap: wrap;
+}
+
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

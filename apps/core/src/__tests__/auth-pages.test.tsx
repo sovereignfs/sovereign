@@ -17,6 +17,12 @@ vi.mock('../auth/client', () => ({
 const getRegistrationMode = vi.fn();
 vi.mock('../auth/mode', () => ({ getRegistrationMode: () => getRegistrationMode() as unknown }));
 
+const lookupInvite = vi.fn();
+vi.mock('../invites/manage', () => ({
+  lookupInvite: (...args: unknown[]) => lookupInvite(...args) as unknown,
+}));
+vi.mock('../database', () => ({ getDatabase: () => Promise.resolve({}) }));
+
 async function pages(env: Record<string, string> = {}) {
   vi.resetModules();
   vi.stubEnv('SV_URL', 'http://localhost:3000');
@@ -35,6 +41,7 @@ const search = (returnTo?: string, extra: Record<string, string> = {}) =>
 beforeEach(() => {
   getSession.mockReset().mockResolvedValue(null);
   getRegistrationMode.mockReset().mockResolvedValue('open');
+  lookupInvite.mockReset().mockResolvedValue({ state: 'invalid' });
 });
 afterEach(() => vi.unstubAllEnvs());
 
@@ -246,5 +253,41 @@ describe('the reset-password page', () => {
   it('keeps the token out of the Referer header sent to anywhere the page links', async () => {
     const { resetMetadata } = await pages();
     expect(resetMetadata.referrer).toBe('no-referrer');
+  });
+});
+
+describe('the sign-up page, reached from an invitation link', () => {
+  it('starts with the address the invitation was sent to', async () => {
+    lookupInvite.mockResolvedValue({ state: 'valid', email: 'invited@example.com' });
+    const { signUp } = await pages();
+    const html = renderToStaticMarkup(
+      await signUp({ searchParams: search(undefined, { invite: 'abc' }) }),
+    );
+    expect(lookupInvite).toHaveBeenCalledWith({}, 'abc', expect.any(Number));
+    expect(html).toMatch(/<input[^>]*type="email"[^>]*value="invited@example.com"/);
+  });
+
+  it('leaves the address empty for a link that no longer works, and says nothing about why', async () => {
+    const { signUp } = await pages();
+    const html = renderToStaticMarkup(
+      await signUp({ searchParams: search(undefined, { invite: 'abc' }) }),
+    );
+    expect(html).not.toMatch(/value="[^"]*@/);
+    expect(html).not.toMatch(/expired|cancelled|used/i);
+  });
+
+  it('does not look anything up when there is no invitation in the address', async () => {
+    const { signUp } = await pages();
+    renderToStaticMarkup(await signUp({ searchParams: search() }));
+    expect(lookupInvite).not.toHaveBeenCalled();
+  });
+
+  it('keeps the address out of the markup as markup', async () => {
+    lookupInvite.mockResolvedValue({ state: 'valid', email: '"><script>alert(1)</script>@x.io' });
+    const { signUp } = await pages();
+    const html = renderToStaticMarkup(
+      await signUp({ searchParams: search(undefined, { invite: 'abc' }) }),
+    );
+    expect(html).not.toContain('<script>alert');
   });
 });

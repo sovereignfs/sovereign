@@ -69,6 +69,8 @@ describe('the Console’s own page', () => {
     const html = renderToStaticMarkup(await ConsolePage());
     expect(html).toContain('href="/console/accounts"');
     expect(html).toContain('Accounts');
+    expect(html).toContain('href="/console/invites"');
+    expect(html).toContain('Invites');
     expect(html).not.toContain('There is nothing to manage here yet.');
   });
 

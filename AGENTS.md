@@ -235,6 +235,10 @@ each: `docs/architecture-rules.md`.
   or an app's callback is requested twice with one authorization code. **Every
   response carries the hardening headers** (`securityHeaders`, from the proxy's
   one exit), HSTS over https only.
+- **Every signed-in page has the one `AccountHeader`** (from its layout: the launcher,
+  the identity pages, the Console), a missing or failed page has `not-found.tsx` /
+  `error.tsx`, and going to another page is a `ButtonLink`: no page is a dead end
+  and none carries an unstyled link.
 - **Phase 1 acceptance is `apps/e2e`**: one named test for each item of §3.17
   (`§3.17.N:` in the title; a test fails when an item has none), run in CI on
   each database against a built core. Its apps ask from addresses of their own,

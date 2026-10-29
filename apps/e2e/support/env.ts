@@ -18,3 +18,14 @@ export const person = (name: string) => ({
   email: `${name.toLowerCase()}@example.test`,
   password: PASSWORD,
 });
+
+let nextAddress = 10;
+/** A client address of its own: core limits sign-in and sign-up attempts for each address, and people are not all one address. */
+export const freshAddress = (): string => `198.51.100.${nextAddress++ % 250}`;
+
+/**
+ * Core refuses a token issued in the same second a revocation was recorded: the doubt goes against the token. A step
+ * that removes an app's access and then needs a token it asks for next waits out that second first.
+ */
+export const pastTheSecond = (): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, 1100));

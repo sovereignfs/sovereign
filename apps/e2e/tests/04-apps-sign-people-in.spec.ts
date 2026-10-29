@@ -1,9 +1,8 @@
-import { createHash, randomBytes } from 'node:crypto';
 import { expect, test } from '@playwright/test';
-import { decodeJwt } from 'jose';
 import { configureRp, rpSeen } from '../support/apps';
 import { registerApp } from '../support/console';
 import { CORE_URL, MINIMAL_URL, RP_URL, person } from '../support/env';
+import { signInMinimal } from '../support/minimal';
 import { heading, newPerson, signIn, signOut } from '../support/ui';
 import { world } from '../support/world';
 
@@ -13,8 +12,6 @@ const member = person('Uma');
 export type RegisteredApp = { id: string; secret: string | undefined };
 
 test.describe.configure({ mode: 'serial' });
-
-const base64url = (bytes: Buffer) => bytes.toString('base64url');
 
 test('§3.17.6: an operator registers two apps, one an off-the-shelf OIDC client; both sign people in through core, appear in the launcher, and receive only the claims their scopes allow', async ({
   browser,
@@ -72,46 +69,14 @@ test('§3.17.6: an operator registers two apps, one an off-the-shelf OIDC client
   expect(seen.refreshToken).toBeTruthy();
 
   // The second app uses no library: the plain requests of the code flow with PKCE, for a client with no secret.
-  const metadata = (await (await fetch(`${CORE_URL}/.well-known/openid-configuration`)).json()) as {
-    authorization_endpoint: string;
-    token_endpoint: string;
-    userinfo_endpoint: string;
-  };
-  const verifier = base64url(randomBytes(32));
-  const authorize = new URL(metadata.authorization_endpoint);
-  authorize.search = new URLSearchParams({
-    client_id: minimal.id,
-    redirect_uri: `${MINIMAL_URL}/callback`,
-    response_type: 'code',
-    scope: 'openid email roles',
-    state: 'minimal-state',
-    code_challenge: base64url(createHash('sha256').update(verifier).digest()),
-    code_challenge_method: 'S256',
-  }).toString();
-  // A trusted app is not asked about: she goes straight back to it.
-  await uma.page.goto(authorize.href);
-  await expect(uma.page).toHaveURL(new RegExp(`^${MINIMAL_URL}/callback\\?`));
-  const back = new URL(uma.page.url());
-  expect(back.searchParams.get('state')).toBe('minimal-state');
-  const token = await fetch(metadata.token_endpoint, {
-    method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'authorization_code',
-      code: back.searchParams.get('code') as string,
-      redirect_uri: `${MINIMAL_URL}/callback`,
-      client_id: minimal.id,
-      code_verifier: verifier,
-    }),
-  });
-  expect(token.status).toBe(200);
-  const tokens = (await token.json()) as { id_token: string; access_token: string };
-  const claims = decodeJwt(tokens.id_token);
+  // It is trusted, so she is not asked about it: she goes straight back to it.
+  const minimalSignIn = await signInMinimal(uma.page, minimal.id, 'openid email roles');
+  expect(minimalSignIn.askedConsent).toBe(false);
   // Email and role, as its scopes allow; no name, which `profile` would have given.
-  expect(claims).toMatchObject({ email: member.email, roles: ['platform:user'] });
-  expect(claims).not.toHaveProperty('name');
-  const userinfo = await fetch(metadata.userinfo_endpoint, {
-    headers: { authorization: `Bearer ${tokens.access_token}` },
+  expect(minimalSignIn.claims).toMatchObject({ email: member.email, roles: ['platform:user'] });
+  expect(minimalSignIn.claims).not.toHaveProperty('name');
+  const userinfo = await fetch(minimalSignIn.userinfoEndpoint, {
+    headers: { authorization: `Bearer ${minimalSignIn.accessToken}` },
   });
   expect(await userinfo.json()).toMatchObject({ email: member.email });
 

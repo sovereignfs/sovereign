@@ -1,11 +1,7 @@
 import { expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
-import { CORE_URL, PASSWORD } from './env';
+import { CORE_URL, freshAddress, PASSWORD } from './env';
 
 export type Who = { name: string; email: string; password: string };
-
-let nextAddress = 10;
-/** A client address of its own: core limits sign-in and sign-up attempts for each address, and people are not all one address. */
-export const freshAddress = (): string => `198.51.100.${nextAddress++ % 250}`;
 
 /** A browser of its own: its own cookies, its own session and its own address, as another person's would be. */
 export async function newPerson(
@@ -74,4 +70,4 @@ export const alert = (page: Page) => page.locator('[role="alert"]:not(#__next-ro
 /** The text of an `<h1>`: what page this is. */
 export const heading = (page: Page) => page.getByRole('heading', { level: 1 });
 
-export { PASSWORD };
+export { freshAddress, PASSWORD };

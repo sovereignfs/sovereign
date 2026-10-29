@@ -1,7 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { createRemoteJWKSet, decodeProtectedHeader, jwtVerify, type JWTPayload } from 'jose';
 import * as oidc from 'openid-client';
-import { CORE_URL, MINIMAL_PORT, RP_PORT, RP_URL } from './env';
+import { CORE_URL, freshAddress, MINIMAL_PORT, RP_PORT, RP_URL } from './env';
 
 /**
  * The two apps core signs people in for, run for the whole suite so that a browser can be sent to them.
@@ -83,6 +83,13 @@ function relyingParty(): Server {
       oidc.ClientSecretBasic(settings.clientSecret),
       { execute: [oidc.allowInsecureRequests] },
     );
+    // The app's server asks from an address of its own: core limits the token endpoint for each address, and the
+    // suite's apps are not one address with the test's requests and each other's.
+    configuration[oidc.customFetch] = (url, options) => {
+      const headers = new Headers(options.headers);
+      headers.set('x-forwarded-for', freshAddress());
+      return fetch(url, { ...options, headers } as RequestInit);
+    };
     return configuration;
   };
 
@@ -332,4 +339,29 @@ export async function configureRp(settings: RpSettings): Promise<void> {
     method: 'POST',
     body: JSON.stringify(settings),
   });
+}
+
+/** Asks the relying party to do something with the tokens it holds (`/api/refresh`, `/api/userinfo`, …). */
+export async function rpApi(
+  path: string,
+): Promise<{ ok: boolean; error?: string; scope?: string; cause?: unknown }> {
+  return (await (await fetch(`${RP_URL}${path}`)).json()) as {
+    ok: boolean;
+    error?: string;
+    scope?: string;
+    cause?: unknown;
+  };
+}
+
+/** Waits until the relying party has been sent `count` logout notices (they arrive after the response that caused them). */
+export async function rpLogoutTokens(count: number, timeoutMs = 10_000): Promise<RpSeen> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const seen = await rpSeen();
+    if (seen.logoutTokens.length >= count) return seen;
+    if (Date.now() > deadline) {
+      throw new Error(`Only ${seen.logoutTokens.length} of ${count} logout notices arrived.`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
 }

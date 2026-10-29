@@ -19,7 +19,10 @@ export function createNonce(): string {
 
 export type CspOptions = {
   nonce: string;
-  /** Development needs `'unsafe-eval'`: React uses `eval` there to rebuild server stacks in the browser. */
+  /**
+   * Development needs `'unsafe-eval'`, since React uses `eval` there to rebuild server stacks in the browser, and
+   * inline styles, which Next's error overlay and indicator are made of.
+   */
   development?: boolean;
   /**
    * Ask the browser to upgrade `http:` subresources to `https:`. Only right when core is
@@ -49,7 +52,9 @@ export function buildCsp({
       "'strict-dynamic'",
       ...(development ? ["'unsafe-eval'"] : []),
     ],
-    'style-src': ["'self'", `'nonce-${nonce}'`],
+    // A nonce makes a browser ignore `'unsafe-inline'`, so development, whose error overlay and indicator
+    // style themselves inline, has the one or the other: with the nonce they are drawn as a blank box.
+    'style-src': development ? ["'self'", "'unsafe-inline'"] : ["'self'", `'nonce-${nonce}'`],
     // A `style=""` attribute cannot run script, and the design system sets CSS custom
     // properties through them. Style *elements* still need the nonce.
     'style-src-attr': ["'unsafe-inline'"],

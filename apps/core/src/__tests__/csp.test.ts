@@ -53,6 +53,16 @@ describe('buildCsp', () => {
     expect(csp.get('style-src-attr')).toEqual(["'unsafe-inline'"]);
   });
 
+  it('lets development draw its overlay with inline styles, and nothing else relaxes there or elsewhere', () => {
+    const dev = directives(buildCsp({ nonce, development: true }));
+    expect(dev.get('style-src')).toEqual(["'self'", "'unsafe-inline'"]);
+    // Scripts keep the nonce in development too.
+    expect(dev.get('script-src')?.join(' ')).not.toContain("'unsafe-inline'");
+    expect(directives(buildCsp({ nonce })).get('style-src')?.join(' ')).not.toContain(
+      "'unsafe-inline'",
+    );
+  });
+
   it('denies plugins and framing, and pins base and form targets to core itself', () => {
     const csp = directives(buildCsp({ nonce }));
     expect(csp.get('default-src')).toEqual(["'self'"]);

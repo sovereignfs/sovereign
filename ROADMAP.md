@@ -1,6 +1,6 @@
 # Sovereign Core — Roadmap
 
-**Version:** 0.50.0 · **Last updated:** 2026-10-29
+**Version:** 0.51.0 · **Last updated:** 2026-10-29
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -155,7 +155,7 @@ be argued before anything is built.
 
 | Version | Priority | Task                                     | Status | Epic task                 |
 | ------- | -------- | ---------------------------------------- | ------ | ------------------------- |
-| —       | 1        | The specification                        | ⏳     | [14.1](docs/epics/sdk.md) |
+| 0.51.0  | 1        | The specification                        | ✅     | [14.1](docs/epics/sdk.md) |
 | —       | 2        | Tokens, failure and today's capabilities | 📋     | [14.2](docs/epics/sdk.md) |
 | —       | 3        | Signing in, and the Next.js adapter      | 📋     | [14.3](docs/epics/sdk.md) |
 | —       | 4        | Publishing                               | 📋     | [14.4](docs/epics/sdk.md) |

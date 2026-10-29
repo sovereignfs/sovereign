@@ -23,7 +23,7 @@ are added when core's Phase 2 specifies them.
 
 ## Tasks
 
-#### ⏳ 14.1 — The specification
+#### ✅ 14.1 — The specification
 
 **Goal:** What the SDK does is written down before any of it is built.
 

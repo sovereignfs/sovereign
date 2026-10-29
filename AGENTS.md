@@ -21,8 +21,11 @@ assumptions:
 
 - `docs/specs/core-app.md` — what `apps/core` must do, phase by phase. Wins over
   code, epics and issues until it is changed.
+- `docs/specs/operator-cli.md` — what `apps/cli` must do. Holds the same place
+  for it as `core-app.md` does for `apps/core`.
 - `spec/core-api/` — the HTTP contract apps call; `spec/env.md` — the
-  environment variable convention.
+  environment variable convention; `spec/suite.md` and `spec/app-manifest.md` —
+  the instance repository and what an app provides (`spec/schemas/`).
 - `ROADMAP.md` — chronological task index (milestone → epic task ID → status).
   Full task detail lives in `docs/epics/`. Each task = one branch = one PR.
 - `docs/development-workflow.md` — how to start, implement, and complete a task
@@ -353,9 +356,9 @@ packages/
   mailer/           mail delivery
   api-client/       typed Core API client — published
   tsconfig/         shared TS configs — extend these
-spec/               core-api/ (OpenAPI), env.md
+spec/               core-api/ (OpenAPI), env.md, suite.md, app-manifest.md, schemas/
 docs/
-  specs/            core-app.md — source of truth for apps/core
+  specs/            core-app.md, operator-cli.md — source of truth for each app
   epics/            task detail;  rfcs/  research/  adrs/
 scripts/            repository tooling
 Dockerfile, docker-compose*.yml   the image and its three compose setups (docs/deploying.md)

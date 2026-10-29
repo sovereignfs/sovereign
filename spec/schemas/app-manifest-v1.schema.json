@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/sovereignfs/sovereign/main/spec/schemas/app-manifest-v1.schema.json",
+  "title": "Sovereign app manifest, version 1",
+  "description": "What an app provides so that it can be hosted. spec/app-manifest.md is the prose.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["manifest", "prefix", "name", "port", "health", "signIn", "core"],
+  "properties": {
+    "manifest": { "const": 1 },
+    "prefix": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]*$",
+      "not": { "const": "SV" }
+    },
+    "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "description": { "type": "string", "maxLength": 280 },
+    "icon": {
+      "type": "string",
+      "anyOf": [{ "$ref": "#/$defs/path" }, { "pattern": "^https://[^\\s]+$" }]
+    },
+    "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+    "health": { "$ref": "#/$defs/path" },
+    "launch": { "$ref": "#/$defs/path" },
+    "signIn": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["redirect", "scopes"],
+      "properties": {
+        "redirect": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/path" },
+          "minItems": 1,
+          "maxItems": 20,
+          "uniqueItems": true
+        },
+        "postLogout": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/path" },
+          "maxItems": 20,
+          "uniqueItems": true
+        },
+        "backChannel": { "$ref": "#/$defs/path" },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "enum": ["openid", "profile", "email", "roles", "directory", "offline_access"]
+          },
+          "contains": { "const": "openid" },
+          "uniqueItems": true
+        }
+      }
+    },
+    "database": { "type": "boolean" },
+    "generate": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9]*_[A-Z0-9_]+$" },
+      "uniqueItems": true
+    },
+    "data": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/path" },
+      "uniqueItems": true
+    },
+    "core": { "type": "string", "minLength": 1 }
+  },
+  "$defs": {
+    "path": {
+      "type": "string",
+      "pattern": "^/[^\\s?#]*$",
+      "not": { "pattern": "(^|/)\\.\\.(/|$)" }
+    }
+  }
+}

@@ -5,7 +5,7 @@
 
 ## Status
 
-📋 Planned. [RFC 0002](../rfcs/0002-deployment-strategies.md) is accepted
+⏳ In Progress. [RFC 0002](../rfcs/0002-deployment-strategies.md) is accepted
 
 ## Overview
 
@@ -17,33 +17,38 @@ and the hardest part, `sv apply`, comes before the commands that drive it.
 ## Related
 
 - [docs/rfcs/0002-deployment-strategies.md](../rfcs/0002-deployment-strategies.md): the design, the alternatives, the open questions
-- [docs/specs/core-app.md](../specs/core-app.md): §3.6, §3.7, §3.15, §3.16
+- [docs/specs/operator-cli.md](../specs/operator-cli.md): what the CLI must do, and where every task below is checked
+- [spec/suite.md](../../spec/suite.md) and [spec/app-manifest.md](../../spec/app-manifest.md): the files it reads
+- [docs/specs/core-app.md](../specs/core-app.md): §3.5, §3.7.4, §3.15, §3.16
 - [spec/env.md](../../spec/env.md): the rules an app's variables follow
 - Epic 12 releases the image that this epic deploys
 
 ## Tasks
 
-#### 📋 13.1 — The contracts
+#### ⏳ 13.1 — The specifications
 
-**Goal:** What an instance repository holds and what an app must provide are written down before anything reads them.
+**Goal:** What the CLI must do, what an instance repository holds and what an app must provide are written down before any
+of it is built.
 
 **Priority:** 1.
 
 **Deliverables:**
 
-- The RFC's outcome in the spec: the managed key (§3.7), and the rule that `SV_AUTH_COOKIE_DOMAIN` stays unset when apps
-  share a parent domain (§3.15)
-- `spec/suite.md` and `spec/app-manifest.md`, each with a JSON Schema
-- A small test app, with a manifest, for the tasks below to deploy
+- `docs/specs/operator-cli.md`: every command, the steps of `sv apply`, deploying, secrets, upgrades and recovery
+- `spec/suite.md` and `spec/app-manifest.md`, with JSON Schemas under `spec/schemas/`, and a test that holds the documents'
+  examples to them
+- The RFC's outcome in core's spec: `sovereign-admin`, the managed key and the system actor (§3.7.4)
+- The shared variable names apps are given, in `spec/env.md`
 
-**Dependencies:** 12.3, 12.4
+**Dependencies:** 12.4
 
-**Spec reference:** §3.7, §3.15
+**Spec reference:** §3.7.4, §3.15; RFC 0002
 
 **Review checklist:**
 
 - No app is named
 - Every field has one meaning, and a rule for what happens when the schema version changes
+- Every failure of `sv apply` has a stated result, and running it again is defined at every step
 
 #### 📋 13.2 — `sovereign-admin` in the image
 
@@ -79,12 +84,13 @@ and the hardest part, `sv apply`, comes before the commands that drive it.
 - `apps/cli`, in the workspace and CI's change classification, with its licence
 - Steps 1 to 5, 8 and 9 of the RFC's `sv apply`: checks, a lock, rendering, networks, PostgreSQL, Caddy, core, verifying,
   releases and `state.json`
-- Generated secrets on the server, and the refusal when `SV_AUTH_COOKIE_DOMAIN` is set
+- Generated secrets on the server, and the refusals of operator-cli §6.5
+- A small test app, with a manifest, for this task and 13.4 to deploy
 - A CI job that runs it against real Docker, twice, and stops it after each step and resumes
 
-**Dependencies:** 13.1
+**Dependencies:** 12.3, 13.1
 
-**Spec reference:** §3.15; RFC 0002
+**Spec reference:** operator-cli §6, §7, §9.2; core-app §3.15
 
 **Review checklist:**
 
@@ -108,13 +114,14 @@ and the hardest part, `sv apply`, comes before the commands that drive it.
 
 **Dependencies:** 13.2, 13.3
 
-**Spec reference:** §3.6.5, §3.7; RFC 0002
+**Spec reference:** operator-cli §6.1, §6.2, §6.4; `spec/app-manifest.md`; core-app §3.6.5, §3.7.4
 
 **Review checklist:**
 
 - An app cannot reach another app's container or database
 - A failing app stops only itself
 - Removing an app keeps its data
+- A run stopped between making a client and saving its secret gives the app a new secret
 
 #### 📋 13.5 — Commands on the operator's machine
 
@@ -125,12 +132,12 @@ and the hardest part, `sv apply`, comes before the commands that drive it.
 **Deliverables:**
 
 - `@sovereignfs/create`: `instance <dir>`, `git init`, `--remote`, the toolkit pinned and installed, the `./sv` script
-- `sv setup`, `sv app add|update|remove|list`, `sv secret set`, `sv push`
+- `sv setup`, `sv app add|update|remove|list`, `sv secret set|remove|list|rekey`, `sv push`
 - Secrets encrypted to the operator's key and the server's, and a plain text check on push
 
 **Dependencies:** 13.1
 
-**Spec reference:** RFC 0002
+**Spec reference:** operator-cli §2, §3, §4, §9.1; `spec/suite.md`
 
 **Review checklist:**
 
@@ -152,11 +159,11 @@ and the hardest part, `sv apply`, comes before the commands that drive it.
 
 - `sv server bootstrap`: Docker, directories, the server's key, a deployment key limited with `command=`, address pools
 - `sv deploy --ssh`: refuses unpushed work, sends the commit as an archive, runs `sv apply` from the pinned image
-- `sv status`, `sv logs`, `sv doctor`, `sv secret rotate`
+- `sv status`, `sv logs`, `sv doctor`, `sv app show`, `sv secret rotate`
 
 **Dependencies:** 13.4
 
-**Spec reference:** RFC 0002
+**Spec reference:** operator-cli §7, §8.1, §8.3, §9.3
 
 **Review checklist:**
 
@@ -180,7 +187,7 @@ and the hardest part, `sv apply`, comes before the commands that drive it.
 
 **Dependencies:** 13.6
 
-**Spec reference:** RFC 0002
+**Spec reference:** operator-cli §5, §10.1; `spec/suite.md` §2, §4
 
 **Review checklist:**
 
@@ -201,7 +208,7 @@ and the hardest part, `sv apply`, comes before the commands that drive it.
 
 **Dependencies:** 13.6
 
-**Spec reference:** RFC 0002
+**Spec reference:** operator-cli §10.2, §10.3
 
 **Review checklist:**
 
@@ -221,7 +228,7 @@ and the hardest part, `sv apply`, comes before the commands that drive it.
 
 **Dependencies:** 13.7
 
-**Spec reference:** RFC 0002
+**Spec reference:** operator-cli §8.2
 
 **Review checklist:**
 
@@ -241,7 +248,7 @@ and the hardest part, `sv apply`, comes before the commands that drive it.
 
 **Dependencies:** 13.8
 
-**Spec reference:** RFC 0002
+**Spec reference:** operator-cli §13
 
 **Review checklist:**
 

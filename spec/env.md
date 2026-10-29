@@ -36,6 +36,8 @@ the prefix differs: `SV_URL` in core, `TASKS_URL` in an app that uses the `TASKS
 | `URL`                                              | The app's public address, with no path. It builds links, cookies and redirects     |        |
 | `AUTH_SECRET`                                      | Signs sessions and tokens. At least 32 characters                                  | yes    |
 | `CORE_URL`                                         | In an app that runs in a suite: the address of core, the app's sign-in server      |        |
+| `CORE_CLIENT_ID`                                   | In an app that runs in a suite: its client ID at core                              |        |
+| `CORE_CLIENT_SECRET`                               | Its client secret at core                                                          | yes    |
 | `DB_DIALECT`                                       | Which database: `sqld`, `sqlite` or `postgres`                                     |        |
 | `SQLD_URL`                                         | An sqld server's address (when `DB_DIALECT` is `sqld`)                             |        |
 | `SQLD_ADMIN_URL`                                   | Its admin address, used to create namespaces                                       |        |

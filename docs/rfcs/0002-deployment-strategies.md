@@ -1,13 +1,13 @@
 # RFC 0002 — Deployment: the operator CLI
 
-|                |                                                                                                                                                               |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**     | Accepted; not implemented                                                                                                                                     |
-| **Date**       | October 2026                                                                                                                                                  |
-| **Author**     | Claude Code, for review                                                                                                                                       |
-| **Scope**      | New `apps/cli`; `sovereign-admin` in the image; a managed key on clients; `spec/suite.md`, `spec/app-manifest.md`; `docs/specs/core-app.md` §3.6, §3.7, §3.15 |
-| **Tasks**      | [Epic 12](../epics/release.md), [Epic 13](../epics/operator-cli.md)                                                                                           |
-| **Supersedes** | Nothing in this repository. The legacy `sovereign-infra` had a template for the old single platform; this replaces the need for a new one                     |
+|                |                                                                                                                                                                                             |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**     | Accepted; not implemented                                                                                                                                                                   |
+| **Date**       | October 2026                                                                                                                                                                                |
+| **Author**     | Claude Code, for review                                                                                                                                                                     |
+| **Scope**      | New `apps/cli`; `sovereign-admin` in the image; a managed key on clients; `docs/specs/operator-cli.md`, `spec/suite.md`, `spec/app-manifest.md`; `docs/specs/core-app.md` §3.6, §3.7, §3.15 |
+| **Tasks**      | [Epic 12](../epics/release.md), [Epic 13](../epics/operator-cli.md)                                                                                                                         |
+| **Supersedes** | Nothing in this repository. The legacy `sovereign-infra` had a template for the old single platform; this replaces the need for a new one                                                   |
 
 ## Summary
 
@@ -503,4 +503,15 @@ Accepted as proposed, with the open questions answered as leaned:
 `create` is told what to make by a word (`instance <dir>`, `app <dir>`), which needs no `--` on any package manager. The
 flags are accepted too. `app <dir>` needs its own design.
 
-The outcome goes into the spec in task 13.1, before any code in epic 13.
+The outcome goes into the spec in task 13.1, before any code in epic 13. That is
+[`docs/specs/operator-cli.md`](../specs/operator-cli.md), `spec/suite.md`, `spec/app-manifest.md` and core-app §3.7.4, which
+now win over this document. Writing them changed four things:
+
+- **Wildcard certificates are not in the first version.** The stock proxy image has no DNS provider module, so a server with
+  no public port uses `tls: internal`, and its devices must trust the server's authority.
+- **A manifest names its prefix, not each variable,** and an app is given `spec/env.md`'s shared names under it, with
+  `CORE_CLIENT_ID` and `CORE_CLIENT_SECRET` added. It also gains `generate` and `data`, since most apps need a secret of their
+  own and somewhere to keep files.
+- **`sv app show --secret`** is how an operator gets an external app's secret, which stays on the server.
+- **A confidential client with no saved secret gets a new one,** since core returns a secret once and a run can stop between
+  making the client and saving it.

@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/sovereignfs/sovereign/main/spec/schemas/suite-v1.schema.json",
+  "title": "Sovereign suite.yml, version 1",
+  "description": "What an operator chose for an instance. spec/suite.md is the prose, with the rules a schema cannot express.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "domain", "core", "database", "server", "secrets"],
+  "properties": {
+    "schema": { "const": 1 },
+    "domain": { "$ref": "#/$defs/hostname" },
+    "core": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version"],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "env": {
+          "type": "object",
+          "propertyNames": {
+            "allOf": [
+              { "pattern": "^SV_[A-Z0-9_]+$" },
+              { "$ref": "#/$defs/notSecretName" },
+              {
+                "not": {
+                  "pattern": "^SV_(URL|AUTH_SECRET|FIELD_ENCRYPTION_KEYS|DB_DIALECT|POSTGRES_URL|SQLD_URL|SQLD_ADMIN_URL|SQLD_NAMESPACE|SQLITE_URL|AUTH_COOKIE_DOMAIN|AUTH_WEBAUTHN_RP_ID)(_FILE)?$"
+                }
+              }
+            ]
+          },
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version"],
+      "properties": {
+        "version": { "type": "string", "pattern": "^[0-9]+$" }
+      }
+    },
+    "server": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["host"],
+      "properties": {
+        "host": { "type": "string", "minLength": 1 },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "user": { "type": "string", "pattern": "^[a-z_][a-z0-9_-]*$" },
+        "deploy": { "enum": ["ssh", "github"] }
+      }
+    },
+    "tls": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "enum": ["per-host", "internal"] },
+        "email": { "type": "string", "pattern": "^[^@\\s]+@[^@\\s]+$" }
+      }
+    },
+    "secrets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["recipients"],
+      "properties": {
+        "recipients": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^age1[0-9a-z]+$" },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    },
+    "apps": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/appName" },
+      "additionalProperties": {
+        "oneOf": [{ "$ref": "#/$defs/hostedApp" }, { "$ref": "#/$defs/externalApp" }]
+      }
+    },
+    "purge": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/appName" },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "hostname": {
+      "type": "string",
+      "pattern": "^([a-z0-9]([a-z0-9-]*[a-z0-9])?\\.)+[a-z]{2,}$"
+    },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "notSecretName": {
+      "not": { "pattern": "_(PASSWORD|SECRET|KEY|KEYS|TOKEN)(_FILE)?$" }
+    },
+    "appName": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,30}[a-z0-9]$",
+      "not": { "enum": ["core", "proxy", "database", "www", "api", "auth"] }
+    },
+    "httpsUrl": { "type": "string", "pattern": "^https://[^\\s#*]+$" },
+    "launcher": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "description": { "type": "string", "maxLength": 280 },
+        "icon": { "$ref": "#/$defs/httpsUrl" },
+        "launchUrl": { "$ref": "#/$defs/httpsUrl" },
+        "show": { "type": "boolean" }
+      }
+    },
+    "hostedApp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image"],
+      "properties": {
+        "image": {
+          "type": "string",
+          "pattern": "^[^\\s@:]+(:[0-9]+)?(/[^\\s@:]+)*(:[A-Za-z0-9_][A-Za-z0-9._-]*|@sha256:[0-9a-f]{64})$",
+          "not": { "pattern": ":latest$" }
+        },
+        "manifest": { "$ref": "#/$defs/httpsUrl" },
+        "env": {
+          "type": "object",
+          "propertyNames": {
+            "allOf": [
+              { "pattern": "^[A-Z][A-Z0-9]*_[A-Z0-9_]+$" },
+              { "$ref": "#/$defs/notSecretName" }
+            ]
+          },
+          "additionalProperties": { "type": "string" }
+        },
+        "launcher": { "$ref": "#/$defs/launcher" }
+      }
+    },
+    "externalApp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["external", "name", "redirect"],
+      "properties": {
+        "external": { "const": true },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "redirect": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/httpsUrl" },
+          "minItems": 1,
+          "maxItems": 20,
+          "uniqueItems": true
+        },
+        "postLogout": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/httpsUrl" },
+          "maxItems": 20,
+          "uniqueItems": true
+        },
+        "backChannel": { "$ref": "#/$defs/httpsUrl" },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "enum": ["openid", "profile", "email", "roles", "directory", "offline_access"]
+          },
+          "uniqueItems": true
+        },
+        "type": { "enum": ["confidential", "public"] },
+        "trusted": { "type": "boolean" },
+        "launcher": { "$ref": "#/$defs/launcher" }
+      },
+      "if": {
+        "properties": { "scopes": { "contains": { "const": "roles" } } },
+        "required": ["scopes"]
+      },
+      "then": {
+        "required": ["trusted"],
+        "properties": { "trusted": { "const": true } }
+      }
+    }
+  }
+}

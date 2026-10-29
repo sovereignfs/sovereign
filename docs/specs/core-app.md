@@ -17,7 +17,8 @@ used as described in RFC 2119.
 The wire contract for anything an app calls over HTTP is in
 [`spec/core-api/`](../../spec/core-api/), and the environment variable
 convention is in [`spec/env.md`](../../spec/env.md). This document describes
-behaviour; those define the exact shapes.
+behaviour; those define the exact shapes. How operators deploy core is in
+[`operator-cli.md`](operator-cli.md).
 
 ---
 
@@ -720,7 +721,7 @@ Operators with `client:manage` register clients in the Console.
   client, and the trusted flag is core's to set). Launcher entries (§3.7.2) are
   stored with the client.
 - The registry is the only thing that writes a client, and every method of it
-  needs `client:manage` in the matrix in force. The provider's own routes for
+  needs `client:manage` in the matrix in force, or the system actor of §3.7.4. The provider's own routes for
   registering, changing, deleting or rotating a client are switched off, so
   nothing reaches a client around the rules. It says everything wrong with what
   was entered at once, each beside its field, and makes nothing when anything is
@@ -760,6 +761,48 @@ appears only as the app's **Client ID** and in its technical settings.
   **Deleting** asks first and says that what the app was given is taken back.
 - The list shows each app's name, whether it is on, whether it appears in the
   launcher, and when it was added.
+
+#### 3.7.4 Managed apps and `sovereign-admin`
+
+Not built yet (task 13.2). A deployment must register apps when nobody can sign
+in to the Console: on a first deployment no account exists. So core's image
+ships **`sovereign-admin`**, a command run inside core's container. The operator
+CLI calls it ([operator-cli §6](operator-cli.md)), and it is not run by hand.
+
+```text
+sovereign-admin apps ensure KEY --name NAME --redirect URL ... [--post-logout URL ...]
+                [--back-channel URL] [--scope SCOPE ...] [--public] [--trusted]
+                [--launch-url URL] [--description TEXT] [--icon URL] [--json]
+sovereign-admin apps list [--json]
+sovereign-admin apps rotate-secret KEY [--json]
+sovereign-admin apps remove KEY
+```
+
+- **It goes through the registry.** Every rule of §3.7 applies, with the same
+  refusals, and it adds no second way to write a client.
+- **The managed key.** A client MAY have a key, which `ensure` uses to find it
+  again on the next run. It is a DNS label, unique on the instance, set only here,
+  and never shown to an app or a person using it. A client made in the Console
+  has none.
+- **`ensure`** makes the client when none has the key, and otherwise changes it to
+  match. Run twice with the same arguments it changes nothing, and it makes one
+  client. A list given is the whole list, so an address left out is removed.
+- **A secret is returned once**, when `ensure` makes a confidential client or
+  `rotate-secret` makes a new one. `ensure` on a client that already exists
+  returns none. With `--json` the answer is `{ "key", "clientId", "secret" }`, and
+  `secret` is absent when there is none to give.
+- **The system actor.** The registry accepts an account with `client:manage` or a
+  system actor. A system actor is built in one place, this command's entry point,
+  which no route or action imports, and a test holds that. Its trust comes from
+  running inside the container: whoever can do that already holds
+  `SV_AUTH_SECRET`, so it grants nothing new.
+- **Every write is logged** to the container's output: what was done, and the
+  key. A secret is never logged.
+- **No HTTP route does this.** One would need a stored credential that can make
+  clients, to do what running a command inside the container does without one.
+- **In the Console**, a managed app says it is managed from the command line, and
+  that a change made there is overwritten on the next deployment. Deleting one
+  works, and the next deployment makes a new client with a new secret.
 
 ### 3.8 Launcher
 
@@ -1191,6 +1234,8 @@ How an operator runs core is in `docs/deploying.md`; what is promised:
   `SV_URL` (§3.6.5). `http://localhost:3000` is, since core listens there; behind
   a proxy on a public name the operator makes the name reach the proxy from
   inside (a host entry or a network alias).
+- The image ships `sovereign-admin` (§3.7.4), so a deployment needs nothing
+  installed beside it. It holds no package manager and no `tsx`.
 - For development, `pnpm dev` starts a persistent sqld when the environment
   chooses sqld, and `pnpm seed` makes an owner, an admin and an ordinary person
   to try it with. The seed refuses any address that is not on the machine it
@@ -1205,7 +1250,8 @@ an email address; editable email templates; theme presets, colours and text
 size preferences (a choice of light, dark or the system's is in Preferences, §3.11); mail, notification and activity APIs for apps; account
 deletion and export across apps; backups; end-to-end encryption and the
 recovery kit; push relay; built-in clients for native shells; provisioning
-databases for apps.
+databases for apps, which the operator CLI does and core takes no part in
+([operator-cli §6.4](operator-cli.md)).
 
 ### 3.17 Phase 1 is done when
 
@@ -1300,3 +1346,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-30 | §3.11, §1.3: Preferences gain Appearance, a choice of light, dark or the system's for core on this device, applied as it is chosen and kept in the browser only; the system's is the default and is followed as it changes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-10-30 | §3.15: the image is published to the GitHub Container Registry for `linux/amd64` and `linux/arm64` from a `vX.Y.Z` tag on `main`, once the full CI passes on that commit.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | 2026-10-30 | §3.5: session cookies are host-only (`__Host-`) over https when no cookie domain is set, so an app on a subdomain cannot plant a cookie core reads as its own; with a cookie domain they are `__Secure-` and shared; the proxy looks for the one name the instance sets; the names are decided in `src/auth/cookies.ts`. §3.15: the cookie domain's row says to leave it unset when apps run on subdomains.                                                                                                                                                                                                                                                                                                                   |
+| 2026-10-30 | §3.7.3, §3.7.4: `sovereign-admin` in the image, a managed key on clients, and a system actor for the registry, from RFC 0002. §3.15: the image ships it. §3.16: the operator CLI, not core, provisions apps' databases.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |

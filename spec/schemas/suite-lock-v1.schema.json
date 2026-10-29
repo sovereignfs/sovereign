@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/sovereignfs/sovereign/main/spec/schemas/suite-lock-v1.schema.json",
+  "title": "Sovereign suite.lock, version 1",
+  "description": "The image digests suite.yml resolved to. spec/suite.md is the prose.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "images"],
+  "properties": {
+    "schema": { "const": 1 },
+    "images": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cli", "core", "database", "proxy"],
+      "properties": {
+        "cli": { "$ref": "#/$defs/image" },
+        "core": { "$ref": "#/$defs/image" },
+        "database": { "$ref": "#/$defs/image" },
+        "proxy": { "$ref": "#/$defs/image" }
+      }
+    },
+    "apps": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9-]{0,30}[a-z0-9]$" },
+      "additionalProperties": { "$ref": "#/$defs/image" }
+    }
+  },
+  "$defs": {
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "digest"],
+      "properties": {
+        "ref": { "type": "string", "minLength": 1 },
+        "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    }
+  }
+}

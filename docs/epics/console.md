@@ -18,7 +18,7 @@ only at the page. All pages are built from `@sovereignfs/ui`.
 
 ## Tasks
 
-#### 📋 8.1 — Console shell
+#### ✅ 8.1 — Console shell
 
 **Goal:** Operators have a Console to work in, and nobody else can enter it.
 

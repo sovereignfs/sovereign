@@ -38,7 +38,7 @@ the task is corrected.
 | 5   | [Roles & Capabilities](roles-capabilities.md) | ✅ Complete    | Platform roles, capability matrix, ownership                                      |
 | 6   | [OIDC Provider](oidc-provider.md)             | ✅ Complete    | Sign-in server for apps: flows, claims, consent, logout                           |
 | 7   | [Apps & Launcher](apps-launcher.md)           | ⏳ In Progress | Client registry with launcher entries, the launcher                               |
-| 8   | [Console](console.md)                         | 📋 Planned     | Operators' administration area                                                    |
+| 8   | [Console](console.md)                         | ⏳ In Progress | Operators' administration area                                                    |
 | 9   | [Identity Pages](identity-pages.md)           | ⏳ In Progress | A person's own account pages                                                      |
 | 10  | [Core API](core-api.md)                       | 📋 Planned     | `spec/core-api`, `packages/api-client`, Directory API, branding                   |
 

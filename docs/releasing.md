@@ -24,7 +24,9 @@ they follow); `apps/core` and the repository are AGPL-3.0-or-later ([README](../
 
 - **A version, set in the pull request.** The package's own `version` follows semver by what
   changed in it ([AGENTS.md](../AGENTS.md) has the policy: `ui` is a published
-  contract, so a patch never breaks, and a break needs a minor bump plus a migration note).
+  contract, so a patch never breaks, and a break needs a minor bump plus a migration note in
+  [`docs/upgrade.md`](upgrade.md), or a major bump from `1.0.0`:
+  [design system §4](specs/design-system.md)).
   The bump is its own commit, `ui-vX.Y.Z`.
 - **A tarball that is only what an app needs:** `dist/`, `LICENSE`, `README.md`, and for `ui`
   the `NOTICE` with Lucide's ISC licence. No source, tests, stories or configuration; no

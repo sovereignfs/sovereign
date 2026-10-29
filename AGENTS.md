@@ -34,7 +34,8 @@ assumptions:
   attribution.
 - `docs/architecture-rules.md` — full detail behind every hard rule listed
   below.
-- `docs/design-system.md` — the `@sovereignfs/ui` model.
+- `docs/specs/design-system.md` — what `@sovereignfs/ui` promises, and
+  `docs/design-system.md` — the guide to using it.
 - `docs/releasing.md` — what is published (npm, the image) and how it is released.
 - `.agents/skills/sv-*` — task lifecycle skills (`sv-task-start`,
   `sv-task-complete`, `sv-verify`, `sv-security-check`, `sv-update-task-docs`,
@@ -110,7 +111,8 @@ recorded as an ADR in `docs/adrs/`. A documented "not now" is a valid outcome.
   - **Internal packages and `apps/core`** follow normal semver independently.
   - **`@sovereignfs/ui`, `@sovereignfs/bridge` and `@sovereignfs/api-client`**
     are published contracts: a patch never contains a breaking change; breaking
-    needs at least a minor bump plus a migration note.
+    needs at least a minor bump plus a migration note (`docs/upgrade.md`), and
+    for `ui` a major bump from `1.0.0` (`docs/specs/design-system.md` §4).
   - Tags/commit subjects: root `vX.Y.Z`; packages and apps `<slug>-vX.Y.Z`
     (`ui-`, `bridge-`, `core-`, …).
 
@@ -314,8 +316,8 @@ each: `docs/architecture-rules.md`.
 
 ## Design system (`packages/ui`)
 
-`packages/ui` is the **Sovereign Design System** — a public contract. Full
-model: `docs/design-system.md`.
+`packages/ui` is the **Sovereign Design System** — a public contract. What it
+promises: `docs/specs/design-system.md`. How to use it: `docs/design-system.md`.
 
 - **Core's UI follows the established Sovereign UI as it is.** Sign-in and
   related pages, consent, the signed-in shell, the launcher, the Console and the
@@ -358,7 +360,7 @@ packages/
   tsconfig/         shared TS configs — extend these
 spec/               core-api/ (OpenAPI), env.md, suite.md, app-manifest.md, schemas/
 docs/
-  specs/            core-app.md, operator-cli.md — source of truth for each app
+  specs/            core-app.md, operator-cli.md, design-system.md — source of truth for each
   epics/            task detail;  rfcs/  research/  adrs/
 scripts/            repository tooling
 Dockerfile, docker-compose*.yml   the image and its three compose setups (docs/deploying.md)

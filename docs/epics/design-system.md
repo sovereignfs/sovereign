@@ -17,6 +17,8 @@ first.
 
 ## Related
 
+- [docs/specs/design-system.md](../specs/design-system.md) — what the package promises
+- [docs/design-system.md](../design-system.md) — the guide to using it
 - [docs/specs/core-app.md](../specs/core-app.md) — §1.3
 - `packages/ui/README.md`
 
@@ -156,3 +158,47 @@ every theme; the encoder stays in core, so the design system takes on no new
 dependency). What remains in `apps/core` is wiring specific to core (the matrix
 editor, the app form, the launcher grid, the picture uploader), each composed
 only of design-system parts.
+
+#### ⏳ 2.4 — The specification
+
+**Goal:** What `@sovereignfs/ui` promises to the apps that depend on it is written down, and held to what the package does.
+
+**Deliverables:**
+
+- `docs/specs/design-system.md`: the public surface, stability tiers, versioning, and the rules for tokens, components and
+  dependencies
+- A test that holds what can be checked to the package
+- The guide corrected where it promised otherwise: React 19, `ToastProvider`, and versioning
+- `docs/upgrade.md`, which the versioning rules name
+
+**Dependencies:** 2.2
+
+**Spec reference:** §1.3
+
+**Review checklist:**
+
+- Every rule is true of the package today, or §10 says it is not
+- A rule held only by review says so
+- It repeats no prop, which the types already define
+
+#### 📋 2.5 — Audit the public surface `[parallel]`
+
+**Goal:** Every export is either worth promising to apps or on its way out of the package.
+
+**Deliverables:**
+
+- Every gap in §10 of the specification closed, or the rule changed in the same task, starting with `Card`, which is listed as
+  stable and has no tests
+- Each experimental export decided: promoted to stable, kept, or removed, with a migration note. Exports that look specific to
+  one app, such as `BalanceChip` and `CurrencyInput`, are the first to look at
+- A check for any rule of §9 that turns out to be practical
+
+**Dependencies:** 2.4
+
+**Spec reference:** design system §3, §4, §6
+
+**Review checklist:**
+
+- §10 of the specification is empty, or says why what is left stays
+- Nothing is removed before a migration note exists
+- An export promoted to stable is used by core or an app

@@ -65,6 +65,7 @@ Task 2.3 runs throughout M1 and M2.
 | **M4 — Core installs as an app**          | Core is installable, shows its own offline page, and never stores a page that belongs to a person | 11.1–11.4  |
 | **M5 — Core can be deployed**             | An operator can pull a released image, connect their apps, and the deployment design is agreed    | 12.1–12.5  |
 | **M6 — Operators run core with one tool** | An operator can deploy, add apps, update and recover an instance with `sv`                        | 13.1–13.10 |
+| **M7 — The design system has a contract** | What `@sovereignfs/ui` promises is specified and held to the package                              | 2.4–2.5    |
 
 ## Open spec questions
 

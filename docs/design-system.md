@@ -11,8 +11,8 @@ audiences:
 `@sovereignfs/ui` is the Sovereign Design System: design tokens and React
 components shared by core's own pages (sign-in, consent, the Console, the
 launcher, the identity pages) and every app built on Sovereign. It is a
-**public contract** — token names and component APIs follow strict semver.
-Renaming a token or changing a component API is a breaking change.
+**public contract**: this guide is how to use it, and what it promises is in its
+[specification](specs/design-system.md), which wins where the two differ.
 
 This document is for **contributors** to the design system and for understanding
 how theming works. An app outside this repository uses the package as
@@ -485,20 +485,18 @@ tier directly, `@sovereignfs/ui/tokens/primitives.css` and
 ### No root provider required
 
 Every component in `@sovereignfs/ui` is a pure CSS-variable/props consumer —
-there is no `SovereignUIRoot`-style wrapper to mount and none is required to
-use components anywhere. The package depends on no other Sovereign package
-and has no `createContext`/`useContext` usage that crosses component
-boundaries (`Toast` and `Dialog` manage their own local state internally, not
-a shared injected global). If a future
-component needs shared context (theme, density, locale), introducing one
-would be a breaking change subject to the semver policy below — not
-something to assume silently.
+there is no root wrapper to mount, and none is required to use components
+anywhere. The one exception is `useToast`, which needs a `ToastProvider` above
+it. The package depends on no other Sovereign package. If a future component
+needs shared context (theme, density, locale), introducing it would be a
+breaking change ([specification §6.3](specs/design-system.md)), not something
+to assume silently.
 
 ### Hooks are framework-independent
 
 `useIsMobile`, `useIsOffline`, `useLongPress`, `useDoubleTapHandler`, and
 `useCommitOnEnterOrBlur` have no dependency on any other package in this
-monorepo — they're safe to use in any React 18+ app.
+monorepo — they're safe to use in any React 19 app.
 
 ### Dark mode
 
@@ -542,17 +540,10 @@ function ExampleForm() {
 
 ### Stability
 
-`@sovereignfs/ui` follows strict semver: patch releases never break, minor
-releases are additive-only, and breaking changes require a major bump plus a
-migration note (`docs/upgrade.md`). In particular:
-
-- **Stable** — token names (both tiers), and the core primitives
-  (`Button`, `FormField`, `Input`, `Card`, `StatusBadge`, `Icon`, and the
-  four hooks listed above). Safe to build against today.
-- **Experimental outside core** — editor-workflow primitives added for a
-  specific app's needs (e.g. `SplitPane`) have not been independently audited
-  for use elsewhere. They likely work, but carry a smaller compatibility
-  guarantee until audited.
+What is stable, what is experimental and what a version number promises are in
+the [specification](specs/design-system.md) (§3 and §4). In short: an export is
+experimental unless it is listed as stable there, a patch never breaks anything,
+and every breaking change comes with a note in [`docs/upgrade.md`](upgrade.md).
 
 ---
 

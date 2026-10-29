@@ -120,6 +120,7 @@ describe('proxy', () => {
       '/api/auth/sign-in/email',
       '/api/auth/get-session',
       '/api/avatars/some-user-id',
+      '/api/branding/favicon',
       '/.well-known/openid-configuration',
       '/.well-known/oauth-authorization-server',
       '/api/auth/oauth2/authorize',

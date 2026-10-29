@@ -56,6 +56,7 @@ function isPublic(pathname: string): boolean {
     pathname === '/.well-known/oauth-authorization-server' ||
     pathname.startsWith('/api/auth/') ||
     pathname.startsWith('/api/avatars/') ||
+    pathname.startsWith('/api/branding/') ||
     pathname.startsWith('/_next/') ||
     pathname === '/favicon.ico'
   );

@@ -11,5 +11,8 @@ Nothing else describes it:
 An operation marked `x-planned: true` is part of the contract but not served yet; the tasks that serve it remove the
 mark.
 
+An operation marked `x-safe-to-repeat: true` changes nothing, so a client may send it again after a failure; every `GET` is
+safe to repeat without the mark. The generated client says which are (`safeToRepeat`), and the SDK retries only those.
+
 The rules (versioning, authentication, errors) are in the description at the top of the file. The behaviour behind
 them is in [core-app §3.9 and §3.13](../../docs/specs/core-app.md).

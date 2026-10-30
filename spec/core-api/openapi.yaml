@@ -90,6 +90,7 @@ paths:
     post:
       operationId: resolveDirectoryUsers
       tags: [Directory]
+      x-safe-to-repeat: true
       summary: Look people up by their `sub`
       description: |
         Returns each person asked for whose account exists, with whether it is active. A deactivated account is

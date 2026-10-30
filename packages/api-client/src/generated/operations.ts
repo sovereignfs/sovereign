@@ -45,26 +45,30 @@ export interface Operations {
   };
 }
 
-/** How each operation is called. `scopes` is undefined for a public one. */
+/** How each operation is called. `scopes` is undefined for a public one, and `safeToRepeat` says a failed call may be sent again. */
 export const operations = {
   findDirectoryUserByEmail: {
     method: 'GET',
     path: '/api/v1/directory/users/by-email',
     scopes: ['directory'],
+    safeToRepeat: true,
   },
   getInstanceBranding: {
     method: 'GET',
     path: '/.well-known/sovereign-instance',
     scopes: undefined,
+    safeToRepeat: true,
   },
   resolveDirectoryUsers: {
     method: 'POST',
     path: '/api/v1/directory/users/resolve',
     scopes: ['directory'],
+    safeToRepeat: true,
   },
   searchDirectoryUsers: {
     method: 'GET',
     path: '/api/v1/directory/users',
     scopes: ['directory'],
+    safeToRepeat: true,
   },
 } as const;

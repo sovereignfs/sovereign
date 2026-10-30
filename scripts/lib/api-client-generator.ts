@@ -35,6 +35,7 @@ type Operation = {
   operationId?: string;
   summary?: string;
   description?: string;
+  'x-safe-to-repeat'?: boolean;
   security?: Record<string, string[]>[];
   parameters?: Parameter[];
   requestBody?: { required?: boolean; content?: Record<string, { schema: Schema }> };
@@ -127,6 +128,7 @@ type Described = {
   method: string;
   path: string;
   scopes: string[] | undefined;
+  safeToRepeat: boolean;
   query: Parameter[];
   pathParams: Parameter[];
   body: Schema | undefined;
@@ -165,6 +167,8 @@ function describe(contract: Contract): Described[] {
         method: method.toUpperCase(),
         path,
         scopes: bearer ? (scopes ?? []) : undefined,
+        // A read is safe to repeat; so is any call the contract says is, such as a lookup that has to be a POST.
+        safeToRepeat: method === 'get' || operation['x-safe-to-repeat'] === true,
         query: parameters.filter((p) => p.in === 'query'),
         pathParams: parameters.filter((p) => p.in === 'path'),
         body: json?.schema,
@@ -205,7 +209,7 @@ export function generateOperations(contract: Contract): string {
       `${comment(operation.summary, '  ')}  ${operation.id}: {\n    request: ${request.length > 0 ? `{ ${request.join('; ')} }` : 'undefined'};\n    response: ${typeOf(operation.answer, '    ')};\n  };`,
     );
     table.push(
-      `  ${operation.id}: {\n    method: '${operation.method}',\n    path: '${operation.path}',\n    scopes: ${operation.scopes === undefined ? 'undefined' : JSON.stringify(operation.scopes)},\n  },`,
+      `  ${operation.id}: {\n    method: '${operation.method}',\n    path: '${operation.path}',\n    scopes: ${operation.scopes === undefined ? 'undefined' : JSON.stringify(operation.scopes)},\n    safeToRepeat: ${operation.safeToRepeat},\n  },`,
     );
   }
   // Only the schemas an operation names are imported: an import nothing uses is a lint failure.
@@ -217,7 +221,7 @@ export function generateOperations(contract: Contract): string {
     GENERATED_HEADER,
     names.length > 0 ? `import type { ${names.join(', ')} } from './schema';\n` : '',
     `/** What each operation takes and answers with. */\nexport interface Operations {\n${types.join('\n')}\n}\n`,
-    `/** How each operation is called. \`scopes\` is undefined for a public one. */\nexport const operations = {\n${table.join('\n')}\n} as const;\n`,
+    `/** How each operation is called. \`scopes\` is undefined for a public one, and \`safeToRepeat\` says a failed call may be sent again. */\nexport const operations = {\n${table.join('\n')}\n} as const;\n`,
   ].join('\n');
 }
 

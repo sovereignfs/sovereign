@@ -92,6 +92,19 @@ describe('the operations of the contract', () => {
     expect(out).toMatch(/getB: \{\s*method: 'GET',\s*path: '\/b',\s*scopes: undefined/);
   });
 
+  it('says which operations are safe to repeat: every read, and a write only when the contract says so', () => {
+    const out = operations({
+      '/a': { get: { operationId: 'getA', responses: ok({ type: 'string' }) } },
+      '/b': { post: { operationId: 'postB', responses: ok({ type: 'string' }) } },
+      '/c': {
+        post: { operationId: 'postC', 'x-safe-to-repeat': true, responses: ok({ type: 'string' }) },
+      },
+    });
+    expect(out).toMatch(/getA: \{[^}]*safeToRepeat: true/);
+    expect(out).toMatch(/postB: \{[^}]*safeToRepeat: false/);
+    expect(out).toMatch(/postC: \{[^}]*safeToRepeat: true/);
+  });
+
   it('types the request: a required query, an optional one, path parameters and a body', () => {
     const out = operations({
       '/a/{id}': {

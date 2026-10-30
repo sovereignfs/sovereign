@@ -1,5 +1,25 @@
 // Generated from spec/core-api/openapi.yaml by scripts/generate-api-client.ts. Do not edit it: change the contract and run `pnpm generate:api-client`.
 
+/**
+ * How it looks. It changes nothing else.
+ */
+export type NotificationCategory = 'info' | 'success' | 'warning' | 'error';
+
+export type Notification = {
+  id: string;
+  title: string;
+  body: string | null;
+  url: string | null;
+  category: NotificationCategory;
+  createdAt: string;
+  readAt: string | null;
+  expiresAt: string;
+};
+
+export type NotificationCount = {
+  count: number;
+};
+
 export type ErrorResponse = {
   /**
    * What kind of failure, for a program to act on.

@@ -117,7 +117,7 @@ are added when core's Phase 2 specifies them.
 - `sv.app` in the SDK
 - The first capability that needs it
 
-**Dependencies:** 14.2, 15.1. No scope is an app scope until a capability needs one, and notifications are the likely first
+**Dependencies:** 14.2. 15.5 builds the first capability that needs an app scope, notifications, and the two meet in `notifications:send`: whichever is built first leaves the other's operation unserved
 
 **Spec reference:** core-app §3.6.6, §3.7.1; sdk §4, §5.2
 

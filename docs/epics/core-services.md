@@ -20,7 +20,7 @@ exists, and account-deletion fan-out is task 14.6, since it needs its own design
 
 ## Tasks
 
-#### 📋 15.1 — Notifications
+#### ✅ 15.1 — Notifications
 
 **Goal:** What an app may send a person, and how it reaches them, is specified.
 
@@ -103,3 +103,29 @@ exists, and account-deletion fan-out is task 14.6, since it needs its own design
 
 - Backups are encrypted, and the keys are never inside them
 - An operator knows which tool is for what
+
+#### 📋 15.5 — Notifications: build
+
+**Goal:** An app with the app scope `notifications:send` can tell a person something, and the person sees it in core.
+
+**Priority:** 5. It is what 14.5's app tokens wait for.
+
+**Deliverables:**
+
+- The tables (`notifications`, and a per-person per-app switch) in a migration on every dialect, and a `NotificationService` that is
+  the only writer: send (with the rules of who may be written to, the dropped send that answers like a delivered one, `key`
+  de-duplication, the limits and the keeping), list, read, dismiss, clear
+- The bell and panel in the account header, and the per-app switches and "Clear all" in Preferences, as the specification says
+- Removing an app's access, deactivating or deleting an account, and deleting an app clean up what they should
+- The six operations of the contract served, with `x-planned` removed and the instance document's `api.capabilities` listing
+  `notifications`; the app scope `notifications:send` and the person scope `notifications` in `ClientRegistry` and the Console
+
+**Dependencies:** 15.1, 14.5 for the app token that sends (the person-token operations and the panel do not wait for it)
+
+**Spec reference:** core-app §4.1, §3.6.6, §3.7.1, §3.13
+
+**Review checklist:**
+
+- A send to a person who never used the app, who turned it off, or whose account is inactive answers exactly as a delivered one does
+- An app never sees another app's notifications, and a person's token never sends
+- The security check is run

@@ -11,8 +11,8 @@ info:
     Paths under `/api/v1` are versioned: a change that could break an app that already calls them is a new version,
     never an edit. An unversioned path under `/.well-known/` is a public document anyone may read.
 
-    **Authentication.** A call that needs it carries an access token Core issued to the app for a signed-in person:
-    `Authorization: Bearer <token>`. The app asks for the token with `resource=<origin>/api/v1` and the scope the
+    **Authentication.** A call that needs it carries an access token Core issued to the app for a signed-in person, or,
+    for an operation that says so, to the app for itself (an app token, core-app §3.6.6): `Authorization: Bearer <token>`. The app asks for the token with `resource=<origin>/api/v1` and the scope the
     call needs, which makes it a signed JWT addressed to this API. A token asked for with a resource is only for
     that resource and comes with no ID token, so an app signs its people in as usual and then asks for this one: with
     its refresh token (the `offline_access` scope), or with a second authorization request that names the resource.
@@ -23,7 +23,7 @@ info:
     malformed, 401 the token is missing or no longer valid, 403 the token lacks the scope, 404 there is nothing
     there, 429 slow down (with `Retry-After`).
 
-    An operation marked `x-planned: true` is part of the contract but not served yet. None is, now.
+    An operation marked `x-planned: true` is part of the contract but not served yet. The notification operations are, until they are built (core-app §4.1).
   license:
     name: MPL-2.0
     identifier: MPL-2.0
@@ -33,6 +33,8 @@ servers:
 tags:
   - name: Directory
     description: Finding the people on an instance, to share something with them.
+  - name: Notifications
+    description: Telling a person something, and the person's own list of what they were told. Planned.
   - name: Instance
     description: What the instance looks like.
 paths:
@@ -175,6 +177,222 @@ paths:
           $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/TooManyRequests'
+  /api/v1/notifications:
+    post:
+      operationId: sendNotification
+      tags: [Notifications]
+      x-planned: true
+      summary: Tell a person something
+      description: |
+        Sends a notification from the calling app to one person. Made with an **app token** (the app acting for itself, with the app
+        scope `notifications:send`), not a person's. The app can write only to a person who has used it; a send to anyone else, to
+        a deactivated account, or to a person who switched the app's notifications off is accepted and dropped, and answers exactly
+        as a delivered one does, so the answer says nothing about the person. A `key` the app used for this person in the last day
+        makes the send the same send.
+      security:
+        - bearer: ['notifications:send']
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [to, title]
+              properties:
+                to:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                  description: The person's `sub`.
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 120
+                body:
+                  type: string
+                  maxLength: 500
+                url:
+                  type: string
+                  format: uri
+                  description: Where choosing it goes. `https`, on the origin of one of the app's registered addresses.
+                category:
+                  $ref: '#/components/schemas/NotificationCategory'
+                expiresAt:
+                  type: string
+                  format: date-time
+                  description: At most 90 days on. 30 days on when not given.
+                key:
+                  type: string
+                  maxLength: 100
+      responses:
+        '202':
+          description: Accepted. Whether it was delivered is not said.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [id]
+                properties:
+                  id:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    get:
+      operationId: listNotifications
+      tags: [Notifications]
+      x-planned: true
+      x-safe-to-repeat: true
+      summary: The notifications this app sent a person
+      description: |
+        The calling app's own notifications for the signed-in person, newest first. Never another app's. Made with the person's token
+        and the scope `notifications`.
+      security:
+        - bearer: [notifications]
+      parameters:
+        - name: unread
+          in: query
+          required: false
+          description: Only the ones not read yet.
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          required: false
+          description: At most this many, 1 to 100. 50 when not given.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: The notifications.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [notifications]
+                properties:
+                  notifications:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Notification'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/v1/notifications/read-all:
+    post:
+      operationId: markAllNotificationsRead
+      tags: [Notifications]
+      x-planned: true
+      summary: Mark all of this app's notifications read
+      security:
+        - bearer: [notifications]
+      responses:
+        '200':
+          description: How many were marked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationCount'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/v1/notifications/dismiss-all:
+    post:
+      operationId: dismissAllNotifications
+      tags: [Notifications]
+      x-planned: true
+      summary: Dismiss all of this app's notifications
+      security:
+        - bearer: [notifications]
+      responses:
+        '200':
+          description: How many were dismissed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationCount'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/v1/notifications/{id}/read:
+    post:
+      operationId: markNotificationRead
+      tags: [Notifications]
+      x-planned: true
+      summary: Mark one notification read
+      security:
+        - bearer: [notifications]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The notification, now read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/v1/notifications/{id}/dismiss:
+    post:
+      operationId: dismissNotification
+      tags: [Notifications]
+      x-planned: true
+      summary: Dismiss one notification
+      security:
+        - bearer: [notifications]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The notification, now dismissed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
   /.well-known/sovereign-instance:
     get:
       operationId: getInstanceBranding
@@ -217,6 +435,44 @@ components:
         An access token Core issued to the app for a signed-in person, requested with `resource=<origin>/api/v1`.
         The scope each operation needs is named on it.
   schemas:
+    NotificationCategory:
+      type: string
+      enum: [info, success, warning, error]
+      default: info
+      description: How it looks. It changes nothing else.
+    Notification:
+      type: object
+      additionalProperties: false
+      required: [id, title, body, url, category, createdAt, readAt, expiresAt]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        body:
+          type: [string, 'null']
+        url:
+          type: [string, 'null']
+          format: uri
+        category:
+          $ref: '#/components/schemas/NotificationCategory'
+        createdAt:
+          type: string
+          format: date-time
+        readAt:
+          type: [string, 'null']
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+    NotificationCount:
+      type: object
+      additionalProperties: false
+      required: [count]
+      properties:
+        count:
+          type: integer
+          minimum: 0
     ErrorResponse:
       type: object
       additionalProperties: false

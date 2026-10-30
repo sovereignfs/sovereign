@@ -155,9 +155,13 @@ function describe(contract: Contract): Described[] {
       const json = operation.requestBody?.content?.['application/json'];
       if (operation.requestBody && !json)
         throw new Error(`${id}: only a JSON request body is supported`);
-      const ok = operation.responses?.['200'];
+      // The answer a call gets when it works: its first success status, 200 for a read and 202 for a send that is accepted.
+      const success = Object.keys(operation.responses ?? {}).find((status) =>
+        /^2\d\d$/.test(status),
+      );
+      const ok = success ? operation.responses?.[success] : undefined;
       const answer = ok?.content?.['application/json']?.schema;
-      if (!answer) throw new Error(`${id}: it needs a JSON 200 answer`);
+      if (!answer) throw new Error(`${id}: it needs a JSON answer when it works (a 2xx)`);
       const scopes = operation.security?.flatMap((requirement) =>
         Object.values(requirement).flat(),
       );

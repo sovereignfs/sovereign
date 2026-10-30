@@ -181,7 +181,7 @@ describe('the operations of the contract', () => {
       },
       /JSON request body/,
     ],
-    ['no 200 answer', { operationId: 'a', responses: { '204': {} } }, /JSON 200 answer/],
+    ['no 200 answer', { operationId: 'a', responses: { '204': {} } }, /needs a JSON answer/],
   ])('refuses %s', (_name, operation, message) => {
     expect(() => operations({ '/a': { get: operation as never } })).toThrow(message);
   });

@@ -179,14 +179,26 @@ Names follow the legacy SDK where the meaning survives. Each method wraps one op
 | `directory.findUserByEmail` | person | `directory` | `findDirectoryUserByEmail` |
 | `instance.getBranding`      | none   |             | `getInstanceBranding`      |
 
+These are planned: specified in [core-app §4.1](core-app.md) and in the contract (`x-planned`), and offered by the SDK when core
+serves them (task 14.5). `app.notifications.send` is made as the app (§4), the others as a person, and a person's call reaches
+only what that app sent them.
+
+| Method                      | Actor  | Scope                | Operation                  |
+| --------------------------- | ------ | -------------------- | -------------------------- |
+| `app.notifications.send`    | app    | `notifications:send` | `sendNotification`         |
+| `notifications.list`        | person | `notifications`      | `listNotifications`        |
+| `notifications.markRead`    | person | `notifications`      | `markNotificationRead`     |
+| `notifications.markAllRead` | person | `notifications`      | `markAllNotificationsRead` |
+| `notifications.dismiss`     | person | `notifications`      | `dismissNotification`      |
+| `notifications.dismissAll`  | person | `notifications`      | `dismissAllNotifications`  |
+
 These are not specified yet, because [core-app §2](core-app.md) leaves them to Phase 2. Each is specified in core and added to the
 contract first, and the names are reserved:
 
-| Namespace       | Actor          | Expected from legacy                                               |
-| --------------- | -------------- | ------------------------------------------------------------------ |
-| `notifications` | person and app | `send`, `list`, `markRead`, `markAllRead`, `dismiss`, `dismissAll` |
-| `email`         | app            | `sendToUser`                                                       |
-| `activity`      | person and app | `log`                                                              |
+| Namespace  | Actor          | Expected from legacy |
+| ---------- | -------------- | -------------------- |
+| `email`    | app            | `sendToUser`         |
+| `activity` | person and app | `log`                |
 
 Account-deletion fan-out runs the other way, from core to an app, and needs its own design.
 
@@ -268,10 +280,10 @@ Every namespace of the legacy `sdk` object:
 | `auth`          | **SDK** §9. `changePassword`, `listSessions` and `revokeSession` become links to core's pages     |
 | `directory`     | **SDK** §8                                                                                        |
 | `platform`      | **SDK** `instance.getBranding`, for what an app needs of it                                       |
-| `notifications` | **SDK**, reserved (§8)                                                                            |
+| `notifications` | **SDK**, planned (§8)                                                                             |
 | `email`         | **SDK**, reserved (§8)                                                                            |
 | `activity`      | **SDK**, reserved (§8)                                                                            |
-| `messages`      | Decided with notifications                                                                        |
+| `messages`      | Not carried over (core-app §4.1)                                                                  |
 | `portability`   | Decided with account-deletion fan-out                                                             |
 | `authz`         | Gone: there are no grants between plugins. Core's `roles` and an app's own permissions replace it |
 | `db`            | **Local.** The app's own database                                                                 |

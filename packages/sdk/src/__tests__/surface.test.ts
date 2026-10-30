@@ -9,6 +9,7 @@ import {
   clock,
   contractProblems,
   memoryStore,
+  servedOperationIds,
   settingsFor,
 } from './helpers';
 
@@ -68,14 +69,20 @@ describe('every method of the capabilities (sdk §8) is checked against the cont
     expect((await sv.instance.getBranding()).url).toBe(core.url);
   });
 
-  it('covers every operation the contract has, so a new operation cannot be left out unnoticed', () => {
-    const covered = new Set([
+  it('covers every operation core serves, so a new one cannot be left out unnoticed', () => {
+    const covered = [
       'searchDirectoryUsers',
       'resolveDirectoryUsers',
       'findDirectoryUserByEmail',
       'getInstanceBranding',
-    ]);
-    expect(Object.keys(operations).sort()).toEqual([...covered].sort());
+    ];
+    expect(servedOperationIds()).toEqual([...covered].sort());
+  });
+
+  it('knows the planned operations, which the SDK offers when core serves them', () => {
+    expect(Object.keys(operations)).toEqual(
+      expect.arrayContaining(['sendNotification', 'listNotifications']),
+    );
   });
 
   it('holds the fake’s failures to the contract too: an error body has the one shape', () => {

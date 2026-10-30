@@ -146,11 +146,11 @@ Roboto, Helvetica, Arial, sans-serif`. A page or component names a family only
 
 ## 2. Phase overview
 
-| Phase | Theme                                                                                    | Status            |
-| ----- | ---------------------------------------------------------------------------------------- | ----------------- |
-| **1** | Identity, sign-in server, app registration                                               | Specified below   |
-| 2     | Core services for apps: mail, notifications, activity, account-deletion fan-out, backups | Not yet specified |
-| Later | Groups and access policies, export, recovery kit, relay, and more                        | Not yet specified |
+| Phase | Theme                                                                                    | Status                         |
+| ----- | ---------------------------------------------------------------------------------------- | ------------------------------ |
+| **1** | Identity, sign-in server, app registration                                               | Specified below                |
+| 2     | Core services for apps: mail, notifications, activity, account-deletion fan-out, backups | Notifications specified (§4.1) |
+| Later | Groups and access policies, export, recovery kit, relay, and more                        | Not yet specified              |
 
 ---
 
@@ -719,9 +719,9 @@ for itself, with the client-credentials grant.
   gate.
 - **App scopes are a separate, short list.** A capability says whether it can be
   used by an app, in its own section. `directory` and `offline_access` can never be
-  one: looking people up needs a person, and an app token has no refresh token. No
-  scope is an app scope yet, so until a capability needs one, the grant is refused
-  for every app.
+  one: looking people up needs a person, and an app token has no refresh token. The
+  first is `notifications:send` (§4.1), so until that is built the grant is refused for
+  every app.
 - **What it is.** A signed JWT addressed to the Core API (§3.9), lasting 15 minutes
   like an access token, with the app as its subject, and no person, no session and
   no refresh token. Nothing marks it as being on a person's behalf.
@@ -1365,6 +1365,89 @@ apps) and §3.15 (image storage, secrets from files).
 
 ---
 
+## 4. Phase 2 — Core services for apps
+
+Phase 2 is what core offers an app beyond signing people in. Each service is specified here before it is built, and its operations
+are added to the contract (`spec/core-api/openapi.yaml`) marked `x-planned` until they are served (§3.13.1). Mail, activity,
+account-deletion fan-out and backups are not specified yet (epic 15, task 14.6).
+
+### 4.1 Notifications
+
+Not built yet. An app can tell a person something: a task is due, a share arrived. Core keeps it, shows it in its own panel, and
+lets the person act on it, so every app's notices are in one place and under the person's control.
+
+**What a notification is.** A short, plain-text message from one app to one person:
+
+| Field       | Notes                                                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `id`        | Made by core.                                                                                                            |
+| `app`       | The app that sent it, shown by its name and icon. Never chosen by the sender: core takes it from the token.              |
+| `title`     | Required, 1 to 120 characters. Text, never markup.                                                                       |
+| `body`      | Optional, up to 500 characters. Text.                                                                                    |
+| `url`       | Optional. Where choosing the notification goes: `https`, and on the origin of one of the app's own registered addresses. |
+| `category`  | `info` (the default), `success`, `warning` or `error`. It only changes how the notification looks.                       |
+| `expiresAt` | Optional. When it stops being shown. At most 90 days on, and 30 when not given.                                          |
+| `key`       | Optional, up to 100 characters. A send with a `key` the app used for this person in the last 24 hours is the same send.  |
+| `createdAt` | When core accepted it.                                                                                                   |
+| `readAt`    | When the person opened it or marked it read, or null.                                                                    |
+
+**Who may send.** Only an app acting for itself (§3.6.6) with the app scope `notifications:send`, which an operator gives it
+(§3.7.1). This is the first app scope. Sending is how an app acts with nobody present, such as a reminder, so it needs no
+person's token and no consent at the time. It is limited instead by who may be written to:
+
+- An app can write only to a person who has used it: one with a consent for the app, or who has signed in to it and not removed its
+  access (§3.6.4, Connected apps). Removing an app's access deletes its notifications for that person and ends the right to send.
+- A deactivated or deleted account receives nothing.
+- A person who has switched the app's notifications off (below) receives nothing from it.
+- **A send to someone who may not receive it is accepted and dropped, and answers exactly as a delivered one does.** Otherwise a
+  send would tell an app whether a person uses it, has turned it off, or has an account. Core logs the drop for the operator,
+  without the text.
+
+**What a person controls.** In Preferences (§3.11), a list of the apps that can send them notifications, each with a switch (on by
+default), and "Clear all". In the panel: open one, mark one or all read, dismiss one or all. An operator cannot read a person's
+notifications.
+
+**The panel.** The bell in the account header shows the number unread and opens a list, newest first, each with the app's icon and
+name, the title, the body, the time and a dot while unread. Choosing one marks it read and goes to its `url` in the same tab. The
+panel reads core's own routes with the person's session. It asks when a page loads and every minute while the page is visible; there
+is no push in Phase 2 (below).
+
+**What an app may do as the person.** An app with a person's token and the person scope `notifications` can list its own
+notifications for that person, mark them read and dismiss them, so that reading one in the app clears it in core. The scope lets it
+manage only what it sent; it never sees another app's, and it can send nothing with a person's token.
+
+**Limits and keeping.**
+
+- Sends are counted in a one-minute window, 600 for an app, and 60 an hour for one app to one person. Over either is a `429` with
+  `Retry-After`. A refused send counts.
+- A person keeps at most 200 notifications from one app; a new one past that removes the oldest. An expired one is not shown and is
+  deleted with the next send; a dismissed one is deleted after seven days.
+- Deleting an account deletes its notifications. Deleting an app deletes what it sent.
+
+**The operations** (`spec/core-api/openapi.yaml`, all `x-planned`):
+
+| Operation                  | Who                  | Scope                | What                                                                       |
+| -------------------------- | -------------------- | -------------------- | -------------------------------------------------------------------------- |
+| `sendNotification`         | the app, for itself  | `notifications:send` | `POST /api/v1/notifications`: answers `202` with the `id`                  |
+| `listNotifications`        | the app, as a person | `notifications`      | `GET /api/v1/notifications`: the app's, newest first; `unread` and `limit` |
+| `markNotificationRead`     | the app, as a person | `notifications`      | `POST /api/v1/notifications/{id}/read`                                     |
+| `markAllNotificationsRead` | the app, as a person | `notifications`      | `POST /api/v1/notifications/read-all`                                      |
+| `dismissNotification`      | the app, as a person | `notifications`      | `POST /api/v1/notifications/{id}/dismiss`                                  |
+| `dismissAllNotifications`  | the app, as a person | `notifications`      | `POST /api/v1/notifications/dismiss-all`                                   |
+
+The panel and Preferences use core's own routes under the session, not these; they are the same data, checked the same way.
+
+**Decided here, so that it can be built.**
+
+- **No push in Phase 2.** Delivering to a phone or a closed browser needs a relay core does not have. A notification waits in the
+  panel. Push belongs to the relay in "Later" (§2), and this service is what it would deliver.
+- **No email fallback.** Mail for apps is its own service (task 15.2).
+- **No threads.** Legacy `messages` is not carried over: a notification with a `url` points at the thing, and a conversation is the
+  app's own.
+- **No categories to switch off, no quiet hours, no templates.** One switch for each app. They can be added without changing this.
+
+---
+
 ## Changelog
 
 | Date       | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
@@ -1427,3 +1510,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-30 | §3.6.1, §3.6.2, §3.7.1: three compatibility settings from research 0002: a confidential app's secret in the request body, an ID-token algorithm of RS256 for chosen apps, and ignoring a scope core does not offer.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | 2026-10-30 | §3.7.4: `sovereign-admin` is built: the managed key, kept in a table of its own, the system actor, the output and the exit codes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | 2026-10-30 | §3.13: the instance document says what this core serves, as `api` (`versions`, `capabilities`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 2026-10-30 | §4.1: notifications for apps, specified: what one is, who may send (an app acting for itself, only to someone who has used it, and a send core drops answers like one it delivered), what a person controls, the panel, the operations, the limits, and what is left out (push, email, threads). §2 and §3.6.6 updated to match. Not built.                                                                                                                                                                                                                                                                                                                                                                                   |

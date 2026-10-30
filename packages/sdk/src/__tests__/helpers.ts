@@ -10,10 +10,22 @@ import type { TokenStore } from '../tokens';
 const ROOT = path.join(import.meta.dirname, '../../../..');
 
 type Json = Record<string, unknown>;
-type Operation = { operationId: string; responses: Record<string, Json> };
+type Operation = {
+  operationId: string;
+  responses: Record<string, Json>;
+  'x-planned'?: boolean;
+};
 const contract = parse(readFileSync(path.join(ROOT, 'spec/core-api/openapi.yaml'), 'utf8')) as {
   paths: Record<string, Record<string, Operation>>;
 };
+
+/** The operations the contract describes and core serves: a planned one is the contract's, and not yet the SDK's. */
+export const servedOperationIds = (): string[] =>
+  Object.values(contract.paths)
+    .flatMap((item) => Object.values(item))
+    .filter((operation) => operation['x-planned'] !== true)
+    .map((operation) => operation.operationId)
+    .sort();
 
 const ajv = new Ajv2020({ strict: false, allErrors: true, validateSchema: false });
 addFormats(ajv);

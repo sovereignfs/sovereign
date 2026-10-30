@@ -8,14 +8,14 @@ and §3.7.
 
 Check these first. They are the places an app that says it supports "OAuth" may not fit.
 
-| Core needs                            | So the app must                                                                                              |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| The authorization code flow           | Use it. The implicit, password and client-credentials flows are not offered                                  |
-| PKCE with `S256`, for every app       | Send a `code_challenge`, even with a client secret. Many apps have PKCE off until a setting turns it on      |
-| ID tokens signed with EdDSA (Ed25519) | Verify EdDSA, unless the app is set to RS256 in the Console. Not every library can (below)                   |
-| The client secret in a Basic header   | Send it as `client_secret_basic`, unless the app is set in the Console to send it in the request body        |
-| A server of its own, or a native app  | Not call the token or userinfo endpoints from a web page: core sends no CORS headers, so a browser blocks it |
-| `https` addresses                     | Have `https` sign-in and logout addresses. `http` is accepted only on `localhost` on a development instance  |
+| Core needs                            | So the app must                                                                                                                           |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| The authorization code flow           | Use it. The implicit and password flows are not offered. The client-credentials flow is, but only to an app an operator gave an app scope |
+| PKCE with `S256`, for every app       | Send a `code_challenge`, even with a client secret. Many apps have PKCE off until a setting turns it on                                   |
+| ID tokens signed with EdDSA (Ed25519) | Verify EdDSA, unless the app is set to RS256 in the Console. Not every library can (below)                                                |
+| The client secret in a Basic header   | Send it as `client_secret_basic`, unless the app is set in the Console to send it in the request body                                     |
+| A server of its own, or a native app  | Not call the token or userinfo endpoints from a web page: core sends no CORS headers, so a browser blocks it                              |
+| `https` addresses                     | Have `https` sign-in and logout addresses. `http` is accepted only on `localhost` on a development instance                               |
 
 An app that signs people in with plain OAuth 2.0, with no ID token, can read the same details from the userinfo endpoint.
 
@@ -38,6 +38,16 @@ Three of these decide whether an app can connect at all:
 - **Scopes.** Core ignores a scope it does not offer, such as `groups`, and signs the person in with the scopes it knows, so an app that
   asks for extra ones by default needs no change. It cannot give what it does not offer: if the app needs that claim, the app has to do
   without it or take it from a scope in the table below. A request that names no `openid` is still refused.
+
+## An app acting for itself
+
+Most apps only act for a person who is there. An app that must act with nobody present, such as sending a reminder, can ask
+core for a token of its own with the client-credentials flow: a `POST` to the token endpoint with its client ID and secret,
+`grant_type=client_credentials`, `resource=<SV_URL>/api/v1` and the scopes it needs. Core gives it only what an operator allowed
+under **What the app may do on its own** in the app's technical settings (nothing, until then), and only if the app is
+confidential. The token lasts 15 minutes, has no refresh token, and names the app and no person. Changing the app's secret or
+switching it off ends the tokens it holds. This is not a way to read people's details: `directory` and the scopes about a person
+can never be given this way.
 
 ## Register the app
 

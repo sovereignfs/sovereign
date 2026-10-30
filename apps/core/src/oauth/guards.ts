@@ -53,6 +53,9 @@ export function oauthGuards() {
             const body = ctx.body as Record<string, unknown> | undefined;
             const scope = typeof body?.scope === 'string' ? body.scope : undefined;
             if (!body || !scope) return;
+            // An app asking for its own token names app scopes, which are not a person's to ignore: the provider checks them
+            // against what the app was given and refuses the rest.
+            if (body.grant_type === 'client_credentials') return;
             const requested = scope.split(' ').filter((name) => name !== '');
             const allowed = requested.filter(isOfferedScope);
             if (allowed.length === 0 || allowed.length === requested.length) return;

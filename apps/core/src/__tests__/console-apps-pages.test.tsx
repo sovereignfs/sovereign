@@ -42,6 +42,7 @@ const app = (id: string, extra: Partial<ClientView> = {}): ClientView => ({
   backchannelLogoutUri: undefined,
   endSession: false,
   scopes: ['openid', 'profile'],
+  appScopes: [],
   trusted: false,
   enabled: true,
   launcher: {

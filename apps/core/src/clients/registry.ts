@@ -4,6 +4,8 @@ import { can } from '../roles/capabilities';
 import { loadMatrix } from '../roles/matrix';
 import { parseMetadata } from '../oauth/client-metadata';
 import { ensureRs256Key, idTokenAlgorithmOf, type IdTokenAlgorithm } from '../oauth/id-token-alg';
+import { revokeAppTokens } from '../oauth/revocation';
+import { APP_SCOPES } from '../oauth/scopes';
 import { NAMES } from '../oauth/schema-names';
 import { isSystemActor, runAsSystem, type SystemActor } from './system-actor';
 import { urlListProblems, urlProblem, scopeProblems, textProblem, type Problem } from './validate';
@@ -31,6 +33,11 @@ export type ClientSettings = {
   /** Lets the app send people to core's sign-out. On whenever a post-logout or back-channel address is set. */
   endSession: boolean;
   scopes: string[];
+  /**
+   * What the app may do for itself, with no person present (core-app §3.6.6, §3.7.1): the scopes of its own token. None unless an
+   * operator gives one, and only a confidential app can hold any. Not the scopes above, which a person grants.
+   */
+  appScopes: string[];
   /** An operator vouches for the app: no consent, and `roles` allowed. Off unless set. */
   trusted: boolean;
   enabled: boolean;
@@ -83,6 +90,7 @@ export type ClientRow = {
   enableEndSession?: boolean | null;
   tokenEndpointAuthMethod?: string | null;
   scopes?: string[] | null;
+  clientCredentialsScopes?: string[] | null;
   redirectUris?: string[] | null;
   postLogoutRedirectUris?: string[] | null;
   backchannelLogoutUri?: string | null;
@@ -189,6 +197,8 @@ export class ClientRegistry {
     const settings = this.#settingsFor(before, input);
     await this.#write(clientId, settings);
     await this.#publishKeysFor(settings);
+    // Switching an app off ends the tokens it holds for itself at once; switching it on again does not bring them back.
+    if (before.enabled && !settings.enabled) await revokeAppTokens(this.#database, clientId);
     return this.get(actor, clientId);
   }
 
@@ -212,6 +222,8 @@ export class ClientRegistry {
       }),
     )) as { client_secret?: string };
     if (!rotated.client_secret) throw new Error('the provider made no secret');
+    // The old secret is dead, and so is every token made with it (core-app §3.6.6).
+    await revokeAppTokens(this.#database, clientId);
     return rotated.client_secret;
   }
 
@@ -419,6 +431,21 @@ export class ClientRegistry {
     } else if (secretIn === 'body' && (input.type ?? before?.type ?? 'confidential') === 'public') {
       problems.push({ field: 'secretIn', message: 'cannot be set: a public app has no secret' });
     }
+    const appScopes = input.appScopes ?? before?.appScopes ?? [];
+    if (
+      !Array.isArray(appScopes) ||
+      appScopes.some((name) => !(APP_SCOPES as readonly string[]).includes(String(name)))
+    ) {
+      problems.push({ field: 'appScopes', message: `must be ${APP_SCOPES.join(' or ')}` });
+    } else if (
+      appScopes.length > 0 &&
+      (input.type ?? before?.type ?? 'confidential') === 'public'
+    ) {
+      problems.push({
+        field: 'appScopes',
+        message: 'cannot be set: a public app has no secret to act for itself with',
+      });
+    }
     if (problems.length > 0) {
       throw new ClientRegistryError(
         'invalid',
@@ -443,6 +470,7 @@ export class ClientRegistry {
         postLogoutRedirectUris.length > 0 ||
         backchannelLogoutUri !== undefined,
       scopes: scopes.list,
+      appScopes: [...new Set(appScopes.map(String))],
       trusted,
       enabled: input.enabled ?? before?.enabled ?? true,
       launcher: {
@@ -483,6 +511,12 @@ export class ClientRegistry {
         backchannelLogoutSessionRequired: settings.backchannelLogoutUri !== undefined,
         enableEndSession: settings.endSession,
         scopes: settings.scopes,
+        // The grant an app uses to act for itself, and what it may ask for with it. The provider holds the app to this list.
+        grantTypes:
+          settings.type === 'confidential' && settings.appScopes.length > 0
+            ? ['authorization_code', 'refresh_token', 'client_credentials']
+            : ['authorization_code', 'refresh_token'],
+        clientCredentialsScopes: settings.type === 'confidential' ? settings.appScopes : [],
         skipConsent: settings.trusted,
         disabled: !settings.enabled,
         metadata: {
@@ -515,6 +549,7 @@ export function clientView(row: ClientRow): ClientView {
     backchannelLogoutUri: blank(row.backchannelLogoutUri),
     endSession: row.enableEndSession === true,
     scopes: list(row.scopes),
+    appScopes: list(row.clientCredentialsScopes),
     trusted: row.skipConsent === true,
     enabled: row.disabled !== true,
     launcher: {

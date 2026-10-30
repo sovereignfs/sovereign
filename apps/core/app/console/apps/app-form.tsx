@@ -14,13 +14,14 @@ import {
   Select,
   Textarea,
 } from '@sovereignfs/ui';
-import { SCOPE_TEXT } from '../../../src/clients/form';
+import { APP_SCOPE_TEXT, SCOPE_TEXT } from '../../../src/clients/form';
 import type { ClientView } from '../../../src/clients/registry';
 import { registerAppAction, updateAppAction, type AppFormResult } from './actions';
 import styles from './apps.module.css';
 import { SecretBox } from './secret-box';
 
 const SCOPES = ['openid', 'profile', 'email', 'roles', 'directory', 'offline_access'];
+const APP_SCOPES = Object.keys(APP_SCOPE_TEXT);
 
 /** What a new app starts as: the scopes most apps want, shown in the launcher, nothing trusted. */
 export const NEW_APP: Pick<
@@ -34,6 +35,7 @@ export const NEW_APP: Pick<
   | 'backchannelLogoutUri'
   | 'endSession'
   | 'scopes'
+  | 'appScopes'
   | 'trusted'
   | 'launcher'
 > = {
@@ -46,6 +48,7 @@ export const NEW_APP: Pick<
   backchannelLogoutUri: undefined,
   endSession: false,
   scopes: ['openid', 'profile', 'email'],
+  appScopes: [],
   trusted: false,
   launcher: { description: undefined, icon: undefined, launchUrl: undefined, show: true },
 };
@@ -71,6 +74,7 @@ export function AppForm({ id, initial }: { id?: string; initial: Initial }) {
   const [backchannel, setBackchannel] = useState(initial.backchannelLogoutUri ?? '');
   const [endSession, setEndSession] = useState(initial.endSession);
   const [scopes, setScopes] = useState(new Set(initial.scopes));
+  const [appScopes, setAppScopes] = useState(new Set(initial.appScopes));
   const [trusted, setTrusted] = useState(initial.trusted);
   const [open, setOpen] = useState(false);
 
@@ -332,6 +336,41 @@ export function AppForm({ id, initial }: { id?: string; initial: Initial }) {
             })}
             {fields.scope ? <p className={styles.error}>{fields.scope}</p> : null}
           </fieldset>
+          {type === 'confidential' ? (
+            <fieldset className={styles.scopes}>
+              <legend className={styles.legend}>What the app may do on its own</legend>
+              <p className={styles.hint}>
+                With nobody there, such as a reminder. No one is asked about these, so give them
+                only to an app you run or vouch for. Changing the secret or switching the app off
+                ends what it holds.
+              </p>
+              {APP_SCOPES.map((scope) => {
+                const text = APP_SCOPE_TEXT[scope];
+                if (!text) return null;
+                return (
+                  <div key={scope} className={styles.scope}>
+                    <Checkbox
+                      id={`app-scope-${scope}`}
+                      name="appScope"
+                      value={scope}
+                      label={text.label}
+                      checked={appScopes.has(scope)}
+                      onChange={(on) =>
+                        setAppScopes((before) => {
+                          const next = new Set(before);
+                          if (on) next.add(scope);
+                          else next.delete(scope);
+                          return next;
+                        })
+                      }
+                    />
+                    <span className={styles.hint}>{text.description}</span>
+                  </div>
+                );
+              })}
+              {fields.appScope ? <p className={styles.error}>{fields.appScope}</p> : null}
+            </fieldset>
+          ) : null}
           <Checkbox
             name="trusted"
             label="Trust this app"

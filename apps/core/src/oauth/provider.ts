@@ -11,7 +11,7 @@ import { idTokenAlgorithm } from './id-token-alg';
 import { jwtOptionsFor } from './keys';
 import { isTrusted } from './trust';
 
-import { OAUTH_SCOPES } from './scopes';
+import { APP_SCOPES, OAUTH_SCOPES, PROVIDER_SCOPES } from './scopes';
 
 // The list lives in scopes.ts, which the guards also read; it is exported from here as it always was.
 export { OAUTH_SCOPES };
@@ -74,14 +74,17 @@ export function oidcPlugins(database: Database, settings: AuthSettings) {
     oauthProvider({
       loginPage: '/sign-in',
       consentPage: '/consent',
-      scopes: [...OAUTH_SCOPES],
-      grantTypes: ['authorization_code', 'refresh_token'],
+      // People's scopes and apps' own: which a client may hold is the registry's rule, not the provider's.
+      scopes: [...PROVIDER_SCOPES],
+      // `client_credentials` is for an app acting for itself, and a client has it only when an operator gave it an app scope.
+      grantTypes: ['authorization_code', 'refresh_token', 'client_credentials'],
       storeClientSecret: 'hashed',
       allowDynamicClientRegistration: false,
       allowUnauthenticatedClientRegistration: false,
       accessTokenExpiresIn: ACCESS_TOKEN_SECONDS,
       idTokenExpiresIn: ID_TOKEN_SECONDS,
       refreshTokenExpiresIn: REFRESH_TOKEN_SECONDS,
+      m2mAccessTokenExpiresIn: ACCESS_TOKEN_SECONDS,
       validateRedirectUri: (uri, registered) => registered.includes(uri),
       // The Core API is a protected resource (core-app §3.9). An app that asks for a token with
       // `resource=<origin>/api/v1` is given a signed JWT addressed to it, limited to the `directory` scope; a
@@ -92,7 +95,7 @@ export function oidcPlugins(database: Database, settings: AuthSettings) {
         {
           identifier: coreApiResource(issuer),
           name: 'Core API',
-          allowedScopes: ['directory'],
+          allowedScopes: ['directory', ...APP_SCOPES],
           accessTokenTtl: ACCESS_TOKEN_SECONDS,
         },
       ],
@@ -102,7 +105,11 @@ export function oidcPlugins(database: Database, settings: AuthSettings) {
       clientPrivileges: async ({ user }) =>
         can(user?.role, 'client:manage', await loadMatrix(database)),
       // Discovery lists the claims core can give. The plugin adds the ones it knows itself.
-      advertisedMetadata: { claims_supported: [...SUPPORTED_CLAIMS] },
+      // The scopes a person grants. An app's own (core-app §3.6.6) are an operator's to give, and not a thing to offer.
+      advertisedMetadata: {
+        claims_supported: [...SUPPORTED_CLAIMS],
+        scopes_supported: [...OAUTH_SCOPES],
+      },
       customIdTokenClaims: ({ user, scopes }) => claimsFor(user, scopes, issuer),
       customUserInfoClaims: ({ user, scopes }) => claimsFor(user, scopes, issuer),
       // `roles` is for a trusted client that was granted the scope, and no other (core-app §3.6.4). Only

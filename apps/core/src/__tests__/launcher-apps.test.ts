@@ -17,6 +17,7 @@ const view = (
   backchannelLogoutUri: undefined,
   endSession: false,
   scopes: ['openid'],
+  appScopes: [],
   trusted: false,
   enabled: true,
   launcher: {

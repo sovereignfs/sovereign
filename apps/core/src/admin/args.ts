@@ -14,6 +14,7 @@ export type Command =
         postLogout: string[];
         backChannel: string | undefined;
         scopes: string[];
+        appScopes: string[];
         isPublic: boolean;
         trusted: boolean;
         launchUrl: string | undefined;
@@ -31,14 +32,14 @@ export class UsageError extends Error {
 
 export const USAGE = `Usage:
   sovereign-admin apps ensure KEY --name NAME --redirect URL... [--post-logout URL...]
-                  [--back-channel URL] [--scope SCOPE...] [--public] [--trusted]
+                  [--back-channel URL] [--scope SCOPE...] [--app-scope SCOPE...] [--public] [--trusted]
                   [--launch-url URL] [--description TEXT] [--icon URL] [--json]
   sovereign-admin apps list [--json]
   sovereign-admin apps rotate-secret KEY [--json]
   sovereign-admin apps remove KEY`;
 
 const VALUE = new Set(['name', 'back-channel', 'launch-url', 'description', 'icon']);
-const LIST = new Set(['redirect', 'post-logout', 'scope']);
+const LIST = new Set(['redirect', 'post-logout', 'scope', 'app-scope']);
 const SWITCH = new Set(['public', 'trusted', 'json']);
 
 type Flags = {
@@ -113,6 +114,7 @@ export function parse(argv: string[]): Command {
           postLogout: flags.lists.get('post-logout') ?? [],
           backChannel: flags.values.get('back-channel'),
           scopes: flags.lists.get('scope') ?? [],
+          appScopes: flags.lists.get('app-scope') ?? [],
           isPublic: flags.switches.has('public'),
           trusted: flags.switches.has('trusted'),
           launchUrl: flags.values.get('launch-url'),

@@ -32,6 +32,7 @@ import {
   REDIRECT,
   authorize,
   formPost,
+  personToken,
   pkce,
   registerClient,
   registryFor,
@@ -61,17 +62,6 @@ const TABLES = [
 const ORIGIN = new URL(BASE_URL).origin;
 const AUDIENCE = coreApiResource(ORIGIN);
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/** The signed part of the sign-in or consent address, as the page would send it back. */
-function signedQueryFor(location: string): string {
-  const params = new URL(location, BASE_URL).searchParams;
-  const names = new Set(params.getAll('ba_param'));
-  const signed = new URLSearchParams();
-  for (const [key, value] of params.entries()) {
-    if (key === 'sig' || key === 'ba_param' || names.has(key)) signed.append(key, value);
-  }
-  return signed.toString();
-}
 
 export function directorySuite(createDatabase: () => Promise<TestDatabase>): void {
   let target: TestDatabase;
@@ -124,43 +114,17 @@ export function directorySuite(createDatabase: () => Promise<TestDatabase>): voi
   type Ctx = Awaited<ReturnType<typeof instance>>;
 
   /** What an app is given for a person: the authorization code flow, asking for the Core API as the resource. */
-  async function tokenFor(
+  const tokenFor = (
     ctx: Ctx,
     jar: Jar,
     client: RegisteredClient,
     options: { trusted?: boolean; resource?: string | null; scope?: string } = {},
-  ): Promise<string> {
-    const scope = options.scope ?? 'directory';
-    const { verifier, challenge } = pkce();
-    let authorized = await authorize(ctx.auth, jar, client, {
-      scope: `openid ${scope}`,
-      challenge,
+  ) =>
+    personToken(ctx.auth, jar, client, {
+      audience: AUDIENCE,
+      ...(options.resource === undefined ? {} : { resource: options.resource }),
+      ...(options.scope === undefined ? {} : { scope: options.scope }),
     });
-    if (!authorized.code && authorized.url?.pathname === '/consent') {
-      await call(ctx.auth, 'POST', '/oauth2/consent', {
-        jar,
-        body: { accept: true, oauth_query: signedQueryFor(authorized.location as string) },
-      });
-      authorized = await authorize(ctx.auth, jar, client, { scope: `openid ${scope}`, challenge });
-    }
-    if (!authorized.code) throw new Error(`no code: ${authorized.location}`);
-    const resource = options.resource === undefined ? AUDIENCE : options.resource;
-    const reply = await formPost(
-      ctx.auth,
-      '/oauth2/token',
-      {
-        grant_type: 'authorization_code',
-        code: authorized.code,
-        redirect_uri: REDIRECT,
-        code_verifier: verifier,
-        ...(resource ? { resource } : {}),
-        scope,
-      },
-      client,
-    );
-    if (reply.status !== 200) throw new Error(`no token: ${JSON.stringify(reply.body)}`);
-    return String(reply.body.access_token);
-  }
 
   const withToken = (token: string) =>
     new Request(`${ORIGIN}/api/v1/directory/users?q=a`, {

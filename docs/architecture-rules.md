@@ -234,6 +234,14 @@ pointing here.
   is saved and whenever the key set is read. An access or logout token is never
   re-signed. A scope core does not offer is dropped by `oauthGuards`
   (`src/oauth/guards.ts`) before the provider reads the request, not refused.
+- **An app's own token is a different kind from a person's, and the Core API tells them apart**
+  (`src/api/token.ts`, core-app §3.6.6). It is made by the provider's client-credentials grant, which an app has only when an
+  operator gave it an app scope (`APP_SCOPES`, never `directory` or anything about a person; a public app cannot hold one); its
+  subject is the app, it has no session, and `authenticate` refuses it where a person is needed while `authenticateApp` refuses a
+  person's where the app's is. `authenticateApp` also requires the scope to be one the app holds _now_, so taking a scope away
+  stops it, and it checks the app is on and confidential. Rotating the secret and switching the app off record the time in
+  `app_token_revocations` (`revokeAppTokens`), the way Remove access does for a person. The token endpoint's guard leaves a
+  client-credentials request's scopes to the provider, and an app scope is never offered to a person.
 - **The SDK keeps a refresh token from being used twice** (`packages/sdk/src/tokens.ts`,
   sdk §5). Core rotates the token on every use and removes everything an app holds for a
   person when one is used twice, so two refreshes racing sign the person out everywhere.

@@ -225,6 +225,9 @@ each: `docs/architecture-rules.md`.
   before using the access token, never retries a refresh that was sent, and refuses to
   send again one whose answer was lost. Its calls name an actor, retry only what the
   contract marks safe to repeat, and log no token or person.
+- **An app's own token is the app's and no person's.** The grant needs an app scope an operator gave a confidential app;
+  `authenticateApp` and `authenticate` each refuse the other's token; rotating the secret or switching the app off ends the
+  tokens (`app_token_revocations`).
 - **The SDK's sign-in is PKCE with a one-use pending record, a host-only session cookie
   and a logout token refused unless it is wrong in no way** (`packages/sdk/src/auth.ts`):
   `getSession` makes no call to core, a return address is a path on the app, and a

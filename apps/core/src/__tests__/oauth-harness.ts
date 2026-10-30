@@ -250,3 +250,53 @@ export async function userInfo(auth: Auth, accessToken: string) {
     body: (text ? JSON.parse(text) : {}) as Record<string, unknown>,
   };
 }
+
+/** The signed part of the sign-in or consent address, as the page would send it back. */
+function signedQueryFor(location: string): string {
+  const params = new URL(location, BASE_URL).searchParams;
+  const names = new Set(params.getAll('ba_param'));
+  const signed = new URLSearchParams();
+  for (const [key, value] of params.entries()) {
+    if (key === 'sig' || key === 'ba_param' || names.has(key)) signed.append(key, value);
+  }
+  return signed.toString();
+}
+
+/**
+ * What an app is given for a person: the authorization code flow (with consent given when it is asked for), asking for the Core
+ * API as the resource unless told otherwise. Returns the access token.
+ */
+export async function personToken(
+  auth: Auth,
+  jar: Jar,
+  client: RegisteredClient,
+  options: { resource?: string | null; scope?: string; audience: string },
+): Promise<string> {
+  const scope = options.scope ?? 'directory';
+  const { verifier, challenge } = pkce();
+  let authorized = await authorize(auth, jar, client, { scope: `openid ${scope}`, challenge });
+  if (!authorized.code && authorized.url?.pathname === '/consent') {
+    await call(auth, 'POST', '/oauth2/consent', {
+      jar,
+      body: { accept: true, oauth_query: signedQueryFor(authorized.location as string) },
+    });
+    authorized = await authorize(auth, jar, client, { scope: `openid ${scope}`, challenge });
+  }
+  if (!authorized.code) throw new Error(`no code: ${authorized.location}`);
+  const resource = options.resource === undefined ? options.audience : options.resource;
+  const reply = await formPost(
+    auth,
+    '/oauth2/token',
+    {
+      grant_type: 'authorization_code',
+      code: authorized.code,
+      redirect_uri: REDIRECT,
+      code_verifier: verifier,
+      ...(resource ? { resource } : {}),
+      scope,
+    },
+    client,
+  );
+  if (reply.status !== 200) throw new Error(`no token: ${JSON.stringify(reply.body)}`);
+  return String(reply.body.access_token);
+}

@@ -150,10 +150,14 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
       }
     });
 
-    it('offers the authorization code flow and refresh tokens, and nothing else, with S256 only', async () => {
+    it('offers the authorization code flow, refresh tokens and an app acting for itself, and nothing else, with S256 only', async () => {
       const { auth } = await instance();
       const config = (await auth.api.getOpenIdConfig()) as Record<string, unknown>;
-      expect(config.grant_types_supported).toEqual(['authorization_code', 'refresh_token']);
+      expect(config.grant_types_supported).toEqual([
+        'authorization_code',
+        'refresh_token',
+        'client_credentials',
+      ]);
       expect(config.response_types_supported).toEqual(['code']);
       expect(config.code_challenge_methods_supported).toEqual(['S256']);
       // EdDSA first and for everyone; RS256 is for an app set to it (core-app §3.6.1).

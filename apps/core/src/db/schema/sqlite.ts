@@ -186,6 +186,16 @@ export const tokenRevocations = sqliteTable(
 );
 
 /**
+ * When an app's own tokens (core-app §3.6.6) were last revoked: its secret was rotated, or it was switched off. An app token is a
+ * signed JWT that leaves no row to mark, so the time is recorded and everything issued up to it is no longer good
+ * (`isAppTokenRevoked`). One row for each app; the time is milliseconds since the epoch, an integer on both dialects.
+ */
+export const appTokenRevocations = sqliteTable('app_token_revocations', {
+  clientId: text('client_id').primaryKey(),
+  revokedBefore: integer('revoked_before').notNull(),
+});
+
+/**
  * The OpenID Connect provider's tables (core-app §3.6): better-auth's JWT plugin keeps the signing keys, and
  * `@better-auth/oauth-provider` keeps the registered apps ("clients" inside the protocol), the tokens it
  * has issued and what each person agreed to share. better-auth names them jwks, oauthClient, oauthResource,

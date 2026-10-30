@@ -261,6 +261,20 @@ describe('the form to change an app', () => {
     expect(sent(update).get('secretIn')).toBe('body');
   });
 
+  it('starts from what the app may do on its own, and sends it back', async () => {
+    update.mockResolvedValue({ ok: true, message: 'The changes are saved.' });
+    render(<AppForm id="c1" initial={{ ...initial, appScopes: ['notifications:send'] }} />);
+    const box = screen.getByLabelText(/Send notifications/) as HTMLInputElement;
+    expect(box.checked).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await screen.findByText('The changes are saved.');
+    expect(sent(update).getAll('appScope')).toEqual(['notifications:send']);
+    fireEvent.click(box);
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await screen.findByText('The changes are saved.');
+    expect(sent(update, 1).getAll('appScope')).toEqual([]);
+  });
+
   it('starts from how tokens are signed, and sends it back', async () => {
     update.mockResolvedValue({ ok: true, message: 'The changes are saved.' });
     render(<AppForm id="c1" initial={{ ...initial, idTokenAlgorithm: 'RS256' }} />);

@@ -75,6 +75,26 @@ describe('how tokens are signed, on the form', () => {
   });
 });
 
+describe('what the app may do on its own, on the form', () => {
+  it('is the boxes ticked, and none when none is', () => {
+    expect(
+      appFromForm(
+        form([
+          ['name', 'Notes'],
+          ['appScope', 'notifications:send'],
+        ]),
+      ).appScopes,
+    ).toEqual(['notifications:send']);
+    expect(appFromForm(form([['name', 'Notes']])).appScopes).toEqual([]);
+  });
+
+  it('is shown beside its own field, in plain words', () => {
+    expect(fieldProblems([{ field: 'appScopes', message: 'must be notifications:send' }])).toEqual({
+      appScope: 'What the app may do on its own must be notifications:send.',
+    });
+  });
+});
+
 describe('what an app form sends, as the registry takes it', () => {
   it('sends every field, so a save sets the app to what the form showed', () => {
     const input = appFromForm(
@@ -100,6 +120,7 @@ describe('what an app form sends, as the registry takes it', () => {
       backchannelLogoutUri: 'https://notes.example/logout',
       endSession: true,
       scopes: ['openid', 'email'],
+      appScopes: [],
       trusted: true,
       launcher: {
         description: 'Take notes',

@@ -116,3 +116,36 @@ export async function removeAccess(
     return { consentsRemoved: consents.rowsAffected, ...revoked };
   });
 }
+
+/**
+ * Ends every token an app holds for itself (core-app §3.6.6): rotating its secret and switching it off each do this. An app token
+ * leaves no row to mark, so the time is recorded and everything issued up to it is refused (`isAppTokenRevoked`). It only ever moves
+ * forward, and runs on the caller's own transaction, so it is whole with the change that made it necessary.
+ */
+export async function revokeAppTokens(
+  tx: Pick<Executor, 'run'>,
+  clientId: string,
+  at: number = Date.now(),
+): Promise<void> {
+  await tx.run(
+    `insert into app_token_revocations (client_id, revoked_before) values (?, ?)
+     on conflict (client_id) do update set revoked_before =
+       case when excluded.revoked_before > app_token_revocations.revoked_before
+         then excluded.revoked_before else app_token_revocations.revoked_before end`,
+    [clientId, at],
+  );
+}
+
+/** Whether an app token issued at `issuedAt` (the JWT's `iat`, in seconds) was revoked by `revokeAppTokens`; the doubt goes against the token. */
+export async function isAppTokenRevoked(
+  database: Pick<Database, 'run'>,
+  clientId: string,
+  issuedAt: number,
+): Promise<boolean> {
+  const { rows } = await database.run(
+    'select revoked_before from app_token_revocations where client_id = ?',
+    [clientId],
+  );
+  const row = rows[0];
+  return row !== undefined && issuedAt <= Math.floor(Number(row.revoked_before) / 1000);
+}

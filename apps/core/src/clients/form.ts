@@ -34,6 +34,17 @@ export const SCOPE_TEXT: Record<string, { label: string; description: string; lo
     },
   };
 
+/**
+ * What each thing an app may do for itself means to the operator who allows it (core-app §3.6.6, §3.7.1). No person is asked
+ * about these, so the words say what the app can do with nobody there.
+ */
+export const APP_SCOPE_TEXT: Record<string, { label: string; description: string }> = {
+  'notifications:send': {
+    label: 'Send notifications',
+    description: 'Tell a person who uses the app something, on its own, when nobody is there.',
+  },
+};
+
 /** Lines of text as a list: trimmed, empty lines dropped. A blank box is no addresses. */
 export function lines(value: FormDataEntryValue | null): string[] {
   if (typeof value !== 'string') return [];
@@ -59,6 +70,8 @@ export function appFromForm(form: FormData): UpdateInput & { name: string } {
     backchannelLogoutUri: text(form.get('backchannelLogoutUri')).trim(),
     endSession: on(form.get('endSession')),
     scopes: form.getAll('scope').map(String),
+    // Only a confidential app's form has these boxes; a public app sends none, which is none allowed.
+    appScopes: form.getAll('appScope').map(String),
     // Only a confidential app's form has the choice: no field is no change.
     ...(text(form.get('secretIn')) !== ''
       ? { secretIn: text(form.get('secretIn')) as 'header' | 'body' }
@@ -95,6 +108,7 @@ const FIELD_OF: Record<string, string> = {
   postLogoutRedirectUris: 'postLogoutRedirectUris',
   backchannelLogoutUri: 'backchannelLogoutUri',
   scopes: 'scope',
+  appScopes: 'appScope',
   secretIn: 'secretIn',
   idTokenAlgorithm: 'idTokenAlgorithm',
   trusted: 'trusted',
@@ -112,6 +126,7 @@ const LABEL_OF: Record<string, string> = {
   postLogoutRedirectUris: 'The addresses after sign-out',
   backchannelLogoutUri: 'The logout notice address',
   scopes: 'What the app may see',
+  appScopes: 'What the app may do on its own',
   secretIn: 'How the app sends its secret',
   idTokenAlgorithm: 'How tokens are signed',
   'launcher.description': 'The description',

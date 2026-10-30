@@ -99,6 +99,13 @@
       "when": 1793382684409,
       "tag": "0013_managed_clients",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793388097981,
+      "tag": "0014_app_token_revocations",
+      "breakpoints": true
     }
   ]
 }

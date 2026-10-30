@@ -1,9 +1,9 @@
 # Sovereign SDK — specification
 
-|            |                                                                                                     |
-| ---------- | --------------------------------------------------------------------------------------------------- |
-| **Status** | Draft. §2 to §9 and §11 are built; publishing and the rest are not yet ([epic 14](../epics/sdk.md)) |
-| **Covers** | `@sovereignfs/sdk`                                                                                  |
+|            |                                                                                                            |
+| ---------- | ---------------------------------------------------------------------------------------------------------- |
+| **Status** | Draft. Built, except account-deletion fan-out and the capabilities of Phase 2 ([epic 14](../epics/sdk.md)) |
+| **Covers** | `@sovereignfs/sdk`                                                                                         |
 
 This document is the single source of truth for what the SDK does. Where code, another document or an issue disagrees with it,
 this document wins until it is changed.
@@ -137,14 +137,13 @@ A refresh token is a credential, and an app SHOULD keep it encrypted (its own fi
 
 Core can be down, slow or refusing, and an app MUST stay up. So every call can fail, and a failure is an error of one of these types:
 
-| Error                   | When                                                                    |
-| ----------------------- | ----------------------------------------------------------------------- |
-| `CoreApiError`          | Core answered with a failure. It carries `status`, `code` and `message` |
-| `CoreUnavailableError`  | No usable answer: a network failure, a timeout, or a `5xx`              |
-| `SessionEndedError`     | This person's token cannot be renewed. They must sign in again          |
-| `NotSupportedError`     | This instance's core does not offer the capability (§7)                 |
-| `NotAuthenticatedError` | There is no session, and the call needed one (§9)                       |
-| `ConfigurationError`    | The client was created wrongly (§2)                                     |
+| Error                  | When                                                                    |
+| ---------------------- | ----------------------------------------------------------------------- |
+| `CoreApiError`         | Core answered with a failure. It carries `status`, `code` and `message` |
+| `CoreUnavailableError` | No usable answer: a network failure, a timeout, or a `5xx`              |
+| `SessionEndedError`    | This person's token cannot be renewed. They must sign in again          |
+| `NotSupportedError`    | This instance's core does not offer the capability (§7)                 |
+| `ConfigurationError`   | The client was created wrongly (§2)                                     |
 
 Each is an instance of `SovereignError`.
 
@@ -243,7 +242,7 @@ after its `expiresAt`.
   with the app's secret, checks the ID token (signature, issuer, audience, `nonce`) and `state`, and makes the session: a `session`
   record, a new random id in the cookie (`__Host-sv_session`), thirty days at most. If the app holds a token store and core gave a
   refresh token, the SDK stores it for the person (§5.1). It returns the session and where to go next.
-- `getSession(request)` reads the cookie and the store, and makes no call to core. `requireSession` throws `NotAuthenticatedError`.
+- `getSession(request)` reads the cookie and the store, and makes no call to core. `requireSession` throws `NotAuthenticatedError` (there is no session). A sign-in that cannot be completed throws `SignInError`: it was not one this app began, it ran out, or core refused it. Both are experimental, like the rest of §9.
 - `signOut(request)` deletes the app's session and clears the cookie, and returns core's end-session address with the `id_token_hint`
   and the app's `post_logout_redirect_uri`, which the app MUST have registered. It ends the app's session even if the person never
   returns from core.

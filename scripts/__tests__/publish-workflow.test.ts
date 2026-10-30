@@ -27,7 +27,7 @@ const privatePackages = packages.filter((p) => p.manifest.private === true).map(
 
 describe('the publish workflow', () => {
   it('finds the published packages it is meant to check', () => {
-    expect(published).toEqual(['ui']);
+    expect(published).toEqual(['sdk', 'ui']);
   });
 
   // A decision, not an accident: the device bridge is not published for now. Publishing it later

@@ -80,6 +80,9 @@ rules; [`AGENTS.md`](AGENTS.md) has the same conventions written for AI agents.
   task list and the detail of each task.
 - [`docs/deploying.md`](docs/deploying.md) — running core: the image, the three
   databases, the address it must reach, backing up and upgrading.
+- [`docs/connecting-an-app.md`](docs/connecting-an-app.md) and
+  [`docs/using-the-sdk.md`](docs/using-the-sdk.md) — connecting any app to core,
+  and a JavaScript app's way to sign people in and call it.
 - [`docs/development-workflow.md`](docs/development-workflow.md) — how a task
   is started, built and finished.
 - [`docs/architecture-rules.md`](docs/architecture-rules.md) — the hard rules,

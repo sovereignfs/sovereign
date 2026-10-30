@@ -3,6 +3,7 @@ name: Publish
 # Releases a package to npm when its tag is pushed. Each published package has its own release
 # cycle and its own tag:
 #   ui-vX.Y.Z      -> @sovereignfs/ui
+#   sdk-vX.Y.Z     -> @sovereignfs/sdk
 # Every other package is private and never published (@sovereignfs/bridge is private for now;
 # publishing it later means removing "private" and adding its tag and case here).
 # docs/releasing.md has the whole process.
@@ -14,6 +15,7 @@ on:
   push:
     tags:
       - 'ui-v*.*.*'
+      - 'sdk-v*.*.*'
 
 permissions:
   contents: read
@@ -52,6 +54,7 @@ jobs:
         run: |
           case "$TAG" in
             ui-v*) dir=ui; prefix=ui-v ;;
+            sdk-v*) dir=sdk; prefix=sdk-v ;;
             *) echo "The tag $TAG is not a package release tag." >&2; exit 1 ;;
           esac
           expected="${TAG#"$prefix"}"

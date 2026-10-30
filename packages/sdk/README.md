@@ -76,6 +76,17 @@ const notice = await core.logoutToken({ sub: 'u1' }, { wrong: 'expired' });
 
 `memorySessionStore()` is a session store for tests.
 
+## Core versions
+
+This release supports core `>=0.46.0` (`sovereign.core` in `package.json`). A core too old to say what it serves is treated as
+serving the Directory and the instance document, and nothing else. The guide for an app's developer is
+[Using the SDK](../../docs/using-the-sdk.md).
+
+## Which exports are stable
+
+`createSovereign` and the error types are **stable**; everything else is **experimental** and may change in a minor version before
+`1.0.0` ([`src/stability.ts`](src/stability.ts) lists both).
+
 ## Licence
 
 MPL-2.0, so an app under any licence can use it.

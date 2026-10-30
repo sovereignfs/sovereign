@@ -5,11 +5,12 @@ Two things are released from this repository: a package to npm, and core's image
 
 ## Packages
 
-One package is published to npm, under the name it has always had:
+Two packages are published to npm:
 
-| Package           | What it is                                     | Licence                                  |
-| ----------------- | ---------------------------------------------- | ---------------------------------------- |
-| `@sovereignfs/ui` | The design system: tokens and React components | MPL-2.0 (icons derived from Lucide: ISC) |
+| Package            | What it is                                                                   | Licence                                  |
+| ------------------ | ---------------------------------------------------------------------------- | ---------------------------------------- |
+| `@sovereignfs/ui`  | The design system: tokens and React components                               | MPL-2.0 (icons derived from Lucide: ISC) |
+| `@sovereignfs/sdk` | How an app's server calls core: tokens, failure, version support and sign-in | MPL-2.0                                  |
 
 Every other package is `private` for now and is not published, **`@sovereignfs/bridge`
 included**: it is release-ready (licence, files, README) but marked `private`, so nothing can
@@ -47,9 +48,25 @@ and runs the real `pnpm publish --dry-run`. It publishes nothing. CI runs it on 
 request that changes code, and a test (`scripts/__tests__/licences.test.ts`) keeps each
 package's `package.json` and `LICENSE` in agreement.
 
+### The SDK
+
+`@sovereignfs/sdk` is published with the private packages it is built from (`@sovereignfs/api-client` and
+`@sovereignfs/config`) **bundled into it**, code and types alike, so a published tarball names no package npm lacks. They are
+`devDependencies` of the SDK for that reason; the check refuses a published package that depends on an unpublished one. Publishing
+them on their own is a later decision.
+
+- **Its exports are marked** stable or experimental in `packages/sdk/src/stability.ts`, and a test holds that list to what each
+  entry point exports and to [sdk §12](specs/sdk.md).
+- **Each release states the core versions it supports**, in `sovereign.core` of its `package.json` and in its README. Raise the
+  floor when the SDK starts to need something a core lacks, and say so in the version's commit.
+- **Its root entry throws in a browser** (`sideEffects` keeps a bundler from dropping that import).
+- A new app that uses only the published package should meet [sdk §14](specs/sdk.md); [Using the SDK](using-the-sdk.md) is the
+  guide for it.
+
 ### Releasing a package
 
-Pushing a tag releases the package: `ui-vX.Y.Z` releases `@sovereignfs/ui`.
+Pushing a tag releases the package: `ui-vX.Y.Z` releases `@sovereignfs/ui`, and `sdk-vX.Y.Z` releases
+`@sovereignfs/sdk`.
 `.github/workflows/publish.yml` does the rest, and **publishes
 nothing unless every one of these holds**:
 

@@ -1,11 +1,13 @@
 {
   "name": "@sovereignfs/sdk",
   "version": "0.2.0",
-  "private": true,
   "type": "module",
   "description": "How a JavaScript app's server talks to the Sovereign server it signs people in with: tokens, failure, version support.",
   "license": "MPL-2.0",
-  "sideEffects": false,
+  "sideEffects": [
+    "./src/browser.ts",
+    "./dist/browser.js"
+  ],
   "engines": {
     "node": ">=22.3"
   },
@@ -18,6 +20,9 @@
   "bugs": {
     "url": "https://github.com/sovereignfs/sovereign/issues"
   },
+  "sovereign": {
+    "core": ">=0.46.0"
+  },
   "exports": {
     ".": {
       "browser": "./src/browser.ts",
@@ -25,6 +30,24 @@
     },
     "./testing": "./src/testing/index.ts",
     "./next": "./src/next/index.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "browser": "./dist/browser.js",
+        "default": "./dist/index.js"
+      },
+      "./next": {
+        "types": "./dist/next.d.ts",
+        "default": "./dist/next.js"
+      },
+      "./testing": {
+        "types": "./dist/testing.d.ts",
+        "default": "./dist/testing.js"
+      }
+    }
   },
   "files": [
     "dist",
@@ -36,19 +59,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@sovereignfs/api-client": "workspace:*",
-    "@sovereignfs/config": "workspace:*",
     "jose": "^6.2.13",
     "openid-client": "^6.8.8"
-  },
-  "devDependencies": {
-    "@sovereignfs/tsconfig": "workspace:*",
-    "@types/node": "catalog:",
-    "@types/react": "catalog:",
-    "next": "catalog:",
-    "react": "catalog:",
-    "tsup": "catalog:",
-    "typescript": "catalog:"
   },
   "peerDependencies": {
     "next": ">=15"
@@ -57,5 +69,16 @@
     "next": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "@sovereignfs/api-client": "workspace:*",
+    "@sovereignfs/config": "workspace:*",
+    "@sovereignfs/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "next": "catalog:",
+    "react": "catalog:",
+    "tsup": "catalog:",
+    "typescript": "catalog:"
   }
 }

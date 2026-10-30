@@ -13,7 +13,12 @@ export default defineConfig({
     next: 'src/next/index.ts',
   },
   format: ['esm'],
-  dts: true,
+  // The private packages' types are inlined, as their code is, so nothing in the published types names a package npm lacks.
+  dts: {
+    resolve: [/^@sovereignfs\//],
+    // The workspace points the package at its source; its built declarations are what can be inlined.
+    compilerOptions: { paths: { '@sovereignfs/api-client': ['../api-client/dist/index.d.ts'] } },
+  },
   clean: true,
   noExternal: [/^@sovereignfs\//],
 });

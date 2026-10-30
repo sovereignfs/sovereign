@@ -161,6 +161,20 @@ describe('sending through a real server', () => {
     expect(mail.html).toContain('<b>body</b>');
   });
 
+  it('adds the List-Unsubscribe header when the message has an unsubscribe address', async () => {
+    const server = await startServer();
+    const transport = createSmtpTransport(settings(server.port));
+    const mailer = createMailer(transport, { from: FROM });
+    await mailer.send({ ...message, unsubscribe: 'https://core.example/preferences' });
+    await mailer.send(message);
+    transport.close?.();
+    // The parser reads the list headers into one object.
+    expect(server.mails[0]?.headers.get('list')).toMatchObject({
+      unsubscribe: { url: 'https://core.example/preferences' },
+    });
+    expect(server.mails[1]?.headers.has('list')).toBe(false);
+  });
+
   it('sends to several recipients at once', async () => {
     const server = await startServer();
     const transport = createSmtpTransport(settings(server.port));

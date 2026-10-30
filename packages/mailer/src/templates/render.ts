@@ -1,6 +1,7 @@
 import { render } from '@react-email/render';
 import { createElement } from 'react';
 import { AccountCreatedEmail } from './AccountCreatedEmail';
+import { AppMessageEmail } from './AppMessageEmail';
 import { DEFAULT_PRIMARY_COLOR, type EmailBranding, type EmailLocale } from './branding';
 import { interpolate, resolveEmailCopy, type EmailTemplateId } from './copy';
 import { InviteEmail } from './InviteEmail';
@@ -29,6 +30,21 @@ export type EmailRequest =
       template: 'mfaReset';
       /** The sign-in page. */
       link: string;
+    }
+  | {
+      /**
+       * A message an app wrote for a person (core-app §4.2). The words around it are the instance's; the subject, the
+       * text and the link are the app's, so they are drawn as text only. Its link is on the app's own address, so it
+       * is not held to the instance's; the link to the person's switches is, and must be on the instance.
+       */
+      template: 'appMessage';
+      appName: string;
+      subject: string;
+      body: string;
+      /** One link, `http` or `https`: where the app's button goes. */
+      appLink?: string | undefined;
+      /** The page where the person switches the app's emails off. */
+      manageUrl: string;
     };
 
 /** A rendered email: all three parts, ready for `Mailer.send`. */
@@ -41,6 +57,8 @@ export interface RenderedEmail {
 export type EmailRenderErrorCode =
   | 'invalid-branding'
   | 'invalid-link'
+  /** An app message with no app name or subject. */
+  | 'invalid-message'
   /** A link that is not on the instance's own address: the shape of a password-reset poisoning attack. */
   | 'link-outside-instance';
 
@@ -157,7 +175,6 @@ export async function renderEmail(
   locale?: EmailLocale,
 ): Promise<RenderedEmail> {
   const branding = prepareBranding(rawBranding);
-  const link = checkedLink(request.link, branding.instanceUrl);
   const language = locale?.locale ?? 'en';
   const copyOf = <T extends EmailTemplateId>(id: T, extra: Record<string, string> = {}) =>
     interpolateAll(resolveEmailCopy(id, language, locale?.overrides), {
@@ -165,6 +182,39 @@ export async function renderEmail(
       ...extra,
     });
   const html = (element: Parameters<typeof render>[0]) => render(element, { pretty: false });
+
+  if (request.template === 'appMessage') {
+    const oneLine = (value: string) => value.replace(/\s+/g, ' ').trim();
+    const appName = oneLine(request.appName);
+    const subject = oneLine(request.subject);
+    if (appName === '' || subject === '') {
+      throw new EmailRenderError(
+        'invalid-message',
+        'The app message needs an app name and a subject.',
+      );
+    }
+    const manageUrl = checkedLink(request.manageUrl, branding.instanceUrl);
+    const appLink = request.appLink
+      ? httpUrl(request.appLink, 'invalid-link', 'The link').toString()
+      : undefined;
+    const copy = copyOf('appMessage', { appName });
+    const body = request.body.replace(/\r\n?/g, '\n');
+    return {
+      subject: `${appName}: ${subject}`,
+      html: await html(
+        createElement(AppMessageEmail, { branding, copy, subject, body, link: appLink, manageUrl }),
+      ),
+      text: [
+        copy.fromApp,
+        subject,
+        body,
+        ...(appLink ? [`${copy.cta}: ${appLink}`] : []),
+        `--\n${copy.why}\n${copy.stop}\n${copy.manage}: ${manageUrl}\n${branding.name}: ${branding.instanceUrl}\n`,
+      ].join('\n\n'),
+    };
+  }
+
+  const link = checkedLink(request.link, branding.instanceUrl);
 
   switch (request.template) {
     case 'passwordReset': {

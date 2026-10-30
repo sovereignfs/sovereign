@@ -33,5 +33,29 @@ export function compose(message: MailMessage, defaultFrom: string): ComposedMess
       throw invalid('the body is too large');
     }
   }
-  return { from, to, subject: message.subject, text: message.text, html: message.html };
+  if (message.unsubscribe !== undefined) {
+    // A header value: no space, bracket or control character can be in it, and it is a web address.
+    let url: URL | undefined;
+    try {
+      url = new URL(message.unsubscribe);
+    } catch {
+      url = undefined;
+    }
+    if (
+      !url ||
+      (url.protocol !== 'https:' && url.protocol !== 'http:') ||
+      // eslint-disable-next-line no-control-regex -- control characters are exactly what is refused
+      /[\s<>\u0000-\u001f\u007f]/.test(message.unsubscribe)
+    ) {
+      throw invalid('the unsubscribe address is not a web address');
+    }
+  }
+  return {
+    from,
+    to,
+    subject: message.subject,
+    text: message.text,
+    html: message.html,
+    unsubscribe: message.unsubscribe,
+  };
 }

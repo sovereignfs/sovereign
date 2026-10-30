@@ -21,6 +21,8 @@ export interface MailMessage {
   html?: string;
   /** Overrides the configured sender for this message. */
   from?: string;
+  /** A web address where the recipient can stop these messages: sent as the `List-Unsubscribe` header. */
+  unsubscribe?: string;
 }
 
 /** A message ready to hand to a transport: validated, with its sender settled. */
@@ -30,6 +32,7 @@ export interface ComposedMessage {
   subject: string;
   text: string | undefined;
   html: string | undefined;
+  unsubscribe: string | undefined;
 }
 
 export interface SentMail {

@@ -33,5 +33,12 @@
     "next": "Sign in with your password, then set up two-step verification again in your account's security settings.",
     "cta": "Sign in",
     "ignore": "If you did not expect this, contact your administrator."
+  },
+  "appMessage": {
+    "fromApp": "From {{appName}}, through {{brandName}}",
+    "cta": "Open {{appName}}",
+    "why": "You are getting this because you use {{appName}} with {{brandName}}.",
+    "stop": "To stop these emails, switch them off for {{appName}} in your preferences.",
+    "manage": "Email preferences"
   }
 }

@@ -3,6 +3,7 @@ export type { EmailRenderErrorCode, EmailRequest, RenderedEmail } from './render
 export { resolveEmailCopy, SUPPORTED_EMAIL_LOCALES } from './copy';
 export type {
   AccountCreatedCopy,
+  AppMessageCopy,
   EmailCopyByTemplate,
   EmailTemplateId,
   InviteCopy,

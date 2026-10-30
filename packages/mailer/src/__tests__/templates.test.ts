@@ -18,7 +18,9 @@ const branding = (extra: Partial<EmailBranding> = {}): EmailBranding => ({
 
 const INVITE: EmailRequest = { template: 'invite', link: `${INSTANCE}/register?invite=tok_123` };
 
-const requests: { name: string; request: EmailRequest; cta: string }[] = [
+type LinkedRequest = Exclude<EmailRequest, { template: 'appMessage' }>;
+
+const requests: { name: string; request: LinkedRequest; cta: string }[] = [
   {
     name: 'invite',
     request: { template: 'invite', link: `${INSTANCE}/register?invite=tok_123` },
@@ -359,5 +361,70 @@ describe('locales and overrides', () => {
       overrides: { cta: 'Choose a new password' },
     });
     expect(email.text).toContain('Choose a new password: ');
+  });
+});
+
+describe('a message an app wrote', () => {
+  const MANAGE = `${INSTANCE}/preferences`;
+  const message = (extra: Partial<Extract<EmailRequest, { template: 'appMessage' }>> = {}) =>
+    renderEmail(
+      {
+        template: 'appMessage',
+        appName: 'Reminders',
+        subject: 'Your task is due',
+        body: 'Water the plants.\nThen rest.',
+        manageUrl: MANAGE,
+        ...extra,
+      },
+      branding(),
+    );
+
+  it('puts the app’s name before its subject, on one line', async () => {
+    expect((await message()).subject).toBe('Reminders: Your task is due');
+    expect((await message({ appName: 'Re\nminders', subject: 'A\r\nB' })).subject).toBe(
+      'Re minders: A B',
+    );
+  });
+
+  it('says whose message it is, why it came and how to stop it', async () => {
+    const email = await message();
+    expect(email.text).toContain('From Reminders, through Acme Identity');
+    expect(email.text).toContain('You are getting this because you use Reminders');
+    expect(email.text).toContain(`Email preferences: ${MANAGE}`);
+    expect(parse(email).body.textContent).toContain('switch them off for Reminders');
+  });
+
+  it('keeps the text as written and reads none of it as markup', async () => {
+    const email = await message({ body: '<b>bold</b> & <script>alert(1)</script>\nline two' });
+    const doc = parse(email);
+    expect(doc.querySelector('script')).toBeNull();
+    expect(doc.querySelector('b')).toBeNull();
+    expect(doc.body.textContent).toContain('<b>bold</b> & <script>alert(1)</script>');
+    expect(email.text).toContain('<b>bold</b>');
+  });
+
+  it('draws the app’s link as the button, on the app’s own address', async () => {
+    const email = await message({ appLink: 'https://reminders.example/task/1' });
+    const buttons = [...parse(email).querySelectorAll('a')].filter(
+      (a) => a.textContent === 'Open Reminders',
+    );
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]?.getAttribute('href')).toBe('https://reminders.example/task/1');
+    expect(email.text).toContain('Open Reminders: https://reminders.example/task/1');
+    expect((await message()).text).not.toContain('Open Reminders');
+  });
+
+  it('refuses a link that is not a web address, and a switches link off the instance', async () => {
+    await expect(message({ appLink: 'javascript:alert(1)' })).rejects.toMatchObject({
+      code: 'invalid-link',
+    });
+    await expect(message({ manageUrl: 'https://evil.example/preferences' })).rejects.toMatchObject({
+      code: 'link-outside-instance',
+    });
+  });
+
+  it('refuses a message with no app name or subject', async () => {
+    await expect(message({ appName: '  ' })).rejects.toMatchObject({ code: 'invalid-message' });
+    await expect(message({ subject: '' })).rejects.toMatchObject({ code: 'invalid-message' });
   });
 });

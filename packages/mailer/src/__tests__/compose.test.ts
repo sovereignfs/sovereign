@@ -83,3 +83,21 @@ describe('compose', () => {
     expect(refusal({ ...ok, text: '日'.repeat(400_000) }).message).toContain('too large');
   });
 });
+
+describe('the unsubscribe address', () => {
+  it('is kept when it is a web address, and absent otherwise', () => {
+    expect(
+      compose({ ...ok, unsubscribe: 'https://core.example/preferences' }, FROM).unsubscribe,
+    ).toBe('https://core.example/preferences');
+    expect(compose(ok, FROM).unsubscribe).toBeUndefined();
+  });
+
+  it.each([
+    'mailto:a@example.com',
+    'not an address',
+    'https://x.example/a b',
+    'https://x.example/>\r\nBcc: a@b.c',
+  ])('refuses %j, since it goes into a header', (unsubscribe) => {
+    expect(() => compose({ ...ok, unsubscribe }, FROM)).toThrow(/unsubscribe address/);
+  });
+});

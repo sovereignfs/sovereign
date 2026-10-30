@@ -56,6 +56,9 @@ export function createSmtpTransport(
           subject: message.subject,
           ...(message.text === undefined ? {} : { text: message.text }),
           ...(message.html === undefined ? {} : { html: message.html }),
+          ...(message.unsubscribe === undefined
+            ? {}
+            : { list: { unsubscribe: message.unsubscribe } }),
         });
         return {
           accepted: (result.accepted ?? []).map(String),

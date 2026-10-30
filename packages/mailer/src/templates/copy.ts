@@ -45,12 +45,25 @@ export interface MfaResetCopy {
   ignore: string;
 }
 
+/** The words around a message an app wrote (core-app §4.2): everything else in it is the app's. */
+export interface AppMessageCopy {
+  /** The line under the instance's name: `{{appName}}`, `{{brandName}}`. */
+  fromApp: string;
+  /** The button's label, when the message has a link. */
+  cta: string;
+  why: string;
+  stop: string;
+  /** What the link to the person's email switches is called. */
+  manage: string;
+}
+
 export interface EmailCopyByTemplate {
   passwordReset: PasswordResetCopy;
   invite: InviteCopy;
   verifyEmail: VerifyEmailCopy;
   accountCreated: AccountCreatedCopy;
   mfaReset: MfaResetCopy;
+  appMessage: AppMessageCopy;
 }
 
 export type EmailTemplateId = keyof EmailCopyByTemplate;

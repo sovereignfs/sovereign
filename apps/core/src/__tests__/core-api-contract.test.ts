@@ -50,8 +50,23 @@ describe('holding an answer to the contract', () => {
         url: 'https://core.example.com',
         logo: { light: 'https://core.example.com/api/branding/logo-light?v=1', dark: null },
         favicon: null,
+        api: { versions: ['v1'], capabilities: ['directory'] },
       }),
     ).toEqual([]);
+    // The field says what is served, so a document without it, or with a capability the contract lacks, is refused.
+    const bare = {
+      name: 'Acme',
+      url: 'https://core.example.com',
+      logo: { light: null, dark: null },
+      favicon: null,
+    };
+    expect(contractProblems('getInstanceBranding', 200, bare)).not.toEqual([]);
+    expect(
+      contractProblems('getInstanceBranding', 200, {
+        ...bare,
+        api: { versions: ['v1'], capabilities: ['notifications'] },
+      }),
+    ).not.toEqual([]);
     expect(
       contractProblems('searchDirectoryUsers', 429, {
         error: 'rate_limited',

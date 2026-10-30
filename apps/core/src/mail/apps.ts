@@ -3,6 +3,7 @@ import type { Database, Executor } from '@sovereignfs/database';
 import type { RenderedEmail, SentMail, SmtpStatus } from '@sovereignfs/mailer';
 import type { EmailRequest } from '@sovereignfs/mailer';
 import { countCall } from '../api/rate-limit';
+import { appOrigins, hasUsed, linkProblem } from '../clients/use';
 import { NAMES } from '../oauth/schema-names';
 import { storedList } from '../oauth/stored-list';
 
@@ -113,7 +114,7 @@ export class MailForAppsService {
       throw new AppMailError('unavailable', 'This instance does not send email for apps.');
     }
     const now = this.#now();
-    const app = await this.#app(clientId);
+    const app = await appOrigins(this.#database, clientId);
     const message = this.#checked(input, app?.origins ?? []);
     await this.#count(`mail-app|${clientId}`, APP_LIMIT);
     await this.#count(`mail-pair-hour|${clientId}|${message.to}`, PAIR_HOUR_LIMIT);
@@ -225,7 +226,7 @@ export class MailForAppsService {
 
     let link: string | null = null;
     if (input.link !== undefined && input.link !== null) {
-      const problem = this.#linkProblem(input.link, origins);
+      const problem = linkProblem(input.link, origins, this.#development);
       if (problem) problems.push({ field: 'link', message: problem });
       else link = String(input.link);
     }
@@ -236,65 +237,11 @@ export class MailForAppsService {
     return { to, subject: subject.trim(), body, link, key };
   }
 
-  /** A link is `https` (or `http` on localhost on a development instance) and on an origin of the app's own addresses. */
-  #linkProblem(value: unknown, origins: readonly string[]): string | undefined {
-    if (typeof value !== 'string' || value === '' || value.length > 2048)
-      return 'must be an address';
-    let url: URL;
-    try {
-      url = new URL(value);
-    } catch {
-      return 'must be an address';
-    }
-    if (url.username !== '' || url.password !== '')
-      return 'must not contain a user name or password';
-    const local = url.hostname === 'localhost' || url.hostname.endsWith('.localhost');
-    if (url.protocol !== 'https:' && !(this.#development && local && url.protocol === 'http:')) {
-      return 'must be https';
-    }
-    if (!origins.includes(url.origin)) return "must be on one of the app's own addresses";
-    return undefined;
-  }
-
   async #count(key: string, limit: { count: number; windowMs: number }): Promise<void> {
     const result = await countCall(this.#database, key, limit.count, limit.windowMs, this.#now());
     if (!result.allowed) {
       throw new AppMailError('rate-limited', 'Too many emails.', [], result.retryAfter);
     }
-  }
-
-  /** The app's name, and the origins it has registered: where a link of its may go. */
-  async #app(clientId: string): Promise<{ name: string; origins: string[] } | undefined> {
-    const { rows } = await this.#database.run(
-      `select name, ${NAMES.client.redirectUris} as redirect_uris, ${NAMES.client.metadata} as metadata from ${NAMES.clients} where ${NAMES.client.clientId} = ?`,
-      [clientId],
-    );
-    const row = rows[0];
-    if (!row) return undefined;
-    const addresses = storedList(row.redirect_uris);
-    let metadata: unknown = row.metadata;
-    for (let step = 0; step < 3 && typeof metadata === 'string'; step += 1) {
-      try {
-        metadata = JSON.parse(metadata);
-      } catch {
-        metadata = undefined;
-      }
-    }
-    const launchUrl = (metadata as { launcher?: { launchUrl?: unknown } } | undefined)?.launcher
-      ?.launchUrl;
-    if (typeof launchUrl === 'string') addresses.push(launchUrl);
-    const origins = new Set<string>();
-    for (const address of addresses) {
-      try {
-        origins.add(new URL(address).origin);
-      } catch {
-        // Not an address; it names no origin.
-      }
-    }
-    return {
-      name: row.name === null || row.name === undefined ? 'An app' : String(row.name),
-      origins: [...origins],
-    };
   }
 
   /**
@@ -325,27 +272,10 @@ export class MailForAppsService {
       )
     ).rows[0];
     if (off && Number(off.enabled) === 0) return { ok: false, reason: 'the person turned it off' };
-    if (!(await this.#hasUsed(userId, clientId))) {
+    if (!(await hasUsed(this.#database, userId, clientId))) {
       return { ok: false, reason: 'the person has not used the app' };
     }
     return { ok: true, address: String(user.email) };
-  }
-
-  /** A person has used an app when they agreed to it, or hold tokens it was given that are not revoked. */
-  async #hasUsed(userId: string, clientId: string): Promise<boolean> {
-    const found = async (sql: string) =>
-      (await this.#database.run(sql, [userId, clientId])).rows.length > 0;
-    return (
-      (await found(
-        `select 1 from ${NAMES.consents} where ${NAMES.consent.userId} = ? and ${NAMES.consent.clientId} = ? limit 1`,
-      )) ||
-      (await found(
-        `select 1 from ${NAMES.refreshTokens} where ${NAMES.refresh.userId} = ? and ${NAMES.refresh.clientId} = ? and ${NAMES.refresh.revoked} is null limit 1`,
-      )) ||
-      (await found(
-        `select 1 from ${NAMES.accessTokens} where ${NAMES.access.userId} = ? and ${NAMES.access.clientId} = ? and ${NAMES.access.revoked} is null limit 1`,
-      ))
-    );
   }
 
   // ---- what a person controls -----------------------------------------------------

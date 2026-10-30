@@ -265,7 +265,7 @@ components:
     InstanceBranding:
       type: object
       additionalProperties: false
-      required: [name, url, logo, favicon]
+      required: [name, url, logo, favicon, api]
       properties:
         name:
           type: string
@@ -290,6 +290,28 @@ components:
         favicon:
           type: [string, 'null']
           format: uri
+        api:
+          type: object
+          additionalProperties: false
+          required: [versions, capabilities]
+          description: |
+            What this core serves, so an app can tell a capability it lacks from a failure. A core that does not
+            publish this field serves the Directory and the instance document, and nothing else.
+          properties:
+            versions:
+              type: array
+              items:
+                type: string
+                pattern: '^v[0-9]+$'
+              description: The API versions served, such as `v1`.
+            capabilities:
+              type: array
+              items:
+                type: string
+                enum: [directory]
+              description: |
+                The groups of calls served, such as `directory`. A capability is listed when every call of it is
+                served.
   responses:
     BadRequest:
       description: The request was malformed, or a value is out of range.

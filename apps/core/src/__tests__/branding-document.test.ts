@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { brandingDocument } from '../instance/branding-document';
+import { brandingDocument, SERVED_API } from '../instance/branding-document';
 import { PLAIN_IDENTITY } from '../instance/identity';
 import { expectMatchesContract } from './core-api-contract';
 import { png } from './image-fixtures';
@@ -15,8 +15,16 @@ describe('the branding document', () => {
       url: 'https://core.example.com',
       logo: { light: null, dark: null },
       favicon: null,
+      api: { versions: ['v1'], capabilities: ['directory'] },
     });
     expectMatchesContract('getInstanceBranding', 200, document);
+  });
+
+  it('says what this core serves, which an app reads to tell a missing capability from a failure', () => {
+    const { api } = brandingDocument(PLAIN_IDENTITY, 'https://core.example.com');
+    expect(api).toEqual(SERVED_API);
+    // Every capability named is one the contract describes, so the list cannot promise what is not there.
+    expect(api.capabilities).toEqual(['directory']);
   });
 
   it('gives the pictures as absolute addresses on the instance, versions and all', () => {

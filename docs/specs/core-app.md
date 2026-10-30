@@ -1174,10 +1174,11 @@ that apps can show the same branding. The address and format are defined in
 - The address is `/.well-known/sovereign-instance`. It is public: it needs no
   account and no token, and any origin may read it, since an app's pages fetch
   it from the browser and it carries nothing private.
-- Not built yet (task 14.2): it also says what this core serves, as `api`, with
-  `versions` (such as `["v1"]`) and `capabilities` (such as `["directory"]`), so
-  that an app can tell a capability this core lacks from a failure
-  ([sdk §7](sdk.md)). A capability is listed when every call of it is served.
+- It also says what this core serves, as `api`, with `versions` (such as
+  `["v1"]`) and `capabilities` (such as `["directory"]`), so that an app can tell
+  a capability this core lacks from a failure ([sdk §7](sdk.md)). A capability is
+  listed when every call of it is served. A core that does not publish `api`
+  serves the Directory and this document, and nothing else.
 - It answers with the instance's name, its own address, a logo for light pages
   and one for dark pages, and its favicon. Each picture is an absolute address
   on the instance, carrying the picture's version, so a changed picture is a new
@@ -1425,3 +1426,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-30 | §3.6.1: a confidential client authenticates with HTTP Basic only, and a secret in the body is refused although discovery lists it (research 0002).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 2026-10-30 | §3.6.1, §3.6.2, §3.7.1: three compatibility settings from research 0002: a confidential app's secret in the request body, an ID-token algorithm of RS256 for chosen apps, and ignoring a scope core does not offer.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | 2026-10-30 | §3.7.4: `sovereign-admin` is built: the managed key, kept in a table of its own, the system actor, the output and the exit codes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 2026-10-30 | §3.13: the instance document says what this core serves, as `api` (`versions`, `capabilities`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |

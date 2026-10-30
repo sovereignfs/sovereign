@@ -53,4 +53,19 @@ export type InstanceBranding = {
     dark: string | null;
   };
   favicon: string | null;
+  /**
+   * What this core serves, so an app can tell a capability it lacks from a failure. A core that does not
+   * publish this field serves the Directory and the instance document, and nothing else.
+   */
+  api: {
+    /**
+     * The API versions served, such as `v1`.
+     */
+    versions: string[];
+    /**
+     * The groups of calls served, such as `directory`. A capability is listed when every call of it is
+     * served.
+     */
+    capabilities: 'directory'[];
+  };
 };

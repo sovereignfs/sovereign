@@ -18,9 +18,9 @@ export function isOfferedScope(name: string): boolean {
  * What an app may do for itself, with no person present (core-app §3.6.6). Separate from the scopes above, which a person
  * grants: an operator gives an app these (§3.7.1), and a person is never asked about one. Never `directory`, which needs a person,
  * and none of `openid`, `profile`, `email`, `roles` or `offline_access`, which are about one. `notifications:send` is the first
- * (core-app §4.1).
+ * (core-app §4.1); `email:send` is the second (core-app §4.2).
  */
-export const APP_SCOPES = ['notifications:send'] as const;
+export const APP_SCOPES = ['notifications:send', 'email:send'] as const;
 
 /** Whether a scope is one an app holds for itself. */
 export function isAppScope(name: string): boolean {

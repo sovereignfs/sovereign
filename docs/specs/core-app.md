@@ -720,8 +720,8 @@ for itself, with the client-credentials grant.
 - **App scopes are a separate, short list.** A capability says whether it can be
   used by an app, in its own section. `directory` and `offline_access` can never be
   one: looking people up needs a person, and an app token has no refresh token. The
-  first is `notifications:send` (§4.1), which is listed and can be given, though nothing
-  uses it until notifications are built.
+  first is `notifications:send` (§4.1) and the second `email:send` (§4.2); each is listed
+  and can be given.
 - **What it is.** A signed JWT addressed to the Core API (§3.9), lasting 15 minutes
   like an access token, with the app as its subject, and no person, no session and
   no refresh token. Nothing marks it as being on a person's behalf.
@@ -1051,7 +1051,7 @@ closing them returns there (§1.3).
 | -------------- | ----------------------------------------------------------------------------------------------------------------- |
 | Profile        | Name and avatar. The email address is shown but cannot be changed in Phase 1                                      |
 | Security       | Change password; manage passkeys; enrol or remove TOTP and backup codes; list sessions and end any of them        |
-| Preferences    | Timezone and locale                                                                                               |
+| Preferences    | Timezone and locale; appearance; notifications and, where an app they use can send it, email from apps            |
 | Connected apps | Apps the person has allowed, with the scopes granted; **Remove access** revokes the app's tokens as well (§3.6.4) |
 | Delete account | Requires the password. The owner must transfer ownership first                                                    |
 
@@ -1450,7 +1450,7 @@ The panel and Preferences use core's own routes under the session, not these; th
 
 ### 4.2 Mail for apps
 
-Not built yet. An app can email a person without being given their address. This is for an app that has no mail server of its own, and
+Built. An app can email a person without being given their address. This is for an app that has no mail server of its own, and
 for one that must not hold addresses: it names the person by `sub`, core looks up the address and sends from the instance's own
 mail (§3.14), and the address never leaves core. An app that runs its own mail (`@sovereignfs/mailer`) can go on doing so; this is
 not a replacement for it, and an app that was granted `email` can still read the address and use whichever it likes.
@@ -1499,6 +1499,25 @@ is queued past a restart: a message core could not hand to the mail server is dr
 - **No delivery reports.** See above: a report is an address oracle.
 - **No sending to an address.** An app that has an address and wants to mail it uses its own mail; `to` is a `sub` only.
 - **One switch for each app**, as for notifications. No per-message categories.
+
+**As built.**
+
+- `MailForAppsService` (`src/mail/apps.ts`) is the only sender. It draws a message in the mailer's `appMessage` template (the
+  instance's name and logo, "From Reminders, through Acme", the subject, the text as written, one button for the link, why the person is
+  getting it and a link to the switches in Preferences) and sends it from the instance's own mail. The sender and recipient are
+  never the app's to choose.
+- The answer is given before the mail server has the message, so a delivered send takes no longer than a dropped one. A message
+  the mail server will not take is dropped and logged (the app's id and the kind of failure, never the person, the address or the
+  text); nothing is kept or retried.
+- The limits are counted before a person is looked at, so a limit says nothing of the person either: 100 a minute for the app, 5
+  an hour and 20 a day for one app to one person. A message that cannot be used is a `400` before anything is counted.
+- A person's address must be **verified** for them to be written to; an account that is not, one that is deactivated, one that has
+  not used the app and one that switched it off are all dropped, and the operator's log says which in a word.
+- The only thing kept is the `key` of a send that carried one, for a day (`app_mail_keys`), and the person's switch
+  (`app_mail_settings`). Remove access, deleting the app and deleting the account remove both.
+- Preferences lists "Email from apps" only while the instance can send mail and the person uses an app that holds `email:send`.
+  The unsubscribe line and the `List-Unsubscribe` header both carry the link to it (a page that asks for a sign-in, not a
+  one-click unsubscribe: nothing a link in an email does changes a person's switch).
 
 ---
 
@@ -1634,3 +1653,4 @@ would be wrong about the keys.
 | 2026-10-30 | §4.1: notifications are built: the service and its tables, the six Core API operations (the instance document lists `notifications`), the person scope `notifications`, the bell and panel, the Preferences switches, and what Remove access, deleting an app and deleting an account take with them.                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2026-10-30 | §4.2: mail for apps, specified: a plain-text message by `sub` through the instance's own mail, only from an app with `email:send` to a person who has used it, dropped without a trace when it may not go, no delivery reports, a switch for each app in Preferences, limits, and no mail when the instance has none. Not built.                                                                                                                                                                                                                                                                                                                                                                                              |
 | 2026-10-30 | §4.3, §4.4: activity (a person's own record of what apps did, recorded only by an app acting for itself, readable only by the person) and backups (core makes none of its own; `sv backup` is the one; a restore records a time before which sessions and tokens are refused) are specified. Not built.                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 2026-10-31 | §4.2: mail for apps is built: the service and its two small tables, `sendEmail` served (the instance document lists `email` only while the instance can send mail, and the operation is a `404` without it), the app scope `email:send`, the mailer's app-message template and `List-Unsubscribe` header, the Preferences switches, and what Remove access, deleting an app and deleting an account take with them. The address is read only when a send is made and never leaves core.                                                                                                                                                                                                                                       |

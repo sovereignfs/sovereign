@@ -43,7 +43,8 @@ const authorizes = (source: string) => /\brequire(Session|Capability)\(/.test(so
  * anything else. A token is not an ambient credential, so these routes are not held to the same-origin rule.
  */
 const isTokenRoute = (file: string) => relative(file).startsWith('api/v1/');
-const guardsByToken = (source: string) => /\b(directoryGuard|notificationsGuard)\(/.test(source);
+const guardsByToken = (source: string) =>
+  /\b(directoryGuard|notificationsGuard|emailGuard)\(/.test(source);
 
 describe('server actions and route handlers authorize inside', () => {
   const routes = all.filter((file) => /(^|\/)route\.ts$/.test(relative(file)));

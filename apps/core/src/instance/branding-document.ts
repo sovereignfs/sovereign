@@ -4,7 +4,7 @@ import type { InstanceIdentity } from './identity';
 /**
  * What this core serves (core-app §3.13): the API versions and the groups of calls, a group being listed when every
  * call of it is served. An app reads it to tell a capability this core lacks from a failure (sdk §7). It grows when a
- * capability does.
+ * capability does. `email` is not here: it is listed only while the instance can send mail (`brandingDocument`).
  */
 export const SERVED_API = {
   versions: ['v1'],
@@ -20,7 +20,12 @@ export const SERVED_API = {
  * does not have does not compile. The pictures are absolute addresses on the instance, which carry the picture's
  * version, so a changed picture is a new address; when only one logo is set it is given for both.
  */
-export function brandingDocument(identity: InstanceIdentity, baseUrl: string): InstanceBranding {
+export function brandingDocument(
+  identity: InstanceIdentity,
+  baseUrl: string,
+  /** Whether this instance can send mail, which is what makes `email` a capability (core-app §4.2). */
+  served: { email?: boolean } = {},
+): InstanceBranding {
   const origin = new URL(baseUrl).origin;
   const absolute = (path: string | undefined) => (path ? new URL(path, origin).toString() : null);
   return {
@@ -28,6 +33,9 @@ export function brandingDocument(identity: InstanceIdentity, baseUrl: string): I
     url: origin,
     logo: { light: absolute(identity.logoLight), dark: absolute(identity.logoDark) },
     favicon: absolute(identity.favicon),
-    api: { versions: [...SERVED_API.versions], capabilities: [...SERVED_API.capabilities] },
+    api: {
+      versions: [...SERVED_API.versions],
+      capabilities: [...SERVED_API.capabilities, ...(served.email ? (['email'] as const) : [])],
+    },
   };
 }

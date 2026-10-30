@@ -47,6 +47,11 @@ export const APP_SCOPE_TEXT: Record<string, { label: string; description: string
     label: 'Send notifications',
     description: 'Tell a person who uses the app something, on its own, when nobody is there.',
   },
+  'email:send': {
+    label: 'Send email',
+    description:
+      'Email a person who uses the app, from this instance, without being given their address.',
+  },
 };
 
 /** Lines of text as a list: trimmed, empty lines dropped. A blank box is no addresses. */

@@ -27,6 +27,14 @@ describe('the branding document', () => {
     expect(api.capabilities).toEqual(['directory', 'notifications']);
   });
 
+  it('lists email only while the instance can send mail, so an app can tell no mail from a failure', () => {
+    const none = brandingDocument(PLAIN_IDENTITY, 'https://core.example.com', { email: false });
+    expect(none.api?.capabilities).not.toContain('email');
+    const mail = brandingDocument(PLAIN_IDENTITY, 'https://core.example.com', { email: true });
+    expect(mail.api?.capabilities).toEqual(['directory', 'notifications', 'email']);
+    expectMatchesContract('getInstanceBranding', 200, mail);
+  });
+
   it('gives the pictures as absolute addresses on the instance, versions and all', () => {
     const document = brandingDocument(
       {

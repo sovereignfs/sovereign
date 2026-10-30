@@ -250,6 +250,37 @@ export const notificationSettings = pgTable(
   (table) => [primaryKey({ columns: [table.userId, table.clientId] })],
 );
 
+/** A person's switch for one app's emails (core-app §4.2). Missing means on. */
+export const appMailSettings = pgTable(
+  'app_mail_settings',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    clientId: text('client_id').notNull(),
+    enabled: integer('enabled').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.clientId] })],
+);
+
+/**
+ * The keys apps gave their emails (core-app §4.2), so a repeat of a send within a day is the same send. Only a send that carried a
+ * key leaves a row, and no text of the message is kept. Written only by `MailForAppsService`.
+ */
+export const appMailKeys = pgTable(
+  'app_mail_keys',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    clientId: text('client_id').notNull(),
+    idemKey: text('idem_key').notNull(),
+    createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+  },
+  (table) => [index('app_mail_keys_idx').on(table.clientId, table.userId, table.idemKey)],
+);
+
 /**
  * When an app's own tokens (core-app §3.6.6) were last revoked: its secret was rotated, or it was switched off. An app token is a
  * signed JWT that leaves no row to mark, so the time is recorded and everything issued up to it is no longer good

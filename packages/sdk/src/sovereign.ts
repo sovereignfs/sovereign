@@ -58,6 +58,17 @@ export interface AppClient {
       message: NonNullable<Request<'sendNotification'>>['body'],
     ): Promise<Answer<'sendNotification'>>;
   };
+  readonly email: EmailApi;
+}
+
+/** What an app can say to a person by email, as itself (sdk §8, core-app §4.2). */
+export interface EmailApi {
+  /**
+   * Emails a person named by `sub`, in the instance's own template, without being given their address. Accepted whether or not
+   * the person receives it: core says nothing of them or their address, and never reports delivery. An instance without mail does
+   * not list `email`, and this raises `NotSupportedError` without sending.
+   */
+  sendToUser(message: NonNullable<Request<'sendEmail'>>['body']): Promise<Answer<'sendEmail'>>;
 }
 
 /** What anyone can ask, with no token. */
@@ -116,6 +127,7 @@ const CAPABILITY: Partial<Record<Name, string>> = {
   resolveDirectoryUsers: 'directory',
   findDirectoryUserByEmail: 'directory',
   sendNotification: 'notifications',
+  sendEmail: 'email',
   listNotifications: 'notifications',
   markNotificationRead: 'notifications',
   markAllNotificationsRead: 'notifications',
@@ -220,6 +232,9 @@ export function createSovereign(options: SovereignOptions): Sovereign {
     app: {
       notifications: {
         send: (message) => execute({ kind: 'app' }, 'sendNotification', { body: message }),
+      },
+      email: {
+        sendToUser: (message) => execute({ kind: 'app' }, 'sendEmail', { body: message }),
       },
     },
     get auth() {

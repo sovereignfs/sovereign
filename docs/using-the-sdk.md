@@ -101,6 +101,26 @@ The answer is the same whether or not the person gets it: they may never have us
 does not say. With the person scope `notifications` an app can also read and clear _its own_ notifications for someone it is acting
 for (`sv.as(person).notifications.list()`, `markRead`, `dismiss`, ...), so that reading one in the app clears it in core.
 
+### Email a person
+
+An app with the app scope `email:send` can email a person without being given their address. It names them by `sub`; core looks the
+address up and sends from the instance's own mail, in its own template, under the app's name:
+
+```ts
+await sv.app.email.sendToUser({
+  to: person.sub,
+  subject: 'Your task is due', // sent as "Notes: Your task is due"
+  body: 'Water the plants.', // plain text; line breaks are kept
+  link: 'https://notes.example.test/tasks/3', // on one of the app's own addresses, drawn as a button
+  key: 'due-3', // sending it again within a day is the same send
+});
+```
+
+As with notifications, the answer is the same whether or not the person gets it, and core never reports delivery. They must have used
+the app, have a verified address and not have switched the app's email off (Preferences). An instance with no mail server does not
+list `email`, so this raises `NotSupportedError` without sending. It is not a replacement for an app's own mail: use that when the app
+has the address and needs more than plain text.
+
 ## 5. Handle failure
 
 Core can be down, slow or refusing, and the app must stay up. Every failure is a `SovereignError`:

@@ -1,4 +1,5 @@
 import type { Database, Executor } from '@sovereignfs/database';
+import { removeAppMail } from '../mail/apps';
 import { removeNotifications } from '../notifications/service';
 import { NAMES } from './schema-names';
 
@@ -116,6 +117,7 @@ export async function removeAccess(
     const revoked = await revokeClientTokens(tx, stamp(database, now), userId, clientId);
     // What the app told them goes with the access, and so does their switch for it (core-app §4.1).
     await removeNotifications(tx, userId, clientId);
+    await removeAppMail(tx, userId, clientId);
     return { consentsRemoved: consents.rowsAffected, ...revoked };
   });
 }

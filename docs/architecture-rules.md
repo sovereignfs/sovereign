@@ -240,6 +240,12 @@ pointing here.
   does; a link goes only to an `https` address on one of the app's own origins; text is plain. The Core API's person calls act on
   the calling app's own notifications only, and core's own panel route (`/api/notifications`) acts on the session's account and
   checks the request's origin. Remove access, deleting an app and deleting an account delete them in the same transaction.
+- **Email for apps is `MailForAppsService`'s alone, and it tells the sender nothing** (`src/mail/apps.ts`, core-app §4.2). The
+  recipient is a `sub`; the address is read inside the service and goes only to the mail server, never into an answer or a log. The
+  sender, recipient and headers are core's (the app supplies a subject, plain text, one link on its own origin and a key); a send that may
+  not be delivered (no such person, not used the app, switched off, deactivated, address not verified) is answered as a delivered one,
+  and so is its limit counted before the person is looked at. The answer is given before the mail server has the message. `emailGuard`
+  asks for an app token with `email:send`, then answers `404` when the instance has no mail.
 - **An app's own token is a different kind from a person's, and the Core API tells them apart**
   (`src/api/token.ts`, core-app §3.6.6). It is made by the provider's client-credentials grant, which an app has only when an
   operator gave it an app scope (`APP_SCOPES`, never `directory` or anything about a person; a public app cannot hold one); its

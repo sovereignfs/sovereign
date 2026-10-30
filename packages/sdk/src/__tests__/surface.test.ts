@@ -80,6 +80,7 @@ describe('every method of the capabilities (sdk §8) is checked against the cont
       'markAllNotificationsRead',
       'dismissNotification',
       'dismissAllNotifications',
+      'sendEmail',
     ];
     expect(servedOperationIds()).toEqual([...covered].sort());
   });

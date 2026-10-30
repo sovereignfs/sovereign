@@ -74,6 +74,17 @@ export type FakeNotification = {
   dismissed: boolean;
 };
 
+/** An email an app sent through the fake core. Whether it was delivered is never said, here or in core. */
+export type FakeEmail = {
+  id: string;
+  to: string;
+  subject: string;
+  body: string;
+  link?: string;
+  key?: string;
+  sentAt: number;
+};
+
 /** One request the fake received, with nothing secret in it. `status` is 0 when it was never answered. */
 export type Received = { method: string; path: string; status: number };
 
@@ -86,6 +97,8 @@ export type FakeCore = {
   readonly fetch: typeof fetch;
   /** What apps have sent through this core, in order, whether or not it was read or dismissed. */
   readonly notificationsSent: readonly FakeNotification[];
+  /** The emails apps sent to people the fake has, in order. A send to anyone else is accepted and dropped, as core does. */
+  readonly emailsSent: readonly FakeEmail[];
   /** Adds a person to the Directory. */
   addPerson(person: FakePerson): void;
   /** Signs a person in, and returns the refresh token an app would have stored for them. */
@@ -171,7 +184,7 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
   const api =
     'api' in options
       ? options.api
-      : { versions: ['v1'], capabilities: ['directory', 'notifications'] };
+      : { versions: ['v1'], capabilities: ['directory', 'notifications', 'email'] };
   const appTokens = options.appTokens ?? true;
 
   const people = new Map<string, Person>();
@@ -387,6 +400,51 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
     expiresAt: new Date(n.createdAt + 30 * 86_400_000).toISOString(),
   });
 
+  const emails = new Map<string, FakeEmail>();
+  const emailApi = async (request: Request): Promise<Response> => {
+    const who = bearer(request);
+    if (who instanceof Response) return who;
+    if (who.kind !== 'app' || request.method !== 'POST') {
+      return problem(403, 'insufficient_scope', 'Only an app acting for itself may send email.');
+    }
+    const body = (await request.json().catch(() => undefined)) as
+      Record<string, unknown> | undefined;
+    const text = (value: unknown, max: number) =>
+      typeof value === 'string' && value.trim() !== '' && value.length <= max;
+    if (
+      !body ||
+      !text(body.to, 255) ||
+      !text(body.subject, 150) ||
+      !text(body.body, 5000) ||
+      (body.link !== undefined && typeof body.link !== 'string') ||
+      (body.key !== undefined && !text(body.key, 100))
+    ) {
+      return problem(400, 'invalid_request', 'to, subject and body are required text.');
+    }
+    const to = body.to as string;
+    const key = body.key as string | undefined;
+    const same =
+      key === undefined
+        ? undefined
+        : [...emails.values()].find(
+            (email) => email.to === to && email.key === key && now() - email.sentAt < 86_400_000,
+          );
+    if (same) return json({ id: same.id }, 202);
+    const id = random('m');
+    if (people.has(to) && people.get(to)?.active !== false) {
+      emails.set(id, {
+        id,
+        to,
+        subject: body.subject as string,
+        body: body.body as string,
+        ...(typeof body.link === 'string' ? { link: body.link } : {}),
+        ...(key === undefined ? {} : { key }),
+        sentAt: now(),
+      });
+    }
+    return json({ id }, 202);
+  };
+
   const notificationsApi = async (request: Request, path: URL): Promise<Response> => {
     const who = bearer(request);
     if (who instanceof Response) return who;
@@ -559,6 +617,10 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
     if (path.pathname === '/api/auth/oauth2/token' && request.method === 'POST') {
       return tokenEndpoint(request, failure, signal);
     }
+    if (path.pathname === '/api/v1/email') {
+      const answer = await emailApi(request);
+      return failure?.kind === 'lost-answer' ? hang(signal) : answer;
+    }
     if (path.pathname.startsWith('/api/v1/notifications')) {
       const answer = await notificationsApi(request, path);
       return failure?.kind === 'lost-answer' ? hang(signal) : answer;
@@ -680,6 +742,9 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
     },
     get notificationsSent() {
       return [...sent.values()];
+    },
+    get emailsSent() {
+      return [...emails.values()];
     },
     revoke(sub) {
       for (const [token, other] of refreshTokens)

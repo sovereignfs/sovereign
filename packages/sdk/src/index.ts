@@ -7,6 +7,7 @@ export type {
   DirectoryApi,
   InstanceApi,
   Links,
+  EmailApi,
   NotificationsApi,
   Person,
   PersonClient,

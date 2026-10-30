@@ -194,7 +194,10 @@ and a person's call reaches only what that app sent them. An older core that doe
 | `app.email.sendToUser`      | app    | `email:send`         | `sendEmail`                |
 | `app.activity.log`          | app    | `activity:write`     | `logActivity`              |
 
-`app.email.sendToUser` and `app.activity.log` are specified ([core-app §4.2, §4.3](core-app.md)) and planned: they are offered when core serves them.
+`app.email.sendToUser` ([core-app §4.2](core-app.md)) is made as the app, names the person by `sub`, and answers an `id` and nothing of
+whether the message went: core says nothing of the person or their address, and never reports delivery. An instance with no mail does not
+list `email`, and the call raises `NotSupportedError` without sending (§7). `app.activity.log` is specified ([core-app §4.3](core-app.md))
+and planned: it is offered when core serves it.
 
 Account-deletion fan-out runs the other way, from core to an app, and needs its own design.
 
@@ -277,7 +280,7 @@ Every namespace of the legacy `sdk` object:
 | `directory`     | **SDK** §8                                                                                        |
 | `platform`      | **SDK** `instance.getBranding`, for what an app needs of it                                       |
 | `notifications` | **SDK** §8                                                                                        |
-| `email`         | **SDK**, planned (§8)                                                                             |
+| `email`         | **SDK** §8 (`app.email.sendToUser`)                                                               |
 | `activity`      | **SDK**, planned (§8)                                                                             |
 | `messages`      | Not carried over (core-app §4.1)                                                                  |
 | `portability`   | Decided with account-deletion fan-out                                                             |

@@ -8,6 +8,11 @@ const apps = vi.fn();
 vi.mock('../notifications', () => ({
   getNotificationService: () => Promise.resolve({ apps: () => apps() as unknown }),
 }));
+const mail = vi.hoisted(() => ({ available: vi.fn(), apps: vi.fn() }));
+vi.mock('../mail', () => ({
+  getMailForAppsService: () => Promise.resolve(mail),
+}));
+vi.mock('../../app/preferences/email-actions', () => ({ setAppEmailAction: vi.fn() }));
 vi.mock('../../app/preferences/notification-actions', () => ({
   setAppNotificationsAction: vi.fn(),
   clearNotificationsAction: vi.fn(),
@@ -18,6 +23,8 @@ const { default: PreferencesPage } = await import('../../app/preferences/page');
 beforeEach(() => {
   getSession.mockReset().mockResolvedValue(null);
   apps.mockReset().mockResolvedValue([]);
+  mail.available.mockReset().mockResolvedValue(true);
+  mail.apps.mockReset().mockResolvedValue([]);
 });
 
 const as = (user: Record<string, unknown>) =>
@@ -51,5 +58,17 @@ describe('the preferences page', () => {
   it('is drawn with the design system and carries no inline styling or scripts of its own', async () => {
     as({});
     expect(renderToStaticMarkup(await PreferencesPage())).not.toMatch(/<script|<style|style="/);
+  });
+
+  it('has a place for email from apps only when the person uses an app that can send it, and the instance has mail', async () => {
+    as({});
+    expect(renderToStaticMarkup(await PreferencesPage())).not.toContain('Email from apps');
+    mail.apps.mockResolvedValue([{ clientId: 'a', name: 'Reminders', enabled: true }]);
+    const html = renderToStaticMarkup(await PreferencesPage());
+    expect(html).toContain('Email from apps');
+    expect(html).toContain('Email from Reminders');
+    mail.available.mockResolvedValue(false);
+    expect(renderToStaticMarkup(await PreferencesPage())).not.toContain('Email from apps');
+    expect(mail.apps).toHaveBeenCalledTimes(2);
   });
 });

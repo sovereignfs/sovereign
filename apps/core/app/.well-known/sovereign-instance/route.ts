@@ -4,6 +4,7 @@ import { getConfig } from '../../../src/config';
 import { getDatabase } from '../../../src/database';
 import { brandingDocument } from '../../../src/instance/branding-document';
 import { loadIdentity } from '../../../src/instance/identity';
+import { getMailForAppsService } from '../../../src/mail';
 import { getSettings } from '../../../src/settings';
 
 // What the operator has set now, read on every request: a change in the Console is here at once, with no restart.
@@ -19,7 +20,9 @@ export async function GET(request: Request): Promise<Response> {
   const [database, settings] = await Promise.all([getDatabase(), getSettings()]);
   const config = getConfig();
   const identity = await loadIdentity(settings, new BrandingStore(database), config.url);
-  const body = JSON.stringify(brandingDocument(identity, config.url));
+  // Email is listed while the instance can send it, so an app can tell a lack of mail from a failure (core-app §4.2).
+  const email = await (await getMailForAppsService()).available();
+  const body = JSON.stringify(brandingDocument(identity, config.url, { email }));
   const etag = `"${createHash('sha256').update(body).digest('hex').slice(0, 16)}"`;
   const headers = {
     etag,

@@ -23,7 +23,7 @@ info:
     malformed, 401 the token is missing or no longer valid, 403 the token lacks the scope, 404 there is nothing
     there, 429 slow down (with `Retry-After`).
 
-    An operation marked `x-planned: true` is part of the contract but not served yet. `sendEmail` and `logActivity` are, until they are built (core-app §4.2, §4.3).
+    An operation marked `x-planned: true` is part of the contract but not served yet. `logActivity` is, until it is built (core-app §4.3).
   license:
     name: MPL-2.0
     identifier: MPL-2.0
@@ -395,7 +395,6 @@ paths:
     post:
       operationId: sendEmail
       tags: [Mail]
-      x-planned: true
       summary: Email a person
       description: |
         Sends a plain-text message from the calling app to one person, in the instance's own mail template, without the app

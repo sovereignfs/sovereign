@@ -2,6 +2,7 @@ export { createFakeCore, memorySessionStore } from './fake-core';
 export type {
   FakeCore,
   FakeCoreOptions,
+  FakeEmail,
   FakeNotification,
   FakePerson,
   Failure,

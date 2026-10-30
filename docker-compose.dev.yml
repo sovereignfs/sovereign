@@ -1,7 +1,7 @@
 # What development needs and nothing else: a persistent sqld, on the ports core's tests and `pnpm dev` expect
 # (8080 and 8081). `pnpm dev` starts it when apps/core/.env chooses sqld (scripts/dev.ts). Core itself runs from
 # source (`next dev`), not from this file.
-name: sovereign-core-dev
+name: sovereign-dev
 
 services:
   sqld:

@@ -95,7 +95,7 @@ first time the name is claimed on npm, so check the scope is yours before taggin
 If the workflow itself is broken, a maintainer can release by hand from a clean checkout of
 `main` (`pnpm install --frozen-lockfile && pnpm build && pnpm packages:check`, then
 `pnpm --filter @sovereignfs/ui publish --access public`, with npm's second factor), and tag the
-commit afterwards. The legacy repository's publish workflows must be retired before the
+commit afterwards. The legacy repository's (`sovereignfs/sovereign-legacy`) publish workflows must be retired before the
 first release from here, so that two places cannot release the same package.
 
 ## Releasing the image

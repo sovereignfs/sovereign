@@ -84,8 +84,8 @@ runs only on a tag, so its first real run is the first release.
 **Deliverables:**
 
 - CI passes in full on `main`, in a run started by hand
-- The repository renamed to `sovereignfs/sovereign`, once the legacy repository has given up the name and its publish
-  workflows are retired
+- The legacy repository's publish workflows retired. The repository itself is already `sovereignfs/sovereign`: the legacy one
+  became `sovereignfs/sovereign-legacy` and this one took the name
 - A `vX.Y.Z` tag, and the package public on GHCR
 
 **Dependencies:** 12.1, 12.2, 12.5, 12.6, 12.8

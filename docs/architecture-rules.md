@@ -8,7 +8,7 @@ Most rules below were learned in the legacy Sovereign repository, often from an
 incident, and carried over because they still apply here. Their
 original write-ups, with the full history, are in the legacy repository's
 `docs/architecture-rules.md` and `docs/incidents/` (as of commit `131f7585`,
-repository `sovereignfs/sovereign-legacy-v1` after the rename). Rules specific
+repository `sovereignfs/sovereign-legacy`). Rules specific
 to the legacy plugin model were not carried over.
 
 **Adding a rule:** when a task surfaces a genuinely reusable lesson, add it here

@@ -93,7 +93,7 @@ export class MailForAppsService {
     this.#manageUrl = manageUrl;
     this.#now = options.now ?? Date.now;
     this.#development = options.development ?? false;
-     
+
     this.#log = options.log ?? ((line) => console.warn(line));
   }
 

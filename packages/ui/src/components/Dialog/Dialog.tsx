@@ -177,12 +177,11 @@ export function Dialog({
   const portalTarget = useOverlayPortalTarget();
 
   useOverlayScrollLock(mounted);
-  // Gated on the portal target too, not `open` alone: the panel doesn't exist
-  // in the DOM until the portal mounts, so for a Dialog whose very first
-  // render is already `open` (a route-driven overlay, or a consumer that
-  // mounts `<Dialog open>` conditionally) a capture keyed on `open` alone
-  // would run against a null ref and never move focus into the panel.
-  useOverlayFocusCapture(panelRef, open && portalTarget !== null);
+  // Gated on `mounted` (the panel is in the DOM) and the portal target, not on `open`: the panel does not exist until the
+  // portal mounts, and when `open` flips true it is not rendered until the next commit. A capture keyed on `open` would run
+  // against a null ref, both for a Dialog that mounts already open and for one opened later, and never move focus in. Focus
+  // goes back when the panel unmounts, after its exit animation.
+  useOverlayFocusCapture(panelRef, mounted && portalTarget !== null);
   useOverlayKeyboardTrap(panelRef, open, onClose);
 
   if (!mounted || !portalTarget) return null;

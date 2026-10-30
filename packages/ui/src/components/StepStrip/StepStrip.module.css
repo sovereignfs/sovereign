@@ -42,9 +42,11 @@
   cursor: pointer;
 }
 
-.addChip:hover {
-  background: var(--sv-color-surface-sunken);
-  color: var(--sv-color-text-primary);
+@media (hover: hover) {
+  .addChip:hover {
+    background: var(--sv-color-surface-sunken);
+    color: var(--sv-color-text-primary);
+  }
 }
 
 .addChip:focus-visible {

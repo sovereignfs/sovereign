@@ -8,7 +8,16 @@ before that is recorded.
 
 ## `@sovereignfs/ui`
 
-No migration notes yet.
+### 0.89.0
+
+- **`NavTabs` and `SplitPane` use the one breakpoint, 768px.** `NavTabs` scrolls its tabs sideways below 768px (it was 640px) and
+  `SplitPane` stacks its two panes below 768px (it was 720px). Between those widths a layout that relied on the old points now
+  changes earlier. Nothing in the props changed.
+- **`FileDropzone` can be reached with the keyboard.** Its file input was hidden with `display: none`, which took it out of the tab
+  order. It is now hidden to the eye only, and the dropzone shows a focus ring. A form's `required` on it now works.
+- **`Dialog` and `Drawer` move focus into the panel when they are opened**, as `Sheet` already did. Focus returns to what opened
+  them when they close, after their exit animation. A test that expected focus to stay on the opener while they were open needs
+  the new behaviour.
 
 ## Core
 

@@ -88,9 +88,10 @@ export function Drawer({
   const portalTarget = useOverlayPortalTarget();
 
   useOverlayScrollLock(mounted);
-  // Gated on the portal target as well as `open` — see Dialog.tsx's identical
-  // call for why `open` alone leaves focus outside an already-open panel.
-  useOverlayFocusCapture(panelRef, open && portalTarget !== null);
+  // Gated on `mounted` (the panel is in the DOM) and the portal target, not on `open`: when `open` flips true the panel is
+  // not rendered until the next commit, so a capture keyed on `open` would run against a null ref and leave focus on
+  // whatever opened it. Focus goes back when the panel unmounts, after its exit animation.
+  useOverlayFocusCapture(panelRef, mounted && portalTarget !== null);
   useOverlayKeyboardTrap(panelRef, open, onClose);
 
   // Swipe-down-to-dismiss, initiated only from the grab handle (see the

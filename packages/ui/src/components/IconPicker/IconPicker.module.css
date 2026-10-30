@@ -10,8 +10,10 @@
   cursor: pointer;
 }
 
-.trigger:hover {
-  background: var(--sv-color-surface-sunken);
+@media (hover: hover) {
+  .trigger:hover {
+    background: var(--sv-color-surface-sunken);
+  }
 }
 
 .trigger:disabled {
@@ -54,10 +56,18 @@
   cursor: pointer;
 }
 
-.option:hover {
-  background: var(--sv-color-surface-sunken);
+@media (hover: hover) {
+  .option:hover {
+    background: var(--sv-color-surface-sunken);
+  }
 }
 
 .optionSelected {
   background: var(--sv-color-accent-subtle);
+}
+
+.trigger:focus-visible,
+.option:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: -2px;
 }

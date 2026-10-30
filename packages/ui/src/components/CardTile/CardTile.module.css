@@ -179,3 +179,9 @@
   padding: var(--sv-space-3) var(--sv-space-2);
   border-radius: var(--sv-radius-md);
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .newTile {
+    transition: none;
+  }
+}

@@ -53,3 +53,9 @@
     color: var(--sv-color-text-primary);
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .segment {
+    transition: none;
+  }
+}

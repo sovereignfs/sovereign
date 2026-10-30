@@ -37,11 +37,8 @@ export interface FileDropzoneProps {
  * (e.g. swap to the picked file's name/size) — this component is otherwise
  * uncontrolled and stateless beyond its own drag-hover visual.
  *
- * Do not pass `required` through to a wrapping form's validation via this
- * field — `display: none` on the hidden input does not exempt it from HTML5
- * constraint validation, so a `required` hidden input can block submission
- * with no visible field for the user to focus. Validate `onFileSelect`'s
- * result in application code instead.
+ * The native input is hidden to the eye and not to the keyboard (it stays in the tab order), so the dropzone takes focus,
+ * shows the focus ring, and opens the picker on Space and Enter, and a form's `required` validation can focus it.
  */
 export function FileDropzone({
   name,

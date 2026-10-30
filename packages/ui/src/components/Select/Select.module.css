@@ -80,3 +80,9 @@
   width: 10px;
   height: 10px;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .select {
+    transition: none;
+  }
+}

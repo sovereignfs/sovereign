@@ -59,3 +59,9 @@
   padding: var(--sv-space-4);
   padding-bottom: max(var(--sv-space-4), env(safe-area-inset-bottom));
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger {
+    transition: none;
+  }
+}

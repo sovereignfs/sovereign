@@ -78,3 +78,9 @@
   word-break: break-word;
   max-width: 80px;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .gridIcon {
+    transition: none;
+  }
+}

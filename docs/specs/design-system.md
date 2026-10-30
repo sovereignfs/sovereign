@@ -106,8 +106,9 @@ Every token is covered by §4 as if stable, because an app can reference any of 
 
 - **Keyboard.** Everything that can be done with a pointer MUST be possible with a keyboard.
 - **Focus.** Every interactive element MUST show `:focus-visible` with `--sv-color-focus-ring`.
-- **Semantics.** It MUST use the right element or role, and a control MUST be able to carry a label. A control that opens an
-  overlay MUST trap focus in it, and return focus on closing.
+- **Semantics.** It MUST use the right element or role, and a control MUST be able to carry a label. A modal overlay (`Dialog`,
+  `Drawer`, `Sheet`, `ConfirmDialog`) MUST move focus into itself on opening, trap it, and return it on closing. A non-modal one
+  (`Popover`, and what is built on it) takes no focus and traps none, and closes on Escape.
 - **Motion.** Animation MUST stop under `prefers-reduced-motion: reduce`.
 - **Touch.** An icon-only control MUST offer a target of at least `--sv-touch-target-min` on mobile, and a hover style MUST sit
   behind `@media (hover: hover)`.
@@ -143,39 +144,38 @@ could use it unchanged.
 
 ## 9. How this is held
 
-| Rule                                                                       | Held by                                        |
-| -------------------------------------------------------------------------- | ---------------------------------------------- |
-| Tokens resolve, and no colour literals                                     | `pnpm design:tokens:check`                     |
-| What a tarball holds, and its entry points                                 | `pnpm packages:check`                          |
-| The stable list exists; providers, dependencies and imports (§3, §6.3, §7) | `scripts/__tests__/design-system-spec.test.ts` |
-| The two breakpoints of §10 are the only exceptions to §6.1                 | `scripts/__tests__/design-system-spec.test.ts` |
-| Accessibility of what stories show                                         | Storybook's a11y checks                        |
-| Stories bundle                                                             | `pnpm build-storybook`, in CI                  |
-| Versioning (§4), §5's rules on use, and §6                                 | Review                                         |
+| Rule                                                                                                           | Held by                                            |
+| -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| Tokens resolve, and no colour literals                                                                         | `pnpm design:tokens:check`                         |
+| What a tarball holds, and its entry points                                                                     | `pnpm packages:check`                              |
+| The stable list exists; providers, dependencies and imports (§3, §6.3, §7)                                     | `scripts/__tests__/design-system-spec.test.ts`     |
+| One breakpoint (§6.1)                                                                                          | `scripts/__tests__/design-system-audit.test.ts`    |
+| Focus rings, reduced motion, hover behind `(hover: hover)`, a story and tests for every component (§6.2, §6.4) | `scripts/__tests__/design-system-audit.test.ts`    |
+| A modal overlay takes focus and returns it (§6.2)                                                              | `packages/ui/src/__tests__/overlay-focus.test.tsx` |
+| Accessibility of what stories show                                                                             | Storybook's a11y checks                            |
+| Stories bundle                                                                                                 | `pnpm build-storybook`, in CI                      |
+| Versioning (§4), §5's rules on use, and §6                                                                     | Review                                             |
 
 A rule held only by review is still a rule. It SHOULD gain a check when one is practical.
 
 ## 10. Where the package falls short
 
-The rules above are what the package MUST do. It does not meet all of them yet. These were measured on 2026-10-30 by scanning the
-source, so they are a place to start and not a verdict: a component that gets a behaviour from another one it wraps can be
-counted here wrongly.
+Nothing the checks in §9 can read from the files. The audit test fails for a new component that has no story or tests, shows no
+focus ring, animates without a reduced-motion rule, puts a hover outside `@media (hover: hover)`, or uses another breakpoint; and
+it fails for a gap that has been closed but is still listed. One exception is written there with its reason: `ButtonLink` draws
+with `Button`'s own stylesheet, which shows the focus ring.
 
-| Rule | Today                                                                                                      |
-| ---- | ---------------------------------------------------------------------------------------------------------- |
-| §6.1 | `NavTabs` (640px) and `SplitPane` (720px) have breakpoints of their own                                    |
-| §6.2 | 16 of 55 interactive components have no `:focus-visible` in their own styles                               |
-| §6.2 | 26 of 32 stylesheets with a transition do not mention `prefers-reduced-motion`. All 5 with an animation do |
-| §6.2 | 7 stylesheets have a `:hover` outside `@media (hover: hover)`                                              |
-| §6.2 | Only `Dialog` visibly returns focus on closing; `Drawer`, `Sheet`, `Menu` and `Popover` need checking      |
-| §6.4 | 22 of 100 components have no tests of their own, `Card` among them, which §3 lists as stable               |
-| §6.4 | 30 of 100 components have no story of their own, though each appears in one                                |
+What the files cannot show is held by review (§9): that a keyboard can do everything a pointer can, that every component is right
+in both themes, and that a control looks and acts disabled.
 
-Closing these is [task 2.5](../epics/design-system.md), which also decides which experimental exports should stay, since some look
-specific to one app. A component that falls short here MUST NOT be promoted to stable until it does not.
+Three exports make sense for sharing expenses and for little else: `BalanceChip`, `CurrencyInput` and `SplitMethodSelector`. They
+stay experimental, which means they MAY be removed (§3), and an app SHOULD NOT start to depend on them. Removing one is breaking
+and comes with a migration note in [`docs/upgrade.md`](../upgrade.md). No other export is promoted to stable here: an export
+becomes stable when core or an app uses it and a task of its own lists it (§3), and none has been put forward.
 
 ## Changelog
 
-| Date       | Change                                                                                                                |
-| ---------- | --------------------------------------------------------------------------------------------------------------------- |
-| 2026-10-30 | First draft. Breaking changes are a minor bump until `1.0.0`, and everything is experimental unless listed as stable. |
+| Date       | Change                                                                                                                                                                                                                                                                 |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-30 | First draft. Breaking changes are a minor bump until `1.0.0`, and everything is experimental unless listed as stable.                                                                                                                                                  |
+| 2026-10-30 | §6.2: focus is trapped and returned by a modal overlay, and a non-modal one takes none. §9: the audit test. §10: nothing the checks can read is left, the three exports that look specific to one app are named, and `NavTabs` and `SplitPane` use the one breakpoint. |

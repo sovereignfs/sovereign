@@ -51,3 +51,9 @@
   border-color: var(--sv-color-error-border);
   box-shadow: 0 0 0 2px var(--sv-color-error-border);
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .textarea {
+    transition: none;
+  }
+}

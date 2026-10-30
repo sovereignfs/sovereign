@@ -22,8 +22,10 @@
   cursor: pointer;
 }
 
-.button:hover:not(:disabled) {
-  background: var(--sv-color-surface);
+@media (hover: hover) {
+  .button:hover:not(:disabled) {
+    background: var(--sv-color-surface);
+  }
 }
 
 .button:disabled {

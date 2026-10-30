@@ -93,3 +93,11 @@
 .trailing {
   flex-shrink: 0;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .box,
+  .label,
+  .label::after {
+    transition: none;
+  }
+}

@@ -35,7 +35,7 @@
   border-bottom-color: var(--sv-color-text-primary);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .nav {
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -46,5 +46,11 @@
 
   .nav::-webkit-scrollbar {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link {
+    transition: none;
   }
 }

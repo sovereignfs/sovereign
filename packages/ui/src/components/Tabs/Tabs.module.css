@@ -54,3 +54,9 @@
     color: var(--sv-color-text-primary);
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .tab {
+    transition: none;
+  }
+}

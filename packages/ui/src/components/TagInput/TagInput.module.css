@@ -139,3 +139,9 @@
     font-size: var(--sv-font-size-md);
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .control {
+    transition: none;
+  }
+}

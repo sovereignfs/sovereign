@@ -62,3 +62,9 @@
     background: var(--sv-color-text-muted);
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .dot::before {
+    transition: none;
+  }
+}

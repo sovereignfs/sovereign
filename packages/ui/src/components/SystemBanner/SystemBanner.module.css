@@ -77,3 +77,9 @@
   color: var(--sv-color-error-text);
   border-bottom-color: var(--sv-color-error-border);
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .dismiss {
+    transition: none;
+  }
+}

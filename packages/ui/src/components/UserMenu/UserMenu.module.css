@@ -88,3 +88,8 @@
   border: none;
   border-top: var(--sv-border-width-hairline) solid var(--sv-color-border);
 }
+
+.trigger:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+}

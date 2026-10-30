@@ -100,7 +100,7 @@ describe('the one breakpoint', () => {
     expect(spec).toContain('`768px`');
   });
 
-  it('has only the two exceptions the specification admits to', () => {
+  it('has no exception: every component uses the one breakpoint', () => {
     const styles = files('packages/ui/src/components').filter((file) =>
       file.endsWith('.module.css'),
     );
@@ -110,9 +110,7 @@ describe('the one breakpoint', () => {
         .filter((match) => match[1] !== '768')
         .map((match) => `${path.basename(file, '.module.css')} ${String(match[1])}`),
     );
-    expect(others.sort()).toEqual(['NavTabs 640', 'SplitPane 720']);
-    expect(spec).toContain('`NavTabs` (640px)');
-    expect(spec).toContain('`SplitPane` (720px)');
+    expect(others).toEqual([]);
   });
 });
 

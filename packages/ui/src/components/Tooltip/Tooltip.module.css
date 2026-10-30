@@ -54,3 +54,9 @@
   top: 50%;
   transform: translateY(-50%);
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .tip {
+    transition: none;
+  }
+}

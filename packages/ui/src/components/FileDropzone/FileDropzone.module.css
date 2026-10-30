@@ -1,4 +1,5 @@
 .dropzone {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--sv-space-4);
@@ -58,6 +59,29 @@
   color: var(--sv-color-text-muted);
 }
 
+/* Hidden to the eye and not to the keyboard: `display: none` would take the input out of the tab order, and the dropzone with
+   it. The label around it is the visible control, and shows the focus ring above. */
 .hiddenInput {
-  display: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dropzone:has(.hiddenInput:focus-visible) {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dropzone {
+    transition: none;
+  }
 }

@@ -1448,6 +1448,60 @@ The panel and Preferences use core's own routes under the session, not these; th
 
 ---
 
+### 4.2 Mail for apps
+
+Not built yet. An app can email a person without being given their address. This is for an app that has no mail server of its own, and
+for one that must not hold addresses: it names the person by `sub`, core looks up the address and sends from the instance's own
+mail (§3.14), and the address never leaves core. An app that runs its own mail (`@sovereignfs/mailer`) can go on doing so; this is
+not a replacement for it, and an app that was granted `email` can still read the address and use whichever it likes.
+
+**What a message is.** Plain text from one app to one person:
+
+| Field     | Notes                                                                                                                   |
+| --------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `to`      | The person's `sub`. Required.                                                                                           |
+| `subject` | Required, 1 to 150 characters. Text. Core puts the app's name before it: `Reminders: Your task is due`.                 |
+| `body`    | Required, up to 5 000 characters of plain text; line breaks are kept and nothing is interpreted as markup.              |
+| `link`    | Optional. One link, `https` and on the origin of one of the app's own registered addresses, shown as a button.          |
+| `key`     | Optional, up to 100 characters. A send with a `key` the app used for this person in the last 24 hours is the same send. |
+
+Core draws it in its own mail template (§3.14): the instance's name and logo, then the app's name ("From Reminders, through
+Acme"), the subject, the text and the link, and a footer saying why the person is getting it and how to stop (below). An app cannot
+change the template, set the sender or a reply address, add an attachment, or send HTML.
+
+**Who may send.** Only an app acting for itself (§3.6.6) with the app scope `email:send`, which an operator gives it (§3.7.1), and
+only when the instance can send mail at all. The rules about whom match notifications (§4.1): the person must have used the app,
+have an active account and a verified address, and not have switched the app's mail off. **A send that may not be delivered is
+accepted and dropped, and answers exactly as a delivered one does**, so an app learns nothing about the person, their address or
+whether it is verified. What core reports of delivery is that it accepted the send: never "delivered", "bounced" or "opened", which
+would be a way to test an address. The operator sees failures in core's own logs, without the text.
+
+**What a person controls.** In Preferences (§3.11), beside notifications, a switch for each app that can mail them (on by default,
+since it is how an app reaches someone who is not there). Every message ends with a line naming the app and a link to those
+switches. Core adds the `List-Unsubscribe` header pointing at them.
+
+**When there is no mail.** An instance with no SMTP server configured does not list `email` in its instance document (§3.13), and
+the operation answers `404`. An SDK sees the capability is missing and raises `NotSupportedError` without sending.
+
+**Limits.** Sends are counted in a window, 100 a minute for an app, and for one app to one person 5 an hour and 20 a day. Over
+is a `429` with `Retry-After`. A message that cannot be used (too long, a bad link) is a `400` before anything is counted. Nothing
+is queued past a restart: a message core could not hand to the mail server is dropped and logged, not kept.
+
+**The operation** (`spec/core-api/openapi.yaml`, `x-planned`):
+
+| Operation   | Who                 | Scope        | What                                                         |
+| ----------- | ------------------- | ------------ | ------------------------------------------------------------ |
+| `sendEmail` | the app, for itself | `email:send` | `POST /api/v1/email`: answers `202` with an `id` of the send |
+
+**Decided here, so that it can be built.**
+
+- **No HTML and no attachments.** The template is core's and keeps every message looking like it came from this instance.
+- **No delivery reports.** See above: a report is an address oracle.
+- **No sending to an address.** An app that has an address and wants to mail it uses its own mail; `to` is a `sub` only.
+- **One switch for each app**, as for notifications. No per-message categories.
+
+---
+
 ## Changelog
 
 | Date       | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
@@ -1513,3 +1567,4 @@ The panel and Preferences use core's own routes under the session, not these; th
 | 2026-10-30 | §4.1: notifications for apps, specified: what one is, who may send (an app acting for itself, only to someone who has used it, and a send core drops answers like one it delivered), what a person controls, the panel, the operations, the limits, and what is left out (push, email, threads). §2 and §3.6.6 updated to match. Not built.                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-10-30 | §3.6.1, §3.6.6, §3.7.1: app tokens are built. The grant is offered to an app that holds an app scope, the Console and `sovereign-admin` give them, the token's subject is the app, and the Core API checks it separately from a person's (`authenticateApp`). Rotating the secret and switching the app off end its tokens by recording the time (`app_token_revocations`); taking a scope away stops it at once.                                                                                                                                                                                                                                                                                                             |
 | 2026-10-30 | §4.1: notifications are built: the service and its tables, the six Core API operations (the instance document lists `notifications`), the person scope `notifications`, the bell and panel, the Preferences switches, and what Remove access, deleting an app and deleting an account take with them.                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 2026-10-30 | §4.2: mail for apps, specified: a plain-text message by `sub` through the instance's own mail, only from an app with `email:send` to a person who has used it, dropped without a trace when it may not go, no delivery reports, a switch for each app in Preferences, limits, and no mail when the instance has none. Not built.                                                                                                                                                                                                                                                                                                                                                                                              |

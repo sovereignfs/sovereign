@@ -191,13 +191,15 @@ and a person's call reaches only what that app sent them. An older core that doe
 | `notifications.markAllRead` | person | `notifications`      | `markAllNotificationsRead` |
 | `notifications.dismiss`     | person | `notifications`      | `dismissNotification`      |
 | `notifications.dismissAll`  | person | `notifications`      | `dismissAllNotifications`  |
+| `app.email.sendToUser`      | app    | `email:send`         | `sendEmail`                |
+
+`app.email.sendToUser` is specified ([core-app §4.2](core-app.md)) and planned: it is offered when core serves it.
 
 These are not specified yet, because [core-app §2](core-app.md) leaves them to Phase 2. Each is specified in core and added to the
 contract first, and the names are reserved:
 
 | Namespace  | Actor          | Expected from legacy |
 | ---------- | -------------- | -------------------- |
-| `email`    | app            | `sendToUser`         |
 | `activity` | person and app | `log`                |
 
 Account-deletion fan-out runs the other way, from core to an app, and needs its own design.
@@ -281,7 +283,7 @@ Every namespace of the legacy `sdk` object:
 | `directory`     | **SDK** §8                                                                                        |
 | `platform`      | **SDK** `instance.getBranding`, for what an app needs of it                                       |
 | `notifications` | **SDK** §8                                                                                        |
-| `email`         | **SDK**, reserved (§8)                                                                            |
+| `email`         | **SDK**, planned (§8)                                                                             |
 | `activity`      | **SDK**, reserved (§8)                                                                            |
 | `messages`      | Not carried over (core-app §4.1)                                                                  |
 | `portability`   | Decided with account-deletion fan-out                                                             |

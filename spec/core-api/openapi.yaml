@@ -23,7 +23,7 @@ info:
     malformed, 401 the token is missing or no longer valid, 403 the token lacks the scope, 404 there is nothing
     there, 429 slow down (with `Retry-After`).
 
-    An operation marked `x-planned: true` is part of the contract but not served yet. None is, now.
+    An operation marked `x-planned: true` is part of the contract but not served yet. `sendEmail` is, until it is built (core-app §4.2).
   license:
     name: MPL-2.0
     identifier: MPL-2.0
@@ -35,6 +35,8 @@ tags:
     description: Finding the people on an instance, to share something with them.
   - name: Notifications
     description: Telling a person something, and the person's own list of what they were told.
+  - name: Mail
+    description: Emailing a person without being given their address. Planned.
   - name: Instance
     description: What the instance looks like.
 paths:
@@ -387,6 +389,74 @@ paths:
           $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/TooManyRequests'
+  /api/v1/email:
+    post:
+      operationId: sendEmail
+      tags: [Mail]
+      x-planned: true
+      summary: Email a person
+      description: |
+        Sends a plain-text message from the calling app to one person, in the instance's own mail template, without the app
+        being given the person's address. Made with an **app token** (the app acting for itself, with the app scope
+        `email:send`). The app can write only to a person who has used it, whose account is active and whose address is verified,
+        and who has not switched the app's mail off; a send to anyone else is accepted and dropped, and answers exactly as a
+        delivered one does, so the answer says nothing about the person or their address. It never says whether the message was
+        delivered. An instance with no mail server does not list `email` and answers 404.
+      security:
+        - bearer: ['email:send']
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [to, subject, body]
+              properties:
+                to:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                  description: The person's `sub`.
+                subject:
+                  type: string
+                  minLength: 1
+                  maxLength: 150
+                body:
+                  type: string
+                  minLength: 1
+                  maxLength: 5000
+                  description: Plain text. Line breaks are kept; nothing is read as markup.
+                link:
+                  type: string
+                  format: uri
+                  description: One link, `https`, on the origin of one of the app's registered addresses.
+                key:
+                  type: string
+                  maxLength: 100
+                  description: A send with the same key for the same person within a day is the same send.
+      responses:
+        '202':
+          description: Accepted. Whether it was sent is not said.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [id]
+                properties:
+                  id:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
   /.well-known/sovereign-instance:
     get:
       operationId: getInstanceBranding
@@ -559,7 +629,7 @@ components:
               type: array
               items:
                 type: string
-                enum: [directory, notifications]
+                enum: [directory, notifications, email]
               description: |
                 The groups of calls served, such as `directory`. A capability is listed when every call of it is
                 served.

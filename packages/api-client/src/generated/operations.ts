@@ -88,6 +88,35 @@ export interface Operations {
     };
   };
   /**
+   * Email a person
+   */
+  sendEmail: {
+    request: {
+      body: {
+        /**
+         * The person's `sub`.
+         */
+        to: string;
+        subject: string;
+        /**
+         * Plain text. Line breaks are kept; nothing is read as markup.
+         */
+        body: string;
+        /**
+         * One link, `https`, on the origin of one of the app's registered addresses.
+         */
+        link?: string;
+        /**
+         * A send with the same key for the same person within a day is the same send.
+         */
+        key?: string;
+      };
+    };
+    response: {
+      id: string;
+    };
+  };
+  /**
    * Tell a person something
    */
   sendNotification: {
@@ -172,6 +201,12 @@ export const operations = {
     path: '/api/v1/directory/users',
     scopes: ['directory'],
     safeToRepeat: true,
+  },
+  sendEmail: {
+    method: 'POST',
+    path: '/api/v1/email',
+    scopes: ['email:send'],
+    safeToRepeat: false,
   },
   sendNotification: {
     method: 'POST',

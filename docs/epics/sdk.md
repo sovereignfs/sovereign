@@ -42,7 +42,7 @@ are added when core's Phase 2 specifies them.
 - Nothing is offered that the contract lacks
 - No app is named
 
-#### 📋 14.2 — Tokens, failure and today's capabilities
+#### ✅ 14.2 — Tokens, failure and today's capabilities
 
 **Goal:** An app calls the Directory through the SDK, and two refreshes can never race.
 

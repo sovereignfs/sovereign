@@ -50,7 +50,7 @@ of it is built.
 - Every field has one meaning, and a rule for what happens when the schema version changes
 - Every failure of `sv apply` has a stated result, and running it again is defined at every step
 
-#### 📋 13.2 — `sovereign-admin` in the image
+#### ✅ 13.2 — `sovereign-admin` in the image
 
 **Goal:** Something inside the container can register an app, under every rule the Console follows.
 

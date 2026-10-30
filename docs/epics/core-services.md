@@ -43,7 +43,7 @@ exists, and account-deletion fan-out is task 14.6, since it needs its own design
 - An app cannot send to someone who has never used it, or the specification says why it may
 - A person can stop an app's notifications
 
-#### 📋 15.2 — Mail for apps
+#### ✅ 15.2 — Mail for apps
 
 **Goal:** An app can email a person without being given their address.
 
@@ -128,4 +128,29 @@ exists, and account-deletion fan-out is task 14.6, since it needs its own design
 
 - A send to a person who never used the app, who turned it off, or whose account is inactive answers exactly as a delivered one does
 - An app never sees another app's notifications, and a person's token never sends
+- The security check is run
+
+#### 📋 15.6 — Mail for apps: build
+
+**Goal:** An app with the app scope `email:send` can email a person by `sub`, and the person can switch it off.
+
+**Priority:** 6.
+
+**Deliverables:**
+
+- A `MailForAppsService` that is the only writer: the rules of core-app §4.2 (who may be written to, the dropped send that answers like
+  a delivered one, `key` de-duplication, the limits), the instance's own template and the unsubscribe line and header, and the
+  per-app switch in Preferences beside notifications
+- `sendEmail` served, with `x-planned` removed, `email` listed in the instance document only when SMTP is configured, and the app
+  scope `email:send` in `ClientRegistry` and the Console
+- The SDK's `app.email.sendToUser`, and the fake core's answer to it
+
+**Dependencies:** 15.2, 15.5
+
+**Spec reference:** core-app §4.2, §3.14
+
+**Review checklist:**
+
+- An app never learns an address, or whether one is verified, or whether the person turned the mail off
+- No HTML, header or recipient of the app's choosing reaches the mail server
 - The security check is run

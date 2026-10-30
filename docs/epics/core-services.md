@@ -64,7 +64,7 @@ exists, and account-deletion fan-out is task 14.6, since it needs its own design
 - An app never learns an address it was not granted
 - A person's address cannot be found from whether a send worked
 
-#### 📋 15.3 — Activity `[parallel]`
+#### ✅ 15.3 — Activity `[parallel]`
 
 **Goal:** What apps record about a person, and what that person can see of it, is specified.
 
@@ -84,7 +84,7 @@ exists, and account-deletion fan-out is task 14.6, since it needs its own design
 - A person can see what is recorded about them
 - What is kept has a limit
 
-#### 📋 15.4 — Backups `[parallel]`
+#### ✅ 15.4 — Backups `[parallel]`
 
 **Goal:** What core's own backups are, apart from an operator's, is specified.
 
@@ -154,3 +154,49 @@ exists, and account-deletion fan-out is task 14.6, since it needs its own design
 - An app never learns an address, or whether one is verified, or whether the person turned the mail off
 - No HTML, header or recipient of the app's choosing reaches the mail server
 - The security check is run
+
+#### 📋 15.7 — Activity: build
+
+**Goal:** An app with the app scope `activity:write` can record what it did for a person, and the person can read and delete it.
+
+**Priority:** 7.
+
+**Deliverables:**
+
+- The table and an `ActivityService` that is the only writer: the rules of core-app §4.3 (who may be recorded about, the dropped
+  record that answers like a kept one, `key` de-duplication, the limits, the 90 days and the 500)
+- Core's Activity page in the identity pages (list, search by app, delete one, one app's, or all), and what Remove access, deleting an
+  app and deleting an account take with them
+- `logActivity` served, with `x-planned` removed and `activity` in the instance document; the app scope `activity:write` in
+  `ClientRegistry` and the Console; the SDK's `app.activity.log`
+
+**Dependencies:** 15.3, 15.5
+
+**Spec reference:** core-app §4.3
+
+**Review checklist:**
+
+- An operator cannot read a person's activity, and an app cannot read any
+- A record about someone who may not have it answers exactly as a kept one does
+- The security check is run
+
+#### 📋 15.8 — The restore marker
+
+**Goal:** After a restore, nothing that was ended since the backup works again.
+
+**Priority:** 8.
+
+**Deliverables:**
+
+- An instance setting `restored_at`, which `sovereign-admin` can write (a command a restore runs), and the session and token checks
+  refusing anything issued before it
+- `sv restore` calling it (operator-cli §10.2), with the specification of the command
+
+**Dependencies:** 15.4, 13.2
+
+**Spec reference:** core-app §4.4; operator-cli §10.2
+
+**Review checklist:**
+
+- A session, an access token, a refresh token and an app token issued before the marker are each refused, and ones after it work
+- The marker only ever moves forward

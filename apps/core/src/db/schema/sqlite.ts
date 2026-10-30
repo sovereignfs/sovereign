@@ -259,6 +259,32 @@ export const appMailKeys = sqliteTable(
 );
 
 /**
+ * What apps recorded about a person (core-app §4.3): one row for each entry, the person's own record. `client_id` is the app that
+ * recorded it, taken from its token. `at` is when it happened and `created_at` when core accepted it, both milliseconds since the
+ * epoch. `idem_key` is the recorder's own key, so a repeat within a day is the same record. Written only by `ActivityService`,
+ * read only for the person it is about.
+ */
+export const activity = sqliteTable(
+  'activity',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    clientId: text('client_id').notNull(),
+    summary: text('summary').notNull(),
+    link: text('link'),
+    at: integer('at').notNull(),
+    createdAt: integer('created_at').notNull(),
+    idemKey: text('idem_key'),
+  },
+  (table) => [
+    index('activity_user_idx').on(table.userId, table.at),
+    index('activity_idem_idx').on(table.clientId, table.userId, table.idemKey),
+  ],
+);
+
+/**
  * When an app's own tokens (core-app §3.6.6) were last revoked: its secret was rotated, or it was switched off. An app token is a
  * signed JWT that leaves no row to mark, so the time is recorded and everything issued up to it is no longer good
  * (`isAppTokenRevoked`). One row for each app; the time is milliseconds since the epoch, an integer on both dialects.

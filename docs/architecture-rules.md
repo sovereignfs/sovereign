@@ -240,6 +240,13 @@ pointing here.
   does; a link goes only to an `https` address on one of the app's own origins; text is plain. The Core API's person calls act on
   the calling app's own notifications only, and core's own panel route (`/api/notifications`) acts on the session's account and
   checks the request's origin. Remove access, deleting an app and deleting an account delete them in the same transaction.
+- **Activity is a person's own record, written by `ActivityService` alone and read for the person it is about and no one else**
+  (`src/activity/service.ts`, core-app §4.3). An app records with its own token and `activity:write` and can read nothing; no operator
+  page or route lists entries; the page and its actions use the session's account, never one from the request. A record about a person who
+  may not have it is answered as a kept one, and the limits are counted before the person is looked at. What is shown is text, and a link
+  is shown only after it was checked against the app's own origins.
+- **The services an app uses for itself share what they ask about an app and a person** (`src/clients/use.ts`): where the app's links may
+  go, and whether the person has used it. Notifications, email and activity do not keep their own copies.
 - **Email for apps is `MailForAppsService`'s alone, and it tells the sender nothing** (`src/mail/apps.ts`, core-app §4.2). The
   recipient is a `sub`; the address is read inside the service and goes only to the mail server, never into an answer or a log. The
   sender, recipient and headers are core's (the app supplies a subject, plain text, one link on its own origin and a key); a send that may

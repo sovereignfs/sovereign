@@ -20,6 +20,7 @@ describe('the identity pages navigation', () => {
       '/security',
       '/preferences',
       '/connected-apps',
+      '/activity',
       '/delete-account',
     ]);
   });
@@ -31,6 +32,7 @@ describe('the identity pages navigation', () => {
     ['/security/two-factor', 'Security'],
     ['/preferences', 'Preferences'],
     ['/connected-apps', 'Connected apps'],
+    ['/activity', 'Activity'],
     ['/delete-account', 'Delete account'],
   ])('marks the current page on %s as %s', (path, label) => {
     pathname = path;

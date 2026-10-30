@@ -196,8 +196,9 @@ and a person's call reaches only what that app sent them. An older core that doe
 
 `app.email.sendToUser` ([core-app §4.2](core-app.md)) is made as the app, names the person by `sub`, and answers an `id` and nothing of
 whether the message went: core says nothing of the person or their address, and never reports delivery. An instance with no mail does not
-list `email`, and the call raises `NotSupportedError` without sending (§7). `app.activity.log` is specified ([core-app §4.3](core-app.md))
-and planned: it is offered when core serves it.
+list `email`, and the call raises `NotSupportedError` without sending (§7). `app.activity.log` ([core-app §4.3](core-app.md)) is made as the app and names the person by `sub`; it answers an `id` and nothing of whether
+the entry was kept. There is no call to read an entry, as the app or as a person: the record is the person's, read in core. A core that does
+not list `activity` raises `NotSupportedError` without sending.
 
 Account-deletion fan-out runs the other way, from core to an app, and needs its own design.
 
@@ -281,7 +282,7 @@ Every namespace of the legacy `sdk` object:
 | `platform`      | **SDK** `instance.getBranding`, for what an app needs of it                                       |
 | `notifications` | **SDK** §8                                                                                        |
 | `email`         | **SDK** §8 (`app.email.sendToUser`)                                                               |
-| `activity`      | **SDK**, planned (§8)                                                                             |
+| `activity`      | **SDK** §8 (`app.activity.log`)                                                                   |
 | `messages`      | Not carried over (core-app §4.1)                                                                  |
 | `portability`   | Decided with account-deletion fan-out                                                             |
 | `authz`         | Gone: there are no grants between plugins. Core's `roles` and an app's own permissions replace it |

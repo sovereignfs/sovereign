@@ -254,7 +254,7 @@ describe('the app’s own token (sdk §5.2)', () => {
       fetch: core.fetch,
       environment: time.environment,
     });
-    expect(Object.keys(sv.app)).toEqual(['notifications', 'email']);
+    expect(Object.keys(sv.app)).toEqual(['notifications', 'email', 'activity']);
     expect((sv.app as { directory?: unknown }).directory).toBeUndefined();
   });
 });

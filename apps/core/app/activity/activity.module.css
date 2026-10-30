@@ -1,0 +1,23 @@
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sv-space-3);
+}
+
+.when {
+  margin: 0;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-sm);
+}
+
+.summary {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sv-space-2);
+}

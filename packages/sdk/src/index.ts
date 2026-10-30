@@ -3,6 +3,7 @@ export { hasRole } from './session';
 export type { Session, SessionStore, StoredRecord } from './session';
 export type { Auth, Step } from './auth';
 export type {
+  ActivityApi,
   AppClient,
   DirectoryApi,
   InstanceApi,

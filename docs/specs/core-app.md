@@ -720,7 +720,7 @@ for itself, with the client-credentials grant.
 - **App scopes are a separate, short list.** A capability says whether it can be
   used by an app, in its own section. `directory` and `offline_access` can never be
   one: looking people up needs a person, and an app token has no refresh token. The
-  first is `notifications:send` (§4.1) and the second `email:send` (§4.2); each is listed
+  first is `notifications:send` (§4.1), the second `email:send` (§4.2) and the third `activity:write` (§4.3); each is listed
   and can be given.
 - **What it is.** A signed JWT addressed to the Core API (§3.9), lasting 15 minutes
   like an access token, with the app as its subject, and no person, no session and
@@ -1053,6 +1053,7 @@ closing them returns there (§1.3).
 | Security       | Change password; manage passkeys; enrol or remove TOTP and backup codes; list sessions and end any of them        |
 | Preferences    | Timezone and locale; appearance; notifications and, where an app they use can send it, email from apps            |
 | Connected apps | Apps the person has allowed, with the scopes granted; **Remove access** revokes the app's tokens as well (§3.6.4) |
+| Activity       | What apps noted they did for the person, newest first, by app; delete one, an app's or all (§4.3)                 |
 | Delete account | Requires the password. The owner must transfer ownership first                                                    |
 
 - A name is 1 to 100 characters, trimmed, with no line breaks or other control
@@ -1523,7 +1524,7 @@ is queued past a restart: a message core could not hand to the mail server is dr
 
 ### 4.3 Activity
 
-Not built yet. An app can record that something happened to or for a person ("Reminders: you completed Water the plants"), and the
+Built. An app can record that something happened to or for a person ("Reminders: you completed Water the plants"), and the
 person can see, in core, everything that is recorded about them. This is the person's own record, not an operator's audit log: the
 operator cannot read it, and it is not a way for an app to learn anything.
 
@@ -1562,6 +1563,21 @@ most 500 in all, the oldest going first.
   app that wants a person's own action recorded records it with the person's `sub`.
 - **No reading by apps.** An app cannot list what any app recorded: the page is the person's.
 - **No export in Phase 2.** Export is the "Later" row (§2), and this is part of what it would hold.
+
+**As built.**
+
+- `ActivityService` (`src/activity/service.ts`) is the only writer and the only reader, and reads only for the account its caller
+  names. The Activity page and its actions name the session's own account; no route lets an app, or an operator, read an entry, and
+  the Console has no page for it.
+- The limits are counted before the person is looked at, so a limit says nothing of the person; a record that cannot be used is a
+  `400` before anything is counted. The record is dropped, answering as a kept one, when the account is missing or deactivated or has
+  not used the app. There is no verified-address condition, because nothing is sent to the address.
+- Retention is by when it happened: entries older than 90 days are not shown and are removed with the next record about the person, and
+  the 500 are the newest by that time across all apps.
+- Remove access, deleting an app and deleting the account remove what was recorded. The summary and the link are shown as text and
+  as a link with `rel="noopener noreferrer"`; the link was checked against the app's own origins when it was recorded.
+- The page lists "All apps" or one app, which it offers only when more than one app has recorded something, and shows times in the
+  person's own time zone, or UTC until they set one.
 
 ### 4.4 Backups
 
@@ -1654,3 +1670,4 @@ would be wrong about the keys.
 | 2026-10-30 | §4.2: mail for apps, specified: a plain-text message by `sub` through the instance's own mail, only from an app with `email:send` to a person who has used it, dropped without a trace when it may not go, no delivery reports, a switch for each app in Preferences, limits, and no mail when the instance has none. Not built.                                                                                                                                                                                                                                                                                                                                                                                              |
 | 2026-10-30 | §4.3, §4.4: activity (a person's own record of what apps did, recorded only by an app acting for itself, readable only by the person) and backups (core makes none of its own; `sv backup` is the one; a restore records a time before which sessions and tokens are refused) are specified. Not built.                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | 2026-10-31 | §4.2: mail for apps is built: the service and its two small tables, `sendEmail` served (the instance document lists `email` only while the instance can send mail, and the operation is a `404` without it), the app scope `email:send`, the mailer's app-message template and `List-Unsubscribe` header, the Preferences switches, and what Remove access, deleting an app and deleting an account take with them. The address is read only when a send is made and never leaves core.                                                                                                                                                                                                                                       |
+| 2026-10-31 | §4.3: activity is built: the service and its table, `logActivity` served (the instance document lists `activity`), the app scope `activity:write`, core's Activity page (all apps or one, delete one, one app's or all), and what Remove access, deleting an app and deleting an account take with them. Only the person reads it: no operator page, no call for an app.                                                                                                                                                                                                                                                                                                                                                      |

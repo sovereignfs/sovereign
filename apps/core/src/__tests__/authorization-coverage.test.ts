@@ -44,7 +44,7 @@ const authorizes = (source: string) => /\brequire(Session|Capability)\(/.test(so
  */
 const isTokenRoute = (file: string) => relative(file).startsWith('api/v1/');
 const guardsByToken = (source: string) =>
-  /\b(directoryGuard|notificationsGuard|emailGuard)\(/.test(source);
+  /\b(directoryGuard|notificationsGuard|emailGuard|activityGuard)\(/.test(source);
 
 describe('server actions and route handlers authorize inside', () => {
   const routes = all.filter((file) => /(^|\/)route\.ts$/.test(relative(file)));

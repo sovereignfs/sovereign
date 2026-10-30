@@ -85,6 +85,17 @@ export type FakeEmail = {
   sentAt: number;
 };
 
+/** An entry an app recorded through the fake core. There is no call to read it back, as in core: a test reads it here. */
+export type FakeActivity = {
+  id: string;
+  to: string;
+  summary: string;
+  link?: string;
+  at: number;
+  key?: string;
+  recordedAt: number;
+};
+
 /** One request the fake received, with nothing secret in it. `status` is 0 when it was never answered. */
 export type Received = { method: string; path: string; status: number };
 
@@ -99,6 +110,8 @@ export type FakeCore = {
   readonly notificationsSent: readonly FakeNotification[];
   /** The emails apps sent to people the fake has, in order. A send to anyone else is accepted and dropped, as core does. */
   readonly emailsSent: readonly FakeEmail[];
+  /** What apps recorded about people the fake has, in order. A record about anyone else is accepted and dropped, as core does. */
+  readonly activityRecorded: readonly FakeActivity[];
   /** Adds a person to the Directory. */
   addPerson(person: FakePerson): void;
   /** Signs a person in, and returns the refresh token an app would have stored for them. */
@@ -184,7 +197,7 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
   const api =
     'api' in options
       ? options.api
-      : { versions: ['v1'], capabilities: ['directory', 'notifications', 'email'] };
+      : { versions: ['v1'], capabilities: ['directory', 'notifications', 'email', 'activity'] };
   const appTokens = options.appTokens ?? true;
 
   const people = new Map<string, Person>();
@@ -445,6 +458,57 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
     return json({ id }, 202);
   };
 
+  const entries = new Map<string, FakeActivity>();
+  const activityApi = async (request: Request): Promise<Response> => {
+    const who = bearer(request);
+    if (who instanceof Response) return who;
+    if (who.kind !== 'app' || request.method !== 'POST') {
+      return problem(
+        403,
+        'insufficient_scope',
+        'Only an app acting for itself may record activity.',
+      );
+    }
+    const body = (await request.json().catch(() => undefined)) as
+      Record<string, unknown> | undefined;
+    const text = (value: unknown, max: number) =>
+      typeof value === 'string' && value.trim() !== '' && value.length <= max;
+    const when = typeof body?.at === 'string' ? Date.parse(body.at) : now();
+    if (
+      !body ||
+      !text(body.to, 255) ||
+      !text(body.summary, 200) ||
+      (body.link !== undefined && typeof body.link !== 'string') ||
+      (body.key !== undefined && !text(body.key, 100)) ||
+      !Number.isFinite(when)
+    ) {
+      return problem(400, 'invalid_request', 'to and summary are required text.');
+    }
+    const to = body.to as string;
+    const key = body.key as string | undefined;
+    const same =
+      key === undefined
+        ? undefined
+        : [...entries.values()].find(
+            (entry) =>
+              entry.to === to && entry.key === key && now() - entry.recordedAt < 86_400_000,
+          );
+    if (same) return json({ id: same.id }, 202);
+    const id = random('a');
+    if (people.has(to) && people.get(to)?.active !== false) {
+      entries.set(id, {
+        id,
+        to,
+        summary: body.summary as string,
+        ...(typeof body.link === 'string' ? { link: body.link } : {}),
+        at: when,
+        ...(key === undefined ? {} : { key }),
+        recordedAt: now(),
+      });
+    }
+    return json({ id }, 202);
+  };
+
   const notificationsApi = async (request: Request, path: URL): Promise<Response> => {
     const who = bearer(request);
     if (who instanceof Response) return who;
@@ -617,6 +681,10 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
     if (path.pathname === '/api/auth/oauth2/token' && request.method === 'POST') {
       return tokenEndpoint(request, failure, signal);
     }
+    if (path.pathname === '/api/v1/activity') {
+      const answer = await activityApi(request);
+      return failure?.kind === 'lost-answer' ? hang(signal) : answer;
+    }
     if (path.pathname === '/api/v1/email') {
       const answer = await emailApi(request);
       return failure?.kind === 'lost-answer' ? hang(signal) : answer;
@@ -742,6 +810,9 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
     },
     get notificationsSent() {
       return [...sent.values()];
+    },
+    get activityRecorded() {
+      return [...entries.values()];
     },
     get emailsSent() {
       return [...emails.values()];

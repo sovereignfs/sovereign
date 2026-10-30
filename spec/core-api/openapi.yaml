@@ -23,7 +23,7 @@ info:
     malformed, 401 the token is missing or no longer valid, 403 the token lacks the scope, 404 there is nothing
     there, 429 slow down (with `Retry-After`).
 
-    An operation marked `x-planned: true` is part of the contract but not served yet. `logActivity` is, until it is built (core-app §4.3).
+    An operation marked `x-planned: true` is part of the contract but not served yet. None is, at present.
   license:
     name: MPL-2.0
     identifier: MPL-2.0
@@ -462,7 +462,6 @@ paths:
     post:
       operationId: logActivity
       tags: [Activity]
-      x-planned: true
       summary: Record something about a person
       description: |
         Records one line of plain text about one person, which they can read in core's Activity page and delete. Made with an **app

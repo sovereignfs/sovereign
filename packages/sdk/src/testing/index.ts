@@ -1,5 +1,6 @@
 export { createFakeCore, memorySessionStore } from './fake-core';
 export type {
+  FakeActivity,
   FakeCore,
   FakeCoreOptions,
   FakeEmail,

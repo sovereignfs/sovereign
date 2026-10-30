@@ -59,6 +59,7 @@ export interface AppClient {
     ): Promise<Answer<'sendNotification'>>;
   };
   readonly email: EmailApi;
+  readonly activity: ActivityApi;
 }
 
 /** What an app can say to a person by email, as itself (sdk §8, core-app §4.2). */
@@ -69,6 +70,15 @@ export interface EmailApi {
    * not list `email`, and this raises `NotSupportedError` without sending.
    */
   sendToUser(message: NonNullable<Request<'sendEmail'>>['body']): Promise<Answer<'sendEmail'>>;
+}
+
+/** What an app can note about a person, as itself (sdk §8, core-app §4.3). */
+export interface ActivityApi {
+  /**
+   * Records one line about something the app did for a person named by `sub`, in the person's own activity page in core. Accepted
+   * whether or not it is kept: core says nothing of the person. There is no way to read it back, as the app or as the person.
+   */
+  log(entry: NonNullable<Request<'logActivity'>>['body']): Promise<Answer<'logActivity'>>;
 }
 
 /** What anyone can ask, with no token. */
@@ -128,6 +138,7 @@ const CAPABILITY: Partial<Record<Name, string>> = {
   findDirectoryUserByEmail: 'directory',
   sendNotification: 'notifications',
   sendEmail: 'email',
+  logActivity: 'activity',
   listNotifications: 'notifications',
   markNotificationRead: 'notifications',
   markAllNotificationsRead: 'notifications',
@@ -235,6 +246,9 @@ export function createSovereign(options: SovereignOptions): Sovereign {
       },
       email: {
         sendToUser: (message) => execute({ kind: 'app' }, 'sendEmail', { body: message }),
+      },
+      activity: {
+        log: (entry) => execute({ kind: 'app' }, 'logActivity', { body: entry }),
       },
     },
     get auth() {

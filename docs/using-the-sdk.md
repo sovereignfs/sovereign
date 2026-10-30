@@ -121,6 +121,24 @@ the app, have a verified address and not have switched the app's email off (Pref
 list `email`, so this raises `NotSupportedError` without sending. It is not a replacement for an app's own mail: use that when the app
 has the address and needs more than plain text.
 
+### Note what the app did for a person
+
+An app with the app scope `activity:write` can add a line to the person's own activity page in core, so that they can see what apps did for
+them in one place:
+
+```ts
+await sv.app.activity.log({
+  to: person.sub,
+  summary: 'You completed Water the plants', // one line of text, the words the person should read
+  link: 'https://notes.example.test/tasks/3', // optional, on one of the app's own addresses
+  at: new Date().toISOString(), // optional: when it happened, within the last day
+  key: 'done-3', // recording it again within a day is the same record
+});
+```
+
+Only the person can read it, and they can delete it: the app cannot list what it recorded, and neither can anyone who runs the
+instance. As with the other calls, the answer is the same whether or not it was kept.
+
 ## 5. Handle failure
 
 Core can be down, slow or refusing, and the app must stay up. Every failure is a `SovereignError`:

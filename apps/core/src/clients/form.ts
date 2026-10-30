@@ -47,6 +47,11 @@ export const APP_SCOPE_TEXT: Record<string, { label: string; description: string
     label: 'Send notifications',
     description: 'Tell a person who uses the app something, on its own, when nobody is there.',
   },
+  'activity:write': {
+    label: 'Record activity',
+    description:
+      'Note what it did for a person who uses the app. They can read and delete it in their account.',
+  },
   'email:send': {
     label: 'Send email',
     description:

@@ -47,8 +47,9 @@ core for a token of its own with the client-credentials flow: a `POST` to the to
 under **What the app may do on its own** in the app's technical settings (nothing, until then), and only if the app is
 confidential. The token lasts 15 minutes, has no refresh token, and names the app and no person. Changing the app's secret or
 switching it off ends the tokens it holds. This is not a way to read people's details: `directory` and the scopes about a person
-can never be given this way. The things an operator can allow are sending notifications (`notifications:send`) and sending email
-(`email:send`, only on an instance with a mail server); the SDK makes both calls for you.
+can never be given this way. The things an operator can allow are sending notifications (`notifications:send`), sending email
+(`email:send`, only on an instance with a mail server) and noting what the app did in a person's own activity page
+(`activity:write`); the SDK makes each call for you.
 
 ## Register the app
 

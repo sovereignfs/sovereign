@@ -106,7 +106,7 @@ are added when core's Phase 2 specifies them.
 - `pnpm packages:check` covers it
 - A new app using only the published package meets §14 of the specification
 
-#### 📋 14.5 — App tokens in core
+#### ✅ 14.5 — App tokens in core
 
 **Goal:** An app can act with no person present, for what an operator allowed.
 
@@ -114,8 +114,8 @@ are added when core's Phase 2 specifies them.
 
 - The client-credentials grant, app scopes on a client through `ClientRegistry` and the Console, and core-app §3.6.6's checks in
   `apps/core/src/api/token.ts`, whose principal is a person today
-- `sv.app` in the SDK
-- The first capability that needs it
+- `sv.app` in the SDK: the token side is there since 14.2, and has no method until a capability needs one
+- The first capability that needs it is notifications, built in 15.5
 
 **Dependencies:** 14.2. 15.5 builds the first capability that needs an app scope, notifications, and the two meet in `notifications:send`: whichever is built first leaves the other's operation unserved
 

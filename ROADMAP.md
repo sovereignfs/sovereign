@@ -1,6 +1,6 @@
 # Sovereign Core — Roadmap
 
-**Version:** 0.60.0 · **Last updated:** 2026-10-30
+**Version:** 0.61.0 · **Last updated:** 2026-10-30
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -160,7 +160,7 @@ be argued before anything is built.
 | 0.55.0  | 2        | Tokens, failure and today's capabilities | 📋     | [14.2](docs/epics/sdk.md) |
 | 0.56.0  | 3        | Signing in, and the Next.js adapter      | 📋     | [14.3](docs/epics/sdk.md) |
 | 0.57.0  | 4        | Publishing                               | 📋     | [14.4](docs/epics/sdk.md) |
-| —       | 5        | App tokens in core                       | 📋     | [14.5](docs/epics/sdk.md) |
+| 0.61.0  | 5        | App tokens in core                       | ✅     | [14.5](docs/epics/sdk.md) |
 | —       | 6        | Account-deletion fan-out                 | 📋     | [14.6](docs/epics/sdk.md) |
 
 ### M9 — Core's Phase 2 is specified

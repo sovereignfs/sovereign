@@ -219,6 +219,12 @@ each: `docs/architecture-rules.md`.
 - **`sovereign-admin` acts as the system actor, which only its entry point
   (`src/admin/main.ts`) builds**; no route or page imports it, and the registry
   accepts only an actor made there.
+- **The SDK sends a refresh token once, and says so when it cannot know.** Core rotates
+  a refresh token on every use and takes one used twice for theft, so
+  `packages/sdk/src/tokens.ts` refreshes one at a time per person, stores the new token
+  before using the access token, never retries a refresh that was sent, and refuses to
+  send again one whose answer was lost. Its calls name an actor, retry only what the
+  contract marks safe to repeat, and log no token or person.
 - **The launcher (`/`) reads apps through `listLauncherApps`** (tile fields only)
   after checking `launcher:access`; **only `/` may load pictures from other
   addresses** (`remoteImages` in `buildCsp`).
@@ -361,6 +367,7 @@ packages/
   crypto/           field encryption (later: end-to-end, recovery kit)
   mailer/           mail delivery
   api-client/       typed Core API client — published
+  sdk/              how an app's server calls core — tokens, failure, version support
   tsconfig/         shared TS configs — extend these
 spec/               core-api/ (OpenAPI), env.md, suite.md, app-manifest.md, schemas/
 docs/

@@ -28,6 +28,7 @@ COPY packages/config/package.json packages/config/package.json
 COPY packages/crypto/package.json packages/crypto/package.json
 COPY packages/database/package.json packages/database/package.json
 COPY packages/mailer/package.json packages/mailer/package.json
+COPY packages/sdk/package.json packages/sdk/package.json
 COPY packages/tsconfig/package.json packages/tsconfig/package.json
 COPY packages/ui/package.json packages/ui/package.json
 # The root's `prepare` installs git hooks, and there is no git here.

@@ -46,6 +46,7 @@ and more. The spec lists what is in and out of each phase.
 | `packages/database`   | One interface over sqld, PostgreSQL and a SQLite file           | In the workspace                                |
 | `packages/crypto`     | Field encryption with a key ring (end-to-end later)             | In the workspace                                |
 | `packages/api-client` | The typed Core API client, generated from the contract          | In the workspace                                |
+| `packages/sdk`        | The SDK: tokens, failure and version support for an app         | In the workspace, not published yet             |
 | `packages/*` (later)  | `auth`, …                                                       | Planned                                         |
 | `spec/`               | `env.md` (the environment convention) and the Core API contract | Written                                         |
 | `docs/`               | The spec, epics, research, RFCs and decisions                   | [Index below](#documentation)                   |

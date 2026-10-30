@@ -234,6 +234,19 @@ pointing here.
   is saved and whenever the key set is read. An access or logout token is never
   re-signed. A scope core does not offer is dropped by `oauthGuards`
   (`src/oauth/guards.ts`) before the provider reads the request, not refused.
+- **The SDK keeps a refresh token from being used twice** (`packages/sdk/src/tokens.ts`,
+  sdk §5). Core rotates the token on every use and removes everything an app holds for a
+  person when one is used twice, so two refreshes racing sign the person out everywhere.
+  Refreshes run one at a time for each person in a process, and under the app's token
+  store lock across processes; the store's write is conditional, and the new token is
+  stored before the access token is used. A refresh is sent once: if its answer is lost,
+  or core rotated and the write failed, the old token is remembered as dead and never sent
+  again, and the person signs in again. A failure that certainly never left (a refused
+  connection) or that core answered with a 5xx keeps the token. Requests time out, only a
+  call the contract marks `x-safe-to-repeat` (or a GET) is retried, twice, inside ten
+  seconds, and a version check never stops a call. Nothing is logged but the operation,
+  status and duration. The fake core (`/testing`) is held to the contract by the SDK's
+  own tests.
 - **`sovereign-admin` writes apps as the system actor, built in one place.**
   `systemActor()` (`src/clients/system-actor.ts`) is called by the command's entry
   point (`src/admin/main.ts`) and nowhere else; no route, page or action imports

@@ -1,9 +1,9 @@
 # Sovereign SDK — specification
 
-|            |                                                   |
-| ---------- | ------------------------------------------------- |
-| **Status** | Draft. Not built yet ([epic 14](../epics/sdk.md)) |
-| **Covers** | `@sovereignfs/sdk`                                |
+|            |                                                                                     |
+| ---------- | ----------------------------------------------------------------------------------- |
+| **Status** | Draft. §2 to §8 and §11 are built; the rest is not yet ([epic 14](../epics/sdk.md)) |
+| **Covers** | `@sovereignfs/sdk`                                                                  |
 
 This document is the single source of truth for what the SDK does. Where code, another document or an issue disagrees with it,
 this document wins until it is changed.
@@ -106,9 +106,14 @@ Core rotates a refresh token on every use, and treats one used twice as stolen: 
 ([core-app §3.6.1](core-app.md)). So two refreshes racing each other sign the person out on every device. The SDK MUST prevent that:
 
 - An app gives the SDK a token store, with `read(sub)` and `write(sub, next, previous)`. `write` MUST be atomic and MUST fail when the
-  stored token is no longer `previous`, as with a database's conditional update. The SDK ships none, since the app owns its data.
+  stored token is no longer `previous`, as with a database's conditional update: it resolves to `true` when it stored `next`, and to
+  `false` (or rejects) when it did not. The SDK ships none, since the app owns its data.
 - Within a process, the SDK MUST run one refresh at a time for each person and app, and let the others wait for its result.
-- Across processes, a refresh that finds the stored token changed MUST use the new one.
+- Across processes, a refresh reads the stored token when it starts and MUST use the one it finds, whoever wrote it. Two processes that
+  both send the same token are indistinguishable from theft, so an app that runs more than one process MUST give its store a
+  `lock(sub, work)`, which runs `work` while no other process holds the lock for that person (a database advisory lock, a row lock, or
+  the like). The SDK takes it around each refresh. Without one, the SDK narrows the window by reading the token at the last moment, and
+  cannot close it.
 - The new refresh token MUST be stored before the access token is used.
 - A failed `write`, after core has rotated, leaves the token lost. The SDK MUST raise `SessionEndedError`.
 - A refresh MUST NOT be retried after the request was sent. If the answer was lost, core may have rotated, and sending the old token
@@ -253,7 +258,7 @@ Every namespace of the legacy `sdk` object:
 `@sovereignfs/sdk/testing` provides a fake core that an app's tests can run with no server:
 
 - it answers the contract's operations, and its answers MUST be checked against the contract;
-- it can act as a person, sign someone in, and send a logout notice;
+- it can act as a person, sign someone in, and send a logout notice (signing in and the notice arrive with §9; a person's tokens are there now);
 - it can be told to fail in each way §6 lists, so an app can test what happens when core is down.
 
 ## 12. Packaging, stability and versioning
@@ -276,7 +281,8 @@ of its own; an app catalogue.
 ## 14. This version is done when
 
 1. A stock app signs a person in, searches the Directory as them, and signs out, using nothing but this package.
-2. Twenty parallel calls for one person, with an expired access token, make one refresh, in one process and across two.
+2. Twenty parallel calls for one person, with an expired access token, make one refresh in a process, and with a lock two processes
+   each make their own, one after the other, with neither sending a token twice.
 3. With core stopped, an app starts, and each call raises `CoreUnavailableError` within the limit.
 4. A lost answer to a refresh raises `SessionEndedError`, and does not resend the old token.
 5. A capability an older core lacks raises `NotSupportedError` without a request.
@@ -287,6 +293,7 @@ of its own; an app catalogue.
 
 ## Changelog
 
-| Date       | Change                                                                         |
-| ---------- | ------------------------------------------------------------------------------ |
-| 2026-10-30 | First draft. Scope, app tokens and explicit actors were decided in discussion. |
+| Date       | Change                                                                                                                                                                                      |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-30 | First draft. Scope, app tokens and explicit actors were decided in discussion.                                                                                                              |
+| 2026-10-30 | §5.1: the token store's `write` says whether it stored, and an optional `lock` closes the window between processes, which a conditional update cannot. §14: what two processes can promise. |

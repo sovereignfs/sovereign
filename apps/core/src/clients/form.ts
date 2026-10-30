@@ -28,6 +28,10 @@ export const SCOPE_TEXT: Record<string, { label: string; description: string; lo
       description:
         'Find other accounts on this instance, for example to share something with them.',
     },
+    notifications: {
+      label: 'Manage its notifications',
+      description: 'Read, mark read and clear the notifications it sent them.',
+    },
     offline_access: {
       label: 'Stay signed in',
       description: 'Keep working for them when they are not there, until they take access away.',

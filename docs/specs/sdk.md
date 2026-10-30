@@ -179,9 +179,9 @@ Names follow the legacy SDK where the meaning survives. Each method wraps one op
 | `directory.findUserByEmail` | person | `directory` | `findDirectoryUserByEmail` |
 | `instance.getBranding`      | none   |             | `getInstanceBranding`      |
 
-These are planned: specified in [core-app §4.1](core-app.md) and in the contract (`x-planned`), and offered by the SDK when core
-serves them (task 14.5). `app.notifications.send` is made as the app (§4), the others as a person, and a person's call reaches
-only what that app sent them.
+These are specified in [core-app §4.1](core-app.md). `app.notifications.send` is made as the app (§4), the others as a person,
+and a person's call reaches only what that app sent them. An older core that does not list `notifications` raises
+`NotSupportedError` for each (§7).
 
 | Method                      | Actor  | Scope                | Operation                  |
 | --------------------------- | ------ | -------------------- | -------------------------- |
@@ -280,7 +280,7 @@ Every namespace of the legacy `sdk` object:
 | `auth`          | **SDK** §9. `changePassword`, `listSessions` and `revokeSession` become links to core's pages     |
 | `directory`     | **SDK** §8                                                                                        |
 | `platform`      | **SDK** `instance.getBranding`, for what an app needs of it                                       |
-| `notifications` | **SDK**, planned (§8)                                                                             |
+| `notifications` | **SDK** §8                                                                                        |
 | `email`         | **SDK**, reserved (§8)                                                                            |
 | `activity`      | **SDK**, reserved (§8)                                                                            |
 | `messages`      | Not carried over (core-app §4.1)                                                                  |

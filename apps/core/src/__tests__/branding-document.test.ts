@@ -15,7 +15,7 @@ describe('the branding document', () => {
       url: 'https://core.example.com',
       logo: { light: null, dark: null },
       favicon: null,
-      api: { versions: ['v1'], capabilities: ['directory'] },
+      api: { versions: ['v1'], capabilities: ['directory', 'notifications'] },
     });
     expectMatchesContract('getInstanceBranding', 200, document);
   });
@@ -24,7 +24,7 @@ describe('the branding document', () => {
     const { api } = brandingDocument(PLAIN_IDENTITY, 'https://core.example.com');
     expect(api).toEqual(SERVED_API);
     // Every capability named is one the contract describes, so the list cannot promise what is not there.
-    expect(api.capabilities).toEqual(['directory']);
+    expect(api.capabilities).toEqual(['directory', 'notifications']);
   });
 
   it('gives the pictures as absolute addresses on the instance, versions and all', () => {

@@ -64,7 +64,7 @@ describe('holding an answer to the contract', () => {
     expect(
       contractProblems('getInstanceBranding', 200, {
         ...bare,
-        api: { versions: ['v1'], capabilities: ['notifications'] },
+        api: { versions: ['v1'], capabilities: ['mail'] },
       }),
     ).not.toEqual([]);
     expect(

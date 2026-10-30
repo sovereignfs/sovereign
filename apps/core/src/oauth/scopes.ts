@@ -5,6 +5,7 @@ export const OAUTH_SCOPES = [
   'email',
   'roles',
   'directory',
+  'notifications',
   'offline_access',
 ] as const;
 

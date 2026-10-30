@@ -12,6 +12,7 @@ export const SCOPE_COPY: Readonly<Record<string, string>> = {
   email: 'See your email address',
   offline_access: 'Stay signed in without asking you again',
   directory: 'Look up the other people on this instance',
+  notifications: 'Read and clear the notifications it sent you',
 };
 
 /** What the page shows, and what it will answer with. */

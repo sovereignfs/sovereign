@@ -86,6 +86,6 @@ export type InstanceBranding = {
      * The groups of calls served, such as `directory`. A capability is listed when every call of it is
      * served.
      */
-    capabilities: 'directory'[];
+    capabilities: ('directory' | 'notifications')[];
   };
 };

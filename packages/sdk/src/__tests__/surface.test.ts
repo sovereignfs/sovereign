@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { operations } from '@sovereignfs/api-client';
 import { describe, expect, it } from 'vitest';
 import { createSovereign } from '../index';
 import { createFakeCore } from '../testing';
@@ -75,14 +74,14 @@ describe('every method of the capabilities (sdk §8) is checked against the cont
       'resolveDirectoryUsers',
       'findDirectoryUserByEmail',
       'getInstanceBranding',
+      'sendNotification',
+      'listNotifications',
+      'markNotificationRead',
+      'markAllNotificationsRead',
+      'dismissNotification',
+      'dismissAllNotifications',
     ];
     expect(servedOperationIds()).toEqual([...covered].sort());
-  });
-
-  it('knows the planned operations, which the SDK offers when core serves them', () => {
-    expect(Object.keys(operations)).toEqual(
-      expect.arrayContaining(['sendNotification', 'listNotifications']),
-    );
   });
 
   it('holds the fake’s failures to the contract too: an error body has the one shape', () => {

@@ -23,7 +23,7 @@ info:
     malformed, 401 the token is missing or no longer valid, 403 the token lacks the scope, 404 there is nothing
     there, 429 slow down (with `Retry-After`).
 
-    An operation marked `x-planned: true` is part of the contract but not served yet. The notification operations are, until they are built (core-app §4.1).
+    An operation marked `x-planned: true` is part of the contract but not served yet. None is, now.
   license:
     name: MPL-2.0
     identifier: MPL-2.0
@@ -34,7 +34,7 @@ tags:
   - name: Directory
     description: Finding the people on an instance, to share something with them.
   - name: Notifications
-    description: Telling a person something, and the person's own list of what they were told. Planned.
+    description: Telling a person something, and the person's own list of what they were told.
   - name: Instance
     description: What the instance looks like.
 paths:
@@ -181,7 +181,6 @@ paths:
     post:
       operationId: sendNotification
       tags: [Notifications]
-      x-planned: true
       summary: Tell a person something
       description: |
         Sends a notification from the calling app to one person. Made with an **app token** (the app acting for itself, with the app
@@ -248,7 +247,6 @@ paths:
     get:
       operationId: listNotifications
       tags: [Notifications]
-      x-planned: true
       x-safe-to-repeat: true
       summary: The notifications this app sent a person
       description: |
@@ -297,7 +295,6 @@ paths:
     post:
       operationId: markAllNotificationsRead
       tags: [Notifications]
-      x-planned: true
       summary: Mark all of this app's notifications read
       security:
         - bearer: [notifications]
@@ -318,7 +315,6 @@ paths:
     post:
       operationId: dismissAllNotifications
       tags: [Notifications]
-      x-planned: true
       summary: Dismiss all of this app's notifications
       security:
         - bearer: [notifications]
@@ -339,7 +335,6 @@ paths:
     post:
       operationId: markNotificationRead
       tags: [Notifications]
-      x-planned: true
       summary: Mark one notification read
       security:
         - bearer: [notifications]
@@ -368,7 +363,6 @@ paths:
     post:
       operationId: dismissNotification
       tags: [Notifications]
-      x-planned: true
       summary: Dismiss one notification
       security:
         - bearer: [notifications]
@@ -565,7 +559,7 @@ components:
               type: array
               items:
                 type: string
-                enum: [directory]
+                enum: [directory, notifications]
               description: |
                 The groups of calls served, such as `directory`. A capability is listed when every call of it is
                 served.

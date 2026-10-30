@@ -95,7 +95,7 @@ export function oidcPlugins(database: Database, settings: AuthSettings) {
         {
           identifier: coreApiResource(issuer),
           name: 'Core API',
-          allowedScopes: ['directory', ...APP_SCOPES],
+          allowedScopes: ['directory', 'notifications', ...APP_SCOPES],
           accessTokenTtl: ACCESS_TOKEN_SECONDS,
         },
       ],

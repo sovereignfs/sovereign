@@ -20,7 +20,15 @@ import { registerAppAction, updateAppAction, type AppFormResult } from './action
 import styles from './apps.module.css';
 import { SecretBox } from './secret-box';
 
-const SCOPES = ['openid', 'profile', 'email', 'roles', 'directory', 'offline_access'];
+const SCOPES = [
+  'openid',
+  'profile',
+  'email',
+  'roles',
+  'directory',
+  'notifications',
+  'offline_access',
+];
 const APP_SCOPES = Object.keys(APP_SCOPE_TEXT);
 
 /** What a new app starts as: the scopes most apps want, shown in the launcher, nothing trusted. */

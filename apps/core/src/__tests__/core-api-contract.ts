@@ -87,7 +87,9 @@ export function servedPaths(): string[] {
   const walk = (directory: string, prefix: string) => {
     for (const name of readdirSync(directory)) {
       const full = path.join(directory, name);
-      if (statSync(full).isDirectory()) walk(full, `${prefix}/${name}`);
+      // A folder named [id] is the contract's {id}.
+      if (statSync(full).isDirectory())
+        walk(full, `${prefix}/${name.replace(/^\[(.+)\]$/, '{$1}')}`);
       else if (name === 'route.ts') found.push(prefix);
     }
   };

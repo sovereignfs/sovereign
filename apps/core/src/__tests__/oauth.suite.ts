@@ -173,6 +173,7 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
         'email',
         'roles',
         'directory',
+        'notifications',
         'offline_access',
       ]);
       for (const claim of [

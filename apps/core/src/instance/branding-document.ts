@@ -6,7 +6,10 @@ import type { InstanceIdentity } from './identity';
  * call of it is served. An app reads it to tell a capability this core lacks from a failure (sdk §7). It grows when a
  * capability does.
  */
-export const SERVED_API = { versions: ['v1'], capabilities: ['directory'] } as const satisfies {
+export const SERVED_API = {
+  versions: ['v1'],
+  capabilities: ['directory', 'notifications'],
+} as const satisfies {
   versions: readonly string[];
   capabilities: readonly string[];
 };

@@ -33,13 +33,32 @@ export interface DirectoryApi {
   ): Promise<Answer<'findDirectoryUserByEmail'>>;
 }
 
+/** A person's notifications from this app (sdk §8, core-app §4.1): the ones the app sent them, never another app's. */
+export interface NotificationsApi {
+  list(
+    request?: NonNullable<Request<'listNotifications'>>['query'],
+  ): Promise<Answer<'listNotifications'>>;
+  markRead(id: string): Promise<Answer<'markNotificationRead'>>;
+  markAllRead(): Promise<Answer<'markAllNotificationsRead'>>;
+  dismiss(id: string): Promise<Answer<'dismissNotification'>>;
+  dismissAll(): Promise<Answer<'dismissAllNotifications'>>;
+}
+
 /** What an app can do as a person. */
 export interface PersonClient {
   readonly directory: DirectoryApi;
+  readonly notifications: NotificationsApi;
 }
 
-/** What an app can do as itself, with no person. Nothing yet: Phase 2's capabilities are added here (sdk §8). */
-export type AppClient = Record<never, never>;
+/** What an app can do as itself, with no person (sdk §4): tell a person something. */
+export interface AppClient {
+  readonly notifications: {
+    /** Sends a notification. Accepted whether or not the person receives it: core says nothing of them. */
+    send(
+      message: NonNullable<Request<'sendNotification'>>['body'],
+    ): Promise<Answer<'sendNotification'>>;
+  };
+}
 
 /** What anyone can ask, with no token. */
 export interface InstanceApi {
@@ -96,6 +115,12 @@ const CAPABILITY: Partial<Record<Name, string>> = {
   searchDirectoryUsers: 'directory',
   resolveDirectoryUsers: 'directory',
   findDirectoryUserByEmail: 'directory',
+  sendNotification: 'notifications',
+  listNotifications: 'notifications',
+  markNotificationRead: 'notifications',
+  markAllNotificationsRead: 'notifications',
+  dismissNotification: 'notifications',
+  dismissAllNotifications: 'notifications',
 };
 
 /**
@@ -171,6 +196,14 @@ export function createSovereign(options: SovereignOptions): Sovereign {
     findUserByEmail: (query) => execute(actor, 'findDirectoryUserByEmail', { query }),
   });
 
+  const notifications = (actor: ActorKey): NotificationsApi => ({
+    list: (query) => execute(actor, 'listNotifications', query === undefined ? {} : { query }),
+    markRead: (id) => execute(actor, 'markNotificationRead', { params: { id } }),
+    markAllRead: () => execute(actor, 'markAllNotificationsRead', undefined),
+    dismiss: (id) => execute(actor, 'dismissNotification', { params: { id } }),
+    dismissAll: () => execute(actor, 'dismissAllNotifications', undefined),
+  });
+
   return {
     as(person) {
       if (typeof person?.sub !== 'string' || person.sub === '') {
@@ -181,9 +214,14 @@ export function createSovereign(options: SovereignOptions): Sovereign {
           'Calling as a person needs a token store: pass tokenStore when creating the client.',
         );
       }
-      return { directory: directory({ kind: 'person', sub: person.sub }) };
+      const actor: ActorKey = { kind: 'person', sub: person.sub };
+      return { directory: directory(actor), notifications: notifications(actor) };
     },
-    app: {},
+    app: {
+      notifications: {
+        send: (message) => execute({ kind: 'app' }, 'sendNotification', { body: message }),
+      },
+    },
     get auth() {
       if (!options.sessionStore) {
         throw new ConfigurationError(

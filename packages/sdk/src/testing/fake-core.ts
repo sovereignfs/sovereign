@@ -61,6 +61,19 @@ export type FakeCoreOptions = {
   instance?: { name?: string };
 };
 
+/** A notification an app sent through the fake core. */
+export type FakeNotification = {
+  id: string;
+  to: string;
+  title: string;
+  body?: string;
+  url?: string;
+  category?: string;
+  createdAt: number;
+  readAt: number | null;
+  dismissed: boolean;
+};
+
 /** One request the fake received, with nothing secret in it. `status` is 0 when it was never answered. */
 export type Received = { method: string; path: string; status: number };
 
@@ -71,6 +84,8 @@ export type FakeCore = {
   readonly credentials: { clientId: string; clientSecret: string };
   /** Answers like core does. Give it to `createSovereign({ fetch })`: no server, no port. */
   readonly fetch: typeof fetch;
+  /** What apps have sent through this core, in order, whether or not it was read or dismissed. */
+  readonly notificationsSent: readonly FakeNotification[];
   /** Adds a person to the Directory. */
   addPerson(person: FakePerson): void;
   /** Signs a person in, and returns the refresh token an app would have stored for them. */
@@ -153,7 +168,10 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
   };
   const now = options.now ?? (() => Date.now());
   const lifetime = options.accessTokenSeconds ?? 900;
-  const api = 'api' in options ? options.api : { versions: ['v1'], capabilities: ['directory'] };
+  const api =
+    'api' in options
+      ? options.api
+      : { versions: ['v1'], capabilities: ['directory', 'notifications'] };
   const appTokens = options.appTokens ?? true;
 
   const people = new Map<string, Person>();
@@ -317,7 +335,7 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
           access_token: issueAccess({ kind: 'person', sub: known.sub }),
           refresh_token: next,
           expires_in: lifetime,
-          scope: 'directory',
+          scope: 'directory notifications',
         });
       }
     } else if (grant === 'client_credentials' && appTokens) {
@@ -355,6 +373,92 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
     name: person.name,
     picture: person.picture ?? null,
   });
+
+  /** What apps sent, by the person it was sent to. A send to anyone who is not here is accepted and dropped, as core does. */
+  const sent = new Map<string, FakeNotification>();
+  const notificationJson = (n: FakeNotification) => ({
+    id: n.id,
+    title: n.title,
+    body: n.body ?? null,
+    url: n.url ?? null,
+    category: n.category ?? 'info',
+    createdAt: new Date(n.createdAt).toISOString(),
+    readAt: n.readAt === null ? null : new Date(n.readAt).toISOString(),
+    expiresAt: new Date(n.createdAt + 30 * 86_400_000).toISOString(),
+  });
+
+  const notificationsApi = async (request: Request, path: URL): Promise<Response> => {
+    const who = bearer(request);
+    if (who instanceof Response) return who;
+    const sendPath = path.pathname === '/api/v1/notifications' && request.method === 'POST';
+    if (sendPath) {
+      if (who.kind !== 'app') {
+        return problem(403, 'insufficient_scope', 'Only an app acting for itself may send.');
+      }
+      const body = (await request.json().catch(() => undefined)) as
+        | { to?: unknown; title?: unknown; body?: unknown; url?: unknown; category?: unknown }
+        | undefined;
+      if (
+        !body ||
+        typeof body.to !== 'string' ||
+        typeof body.title !== 'string' ||
+        body.title === ''
+      ) {
+        return problem(400, 'invalid_request', 'to and title are required.');
+      }
+      const id = random('n');
+      if (people.get(body.to)?.active !== false && people.has(body.to)) {
+        sent.set(id, {
+          id,
+          to: body.to,
+          title: body.title,
+          ...(typeof body.body === 'string' ? { body: body.body } : {}),
+          ...(typeof body.url === 'string' ? { url: body.url } : {}),
+          ...(typeof body.category === 'string' ? { category: body.category } : {}),
+          createdAt: now(),
+          readAt: null,
+          dismissed: false,
+        });
+      }
+      return json({ id }, 202);
+    }
+    if (who.kind !== 'person') {
+      return problem(
+        403,
+        'insufficient_scope',
+        'The token does not carry the notifications scope.',
+      );
+    }
+    const mine = () => [...sent.values()].filter((n) => n.to === who.sub && !n.dismissed);
+    if (path.pathname === '/api/v1/notifications' && request.method === 'GET') {
+      const unread = path.searchParams.get('unread') === 'true';
+      const limit = Number(path.searchParams.get('limit') ?? 50);
+      const found = mine()
+        .filter((n) => !unread || n.readAt === null)
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, Number.isInteger(limit) && limit > 0 ? limit : 50);
+      return json({ notifications: found.map(notificationJson) });
+    }
+    if (request.method === 'POST' && path.pathname === '/api/v1/notifications/read-all') {
+      const all = mine().filter((n) => n.readAt === null);
+      for (const n of all) n.readAt = now();
+      return json({ count: all.length });
+    }
+    if (request.method === 'POST' && path.pathname === '/api/v1/notifications/dismiss-all') {
+      const all = mine();
+      for (const n of all) n.dismissed = true;
+      return json({ count: all.length });
+    }
+    const one = /^\/api\/v1\/notifications\/([^/]+)\/(read|dismiss)$/.exec(path.pathname);
+    if (one && request.method === 'POST') {
+      const found = mine().find((n) => n.id === one[1]);
+      if (!found) return problem(404, 'not_found', 'There is no such notification.');
+      if (one[2] === 'read') found.readAt ??= now();
+      else found.dismissed = true;
+      return json(notificationJson(found));
+    }
+    return problem(404, 'not_found', 'There is no such route.');
+  };
 
   const directory = async (request: Request, path: URL): Promise<Response> => {
     const who = bearer(request);
@@ -454,6 +558,10 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
     }
     if (path.pathname === '/api/auth/oauth2/token' && request.method === 'POST') {
       return tokenEndpoint(request, failure, signal);
+    }
+    if (path.pathname.startsWith('/api/v1/notifications')) {
+      const answer = await notificationsApi(request, path);
+      return failure?.kind === 'lost-answer' ? hang(signal) : answer;
     }
     if (path.pathname.startsWith('/api/v1/')) {
       const answer = await directory(request, path);
@@ -569,6 +677,9 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
         return jwt.sign(other.privateKey);
       }
       return jwt.sign((await keys()).privateKey);
+    },
+    get notificationsSent() {
+      return [...sent.values()];
     },
     revoke(sub) {
       for (const [token, other] of refreshTokens)

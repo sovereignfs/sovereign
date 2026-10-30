@@ -86,7 +86,7 @@ are added when core's Phase 2 specifies them.
 - The session cookie is host-only over https
 - `getSession` makes no call to core
 
-#### 📋 14.4 — Publishing
+#### ✅ 14.4 — Publishing
 
 **Goal:** An app installs the SDK from npm.
 

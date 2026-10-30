@@ -1,7 +1,7 @@
 import { createHash, createPublicKey, randomBytes, verify } from 'node:crypto';
 import type { Database } from '@sovereignfs/database';
 import type { Auth } from '../auth/auth';
-import { ClientRegistry, type RegistryActor } from '../clients/registry';
+import { ClientRegistry, type UserActor } from '../clients/registry';
 import { BASE_URL, call, type Jar } from './auth-harness';
 
 /** A relying party's view of core's OpenID Connect provider: what an off-the-shelf client would send. */
@@ -42,7 +42,7 @@ export function registryFor(auth: Auth): ClientRegistry {
 }
 
 /** Who is asking, as the registry sees it: the person behind a browser's cookies. */
-export async function actorOf(auth: Auth, jar: Jar): Promise<RegistryActor> {
+export async function actorOf(auth: Auth, jar: Jar): Promise<UserActor> {
   const headers = new Headers({ cookie: jar.header() ?? '' });
   const session = await auth.api.getSession({ headers });
   if (!session) throw new Error('nobody is signed in');

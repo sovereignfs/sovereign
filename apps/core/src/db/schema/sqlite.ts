@@ -250,6 +250,20 @@ export const oauthClients = sqliteTable(
   (table) => [index('oauth_clients_user_id_idx').on(table.userId)],
 );
 
+/**
+ * The key an operator command gives an app it manages (core-app §3.7.4), so the next run finds the same app again.
+ * A table of its own, and not a column of the provider's, which holds only what the provider writes
+ * (`oauth-schema.test.ts`). A key is a DNS label, and an app has at most one.
+ */
+export const managedClients = sqliteTable('managed_clients', {
+  key: text('key').primaryKey(),
+  clientId: text('client_id')
+    .notNull()
+    .unique()
+    .references(() => oauthClients.clientId, { onDelete: 'cascade' }),
+  createdAt: sqliteTimestampMs('created_at').notNull(),
+});
+
 export const oauthResources = sqliteTable('oauth_resources', {
   id: text('id').primaryKey(),
   identifier: text('identifier').notNull().unique(),

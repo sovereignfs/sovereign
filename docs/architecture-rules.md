@@ -234,6 +234,19 @@ pointing here.
   is saved and whenever the key set is read. An access or logout token is never
   re-signed. A scope core does not offer is dropped by `oauthGuards`
   (`src/oauth/guards.ts`) before the provider reads the request, not refused.
+- **`sovereign-admin` writes apps as the system actor, built in one place.**
+  `systemActor()` (`src/clients/system-actor.ts`) is called by the command's entry
+  point (`src/admin/main.ts`) and nowhere else; no route, page or action imports
+  it (`system-actor.test.ts` fails when one does). The registry still validates
+  and writes everything, and accepts an actor only if it was made there (a
+  `WeakSet`, so an object that merely looks like one is refused). The provider's
+  client routes ask for a session, so for a call made as the system actor, and
+  only then (`runAsSystem` sets an `AsyncLocalStorage` no request can set), a
+  before-hook gives the call a session of the owner's role that is never stored.
+  A managed app's key is in `managed_clients`, not a column of the provider's
+  table, which `oauth-schema.test.ts` holds to what the provider writes. The
+  image runs the command from one bundled file (`tsup.admin.config.ts`), with no
+  package manager and nothing to run TypeScript.
 - **An operator's action on an account holds the role rules in the function, not
   in the page.** `AccountManager` (`src/accounts/manage.ts`) checks `user:manage`
   fresh, that the account exists, that it is not the actor's own, and `mayActOn`,

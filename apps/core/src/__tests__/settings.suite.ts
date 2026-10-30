@@ -98,6 +98,7 @@ export function settingsSuite(createDatabase: () => Promise<TestDatabase>): void
         '0010_oidc_provider',
         '0011_instance_images',
         '0012_token_revocations',
+        '0013_managed_clients',
       ]);
     });
   });

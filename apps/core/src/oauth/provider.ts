@@ -2,6 +2,7 @@ import { oauthProvider } from '@better-auth/oauth-provider';
 import type { Database } from '@sovereignfs/database';
 import { jwt } from 'better-auth/plugins/jwt';
 import type { AuthSettings } from '../auth/settings';
+import { systemSession } from '../clients/system-actor';
 import { can } from '../roles/capabilities';
 import { loadMatrix } from '../roles/matrix';
 import { claimsFor, rolesClaim } from './claims';
@@ -67,6 +68,7 @@ export function oidcPlugins(database: Database, settings: AuthSettings) {
   const jwtOptions = jwtOptionsFor(issuer);
   return [
     oauthGuards(),
+    systemSession(),
     jwt(jwtOptions),
     idTokenAlgorithm(jwtOptions),
     oauthProvider({

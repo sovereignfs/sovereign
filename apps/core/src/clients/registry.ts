@@ -5,6 +5,7 @@ import { loadMatrix } from '../roles/matrix';
 import { parseMetadata } from '../oauth/client-metadata';
 import { ensureRs256Key, idTokenAlgorithmOf, type IdTokenAlgorithm } from '../oauth/id-token-alg';
 import { NAMES } from '../oauth/schema-names';
+import { isSystemActor, runAsSystem, type SystemActor } from './system-actor';
 import { urlListProblems, urlProblem, scopeProblems, textProblem, type Problem } from './validate';
 
 /** The settings of an app (core-app §3.7.1) and its launcher entry (§3.7.2), as the Console shows and sets them. */
@@ -58,8 +59,14 @@ export class ClientRegistryError extends Error {
   }
 }
 
-/** Who is asking: the account (its role is what `client:manage` is judged by) and the request it is asking in. */
-export type RegistryActor = { user: { id: string; role: unknown }; headers: Headers };
+/** An account (its role is what `client:manage` is judged by) and the request it is asking in. */
+export type UserActor = { user: { id: string; role: unknown }; headers: Headers };
+
+/** Who is asking: an account, or the system actor `sovereign-admin` acts as (core-app §3.7.4). */
+export type RegistryActor = UserActor | SystemActor;
+
+/** What a managed app's key looks like: a DNS label (core-app §3.7.4). */
+const MANAGED_KEY = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
 /** What is given to change an app: any of its settings, and any part of its launcher entry. */
 export type UpdateInput = Omit<Partial<ClientSettings>, 'launcher'> & {
@@ -83,7 +90,7 @@ export type ClientRow = {
   createdAt?: Date | string | number | null;
 };
 
-const DEFAULT_SCOPES = ['openid', 'profile', 'email'];
+export const DEFAULT_SCOPES = ['openid', 'profile', 'email'];
 /** What the plugin is given to make the client with: a valid address, replaced by the real ones straight after. */
 const PLACEHOLDER = 'https://client.invalid/callback';
 
@@ -111,9 +118,18 @@ export class ClientRegistry {
   }
 
   async #require(actor: RegistryActor): Promise<void> {
-    if (!can(actor.user.role, 'client:manage', await loadMatrix(this.#database))) {
+    if (isSystemActor(actor)) return;
+    if (
+      !('user' in actor) ||
+      !can(actor.user.role, 'client:manage', await loadMatrix(this.#database))
+    ) {
       throw new ClientRegistryError('forbidden', 'Only an operator who manages apps can do that.');
     }
+  }
+
+  /** Runs a call to the provider as the system actor when that is who is asking, since the provider asks for a session. */
+  #provider<T>(actor: RegistryActor, call: () => Promise<T>): Promise<T> {
+    return isSystemActor(actor) ? runAsSystem(call) : call();
   }
 
   async #adapter() {
@@ -138,16 +154,18 @@ export class ClientRegistry {
     await this.#require(actor);
     const settings = this.#settingsFor(undefined, input);
 
-    const created = (await this.#auth.api.adminCreateOAuthClient({
-      body: {
-        redirect_uris: [PLACEHOLDER],
-        client_name: settings.name,
-        scope: settings.scopes.join(' '),
-        token_endpoint_auth_method: settings.type === 'public' ? 'none' : 'client_secret_basic',
-        grant_types: ['authorization_code', 'refresh_token'],
-      },
-      headers: actor.headers,
-    })) as { client_id: string; client_secret?: string };
+    const created = (await this.#provider(actor, () =>
+      this.#auth.api.adminCreateOAuthClient({
+        body: {
+          redirect_uris: [PLACEHOLDER],
+          client_name: settings.name,
+          scope: settings.scopes.join(' '),
+          token_endpoint_auth_method: settings.type === 'public' ? 'none' : 'client_secret_basic',
+          grant_types: ['authorization_code', 'refresh_token'],
+        },
+        headers: actor.headers,
+      }),
+    )) as { client_id: string; client_secret?: string };
 
     await this.#write(created.client_id, settings);
     await this.#publishKeysFor(settings);
@@ -187,10 +205,12 @@ export class ClientRegistry {
     if (clientView(row).type === 'public') {
       throw new ClientRegistryError('public-client', 'A public app has no secret to rotate.');
     }
-    const rotated = (await this.#auth.api.rotateClientSecret({
-      body: { client_id: clientId },
-      headers: actor.headers,
-    })) as { client_secret?: string };
+    const rotated = (await this.#provider(actor, () =>
+      this.#auth.api.rotateClientSecret({
+        body: { client_id: clientId },
+        headers: actor.headers,
+      }),
+    )) as { client_secret?: string };
     if (!rotated.client_secret) throw new Error('the provider made no secret');
     return rotated.client_secret;
   }
@@ -212,11 +232,99 @@ export class ClientRegistry {
               : NAMES.consent.clientId;
         await tx.run(`delete from ${table} where ${column} = ?`, [clientId]);
       }
+      await tx.run(`delete from ${NAMES.managed.table} where ${NAMES.managed.clientId} = ?`, [
+        clientId,
+      ]);
     });
-    await this.#auth.api.deleteOAuthClient({
-      body: { client_id: clientId },
-      headers: actor.headers,
+    await this.#provider(actor, () =>
+      this.#auth.api.deleteOAuthClient({
+        body: { client_id: clientId },
+        headers: actor.headers,
+      }),
+    );
+  }
+
+  /**
+   * Makes the app that has `key`, or changes it to match `input` (core-app §3.7.4). Run twice with the same input it
+   * changes nothing and makes one app. A list given is the whole list. The secret is returned only when the app is
+   * made. Every rule of §3.7.1 applies, since it is `register` and `update` that write.
+   */
+  async ensure(
+    actor: RegistryActor,
+    key: string,
+    input: RegisterInput,
+  ): Promise<{ client: ClientView; secret: string | undefined; created: boolean }> {
+    await this.#require(actor);
+    if (!MANAGED_KEY.test(key)) {
+      throw new ClientRegistryError('invalid', 'The key cannot be used.', [
+        { field: 'key', message: 'is a DNS label: lower-case letters, digits and hyphens' },
+      ]);
+    }
+    for (let attempt = 0; ; attempt++) {
+      const existing = await this.#managedClientId(key);
+      if (existing) {
+        const before = await this.get(actor, existing);
+        const wanted = this.#settingsFor(before, input);
+        if (sameSettings(before, wanted))
+          return { client: before, secret: undefined, created: false };
+        return {
+          client: await this.update(actor, existing, input),
+          secret: undefined,
+          created: false,
+        };
+      }
+      const made = await this.register(actor, input);
+      try {
+        await this.#database.run(
+          `insert into ${NAMES.managed.table} (${NAMES.managed.key}, ${NAMES.managed.clientId}, ${NAMES.managed.createdAt}) values (?, ?, ?)`,
+          [key, made.client.clientId, Date.now()],
+        );
+      } catch (error) {
+        // Another run took the key between the look and the insert: its app stays and this one is taken back.
+        await this.remove(actor, made.client.clientId);
+        if (attempt === 0 && (await this.#managedClientId(key))) continue;
+        throw error;
+      }
+      return { client: made.client, secret: made.secret, created: true };
+    }
+  }
+
+  /** The apps that have a key, with it, for `sovereign-admin apps list`. */
+  async managed(actor: RegistryActor): Promise<Array<{ key: string; client: ClientView }>> {
+    await this.#require(actor);
+    const { rows } = await this.#database.run(
+      `select ${NAMES.managed.key} as key, ${NAMES.managed.clientId} as client_id from ${NAMES.managed.table} order by ${NAMES.managed.key}`,
+    );
+    const clients = new Map((await this.list(actor)).map((client) => [client.clientId, client]));
+    return rows.flatMap((row) => {
+      const client = clients.get(String(row.client_id));
+      return client ? [{ key: String(row.key), client }] : [];
     });
+  }
+
+  /** Which of the apps are managed from the command line, so the Console can say so. */
+  async managedClientIds(actor: RegistryActor): Promise<Set<string>> {
+    await this.#require(actor);
+    const { rows } = await this.#database.run(
+      `select ${NAMES.managed.clientId} as client_id from ${NAMES.managed.table}`,
+    );
+    return new Set(rows.map((row) => String(row.client_id)));
+  }
+
+  /** The app a key names. */
+  async clientIdOfKey(actor: RegistryActor, key: string): Promise<string> {
+    await this.#require(actor);
+    const clientId = await this.#managedClientId(key);
+    if (!clientId) throw new ClientRegistryError('not-found', 'There is no app with that key.');
+    return clientId;
+  }
+
+  async #managedClientId(key: string): Promise<string | undefined> {
+    const { rows } = await this.#database.run(
+      `select ${NAMES.managed.clientId} as client_id from ${NAMES.managed.table} where ${NAMES.managed.key} = ?`,
+      [key],
+    );
+    return rows[0] ? String(rows[0].client_id) : undefined;
   }
 
   async get(actor: RegistryActor, clientId: string): Promise<ClientView> {
@@ -417,6 +525,18 @@ export function clientView(row: ClientRow): ClientView {
     },
     createdAt: row.createdAt ? new Date(row.createdAt) : undefined,
   };
+}
+
+/** Whether the settings an app has are the ones asked for, so `ensure` writes nothing when they are. */
+function sameSettings(has: ClientView, wanted: ClientSettings): boolean {
+  const { clientId: _clientId, createdAt: _createdAt, ...current } = has;
+  const stable = (value: unknown): string =>
+    JSON.stringify(value, (_key, item: unknown) =>
+      item && typeof item === 'object' && !Array.isArray(item)
+        ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)))
+        : item,
+    );
+  return stable(current) === stable(wanted);
 }
 
 const blank = (value: unknown): string | undefined =>

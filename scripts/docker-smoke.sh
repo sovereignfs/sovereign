@@ -2,7 +2,7 @@
 # Builds the image and boots each documented compose setup from it: sqld, PostgreSQL and a SQLite file. For each it
 # waits for core to report itself and its database up, signs the first account up (the owner), and makes core fetch
 # its own signing keys from its public address from inside its container, which is what checking an
-# `id_token_hint` needs (core-app §3.6.5). The image is checked for an environment file baked in, and for starting
+# `id_token_hint` needs (core-app §3.6.5), and registers an app with `sovereign-admin` (§3.7.4). The image is checked for an environment file baked in, and for starting
 # without one: it must refuse, saying what is missing.
 #
 # Run: `pnpm docker:smoke` (needs Docker). It takes a few minutes, mostly the build. CI runs it on every change.
@@ -57,7 +57,28 @@ smoke() {
   docker compose "$@" exec -T core node -e \
     "fetch('$SV_URL/api/auth/jwks').then(r=>r.json()).then(j=>process.exit(Array.isArray(j.keys)&&j.keys.length?0:1)).catch(()=>process.exit(1))" \
     || fail "$name: core cannot reach its own address from inside its container"
+  admin_smoke "$name" "$@"
   docker compose "$@" down -v
+}
+
+# `sovereign-admin` registers an app with nobody signed in to the Console: it makes the app once and a secret once, finds the
+# same app on the next run, and removes it (core-app §3.7.4).
+admin_smoke() {
+  local name="$1"; shift
+  local admin=(docker compose "$@" exec -T core sovereign-admin apps)
+  local first second
+  first="$("${admin[@]}" ensure smoke --name Smoke --redirect https://smoke.example.test/callback --json)" \
+    || fail "$name: sovereign-admin could not register an app"
+  grep -q '"secret":"' <<<"$first" || fail "$name: the first ensure gave no secret: $first"
+  second="$("${admin[@]}" ensure smoke --name Smoke --redirect https://smoke.example.test/callback --json)" \
+    || fail "$name: sovereign-admin failed the second time"
+  grep -q '"secret"' <<<"$second" && fail "$name: the second ensure gave a secret: $second"
+  [ "$(sed -n 's/.*"clientId":"\([^"]*\)".*/\1/p' <<<"$first")" = "$(sed -n 's/.*"clientId":"\([^"]*\)".*/\1/p' <<<"$second")" ] \
+    || fail "$name: ensure made a second app"
+  [ "$("${admin[@]}" list --json | grep -o '"key":"smoke"' | wc -l | tr -d ' ')" = 1 ] || fail "$name: the app is not listed once"
+  "${admin[@]}" rotate-secret smoke --json | grep -q '"secret":"' || fail "$name: no new secret"
+  "${admin[@]}" remove smoke || fail "$name: the app could not be removed"
+  [ "$("${admin[@]}" list --json)" = '[]' ] || fail "$name: the app is still listed"
 }
 
 smoke "sqld" -f docker-compose.yml

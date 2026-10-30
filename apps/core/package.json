@@ -3,11 +3,11 @@
   "version": "0.44.0",
   "private": true,
   "type": "module",
-  "description": "Sovereign Core — the sign-in server, Console and launcher.",
+  "description": "Sovereign Core \u2014 the sign-in server, Console and launcher.",
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && tsup --config tsup.admin.config.ts",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate --config=drizzle.config.sqlite.ts && drizzle-kit generate --config=drizzle.config.postgres.ts && node scripts/unqualify-postgres.mjs",
@@ -39,6 +39,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "drizzle-kit": "catalog:",
+    "tsup": "catalog:",
     "typescript": "catalog:"
   }
 }

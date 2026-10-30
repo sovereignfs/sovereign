@@ -823,7 +823,7 @@ appears only as the app's **Client ID** and in its technical settings.
 
 #### 3.7.4 Managed apps and `sovereign-admin`
 
-Not built yet (task 13.2). A deployment must register apps when nobody can sign
+A deployment must register apps when nobody can sign
 in to the Console: on a first deployment no account exists. So core's image
 ships **`sovereign-admin`**, a command run inside core's container. The operator
 CLI calls it ([operator-cli §6](operator-cli.md)), and it is not run by hand.
@@ -857,6 +857,17 @@ sovereign-admin apps remove KEY
   `SV_AUTH_SECRET`, so it grants nothing new.
 - **Every write is logged** to the container's output: what was done, and the
   key. A secret is never logged.
+- **Output and exit codes.** The answer goes to standard output and the log to
+  standard error, so `--json` output can be read as it is. The exit code is 0
+  when it worked, 1 when core refused (each thing wrong is a line `field:
+message`) and 2 when the command line is wrong or core is not configured. A
+  list flag takes every word after it up to the next flag, so the key comes first.
+- **What `ensure` asks for is the whole app.** An option left out is its default,
+  not what the app had: no `--scope` is `openid profile email`, no `--post-logout`
+  is none, no `--trusted` is untrusted, and the app is on.
+- **The key is kept beside the app**, in a table of its own (`managed_clients`),
+  so the provider's table holds only what the provider writes. Removing the app
+  removes the key.
 - **No HTTP route does this.** One would need a stored credential that can make
   clients, to do what running a command inside the container does without one.
 - **In the Console**, a managed app says it is managed from the command line, and
@@ -1413,3 +1424,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-30 | §3.6.1, §3.6.6, §3.7.1, §3.13.1: app tokens, with the client-credentials grant, for an app acting with no person present. §3.13: the instance document says what this core serves. Neither is built.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | 2026-10-30 | §3.6.1: a confidential client authenticates with HTTP Basic only, and a secret in the body is refused although discovery lists it (research 0002).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 2026-10-30 | §3.6.1, §3.6.2, §3.7.1: three compatibility settings from research 0002: a confidential app's secret in the request body, an ID-token algorithm of RS256 for chosen apps, and ignoring a scope core does not offer.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 2026-10-30 | §3.7.4: `sovereign-admin` is built: the managed key, kept in a table of its own, the system actor, the output and the exit codes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |

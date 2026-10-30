@@ -29,9 +29,10 @@ function AddAppLink() {
 
 export default async function AppsPage() {
   const { session } = await requireConsole('client:manage', { returnTo: '/console/apps' });
-  const apps = await (
-    await getClientRegistry()
-  ).list({ user: session.user, headers: await headers() });
+  const registry = await getClientRegistry();
+  const actor = { user: session.user, headers: await headers() };
+  const apps = await registry.list(actor);
+  const managed = await registry.managedClientIds(actor);
 
   return (
     <div className={styles.page}>
@@ -67,6 +68,9 @@ export default async function AppsPage() {
                   <Link className={styles.name} href={`/console/apps/${app.clientId}`}>
                     {app.name}
                   </Link>
+                  {managed.has(app.clientId) ? (
+                    <span className={styles.muted}> · managed from the command line</span>
+                  ) : null}
                 </TableCell>
                 <TableCell>
                   {app.enabled ? (

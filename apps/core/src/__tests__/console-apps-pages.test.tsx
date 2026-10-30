@@ -14,9 +14,10 @@ vi.mock('next/link', () => ({
 }));
 const list = vi.fn();
 const get = vi.fn();
+const managedClientIds = vi.fn();
 vi.mock('../clients', async (original) => ({
   ...(await original<typeof import('../clients')>()),
-  getClientRegistry: () => Promise.resolve({ list, get }),
+  getClientRegistry: () => Promise.resolve({ list, get, managedClientIds }),
 }));
 vi.mock('../../app/console/apps/actions', () => ({
   registerAppAction: vi.fn(),
@@ -70,6 +71,7 @@ beforeEach(() => {
   matrixInForce.mockReset().mockResolvedValue(DEFAULT_MATRIX);
   list.mockReset().mockResolvedValue([]);
   get.mockReset();
+  managedClientIds.mockReset().mockResolvedValue(new Set());
 });
 
 describe('the apps pages', () => {
@@ -134,6 +136,15 @@ describe('the list of apps', () => {
     expect(visible(renderToStaticMarkup(await NewAppPage()))).not.toMatch(/client/i);
   });
 
+  it('says which apps are managed from the command line, and only those, without the word “client”', async () => {
+    as(ROLE_ADMIN);
+    list.mockResolvedValue([app('c1'), app('c2')]);
+    managedClientIds.mockResolvedValue(new Set(['c2']));
+    const text = visible(renderToStaticMarkup(await AppsPage()));
+    expect(text.match(/managed from the command line/g)).toHaveLength(1);
+    expect(text).not.toMatch(/client/i);
+  });
+
   it('asks the registry as the person who is signed in', async () => {
     as(ROLE_OWNER);
     await AppsPage();
@@ -158,6 +169,19 @@ describe('the page to add an app', () => {
 
 describe('the page of one app', () => {
   const page = () => AppPage({ params: Promise.resolve({ id: 'c1' }) });
+
+  it('says a managed app is managed from the command line, what that means, and says nothing of it for others', async () => {
+    as(ROLE_OWNER);
+    get.mockResolvedValue(app('c1'));
+    expect(visible(renderToStaticMarkup(await page()))).not.toContain(
+      'managed from the command line',
+    );
+    managedClientIds.mockResolvedValue(new Set(['c1']));
+    const text = visible(renderToStaticMarkup(await page()));
+    expect(text).toContain('managed from the command line');
+    expect(text).toContain('overwritten the next time it is deployed');
+    expect(text).toContain('a new secret');
+  });
 
   it('shows the app, its ID to copy, what kind it is, and the form with what it has', async () => {
     as(ROLE_OWNER);

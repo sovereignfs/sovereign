@@ -15,6 +15,7 @@ const access = columns(schema.oauthAccessTokens);
 const refresh = columns(schema.oauthRefreshTokens);
 const consent = columns(schema.oauthConsents);
 const client = columns(schema.oauthClients);
+const managed = columns(schema.managedClients);
 
 const col = (found: Record<string, { name: string }>, key: string): string => {
   const column = found[key];
@@ -46,6 +47,12 @@ export const NAMES = {
   consent: {
     userId: col(consent, 'userId'),
     clientId: col(consent, 'clientId'),
+  },
+  managed: {
+    table: name(schema.managedClients),
+    key: col(managed, 'key'),
+    clientId: col(managed, 'clientId'),
+    createdAt: col(managed, 'createdAt'),
   },
   client: {
     clientId: col(client, 'clientId'),

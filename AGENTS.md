@@ -216,6 +216,9 @@ each: `docs/architecture-rules.md`.
 - **Apps are written only through `ClientRegistry`, as the person with the
   request's headers; an app's secret is returned once, to the page that asked**,
   and the Console says "app" except in the technical settings.
+- **`sovereign-admin` acts as the system actor, which only its entry point
+  (`src/admin/main.ts`) builds**; no route or page imports it, and the registry
+  accepts only an actor made there.
 - **The launcher (`/`) reads apps through `listLauncherApps`** (tile fields only)
   after checking `launcher:access`; **only `/` may load pictures from other
   addresses** (`remoteImages` in `buildCsp`).

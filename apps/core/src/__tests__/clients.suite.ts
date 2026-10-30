@@ -11,6 +11,8 @@ import type { TestDatabase } from '@sovereignfs/database/testing';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { ROLE_ADMIN, ROLE_OWNER } from '../auth/roles';
 import { ClientRegistry, ClientRegistryError, type RegistryActor } from '../clients/registry';
+import { runAdmin } from '../admin/run';
+import { systemActor } from '../clients/system-actor';
 import { migrateCore } from '../db/migrate';
 import { changeCapabilities } from '../roles/configure';
 import { changeRole } from '../roles/people';
@@ -31,6 +33,7 @@ import {
 
 const MIGRATIONS = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../migrations');
 const TABLES = [
+  'managed_clients',
   'oauth_access_tokens',
   'oauth_refresh_tokens',
   'oauth_consents',
@@ -913,6 +916,265 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
       expect(((await refused(() => registry.list(odd))) as ClientRegistryError).code).toBe(
         'forbidden',
       );
+    });
+  });
+
+  describe('managed apps and the system actor', () => {
+    const key = 'notes';
+    const managedRows = async () => (await db.run('select * from managed_clients')).rows;
+
+    it('makes the app the first time, with a secret, and finds the same app the next', async () => {
+      const { registry } = await instance();
+      const system = systemActor();
+      const first = await registry.ensure(system, key, settings());
+      expect(first.created).toBe(true);
+      expect(first.secret).toMatch(/\S{20,}/);
+      expect(first.client).toMatchObject({ name: 'Notes', type: 'confidential', enabled: true });
+      expect(await managedRows()).toHaveLength(1);
+
+      const second = await registry.ensure(system, key, settings());
+      expect(second.created).toBe(false);
+      expect(second.secret).toBeUndefined();
+      expect(second.client.clientId).toBe(first.client.clientId);
+      expect(await clientCount()).toBe(1);
+      expect(await managedRows()).toHaveLength(1);
+    });
+
+    it('changes nothing when run again with the same arguments, not even the row’s time', async () => {
+      const { registry } = await instance();
+      const system = systemActor();
+      const { client } = await registry.ensure(system, key, settings());
+      const before = await rowOf(client.clientId);
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+      await registry.ensure(system, key, settings());
+      expect(await rowOf(client.clientId)).toEqual(before);
+    });
+
+    it('takes the list it is given as the whole list, so an address left out is removed', async () => {
+      const { registry } = await instance();
+      const system = systemActor();
+      const other = 'https://notes.example.test/second';
+      const { client } = await registry.ensure(
+        system,
+        key,
+        settings({ redirectUris: [REDIRECT, other] }),
+      );
+      expect(client.redirectUris).toEqual([REDIRECT, other]);
+      const changed = await registry.ensure(
+        system,
+        key,
+        settings({ redirectUris: [other], name: 'Notes, renamed' }),
+      );
+      expect(changed.client).toMatchObject({ name: 'Notes, renamed', redirectUris: [other] });
+      expect(changed.client.clientId).toBe(client.clientId);
+      expect(changed.secret).toBeUndefined();
+    });
+
+    it('applies every rule the Console does, with the same refusals, and makes nothing then', async () => {
+      const { registry } = await instance({ development: false });
+      const system = systemActor();
+      const error = (await refused(() =>
+        registry.ensure(system, key, settings({ redirectUris: ['http://notes.example.test/cb'] })),
+      )) as ClientRegistryError;
+      expect(error.code).toBe('invalid');
+      expect(error.problems.map((problem) => problem.field)).toContain('redirectUris');
+      const roles = (await refused(() =>
+        registry.ensure(system, key, settings({ scopes: ['openid', 'roles'] })),
+      )) as ClientRegistryError;
+      expect(roles.code).toBe('invalid');
+      expect(await clientCount()).toBe(0);
+      expect(await managedRows()).toHaveLength(0);
+    });
+
+    it('refuses a key that is not a DNS label, and a change from public to confidential', async () => {
+      const { registry } = await instance();
+      const system = systemActor();
+      for (const bad of ['', 'Notes', 'no_t', '-a', 'a-', 'a.b', 'x'.repeat(64)]) {
+        const error = (await refused(() =>
+          registry.ensure(system, bad, settings()),
+        )) as ClientRegistryError;
+        expect(error.code, bad).toBe('invalid');
+      }
+      await registry.ensure(system, key, settings());
+      const type = (await refused(() =>
+        registry.ensure(system, key, settings({ type: 'public' })),
+      )) as ClientRegistryError;
+      expect(type.code).toBe('invalid');
+      expect(await clientCount()).toBe(1);
+    });
+
+    it('makes a public app with no secret', async () => {
+      const { registry } = await instance();
+      const { client, secret } = await registry.ensure(
+        systemActor(),
+        key,
+        settings({ type: 'public' }),
+      );
+      expect(client.type).toBe('public');
+      expect(secret).toBeUndefined();
+    });
+
+    it('rotates the secret of the app a key names, and stores only a new hash', async () => {
+      const { registry } = await instance();
+      const system = systemActor();
+      const { client, secret } = await registry.ensure(system, key, settings());
+      const clientId = await registry.clientIdOfKey(system, key);
+      expect(clientId).toBe(client.clientId);
+      const before = (await rowOf(clientId))?.client_secret;
+      const rotated = await registry.rotateSecret(system, clientId);
+      expect(rotated).not.toBe(secret);
+      const after = (await rowOf(clientId))?.client_secret;
+      expect(after).not.toBe(before);
+      expect(String(after)).not.toContain(rotated);
+    });
+
+    it('removes the app a key names, with what it was given, and the key with it', async () => {
+      const { registry } = await instance();
+      const system = systemActor();
+      const { client } = await registry.ensure(system, key, settings());
+      await registry.remove(system, await registry.clientIdOfKey(system, key));
+      expect(await clientCount()).toBe(0);
+      expect(await managedRows()).toHaveLength(0);
+      expect(
+        ((await refused(() => registry.clientIdOfKey(system, key))) as ClientRegistryError).code,
+      ).toBe('not-found');
+      // The next run makes a new app with a new secret (core-app §3.7.4).
+      const again = await registry.ensure(system, key, settings());
+      expect(again.created).toBe(true);
+      expect(again.client.clientId).not.toBe(client.clientId);
+    });
+
+    it('lists the managed apps with their keys, and says which apps are managed', async () => {
+      const { registry, asOwner } = await instance();
+      const system = systemActor();
+      await registry.ensure(system, 'bravo', settings({ name: 'Bravo' }));
+      await registry.ensure(system, 'alpha', settings({ name: 'Alpha' }));
+      const byHand = (await registry.register(asOwner, settings({ name: 'By hand' }))).client;
+      const listed = await registry.managed(system);
+      expect(listed.map(({ key: found }) => found)).toEqual(['alpha', 'bravo']);
+      const ids = await registry.managedClientIds(asOwner);
+      expect(ids.has(listed[0]?.client.clientId as string)).toBe(true);
+      expect(ids.has(byHand.clientId)).toBe(false);
+    });
+
+    it('lets a person with client:manage do none of this, and an object that only looks like the actor nothing', async () => {
+      const { registry, asPerson, asOwner } = await instance();
+      for (const run of [
+        () => registry.ensure(asPerson, key, settings()),
+        () => registry.managed(asPerson),
+        () => registry.managedClientIds(asPerson),
+        () => registry.clientIdOfKey(asPerson, key),
+      ]) {
+        expect(((await refused(run)) as ClientRegistryError).code).toBe('forbidden');
+      }
+      const forged = { system: true as const, headers: new Headers() };
+      expect(
+        ((await refused(() => registry.ensure(forged, key, settings()))) as ClientRegistryError)
+          .code,
+      ).toBe('forbidden');
+      expect(await clientCount()).toBe(0);
+      // An operator may still ask for the managed apps, since they are apps like any other.
+      expect(await registry.managed(asOwner)).toEqual([]);
+    });
+
+    it('is reached by no request: the provider’s routes it stands in for are off, for everyone', async () => {
+      const { auth, registry, owner } = await instance();
+      const { client } = await registry.ensure(systemActor(), key, settings());
+      for (const jar of [owner, new Jar()]) {
+        for (const route of ['/oauth2/delete-client', '/oauth2/client/rotate-secret']) {
+          const reply = await call(auth, 'POST', route, {
+            jar,
+            body: { client_id: client.clientId },
+          });
+          expect(reply.status, route).toBe(404);
+        }
+      }
+      expect(await clientCount()).toBe(1);
+    });
+  });
+
+  describe('the sovereign-admin command', () => {
+    const run = async (registry: ClientRegistry, ...argv: string[]) => {
+      const out: string[] = [];
+      const log: string[] = [];
+      const code = await runAdmin(argv, registry, systemActor(), {
+        out: (line) => out.push(line),
+        log: (line) => log.push(line),
+      });
+      return { code, out, log };
+    };
+    const ensureArgs = [
+      'apps',
+      'ensure',
+      'notes',
+      '--name',
+      'Notes',
+      '--redirect',
+      REDIRECT,
+      '--json',
+    ];
+
+    it('makes an app and answers with its client id and its secret, once', async () => {
+      const { registry } = await instance();
+      const first = await run(registry, ...ensureArgs);
+      expect(first.code).toBe(0);
+      const answer = JSON.parse(first.out[0] as string) as Record<string, string>;
+      expect(Object.keys(answer).sort()).toEqual(['clientId', 'key', 'secret']);
+      expect(answer.key).toBe('notes');
+      // The log says what was done and which app, and never the secret.
+      expect(first.log.join('\n')).toContain('made app notes');
+      expect(first.log.join('\n')).not.toContain(answer.secret);
+
+      const second = await run(registry, ...ensureArgs);
+      expect(second.code).toBe(0);
+      const again = JSON.parse(second.out[0] as string) as Record<string, string>;
+      expect(again).toEqual({ key: 'notes', clientId: answer.clientId });
+      expect(second.log.join('\n')).toContain('kept app notes');
+      expect(await clientCount()).toBe(1);
+    });
+
+    it('lists, rotates and removes by key', async () => {
+      const { registry } = await instance();
+      await run(registry, ...ensureArgs);
+      const listed = await run(registry, 'apps', 'list', '--json');
+      expect(JSON.parse(listed.out[0] as string)).toMatchObject([
+        { key: 'notes', name: 'Notes', type: 'confidential', enabled: true },
+      ]);
+      const rotated = await run(registry, 'apps', 'rotate-secret', 'notes', '--json');
+      expect(rotated.code).toBe(0);
+      expect(JSON.parse(rotated.out[0] as string)).toHaveProperty('secret');
+      expect(rotated.log.join('\n')).not.toContain(
+        (JSON.parse(rotated.out[0] as string) as { secret: string }).secret,
+      );
+      expect((await run(registry, 'apps', 'remove', 'notes')).code).toBe(0);
+      expect(await clientCount()).toBe(0);
+      expect(JSON.parse((await run(registry, 'apps', 'list', '--json')).out[0] as string)).toEqual(
+        [],
+      );
+    });
+
+    it('exits 1 with each thing wrong on a line when core refuses, and 2 for a bad command line', async () => {
+      const { registry } = await instance({ development: false });
+      const refused = await run(
+        registry,
+        'apps',
+        'ensure',
+        'notes',
+        '--name',
+        'Notes',
+        '--redirect',
+        'http://notes.example.test/cb',
+      );
+      expect(refused.code).toBe(1);
+      expect(refused.log.join('\n')).toMatch(/redirectUris\[?0?\]?.*https/s);
+      expect(refused.out).toEqual([]);
+      const missing = await run(registry, 'apps', 'rotate-secret', 'nope');
+      expect(missing.code).toBe(1);
+      expect(missing.log.join('\n')).toContain('no app with that key');
+      const usage = await run(registry, 'apps', 'ensure');
+      expect(usage.code).toBe(2);
+      expect(usage.log.join('\n')).toContain('Usage:');
+      expect(await clientCount()).toBe(0);
     });
   });
 

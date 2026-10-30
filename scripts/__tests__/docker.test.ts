@@ -61,7 +61,8 @@ describe('the Dockerfile', () => {
     expect(stages[0]).toBe('FROM node:${NODE_VERSION}-alpine AS deps');
     expect(stages[2]).toBe('FROM node:${NODE_VERSION}-alpine AS run');
     expect(dockerfile).toContain('ARG NODE_VERSION=24');
-    expect(dockerfile.split('AS run')[1]).not.toContain('pnpm');
+    // No package manager is run or installed in the last stage (the install's own folder, `.pnpm`, is not one).
+    expect(dockerfile.split('AS run')[1]).not.toMatch(/corepack|\bpnpm\s+[a-z-]/);
   });
 
   it('runs the traced server as an unprivileged user, on 3000, with a health check', () => {
@@ -71,6 +72,15 @@ describe('the Dockerfile', () => {
     expect(run).toMatch(/HEALTHCHECK[\s\S]*\/api\/health/);
     expect(run).toMatch(/CMD \["node", "server\.js"\]/);
     expect(run).toContain('.next/standalone');
+  });
+
+  it('ships sovereign-admin as one bundled file on the PATH, and nothing to run TypeScript with', () => {
+    const run = dockerfile.split('AS run')[1] ?? '';
+    expect(run).toContain('/repo/apps/core/dist/sovereign-admin.mjs');
+    expect(run).toContain('/usr/local/bin/sovereign-admin');
+    expect(run).not.toMatch(/\btsx\b|npm install|apk add/);
+    expect(read('apps/core/package.json')).toContain('tsup --config tsup.admin.config.ts');
+    expect(read('scripts/docker-smoke.sh')).toContain('sovereign-admin apps');
   });
 
   it('bakes in no environment: no secret, no address, no environment file copied', () => {

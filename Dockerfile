@@ -55,6 +55,16 @@ WORKDIR /app
 COPY --from=build --chown=node:node /repo/apps/core/.next/standalone ./
 COPY --from=build --chown=node:node /repo/apps/core/.next/static ./apps/core/.next/static
 
+# `sovereign-admin` (core-app §3.7.4), bundled by `tsup.admin.config.ts` into one file that runs on the Node here: the
+# image holds no package manager and nothing to run TypeScript with. Only the database drivers are not in the file:
+# `pg` is in `node_modules` already, and the native `libsql` is linked in from where the install keeps it, so the file finds
+# it from its own folder. The operator CLI runs the command with `docker exec`; nobody runs it by hand.
+COPY --from=build --chown=node:node /repo/apps/core/dist/sovereign-admin.mjs ./apps/core/admin/sovereign-admin.mjs
+RUN mkdir -p apps/core/admin/node_modules \
+ && ln -s /app/node_modules/.pnpm/node_modules/libsql apps/core/admin/node_modules/libsql \
+ && printf '#!/bin/sh\nexec node /app/apps/core/admin/sovereign-admin.mjs "$@"\n' > /usr/local/bin/sovereign-admin \
+ && chmod 0755 /usr/local/bin/sovereign-admin
+
 # A SQLite file is kept here when that is the database chosen; the compose file mounts a volume over it.
 RUN mkdir -p /data && chown node:node /data
 VOLUME ["/data"]

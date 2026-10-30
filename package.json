@@ -1,6 +1,6 @@
 {
   "name": "sovereign",
-  "version": "0.59.0",
+  "version": "0.60.0",
   "private": true,
   "type": "module",
   "description": "Sovereign Core — a self-hostable identity and foundation service, and the shared packages every Sovereign app uses.",

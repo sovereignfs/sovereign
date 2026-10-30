@@ -49,6 +49,29 @@ export interface Operations {
     };
   };
   /**
+   * Record something about a person
+   */
+  logActivity: {
+    request: {
+      body: {
+        /**
+         * The person's `sub`.
+         */
+        to: string;
+        summary: string;
+        link?: string;
+        /**
+         * When it happened. Now when not given.
+         */
+        at?: string;
+        key?: string;
+      };
+    };
+    response: {
+      id: string;
+    };
+  };
+  /**
    * Mark all of this app's notifications read
    */
   markAllNotificationsRead: {
@@ -177,6 +200,12 @@ export const operations = {
     path: '/api/v1/notifications',
     scopes: ['notifications'],
     safeToRepeat: true,
+  },
+  logActivity: {
+    method: 'POST',
+    path: '/api/v1/activity',
+    scopes: ['activity:write'],
+    safeToRepeat: false,
   },
   markAllNotificationsRead: {
     method: 'POST',

@@ -192,15 +192,9 @@ and a person's call reaches only what that app sent them. An older core that doe
 | `notifications.dismiss`     | person | `notifications`      | `dismissNotification`      |
 | `notifications.dismissAll`  | person | `notifications`      | `dismissAllNotifications`  |
 | `app.email.sendToUser`      | app    | `email:send`         | `sendEmail`                |
+| `app.activity.log`          | app    | `activity:write`     | `logActivity`              |
 
-`app.email.sendToUser` is specified ([core-app §4.2](core-app.md)) and planned: it is offered when core serves it.
-
-These are not specified yet, because [core-app §2](core-app.md) leaves them to Phase 2. Each is specified in core and added to the
-contract first, and the names are reserved:
-
-| Namespace  | Actor          | Expected from legacy |
-| ---------- | -------------- | -------------------- |
-| `activity` | person and app | `log`                |
+`app.email.sendToUser` and `app.activity.log` are specified ([core-app §4.2, §4.3](core-app.md)) and planned: they are offered when core serves them.
 
 Account-deletion fan-out runs the other way, from core to an app, and needs its own design.
 
@@ -284,7 +278,7 @@ Every namespace of the legacy `sdk` object:
 | `platform`      | **SDK** `instance.getBranding`, for what an app needs of it                                       |
 | `notifications` | **SDK** §8                                                                                        |
 | `email`         | **SDK**, planned (§8)                                                                             |
-| `activity`      | **SDK**, reserved (§8)                                                                            |
+| `activity`      | **SDK**, planned (§8)                                                                             |
 | `messages`      | Not carried over (core-app §4.1)                                                                  |
 | `portability`   | Decided with account-deletion fan-out                                                             |
 | `authz`         | Gone: there are no grants between plugins. Core's `roles` and an app's own permissions replace it |

@@ -1502,6 +1502,71 @@ is queued past a restart: a message core could not hand to the mail server is dr
 
 ---
 
+### 4.3 Activity
+
+Not built yet. An app can record that something happened to or for a person ("Reminders: you completed Water the plants"), and the
+person can see, in core, everything that is recorded about them. This is the person's own record, not an operator's audit log: the
+operator cannot read it, and it is not a way for an app to learn anything.
+
+**What an entry is.** One line of plain text, recorded by an app:
+
+| Field     | Notes                                                                                                       |
+| --------- | ----------------------------------------------------------------------------------------------------------- |
+| `id`      | Made by core.                                                                                               |
+| `app`     | The app that recorded it, from its token, never from the sender.                                            |
+| `summary` | Required, 1 to 200 characters. Text. What happened, in the words the person should read.                    |
+| `link`    | Optional. `https`, on the origin of one of the app's own registered addresses.                              |
+| `at`      | When it happened, at most a day in the past or a minute in the future; when it was recorded when not given. |
+| `key`     | Optional. A record with a `key` the app used for this person in the last 24 hours is the same record.       |
+
+**Who may record.** Only an app acting for itself (§3.6.6) with the app scope `activity:write`, which an operator gives it (§3.7.1),
+about a person who has used it and has an active account. A record about anyone else is accepted and dropped, and answers exactly as
+a kept one does (as §4.1 does for a notification). There is no switch to stop an app recording about a person: what is recorded is
+only what the app did with their account, and the person can delete it.
+
+**What the person sees and can do.** Core's Activity page (`/activity`, in the identity pages, §3.11), newest first, each entry with
+the app's name, the text, when and the link, searchable by app. They can delete one entry or all of them, or all of one app's. Deleting
+an app's access (Remove access, §3.6.4) deletes what it recorded. An entry is deleted 90 days after it happened, and a person keeps at
+most 500 in all, the oldest going first.
+
+**Limits.** 600 a minute for an app, and 120 an hour for one app about one person; over is a `429` with `Retry-After`.
+
+**The operation** (`spec/core-api/openapi.yaml`, `x-planned`):
+
+| Operation     | Who                 | Scope            | What                                                       |
+| ------------- | ------------------- | ---------------- | ---------------------------------------------------------- |
+| `logActivity` | the app, for itself | `activity:write` | `POST /api/v1/activity`: answers `202` with the entry `id` |
+
+**Decided here, so that it can be built.**
+
+- **App only.** Legacy `activity.log` could be called as a person; now an app records what it did, and acts for itself to do so. An
+  app that wants a person's own action recorded records it with the person's `sub`.
+- **No reading by apps.** An app cannot list what any app recorded: the page is the person's.
+- **No export in Phase 2.** Export is the "Later" row (§2), and this is part of what it would hold.
+
+### 4.4 Backups
+
+Core makes no backup of its own in Phase 2. This is a decision, and the reason is that two backup tools would overlap and one of them
+would be wrong about the keys.
+
+- **The instance's backup is `sv backup`** ([operator-cli §10.2](operator-cli.md)): every database, each hosted app's data, the state and
+  the secrets, encrypted to the operator's key alone. It is the only way an instance is backed up and restored. Core, which runs
+  inside the container, has no key of the operator's and no place to put a file, and is never asked to.
+- **What a backup of core needs** is the database (accounts, apps, consents, tokens' revocations, notifications, activity, settings and
+  the instance's pictures, which are rows) together with the secrets core starts with: `SV_AUTH_SECRET` and the field encryption key ring
+  (§3.15). Without them an encrypted setting cannot be read and every TOTP enrolment ends (§3.3). They are in `secrets/`, not in the
+  database, and a backup that has both is as sensitive as the operator's key: it is encrypted, and the key is never inside it.
+- **A person's own copy of their data** is export, in "Later" (§2). It is a different thing for a different person, and is not specified
+  here.
+- **After a restore, what was revoked since is alive again**: a session ended, a consent removed and a token revoked after the backup was
+  taken are back in the database as they were. So a restore records the time (`restored_at`, an instance setting, written by the
+  restore itself), and from then on core refuses every session and token issued before it: people sign in again, and apps ask for tokens
+  again. An account deleted after the backup is not recreated by this; apps are told of deletions again by the fan-out's own record (task
+  14.6). The restore is `sv restore`'s to make and core's to honour, and is built in task 15.8.
+- **Core's Console shows nothing about backups.** An operator who wants to know the state of them asks `sv`.
+
+---
+
 ## Changelog
 
 | Date       | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
@@ -1568,3 +1633,4 @@ is queued past a restart: a message core could not hand to the mail server is dr
 | 2026-10-30 | §3.6.1, §3.6.6, §3.7.1: app tokens are built. The grant is offered to an app that holds an app scope, the Console and `sovereign-admin` give them, the token's subject is the app, and the Core API checks it separately from a person's (`authenticateApp`). Rotating the secret and switching the app off end its tokens by recording the time (`app_token_revocations`); taking a scope away stops it at once.                                                                                                                                                                                                                                                                                                             |
 | 2026-10-30 | §4.1: notifications are built: the service and its tables, the six Core API operations (the instance document lists `notifications`), the person scope `notifications`, the bell and panel, the Preferences switches, and what Remove access, deleting an app and deleting an account take with them.                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2026-10-30 | §4.2: mail for apps, specified: a plain-text message by `sub` through the instance's own mail, only from an app with `email:send` to a person who has used it, dropped without a trace when it may not go, no delivery reports, a switch for each app in Preferences, limits, and no mail when the instance has none. Not built.                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-10-30 | §4.3, §4.4: activity (a person's own record of what apps did, recorded only by an app acting for itself, readable only by the person) and backups (core makes none of its own; `sv backup` is the one; a restore records a time before which sessions and tokens are refused) are specified. Not built.                                                                                                                                                                                                                                                                                                                                                                                                                       |

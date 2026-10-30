@@ -5,6 +5,13 @@
   gap: var(--sv-space-3);
 }
 
+/* The bell, when there is one, and the person's avatar. */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+}
+
 /* In the Console, which has no page container of its own, the bar spans the screen. */
 .bordered {
   padding: var(--sv-space-3) var(--sv-space-8);

@@ -82,6 +82,25 @@ const branding = await sv.instance.getBranding(); // public, so no actor
 The SDK gets, caches and refreshes the tokens; the app never handles one. It asks the instance what it serves first, so a call to
 something an older core lacks raises `NotSupportedError` and sends nothing.
 
+### Tell a person something
+
+An app with the app scope `notifications:send` (an operator gives it, under "What the app may do on its own") can send a notification
+with nobody there. It goes to the person's bell in core, with a link back to the app:
+
+```ts
+await sv.app.notifications.send({
+  to: person.sub,
+  title: 'Due today',
+  body: 'Water the plants',
+  url: 'https://notes.example.test/tasks/3', // on one of the app's own addresses
+  key: 'due-3', // sending it again within a day is the same send
+});
+```
+
+The answer is the same whether or not the person gets it: they may never have used the app or may have switched it off, and core
+does not say. With the person scope `notifications` an app can also read and clear _its own_ notifications for someone it is acting
+for (`sv.as(person).notifications.list()`, `markRead`, `dismiss`, ...), so that reading one in the app clears it in core.
+
 ## 5. Handle failure
 
 Core can be down, slow or refusing, and the app must stay up. Every failure is a `SovereignError`:

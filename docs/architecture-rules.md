@@ -234,6 +234,12 @@ pointing here.
   is saved and whenever the key set is read. An access or logout token is never
   re-signed. A scope core does not offer is dropped by `oauthGuards`
   (`src/oauth/guards.ts`) before the provider reads the request, not refused.
+- **Notifications are written only by `NotificationService`, and say nothing of who may be told** (`src/notifications/service.ts`,
+  core-app §4.1). The app is taken from its token and the person named by the caller, never from the request body; a send to
+  someone who has not used the app, has switched it off or is inactive is accepted and dropped and answers as a delivered one
+  does; a link goes only to an `https` address on one of the app's own origins; text is plain. The Core API's person calls act on
+  the calling app's own notifications only, and core's own panel route (`/api/notifications`) acts on the session's account and
+  checks the request's origin. Remove access, deleting an app and deleting an account delete them in the same transaction.
 - **An app's own token is a different kind from a person's, and the Core API tells them apart**
   (`src/api/token.ts`, core-app §3.6.6). It is made by the provider's client-credentials grant, which an app has only when an
   operator gave it an app scope (`APP_SCOPES`, never `directory` or anything about a person; a public app cannot hold one); its

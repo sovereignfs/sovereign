@@ -3,7 +3,9 @@ import { getSession } from '../src/auth/session';
 import { getInstanceIdentity } from '../src/instance/service';
 import { can } from '../src/roles/capabilities';
 import { getCapabilityMatrix } from '../src/roles/matrix';
+import { getNotificationService } from '../src/notifications';
 import { AccountMenu } from './account-menu';
+import { NotificationsBell } from './notifications-bell';
 import styles from './account-header.module.css';
 import { BrandMark } from './brand-mark';
 
@@ -18,6 +20,11 @@ export async function AccountHeader({ bordered = false }: { bordered?: boolean }
   if (!session) return null;
   const [identity, matrix] = await Promise.all([getInstanceIdentity(), getCapabilityMatrix()]);
   const operator = can(session.user.role, 'console:access', matrix);
+  // The bell is there when an app can write to this person or has: an instance whose apps send nothing does not clutter the bar.
+  const notifications = await getNotificationService();
+  const hasNotifications =
+    (await notifications.apps(session.user.id)).length > 0 ||
+    (await notifications.list(session.user.id, { limit: 1 })).length > 0;
 
   return (
     <header className={bordered ? `${styles.header} ${styles.bordered}` : styles.header}>
@@ -25,12 +32,15 @@ export async function AccountHeader({ bordered = false }: { bordered?: boolean }
         <BrandMark size="lg" />
         <span className={styles.brandName}>{identity.name}</span>
       </Link>
-      <AccountMenu
-        name={session.user.name}
-        email={session.user.email}
-        avatarUrl={session.user.image ?? undefined}
-        operator={operator}
-      />
+      <div className={styles.actions}>
+        {hasNotifications ? <NotificationsBell /> : null}
+        <AccountMenu
+          name={session.user.name}
+          email={session.user.email}
+          avatarUrl={session.user.image ?? undefined}
+          operator={operator}
+        />
+      </div>
     </header>
   );
 }

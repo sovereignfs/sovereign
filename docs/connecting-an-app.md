@@ -99,6 +99,7 @@ An app gets the scopes it is allowed in the Console **and** the person agrees to
 | `email`          | `email`, `email_verified`                                                   |
 | `offline_access` | A refresh token, so the app can keep working after the access token expires |
 | `directory`      | Finding other people on the instance (below)                                |
+| `notifications`  | Reading and clearing the notifications the app itself sent the person       |
 | `roles`          | `roles`: the person's roles on the instance. Trusted apps only              |
 
 The claims appear in the ID token and at the userinfo endpoint, so an app can read them from either. (Userinfo also gives

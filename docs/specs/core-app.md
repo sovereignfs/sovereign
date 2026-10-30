@@ -1373,7 +1373,7 @@ account-deletion fan-out and backups are not specified yet (epic 15, task 14.6).
 
 ### 4.1 Notifications
 
-Not built yet. An app can tell a person something: a task is due, a share arrived. Core keeps it, shows it in its own panel, and
+An app can tell a person something: a task is due, a share arrived. Core keeps it, shows it in its own panel, and
 lets the person act on it, so every app's notices are in one place and under the person's control.
 
 **What a notification is.** A short, plain-text message from one app to one person:
@@ -1407,7 +1407,7 @@ person's token and no consent at the time. It is limited instead by who may be w
 default), and "Clear all". In the panel: open one, mark one or all read, dismiss one or all. An operator cannot read a person's
 notifications.
 
-**The panel.** The bell in the account header shows the number unread and opens a list, newest first, each with the app's icon and
+**The panel.** The bell in the account header, which is there when an app can write to the person or has, shows the number unread and opens a list, newest first, each with the app's icon and
 name, the title, the body, the time and a dot while unread. Choosing one marks it read and goes to its `url` in the same tab. The
 panel reads core's own routes with the person's session. It asks when a page loads and every minute while the page is visible; there
 is no push in Phase 2 (below).
@@ -1512,3 +1512,4 @@ The panel and Preferences use core's own routes under the session, not these; th
 | 2026-10-30 | §3.13: the instance document says what this core serves, as `api` (`versions`, `capabilities`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | 2026-10-30 | §4.1: notifications for apps, specified: what one is, who may send (an app acting for itself, only to someone who has used it, and a send core drops answers like one it delivered), what a person controls, the panel, the operations, the limits, and what is left out (push, email, threads). §2 and §3.6.6 updated to match. Not built.                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-10-30 | §3.6.1, §3.6.6, §3.7.1: app tokens are built. The grant is offered to an app that holds an app scope, the Console and `sovereign-admin` give them, the token's subject is the app, and the Core API checks it separately from a person's (`authenticateApp`). Rotating the secret and switching the app off end its tokens by recording the time (`app_token_revocations`); taking a scope away stops it at once.                                                                                                                                                                                                                                                                                                             |
+| 2026-10-30 | §4.1: notifications are built: the service and its tables, the six Core API operations (the instance document lists `notifications`), the person scope `notifications`, the bell and panel, the Preferences switches, and what Remove access, deleting an app and deleting an account take with them.                                                                                                                                                                                                                                                                                                                                                                                                                         |

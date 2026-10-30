@@ -4,10 +4,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const getSession = vi.fn();
 vi.mock('../auth/session', () => ({ getSession: () => getSession() as unknown }));
 vi.mock('../auth/client', () => ({ authClient: { updateUser: vi.fn() } }));
+const apps = vi.fn();
+vi.mock('../notifications', () => ({
+  getNotificationService: () => Promise.resolve({ apps: () => apps() as unknown }),
+}));
+vi.mock('../../app/preferences/notification-actions', () => ({
+  setAppNotificationsAction: vi.fn(),
+  clearNotificationsAction: vi.fn(),
+}));
 
 const { default: PreferencesPage } = await import('../../app/preferences/page');
 
-beforeEach(() => getSession.mockReset().mockResolvedValue(null));
+beforeEach(() => {
+  getSession.mockReset().mockResolvedValue(null);
+  apps.mockReset().mockResolvedValue([]);
+});
 
 const as = (user: Record<string, unknown>) =>
   getSession.mockResolvedValue({

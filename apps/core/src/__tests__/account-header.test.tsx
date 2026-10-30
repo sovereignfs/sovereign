@@ -10,6 +10,16 @@ const signOut = vi.fn();
 vi.mock('../auth/client', () => ({ authClient: { signOut: () => signOut() as unknown } }));
 const matrix = vi.fn();
 vi.mock('../roles/matrix', () => ({ getCapabilityMatrix: () => matrix() as unknown }));
+const apps = vi.fn();
+const list = vi.fn();
+vi.mock('../notifications', () => ({
+  getNotificationService: () =>
+    Promise.resolve({ apps: () => apps() as unknown, list: () => list() as unknown }),
+}));
+// The bell asks core for the notifications itself; what it draws is tested with it (notifications-bell.test.tsx).
+vi.mock('../../app/notifications-bell', () => ({
+  NotificationsBell: () => <button>Notifications</button>,
+}));
 const identity = vi.fn();
 vi.mock('../instance/service', () => ({ getInstanceIdentity: () => identity() as unknown }));
 // The mark reads the instance; what it draws is tested with it (instance-identity.test.tsx).
@@ -36,10 +46,34 @@ beforeEach(() => {
   signOut.mockReset();
   matrix.mockReset().mockResolvedValue(DEFAULT_MATRIX);
   identity.mockReset().mockResolvedValue({ name: 'Acme' });
+  apps.mockReset().mockResolvedValue([]);
+  list.mockReset().mockResolvedValue([]);
 });
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+});
+
+describe('the bell', () => {
+  it('is not there when no app can write to the person and nothing was sent', async () => {
+    as(ROLE_USER);
+    await draw();
+    expect(screen.queryByRole('button', { name: 'Notifications' })).toBeNull();
+  });
+
+  it('is there when an app can write to them', async () => {
+    as(ROLE_USER);
+    apps.mockResolvedValue([{ clientId: 'a', name: 'Reminders', enabled: true }]);
+    await draw();
+    expect(screen.getByRole('button', { name: 'Notifications' })).toBeDefined();
+  });
+
+  it('stays when an app that no longer can left something', async () => {
+    as(ROLE_USER);
+    list.mockResolvedValue([{ id: 'n1' }]);
+    await draw();
+    expect(screen.getByRole('button', { name: 'Notifications' })).toBeDefined();
+  });
 });
 
 describe('the header every signed-in page has', () => {

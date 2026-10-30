@@ -1,6 +1,6 @@
 # Sovereign Core — Roadmap
 
-**Version:** 0.61.0 · **Last updated:** 2026-10-30
+**Version:** 0.62.0 · **Last updated:** 2026-10-30
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -173,4 +173,4 @@ Epic [15](docs/epics/core-services.md)
 | —       | 2        | Mail for apps         | 📋     | [15.2](docs/epics/core-services.md) |
 | —       | 3        | Activity `[parallel]` | 📋     | [15.3](docs/epics/core-services.md) |
 | —       | 4        | Backups `[parallel]`  | 📋     | [15.4](docs/epics/core-services.md) |
-| —       | 5        | Notifications: build  | 📋     | [15.5](docs/epics/core-services.md) |
+| 0.62.0  | 5        | Notifications: build  | ✅     | [15.5](docs/epics/core-services.md) |

@@ -104,7 +104,7 @@ exists, and account-deletion fan-out is task 14.6, since it needs its own design
 - Backups are encrypted, and the keys are never inside them
 - An operator knows which tool is for what
 
-#### 📋 15.5 — Notifications: build
+#### ✅ 15.5 — Notifications: build
 
 **Goal:** An app with the app scope `notifications:send` can tell a person something, and the person sees it in core.
 

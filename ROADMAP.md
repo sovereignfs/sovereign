@@ -174,6 +174,6 @@ Epic [15](docs/epics/core-services.md)
 | 0.64.0  | 3        | Activity `[parallel]` | ✅     | [15.3](docs/epics/core-services.md) |
 | 0.64.0  | 4        | Backups `[parallel]`  | ✅     | [15.4](docs/epics/core-services.md) |
 | 0.62.0  | 5        | Notifications: build  | ✅     | [15.5](docs/epics/core-services.md) |
-| —       | 6        | Mail for apps: build  | 📋     | [15.6](docs/epics/core-services.md) |
+| 0.65.0  | 6        | Mail for apps: build  | ✅     | [15.6](docs/epics/core-services.md) |
 | —       | 7        | Activity: build       | 📋     | [15.7](docs/epics/core-services.md) |
 | —       | 8        | The restore marker    | 📋     | [15.8](docs/epics/core-services.md) |

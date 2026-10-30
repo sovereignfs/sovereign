@@ -130,7 +130,7 @@ exists, and account-deletion fan-out is task 14.6, since it needs its own design
 - An app never sees another app's notifications, and a person's token never sends
 - The security check is run
 
-#### 📋 15.6 — Mail for apps: build
+#### ✅ 15.6 — Mail for apps: build
 
 **Goal:** An app with the app scope `email:send` can email a person by `sub`, and the person can switch it off.
 

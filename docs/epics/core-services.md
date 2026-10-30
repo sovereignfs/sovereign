@@ -180,7 +180,7 @@ exists, and account-deletion fan-out is task 14.6, since it needs its own design
 - A record about someone who may not have it answers exactly as a kept one does
 - The security check is run
 
-#### 📋 15.8 — The restore marker
+#### ✅ 15.8 — The restore marker
 
 **Goal:** After a restore, nothing that was ended since the backup works again.
 
@@ -191,6 +191,8 @@ exists, and account-deletion fan-out is task 14.6, since it needs its own design
 - An instance setting `restored_at`, which `sovereign-admin` can write (a command a restore runs), and the session and token checks
   refusing anything issued before it
 - `sv restore` calling it (operator-cli §10.2), with the specification of the command
+
+**Not here:** `sv` itself. The call is specified in operator-cli §10.2 and built with `sv restore`, in the operator CLI's epic.
 
 **Dependencies:** 15.4, 13.2
 

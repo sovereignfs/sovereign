@@ -21,7 +21,7 @@ acceptance, in [epic 13](operator-cli.md).
 
 ## Tasks
 
-#### ⏳ 12.1 — Publish the image
+#### ✅ 12.1 — Publish the image
 
 **Goal:** A tag on `main` publishes core's image, and nothing else can.
 
@@ -48,7 +48,11 @@ acceptance, in [epic 13](operator-cli.md).
 
 **Not here:** the first release itself (12.3).
 
-#### ⏳ 12.2 — Guides for operators `[parallel]`
+**Checked on 2026-10-30:** the workflow's rules are held by `scripts/__tests__/publish-workflow.test.ts`; `pnpm docker:smoke` passes; and a
+run of the full CI by hand on `main` passed every job, `Acceptance` on each database and `Docker image` among them. The workflow itself
+runs only on a tag, so its first real run is the first release.
+
+#### ✅ 12.2 — Guides for operators `[parallel]`
 
 **Goal:** An operator can put core on a public name and connect an app of any kind, from the documents alone.
 
@@ -66,7 +70,8 @@ acceptance, in [epic 13](operator-cli.md).
 
 **Review checklist:**
 
-- The proxy example boots as written, and core reaches its own address through it
+- The proxy example boots as written, and core reaches its own address through it (checked 2026-10-30 with the example's files and
+  `tls internal` for the offline name: 200 through the proxy, 200 from inside core, and nothing published on port 3000)
 - What the guide says an app needs matches what core does
 - No app is named
 

@@ -1,4 +1,6 @@
 import type { DirectoryUser, DirectoryUserStatus, InstanceBranding } from '@sovereignfs/api-client';
+import { SignJWT, exportJWK, generateKeyPair, type JWK } from 'jose';
+import type { SessionStore, StoredRecord } from '../session';
 
 /** A person the fake core knows. */
 export type FakePerson = {
@@ -22,6 +24,19 @@ export type Failure =
   | { kind: 'lost-answer' }
   | { kind: 'timeout' }
   | { kind: 'status'; status: number; retryAfter?: number };
+
+/** The ways a logout token can be wrong, each of which an app must refuse. */
+export type WrongLogoutToken =
+  | 'signature'
+  | 'issuer'
+  | 'audience'
+  | 'expired'
+  | 'future'
+  | 'event'
+  | 'nonce'
+  | 'type'
+  | 'no-subject'
+  | 'no-jti';
 
 /** Which requests a failure applies to. */
 export type Target = 'any' | 'token' | 'api' | 'instance' | 'discovery';
@@ -64,6 +79,21 @@ export type FakeCore = {
   fail(failure: Failure, options?: { target?: Target; times?: number }): void;
   /** Ends every failure. */
   heal(): void;
+  /**
+   * The person agrees at core's sign-in page: given the address `beginSignIn` returned, this is the address core sends the
+   * browser back to, with the code and `state`. It checks the request as core does (PKCE `S256`, a registered redirect).
+   */
+  authorize(authorizationUrl: string, sub: string, options?: { roles?: string[] }): string;
+  /** The core session id (`sid`) of the person's latest sign-in. */
+  sessionIdOf(sub: string): string | undefined;
+  /**
+   * A signed logout token, as core sends to an app's back-channel address when a session ends (core-app §3.6.5). `wrong` makes
+   * one that is wrong in one way, for testing that an app refuses it.
+   */
+  logoutToken(
+    who: { sub?: string; sid?: string },
+    options?: { wrong?: WrongLogoutToken },
+  ): Promise<string>;
   /** Ends a person's tokens, as core does when their sessions end: the next use of any is refused. */
   revoke(sub: string): void;
   /** Ends every access token but keeps the refresh tokens, so the next call must refresh. */
@@ -83,6 +113,15 @@ export type FakeCore = {
 
 type Person = Required<Pick<FakePerson, 'sub' | 'name'>> & Pick<FakePerson, 'picture' | 'active'>;
 type Access = { kind: 'person'; sub: string } | { kind: 'app' };
+
+/** The PKCE `S256` challenge for a verifier. */
+async function challengeOf(verifier: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
 
 const random = (prefix: string) =>
   `${prefix}_${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
@@ -118,6 +157,27 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
   const appTokens = options.appTokens ?? true;
 
   const people = new Map<string, Person>();
+  /** Codes core has given for a sign-in, and the core sessions those made. */
+  const codes = new Map<
+    string,
+    {
+      sub: string;
+      sid: string;
+      nonce: string | null;
+      challenge: string;
+      redirectUri: string;
+      scope: string;
+      roles: string[];
+      used: boolean;
+    }
+  >();
+  const sessionOf = new Map<string, string>();
+  let signing: Promise<{ privateKey: CryptoKey; publicJwk: JWK }> | undefined;
+  const keys = () =>
+    (signing ??= generateKeyPair('EdDSA', { extractable: true }).then(async (pair) => ({
+      privateKey: pair.privateKey,
+      publicJwk: { ...(await exportJWK(pair.publicKey)), kid: 'fake-1', alg: 'EdDSA', use: 'sig' },
+    })));
   /** Refresh tokens: whose they are and whether they were used. */
   const refreshTokens = new Map<string, { sub: string; used: boolean }>();
   const accessTokens = new Map<string, Access & { expiresAt: number }>();
@@ -168,15 +228,70 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
     failure: Failure | undefined,
     signal: AbortSignal | null | undefined,
   ): Promise<Response> => {
+    // HTTP Basic, with each part form-encoded and so decoded first (RFC 6749 §2.3.1), as core does.
     const given = request.headers.get('authorization') ?? '';
-    const expected = `Basic ${btoa(`${encodeURIComponent(credentials.clientId)}:${encodeURIComponent(credentials.clientSecret)}`)}`;
-    if (given !== expected) {
+    const decoded = given.startsWith('Basic ') ? atob(given.slice(6)) : '';
+    const colon = decoded.indexOf(':');
+    const decode = (part: string) => {
+      try {
+        return decodeURIComponent(part.replace(/\+/g, ' '));
+      } catch {
+        return part;
+      }
+    };
+    if (
+      colon < 0 ||
+      decode(decoded.slice(0, colon)) !== credentials.clientId ||
+      decode(decoded.slice(colon + 1)) !== credentials.clientSecret
+    ) {
       return json({ error: 'invalid_client', error_description: 'the app is not recognised' }, 401);
     }
     const form = new URLSearchParams(await request.text());
     const grant = form.get('grant_type');
     let answer: Response;
-    if (grant === 'refresh_token') {
+    if (grant === 'authorization_code') {
+      const record = codes.get(form.get('code') ?? '');
+      const verifier = form.get('code_verifier') ?? '';
+      if (
+        !record ||
+        record.used ||
+        form.get('redirect_uri') !== record.redirectUri ||
+        (await challengeOf(verifier)) !== record.challenge
+      ) {
+        if (record) record.used = true;
+        answer = json({ error: 'invalid_grant', error_description: 'the code is not valid' }, 400);
+      } else {
+        record.used = true;
+        const person = people.get(record.sub);
+        const issued = Math.floor(now() / 1000);
+        const idToken = await new SignJWT({
+          ...(record.nonce ? { nonce: record.nonce } : {}),
+          sid: record.sid,
+          name: person?.name ?? record.sub,
+          ...(record.scope.split(' ').includes('roles') ? { roles: record.roles } : {}),
+        })
+          .setProtectedHeader({ alg: 'EdDSA', kid: 'fake-1' })
+          .setIssuer(url)
+          .setAudience(credentials.clientId)
+          .setSubject(record.sub)
+          .setIssuedAt(issued)
+          .setExpirationTime(issued + 3600)
+          .sign((await keys()).privateKey);
+        let refresh: string | undefined;
+        if (record.scope.split(' ').includes('offline_access')) {
+          refresh = random('rt');
+          refreshTokens.set(refresh, { sub: record.sub, used: false });
+        }
+        answer = json({
+          token_type: 'Bearer',
+          access_token: issueAccess({ kind: 'person', sub: record.sub }),
+          id_token: idToken,
+          ...(refresh ? { refresh_token: refresh } : {}),
+          expires_in: lifetime,
+          scope: record.scope,
+        });
+      }
+    } else if (grant === 'refresh_token') {
       const presented = form.get('refresh_token') ?? '';
       const known = refreshTokens.get(presented);
       if (!known) {
@@ -314,7 +429,18 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
         issuer: url,
         token_endpoint: `${url}/api/auth/oauth2/token`,
         authorization_endpoint: `${url}/api/auth/oauth2/authorize`,
+        end_session_endpoint: `${url}/api/auth/oauth2/end-session`,
+        jwks_uri: `${url}/api/auth/jwks`,
+        response_types_supported: ['code'],
+        subject_types_supported: ['public'],
+        id_token_signing_alg_values_supported: ['EdDSA'],
+        code_challenge_methods_supported: ['S256'],
+        token_endpoint_auth_methods_supported: ['client_secret_basic', 'client_secret_post'],
+        authorization_response_iss_parameter_supported: true,
       });
+    }
+    if (path.pathname === '/api/auth/jwks') {
+      return json({ keys: [(await keys()).publicJwk] });
     }
     if (path.pathname === '/.well-known/sovereign-instance') {
       const document: Record<string, unknown> = {
@@ -377,6 +503,73 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
     heal() {
       failures.length = 0;
     },
+    authorize(authorizationUrl, sub, options = {}) {
+      const request = new URL(authorizationUrl);
+      const given = request.searchParams;
+      const redirectUri = given.get('redirect_uri') ?? '';
+      const scope = given.get('scope') ?? '';
+      const problems = [
+        request.origin + request.pathname !== `${url}/api/auth/oauth2/authorize` &&
+          'wrong endpoint',
+        given.get('client_id') !== credentials.clientId && 'unknown client_id',
+        given.get('response_type') !== 'code' && 'response_type is not code',
+        given.get('code_challenge_method') !== 'S256' && 'PKCE S256 is required',
+        !given.get('code_challenge') && 'a code_challenge is required',
+        !redirectUri && 'a redirect_uri is required',
+        !scope.split(' ').includes('openid') && 'the openid scope is required',
+      ].filter(Boolean);
+      if (problems.length > 0) {
+        throw new Error(`the fake core refuses this authorization request: ${problems.join(', ')}`);
+      }
+      const code = random('code');
+      const sid = random('sid');
+      codes.set(code, {
+        sub,
+        sid,
+        nonce: given.get('nonce'),
+        challenge: given.get('code_challenge') ?? '',
+        redirectUri,
+        scope,
+        roles: options.roles ?? [],
+        used: false,
+      });
+      sessionOf.set(sub, sid);
+      if (!people.has(sub)) people.set(sub, { sub, name: sub, picture: null, active: true });
+      const back = new URL(redirectUri);
+      back.searchParams.set('code', code);
+      const state = given.get('state');
+      if (state) back.searchParams.set('state', state);
+      back.searchParams.set('iss', url);
+      return back.toString();
+    },
+    sessionIdOf: (sub) => sessionOf.get(sub),
+    async logoutToken(who, { wrong } = {}) {
+      const issued = Math.floor(now() / 1000);
+      const claims: Record<string, unknown> = {
+        events: { 'http://schemas.openid.net/event/backchannel-logout': {} },
+      };
+      if (who.sub && wrong !== 'no-subject') claims.sub = who.sub;
+      if (who.sid && wrong !== 'no-subject') claims.sid = who.sid;
+      if (wrong === 'no-subject') delete claims.sub;
+      if (wrong === 'event') claims.events = {};
+      if (wrong === 'nonce') claims.nonce = 'a-nonce';
+      let jwt = new SignJWT(claims)
+        .setProtectedHeader({
+          alg: 'EdDSA',
+          kid: 'fake-1',
+          typ: wrong === 'type' ? 'JWT' : 'logout+jwt',
+        })
+        .setIssuer(wrong === 'issuer' ? 'https://elsewhere.test' : url)
+        .setAudience(wrong === 'audience' ? 'another-app' : credentials.clientId)
+        .setIssuedAt(wrong === 'future' ? issued + 3600 : issued)
+        .setExpirationTime(wrong === 'expired' ? issued - 10 : issued + 120);
+      if (wrong !== 'no-jti') jwt = jwt.setJti(random('jti'));
+      if (wrong === 'signature') {
+        const other = await generateKeyPair('EdDSA');
+        return jwt.sign(other.privateKey);
+      }
+      return jwt.sign((await keys()).privateKey);
+    },
     revoke(sub) {
       for (const [token, other] of refreshTokens)
         if (other.sub === sub) refreshTokens.delete(token);
@@ -388,6 +581,38 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
     },
     get seen() {
       return { requests: [...requests], ...seen };
+    },
+  };
+}
+
+/**
+ * A session store for an app's tests (sdk §9.1): records in memory, with the expiry the contract asks for. An app's own is a
+ * database table or a cache; this is only for tests.
+ */
+export function memorySessionStore(now: () => number = () => Date.now()): SessionStore {
+  const records = new Map<string, { record: StoredRecord; expiresAt: number }>();
+  return {
+    get(id) {
+      const found = records.get(id);
+      if (!found || found.expiresAt <= now()) return undefined;
+      return found.record;
+    },
+    set(id, record, expiresAt) {
+      records.set(id, { record, expiresAt });
+    },
+    delete(id) {
+      records.delete(id);
+    },
+    deleteMatching({ sub, sid }) {
+      for (const [id, { record }] of records) {
+        if (record.kind !== 'session') continue;
+        if (
+          (sid !== undefined && record.sid === sid) ||
+          (sid === undefined && sub !== undefined && record.sub === sub)
+        ) {
+          records.delete(id);
+        }
+      }
     },
   };
 }

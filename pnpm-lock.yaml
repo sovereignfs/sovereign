@@ -445,6 +445,12 @@ importers:
       '@sovereignfs/config':
         specifier: workspace:*
         version: link:../config
+      jose:
+        specifier: ^6.2.13
+        version: 6.2.13
+      openid-client:
+        specifier: ^6.8.8
+        version: 6.8.8
     devDependencies:
       '@sovereignfs/tsconfig':
         specifier: workspace:*
@@ -452,6 +458,15 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.2
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.3.0
+      next:
+        specifier: 'catalog:'
+        version: 16.4.3(@babel/core@7.29.7)(@playwright/test@1.64.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      react:
+        specifier: 'catalog:'
+        version: 19.3.1
       tsup:
         specifier: 'catalog:'
         version: 9.0.0(jiti@2.7.0)(postcss@8.5.23)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1)

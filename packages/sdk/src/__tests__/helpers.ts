@@ -78,7 +78,7 @@ export function checkedAgainstContract(inner: typeof fetch): typeof fetch {
 }
 
 /** A clock a test moves: sleeping moves it, so no test waits for real. */
-export function clock(start = 1_700_000_000_000) {
+export function clock(start = Date.now()) {
   const state = { time: start, slept: [] as number[] };
   const environment: Environment = {
     now: () => state.time,

@@ -1,9 +1,9 @@
 # Sovereign SDK — specification
 
-|            |                                                                                     |
-| ---------- | ----------------------------------------------------------------------------------- |
-| **Status** | Draft. §2 to §8 and §11 are built; the rest is not yet ([epic 14](../epics/sdk.md)) |
-| **Covers** | `@sovereignfs/sdk`                                                                  |
+|            |                                                                                                     |
+| ---------- | --------------------------------------------------------------------------------------------------- |
+| **Status** | Draft. §2 to §9 and §11 are built; publishing and the rest are not yet ([epic 14](../epics/sdk.md)) |
+| **Covers** | `@sovereignfs/sdk`                                                                                  |
 
 This document is the single source of truth for what the SDK does. Where code, another document or an issue disagrees with it,
 this document wins until it is changed.
@@ -137,13 +137,14 @@ A refresh token is a credential, and an app SHOULD keep it encrypted (its own fi
 
 Core can be down, slow or refusing, and an app MUST stay up. So every call can fail, and a failure is an error of one of these types:
 
-| Error                  | When                                                                    |
-| ---------------------- | ----------------------------------------------------------------------- |
-| `CoreApiError`         | Core answered with a failure. It carries `status`, `code` and `message` |
-| `CoreUnavailableError` | No usable answer: a network failure, a timeout, or a `5xx`              |
-| `SessionEndedError`    | This person's token cannot be renewed. They must sign in again          |
-| `NotSupportedError`    | This instance's core does not offer the capability (§7)                 |
-| `ConfigurationError`   | The client was created wrongly (§2)                                     |
+| Error                   | When                                                                    |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `CoreApiError`          | Core answered with a failure. It carries `status`, `code` and `message` |
+| `CoreUnavailableError`  | No usable answer: a network failure, a timeout, or a `5xx`              |
+| `SessionEndedError`     | This person's token cannot be renewed. They must sign in again          |
+| `NotSupportedError`     | This instance's core does not offer the capability (§7)                 |
+| `NotAuthenticatedError` | There is no session, and the call needed one (§9)                       |
+| `ConfigurationError`    | The client was created wrongly (§2)                                     |
 
 Each is an instance of `SovereignError`.
 
@@ -205,16 +206,57 @@ The SDK signs people in through core with an established OpenID Connect client, 
 | `sv.auth.signOut`                 | Ends the app's session, and returns the address of core's end-session endpoint |
 | `sv.auth.handleBackChannelLogout` | Verifies a logout token and ends the sessions it names                         |
 
-- These are framework-neutral and take a request and a session store from the app. `@sovereignfs/sdk/next` binds them to Next.js:
-  cookies, route handlers and redirects. `next` is an optional peer dependency, and nothing else needs it.
+- These are framework-neutral: they take a web-standard `Request` and return data and `Set-Cookie` values, and need a **session
+  store** from the app (§9.1). `@sovereignfs/sdk/next` binds them to Next.js: cookies, route handlers and redirects. `next` is an
+  optional peer dependency, and nothing else needs it.
 - A session holds the person's `sub` and the claims of the scopes granted. An app MUST identify a person by `sub`, which is stable.
 - `getSession` MUST NOT call core on every request. An app's session is its own, and it ends when its back-channel logout arrives or
   its tokens stop working.
 - A logout token MUST be verified as [core-app §3.6.5](core-app.md) describes, and refused if its signature, issuer, audience, age or
   event is wrong, or if it carries a `nonce`.
 - An app's session cookie MUST be host-only, with the `__Host-` prefix over https, for the reason in [core-app §3.5](core-app.md).
-- Changing a password, listing sessions and revoking them are core's own pages. The SDK offers an address to them, and no call.
+- Changing a password, listing sessions and revoking them are core's own pages. The SDK offers an address to them (`sv.links`), and no
+  call.
 - `roles` is available to trusted apps only. The SDK offers `hasRole(session, role)`. An app's own permissions are its own.
+
+### 9.1 What the app provides, and what the SDK does with it
+
+The app gives `createSovereign` a `sessionStore` (the app owns its data; the SDK ships none outside `/testing`):
+
+```ts
+interface SessionStore {
+  get(id: string): Promise<StoredRecord | undefined>;
+  set(id: string, record: StoredRecord, expiresAt: number): Promise<void>;
+  delete(id: string): Promise<void>;
+  /** Removes every session of a person (`sub`), or the ones of one core session (`sid`). */
+  deleteMatching(match: { sub?: string; sid?: string }): Promise<void>;
+}
+```
+
+A record is `{ kind: 'session' | 'pending' | 'seen', sub?, sid?, data }`, which the store keeps as it is. A store MUST NOT return a record
+after its `expiresAt`.
+
+- `beginSignIn({ returnTo? })` makes the PKCE `S256` verifier, `state` and `nonce`, keeps them in the store as a `pending` record that
+  lives ten minutes, and returns the address to send the person to and the cookie (`__Host-sv_signin`) that names the record. `returnTo`
+  is a path on the app, and anything else is ignored.
+- `completeSignIn(request)` finds the pending record from the cookie, deletes it (a callback can be used once), exchanges the code
+  with the app's secret, checks the ID token (signature, issuer, audience, `nonce`) and `state`, and makes the session: a `session`
+  record, a new random id in the cookie (`__Host-sv_session`), thirty days at most. If the app holds a token store and core gave a
+  refresh token, the SDK stores it for the person (§5.1). It returns the session and where to go next.
+- `getSession(request)` reads the cookie and the store, and makes no call to core. `requireSession` throws `NotAuthenticatedError`.
+- `signOut(request)` deletes the app's session and clears the cookie, and returns core's end-session address with the `id_token_hint`
+  and the app's `post_logout_redirect_uri`, which the app MUST have registered. It ends the app's session even if the person never
+  returns from core.
+- `handleBackChannelLogout(request)` takes a `POST` with a `logout_token` and ends the sessions it names (`deleteMatching`). It
+  answers `200`, and `400` for a token it refuses, saying nothing of why beyond `invalid_request`. A token is refused unless its
+  header `typ` is `logout+jwt`, its signature checks against core's published keys, its `iss` is this core and its `aud` includes this
+  app, it is not issued in the future and has not expired, its `events` carry the back-channel logout event, it carries a `jti`, it
+  names a `sub` or a `sid`, and it carries no `nonce`. A `jti` seen before is refused.
+- The session cookie is `HttpOnly; Secure; SameSite=Lax; Path=/` with no `Domain` and the `__Host-` prefix over https. Over `http`
+  (a development instance) it has no `Secure` and no prefix, since a browser would refuse the prefix.
+- `sv.links` has the addresses of core's own pages for a person: `profile`, `security`, `preferences`, `connectedApps` and
+  `deleteAccount`.
+- `hasRole(session, role)` is true when the `roles` claim has `role`. An app that was not given `roles` has none.
 
 ---
 
@@ -297,3 +339,4 @@ of its own; an app catalogue.
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-10-30 | First draft. Scope, app tokens and explicit actors were decided in discussion.                                                                                                              |
 | 2026-10-30 | §5.1: the token store's `write` says whether it stored, and an optional `lock` closes the window between processes, which a conditional update cannot. §14: what two processes can promise. |
+| 2026-10-30 | §9.1: the session store the app provides, what each function does with it, how a logout token is refused, the cookie, `sv.links`.                                                           |

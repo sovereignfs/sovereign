@@ -247,6 +247,18 @@ pointing here.
   seconds, and a version check never stops a call. Nothing is logged but the operation,
   status and duration. The fake core (`/testing`) is held to the contract by the SDK's
   own tests.
+- **The SDK's sign-in keeps its state in the app's store and trusts nothing it was not
+  given** (`packages/sdk/src/auth.ts`, sdk §9.1). A sign-in's verifier, `state` and
+  `nonce` are a `pending` record named by an unguessable cookie and deleted the first
+  time a callback uses it, ten minutes at most; the callback is read at the app's
+  public address, never the one a proxy gave the request, and only a path on the app
+  can be returned to. The session cookie is host-only (`__Host-`, `Secure`, `HttpOnly`,
+  no `Domain`) over https, and `getSession` never calls core. A logout token is refused
+  unless its `typ` is `logout+jwt`, its signature checks against core's published keys,
+  its issuer and audience are right, it is neither expired nor from the future, it
+  carries the back-channel event and a `jti` not seen before, names a `sub` or `sid`,
+  and has no `nonce`; it ends the one session its `sid` names, or every session of its
+  `sub`. Signing out is a `POST` in the Next adapter, so a page cannot cause it.
 - **`sovereign-admin` writes apps as the system actor, built in one place.**
   `systemActor()` (`src/clients/system-actor.ts`) is called by the command's entry
   point (`src/admin/main.ts`) and nowhere else; no route, page or action imports

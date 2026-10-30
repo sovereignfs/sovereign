@@ -5,7 +5,7 @@ How a JavaScript app's **server** talks to the Sovereign server it signs people 
 promises is in [`docs/specs/sdk.md`](../../docs/specs/sdk.md); the contract it never goes beyond is
 [`spec/core-api/openapi.yaml`](../../spec/core-api/openapi.yaml).
 
-> Not published yet. Signing in (`sv.auth`) and the Next.js adapter come next.
+> Not published yet.
 
 ```ts
 import { createSovereign } from '@sovereignfs/sdk';
@@ -28,7 +28,26 @@ const branding = await sv.instance.getBranding(); // public, so no actor
   `ConfigurationError`. Requests time out (5 seconds), safe ones are retried, and nothing logs a token or a person's details.
 - **Version support.** The SDK reads the instance document and raises `NotSupportedError` for a capability this core lacks,
   without sending the call.
+- **Signing in.** `sv.auth` signs people in through core with [`openid-client`](https://github.com/panva/openid-client) (PKCE `S256`,
+  `state`, `nonce`), keeps the sessions in a **session store** the app gives, and ends them on sign-out and on core's back-channel
+  logout notice, which it verifies (signature, issuer, audience, age, event, `jti`, and no `nonce`). The session cookie is host-only
+  (`__Host-`, `Secure`, `HttpOnly`) over https. `getSession` makes no call to core.
 - **Server only.** Importing it in a browser throws.
+
+## In Next.js
+
+```ts
+// app/auth/[action]/route.ts: /auth/login, /auth/callback, /auth/logout (POST) and /auth/backchannel-logout (POST)
+import { nextAuth } from '@sovereignfs/sdk/next';
+export const { GET, POST } = nextAuth(sv).handlers;
+
+// A Server Component:
+const session = await nextAuth(sv).requireSession('/notes'); // sends a person to sign in, and back
+```
+
+Register `https://notes.example.test/auth/callback` as the app's sign-in address, `https://notes.example.test/` as its address after
+sign-out, and `https://notes.example.test/auth/backchannel-logout` as its back-channel logout address. `next` is an optional peer
+dependency, and nothing outside `/next` needs it.
 
 ## Testing an app
 
@@ -49,7 +68,13 @@ const sv = createSovereign({
 await tokenStore.write('u1', core.signIn('u1'), undefined);
 
 core.fail({ kind: 'down' }); // or 'timeout', 'lost-answer', or { kind: 'status', status: 503 }
+
+// Signing in: the person agrees at core, and core can send a logout notice, wrong in any way you want to test.
+const back = core.authorize((await sv.auth.beginSignIn()).url, 'u1');
+const notice = await core.logoutToken({ sub: 'u1' }, { wrong: 'expired' });
 ```
+
+`memorySessionStore()` is a session store for tests.
 
 ## Licence
 

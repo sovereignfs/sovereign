@@ -66,3 +66,17 @@ export class NotSupportedError extends SovereignError {
     super(`This instance's core does not offer ${capability}.`);
   }
 }
+
+/** There is no session, and the call needed one (sdk §9). Send the person to sign in. */
+export class NotAuthenticatedError extends SovereignError {
+  override name = 'NotAuthenticatedError';
+
+  constructor() {
+    super('There is no signed-in person.');
+  }
+}
+
+/** A sign-in could not be completed: it was not one this app began, it ran out, or core refused it (sdk §9). The person starts again. */
+export class SignInError extends SovereignError {
+  override name = 'SignInError';
+}

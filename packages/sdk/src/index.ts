@@ -1,8 +1,12 @@
 export { createSovereign } from './sovereign';
+export { hasRole } from './session';
+export type { Session, SessionStore, StoredRecord } from './session';
+export type { Auth, Step } from './auth';
 export type {
   AppClient,
   DirectoryApi,
   InstanceApi,
+  Links,
   Person,
   PersonClient,
   Sovereign,
@@ -12,7 +16,9 @@ export {
   ConfigurationError,
   CoreApiError,
   CoreUnavailableError,
+  NotAuthenticatedError,
   NotSupportedError,
+  SignInError,
   SessionEndedError,
   SovereignError,
 } from './errors';

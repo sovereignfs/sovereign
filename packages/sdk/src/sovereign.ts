@@ -5,9 +5,11 @@ import {
   type InstanceBranding,
   type Operations,
 } from '@sovereignfs/api-client';
+import { Auth } from './auth';
 import { CoreApiError, ConfigurationError, SessionEndedError } from './errors';
 import { Instance } from './instance';
 import { readSettings, type SettingsSource } from './settings';
+import type { SessionStore } from './session';
 import { TokenManager, type ActorKey, type TokenStore } from './tokens';
 import { Transport, type Environment, type Logger } from './transport';
 
@@ -44,6 +46,15 @@ export interface InstanceApi {
   getBranding(): Promise<InstanceBranding>;
 }
 
+/** Addresses of core's own pages for a person, which the SDK offers and has no call for (sdk §9). */
+export interface Links {
+  readonly profile: string;
+  readonly security: string;
+  readonly preferences: string;
+  readonly connectedApps: string;
+  readonly deleteAccount: string;
+}
+
 export interface Sovereign {
   /** Calls made as this person, with their token. Needs a token store. */
   as(person: Person): PersonClient;
@@ -51,11 +62,25 @@ export interface Sovereign {
   readonly app: AppClient;
   /** Public calls. */
   readonly instance: InstanceApi;
+  /** Signing people in, their sessions, and signing out (sdk §9). Needs a session store. */
+  readonly auth: Auth;
+  /** Core's own pages for a person. */
+  readonly links: Links;
 }
 
 export type SovereignOptions = SettingsSource & {
   /** Where a person's refresh token is kept (sdk §5.1). Needed to call as a person. */
   tokenStore?: TokenStore;
+  /** Where the app's sessions are kept (sdk §9.1). Needed to sign people in. */
+  sessionStore?: SessionStore;
+  /** What the app asks to see when it signs a person in. `openid profile email offline_access` unless changed. */
+  scopes?: string[];
+  /** The app's callback path, which must be registered with core. `/auth/callback` unless changed. */
+  redirectPath?: string;
+  /** Where core returns a person after they sign out, which must be registered with core. `/` unless changed. */
+  postLogoutPath?: string;
+  /** How long a session lasts at most, in seconds. Thirty days unless changed. */
+  sessionSeconds?: number;
   /** Each request's timeout. 5 seconds unless changed. */
   timeoutMs?: number;
   /** Told the operation, status and duration of each request, and nothing else. */
@@ -93,6 +118,8 @@ export function createSovereign(options: SovereignOptions): Sovereign {
     store: options.tokenStore,
   });
   const instance = new Instance(transport, settings.coreUrl);
+  let auth: Auth | undefined;
+  const pageOf = (path: string) => new URL(path, settings.coreUrl).toString();
 
   /** One call to core as an actor, or as nobody, with the specification's rules for tokens, failure and version support. */
   async function execute<K extends Name>(
@@ -157,6 +184,34 @@ export function createSovereign(options: SovereignOptions): Sovereign {
       return { directory: directory({ kind: 'person', sub: person.sub }) };
     },
     app: {},
+    get auth() {
+      if (!options.sessionStore) {
+        throw new ConfigurationError(
+          'Signing people in needs a session store: pass sessionStore when creating the client.',
+        );
+      }
+      auth ??= new Auth({
+        appUrl: settings.appUrl,
+        coreUrl: settings.coreUrl,
+        clientId: settings.clientId,
+        clientSecret: settings.clientSecret,
+        transport,
+        sessionStore: options.sessionStore,
+        tokenStore: options.tokenStore,
+        scopes: options.scopes ?? ['openid', 'profile', 'email', 'offline_access'],
+        redirectPath: options.redirectPath ?? '/auth/callback',
+        postLogoutPath: options.postLogoutPath ?? '/',
+        sessionSeconds: options.sessionSeconds,
+      });
+      return auth;
+    },
+    links: {
+      profile: pageOf('/profile'),
+      security: pageOf('/security'),
+      preferences: pageOf('/preferences'),
+      connectedApps: pageOf('/connected-apps'),
+      deleteAccount: pageOf('/delete-account'),
+    },
     instance: {
       getBranding: () => instance.branding(transport.deadline()),
     },

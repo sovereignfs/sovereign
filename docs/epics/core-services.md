@@ -155,7 +155,7 @@ exists, and account-deletion fan-out is task 14.6, since it needs its own design
 - No HTML, header or recipient of the app's choosing reaches the mail server
 - The security check is run
 
-#### 📋 15.7 — Activity: build
+#### ✅ 15.7 — Activity: build
 
 **Goal:** An app with the app scope `activity:write` can record what it did for a person, and the person can read and delete it.
 

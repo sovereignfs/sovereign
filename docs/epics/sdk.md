@@ -65,7 +65,7 @@ are added when core's Phase 2 specifies them.
 - The browser entry throws
 - No token reaches a log
 
-#### 📋 14.3 — Signing in, and the Next.js adapter
+#### ✅ 14.3 — Signing in, and the Next.js adapter
 
 **Goal:** An app's sign-in, session and sign-out are a few lines.
 

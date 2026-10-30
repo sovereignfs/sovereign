@@ -59,6 +59,13 @@ export function appFromForm(form: FormData): UpdateInput & { name: string } {
     backchannelLogoutUri: text(form.get('backchannelLogoutUri')).trim(),
     endSession: on(form.get('endSession')),
     scopes: form.getAll('scope').map(String),
+    // Only a confidential app's form has the choice: no field is no change.
+    ...(text(form.get('secretIn')) !== ''
+      ? { secretIn: text(form.get('secretIn')) as 'header' | 'body' }
+      : {}),
+    ...(text(form.get('idTokenAlgorithm')) !== ''
+      ? { idTokenAlgorithm: text(form.get('idTokenAlgorithm')) as 'EdDSA' | 'RS256' }
+      : {}),
     trusted: on(form.get('trusted')),
     launcher: {
       description: text(form.get('description')),
@@ -88,6 +95,8 @@ const FIELD_OF: Record<string, string> = {
   postLogoutRedirectUris: 'postLogoutRedirectUris',
   backchannelLogoutUri: 'backchannelLogoutUri',
   scopes: 'scope',
+  secretIn: 'secretIn',
+  idTokenAlgorithm: 'idTokenAlgorithm',
   trusted: 'trusted',
   endSession: 'endSession',
   'launcher.description': 'description',
@@ -103,6 +112,8 @@ const LABEL_OF: Record<string, string> = {
   postLogoutRedirectUris: 'The addresses after sign-out',
   backchannelLogoutUri: 'The logout notice address',
   scopes: 'What the app may see',
+  secretIn: 'How the app sends its secret',
+  idTokenAlgorithm: 'How tokens are signed',
   'launcher.description': 'The description',
   'launcher.icon': 'The icon address',
   'launcher.launchUrl': 'The launch address',

@@ -548,14 +548,25 @@ passkeys), subject to §3.2.1. The account holder is told by email.
 - Clients are registered by operators only; dynamic client registration is
   off.
 - A confidential client authenticates at the token endpoint with HTTP Basic
-  (`client_secret_basic`) only. Discovery lists the methods the provider knows,
-  but a client is registered for one, and a request that uses another (a secret
-  in the body, or none) is refused with `invalid_client`. A public client uses
-  none, and PKCE.
+  (`client_secret_basic`) or, when an operator has chosen it for that app, with
+  its secret in the request body (`client_secret_post`; §3.7.1). Discovery lists
+  the methods the provider knows, but a client is registered for one, and a
+  request that uses another (the other method, or none) is refused with
+  `invalid_client`. A public client uses none, and PKCE.
 - Redirect URIs and post-logout redirect URIs match exactly.
 - ID tokens are signed (EdDSA) with keys published at the JWKS endpoint. The
   signing keys rotate every 90 days; the previous key stays published for a
   30-day grace period so tokens already issued keep verifying.
+- An app that cannot verify EdDSA can be set to **RS256** (§3.7.1). Its ID
+  tokens, from the authorization-code and the refresh grants alike, are then
+  RS256 with an `at_hash` computed for that algorithm; every other app is
+  unchanged. The RSA key is published at the JWKS endpoint as soon as an app is
+  set to RS256 (and whenever the key set is read while one is), not when its
+  first token is issued, since an app reads the key set before any token
+  exists. The key is published as an RSA key only, with no curve. It rotates
+  like the other key. Discovery then lists both algorithms. Access tokens (the
+  Directory API, §3.9) and logout tokens (§3.6.5) stay EdDSA, so an RS256 app
+  that also takes a back-channel logout cannot verify its notices.
 - Only an operator can register a client: creating, changing and listing them
   needs the `client:manage` capability in the matrix in force, and every client
   belongs to the instance, so any operator can manage any client. A client's
@@ -591,6 +602,14 @@ passkeys), subject to §3.2.1. The account holder is told by email.
 
 A client receives only the scopes it is allowed (§3.7) and the user has
 granted (§3.6.4).
+
+A scope core does not offer (one not in the table above, such as `groups`) is
+**ignored**, as OpenID Connect Core says an unrecognised scope SHOULD be: it is
+taken out of the request when it is made, so the sign-in and consent pages, the
+consent that is remembered and the token's `scope` never mention it, and the
+sign-in goes ahead with the scopes core knows. This holds for a refresh request
+too. A request with no `openid` is still refused, and a scope core offers but
+the app is not allowed behaves as it did.
 
 The claims of the granted scopes appear both in the **ID token** and at the
 userinfo endpoint, so an ordinary relying party can read them from either.
@@ -729,6 +748,8 @@ Operators with `client:manage` register clients in the Console.
 | Post-logout redirect URIs | Optional; the only addresses core returns a person to after sign-out                                                                                                                    |
 | Back-channel logout URI   | Optional. Core sends a signed logout notice there when a person's session ends (§3.6.5)                                                                                                 |
 | End-session               | Lets the app send people to core's sign-out (§3.6.5). On automatically when a post-logout redirect URI or a back-channel logout URI is set                                              |
+| Secret                    | Confidential apps only. Sent in a header (HTTP Basic; the default) or in the request body (§3.6.1). A public app has none. Changing it needs the app reconfigured.                      |
+| Token signature           | How ID tokens are signed: EdDSA (the default) or RS256, for an app that cannot verify EdDSA (§3.6.1). Either client type may choose it.                                                 |
 | Allowed scopes            | Any of §3.6.2; `roles` only when trusted                                                                                                                                                |
 | Trusted                   | Off by default                                                                                                                                                                          |
 | Enabled                   | On by default                                                                                                                                                                           |
@@ -1391,3 +1412,4 @@ apps) and §3.15 (image storage, secrets from files).
 | 2026-10-30 | §3.7.3, §3.7.4: `sovereign-admin` in the image, a managed key on clients, and a system actor for the registry, from RFC 0002. §3.15: the image ships it. §3.16: the operator CLI, not core, provisions apps' databases.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | 2026-10-30 | §3.6.1, §3.6.6, §3.7.1, §3.13.1: app tokens, with the client-credentials grant, for an app acting with no person present. §3.13: the instance document says what this core serves. Neither is built.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | 2026-10-30 | §3.6.1: a confidential client authenticates with HTTP Basic only, and a secret in the body is refused although discovery lists it (research 0002).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 2026-10-30 | §3.6.1, §3.6.2, §3.7.1: three compatibility settings from research 0002: a confidential app's secret in the request body, an ID-token algorithm of RS256 for chosen apps, and ignoring a scope core does not offer.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |

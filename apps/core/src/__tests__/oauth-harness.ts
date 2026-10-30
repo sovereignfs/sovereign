@@ -24,6 +24,8 @@ export type ClientOptions = {
   enableEndSession?: boolean;
   /** Where core tells the app that a session ended. */
   backchannelLogoutUri?: string;
+  /** How the app's ID tokens are signed (core-app §3.6.1). EdDSA unless said. */
+  idTokenAlgorithm?: 'EdDSA' | 'RS256';
 };
 
 let registryDatabase: Database | undefined;
@@ -56,6 +58,8 @@ export async function registerClient(
   const { client, secret } = await registryFor(auth).register(await actorOf(auth, owner), {
     name: options.name ?? 'Test app',
     type: options.authMethod === 'none' ? 'public' : 'confidential',
+    ...(options.authMethod === 'client_secret_post' ? { secretIn: 'body' as const } : {}),
+    ...(options.idTokenAlgorithm ? { idTokenAlgorithm: options.idTokenAlgorithm } : {}),
     redirectUris: options.redirectUris ?? [REDIRECT],
     // An untrusted app may not be allowed `roles` (core-app §3.6.4), so its default leaves it out.
     scopes: (
@@ -218,7 +222,8 @@ export function verifyJwt(token: string, jwks: readonly Jwk[]): Jwt {
   const key = jwks.find((candidate) => candidate.kid === header.kid);
   if (!key) throw new Error(`no published key for ${String(header.kid)}`);
   const valid = verify(
-    null,
+    // An RS256 token is checked as RSA with SHA-256; an EdDSA one has no digest to name.
+    header.alg === 'RS256' ? 'sha256' : null,
     Buffer.from(`${header64}.${payload64}`),
     createPublicKey({ key: key as never, format: 'jwk' }),
     Buffer.from(signature64, 'base64url'),

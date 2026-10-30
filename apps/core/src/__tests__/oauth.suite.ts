@@ -28,6 +28,7 @@ import {
   REFRESH_TOKEN_SECONDS,
 } from '../oauth/provider';
 import { SCOPE_COPY, readConsentRequest } from '../oauth/consent';
+import { rs256AccessTokenHash } from '../oauth/id-token-alg';
 import { signedQueryOf } from '../oauth/signed-query';
 import { secretOf, totp } from './totp';
 import { BASE_URL, Jar, PASSWORD, authSettings, call, makeAuth, signUp } from './auth-harness';
@@ -155,7 +156,8 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
       expect(config.grant_types_supported).toEqual(['authorization_code', 'refresh_token']);
       expect(config.response_types_supported).toEqual(['code']);
       expect(config.code_challenge_methods_supported).toEqual(['S256']);
-      expect(config.id_token_signing_alg_values_supported).toEqual(['EdDSA']);
+      // EdDSA first and for everyone; RS256 is for an app set to it (core-app §3.6.1).
+      expect(config.id_token_signing_alg_values_supported).toEqual(['EdDSA', 'RS256']);
     });
 
     it('lists the scopes and the claims core can give', async () => {
@@ -960,15 +962,99 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
       }
     });
 
-    it('refuses a scope core does not know', async () => {
-      const { auth, owner } = await instance();
-      const client = await registerClient(auth, owner);
-      const { code: issued, error } = await authorize(auth, owner, client, {
-        scope: 'openid admin',
-        challenge: pkce().challenge,
+    describe('a scope core does not offer', () => {
+      // `groups` is what an app asks for by default and core has none: it is ignored, as OpenID Connect Core says.
+      it('is ignored: the sign-in goes ahead with the scopes core knows', async () => {
+        const { auth, owner } = await instance();
+        const client = await registerClient(auth, owner);
+        const { tokens } = await signInTo(auth, owner, client, {
+          scope: 'openid profile groups email',
+        });
+        expect(tokens.status).toBe(200);
+        expect((tokens.body as Record<string, string>).scope).toBe('openid profile email');
+        const idToken = verifyJwt(String(tokens.body.id_token), await publishedKeys(auth));
+        expect(idToken.payload.email).toBeDefined();
       });
-      expect(issued).toBeUndefined();
-      expect(error).toBe('invalid_scope');
+
+      it('is ignored beside only openid', async () => {
+        const { auth, owner } = await instance();
+        const client = await registerClient(auth, owner);
+        const { tokens } = await signInTo(auth, owner, client, { scope: 'openid groups' });
+        expect((tokens.body as Record<string, string>).scope).toBe('openid');
+      });
+
+      it('is never shown to the person, signed into the request or remembered as consent', async () => {
+        const { auth, owner, person } = await instance();
+        const client = await registerClient(auth, owner, { trusted: false });
+        const { verifier, challenge } = pkce();
+        const { signed, url } = await asked(
+          auth,
+          person,
+          client,
+          'openid profile groups',
+          challenge,
+        );
+        expect(url.searchParams.get('scope')).toBe('openid profile');
+        expect((await readRequest(auth, signed))?.scopes).toEqual(['openid', 'profile']);
+
+        const reply = await answer(auth, person, signed, { accept: true });
+        const issued = new URL(String(reply.body.url)).searchParams.get('code') as string;
+        const tokens = await exchangeCode(auth, client, issued, verifier);
+        expect((tokens.body as Record<string, string>).scope).toBe('openid profile');
+
+        // Asking again, with the same scopes in a different dress, is not asked about again.
+        const again = await authorize(auth, person, client, {
+          scope: 'groups openid profile',
+          challenge: pkce().challenge,
+        });
+        expect(again.code).toBeDefined();
+      });
+
+      it('is ignored in a refresh too', async () => {
+        const { auth, owner } = await instance();
+        const client = await registerClient(auth, owner);
+        const { tokens } = await signInTo(auth, owner, client, {
+          scope: 'openid profile offline_access',
+        });
+        const renewed = await refresh(auth, client, String(tokens.body.refresh_token));
+        expect(renewed.status).toBe(200);
+        const named = await formPost(
+          auth,
+          '/oauth2/token',
+          {
+            grant_type: 'refresh_token',
+            refresh_token: String(renewed.body.refresh_token),
+            scope: 'openid profile groups',
+          },
+          client,
+        );
+        expect(named.status).toBe(200);
+        expect((named.body as Record<string, string>).scope).toBe('openid profile');
+      });
+
+      it('does not make a request without openid pass: it is refused, as before', async () => {
+        const { auth, owner } = await instance();
+        const client = await registerClient(auth, owner);
+        for (const scope of ['groups', 'profile groups', 'admin']) {
+          const { code: issued, error } = await authorize(auth, owner, client, {
+            scope,
+            challenge: pkce().challenge,
+          });
+          expect(issued, scope).toBeUndefined();
+          expect(error, scope).toBe('invalid_scope');
+        }
+      });
+
+      it('leaves a scope core offers but the client is not allowed refused, beside an ignored one', async () => {
+        const { auth, owner } = await instance();
+        const client = await registerClient(auth, owner, { scope: 'openid profile' });
+        const { code: issued, error } = await authorize(auth, owner, client, {
+          scope: 'openid email groups',
+          challenge: pkce().challenge,
+        });
+        expect(issued).toBeUndefined();
+        expect(error).toBe('invalid_scope');
+      });
     });
 
     it('gives an ordinary person’s role as it is, and never the owner’s', async () => {
@@ -977,6 +1063,71 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
       const tokens = await code(auth, person, client, 'openid roles');
       const claims = verifyJwt(String(tokens.id_token), await publishedKeys(auth)).payload;
       expect(claims.roles).toEqual(['platform:user']);
+    });
+  });
+
+  describe('an app set to sign its ID tokens as RS256', () => {
+    it('is given an RS256 ID token that verifies against a published RSA key', async () => {
+      const { auth, owner } = await instance();
+      const client = await registerClient(auth, owner, { idTokenAlgorithm: 'RS256' });
+      const { tokens } = await signInTo(auth, owner, client, { scope: 'openid profile email' });
+      expect(tokens.status).toBe(200);
+      const jwt = verifyJwt(String(tokens.body.id_token), await publishedKeys(auth));
+      expect(jwt.header.alg).toBe('RS256');
+      const key = (await publishedKeys(auth)).find((candidate) => candidate.kid === jwt.header.kid);
+      expect(key?.kty).toBe('RSA');
+    });
+
+    it('is given the same claims, with an at_hash for its own algorithm', async () => {
+      const { auth, owner } = await instance();
+      const plain = await registerClient(auth, owner);
+      const rs = await registerClient(auth, owner, { idTokenAlgorithm: 'RS256' });
+      const scope = 'openid profile email';
+      const before = (await signInTo(auth, owner, plain, { scope })).tokens.body;
+      const after = (await signInTo(auth, owner, rs, { scope })).tokens.body;
+      const keys = await publishedKeys(auth);
+      const eddsa = verifyJwt(String(before.id_token), keys);
+      const rsa = verifyJwt(String(after.id_token), keys);
+
+      expect(eddsa.header.alg).toBe('EdDSA');
+      expect(Object.keys(rsa.payload).sort()).toEqual(Object.keys(eddsa.payload).sort());
+      expect(rsa.payload).toMatchObject({
+        iss: eddsa.payload.iss,
+        aud: rs.clientId,
+        sub: eddsa.payload.sub,
+        nonce: 'nonce-1',
+        email: eddsa.payload.email,
+      });
+      expect(rsa.payload.at_hash).toBe(rs256AccessTokenHash(String(after.access_token)));
+      // The tokens that are not the ID token are the provider's, untouched.
+      expect(String(after.access_token)).not.toContain('.');
+      expect(after.scope).toBe(before.scope);
+      expect(after.expires_in).toBe(before.expires_in);
+    });
+
+    it('is given RS256 again when it refreshes, and an app not set to RS256 is not', async () => {
+      const { auth, owner } = await instance();
+      const plain = await registerClient(auth, owner);
+      const rs = await registerClient(auth, owner, { idTokenAlgorithm: 'RS256' });
+      const scope = 'openid profile offline_access';
+      const first = (await signInTo(auth, owner, rs, { scope })).tokens.body;
+      const renewed = await refresh(auth, rs, String(first.refresh_token));
+      expect(renewed.status).toBe(200);
+      const keys = await publishedKeys(auth);
+      expect(verifyJwt(String(renewed.body.id_token), keys).header.alg).toBe('RS256');
+
+      const other = (await signInTo(auth, owner, plain, { scope })).tokens.body;
+      const again = await refresh(auth, plain, String(other.refresh_token));
+      expect(verifyJwt(String(again.body.id_token), keys).header.alg).toBe('EdDSA');
+    });
+
+    it('does not change what userinfo or an access token for the Core API look like', async () => {
+      const { auth, owner } = await instance();
+      const client = await registerClient(auth, owner, { idTokenAlgorithm: 'RS256' });
+      const { tokens } = await signInTo(auth, owner, client, { scope: 'openid profile email' });
+      const info = await userInfo(auth, String(tokens.body.access_token));
+      expect(info.status).toBe(200);
+      expect(info.body.sub).toBeDefined();
     });
   });
 

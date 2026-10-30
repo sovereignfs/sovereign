@@ -2,6 +2,8 @@ import type { Database } from '@sovereignfs/database';
 import type { Auth } from '../auth/auth';
 import { can } from '../roles/capabilities';
 import { loadMatrix } from '../roles/matrix';
+import { parseMetadata } from '../oauth/client-metadata';
+import { ensureRs256Key, idTokenAlgorithmOf, type IdTokenAlgorithm } from '../oauth/id-token-alg';
 import { NAMES } from '../oauth/schema-names';
 import { urlListProblems, urlProblem, scopeProblems, textProblem, type Problem } from './validate';
 
@@ -11,6 +13,17 @@ export type ClientSettings = {
   name: string;
   /** Confidential has a secret; public has none. PKCE is required of both. */
   type: 'confidential' | 'public';
+  /**
+   * Where a confidential app puts its secret when it asks for tokens: in a header (HTTP Basic, the usual way) or in
+   * the request body. An app whose library can only do the second needs `body` (core-app §3.7.1). A public app has
+   * no secret, so it is always `header` here and cannot be given `body`.
+   */
+  secretIn: 'header' | 'body';
+  /**
+   * How the app's ID tokens are signed: EdDSA, or RS256 for an app whose library cannot verify EdDSA (core-app
+   * §3.6.1). Either kind of app may choose it.
+   */
+  idTokenAlgorithm: IdTokenAlgorithm;
   redirectUris: string[];
   postLogoutRedirectUris: string[];
   backchannelLogoutUri: string | undefined;
@@ -137,6 +150,7 @@ export class ClientRegistry {
     })) as { client_id: string; client_secret?: string };
 
     await this.#write(created.client_id, settings);
+    await this.#publishKeysFor(settings);
     const client = await this.get(actor, created.client_id);
     return { client, secret: settings.type === 'confidential' ? created.client_secret : undefined };
   }
@@ -156,6 +170,7 @@ export class ClientRegistry {
     }
     const settings = this.#settingsFor(before, input);
     await this.#write(clientId, settings);
+    await this.#publishKeysFor(settings);
     return this.get(actor, clientId);
   }
 
@@ -286,6 +301,16 @@ export class ClientRegistry {
     if (input.type !== undefined && input.type !== 'confidential' && input.type !== 'public') {
       problems.push({ field: 'type', message: 'is confidential or public' });
     }
+    const idTokenAlgorithm = input.idTokenAlgorithm ?? before?.idTokenAlgorithm ?? 'EdDSA';
+    if (idTokenAlgorithm !== 'EdDSA' && idTokenAlgorithm !== 'RS256') {
+      problems.push({ field: 'idTokenAlgorithm', message: 'is EdDSA or RS256' });
+    }
+    const secretIn = input.secretIn ?? before?.secretIn ?? 'header';
+    if (secretIn !== 'header' && secretIn !== 'body') {
+      problems.push({ field: 'secretIn', message: 'is a header or the request body' });
+    } else if (secretIn === 'body' && (input.type ?? before?.type ?? 'confidential') === 'public') {
+      problems.push({ field: 'secretIn', message: 'cannot be set: a public app has no secret' });
+    }
     if (problems.length > 0) {
       throw new ClientRegistryError(
         'invalid',
@@ -299,6 +324,8 @@ export class ClientRegistry {
     return {
       name: (name as string).trim(),
       type: input.type ?? before?.type ?? 'confidential',
+      secretIn,
+      idTokenAlgorithm,
       redirectUris: redirect.list,
       postLogoutRedirectUris,
       backchannelLogoutUri,
@@ -319,6 +346,11 @@ export class ClientRegistry {
     };
   }
 
+  /** An app set to RS256 needs the RSA key published before it signs anyone in, not when its first token is made. */
+  async #publishKeysFor(settings: ClientSettings): Promise<void> {
+    if (settings.idTokenAlgorithm === 'RS256') await ensureRs256Key(await this.#auth.$context);
+  }
+
   /** Writes settings that have passed `#settingsFor`, through the provider's adapter. */
   async #write(clientId: string, settings: ClientSettings): Promise<void> {
     await (
@@ -329,6 +361,13 @@ export class ClientRegistry {
       update: {
         name: settings.name,
         icon: settings.launcher.icon ?? null,
+        // The method the provider holds the client to at the token endpoint: it refuses any other (core-app §3.6.1).
+        tokenEndpointAuthMethod:
+          settings.type === 'public'
+            ? 'none'
+            : settings.secretIn === 'body'
+              ? 'client_secret_post'
+              : 'client_secret_basic',
         redirectUris: settings.redirectUris,
         postLogoutRedirectUris:
           settings.postLogoutRedirectUris.length > 0 ? settings.postLogoutRedirectUris : null,
@@ -344,6 +383,8 @@ export class ClientRegistry {
             launchUrl: settings.launcher.launchUrl ?? null,
             show: settings.launcher.show,
           },
+          // Kept only when it is not the default, so an app that never chose it has the metadata it always had.
+          ...(settings.idTokenAlgorithm === 'RS256' ? { idTokenAlgorithm: 'RS256' } : {}),
         },
         updatedAt: new Date(),
       },
@@ -359,6 +400,8 @@ export function clientView(row: ClientRow): ClientView {
     clientId: row.clientId,
     name: row.name ?? '',
     type: row.tokenEndpointAuthMethod === 'none' ? 'public' : 'confidential',
+    secretIn: row.tokenEndpointAuthMethod === 'client_secret_post' ? 'body' : 'header',
+    idTokenAlgorithm: idTokenAlgorithmOf(metadata),
     redirectUris: list(row.redirectUris),
     postLogoutRedirectUris: list(row.postLogoutRedirectUris),
     backchannelLogoutUri: blank(row.backchannelLogoutUri),
@@ -380,18 +423,3 @@ const blank = (value: unknown): string | undefined =>
   typeof value === 'string' && value !== '' ? value : undefined;
 
 const list = (value: unknown): string[] => (Array.isArray(value) ? value.map(String) : []);
-
-/** The provider stores an object as JSON text on SQLite; read either. */
-function parseMetadata(value: unknown): Record<string, unknown> {
-  let current = value;
-  for (let i = 0; i < 2 && typeof current === 'string'; i++) {
-    try {
-      current = JSON.parse(current);
-    } catch {
-      return {};
-    }
-  }
-  return current && typeof current === 'object' && !Array.isArray(current)
-    ? (current as Record<string, unknown>)
-    : {};
-}

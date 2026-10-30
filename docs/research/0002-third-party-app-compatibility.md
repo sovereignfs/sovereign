@@ -260,7 +260,10 @@ Of the other recommendations, the second is applied (the guide and §3.6.1 say w
 
 ## Effect on the spec and epics (applied 2026-10-30)
 
-- **Epic 12:** task 12.7's deliverables are exactly decisions 1 to 4.
+- **Epic 12:** task 12.7's deliverables are exactly decisions 1 to 4. They are built: the secret in the body and RS256 are per-app
+  settings, RS256 by re-signing the ID token after the token endpoint (better-auth signs every ID token with its primary key), and an
+  unknown scope is dropped from the authorization and refresh requests. All four were run against the same six apps on 2026-10-30: the
+  Django and PHP apps that could not connect now sign in, and the others sign in as before.
 - **RFC 0002:** its outcome points here for the RS256 question.
 - **`docs/specs/core-app.md`:** §3.6.1, §3.6.2 and §3.7.1 change first in task 12.7, before any code, as that task says. §3.6.1 already records today's
   Basic-only behaviour.

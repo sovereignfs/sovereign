@@ -160,7 +160,7 @@ acceptance, in [epic 13](operator-cli.md).
 - Each failure is traced to a cause, and either goes into 12.7 or is stated in the guide as a limit
 - Core's documents describe what an app needs, and do not depend on any one app
 
-#### 📋 12.7 — Compatibility settings
+#### ✅ 12.7 — Compatibility settings
 
 **Goal:** An ordinary app that 12.6 found could not connect can, without weakening anything for the others.
 

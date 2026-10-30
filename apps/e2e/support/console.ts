@@ -11,6 +11,10 @@ export type NewApp = {
   trusted?: boolean;
   postLogoutRedirectUri?: string;
   backchannelLogoutUri?: string;
+  /** Where the app puts its secret when it asks for tokens. In a header unless said. */
+  secretIn?: 'header' | 'body';
+  /** How the app's ID tokens are signed. EdDSA unless said. */
+  idTokenAlgorithm?: 'EdDSA' | 'RS256';
 };
 
 const SCOPE_LABEL: Record<string, string> = {
@@ -37,6 +41,12 @@ export async function registerApp(
   }
   if (app.backchannelLogoutUri) {
     await page.getByLabel('Back-channel logout address').fill(app.backchannelLogoutUri);
+  }
+  if (app.secretIn) {
+    await page.getByLabel('How the app sends its secret').selectOption(app.secretIn);
+  }
+  if (app.idTokenAlgorithm) {
+    await page.getByLabel('How tokens are signed').selectOption(app.idTokenAlgorithm);
   }
   // Trust first: the role scope is not offered to an app that is not trusted.
   if (app.trusted) await page.getByLabel('Trust this app').check();

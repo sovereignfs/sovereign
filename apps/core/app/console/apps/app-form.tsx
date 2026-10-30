@@ -27,6 +27,8 @@ export const NEW_APP: Pick<
   ClientView,
   | 'name'
   | 'type'
+  | 'secretIn'
+  | 'idTokenAlgorithm'
   | 'redirectUris'
   | 'postLogoutRedirectUris'
   | 'backchannelLogoutUri'
@@ -37,6 +39,8 @@ export const NEW_APP: Pick<
 > = {
   name: '',
   type: 'confidential',
+  secretIn: 'header',
+  idTokenAlgorithm: 'EdDSA',
   redirectUris: [],
   postLogoutRedirectUris: [],
   backchannelLogoutUri: undefined,
@@ -60,6 +64,8 @@ export function AppForm({ id, initial }: { id?: string; initial: Initial }) {
   const [icon, setIcon] = useState(initial.launcher.icon ?? '');
   const [show, setShow] = useState(initial.launcher.show);
   const [type, setType] = useState<string>(initial.type);
+  const [secretIn, setSecretIn] = useState<string>(initial.secretIn);
+  const [idTokenAlgorithm, setIdTokenAlgorithm] = useState<string>(initial.idTokenAlgorithm);
   const [redirectUris, setRedirectUris] = useState(initial.redirectUris.join('\n'));
   const [postLogout, setPostLogout] = useState(initial.postLogoutRedirectUris.join('\n'));
   const [backchannel, setBackchannel] = useState(initial.backchannelLogoutUri ?? '');
@@ -229,6 +235,42 @@ export function AppForm({ id, initial }: { id?: string; initial: Initial }) {
         trigger="Technical settings, for the people who build the app"
       >
         <div className={styles.technical}>
+          {type === 'confidential' ? (
+            <FormField
+              label="How the app sends its secret"
+              hint="Most apps send it in a header. Some libraries can only put it in the request body: if sign-in gets as far as the app and then fails with a message that mentions secret_post, choose that. The app’s own settings have to match whatever you choose here."
+              error={fields.secretIn}
+            >
+              {(field) => (
+                <Select
+                  {...field}
+                  name="secretIn"
+                  value={secretIn}
+                  onChange={(event) => setSecretIn(event.target.value)}
+                >
+                  <option value="header">In a header (the usual way)</option>
+                  <option value="body">In the request body</option>
+                </Select>
+              )}
+            </FormField>
+          ) : null}
+          <FormField
+            label="How tokens are signed"
+            hint="Most apps read the usual way. Some libraries can only read RSA signatures: if sign-in fails with a message about the algorithm or the key, choose RSA. Logout notices (the back-channel address below) are always signed the usual way, so an app that needs RSA cannot use them."
+            error={fields.idTokenAlgorithm}
+          >
+            {(field) => (
+              <Select
+                {...field}
+                name="idTokenAlgorithm"
+                value={idTokenAlgorithm}
+                onChange={(event) => setIdTokenAlgorithm(event.target.value)}
+              >
+                <option value="EdDSA">The usual way (EdDSA)</option>
+                <option value="RS256">RSA, for apps that cannot read the usual way (RS256)</option>
+              </Select>
+            )}
+          </FormField>
           <FormField
             label="Addresses after sign-out"
             hint="One per line. The only places core sends people back to after the app asks it to sign them out."

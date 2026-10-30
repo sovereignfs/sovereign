@@ -10,6 +10,8 @@ const view = (
   clientId: id,
   name: id,
   type: 'confidential',
+  secretIn: 'header',
+  idTokenAlgorithm: 'EdDSA',
   redirectUris: ['https://a.example/cb'],
   postLogoutRedirectUris: [],
   backchannelLogoutUri: undefined,

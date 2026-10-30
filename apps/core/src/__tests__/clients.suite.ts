@@ -22,6 +22,7 @@ import {
   exchangeCode,
   formPost,
   pkce,
+  publishedKeys,
   refresh,
   signInTo,
   userInfo,
@@ -125,6 +126,271 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
       // Nothing it returns later carries the secret.
       expect(JSON.stringify(await registry.get(asOwner, client.clientId))).not.toContain(secret);
       expect(JSON.stringify(await registry.list(asOwner))).not.toContain(secret);
+    });
+
+    it('has the app send its secret in a header unless said otherwise', async () => {
+      const { registry, asOwner } = await instance();
+      const { client } = await registry.register(asOwner, settings());
+      expect(client.secretIn).toBe('header');
+      expect((await rowOf(client.clientId))?.token_endpoint_auth_method).toBe(
+        'client_secret_basic',
+      );
+    });
+
+    it('makes an app that sends its secret in the request body, and changes it either way', async () => {
+      const { registry, asOwner } = await instance();
+      const { client } = await registry.register(asOwner, settings({ secretIn: 'body' }));
+      expect(client.secretIn).toBe('body');
+      expect((await rowOf(client.clientId))?.token_endpoint_auth_method).toBe('client_secret_post');
+
+      const back = await registry.update(asOwner, client.clientId, { secretIn: 'header' });
+      expect(back.secretIn).toBe('header');
+      expect((await rowOf(client.clientId))?.token_endpoint_auth_method).toBe(
+        'client_secret_basic',
+      );
+      const again = await registry.update(asOwner, client.clientId, { secretIn: 'body' });
+      expect(again.secretIn).toBe('body');
+      // Saving something else leaves the choice as it was.
+      expect((await registry.update(asOwner, client.clientId, { name: 'Notes 2' })).secretIn).toBe(
+        'body',
+      );
+    });
+
+    it('does not give a public app a way to send a secret it does not have', async () => {
+      const { registry, asOwner } = await instance();
+      const error = (await refused(() =>
+        registry.register(asOwner, settings({ type: 'public', secretIn: 'body' })),
+      )) as ClientRegistryError;
+      expect(error.problems.map((problem) => problem.field)).toEqual(['secretIn']);
+      expect(await clientCount()).toBe(0);
+
+      const pub = (await registry.register(asOwner, settings({ type: 'public' }))).client;
+      expect(pub.secretIn).toBe('header');
+      expect((await rowOf(pub.clientId))?.token_endpoint_auth_method).toBe('none');
+      expect(
+        (
+          (await refused(() =>
+            registry.update(asOwner, pub.clientId, { secretIn: 'body' }),
+          )) as ClientRegistryError
+        ).problems[0]?.field,
+      ).toBe('secretIn');
+      expect((await rowOf(pub.clientId))?.token_endpoint_auth_method).toBe('none');
+    });
+
+    it('refuses a value that is neither a header nor the body, beside its field', async () => {
+      const { registry, asOwner } = await instance();
+      const error = (await refused(() =>
+        registry.register(asOwner, settings({ secretIn: 'query' })),
+      )) as ClientRegistryError;
+      expect(error.problems[0]?.field).toBe('secretIn');
+      expect(await clientCount()).toBe(0);
+    });
+
+    describe('the token endpoint holds an app to the way it was registered', () => {
+      /** A fresh authorization code for the app, and the verifier that goes with it. */
+      const codeFor = async (
+        auth: Awaited<ReturnType<typeof instance>>['auth'],
+        owner: Awaited<ReturnType<typeof instance>>['owner'],
+        app: { clientId: string; secret: string | undefined },
+      ) => {
+        const { verifier, challenge } = pkce();
+        const issued = await authorize(auth, owner, app, { scope: 'openid profile', challenge });
+        return { code: String(issued.code), verifier };
+      };
+      const exchange = (
+        auth: Awaited<ReturnType<typeof instance>>['auth'],
+        app: { clientId: string; secret: string | undefined },
+        step: { code: string; verifier: string },
+        how: 'basic' | 'post',
+      ) =>
+        formPost(
+          auth,
+          '/oauth2/token',
+          {
+            grant_type: 'authorization_code',
+            code: step.code,
+            redirect_uri: REDIRECT,
+            code_verifier: step.verifier,
+          },
+          app,
+          how,
+        );
+
+      it('takes a secret in the body from an app registered for it, and not one in a header', async () => {
+        const { auth, registry, owner, asOwner } = await instance();
+        const made = await registry.register(
+          asOwner,
+          settings({ secretIn: 'body', trusted: true }),
+        );
+        const app = { clientId: made.client.clientId, secret: made.secret };
+
+        const inBody = await exchange(auth, app, await codeFor(auth, owner, app), 'post');
+        expect(inBody.status).toBe(200);
+        expect(inBody.body.id_token).toBeTruthy();
+
+        const inHeader = await exchange(auth, app, await codeFor(auth, owner, app), 'basic');
+        expect(inHeader.status).toBeGreaterThanOrEqual(400);
+        expect(inHeader.body.error).toBe('invalid_client');
+      });
+
+      it('takes a secret in a header from an app registered for that, and refuses one in the body', async () => {
+        const { auth, registry, owner, asOwner } = await instance();
+        const made = await registry.register(asOwner, settings({ trusted: true }));
+        const app = { clientId: made.client.clientId, secret: made.secret };
+
+        expect((await exchange(auth, app, await codeFor(auth, owner, app), 'basic')).status).toBe(
+          200,
+        );
+        const inBody = await exchange(auth, app, await codeFor(auth, owner, app), 'post');
+        expect(inBody.body.error).toBe('invalid_client');
+        expect(String(inBody.body.error_description)).toContain('client_secret_basic');
+      });
+
+      it('still wants the secret itself: a wrong one in the body is refused', async () => {
+        const { auth, registry, owner, asOwner } = await instance();
+        const made = await registry.register(
+          asOwner,
+          settings({ secretIn: 'body', trusted: true }),
+        );
+        const app = { clientId: made.client.clientId, secret: made.secret };
+        const wrong = await exchange(
+          auth,
+          { ...app, secret: 'not-the-secret' },
+          await codeFor(auth, owner, app),
+          'post',
+        );
+        expect(wrong.body.error).toBe('invalid_client');
+      });
+
+      it('moves with the choice: after a change, the old way is refused and the new one works', async () => {
+        const { auth, registry, owner, asOwner } = await instance();
+        const made = await registry.register(asOwner, settings({ trusted: true }));
+        const app = { clientId: made.client.clientId, secret: made.secret };
+        await registry.update(asOwner, app.clientId, { secretIn: 'body' });
+        expect(
+          (await exchange(auth, app, await codeFor(auth, owner, app), 'basic')).body.error,
+        ).toBe('invalid_client');
+        expect((await exchange(auth, app, await codeFor(auth, owner, app), 'post')).status).toBe(
+          200,
+        );
+      });
+    });
+
+    describe('how its tokens are signed', () => {
+      /** The kinds of key the instance publishes, as a relying party would read them. */
+      const kinds = async (auth: Awaited<ReturnType<typeof instance>>['auth']) =>
+        (await publishedKeys(auth)).map((key) => key.kty).sort();
+
+      it('is EdDSA unless said otherwise, and leaves the app’s metadata as it always was', async () => {
+        const { registry, asOwner } = await instance();
+        const { client } = await registry.register(asOwner, settings());
+        expect(client.idTokenAlgorithm).toBe('EdDSA');
+        expect(String((await rowOf(client.clientId))?.metadata)).not.toContain('idTokenAlgorithm');
+      });
+
+      it('can be RS256 for either kind of app, changed either way, and kept when something else is saved', async () => {
+        const { registry, asOwner } = await instance();
+        const { client } = await registry.register(
+          asOwner,
+          settings({ idTokenAlgorithm: 'RS256' }),
+        );
+        expect(client.idTokenAlgorithm).toBe('RS256');
+        const pub = await registry.register(
+          asOwner,
+          settings({ type: 'public', idTokenAlgorithm: 'RS256' }),
+        );
+        expect(pub.client.idTokenAlgorithm).toBe('RS256');
+
+        expect(
+          (await registry.update(asOwner, client.clientId, { name: 'Notes 2' })).idTokenAlgorithm,
+        ).toBe('RS256');
+        expect(
+          (await registry.update(asOwner, client.clientId, { idTokenAlgorithm: 'EdDSA' }))
+            .idTokenAlgorithm,
+        ).toBe('EdDSA');
+        expect(
+          (await registry.update(asOwner, client.clientId, { idTokenAlgorithm: 'RS256' }))
+            .idTokenAlgorithm,
+        ).toBe('RS256');
+      });
+
+      it('keeps the launcher entry beside it', async () => {
+        const { registry, asOwner } = await instance();
+        const { client } = await registry.register(
+          asOwner,
+          settings({
+            idTokenAlgorithm: 'RS256',
+            launcher: { description: 'Take notes', show: true },
+          }),
+        );
+        const again = await registry.get(asOwner, client.clientId);
+        expect(again.launcher.description).toBe('Take notes');
+        expect(again.idTokenAlgorithm).toBe('RS256');
+      });
+
+      it('refuses any other algorithm, beside its field, and makes nothing', async () => {
+        const { registry, asOwner } = await instance();
+        const error = (await refused(() =>
+          registry.register(asOwner, settings({ idTokenAlgorithm: 'none' })),
+        )) as ClientRegistryError;
+        expect(error.problems[0]?.field).toBe('idTokenAlgorithm');
+        expect(await clientCount()).toBe(0);
+      });
+
+      it('publishes the RSA key as soon as an app is set to it, before any token, and only then', async () => {
+        const { auth, registry, asOwner } = await instance();
+        await registry.register(asOwner, settings());
+        expect(await kinds(auth)).not.toContain('RSA');
+
+        await registry.register(asOwner, settings({ idTokenAlgorithm: 'RS256' }));
+        const keys = await publishedKeys(auth);
+        const rsa = keys.find((key) => key.kty === 'RSA');
+        expect(rsa).toMatchObject({ alg: 'RS256', kty: 'RSA', e: 'AQAB' });
+        expect(rsa?.kid).toBeTruthy();
+        // No curve on an RSA key, and the EdDSA key keeps its own.
+        expect(rsa && 'crv' in rsa).toBe(false);
+        expect(keys.find((key) => key.kty === 'OKP')?.crv).toBe('Ed25519');
+      });
+
+      it('is also made when an existing app is changed to it', async () => {
+        const { auth, registry, asOwner } = await instance();
+        const { client } = await registry.register(asOwner, settings());
+        await registry.update(asOwner, client.clientId, { idTokenAlgorithm: 'RS256' });
+        expect(await kinds(auth)).toContain('RSA');
+      });
+
+      it('is made again when the key set is read and the key is gone, for as long as an app needs it', async () => {
+        const { auth, registry, asOwner } = await instance();
+        await registry.register(asOwner, settings({ idTokenAlgorithm: 'RS256' }));
+        const first = (await publishedKeys(auth)).find((key) => key.kty === 'RSA')?.kid;
+        await db.run("delete from jwks where alg = 'RS256'");
+        const again = (await publishedKeys(auth)).find((key) => key.kty === 'RSA')?.kid;
+        expect(again).toBeTruthy();
+        expect(again).not.toBe(first);
+      });
+
+      it('is made again when it has expired, and the old one stays published through its grace', async () => {
+        const { auth, registry, asOwner } = await instance();
+        await registry.register(asOwner, settings({ idTokenAlgorithm: 'RS256' }));
+        const first = (await publishedKeys(auth)).find((key) => key.kty === 'RSA')?.kid;
+        const context = await auth.$context;
+        await context.adapter.update({
+          model: 'jwks',
+          where: [{ field: 'alg', value: 'RS256' }],
+          update: { expiresAt: new Date(Date.now() - 60_000) },
+        });
+        const kids = (await publishedKeys(auth))
+          .filter((key) => key.kty === 'RSA')
+          .map((key) => key.kid);
+        expect(kids).toHaveLength(2);
+        expect(kids).toContain(first);
+      });
+
+      it('never shows the RSA key while no app is set to it, so an instance that never chose it is as it was', async () => {
+        const { auth, registry, asOwner } = await instance();
+        await registry.register(asOwner, settings());
+        expect(await kinds(auth)).toEqual(['OKP']);
+      });
     });
 
     it('makes a public app with no secret', async () => {
@@ -696,7 +962,7 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
         .map(({ file }) => file);
       expect(writers).toEqual(['src/clients/registry.ts']);
       // Reading a client by the provider's adapter is allowed in these places (the consent page, the launcher's
-      // tiles, the registry and the guards); writing it is allowed in one.
+      // tiles, the registry, the guards and the step that signs an app's ID tokens); writing it is allowed in one.
       const readers = sources
         .filter(({ text }) => /model: 'oauthClient'/.test(text))
         .map(({ file }) => file)
@@ -706,6 +972,7 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
         'src/clients/launcher.ts',
         'src/clients/registry.ts',
         'src/oauth/guards.ts',
+        'src/oauth/id-token-alg.ts',
       ]);
     });
   });

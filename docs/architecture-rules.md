@@ -227,6 +227,13 @@ pointing here.
   turned off); the JWT plugin's own `/token`, which hands any session a signed
   JWT, is disabled. Claims are made by one function (`claimsFor`) for the ID token
   and userinfo alike and only from granted scopes.
+  An ID token's algorithm is applied in `src/oauth/id-token-alg.ts` alone: the
+  provider signs every ID token with its primary (EdDSA) key and cannot choose
+  per app, so an app set to RS256 has its token re-signed after the token
+  endpoint (with `at_hash` recomputed), and the RSA key is published when the app
+  is saved and whenever the key set is read. An access or logout token is never
+  re-signed. A scope core does not offer is dropped by `oauthGuards`
+  (`src/oauth/guards.ts`) before the provider reads the request, not refused.
 - **An operator's action on an account holds the role rules in the function, not
   in the page.** `AccountManager` (`src/accounts/manage.ts`) checks `user:manage`
   fresh, that the account exists, that it is not the actor's own, and `mayActOn`,

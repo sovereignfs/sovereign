@@ -8,14 +8,14 @@ and §3.7.
 
 Check these first. They are the places an app that says it supports "OAuth" may not fit.
 
-| Core needs                            | So the app must                                                                                               |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| The authorization code flow           | Use it. The implicit, password and client-credentials flows are not offered                                   |
-| PKCE with `S256`, for every app       | Send a `code_challenge`, even with a client secret. Many apps have PKCE off until a setting turns it on       |
-| ID tokens signed with EdDSA (Ed25519) | Verify EdDSA. Not every library can (below)                                                                   |
-| The client secret in a Basic header   | Send it as `client_secret_basic`. A secret in the request body is refused, though discovery lists that method |
-| A server of its own, or a native app  | Not call the token or userinfo endpoints from a web page: core sends no CORS headers, so a browser blocks it  |
-| `https` addresses                     | Have `https` sign-in and logout addresses. `http` is accepted only on `localhost` on a development instance   |
+| Core needs                            | So the app must                                                                                              |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| The authorization code flow           | Use it. The implicit, password and client-credentials flows are not offered                                  |
+| PKCE with `S256`, for every app       | Send a `code_challenge`, even with a client secret. Many apps have PKCE off until a setting turns it on      |
+| ID tokens signed with EdDSA (Ed25519) | Verify EdDSA, unless the app is set to RS256 in the Console. Not every library can (below)                   |
+| The client secret in a Basic header   | Send it as `client_secret_basic`, unless the app is set in the Console to send it in the request body        |
+| A server of its own, or a native app  | Not call the token or userinfo endpoints from a web page: core sends no CORS headers, so a browser blocks it |
+| `https` addresses                     | Have `https` sign-in and logout addresses. `http` is accepted only on `localhost` on a development instance  |
 
 An app that signs people in with plain OAuth 2.0, with no ID token, can read the same details from the userinfo endpoint.
 
@@ -23,15 +23,21 @@ Three of these decide whether an app can connect at all:
 
 - **The secret.** Many libraries send the secret in the request body by default. Core refuses that with
   `invalid_client: client registered for client_secret_basic cannot use client_secret_post`, because each app is registered for one
-  method and discovery's list is only what core knows. Look for a setting that sends it in a header. An app with none cannot connect yet.
+  method and discovery's list is only what core knows. Either look for a setting that sends it in a header, or open the app's
+  **Technical settings** in the Console and set **How the app sends its secret** to _In the request body_. Then give the app its secret
+  again if it asks, since the setting changes only what core accepts.
 - **EdDSA.** Some libraries choose how to check a token from the name of its algorithm, and treat a name they do not know as a
   shared-secret one. They never fetch core's keys, and fail. Some frameworks accept RS256 keys only: they read core's key set, keep
   the RSA keys, find none, and stop before the person is sent anywhere, with a vague error. Others can verify EdDSA but are not asked to unless a setting turns
   signature checking on, so an app can seem to work without ever checking the signature. If the app fails with a message about the
-  algorithm or the key, this is the likely cause.
+  algorithm or the key, this is the likely cause. In the Console's **Technical settings**, set **How tokens are signed** to _RSA, for apps
+  that cannot read the usual way (RS256)_. Core then signs that app's ID tokens with an RSA key it publishes with the other, and every other
+  app is unchanged. One limit: logout notices (a back-channel logout) are always signed the usual way, so an app that needs RS256 cannot
+  check them.
 - **PKCE.** It is often off by default. Turn it on and choose `S256`.
-- **Scopes.** Core refuses a request that names a scope it does not offer, such as `groups`, with `invalid_scope`, and the person sees
-  only a generic login error. Some apps ask for extra scopes by default. Set the app's scopes to the ones in the table below.
+- **Scopes.** Core ignores a scope it does not offer, such as `groups`, and signs the person in with the scopes it knows, so an app that
+  asks for extra ones by default needs no change. It cannot give what it does not offer: if the app needs that claim, the app has to do
+  without it or take it from a scope in the table below. A request that names no `openid` is still refused.
 
 ## Register the app
 
@@ -138,12 +144,12 @@ first. The contract is [`spec/core-api/openapi.yaml`](../spec/core-api/openapi.y
 | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Core shows its own error page, not the app                            | The sign-in address does not match exactly. Compare it with what the app sent, character by character                                                                                                |
 | Sign-in fails at once, with a PKCE error                              | The app is not sending a `code_challenge`, or it uses `plain`. The app may show only "403" or "login denied": the reason is in the address core sent back (`error_description`) and in the app's log |
-| The app says the signature or algorithm is wrong                      | The app cannot verify EdDSA, or is configured for another algorithm                                                                                                                                  |
+| The app says the signature or algorithm is wrong                      | The app cannot verify EdDSA (set **How tokens are signed** to RS256), or is configured for another algorithm                                                                                         |
 | The app fails before it sends the person to core, with a vague error  | It reads core's keys and keeps only RSA ones. Its own log says what it found missing                                                                                                                 |
-| `invalid_scope`                                                       | The app asks for a scope core does not offer. Narrow its scopes to the table above                                                                                                                   |
+| `invalid_scope`                                                       | The app asks for a scope core offers but the app is not allowed. Allow it in the Console, or narrow the app's scopes to the table above                                                              |
 | A generic profile or login error after the person signs in and agrees | The app needs a claim core does not send, most often `preferred_username`. Point its name or username setting at `name` or `email`                                                                   |
 | The app cannot verify core's certificate                              | The certificate comes from an authority the app does not trust. Many apps keep a store of their own, apart from the system's                                                                         |
 | The app says the issuer does not match                                | The issuer it was given has a path or a trailing slash, or `SV_URL` is not the address it used                                                                                                       |
-| The token request is refused                                          | A wrong or old secret, or the app sends it in the request body, not a Basic header (`cannot use client_secret_post`)                                                                                 |
+| The token request is refused                                          | A wrong or old secret, or the app sends it in the request body and is not set to (`cannot use client_secret_post`)                                                                                   |
 | A person sees no consent screen, or is asked again                    | **Trusted** apps do not ask. An app asking for a scope the person has not granted asks again                                                                                                         |
 | Signing out of core leaves the person in the app                      | No back-channel address, or core cannot reach it. Core's logs say so                                                                                                                                 |

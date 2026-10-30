@@ -66,6 +66,57 @@ describe('the form to add an app', () => {
     expect((screen.getByLabelText(/Kind of app/) as HTMLSelectElement).value).toBe('confidential');
   });
 
+  it('asks how the app sends its secret, in a header unless said, and sends the choice', async () => {
+    register.mockResolvedValue({ ok: true, message: 'ok', id: 'c1' });
+    render(<AppForm initial={NEW_APP} />);
+    const choice = screen.getByLabelText(/How the app sends its secret/) as HTMLSelectElement;
+    expect(choice.value).toBe('header');
+    expect(
+      within(choice).getByRole('option', { name: 'In a header (the usual way)' }),
+    ).toBeTruthy();
+    fireEvent.change(choice, { target: { value: 'body' } });
+    fillRequired();
+    fireEvent.click(screen.getByRole('button', { name: 'Add the app' }));
+    await waitFor(() => expect(register).toHaveBeenCalled());
+    expect(sent(register).get('secretIn')).toBe('body');
+  });
+
+  it('asks how tokens are signed, the usual way unless said, and sends the choice', async () => {
+    register.mockResolvedValue({ ok: true, message: 'ok', id: 'c1' });
+    render(<AppForm initial={NEW_APP} />);
+    const choice = screen.getByLabelText(/How tokens are signed/) as HTMLSelectElement;
+    expect(choice.value).toBe('EdDSA');
+    expect(within(choice).getByRole('option', { name: 'The usual way (EdDSA)' })).toBeTruthy();
+    fireEvent.change(choice, { target: { value: 'RS256' } });
+    fillRequired();
+    fireEvent.click(screen.getByRole('button', { name: 'Add the app' }));
+    await waitFor(() => expect(register).toHaveBeenCalled());
+    expect(sent(register).get('idTokenAlgorithm')).toBe('RS256');
+  });
+
+  it('asks how tokens are signed of an app that keeps no secret too', async () => {
+    register.mockResolvedValue({ ok: true, message: 'ok', id: 'c1' });
+    render(<AppForm initial={NEW_APP} />);
+    fireEvent.change(screen.getByLabelText(/Kind of app/), { target: { value: 'public' } });
+    expect(screen.getByLabelText(/How tokens are signed/)).toBeTruthy();
+  });
+
+  it('says what RSA gives up: logout notices are signed the usual way', () => {
+    render(<AppForm initial={NEW_APP} />);
+    expect(document.body.textContent).toMatch(/Logout notices .* always signed the usual way/);
+  });
+
+  it('does not ask for a secret’s place when the app keeps none', async () => {
+    register.mockResolvedValue({ ok: true, message: 'ok', id: 'c1' });
+    render(<AppForm initial={NEW_APP} />);
+    fireEvent.change(screen.getByLabelText(/Kind of app/), { target: { value: 'public' } });
+    expect(screen.queryByLabelText(/How the app sends its secret/)).toBeNull();
+    fillRequired();
+    fireEvent.click(screen.getByRole('button', { name: 'Add the app' }));
+    await waitFor(() => expect(register).toHaveBeenCalled());
+    expect(sent(register).get('secretIn')).toBeNull();
+  });
+
   it('sends what was typed and ticked', async () => {
     register.mockResolvedValue({ ok: true, message: 'The app is added.', id: 'c1' });
     render(<AppForm initial={NEW_APP} />);
@@ -198,6 +249,32 @@ describe('the form to change an app', () => {
     expect((screen.getByLabelText(/Look people up/) as HTMLInputElement).checked).toBe(true);
     expect((screen.getByLabelText(/Name and picture/) as HTMLInputElement).checked).toBe(false);
     expect(screen.queryByLabelText(/Kind of app/)).toBeNull();
+  });
+
+  it('starts from how the app sends its secret, and sends it back', async () => {
+    update.mockResolvedValue({ ok: true, message: 'The changes are saved.' });
+    render(<AppForm id="c1" initial={{ ...initial, secretIn: 'body' }} />);
+    const choice = screen.getByLabelText(/How the app sends its secret/) as HTMLSelectElement;
+    expect(choice.value).toBe('body');
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await screen.findByText('The changes are saved.');
+    expect(sent(update).get('secretIn')).toBe('body');
+  });
+
+  it('starts from how tokens are signed, and sends it back', async () => {
+    update.mockResolvedValue({ ok: true, message: 'The changes are saved.' });
+    render(<AppForm id="c1" initial={{ ...initial, idTokenAlgorithm: 'RS256' }} />);
+    expect((screen.getByLabelText(/How tokens are signed/) as HTMLSelectElement).value).toBe(
+      'RS256',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await screen.findByText('The changes are saved.');
+    expect(sent(update).get('idTokenAlgorithm')).toBe('RS256');
+  });
+
+  it('offers no secret place for an app that has no secret', () => {
+    render(<AppForm id="c1" initial={{ ...initial, type: 'public' }} />);
+    expect(screen.queryByLabelText(/How the app sends its secret/)).toBeNull();
   });
 
   it('sends the whole form for that app, and says it is saved without leaving the page', async () => {

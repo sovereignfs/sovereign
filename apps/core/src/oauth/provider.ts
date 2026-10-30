@@ -6,17 +6,14 @@ import { can } from '../roles/capabilities';
 import { loadMatrix } from '../roles/matrix';
 import { claimsFor, rolesClaim } from './claims';
 import { oauthGuards } from './guards';
+import { idTokenAlgorithm } from './id-token-alg';
+import { jwtOptionsFor } from './keys';
 import { isTrusted } from './trust';
 
-/** The scopes core knows (core-app §3.6.2). A client is allowed some of them; it can never ask for another. */
-export const OAUTH_SCOPES = [
-  'openid',
-  'profile',
-  'email',
-  'roles',
-  'directory',
-  'offline_access',
-] as const;
+import { OAUTH_SCOPES } from './scopes';
+
+// The list lives in scopes.ts, which the guards also read; it is exported from here as it always was.
+export { OAUTH_SCOPES };
 
 /** The claims discovery advertises (core-app §3.6.2). */
 const SUPPORTED_CLAIMS = [
@@ -47,9 +44,7 @@ export const coreApiResource = (origin: string): string => `${origin}/api/v1`;
 export const ID_TOKEN_SECONDS = 60 * 60;
 export const REFRESH_TOKEN_SECONDS = 30 * 24 * 60 * 60;
 
-/** Signing keys rotate every 90 days, and the old one stays published for 30 more (core-app §3.6.1). */
-export const KEY_ROTATION_SECONDS = 90 * 24 * 60 * 60;
-export const KEY_GRACE_SECONDS = 30 * 24 * 60 * 60;
+export { KEY_GRACE_SECONDS, KEY_ROTATION_SECONDS } from './keys';
 
 /**
  * Core's OpenID Connect provider (core-app §3.6) as better-auth plugins: the JWT plugin, which holds the
@@ -69,16 +64,11 @@ export const KEY_GRACE_SECONDS = 30 * 24 * 60 * 60;
  */
 export function oidcPlugins(database: Database, settings: AuthSettings) {
   const issuer = new URL(settings.baseUrl).origin;
+  const jwtOptions = jwtOptionsFor(issuer);
   return [
     oauthGuards(),
-    jwt({
-      jwks: {
-        keyPairConfig: { alg: 'EdDSA', crv: 'Ed25519' },
-        rotationInterval: KEY_ROTATION_SECONDS,
-        gracePeriod: KEY_GRACE_SECONDS,
-      },
-      jwt: { issuer },
-    }),
+    jwt(jwtOptions),
+    idTokenAlgorithm(jwtOptions),
     oauthProvider({
       loginPage: '/sign-in',
       consentPage: '/consent',

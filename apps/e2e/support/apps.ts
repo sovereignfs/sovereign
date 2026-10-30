@@ -16,7 +16,12 @@ import { CORE_URL, freshAddress, MINIMAL_PORT, RP_PORT, RP_URL } from './env';
  * What either one has seen is read with `GET /__last`.
  */
 
-export type RpSettings = { clientId: string; clientSecret: string };
+export type RpSettings = {
+  clientId: string;
+  clientSecret: string;
+  /** Where the app puts its secret when it asks for tokens. In a header (HTTP Basic) unless said. */
+  secretIn?: 'header' | 'body';
+};
 
 export type RpSeen = {
   claims?: JWTPayload;
@@ -80,7 +85,9 @@ function relyingParty(): Server {
       new URL(CORE_URL),
       settings.clientId,
       undefined,
-      oidc.ClientSecretBasic(settings.clientSecret),
+      settings.secretIn === 'body'
+        ? oidc.ClientSecretPost(settings.clientSecret)
+        : oidc.ClientSecretBasic(settings.clientSecret),
       { execute: [oidc.allowInsecureRequests] },
     );
     // The app's server asks from an address of its own: core limits the token endpoint for each address, and the

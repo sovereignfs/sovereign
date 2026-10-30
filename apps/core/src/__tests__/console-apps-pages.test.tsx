@@ -34,6 +34,8 @@ const app = (id: string, extra: Partial<ClientView> = {}): ClientView => ({
   clientId: id,
   name: `App ${id}`,
   type: 'confidential',
+  secretIn: 'header',
+  idTokenAlgorithm: 'EdDSA',
   redirectUris: ['https://a.example/cb'],
   postLogoutRedirectUris: [],
   backchannelLogoutUri: undefined,

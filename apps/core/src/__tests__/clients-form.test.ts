@@ -23,6 +23,58 @@ describe('lines of addresses', () => {
   });
 });
 
+describe('how the app sends its secret, on the form', () => {
+  it('is read when the form has the choice', () => {
+    const input = appFromForm(
+      form([
+        ['name', 'Notes'],
+        ['secretIn', 'body'],
+      ]),
+    );
+    expect(input.secretIn).toBe('body');
+    expect(
+      appFromForm(
+        form([
+          ['name', 'Notes'],
+          ['secretIn', 'header'],
+        ]),
+      ).secretIn,
+    ).toBe('header');
+  });
+
+  it('is left alone when the form has no choice: a public app’s form has none', () => {
+    expect('secretIn' in appFromForm(form([['name', 'Notes']]))).toBe(false);
+  });
+
+  it('is shown beside its own field, in plain words', () => {
+    expect(
+      fieldProblems([{ field: 'secretIn', message: 'cannot be set: a public app has no secret' }]),
+    ).toEqual({
+      secretIn: 'How the app sends its secret cannot be set: a public app has no secret.',
+    });
+  });
+});
+
+describe('how tokens are signed, on the form', () => {
+  it('is read when the form has the choice, and left alone when it does not', () => {
+    expect(
+      appFromForm(
+        form([
+          ['name', 'Notes'],
+          ['idTokenAlgorithm', 'RS256'],
+        ]),
+      ).idTokenAlgorithm,
+    ).toBe('RS256');
+    expect('idTokenAlgorithm' in appFromForm(form([['name', 'Notes']]))).toBe(false);
+  });
+
+  it('is shown beside its own field, in plain words', () => {
+    expect(fieldProblems([{ field: 'idTokenAlgorithm', message: 'is EdDSA or RS256' }])).toEqual({
+      idTokenAlgorithm: 'How tokens are signed is EdDSA or RS256.',
+    });
+  });
+});
+
 describe('what an app form sends, as the registry takes it', () => {
   it('sends every field, so a save sets the app to what the form showed', () => {
     const input = appFromForm(

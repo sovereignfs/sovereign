@@ -181,7 +181,7 @@ only of design-system parts.
 - A rule held only by review says so
 - It repeats no prop, which the types already define
 
-#### 📋 2.5 — Audit the public surface `[parallel]`
+#### ✅ 2.5 — Audit the public surface `[parallel]`
 
 **Goal:** Every export is either worth promising to apps or on its way out of the package.
 

@@ -1,6 +1,6 @@
 # Sovereign Core — Roadmap
 
-**Version:** 0.57.0 · **Last updated:** 2026-10-30
+**Version:** 0.58.0 · **Last updated:** 2026-10-30
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -148,7 +148,7 @@ be argued before anything is built.
 | Version | Priority | Task                                  | Status | Epic task                          |
 | ------- | -------- | ------------------------------------- | ------ | ---------------------------------- |
 | 0.50.0  | 1        | The specification                     | ✅     | [2.4](docs/epics/design-system.md) |
-| —       | 2        | Audit the public surface `[parallel]` | 📋     | [2.5](docs/epics/design-system.md) |
+| 0.58.0  | 2        | Audit the public surface `[parallel]` | 📋     | [2.5](docs/epics/design-system.md) |
 
 ### M8 — Apps have an SDK
 

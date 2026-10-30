@@ -835,10 +835,12 @@ sovereign-admin apps ensure KEY --name NAME --redirect URL ... [--post-logout UR
 sovereign-admin apps list [--json]
 sovereign-admin apps rotate-secret KEY [--json]
 sovereign-admin apps remove KEY
+sovereign-admin instance restored [--json]
 ```
 
 - **It goes through the registry.** Every rule of §3.7 applies, with the same
-  refusals, and it adds no second way to write a client.
+  refusals, and it adds no second way to write a client. (`instance restored` writes
+  no client: it records a restore, §4.4.)
 - **The managed key.** A client MAY have a key, which `ensure` uses to find it
   again on the next run. It is a DNS label, unique on the instance, set only here,
   and never shown to an app or a person using it. A client made in the Console
@@ -1597,7 +1599,17 @@ would be wrong about the keys.
   taken are back in the database as they were. So a restore records the time (`restored_at`, an instance setting, written by the
   restore itself), and from then on core refuses every session and token issued before it: people sign in again, and apps ask for tokens
   again. An account deleted after the backup is not recreated by this; apps are told of deletions again by the fan-out's own record (task
-  14.6). The restore is `sv restore`'s to make and core's to honour, and is built in task 15.8.
+  14.6). The restore is `sv restore`'s to make and core's to honour.
+- **How core honours it** (built). `sovereign-admin instance restored` (§3.7.4), which `sv restore` runs in core's container after the
+  database is back and before core starts for people, records `restored_at` and, in the same transaction, ends what the backup brought
+  back: it deletes every session and revokes every access and refresh token the provider keeps a row for. A signed access token and an
+  app's own token leave no row, so the Core API refuses any issued before `restored_at` (`authenticate`, `authenticateApp`), and a
+  person's token whose session opened before it. Consents stay, so a person signs in again and the apps they allowed are still allowed.
+  A token issued in the same second as the marker counts as before it, as it does for any revocation (§3.9). The marker only moves
+  forward: recording a time at or before the one held changes nothing and ends nothing, so running the last step of a restore twice does
+  not sign out the people who came back in between. The marker is in `instance_settings` under `instance.restored_at`, is not one of the
+  settings the Console shows, and nothing in core writes it but this command. Core's own pages ask the database for the session every
+  time (§3.3), so they need no check of their own: a session the command removed is gone.
 - **Core's Console shows nothing about backups.** An operator who wants to know the state of them asks `sv`.
 
 ---
@@ -1671,3 +1683,4 @@ would be wrong about the keys.
 | 2026-10-30 | §4.3, §4.4: activity (a person's own record of what apps did, recorded only by an app acting for itself, readable only by the person) and backups (core makes none of its own; `sv backup` is the one; a restore records a time before which sessions and tokens are refused) are specified. Not built.                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | 2026-10-31 | §4.2: mail for apps is built: the service and its two small tables, `sendEmail` served (the instance document lists `email` only while the instance can send mail, and the operation is a `404` without it), the app scope `email:send`, the mailer's app-message template and `List-Unsubscribe` header, the Preferences switches, and what Remove access, deleting an app and deleting an account take with them. The address is read only when a send is made and never leaves core.                                                                                                                                                                                                                                       |
 | 2026-10-31 | §4.3: activity is built: the service and its table, `logActivity` served (the instance document lists `activity`), the app scope `activity:write`, core's Activity page (all apps or one, delete one, one app's or all), and what Remove access, deleting an app and deleting an account take with them. Only the person reads it: no operator page, no call for an app.                                                                                                                                                                                                                                                                                                                                                      |
+| 2026-10-31 | §4.4, §3.7.4: the restore marker is built: `sovereign-admin instance restored` records `restored_at`, ends every session and every token the provider keeps a row for, and the Core API refuses any signed access token or app token issued before it. The marker only moves forward.                                                                                                                                                                                                                                                                                                                                                                                                                                         |

@@ -386,7 +386,11 @@ A backup MUST hold every database, each hosted app's data volumes, `state.json` 
 key alone, so that the server cannot read a backup it no longer should.
 
 `sv restore PATH` MUST need the operator's key, stop core and the hosted apps, restore everything, and start them, on the same
-server or a new one. To move to a new server: `sv backup`, `sv server bootstrap` on the new one, change `server.host`, and
+server or a new one. After the database is back and **before core is started for people**, it MUST run
+`sovereign-admin instance restored` in core's container (`docker compose run --rm core sovereign-admin instance restored`, since core
+is stopped) and MUST fail the restore if that command does not succeed: a backup brings back the sessions, consents and tokens that
+were ended after it was taken, and that command ends them again and records the time, so that core refuses any token issued before it
+([core-app §4.4](core-app.md)). Running it twice is harmless. To move to a new server: `sv backup`, `sv server bootstrap` on the new one, change `server.host`, and
 `sv restore`. There is no other command for it.
 
 A backup taken by a deployment (§6.1) stays on the server, under the same encryption.

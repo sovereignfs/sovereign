@@ -207,7 +207,8 @@ of it is built.
 
 **Deliverables:**
 
-- `sv backup` and `sv restore`: every database and the server's secrets, encrypted to the operator's key
+- `sv backup` and `sv restore`: every database and the server's secrets, encrypted to the operator's key. `sv restore` runs
+  `sovereign-admin instance restored` before core starts for people, and fails if it does not succeed (operator-cli §10.2)
 - `sv rollback`, refusing when core's version would go backward
 - A backup before any deployment that changes core or the database server
 

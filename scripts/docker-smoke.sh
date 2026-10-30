@@ -79,6 +79,9 @@ admin_smoke() {
   "${admin[@]}" rotate-secret smoke --json | grep -q '"secret":"' || fail "$name: no new secret"
   "${admin[@]}" remove smoke || fail "$name: the app could not be removed"
   [ "$("${admin[@]}" list --json)" = '[]' ] || fail "$name: the app is still listed"
+  # A restore is recorded once and only ever moves the marker forward (core-app §4.4).
+  docker compose "$@" exec -T core sovereign-admin instance restored --json 2>/dev/null | grep -q '"restoredAt":"' \
+    || fail "$name: sovereign-admin could not record a restore"
 }
 
 smoke "sqld" -f docker-compose.yml

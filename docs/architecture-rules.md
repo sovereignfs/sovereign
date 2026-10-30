@@ -240,6 +240,10 @@ pointing here.
   does; a link goes only to an `https` address on one of the app's own origins; text is plain. The Core API's person calls act on
   the calling app's own notifications only, and core's own panel route (`/api/notifications`) acts on the session's account and
   checks the request's origin. Remove access, deleting an app and deleting an account delete them in the same transaction.
+- **A restore is recorded once, only forward, and by one command** (`sovereign-admin instance restored`, `src/instance/restore.ts`,
+  core-app §4.4). It writes `instance.restored_at`, deletes every session and revokes every token row in one transaction; the Core API
+  refuses a signed access token or an app token issued at or before the marker. The marker is not one of the Console's settings, and a
+  time at or before the one held changes nothing and ends nothing.
 - **Activity is a person's own record, written by `ActivityService` alone and read for the person it is about and no one else**
   (`src/activity/service.ts`, core-app §4.3). An app records with its own token and `activity:write` and can read nothing; no operator
   page or route lists entries; the page and its actions use the session's account, never one from the request. A record about a person who

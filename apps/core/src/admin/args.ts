@@ -1,5 +1,6 @@
 /**
- * The command line of `sovereign-admin` (core-app §3.7.4): `apps ensure|list|rotate-secret|remove`. Parsing only, so it
+ * The command line of `sovereign-admin` (core-app §3.7.4, §4.4): `apps ensure|list|rotate-secret|remove` and
+ * `instance restored`. Parsing only, so it
  * can be tested without a database. A flag that takes several values takes every word after it up to the next flag,
  * and may also be given again.
  */
@@ -24,7 +25,8 @@ export type Command =
     }
   | { name: 'list'; json: boolean }
   | { name: 'rotate-secret'; key: string; json: boolean }
-  | { name: 'remove'; key: string };
+  | { name: 'remove'; key: string }
+  | { name: 'restored'; json: boolean };
 
 export class UsageError extends Error {
   override name = 'UsageError';
@@ -36,7 +38,8 @@ export const USAGE = `Usage:
                   [--launch-url URL] [--description TEXT] [--icon URL] [--json]
   sovereign-admin apps list [--json]
   sovereign-admin apps rotate-secret KEY [--json]
-  sovereign-admin apps remove KEY`;
+  sovereign-admin apps remove KEY
+  sovereign-admin instance restored [--json]`;
 
 const VALUE = new Set(['name', 'back-channel', 'launch-url', 'description', 'icon']);
 const LIST = new Set(['redirect', 'post-logout', 'scope', 'app-scope']);
@@ -95,7 +98,17 @@ function one(rest: string[], what: string): string {
 
 export function parse(argv: string[]): Command {
   const [group, verb, ...words] = argv;
-  if (group !== 'apps') throw new UsageError('the only group is apps');
+  if (group === 'instance') {
+    if (verb !== 'restored') {
+      throw new UsageError(
+        verb === undefined ? 'a command is needed' : `unknown instance command ${verb}`,
+      );
+    }
+    const { rest, flags } = flagsOf(words, JSON_ONLY);
+    if (rest.length > 0) throw new UsageError('restored takes no argument');
+    return { name: 'restored', json: flags.switches.has('json') };
+  }
+  if (group !== 'apps') throw new UsageError('the groups are apps and instance');
   switch (verb) {
     case 'ensure': {
       const { rest, flags } = flagsOf(words, ALL);

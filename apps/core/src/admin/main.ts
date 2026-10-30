@@ -3,6 +3,7 @@ import { getClientRegistry } from '../clients';
 import { systemActor } from '../clients/system-actor';
 import { getConfig, getDatabaseSettings } from '../config';
 import { getDatabase } from '../database';
+import { recordRestore } from '../instance/restore';
 import { runAdmin } from './run';
 
 /**
@@ -23,10 +24,16 @@ async function main(): Promise<number> {
   }
   const database = await getDatabase();
   try {
-    return await runAdmin(process.argv.slice(2), await getClientRegistry(), systemActor(), {
-      out: (line) => console.log(line),
-      log: (line) => console.error(line),
-    });
+    return await runAdmin(
+      process.argv.slice(2),
+      await getClientRegistry(),
+      systemActor(),
+      {
+        out: (line) => console.log(line),
+        log: (line) => console.error(line),
+      },
+      () => recordRestore(database),
+    );
   } finally {
     await database.close();
   }

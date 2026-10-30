@@ -5,6 +5,7 @@ import {
   type RegisterInput,
 } from '../clients/registry';
 import type { SystemActor } from '../clients/system-actor';
+import type { Restored } from '../instance/restore';
 import { parse, UsageError, USAGE, type Command } from './args';
 
 /** Where the command writes: what it answers on `out`, and a line for each write on `log`, never a secret. */
@@ -37,12 +38,16 @@ export function inputOf(app: Extract<Command, { name: 'ensure' }>['app']): Regis
 /**
  * Runs one command as the system actor and returns the exit code: 0 when it worked, 1 when core refused it (each
  * thing wrong, one to a line), 2 when the command line is wrong.
+ *
+ * `restore` records that the instance was restored from a backup (core-app §4.4). It is given only by the entry point, which has the
+ * database; a command that needs it and is not given it is a bug, not a usage error.
  */
 export async function runAdmin(
   argv: string[],
   registry: ClientRegistry,
   actor: SystemActor,
   { out, log }: Output,
+  restore?: () => Promise<Restored>,
 ): Promise<number> {
   let command: Command;
   try {
@@ -102,6 +107,21 @@ export async function runAdmin(
           command.json
             ? JSON.stringify({ key: command.key, clientId, secret })
             : `secret: ${secret}`,
+        );
+        return 0;
+      }
+      case 'restored': {
+        if (!restore) throw new Error('the restore marker was not given to sovereign-admin');
+        const { at, moved } = await restore();
+        log(
+          moved
+            ? 'sovereign-admin: recorded the restore; every session and token from before it is ended'
+            : 'sovereign-admin: the restore was already recorded at that time or later; nothing changed',
+        );
+        out(
+          command.json
+            ? JSON.stringify({ restoredAt: new Date(at).toISOString(), moved })
+            : `restored at: ${new Date(at).toISOString()}`,
         );
         return 0;
       }

@@ -1,6 +1,7 @@
 import type { Database } from '@sovereignfs/database';
 import { createLocalJWKSet, errors, jwtVerify, type JSONWebKeySet, type JWTPayload } from 'jose';
 import { NAMES } from '../oauth/schema-names';
+import { issuedBeforeRestore, openedBeforeRestore, restoredAt } from '../instance/restore';
 import { isAppTokenRevoked, isTokenRevoked } from '../oauth/revocation';
 import { storedList } from '../oauth/stored-list';
 import { ApiError } from './errors';
@@ -74,12 +75,26 @@ export async function authenticate(
   if (!client || client.disabled === true || Number(client.disabled) === 1) {
     throw invalid('The access token is no longer valid.');
   }
+  // Nothing issued before the instance was last restored from a backup is good, whatever the backup said of it (core-app §4.4).
+  const restored = await restoredAt(deps.database);
+  if (issuedBeforeRestore(restored, token.issuedAt)) {
+    throw invalid('The access token is no longer valid.');
+  }
   const sessionId = text(payload.sid);
   if (sessionId) {
     const session = (
-      await deps.database.run('select expires_at from sessions where id = ?', [sessionId])
+      await deps.database.run('select expires_at, created_at from sessions where id = ?', [
+        sessionId,
+      ])
     ).rows[0];
-    if (!session || new Date(session.expires_at as string | number | Date).getTime() <= now) {
+    if (
+      !session ||
+      new Date(session.expires_at as string | number | Date).getTime() <= now ||
+      openedBeforeRestore(
+        restored,
+        new Date(session.created_at as string | number | Date).getTime(),
+      )
+    ) {
       throw invalid('The access token is no longer valid.');
     }
   }
@@ -124,6 +139,9 @@ export async function authenticateApp(
     throw new ApiError(403, 'insufficient_scope', `The app may not ${scope}.`, {
       'www-authenticate': `Bearer realm="${REALM}", error="insufficient_scope", scope="${scope}"`,
     });
+  }
+  if (issuedBeforeRestore(await restoredAt(deps.database), token.issuedAt)) {
+    throw invalid('The access token is no longer valid.');
   }
   if (await isAppTokenRevoked(deps.database, clientId, token.issuedAt)) {
     throw invalid('The access token is no longer valid.');

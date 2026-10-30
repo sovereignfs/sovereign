@@ -1,4 +1,5 @@
 import type { Database, Executor } from '@sovereignfs/database';
+import { removeNotifications } from '../notifications/service';
 import { NAMES } from './schema-names';
 
 /** What a timestamp column takes on this dialect: a date on PostgreSQL, milliseconds on SQLite and sqld. */
@@ -113,6 +114,8 @@ export async function removeAccess(
       [userId, clientId],
     );
     const revoked = await revokeClientTokens(tx, stamp(database, now), userId, clientId);
+    // What the app told them goes with the access, and so does their switch for it (core-app §4.1).
+    await removeNotifications(tx, userId, clientId);
     return { consentsRemoved: consents.rowsAffected, ...revoked };
   });
 }

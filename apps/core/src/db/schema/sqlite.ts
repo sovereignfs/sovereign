@@ -186,6 +186,48 @@ export const tokenRevocations = sqliteTable(
 );
 
 /**
+ * What an app told a person (core-app §4.1): one row for each notification. `client_id` is the app that sent it and is taken from
+ * its token, never from the sender. Times are milliseconds since the epoch, an integer on both dialects. `idem_key` is the sender's
+ * own key for the send, so a repeat within a day is the same send. Written only by `NotificationService`.
+ */
+export const notifications = sqliteTable(
+  'notifications',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    clientId: text('client_id').notNull(),
+    title: text('title').notNull(),
+    body: text('body'),
+    url: text('url'),
+    category: text('category').notNull(),
+    createdAt: integer('created_at').notNull(),
+    readAt: integer('read_at'),
+    dismissedAt: integer('dismissed_at'),
+    expiresAt: integer('expires_at').notNull(),
+    idemKey: text('idem_key'),
+  },
+  (table) => [
+    index('notifications_user_idx').on(table.userId, table.clientId, table.createdAt),
+    index('notifications_idem_idx').on(table.clientId, table.userId, table.idemKey),
+  ],
+);
+
+/** A person's switch for one app's notifications (core-app §4.1). Missing means on. */
+export const notificationSettings = sqliteTable(
+  'notification_settings',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    clientId: text('client_id').notNull(),
+    enabled: integer('enabled').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.clientId] })],
+);
+
+/**
  * When an app's own tokens (core-app §3.6.6) were last revoked: its secret was rotated, or it was switched off. An app token is a
  * signed JWT that leaves no row to mark, so the time is recorded and everything issued up to it is no longer good
  * (`isAppTokenRevoked`). One row for each app; the time is milliseconds since the epoch, an integer on both dialects.

@@ -59,6 +59,8 @@ export const NAMES = {
     backchannelLogoutUri: col(client, 'backchannelLogoutUri'),
     disabled: col(client, 'disabled'),
     authMethod: col(client, 'tokenEndpointAuthMethod'),
+    redirectUris: col(client, 'redirectUris'),
+    metadata: col(client, 'metadata'),
     appScopes: col(client, 'clientCredentialsScopes'),
   },
 };

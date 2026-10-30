@@ -293,6 +293,8 @@ async function removeAccount(tx: Executor, id: string): Promise<void> {
     'two_factors',
     'passkeys',
     'avatars',
+    'notifications',
+    'notification_settings',
     'token_revocations',
     'sessions',
     'accounts',

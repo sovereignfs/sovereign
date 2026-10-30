@@ -100,6 +100,7 @@ export function settingsSuite(createDatabase: () => Promise<TestDatabase>): void
         '0012_token_revocations',
         '0013_managed_clients',
         '0014_app_token_revocations',
+        '0015_notifications',
       ]);
     });
   });

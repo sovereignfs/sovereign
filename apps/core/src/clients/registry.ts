@@ -4,6 +4,7 @@ import { can } from '../roles/capabilities';
 import { loadMatrix } from '../roles/matrix';
 import { parseMetadata } from '../oauth/client-metadata';
 import { ensureRs256Key, idTokenAlgorithmOf, type IdTokenAlgorithm } from '../oauth/id-token-alg';
+import { removeAppNotifications } from '../notifications/service';
 import { revokeAppTokens } from '../oauth/revocation';
 import { APP_SCOPES } from '../oauth/scopes';
 import { NAMES } from '../oauth/schema-names';
@@ -247,6 +248,7 @@ export class ClientRegistry {
       await tx.run(`delete from ${NAMES.managed.table} where ${NAMES.managed.clientId} = ?`, [
         clientId,
       ]);
+      await removeAppNotifications(tx, clientId);
     });
     await this.#provider(actor, () =>
       this.#auth.api.deleteOAuthClient({

@@ -2,6 +2,7 @@ import type { Database } from '@sovereignfs/database';
 import { createLocalJWKSet, errors, jwtVerify, type JSONWebKeySet, type JWTPayload } from 'jose';
 import { NAMES } from '../oauth/schema-names';
 import { isAppTokenRevoked, isTokenRevoked } from '../oauth/revocation';
+import { storedList } from '../oauth/stored-list';
 import { ApiError } from './errors';
 
 /** Who is calling the Core API for a person: the person, the app, and what the token allows. */
@@ -119,7 +120,7 @@ export async function authenticateApp(
   ) {
     throw invalid('The access token is no longer valid.');
   }
-  if (!appScopesOf(client.appScopes).includes(scope)) {
+  if (!storedList(client.appScopes).includes(scope)) {
     throw new ApiError(403, 'insufficient_scope', `The app may not ${scope}.`, {
       'www-authenticate': `Bearer realm="${REALM}", error="insufficient_scope", scope="${scope}"`,
     });
@@ -184,20 +185,4 @@ async function clientRow(deps: TokenDeps, clientId: string) {
   const row = rows[0];
   if (!row) return undefined;
   return { disabled: row.disabled, authMethod: row.auth_method, appScopes: row.app_scopes };
-}
-
-/**
- * The app scopes a row holds: an array on PostgreSQL, and JSON text on SQLite and sqld, which the provider's adapter writes as a
- * JSON string of a JSON string, so text is read until it is a list.
- */
-function appScopesOf(value: unknown): string[] {
-  let list: unknown = value;
-  for (let step = 0; step < 3 && typeof list === 'string'; step += 1) {
-    try {
-      list = JSON.parse(list);
-    } catch {
-      return [];
-    }
-  }
-  return Array.isArray(list) ? list.filter((name): name is string => typeof name === 'string') : [];
 }

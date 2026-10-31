@@ -134,7 +134,7 @@ be argued before anything is built.
 | 0.73.0  | 3        | `sv apply`: the base               | ✅     | [13.3](docs/epics/operator-cli.md)  |
 | 0.74.0  | 4        | `sv apply`: apps                   | ✅     | [13.4](docs/epics/operator-cli.md)  |
 | 0.72.0  | 5        | Commands on the operator's machine | ✅     | [13.5](docs/epics/operator-cli.md)  |
-| —       | 6        | Deploying over SSH `[parallel]`    | 📋     | [13.6](docs/epics/operator-cli.md)  |
+| 0.75.0  | 6        | Deploying over SSH `[parallel]`    | ✅     | [13.6](docs/epics/operator-cli.md)  |
 | —       | 7        | Publishing and upgrading           | 📋     | [13.7](docs/epics/operator-cli.md)  |
 | —       | 8        | Backup, restore and rollback       | 📋     | [13.8](docs/epics/operator-cli.md)  |
 | —       | 9        | Deploying from GitHub `[parallel]` | 📋     | [13.9](docs/epics/operator-cli.md)  |

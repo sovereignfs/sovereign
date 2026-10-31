@@ -154,7 +154,7 @@ of it is built.
 - A plain value never reaches the disk or the command history
 - `sv push` stages only known files
 
-#### 📋 13.6 — Deploying over SSH `[parallel]`
+#### ✅ 13.6 — Deploying over SSH `[parallel]`
 
 **Goal:** `sv deploy` works from a laptop to a server on a home network, with no GitHub.
 
@@ -165,6 +165,9 @@ of it is built.
 - `sv server bootstrap`: Docker, directories, the server's key, a deployment key limited with `command=`, address pools
 - `sv deploy --ssh`: refuses unpushed work, sends the commit as an archive, runs `sv apply` from the pinned image
 - `sv status`, `sv logs`, `sv doctor`, `sv app show`, `sv secret rotate`
+- The toolkit as an image (`apps/cli/Dockerfile`), which is what the server runs; publishing it is 13.7
+
+**Not verified here:** following the guide on a new virtual machine, and Docker's installation on one. The checklist's last item is done by hand on the first real instance (operator-cli §13).
 
 **Dependencies:** 13.4
 

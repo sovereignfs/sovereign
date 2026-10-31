@@ -19,6 +19,15 @@ before that is recorded.
   them when they close, after their exit animation. A test that expected focus to stay on the opener while they were open needs
   the new behaviour.
 
+## `@sovereignfs/sdk`
+
+### 2.0.0
+
+- **This is a new SDK under the old name.** Versions up to `1.25.0` were the legacy SDK, which ran inside the old platform as an
+  object of namespaces. This one is used from an app's own server and calls core over the Core API. Nothing carries over by
+  upgrading: remove the legacy package, install `@sovereignfs/sdk@^2`, and follow [Using the SDK](using-the-sdk.md).
+  [SDK §10](specs/sdk.md) maps each legacy namespace to what replaces it.
+
 ## Core
 
 No migration notes yet.

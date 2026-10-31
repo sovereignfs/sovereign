@@ -84,8 +84,13 @@ serving the Directory and the instance document, and nothing else. The guide for
 
 ## Which exports are stable
 
-`createSovereign` and the error types are **stable**; everything else is **experimental** and may change in a minor version before
-`1.0.0` ([`src/stability.ts`](src/stability.ts) lists both).
+`createSovereign` and the error types are **stable** and change only in a major version; everything else is **experimental** and may
+change in a minor version ([`src/stability.ts`](src/stability.ts) lists both).
+
+## Versions
+
+This SDK starts at `2.0.0`. Versions up to `1.25.0` of `@sovereignfs/sdk` are the legacy SDK, which ran inside the old platform and is
+not an earlier release of this one.
 
 ## Licence
 

@@ -179,7 +179,7 @@ of it is built.
 - The server holds no credential for the repository
 - Following the guide on a new virtual machine reaches a healthy instance
 
-#### 📋 13.7 — Publishing and upgrading
+#### ✅ 13.7 — Publishing and upgrading
 
 **Goal:** An operator starts from `npm create`, and takes an update with one reviewed change.
 
@@ -192,6 +192,8 @@ of it is built.
 - `suite.lock`, holding the image digest that matches the pinned toolkit
 - `sv upgrade`, including rewriting `suite.yml` when its schema changes
 - A CI job that deploys the previous release and upgrades it
+
+**Not done here:** the CI job that deploys the previous release and upgrades it needs a published release to start from; it is added with the first release (12.3). The workflow itself, the package rules for a tool, and `sv upgrade` are tested; the publish has not run.
 
 **Dependencies:** 13.6
 

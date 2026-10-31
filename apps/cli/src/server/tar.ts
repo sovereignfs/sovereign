@@ -35,8 +35,12 @@ function paxPath(data: Buffer): string | undefined {
  * where they are put. A link, a device, a name that climbs out, or an archive too large is refused whole, before anything is written.
  * It reads what `git archive` writes, which is ustar with pax headers for long names and for the commit.
  */
-export function readArchive(archive: Buffer, allowed: (name: string) => boolean): Entry[] {
-  if (archive.length > MAX_ARCHIVE_BYTES) {
+export function readArchive(
+  archive: Buffer,
+  allowed: (name: string) => boolean,
+  options: { maxBytes?: number; stripDot?: boolean } = {},
+): Entry[] {
+  if (archive.length > (options.maxBytes ?? MAX_ARCHIVE_BYTES)) {
     throw new Refused('The archive is larger than a deployment can be.');
   }
   const entries: Entry[] = [];
@@ -60,9 +64,11 @@ export function readArchive(archive: Buffer, allowed: (name: string) => boolean)
       continue;
     }
     const prefix = text(header, 345, 500);
-    const name = longName ?? (prefix ? `${prefix}/` : '') + text(header, 0, 100);
+    const written = longName ?? (prefix ? `${prefix}/` : '') + text(header, 0, 100);
+    // A tar made with `tar -C dir .` names everything `./name`.
+    const name = options.stripDot ? written.replace(/^\.\//, '') : written;
     longName = undefined;
-    if (type === '5') continue;
+    if (type === '5' || (options.stripDot && written === '.')) continue;
     if (type !== '0') throw new Refused(`The archive holds something that is not a file: ${name}.`);
     if (
       name === '' ||
@@ -76,7 +82,7 @@ export function readArchive(archive: Buffer, allowed: (name: string) => boolean)
     if (!allowed(name))
       throw new Refused(`The archive holds a file that is not an instance file: ${name}.`);
     if (entries.length >= MAX_ENTRIES) throw new Refused('The archive holds too many files.');
-    entries.push({ name, data: Buffer.from(data) });
+    entries.push({ name, data });
   }
   return entries;
 }
@@ -114,4 +120,19 @@ export function makeArchive(files: Record<string, string>): Buffer {
   }
   blocks.push(Buffer.alloc(BLOCK * 2));
   return Buffer.concat(blocks);
+}
+
+/** What `sv restore` sends: the deployment's files as one archive, then the backup, with the length of the first in front. */
+export function joinRestore(deployment: Buffer, backup: Buffer): Buffer {
+  const length = Buffer.alloc(8);
+  length.writeBigUInt64BE(BigInt(deployment.length));
+  return Buffer.concat([length, deployment, backup]);
+}
+
+export function splitRestore(sent: Buffer): { deployment: Buffer; backup: Buffer } {
+  if (sent.length < 8) throw new Refused('The restore was cut short.');
+  const length = Number(sent.readBigUInt64BE(0));
+  if (length > MAX_ARCHIVE_BYTES || 8 + length > sent.length)
+    throw new Refused('The restore is not in the shape the toolkit sends.');
+  return { deployment: sent.subarray(8, 8 + length), backup: sent.subarray(8 + length) };
 }

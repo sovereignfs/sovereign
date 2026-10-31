@@ -1,9 +1,9 @@
 # Sovereign — operator CLI specification
 
-|            |                                                                                                                                                                                                                                                                                            |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Status** | Draft. Specified from [RFC 0002](../rfcs/0002-deployment-strategies.md); the commands on the operator's machine and `sv apply` for core and apps, and deploying over SSH are built; publishing, upgrading, backups and deploying from GitHub are not ([epic 13](../epics/operator-cli.md)) |
-| **Covers** | `apps/cli`: the `sv` toolkit, `sv apply`, and `@sovereignfs/create`                                                                                                                                                                                                                        |
+|            |                                                                                                                                                                                                                                                                                                                |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status** | Draft. Specified from [RFC 0002](../rfcs/0002-deployment-strategies.md); the commands on the operator's machine and `sv apply` for core and apps, deploying over SSH, backups, restores and rollbacks are built; publishing, upgrading and deploying from GitHub are not ([epic 13](../epics/operator-cli.md)) |
+| **Covers** | `apps/cli`: the `sv` toolkit, `sv apply`, and `@sovereignfs/create`                                                                                                                                                                                                                                            |
 
 This document is the single source of truth for what the operator CLI does. Where code, another document or an issue
 disagrees with it, this document wins until it is changed.
@@ -466,6 +466,26 @@ deleted since the backup will reappear. The file holds `sub`s and nothing else a
 `sv restore`. There is no other command for it.
 
 A backup taken by a deployment (§6.1) stays on the server, under the same encryption.
+
+#### 10.2.1 As built
+
+- **What a backup holds:** one `pg_dumpall` of every database and role, `state.json`, the generated secrets, and a tar of each hosted
+  app's data volume (`sovereign-app-<name>_data-<n>`, copied through the toolkit's image, which has `tar`). Volumes are copied while the
+  app runs, so they are as consistent as a crash would leave them. It is encrypted to `secrets.recipients` without the server's own key.
+- **`sv backup`** has the server make one, sends it down the connection as it is, and does not keep a copy there. The backups a
+  deployment takes stay in `backups/`, and are restored by copying them down (`scp`) and using `sv restore`.
+- **`sv restore`** decrypts here, with your key, and sends the pushed commit's deployment files and then the backup in the clear over
+  the encrypted connection: the server has no key that opens a backup. The server runs `sv apply --restore-from`, which, in this order:
+  backs up what is there (when there is something), keeps the deletions core remembers, stops core and the apps, puts the backup's
+  secrets in place **before** any is made, starts the database server, empties it and loads the dump (the only errors it accepts are the
+  administrator's own role, which it cannot drop while connected as it), puts each app's volume back, and, with core still stopped, runs
+  `sovereign-admin instance restored` and then `instance deletions apply` in a container of its own. Only then does it start the proxy,
+  core and the apps, and verify as a deployment does. A restore may take core's version backward.
+- **`sv rollback`** applies the previous release's files again, as the commit they were. `state.json` records which that is
+  (`previous`); only the last five releases are kept. It is refused when core's version would go backward, and says so before it runs
+  for apps.
+- **Not done:** the volumes of the proxy (certificates are issued again), and restoring a backup taken by a newer toolkit than the one
+  restoring it.
 
 ### 10.3 Rolling back
 

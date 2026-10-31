@@ -12,6 +12,7 @@ const OPTIONS = {
   'no-publish-ports': 'switch',
   'skip-dns': 'switch',
   restore: 'switch',
+  'restore-from': 'value',
 } as const;
 
 /**
@@ -40,6 +41,9 @@ export async function applyCommand(
     publishPorts: !args.switches.has('no-publish-ports'),
     skipDns: args.switches.has('skip-dns'),
     restore: args.switches.has('restore'),
+    ...(args.values.get('restore-from')
+      ? { restoreFrom: path.resolve(args.values.get('restore-from') as string) }
+      : {}),
     ...(process.env.SV_TOOLKIT_IMAGE ? { toolkitImage: process.env.SV_TOOLKIT_IMAGE } : {}),
   });
   io.err(result.changed ? `Applied ${commit}.` : `Applied ${commit}; nothing needed changing.`);

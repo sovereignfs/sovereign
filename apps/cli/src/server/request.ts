@@ -8,7 +8,10 @@ export type Request =
   | { verb: 'doctor' }
   | { verb: 'logs'; target: string; lines: number }
   | { verb: 'app'; name: string; secret: boolean }
-  | { verb: 'rotate'; name: string };
+  | { verb: 'rotate'; name: string }
+  | { verb: 'backup' }
+  | { verb: 'restore'; commit: string }
+  | { verb: 'rollback' };
 
 const COMMIT = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
 const NAME = /^[a-z][a-z0-9-]{0,30}[a-z0-9]$/;
@@ -21,7 +24,7 @@ export function parseRequest(line: string): Request {
   const usage = () =>
     new Refused(
       `The server does not understand “${words.slice(0, 4).join(' ').slice(0, 60)}”.`,
-      'It answers: version, deploy, status, doctor, logs, app, rotate.',
+      'It answers: version, deploy, status, doctor, logs, app, rotate, backup, restore, rollback.',
     );
   switch (verb) {
     case 'version':
@@ -33,6 +36,8 @@ export function parseRequest(line: string): Request {
       break;
     case 'status':
     case 'doctor':
+    case 'backup':
+    case 'rollback':
       if (rest.length === 0) return { verb };
       break;
     case 'logs': {
@@ -59,6 +64,10 @@ export function parseRequest(line: string): Request {
       }
       break;
     }
+    case 'restore':
+      if (rest.length === 1 && COMMIT.test(rest[0] as string))
+        return { verb, commit: rest[0] as string };
+      break;
     case 'rotate':
       if (rest.length === 1 && NAME.test(rest[0] as string))
         return { verb, name: rest[0] as string };

@@ -19,11 +19,15 @@ type Container = {
  * every call is kept, so a test can see what was run, in what order, and that no secret was on a command line.
  */
 export class FakeDocker {
-  calls: { args: string[]; input?: string }[] = [];
+  calls: { args: string[]; input?: string; inputFrom?: string }[] = [];
   networks = new Set<string>();
   containers = new Map<string, Container>();
   psql: string[] = [];
   caddyReloads = 0;
+  /** What was run once with `compose run`, after the word run. */
+  composeRuns: string[][] = [];
+  /** What `sovereign-admin instance deletions export` prints. */
+  deletionsExport = '{"deleted":[]}';
   /** Where the proxy’s folder is on the host, from the compose file it was started with. */
   caddyDir: string | undefined;
   /** Fails the n-th call (counting from 0) with this message, once. */
@@ -53,12 +57,13 @@ export class FakeDocker {
 
   async run(
     args: readonly string[],
-    options: { input?: string; stdoutTo?: string } = {},
+    options: { input?: string; inputFrom?: string; stdoutTo?: string } = {},
   ): Promise<Ran> {
     const n = this.#next++;
     this.calls.push({
       args: [...args],
       ...(options.input === undefined ? {} : { input: options.input }),
+      ...(options.inputFrom === undefined ? {} : { inputFrom: options.inputFrom }),
     });
     const joined = args.join(' ');
     if (this.failAt && this.failAt.n === n) {
@@ -87,6 +92,10 @@ export class FakeDocker {
       const prefix = (rest[rest.indexOf('--filter') + 1] ?? '').replace('name=^', '');
       return ok([...this.containers.keys()].filter((name) => name.startsWith(prefix)).join('\n'));
     }
+    if (command === 'stop') {
+      for (const name of rest) this.containers.delete(name);
+      return ok('');
+    }
     if (command === 'rm') {
       for (const name of rest.filter((word) => !word.startsWith('-'))) this.containers.delete(name);
       return ok('');
@@ -99,6 +108,16 @@ export class FakeDocker {
           .split('=')
           .pop() as string;
         return ok((this.volumes[project] ?? []).join('\n'));
+      }
+      if (rest[0] === 'inspect') {
+        const found = Object.values(this.volumes).some((list) => list.includes(rest[1] as string));
+        return found ? ok('[]') : { code: 1, stdout: '', stderr: 'No such volume' };
+      }
+      if (rest[0] === 'create') {
+        const name = rest[rest.length - 1] as string;
+        const project = name.split('_')[0] as string;
+        (this.volumes[project] ??= []).push(name);
+        return ok(name);
       }
       if (rest[0] === 'rm') {
         for (const list of Object.values(this.volumes)) {
@@ -149,6 +168,10 @@ export class FakeDocker {
   }
 
   #composeUp(rest: string[]): Ran {
+    if (rest.includes('run')) {
+      this.composeRuns.push(rest.slice(rest.indexOf('run')));
+      return ok('');
+    }
     const project = rest[rest.indexOf('--project-name') + 1] as string;
     const files = rest.flatMap((word, i) => (rest[i - 1] === '-f' ? [word] : []));
     const name = project.startsWith('sovereign-app-')
@@ -191,6 +214,11 @@ export class FakeDocker {
   }
 
   #inspect(rest: string[]): Ran {
+    if (rest[0] === '--format' && rest[1] === '{{.State.Running}}') {
+      return this.containers.has(rest[2] as string)
+        ? ok('true')
+        : { code: 1, stdout: '', stderr: 'No such object' };
+    }
     if (rest[0] === '--format') {
       const lines = rest.slice(2).flatMap((name) => {
         const found = this.containers.get(name);
@@ -211,6 +239,8 @@ export class FakeDocker {
 
   #admin(more: string[]): Ran {
     const [group, verb, name] = more;
+    if (group === 'instance' && verb === 'deletions' && name === 'export')
+      return ok(this.deletionsExport);
     if (group !== 'apps' || !name) return { code: 1, stdout: '', stderr: 'unknown admin command' };
     if (verb === 'ensure') {
       const known = this.clients.get(name);

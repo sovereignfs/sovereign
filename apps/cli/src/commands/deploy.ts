@@ -48,6 +48,17 @@ async function requirePushed(ctx: Context): Promise<string> {
   return head.stdout.trim();
 }
 
+/** The pushed commit and the archive of its deployment files: what `sv deploy` sends, and what `sv restore` and `sv rollback` start from. */
+export async function prepareDeployment(
+  ctx: Context,
+): Promise<{ commit: string; archive: Buffer }> {
+  const commit = await requirePushed(ctx);
+  await checkRepository(ctx);
+  const listed = await git(ctx, ['ls-tree', '--name-only', commit]);
+  const paths = SENT.filter((name) => listed.stdout.split('\n').includes(name));
+  return { commit, archive: await ctx.archive(ctx.root, commit, paths) };
+}
+
 /** `sv deploy` (operator-cli §8): sends the pushed commit’s files to the server and starts `sv apply` on them. */
 export async function deploy(ctx: Context, argv: string[]): Promise<void> {
   const args = parseArgs(argv, { ssh: 'switch', github: 'switch' });
@@ -74,12 +85,7 @@ export async function deploy(ctx: Context, argv: string[]): Promise<void> {
     );
   }
   const target = targetOf(suite);
-
-  const commit = await requirePushed(ctx);
-  await checkRepository(ctx);
-  const listed = await git(ctx, ['ls-tree', '--name-only', commit]);
-  const paths = SENT.filter((name) => listed.stdout.split('\n').includes(name));
-  const archive = await ctx.archive(ctx.root, commit, paths);
+  const { commit, archive } = await prepareDeployment(ctx);
 
   ctx.io.err(`Sending ${commit.slice(0, 12)} to ${target.host}.`);
   const result = await ctx.remote(target, [WRAPPER_PATH, 'deploy', commit], {

@@ -1,4 +1,12 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -6,7 +14,7 @@ import { Locked, Refused } from '../errors.js';
 import { fakeHost } from '../testing/fake-host.js';
 import { makeSource, type Source } from '../testing/source.js';
 import { receive, type ReceiveOptions, type ReceiverHost } from './receive.js';
-import { makeArchive } from './tar.js';
+import { joinRestore, makeArchive } from './tar.js';
 
 const sources: Source[] = [];
 afterEach(() => {
@@ -303,5 +311,177 @@ describe('what the archive may hold and what the lock may name', () => {
     });
     await expect(receive(host, o)).rejects.toThrow(/not an image by digest/);
     expect(calls.some((c) => c[0] === 'run')).toBe(false);
+  });
+});
+
+describe('a restore', () => {
+  const backupOf = (names: string[]) =>
+    makeArchive(Object.fromEntries(names.map((name) => [name, `content of ${name}`])));
+  const sent = (deployment: Buffer, backup: Buffer) => joinRestore(deployment, backup);
+  const idle = (args: string[]) =>
+    args[0] === 'inspect' ? { stdout: 'false\n' } : args[0] === 'wait' ? { stdout: '0\n' } : {};
+
+  it('unpacks the backup beside the deployment’s files, and starts sv apply with the backup as its data to restore', async () => {
+    const { archive } = await archiveOf();
+    const dir = stateDir();
+    const { host, calls } = receiver(idle);
+    const body = sent(
+      archive,
+      backupOf([
+        './databases.sql',
+        './secrets/role-core-password',
+        './volumes/sovereign-app-notes_data-0.tar',
+      ]),
+    );
+    const { options: o, out } = options(dir, `restore ${commit}`, { stdin: async () => body });
+    expect(await receive(host, o)).toBe(0);
+    expect(readFileSync(path.join(dir, 'incoming', 'restore', 'databases.sql'), 'utf8')).toBe(
+      'content of ./databases.sql',
+    );
+    expect(existsSync(path.join(dir, 'incoming', 'restore', 'secrets', 'role-core-password'))).toBe(
+      true,
+    );
+    expect(existsSync(path.join(dir, 'incoming', commit, 'suite.lock'))).toBe(true);
+    const run = calls.find((c) => c[0] === 'run') as string[];
+    expect(run).toContain('--restore-from');
+    expect(run[run.indexOf('--restore-from') + 1]).toBe(path.join(dir, 'incoming', 'restore'));
+    expect(out.join('')).toContain('and a backup of 3 files');
+  });
+
+  it('refuses a backup that holds no databases, and a file a backup does not hold, starting nothing', async () => {
+    const { archive } = await archiveOf();
+    const { host, calls } = receiver(idle);
+    for (const names of [
+      ['./secrets/x'],
+      ['./databases.sql', './evil.sh'],
+      ['./databases.sql', './secrets/../x'],
+      ['./databases.sql', './volumes/other.tar'],
+    ]) {
+      const { options: o } = options(stateDir(), `restore ${commit}`, {
+        stdin: async () => sent(archive, backupOf(names)),
+      });
+      await expect(receive(host, o), names.join()).rejects.toBeInstanceOf(Refused);
+    }
+    expect(calls.some((c) => c[0] === 'run')).toBe(false);
+  });
+
+  it('is refused for a connection with the deployment key, and while a deployment runs', async () => {
+    const { host } = receiver((args) => (args[0] === 'inspect' ? { stdout: 'true\n' } : {}));
+    const a = options(stateDir(), `restore ${commit}`, { deployOnly: true });
+    await expect(receive(host, a.options)).rejects.toThrow(/deploy and do nothing else/);
+    const b = options(stateDir(), `restore ${commit}`);
+    await expect(receive(host, b.options)).rejects.toBeInstanceOf(Locked);
+  });
+});
+
+describe('a rollback', () => {
+  /** A server whose `current` is `b…` and whose previous release was `a…`, with the files each was deployed from. */
+  async function deployed(
+    options_: { previousCore?: string; currentCore?: string; keep?: boolean } = {},
+  ) {
+    const dir = stateDir();
+    const previous = await makeSource({
+      suite: { core: { version: options_.previousCore ?? '0.71.0' } },
+    });
+    sources.push(previous);
+    if (options_.keep !== false) {
+      const release = path.join(dir, 'releases', 'a'.repeat(40));
+      mkdirSync(path.join(release, 'overrides'), { recursive: true });
+      for (const name of ['suite.yml', 'suite.lock'])
+        writeFileSync(path.join(release, name), readFileSync(path.join(previous.dir, name)));
+      writeFileSync(path.join(release, 'overrides', 'note.txt'), 'kept');
+    }
+    writeFileSync(
+      path.join(dir, 'state.json'),
+      JSON.stringify({
+        schema: 1,
+        commit: 'b'.repeat(40),
+        previous: 'a'.repeat(40),
+        core: { version: options_.currentCore ?? '0.71.0', healthy: true },
+        apps: {},
+      }),
+    );
+    return dir;
+  }
+  const idle = (args: string[]) =>
+    args[0] === 'inspect' ? { stdout: 'false\n' } : args[0] === 'wait' ? { stdout: '0\n' } : {};
+
+  it('applies the previous release’s files again, from a copy of them, as the commit it was', async () => {
+    const dir = await deployed();
+    const { host, calls } = receiver(idle);
+    const { options: o, out } = options(dir, 'rollback');
+    expect(await receive(host, o)).toBe(0);
+    const run = calls.find((c) => c[0] === 'run') as string[];
+    expect(run.slice(-4)).toEqual([
+      '--from',
+      path.join(dir, 'incoming', 'a'.repeat(40)),
+      '--commit',
+      'a'.repeat(40),
+    ]);
+    expect(
+      readFileSync(path.join(dir, 'incoming', 'a'.repeat(40), 'overrides', 'note.txt'), 'utf8'),
+    ).toBe('kept');
+    expect(out.join('')).toContain('Going back to aaaaaaaaaaaa');
+  });
+
+  it('refuses when core would go backward, pointing to sv restore, and starts nothing', async () => {
+    const dir = await deployed({ previousCore: '0.70.0', currentCore: '0.71.0' });
+    const { host, calls } = receiver(idle);
+    const failure = await receive(host, options(dir, 'rollback').options).catch((e: unknown) => e);
+    expect(failure).toBeInstanceOf(Refused);
+    expect((failure as Refused).message).toContain('only go forward');
+    expect((failure as Refused).hint).toContain('sv restore');
+    expect(calls.some((c) => c[0] === 'run')).toBe(false);
+  });
+
+  it('refuses when there is nothing earlier, or the earlier release has been cleared away', async () => {
+    const { host } = receiver(idle);
+    const none = stateDir();
+    writeFileSync(
+      path.join(none, 'state.json'),
+      JSON.stringify({ schema: 1, commit: 'b'.repeat(40), core: { version: '0.71.0' }, apps: {} }),
+    );
+    await expect(receive(host, options(none, 'rollback').options)).rejects.toThrow(
+      /no earlier release/,
+    );
+    const gone = await deployed({ keep: false });
+    await expect(receive(host, options(gone, 'rollback').options)).rejects.toThrow(
+      /no longer on the server/,
+    );
+  });
+});
+
+describe('a backup', () => {
+  it('is taken to the operator’s keys alone, sent as it is, and not kept on the server', async () => {
+    const made = await makeSource();
+    sources.push(made);
+    const dir = stateDir();
+    const release = path.join(dir, 'releases', commit);
+    mkdirSync(release, { recursive: true });
+    writeFileSync(path.join(release, 'suite.yml'), readFileSync(path.join(made.dir, 'suite.yml')));
+    symlinkSync(release, path.join(dir, 'current'));
+    let sentFile = '';
+    let head = '';
+    const { host } = receiver((args) => (args[0] === 'inspect' ? { stdout: 'false\n' } : {}));
+    const { options: o } = options(dir, 'backup', {
+      sendFile: async (file) => {
+        sentFile = file;
+        head = readFileSync(file).subarray(0, 21).toString();
+      },
+    });
+    expect(await receive(host, o)).toBe(0);
+    expect(head).toBe('age-encryption.org/v1');
+    expect(path.dirname(sentFile)).toBe(path.join(dir, 'backups'));
+    expect(existsSync(sentFile)).toBe(false);
+  });
+
+  it('is refused before anything is deployed, and when the connection cannot carry it', async () => {
+    const { host } = receiver();
+    await expect(
+      receive(host, options(stateDir(), 'backup', { sendFile: async () => undefined }).options),
+    ).rejects.toThrow(/nothing to back up/);
+    await expect(receive(host, options(stateDir(), 'backup').options)).rejects.toThrow(
+      /cannot carry/,
+    );
   });
 });

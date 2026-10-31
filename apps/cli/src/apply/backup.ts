@@ -20,7 +20,13 @@ import { layout } from './state.js';
  */
 export async function takeBackup(
   host: Host,
-  input: { stateDir: string; recipients: readonly string[]; reason: string },
+  input: {
+    stateDir: string;
+    recipients: readonly string[];
+    reason: string;
+    /** The toolkit’s image, which has `tar`, for copying an app’s data volumes out. Without it only the databases and secrets are kept. */
+    image?: string;
+  },
 ): Promise<string> {
   const paths = layout(input.stateDir);
   const serverRecipient = existsSync(paths.ageKey)
@@ -51,6 +57,7 @@ export async function takeBackup(
       },
     );
     if (existsSync(paths.state)) await cp(paths.state, path.join(work, 'state.json'));
+    if (input.image) await copyVolumes(host, input.image, work);
     if (existsSync(paths.secrets))
       await cp(paths.secrets, path.join(work, 'secrets'), { recursive: true });
 
@@ -73,4 +80,38 @@ export async function takeBackup(
     await rm(work, { recursive: true, force: true });
   }
   return file;
+}
+
+/** The data volumes of hosted apps: Compose names them `<project>_<volume>`, under a project of ours. */
+export async function appVolumes(host: Host): Promise<string[]> {
+  const listed = await host.docker(['volume', 'ls', '--quiet', '--filter', 'name=^sovereign-app-']);
+  return listed.stdout
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => /^sovereign-app-[a-z0-9-]+_data-[0-9]+$/.test(line));
+}
+
+/** Copies each app data volume to `<work>/volumes/<name>.tar`, through a container that has `tar` and mounts it read only. */
+async function copyVolumes(host: Host, image: string, work: string): Promise<void> {
+  const volumes = await appVolumes(host);
+  if (volumes.length === 0) return;
+  await mkdir(path.join(work, 'volumes'), { recursive: true, mode: 0o700 });
+  for (const volume of volumes) {
+    await docker(host, `Copying ${volume}`, [
+      'run',
+      '--rm',
+      '--entrypoint',
+      'tar',
+      '--volume',
+      `${volume}:/source:ro`,
+      '--volume',
+      `${path.join(work, 'volumes')}:/target`,
+      image,
+      '-C',
+      '/source',
+      '-cf',
+      `/target/${volume}.tar`,
+      '.',
+    ]);
+  }
 }

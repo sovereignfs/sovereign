@@ -29,6 +29,15 @@ import {
   type AppRun,
 } from './apps.js';
 import { takeBackup } from './backup.js';
+import {
+  BACKUP,
+  loadDatabases,
+  markRestored,
+  restoreSecrets,
+  restoreVolumes,
+  saveDeletions,
+  stopRunning,
+} from './restore.js';
 import { look, refusals, refuseIfAny } from './checks.js';
 import { composeUp, docker, ensureDatabase, ensureNetwork, ensureOnNetwork } from './docker.js';
 import type { Host } from './host.js';
@@ -59,6 +68,8 @@ export type ApplyOptions = {
   skipDns: boolean;
   /** Set by a restore, which may take core’s version backward. */
   restore: boolean;
+  /** A backup unpacked in a folder: the instance is brought to the commit and then its data is put back (operator-cli §10.2). */
+  restoreFrom?: string;
   /** The image this run is in, written down so the server’s wrapper starts the next request from it. */
   toolkitImage?: string;
   /** For tests that run a locally built image. Nothing in the toolkit sets it, and no command line flag reaches it. */
@@ -114,7 +125,7 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
       state,
       secrets,
       coreOverride: overrides.compose.core,
-      restore: options.restore,
+      restore: options.restore || options.restoreFrom !== undefined,
     }),
     ...overrides.problems,
     ...read.problems,
@@ -139,6 +150,31 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
   const before = await fingerprint(host, Object.keys(names.apps));
   const generated = new GeneratedSecrets(paths.secrets, host);
 
+  // A restore (operator-cli §10.2) first stops what runs and keeps what must survive it: a copy of what is there now, and the people deleted
+  // since the backup. The backup’s secrets go in before any is made, since the passwords in its dump are the ones they hold.
+  let deletions: string | undefined;
+  if (options.restoreFrom) {
+    if ((await containerId(host, CONTAINER.database)) !== undefined) {
+      const archive = await takeBackup(host, {
+        stateDir: options.stateDir,
+        recipients: suite.secrets.recipients,
+        reason: 'before-restore',
+        ...(options.toolkitImage ? { image: options.toolkitImage } : {}),
+      });
+      say(`Backed up what is there now to ${archive}, before it is replaced.`);
+    }
+    deletions = await saveDeletions(host, options.stateDir);
+    if (!deletions)
+      say(
+        'Core could not be reached to list its deletions: people deleted since the backup was taken will reappear.',
+      );
+    await stopRunning(host);
+    const count = await restoreSecrets(options.restoreFrom, paths.secrets);
+    say(
+      `Stopped core and the apps, and put back ${count} secret${count === 1 ? '' : 's'} from the backup.`,
+    );
+  }
+
   // 3. Back up, when core or the database server changes version, or an app’s data is about to be deleted.
   if (
     state &&
@@ -148,6 +184,7 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
       stateDir: options.stateDir,
       recipients: suite.secrets.recipients,
       reason: 'before-change',
+      ...(options.toolkitImage ? { image: options.toolkitImage } : {}),
     });
     say(`Backed up to ${archive}, because core or the database server is changing version.`);
   }
@@ -157,6 +194,7 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
       stateDir: options.stateDir,
       recipients: suite.secrets.recipients,
       reason: 'before-purge',
+      ...(options.toolkitImage ? { image: options.toolkitImage } : {}),
     });
     say(
       `Backed up to ${archive}, because ${purging.join(', ')} ${purging.length === 1 ? 'is' : 'are'} to be purged.`,
@@ -193,6 +231,7 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
   say(`Rendered release ${options.commit}.`);
 
   // 5. Start the base.
+  if (internalCa) await mkdir(paths.pki, { recursive: true, mode: 0o755 });
   await ensureNetwork(host, NETWORK.core);
   await generated.ensure('postgres-admin-password', () => generated.random(24));
   const rolePassword = await generated.ensure('role-core-password', () => generated.random(24));
@@ -213,8 +252,17 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
     project: PROJECT.database,
     files: [path.join(release, 'database', 'compose.yml'), ...(overrides.files.database ?? [])],
   });
+  if (options.restoreFrom) {
+    await loadDatabases(host, path.join(options.restoreFrom, BACKUP.databases));
+    const volumes = await restoreVolumes(host, options.restoreFrom, options.toolkitImage);
+    say(`The databases and ${volumes} data volume${volumes === 1 ? '' : 's'} are back.`);
+  }
   await ensureDatabase(host, CORE_DATABASE, CORE_ROLE, rolePassword.value);
   say('The database server is up, with core’s database.');
+  if (options.restoreFrom) {
+    await markRestored(host, path.join(release, 'core', 'compose.yml'), deletions);
+    say('Recorded the restore: every session and token from before it is ended.');
+  }
 
   const proxyBefore = await containerId(host, CONTAINER.proxy);
   await composeUp(host, {
@@ -368,6 +416,11 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
   const next: State = {
     schema: 1,
     commit: options.commit,
+    ...(state && state.commit !== options.commit
+      ? { previous: state.commit }
+      : state?.previous
+        ? { previous: state.previous }
+        : {}),
     appliedAt: new Date(host.now()).toISOString(),
     core: { version: suite.core.version, image: lock.images.core.digest, healthy: true },
     database: { version: suite.database.version },
@@ -698,7 +751,7 @@ async function pruneReleases(dir: string, keep: string): Promise<void> {
 
 async function containerId(host: Host, name: string): Promise<string | undefined> {
   const done = await host.docker(['inspect', '--format', '{{.Id}}', name]);
-  return done.code === 0 ? done.stdout.trim() : undefined;
+  return done.code === 0 && done.stdout.trim() !== '' ? done.stdout.trim() : undefined;
 }
 
 /** What is running, as ids and start times: two of these being equal is how a deployment knows it changed nothing. */

@@ -8,6 +8,8 @@ export type State = {
   schema: 1;
   /** The commit `current` points at. */
   commit: string;
+  /** The commit that ran before it, which `sv rollback` goes back to. */
+  previous?: string;
   appliedAt: string;
   core: { version: string; image: string; healthy: boolean };
   database: { version: string };

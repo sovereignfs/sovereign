@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { createWriteStream } from 'node:fs';
 import { Refused } from '../errors.js';
 import type { Suite } from '../suite/types.js';
 
@@ -13,6 +14,10 @@ export type Remote = (
   words: readonly string[],
   options?: {
     input?: Buffer | string;
+    /** Standard input from a stream, for something too large to hold. */
+    inputStream?: NodeJS.ReadableStream;
+    /** Writes standard output to this file as it arrives instead of holding it, for a backup. */
+    stdoutTo?: string;
     onStdout?: (chunk: string) => void;
     onStderr?: (chunk: string) => void;
   },
@@ -55,11 +60,15 @@ export const sshRemote: Remote = (target, words, options = {}) =>
     const child = spawn('ssh', sshArgs(target, words), { stdio: ['pipe', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
-    child.stdout.on('data', (chunk: Buffer) => {
-      const text = chunk.toString('utf8');
-      stdout += text;
-      options.onStdout?.(text);
-    });
+    if (options.stdoutTo) {
+      child.stdout.pipe(createWriteStream(options.stdoutTo, { mode: 0o600 }));
+    } else {
+      child.stdout.on('data', (chunk: Buffer) => {
+        const text = chunk.toString('utf8');
+        stdout += text;
+        options.onStdout?.(text);
+      });
+    }
     child.stderr.on('data', (chunk: Buffer) => {
       const text = chunk.toString('utf8');
       stderr += text;
@@ -71,5 +80,6 @@ export const sshRemote: Remote = (target, words, options = {}) =>
     child.on('close', (code) => resolve({ code: code ?? 255, stdout, stderr }));
     // A server that has stopped listening closes the pipe; that is the ssh exit code’s to report.
     child.stdin.on('error', () => undefined);
-    child.stdin.end(options.input);
+    if (options.inputStream) options.inputStream.pipe(child.stdin);
+    else child.stdin.end(options.input);
   });

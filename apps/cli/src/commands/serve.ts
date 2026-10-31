@@ -1,4 +1,6 @@
+import { createReadStream } from 'node:fs';
 import path from 'node:path';
+import { pipeline } from 'node:stream/promises';
 import { realReceiverHost, type Host } from '../apply/host.js';
 import { layout } from '../apply/state.js';
 import { parseArgs } from '../args.js';
@@ -10,11 +12,22 @@ import { receive, type ReceiverHost } from '../server/receive.js';
 const stateDirOf = (value: string | undefined) =>
   path.resolve(value ?? process.env.SV_STATE_DIR ?? '/var/lib/sovereign');
 
-const readAll = async (stream: NodeJS.ReadableStream): Promise<Buffer> => {
+/** Everything the stream holds, but not more than `max` bytes: what is sent is not trusted to be small. */
+const readAll = async (stream: NodeJS.ReadableStream, max: number): Promise<Buffer> => {
   const chunks: Buffer[] = [];
-  for await (const chunk of stream) chunks.push(Buffer.from(chunk as Uint8Array));
+  let total = 0;
+  for await (const chunk of stream) {
+    const part = Buffer.from(chunk as Uint8Array);
+    total += part.length;
+    if (total > max) throw new Refused('What was sent is larger than this can take.');
+    chunks.push(part);
+  }
   return Buffer.concat(chunks);
 };
+
+/** Sends a file down standard output as it is. */
+const sendFile = (file: string): Promise<void> =>
+  pipeline(createReadStream(file), process.stdout, { end: false });
 
 /**
  * `sv receive` (operator-cli §8): runs on the server, in the toolkit’s image, started by the wrapper `sv server bootstrap` installs. It
@@ -25,8 +38,9 @@ export async function receiveCommand(
   argv: string[],
   options: {
     host?: ReceiverHost;
-    stdin?: () => Promise<Buffer>;
+    stdin?: (max: number) => Promise<Buffer>;
     write?: (text: string) => void;
+    sendFile?: (file: string) => Promise<void>;
   } = {},
 ): Promise<number> {
   // What follows the first `--` is the request, one word and never read as an option, however it begins.
@@ -44,7 +58,8 @@ export async function receiveCommand(
     line: request[0] as string,
     deployOnly: args.switches.has('deploy-only'),
     stateDir: stateDirOf(args.values.get('state-dir')),
-    stdin: options.stdin ?? (() => readAll(process.stdin)),
+    stdin: options.stdin ?? ((max) => readAll(process.stdin, max)),
+    sendFile: options.sendFile ?? sendFile,
     out: options.write ?? ((text) => void process.stdout.write(text)),
     applyFlags: [
       ...(args.switches.has('no-publish-ports') ? ['--no-publish-ports'] : []),

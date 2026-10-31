@@ -1,5 +1,5 @@
 import { existsSync, readlinkSync } from 'node:fs';
-import { mkdir, readFile, readdir, rm } from 'node:fs/promises';
+import { cp, mkdir, readFile, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { byDigest } from '../apply/render.js';
 import { docker, dockerVersions } from '../apply/docker.js';
@@ -8,10 +8,12 @@ import { layout, readState } from '../apply/state.js';
 import { GeneratedSecrets } from '../apply/secrets.js';
 import { CONTAINER } from '../apply/names.js';
 import { Failed, Locked, Refused } from '../errors.js';
-import { readLock } from '../suite/files.js';
+import { gt } from 'semver';
+import { takeBackup } from '../apply/backup.js';
+import { SuiteFile, readLock } from '../suite/files.js';
 import { DEPLOY_ONLY, parseRequest, type Request } from './request.js';
 import { IMAGE_BY_DIGEST } from './image.js';
-import { extract, readArchive } from './tar.js';
+import { MAX_ARCHIVE_BYTES, extract, readArchive, splitRestore } from './tar.js';
 
 /** The server's side of the operator's commands (operator-cli §8): what the wrapper installed by `sv server bootstrap` starts. */
 export interface ReceiverHost extends Host {
@@ -24,9 +26,12 @@ export type ReceiveOptions = {
   /** The key that only deploys: it may ask for nothing else. */
   deployOnly: boolean;
   stateDir: string;
-  stdin: () => Promise<Buffer>;
+  /** Everything standard input holds, up to `max` bytes. */
+  stdin: (max: number) => Promise<Buffer>;
   /** Standard output: what the request answers. */
   out: (text: string) => void;
+  /** Sends a file to standard output as it is, for a backup. */
+  sendFile?: (file: string) => Promise<void>;
   /** Used by a test that runs a locally built image. Nothing in the toolkit sets it. */
   imageOverride?: string;
   /** Passed to `sv apply`, for a test on a machine that shares its ports. */
@@ -68,41 +73,45 @@ export async function receive(host: ReceiverHost, options: ReceiveOptions): Prom
       return app(host, options, request);
     case 'rotate':
       return rotate(host, options, request.name);
+    case 'backup':
+      return backup(host, options);
+    case 'restore':
+      return restore(host, options, request.commit);
+    case 'rollback':
+      return rollback(host, options);
   }
 }
 
 const running = async (host: Host, name: string) =>
   (await host.docker(['inspect', '--format', '{{.State.Running}}', name])).stdout.trim() === 'true';
 
-/** Takes the archive, checks it holds only instance files, and starts `sv apply` on it from the image the commit’s lock names. */
-async function deploy(
-  host: ReceiverHost,
-  options: ReceiveOptions,
-  commit: string,
-): Promise<number> {
-  const { stateDir, out } = options;
+/** Refuses while a deployment, a restore or a rollback is running: they share one container, and one run at a time. */
+async function requireIdle(host: Host): Promise<void> {
   if (await running(host, APPLY_CONTAINER)) {
     throw new Locked(
       'Another deployment is running.',
-      'sv logs deploy shows it. Run sv deploy again when it has finished.',
+      'sv logs deploy shows it. Run the command again when it has finished.',
     );
   }
-  const incoming = path.join(stateDir, 'incoming');
-  await rm(incoming, { recursive: true, force: true });
-  const dir = path.join(incoming, commit);
+}
+
+/** Reads the deployment files out of an archive into `incoming/<commit>/`, and says what the commit's lock names. */
+async function unpack(
+  options: ReceiveOptions,
+  commit: string,
+  archive: Buffer,
+): Promise<{ dir: string; pinned: string; files: number }> {
+  const dir = path.join(options.stateDir, 'incoming', commit);
   await mkdir(dir, { recursive: true, mode: 0o755 });
-  const entries = readArchive(await options.stdin(), isDeployPath);
+  const entries = readArchive(archive, isDeployPath);
   for (const required of ['suite.yml', 'suite.lock']) {
     if (!entries.some((entry) => entry.name === required))
       throw new Refused(`The archive has no ${required}.`);
   }
   await extract(entries, dir);
-  out(`Received ${entries.length} files for ${commit.slice(0, 12)}.\n`);
-
   const lock = await readLock(dir);
   if (!lock) throw new Refused('The archive has no usable suite.lock.');
   const pinned = byDigest(lock.images.cli);
-  const image = options.imageOverride ?? pinned;
   // The lock came in the archive: its image is run with the Docker socket, so it is checked to be an image by digest and not an option.
   if (!IMAGE_BY_DIGEST.test(pinned)) {
     throw new Refused(
@@ -110,8 +119,19 @@ async function deploy(
       'Run sv push to refresh suite.lock.',
     );
   }
+  return { dir, pinned, files: entries.length };
+}
+
+/** Starts `sv apply` on the files in `dir`, detached, follows it to its end, and returns the code it ended with. */
+async function launch(
+  host: ReceiverHost,
+  options: ReceiveOptions,
+  input: { commit: string; dir: string; pinned: string; extra?: string[] },
+): Promise<number> {
+  const { stateDir, out } = options;
+  const image = options.imageOverride ?? input.pinned;
   if (!options.imageOverride && (await host.docker(['image', 'inspect', image])).code !== 0) {
-    out(`Pulling the toolkit ${lock.images.cli.ref}.\n`);
+    out(`Pulling the toolkit ${image.split('@')[0]}.\n`);
     await docker(host, 'Pulling the toolkit', ['pull', image]);
   }
   await host.docker(['rm', '--force', APPLY_CONTAINER]);
@@ -132,12 +152,13 @@ async function deploy(
     image,
     'apply',
     '--from',
-    dir,
+    input.dir,
     '--commit',
-    commit,
+    input.commit,
+    ...(input.extra ?? []),
     ...(options.applyFlags ?? []),
   ]);
-  // From here the deployment goes on whether or not anyone is watching: the container is not tied to this connection.
+  // From here the run goes on whether or not anyone is watching: the container is not tied to this connection.
   await host.follow(['logs', '--follow', APPLY_CONTAINER], (chunk) => out(chunk));
   const waited = await host.docker(['wait', APPLY_CONTAINER]);
   const said = waited.stdout.trim();
@@ -145,6 +166,121 @@ async function deploy(
   return waited.code === 0 && said !== '' && Number.isInteger(code) && code >= 0 && code <= 3
     ? code
     : 1;
+}
+
+/** Takes the archive, checks it holds only instance files, and starts `sv apply` on it from the image the commit's lock names. */
+async function deploy(
+  host: ReceiverHost,
+  options: ReceiveOptions,
+  commit: string,
+): Promise<number> {
+  await requireIdle(host);
+  const incoming = path.join(options.stateDir, 'incoming');
+  await rm(incoming, { recursive: true, force: true });
+  const { dir, pinned, files } = await unpack(
+    options,
+    commit,
+    await options.stdin(MAX_ARCHIVE_BYTES),
+  );
+  options.out(`Received ${files} files for ${commit.slice(0, 12)}.\n`);
+  return launch(host, options, { commit, dir, pinned });
+}
+
+/** The backup's files, and nothing else: the databases, the generated secrets, and the app data (operator-cli §10.2). */
+const isBackupPath = (name: string) =>
+  name === 'databases.sql' ||
+  /^secrets\/[A-Za-z0-9_.-]{1,128}$/.test(name) ||
+  /^volumes\/sovereign-app-[a-z0-9-]+_data-[0-9]+\.tar$/.test(name);
+const MAX_RESTORE_BYTES = 1024 ** 3;
+
+/** `sv restore`: the deployment's files and the backup arrive together; `sv apply` brings the instance to the commit and puts the data back. */
+async function restore(
+  host: ReceiverHost,
+  options: ReceiveOptions,
+  commit: string,
+): Promise<number> {
+  await requireIdle(host);
+  const incoming = path.join(options.stateDir, 'incoming');
+  await rm(incoming, { recursive: true, force: true });
+  const sent = splitRestore(await options.stdin(MAX_RESTORE_BYTES));
+  const backup = readArchive(sent.backup, isBackupPath, {
+    maxBytes: MAX_RESTORE_BYTES,
+    stripDot: true,
+  });
+  if (!backup.some((entry) => entry.name === 'databases.sql'))
+    throw new Refused('The backup holds no databases.', 'This is not a backup taken by sv backup.');
+  const { dir, pinned, files } = await unpack(options, commit, sent.deployment);
+  const data = path.join(incoming, 'restore');
+  await mkdir(data, { recursive: true, mode: 0o700 });
+  await extract(backup, data);
+  options.out(
+    `Received ${files} files for ${commit.slice(0, 12)} and a backup of ${backup.length} files.\n`,
+  );
+  return launch(host, options, { commit, dir, pinned, extra: ['--restore-from', data] });
+}
+
+/** `sv rollback`: applies the previous release's files again (operator-cli §10.3), unless core would go backward. */
+async function rollback(host: ReceiverHost, options: ReceiveOptions): Promise<number> {
+  await requireIdle(host);
+  const state = await readState(options.stateDir);
+  if (!state?.previous) {
+    throw new Refused(
+      'There is no earlier release to go back to.',
+      'sv status shows what is running.',
+    );
+  }
+  const release = path.join(layout(options.stateDir).releases, state.previous);
+  if (!existsSync(path.join(release, 'suite.lock'))) {
+    throw new Refused(
+      `The release ${state.previous.slice(0, 12)} is no longer on the server.`,
+      'Only the last five are kept. Deploy the commit you want with sv deploy.',
+    );
+  }
+  const before = (await SuiteFile.load(release)).value;
+  if (gt(state.core.version, before.core.version)) {
+    throw new Refused(
+      `Core ${state.core.version} cannot go back to ${before.core.version}: its migrations only go forward.`,
+      'sv restore brings a backup taken before the upgrade back.',
+    );
+  }
+  await rm(path.join(options.stateDir, 'incoming'), { recursive: true, force: true });
+  const dir = path.join(options.stateDir, 'incoming', state.previous);
+  await mkdir(dir, { recursive: true, mode: 0o755 });
+  for (const name of ['suite.yml', 'suite.lock', 'secrets.age.yml', 'overrides']) {
+    if (existsSync(path.join(release, name)))
+      await cp(path.join(release, name), path.join(dir, name), { recursive: true });
+  }
+  const lock = await readLock(dir);
+  if (!lock) throw new Refused('That release has no usable suite.lock.');
+  const pinned = byDigest(lock.images.cli);
+  if (!IMAGE_BY_DIGEST.test(pinned))
+    throw new Refused('That release names a toolkit that is not an image by digest.');
+  options.out(`Going back to ${state.previous.slice(0, 12)}.\n`);
+  return launch(host, options, { commit: state.previous, dir, pinned });
+}
+
+/** `sv backup`: a backup of the instance, encrypted to the operator's keys alone, sent down the connection and not kept on the server. */
+async function backup(host: Host, options: ReceiveOptions): Promise<number> {
+  const paths = layout(options.stateDir);
+  if (!options.sendFile) throw new Refused('This connection cannot carry a backup.');
+  if (!existsSync(path.join(paths.current, 'suite.yml'))) {
+    throw new Refused('Nothing has been deployed yet, so there is nothing to back up.');
+  }
+  await requireIdle(host);
+  const suite = (await SuiteFile.load(paths.current)).value;
+  const imageFile = path.join(options.stateDir, 'toolkit-image');
+  const file = await takeBackup(host, {
+    stateDir: options.stateDir,
+    recipients: suite.secrets.recipients,
+    reason: 'manual',
+    ...(existsSync(imageFile) ? { image: (await readFile(imageFile, 'utf8')).trim() } : {}),
+  });
+  try {
+    await options.sendFile(file);
+  } finally {
+    await rm(file, { force: true });
+  }
+  return 0;
 }
 
 async function status(host: Host, options: ReceiveOptions): Promise<number> {

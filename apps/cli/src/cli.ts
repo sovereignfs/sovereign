@@ -1,5 +1,6 @@
 import { app } from './commands/app.js';
 import { applyCommand } from './commands/apply.js';
+import { backup, restore, rollback } from './commands/backup.js';
 import { deploy } from './commands/deploy.js';
 import { push } from './commands/push.js';
 import { doctor, logs, status } from './commands/remote.js';
@@ -27,6 +28,9 @@ Deploying
   server bootstrap              prepare a new machine: Docker, folders, keys
   deploy                        put the pushed commit on the server
   status | logs | doctor        what is running, what it printed, what to fix
+Recovering
+  backup | restore PATH         a backup encrypted to your key alone, and bringing one back
+  rollback                      run the previous release again
   apply                         on the server: make it match one commit (sv deploy starts it)
 
 Every command says what it changed. Exit codes: 0 done, 1 failed partway (run it again), 2 refused (nothing changed), 3 locked.`;
@@ -40,6 +44,9 @@ const COMMANDS: Record<string, Command> = {
   push,
   server,
   deploy,
+  backup,
+  restore,
+  rollback,
   status,
   logs,
   doctor,

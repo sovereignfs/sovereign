@@ -1,7 +1,7 @@
 import { execFile, spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { lookup } from 'node:dns/promises';
-import { createWriteStream } from 'node:fs';
+import { createReadStream, createWriteStream } from 'node:fs';
 import { statfs } from 'node:fs/promises';
 import type { Registry } from '../registry.js';
 
@@ -16,7 +16,14 @@ export interface Host {
   /** Runs `docker` with an argument list, never through a shell. `input` is written to its standard input and not to its argument list. */
   docker(
     args: readonly string[],
-    options?: { input?: string; cwd?: string; env?: Record<string, string>; stdoutTo?: string },
+    options?: {
+      input?: string;
+      /** A file to send to standard input, for something too large to hold as a string. */
+      inputFrom?: string;
+      cwd?: string;
+      env?: Record<string, string>;
+      stdoutTo?: string;
+    },
   ): Promise<Ran>;
   /** The addresses a name resolves to. */
   resolve(name: string): Promise<string[]>;
@@ -75,7 +82,13 @@ export function realHost(log: (line: string) => void): Host {
           resolve({ code: 127, stdout, stderr: `${stderr}${error.message}` }),
         );
         child.on('close', (code) => resolve({ code: code ?? 1, stdout, stderr }));
-        child.stdin.end(options.input ?? '');
+        if (options.inputFrom) {
+          const source = createReadStream(options.inputFrom);
+          source.on('error', () => child.stdin.end());
+          source.pipe(child.stdin);
+        } else {
+          child.stdin.end(options.input ?? '');
+        }
       }),
     async resolve(name) {
       try {

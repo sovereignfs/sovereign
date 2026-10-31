@@ -1,0 +1,27 @@
+body {
+  margin: 0;
+  font-family: var(--sv-font-family);
+  color: var(--sv-color-text-primary);
+  background: var(--sv-color-surface);
+}
+
+main {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: var(--sv-space-6) var(--sv-space-4);
+  display: grid;
+  gap: var(--sv-space-4);
+}
+
+form {
+  display: flex;
+  gap: var(--sv-space-2);
+}
+
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sv-space-2);
+}

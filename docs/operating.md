@@ -66,6 +66,9 @@ already true is left alone.
 
 ## Add two apps
 
+To start a new hosted app, `npm create @sovereignfs app my-notes` makes one that signs in through your instance, keeps its data in its
+own database and builds into an image the instance can host as it stands; its README says how.
+
 An app is **hosted** (it runs on your machine, from an image) or **external** (it runs somewhere else and signs in through core).
 
 ```bash

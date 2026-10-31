@@ -1,0 +1,19 @@
+{
+  "manifest": 1,
+  "prefix": "__PREFIX__",
+  "name": "__TITLE__",
+  "description": "Notes, as a starting point for an app on a Sovereign instance",
+  "port": 3000,
+  "health": "/api/health",
+  "launch": "/",
+  "signIn": {
+    "redirect": ["/auth/callback"],
+    "postLogout": ["/"],
+    "backChannel": "/auth/backchannel-logout",
+    "accountDeleted": "/auth/account-deleted",
+    "scopes": ["openid", "profile", "email"]
+  },
+  "database": true,
+  "generate": ["__PREFIX___AUTH_SECRET"],
+  "core": ">=0.49.0 <1.0.0"
+}

@@ -58,8 +58,7 @@ The operator CLI deploys core, with or without apps, to one machine with Docker,
 npm create @sovereignfs instance my-instance
 ```
 
-- `instance <dir>` makes an instance repository in `<dir>`. `app <dir>` is reserved and is not specified here: until it is,
-  it MUST say so and change nothing.
+- `instance <dir>` makes an instance repository in `<dir>`. `app <dir>` makes an app (§2.2).
 - With no word it MUST ask, unless there is no terminal, when it MUST refuse and say what to pass.
 - `--instance` and `--app` MUST be accepted in place of the word, read from the arguments or from `npm_config_instance` and
   `npm_config_app`, since npm keeps a flag before `--` for itself. The documented form is the word.
@@ -67,6 +66,26 @@ npm create @sovereignfs instance my-instance
 
 `instance` MUST, in order: write the files of §2.1, run `git init`, install the toolkit from the lockfile it wrote, add
 `--remote URL` as `origin` if given, and make the first commit. It MUST NOT push.
+
+### 2.2 An app
+
+`npm create @sovereignfs app my-notes` makes a Next.js app in `my-notes` that an instance can host as it stands. The folder's name is the
+app's name (it MUST be one `sv app add` accepts, and not `sv`), its variable prefix is that name upper-cased without hyphens, and its title
+is the name in words.
+
+It MUST meet [`spec/app-manifest.md`](../../spec/app-manifest.md), and so MUST hold:
+
+- `sovereign.manifest.json`, valid against the manifest schema, and a `Dockerfile` whose `io.github.sovereignfs.app-manifest` label is that
+  manifest, with a script that checks the two agree and one that copies the manifest over the label;
+- sign-in through `@sovereignfs/sdk` with its sessions and refresh tokens in the app's own database, the tokens encrypted, and routes for
+  sign-in, the callback, sign-out, core's back-channel logout and core's account-deleted notice at the paths the manifest names;
+- a page behind sign-in using `@sovereignfs/ui`, whose every server action asks who is calling and whose every delete names the owner;
+- a health route that answers 200 when its database does;
+- its own migrations, applied once each when it starts, behind a lock;
+- an image that does not run as root, listens on 3000 and is configured by its environment alone.
+
+`create` writes the files, runs `git init`, resolves the lockfile and makes the first commit. It MUST NOT install or build, and it
+writes nothing outside the folder. The versions it writes are held by a test to the packages of this repository.
 
 ### 2.1 What an instance repository holds
 

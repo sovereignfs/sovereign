@@ -7,4 +7,5 @@
 npm create @sovereignfs my-instance
 ```
 
-Then `./sv setup`. See [`@sovereignfs/cli`](https://www.npmjs.com/package/@sovereignfs/cli). Licence: AGPL-3.0-or-later.
+Then `./sv setup`. `npm create @sovereignfs app my-notes` makes a Next.js app that an instance can host as it stands: it signs in through
+the instance's core, keeps its data in its own database, and builds into an image whose label is its manifest. See [`@sovereignfs/cli`](https://www.npmjs.com/package/@sovereignfs/cli). Licence: AGPL-3.0-or-later.

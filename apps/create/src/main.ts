@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 import pkg from '../package.json' with { type: 'json' };
+import { createApp } from './app.js';
 import { CreateError, createInstance, readRequest, type CreateIo, type Exec } from './create.js';
 
 const exec: Exec = (command, args, options) =>
@@ -38,15 +39,15 @@ async function main(): Promise<number> {
     let { kind, dir } = request;
     if (kind === undefined) {
       if (!io.interactive)
-        throw new CreateError('Say what to make.', 2, 'npm create @sovereignfs instance <folder>');
-      kind = (await io.ask('What do you want to make (instance)?')) === 'app' ? 'app' : 'instance';
-    }
-    if (kind === 'app') {
-      throw new CreateError(
-        'Making an app is not available yet.',
-        2,
-        'An app is added to an instance with ./sv app add. Nothing was written.',
-      );
+        throw new CreateError(
+          'Say what to make.',
+          2,
+          'npm create @sovereignfs instance <folder>, or app <folder>',
+        );
+      kind =
+        (await io.ask('What do you want to make (instance or app)?')) === 'app'
+          ? 'app'
+          : 'instance';
     }
     if (dir === undefined) {
       if (!io.interactive)
@@ -58,12 +59,22 @@ async function main(): Promise<number> {
       dir = await io.ask('In which folder?');
       if (dir === '') throw new CreateError('No folder was named.', 2);
     }
-    await createInstance(
-      { dir, remote: request.remote, cliVersion: pkg.version },
-      io,
-      exec,
-      process.cwd(),
-    );
+    if (kind === 'app') {
+      if (request.remote)
+        throw new CreateError(
+          '--remote is for an instance.',
+          2,
+          'Add a remote to an app with git remote add.',
+        );
+      await createApp({ dir }, io, exec, process.cwd());
+    } else {
+      await createInstance(
+        { dir, remote: request.remote, cliVersion: pkg.version },
+        io,
+        exec,
+        process.cwd(),
+      );
+    }
     return 0;
   } catch (error) {
     if (error instanceof CreateError) {

@@ -74,7 +74,7 @@ export function readRequest(argv: readonly string[], env: NodeJS.ProcessEnv): Re
 }
 
 /** Whether `dir` can be made into an instance: absent, or empty. Anything else is refused, and nothing is written. */
-async function checkEmpty(dir: string): Promise<void> {
+export async function checkEmpty(dir: string): Promise<void> {
   try {
     if ((await readdir(dir)).length > 0) {
       throw new CreateError(

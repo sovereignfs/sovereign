@@ -228,7 +228,7 @@ of it is built.
 - A backup restored to a new machine gives a working instance, with people still signed in to their apps
 - A backup cannot be read with what the server holds
 
-#### 📋 13.9 — Deploying from GitHub `[parallel]`
+#### ✅ 13.9 — Deploying from GitHub `[parallel]`
 
 **Goal:** A push can deploy without the operator's machine, and without GitHub holding a secret that decrypts anything.
 
@@ -238,6 +238,8 @@ of it is built.
 
 - A reusable workflow in this repository, pinned by the CLI's version, and the thin one `@sovereignfs/create` writes
 - `sv deploy --github`
+
+**Not verified here:** a run on a GitHub runner against a real server. The workflow is tested for what it holds and how it is pinned, and `sv deploy --ci` against a fake server, with the key and the host key written to files that are gone afterwards.
 
 **Dependencies:** 13.7
 

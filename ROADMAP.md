@@ -137,7 +137,7 @@ be argued before anything is built.
 | 0.75.0  | 6        | Deploying over SSH `[parallel]`    | ✅     | [13.6](docs/epics/operator-cli.md)  |
 | 0.77.0  | 7        | Publishing and upgrading           | ✅     | [13.7](docs/epics/operator-cli.md)  |
 | 0.76.0  | 8        | Backup, restore and rollback       | ✅     | [13.8](docs/epics/operator-cli.md)  |
-| —       | 9        | Deploying from GitHub `[parallel]` | 📋     | [13.9](docs/epics/operator-cli.md)  |
+| 0.78.0  | 9        | Deploying from GitHub `[parallel]` | ✅     | [13.9](docs/epics/operator-cli.md)  |
 | —       | 10       | The operator's guide               | 📋     | [13.10](docs/epics/operator-cli.md) |
 | —       | 11       | The app template                   | 📋     | [13.11](docs/epics/operator-cli.md) |
 

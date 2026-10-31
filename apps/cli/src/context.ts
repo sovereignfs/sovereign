@@ -1,10 +1,13 @@
 import { execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { lookup } from 'node:dns/promises';
+import { connect } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { keyFile } from './secrets/keys.js';
 import { type Io } from './io.js';
 import { Registry, type RegistryAuths } from './registry.js';
+import { sshRemote, type Remote } from './server/remote.js';
 
 /** Runs a program with an argument list, never through a shell, so nothing in an argument is read as a command. */
 export type Exec = (
@@ -26,6 +29,16 @@ export type Context = {
   keyFile: string;
   /** The clock. */
   now: () => number;
+  /** What the operator’s machine can see of the network, for the checks that look from outside. */
+  network: {
+    resolve: (name: string) => Promise<string[]>;
+    /** Whether something answers on the port within a few seconds. */
+    reachable: (host: string, port: number) => Promise<boolean>;
+  };
+  /** The server, over the operator’s own SSH access. */
+  remote: Remote;
+  /** The files of one commit as a tar archive, as `git archive` writes it. */
+  archive: (root: string, commit: string, paths: readonly string[]) => Promise<Buffer>;
 };
 
 export const realExec: Exec = (command, args, options = {}) =>
@@ -59,6 +72,33 @@ export function dockerAuths(env: NodeJS.ProcessEnv): RegistryAuths {
   }
 }
 
+const realNetwork: Context['network'] = {
+  async resolve(name) {
+    try {
+      return (await lookup(name, { all: true })).map((entry) => entry.address);
+    } catch {
+      return [];
+    }
+  },
+  reachable: (host, port) =>
+    new Promise((resolve) => {
+      const socket = connect({ host, port, timeout: 4000 });
+      socket.on('connect', () => (socket.destroy(), resolve(true)));
+      socket.on('timeout', () => (socket.destroy(), resolve(false)));
+      socket.on('error', () => resolve(false));
+    }),
+};
+
+export const gitArchive: Context['archive'] = (root, commit, paths) =>
+  new Promise((resolve, reject) => {
+    execFile(
+      'git',
+      ['archive', '--format=tar', commit, '--', ...paths],
+      { cwd: root, encoding: 'buffer', maxBuffer: 64 * 1024 * 1024 },
+      (error, stdout) => (error ? reject(error) : resolve(stdout)),
+    );
+  });
+
 export function makeContext(root: string, io: Io, env: NodeJS.ProcessEnv): Context {
   return {
     io,
@@ -69,5 +109,8 @@ export function makeContext(root: string, io: Io, env: NodeJS.ProcessEnv): Conte
     exec: realExec,
     keyFile: keyFile(env),
     now: Date.now,
+    network: realNetwork,
+    remote: sshRemote,
+    archive: gitArchive,
   };
 }

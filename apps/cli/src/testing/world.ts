@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { realExec, type Context } from '../context.js';
+import { gitArchive, realExec, type Context } from '../context.js';
 import type { Io } from '../io.js';
 import { Registry } from '../registry.js';
 import { MANIFEST_LABEL } from '../release.js';
@@ -184,6 +184,12 @@ export function makeWorld(
     exec: realExec,
     keyFile: path.join(home, 'config', 'age.key'),
     now: () => 1_800_000_000_000,
+    network: {
+      resolve: async () => [],
+      reachable: async () => false,
+    },
+    remote: () => Promise.reject(new Error('the test has no server')),
+    archive: gitArchive,
   };
   // A commit needs an author, and a test machine may have none.
   for (const [name, value] of Object.entries({

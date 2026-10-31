@@ -1,9 +1,9 @@
 # Sovereign — operator CLI specification
 
-|            |                                                                                                                                                                                                                    |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Status** | Draft. Specified from [RFC 0002](../rfcs/0002-deployment-strategies.md); the commands on the operator's machine and `sv apply` for core and apps are built, deploying is not ([epic 13](../epics/operator-cli.md)) |
-| **Covers** | `apps/cli`: the `sv` toolkit, `sv apply`, and `@sovereignfs/create`                                                                                                                                                |
+|            |                                                                                                                                                                                                                                                                                            |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Status** | Draft. Specified from [RFC 0002](../rfcs/0002-deployment-strategies.md); the commands on the operator's machine and `sv apply` for core and apps, and deploying over SSH are built; publishing, upgrading, backups and deploying from GitHub are not ([epic 13](../epics/operator-cli.md)) |
+| **Covers** | `apps/cli`: the `sv` toolkit, `sv apply`, and `@sovereignfs/create`                                                                                                                                                                                                                        |
 
 This document is the single source of truth for what the operator CLI does. Where code, another document or an issue
 disagrees with it, this document wins until it is changed.
@@ -314,6 +314,8 @@ apply` itself after Compose, since an alias set that changes would otherwise rec
   current               a link to the last release that worked
   secrets/              generated secrets, one file each, readable by root only
   backups/              backups taken by deployments
+  incoming/             the files of a deployment being received, removed by the next one
+  toolkit-image         the toolkit's image, by digest, which the wrapper in 8.3 starts
   state.json            what was applied
   age.key               the server's decryption key, readable by root only
   lock
@@ -358,6 +360,33 @@ Runs over the operator's SSH access, once, and is safe to run again. It MUST:
 - install a deployment key in `authorized_keys`, limited with `command=` to receiving an archive and starting `sv apply`, and
   with no forwarding, no terminal and no other command, and print the private half once for the operator to store as a
   secret in the repository's Actions settings. With `server.deploy: ssh` it installs none.
+
+### 8.4 As built
+
+- **One program on the server.** `sv server bootstrap` installs `/usr/local/sbin/sovereign-receive`, a shell script of a dozen lines that
+  runs the toolkit's image (the one named in `toolkit-image`) with the Docker socket and the state directory, and passes the request on as a
+  single argument. It parses nothing. The toolkit answers the request, so the checking is code that is tested: a request is a verb and the
+  few words it takes, each matched against a pattern (`version`, `deploy COMMIT`, `status`, `doctor`, `logs TARGET [LINES]`,
+  `app NAME [--secret]`, `rotate NAME`), and anything else is refused. The deployment key runs the wrapper as `restrict,command="…
+--deploy-only"`, and the toolkit then answers `deploy` and `version` and nothing else.
+- **The archive** is what `git archive` writes for the pushed commit's `suite.yml`, `suite.lock`, `secrets.age.yml` and `overrides/`. The
+  toolkit reads it with its own reader and writes nothing until the whole archive is accepted: a link, a device, a name that climbs out of
+  the folder or is not an instance file, an archive over 32 MB or one that is cut short is refused. It is written to `incoming/<commit>/`.
+- **The lock is checked too.** It arrives in the archive, and its toolkit image is run with the Docker socket, so the image is refused
+  unless it is a reference by digest that cannot be read as an option.
+- **`sv apply` runs in a container of its own,** `sv-apply`, started detached from the image named in the commit's `suite.lock` (pulled
+  if the machine does not have it), with the Docker socket and the state directory at the same path as on the host, so the paths Compose
+  mounts mean the same to the host's Docker. The receiving process follows its output to the operator and ends with its exit code; if the
+  connection is lost, the container goes on. The container is kept after it ends, so `sv logs` shows the last deployment, and a second
+  deployment is refused (exit 3) while it runs. When `sv apply` finishes it writes its image into `toolkit-image`, so the next request
+  starts from the toolkit the instance now pins.
+- **The deployment key is made on the operator's machine,** so its private half never exists on the server; the server gets the public half
+  and the operator is shown the private half once. Running bootstrap again leaves an installed key alone unless `--new-deploy-key`.
+- **The server's key** is made by the toolkit's image on the server (`sv server-key`) and printed; bootstrap adds it to
+  `secrets.recipients` and re-encrypts what is held, which needs the operator's key (otherwise it says to run `sv secret rekey`).
+- **Not tried here:** installing Docker on a clean Debian or Ubuntu machine, and a whole deployment on a virtual machine (§13). The
+  script is checked to be a program a shell reads and its inputs are checked; the receiving side is run against real Docker with the
+  toolkit's own image.
 
 ---
 

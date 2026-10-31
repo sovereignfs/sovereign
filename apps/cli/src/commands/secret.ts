@@ -4,6 +4,7 @@ import { Refused } from '../errors.js';
 import { readOperatorKey } from '../secrets/keys.js';
 import { decryptValue, encryptValue, SecretsFile } from '../secrets/store.js';
 import { SuiteFile, readLock } from '../suite/files.js';
+import { secretRotate } from './remote.js';
 import { isReservedCore, isReservedForApp } from '../suite/names.js';
 import { manifestOf } from '../suite/apps.js';
 import { isExternal } from '../suite/types.js';
@@ -93,8 +94,8 @@ async function list(ctx: Context, argv: string[]): Promise<void> {
   for (const row of rows) ctx.io.out(`${row.owner}\t${row.name}`);
 }
 
-async function rekey(ctx: Context, argv: string[]): Promise<void> {
-  positionals(parseArgs(argv, {}), 0, 'sv secret rekey');
+/** Re-encrypts every secret to the recipients in `suite.yml`, and says how many; it needs the operator’s key to read them first. */
+export async function reencrypt(ctx: Context): Promise<number> {
   const suite = (await SuiteFile.load(ctx.root)).value;
   const key = await readOperatorKey(ctx.keyFile);
   if (!key)
@@ -112,6 +113,13 @@ async function rekey(ctx: Context, argv: string[]): Promise<void> {
     }
   }
   await secrets.save();
+  return count;
+}
+
+async function rekey(ctx: Context, argv: string[]): Promise<void> {
+  positionals(parseArgs(argv, {}), 0, 'sv secret rekey');
+  const suite = (await SuiteFile.load(ctx.root)).value;
+  const count = await reencrypt(ctx);
   ctx.io.err(
     `Re-encrypted ${count} secret${count === 1 ? '' : 's'} to ${suite.secrets.recipients.length} recipient${suite.secrets.recipients.length === 1 ? '' : 's'}.`,
   );
@@ -133,9 +141,7 @@ export async function secret(ctx: Context, argv: string[]): Promise<void> {
     case 'rekey':
       return rekey(ctx, rest);
     case 'rotate':
-      throw new Refused(
-        'sv secret rotate needs the server, and is not in this version of the toolkit yet.',
-      );
+      return secretRotate(ctx, rest);
     default:
       throw new Refused('Usage: sv secret set|remove|list|rekey|rotate');
   }

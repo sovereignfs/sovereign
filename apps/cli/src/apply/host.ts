@@ -36,6 +36,23 @@ export interface Host {
   log(line: string): void;
 }
 
+/** The real host for the server’s side of the operator’s commands, which can follow a container’s output as it is printed. */
+export function realReceiverHost(
+  log: (line: string) => void,
+): Host & { follow: (args: readonly string[], write: (chunk: string) => void) => Promise<number> } {
+  return {
+    ...realHost(log),
+    follow: (args, write) =>
+      new Promise((resolve) => {
+        const child = spawn('docker', [...args], { stdio: ['ignore', 'pipe', 'pipe'] });
+        child.stdout.on('data', (chunk: Buffer) => write(chunk.toString('utf8')));
+        child.stderr.on('data', (chunk: Buffer) => write(chunk.toString('utf8')));
+        child.on('error', () => resolve(127));
+        child.on('close', (code) => resolve(code ?? 1));
+      }),
+  };
+}
+
 export function realHost(log: (line: string) => void): Host {
   return {
     docker: (args, options = {}) =>

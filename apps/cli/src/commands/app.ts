@@ -2,6 +2,7 @@ import { parseArgs, positionals } from '../args.js';
 import type { Context } from '../context.js';
 import { Refused } from '../errors.js';
 import { askOrRefuse, confirm } from '../io.js';
+import { appShow } from './remote.js';
 import { readManifest } from '../manifest.js';
 import { SuiteFile, readLock, writeLock } from '../suite/files.js';
 import { refreshedLock } from '../suite/lock.js';
@@ -385,9 +386,7 @@ export async function app(ctx: Context, argv: string[]): Promise<void> {
     case 'list':
       return list(ctx, rest);
     case 'show':
-      throw new Refused(
-        'sv app show needs the server, and is not in this version of the toolkit yet.',
-      );
+      return appShow(ctx, rest);
     default:
       throw new Refused('Usage: sv app add|update|remove|list|show');
   }

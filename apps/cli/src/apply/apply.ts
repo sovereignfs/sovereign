@@ -59,6 +59,8 @@ export type ApplyOptions = {
   skipDns: boolean;
   /** Set by a restore, which may take core’s version backward. */
   restore: boolean;
+  /** The image this run is in, written down so the server’s wrapper starts the next request from it. */
+  toolkitImage?: string;
   /** For tests that run a locally built image. Nothing in the toolkit sets it, and no command line flag reaches it. */
   imageOverrides?: ImageOverrides;
 };
@@ -376,6 +378,11 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
     ),
   };
   await writeState(options.stateDir, next);
+  if (options.toolkitImage)
+    await writeAtomically(
+      path.join(options.stateDir, 'toolkit-image'),
+      `${options.toolkitImage}\n`,
+    );
   await pruneReleases(paths.releases, options.commit);
   const after = await fingerprint(host, Object.keys(names.apps));
   const changed =

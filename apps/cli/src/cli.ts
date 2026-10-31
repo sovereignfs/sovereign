@@ -1,6 +1,10 @@
 import { app } from './commands/app.js';
 import { applyCommand } from './commands/apply.js';
+import { deploy } from './commands/deploy.js';
 import { push } from './commands/push.js';
+import { doctor, logs, status } from './commands/remote.js';
+import { server } from './commands/server.js';
+import { receiveCommand, serverKeyCommand } from './commands/serve.js';
 import { secret } from './commands/secret.js';
 import { setup } from './commands/setup.js';
 import type { Context } from './context.js';
@@ -20,13 +24,26 @@ Secrets
   secret set|remove|list|rekey  keep secrets in secrets.age.yml, encrypted
 Deploying
   push                          check the repository, commit its files, and push
+  server bootstrap              prepare a new machine: Docker, folders, keys
+  deploy                        put the pushed commit on the server
+  status | logs | doctor        what is running, what it printed, what to fix
   apply                         on the server: make it match one commit (sv deploy starts it)
 
 Every command says what it changed. Exit codes: 0 done, 1 failed partway (run it again), 2 refused (nothing changed), 3 locked.`;
 
 type Command = (ctx: Context, argv: string[]) => Promise<void>;
 
-const COMMANDS: Record<string, Command> = { setup, app, secret, push };
+const COMMANDS: Record<string, Command> = {
+  setup,
+  app,
+  secret,
+  push,
+  server,
+  deploy,
+  status,
+  logs,
+  doctor,
+};
 
 /**
  * Runs one command line and returns how it ended (operator-cli §11). A command refuses or fails by throwing; this turns that into
@@ -46,6 +63,22 @@ export async function run(argv: string[], io: Io, contextFor: () => Context): Pr
   if (name === 'apply') {
     try {
       await applyCommand(io, rest);
+      return 0;
+    } catch (error) {
+      return report(io, error);
+    }
+  }
+  // So do these two, which the server’s wrapper starts.
+  if (name === 'receive') {
+    try {
+      return await receiveCommand(io, rest);
+    } catch (error) {
+      return report(io, error);
+    }
+  }
+  if (name === 'server-key') {
+    try {
+      await serverKeyCommand(io, rest);
       return 0;
     } catch (error) {
       return report(io, error);

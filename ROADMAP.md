@@ -148,7 +148,7 @@ be argued before anything is built.
 | Version | Priority | Task                                  | Status | Epic task                          |
 | ------- | -------- | ------------------------------------- | ------ | ---------------------------------- |
 | 0.50.0  | 1        | The specification                     | ✅     | [2.4](docs/epics/design-system.md) |
-| 0.58.0  | 2        | Audit the public surface `[parallel]` | 📋     | [2.5](docs/epics/design-system.md) |
+| 0.58.0  | 2        | Audit the public surface `[parallel]` | ✅     | [2.5](docs/epics/design-system.md) |
 
 ### M8 — Apps have an SDK
 
@@ -157,9 +157,9 @@ be argued before anything is built.
 | Version | Priority | Task                                     | Status | Epic task                 |
 | ------- | -------- | ---------------------------------------- | ------ | ------------------------- |
 | 0.51.0  | 1        | The specification                        | ✅     | [14.1](docs/epics/sdk.md) |
-| 0.55.0  | 2        | Tokens, failure and today's capabilities | 📋     | [14.2](docs/epics/sdk.md) |
-| 0.56.0  | 3        | Signing in, and the Next.js adapter      | 📋     | [14.3](docs/epics/sdk.md) |
-| 0.57.0  | 4        | Publishing                               | 📋     | [14.4](docs/epics/sdk.md) |
+| 0.55.0  | 2        | Tokens, failure and today's capabilities | ✅     | [14.2](docs/epics/sdk.md) |
+| 0.56.0  | 3        | Signing in, and the Next.js adapter      | ✅     | [14.3](docs/epics/sdk.md) |
+| 0.57.0  | 4        | Publishing                               | ✅     | [14.4](docs/epics/sdk.md) |
 | 0.61.0  | 5        | App tokens in core                       | ✅     | [14.5](docs/epics/sdk.md) |
 | —       | 6        | Account-deletion fan-out                 | 📋     | [14.6](docs/epics/sdk.md) |
 

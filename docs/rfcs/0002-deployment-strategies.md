@@ -505,6 +505,9 @@ Accepted as proposed, with the open questions answered as leaned:
 `create` is told what to make by a word (`instance <dir>`, `app <dir>`), which needs no `--` on any package manager. The
 flags are accepted too. `app <dir>` needs its own design.
 
+The owner confirmed the outcome above on 2026-10-31, including the four changes writing the spec made. The design of `app <dir>` is
+deliverable one of task 13.11, not a prerequisite of epic 13.
+
 The outcome goes into the spec in task 13.1, before any code in epic 13. That is
 [`docs/specs/operator-cli.md`](../specs/operator-cli.md), `spec/suite.md`, `spec/app-manifest.md` and core-app §3.7.4, which
 now win over this document. Writing them changed four things:

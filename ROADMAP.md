@@ -117,7 +117,7 @@ be argued before anything is built.
 | 0.59.0  | 1        | Publish the image                  | ✅     | [12.1](docs/epics/release.md) |
 | 0.59.0  | 2        | Guides for operators `[parallel]`  | ✅     | [12.2](docs/epics/release.md) |
 | —       | 3        | First release                      | 📋     | [12.3](docs/epics/release.md) |
-| —       | 4        | The deployment design `[parallel]` | ⏳     | [12.4](docs/epics/release.md) |
+| —       | 4        | The deployment design `[parallel]` | ✅     | [12.4](docs/epics/release.md) |
 | 0.48.0  | 5        | Host-only cookies                  | ✅     | [12.5](docs/epics/release.md) |
 | 0.52.0  | 6        | Try real third-party apps          | ✅     | [12.6](docs/epics/release.md) |
 | 0.53.0  | 7        | Compatibility settings             | ✅     | [12.7](docs/epics/release.md) |

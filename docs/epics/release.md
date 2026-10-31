@@ -97,7 +97,7 @@ runs only on a tag, so its first real run is the first release.
 - The image pulls without logging in, on both architectures
 - Following `docs/deploying.md` as written reaches a healthy core
 
-#### ⏳ 12.4 — The deployment design `[parallel]`
+#### ✅ 12.4 — The deployment design `[parallel]`
 
 **Goal:** The contract between core, the operator CLI and apps is agreed before any of it is built.
 

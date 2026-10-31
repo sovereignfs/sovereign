@@ -220,6 +220,18 @@ describe('the form to add an app', () => {
     expect(box.checked).toBe(false);
     expect(box.disabled).toBe(false);
   });
+
+  it('sends the account-deleted address, trimmed by the server, and does not tie it to end-session', async () => {
+    register.mockResolvedValue({ ok: true, message: 'The app is added.', secret: 's3cret' });
+    render(<AppForm initial={NEW_APP} />);
+    fillRequired();
+    const box = screen.getByLabelText(/send people to core’s sign-out/) as HTMLInputElement;
+    type(/Account-deleted address/, 'https://notes.example/gone');
+    expect(box.checked).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Add the app' }));
+    await waitFor(() => expect(register).toHaveBeenCalled());
+    expect(sent(register).get('accountDeletedUri')).toBe('https://notes.example/gone');
+  });
 });
 
 describe('the form to change an app', () => {

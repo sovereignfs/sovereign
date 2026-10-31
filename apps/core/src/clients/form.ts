@@ -82,6 +82,7 @@ export function appFromForm(form: FormData): UpdateInput & { name: string } {
     redirectUris: lines(form.get('redirectUris')),
     postLogoutRedirectUris: lines(form.get('postLogoutRedirectUris')),
     backchannelLogoutUri: text(form.get('backchannelLogoutUri')).trim(),
+    accountDeletedUri: text(form.get('accountDeletedUri')).trim(),
     endSession: on(form.get('endSession')),
     scopes: form.getAll('scope').map(String),
     // Only a confidential app's form has these boxes; a public app sends none, which is none allowed.
@@ -121,6 +122,7 @@ const FIELD_OF: Record<string, string> = {
   redirectUris: 'redirectUris',
   postLogoutRedirectUris: 'postLogoutRedirectUris',
   backchannelLogoutUri: 'backchannelLogoutUri',
+  accountDeletedUri: 'accountDeletedUri',
   scopes: 'scope',
   appScopes: 'appScope',
   secretIn: 'secretIn',
@@ -139,6 +141,7 @@ const LABEL_OF: Record<string, string> = {
   redirectUris: 'The sign-in addresses',
   postLogoutRedirectUris: 'The addresses after sign-out',
   backchannelLogoutUri: 'The logout notice address',
+  accountDeletedUri: 'The account-deleted address',
   scopes: 'What the app may see',
   appScopes: 'What the app may do on its own',
   secretIn: 'How the app sends its secret',

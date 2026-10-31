@@ -4,6 +4,7 @@ import { can } from '../roles/capabilities';
 import { loadMatrix } from '../roles/matrix';
 import { parseMetadata } from '../oauth/client-metadata';
 import { ensureRs256Key, idTokenAlgorithmOf, type IdTokenAlgorithm } from '../oauth/id-token-alg';
+import { removeAppDeletionNotices } from '../accounts/deletion-notices';
 import { removeAppActivity } from '../activity/service';
 import { removeAppMailOfApp } from '../mail/apps';
 import { removeAppNotifications } from '../notifications/service';
@@ -33,6 +34,11 @@ export type ClientSettings = {
   redirectUris: string[];
   postLogoutRedirectUris: string[];
   backchannelLogoutUri: string | undefined;
+  /**
+   * Where core tells the app that a person who used it deleted their account, and keeps trying until the app answers (core-app §4.5).
+   * Kept with the app's other settings core adds to the provider's own, not as a column of the provider.
+   */
+  accountDeletedUri: string | undefined;
   /** Lets the app send people to core's sign-out. On whenever a post-logout or back-channel address is set. */
   endSession: boolean;
   scopes: string[];
@@ -253,6 +259,7 @@ export class ClientRegistry {
       await removeAppNotifications(tx, clientId);
       await removeAppMailOfApp(tx, clientId);
       await removeAppActivity(tx, clientId);
+      await removeAppDeletionNotices(tx, clientId);
     });
     await this.#provider(actor, () =>
       this.#auth.api.deleteOAuthClient({
@@ -394,6 +401,13 @@ export class ClientRegistry {
       if (problem) problems.push({ field: 'backchannelLogoutUri', message: problem });
     }
 
+    const accountDeleted =
+      'accountDeletedUri' in input ? input.accountDeletedUri : before?.accountDeletedUri;
+    if (accountDeleted !== undefined && accountDeleted !== '') {
+      const problem = urlProblem(accountDeleted, this.#development);
+      if (problem) problems.push({ field: 'accountDeletedUri', message: problem });
+    }
+
     // Stopping trust takes `roles` with it, quietly: it is the consequence, not a mistake. Asking for
     // `roles` for an untrusted app is a mistake, and is refused.
     let requested: unknown = input.scopes ?? before?.scopes ?? DEFAULT_SCOPES;
@@ -470,6 +484,7 @@ export class ClientRegistry {
       redirectUris: redirect.list,
       postLogoutRedirectUris,
       backchannelLogoutUri,
+      accountDeletedUri: accountDeleted === '' ? undefined : accountDeleted,
       // On automatically when an address that needs it is set (core-app §3.7.1).
       endSession:
         (input.endSession ?? before?.endSession ?? false) ||
@@ -533,6 +548,7 @@ export class ClientRegistry {
           },
           // Kept only when it is not the default, so an app that never chose it has the metadata it always had.
           ...(settings.idTokenAlgorithm === 'RS256' ? { idTokenAlgorithm: 'RS256' } : {}),
+          ...(settings.accountDeletedUri ? { accountDeletedUri: settings.accountDeletedUri } : {}),
         },
         updatedAt: new Date(),
       },
@@ -553,6 +569,7 @@ export function clientView(row: ClientRow): ClientView {
     redirectUris: list(row.redirectUris),
     postLogoutRedirectUris: list(row.postLogoutRedirectUris),
     backchannelLogoutUri: blank(row.backchannelLogoutUri),
+    accountDeletedUri: blank(metadata.accountDeletedUri),
     endSession: row.enableEndSession === true,
     scopes: list(row.scopes),
     appScopes: list(row.clientCredentialsScopes),

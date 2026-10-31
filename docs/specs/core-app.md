@@ -833,7 +833,7 @@ CLI calls it ([operator-cli §6](operator-cli.md)), and it is not run by hand.
 
 ```text
 sovereign-admin apps ensure KEY --name NAME --redirect URL ... [--post-logout URL ...]
-                [--back-channel URL] [--scope SCOPE ...] [--public] [--trusted]
+                [--back-channel URL] [--account-deleted URL] [--scope SCOPE ...] [--public] [--trusted]
                 [--launch-url URL] [--description TEXT] [--icon URL] [--json]
 sovereign-admin apps list [--json]
 sovereign-admin apps rotate-secret KEY [--json]
@@ -1618,12 +1618,14 @@ would be wrong about the keys.
 
 ### 4.5 Account deletion: telling the apps
 
-Specified; not built. When a person deletes their account, each app that holds something of theirs is told, so that it can delete it. This
+Specified. The notices are recorded when an account is deleted and an app can be given the address (built); sending them, the Console list
+and the restore commands are not built yet. When a person deletes their account, each app that holds something of theirs is told, so that it can delete it. This
 runs from core to an app, unlike every other service in this phase, and it is the one place where an app being down must not lose
 something: a person who deleted their account must not find their data still held by an app because it was restarting that day.
 
 **Who is told.** Every app with an account-deleted address (§3.7.1) that the person had **used**: a consent, an access token or a
-refresh token of theirs, revoked or not, in the same sense as §4.1. Core reads that list inside the deletion's own transaction, before
+refresh token of theirs, revoked or not, or the record that their access to it was removed (Remove access leaves one, which is all
+a signed access token leaves behind), in the same sense as §4.1. Core reads that list inside the deletion's own transaction, before
 the same transaction deletes the consents and tokens, since afterwards nothing says which apps they were. An app without an
 account-deleted address is not told, and is as it was before: it has its back-channel logout at most. An operator deleting an account
 (§3.3, §3.11) and a person deleting their own go through the same transaction and so the same notices. Deactivating an account is not
@@ -1748,3 +1750,4 @@ operator's guide says so.
 | 2026-10-31 | §4.3: activity is built: the service and its table, `logActivity` served (the instance document lists `activity`), the app scope `activity:write`, core's Activity page (all apps or one, delete one, one app's or all), and what Remove access, deleting an app and deleting an account take with them. Only the person reads it: no operator page, no call for an app.                                                                                                                                                                                                                                                                                                                                                      |
 | 2026-10-31 | §4.4, §3.7.4: the restore marker is built: `sovereign-admin instance restored` records `restored_at`, ends every session and every token the provider keeps a row for, and the Core API refuses any signed access token or app token issued before it. The marker only moves forward.                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2026-10-31 | §4.5, §3.3, §3.7.1, §4.4, §2: account deletion is specified: each app the person used that has an account-deleted address is sent a signed notice, kept in a table written by the deletion's own transaction and retried (1 minute up to 24 hours, for 30 days) until the app answers `2xx`; an operator sees what is not delivered, with eight characters of the `sub`; `sv restore` carries deletions across a restore. Not built.                                                                                                                                                                                                                                                                                          |
+| 2026-10-31 | §4.5, §3.7.1, §3.7.4: the notices are recorded: an app can be given an account-deleted address (the Console, `sovereign-admin apps ensure --account-deleted`), and deleting an account, a person's own or an operator's, writes a notice in its transaction for each app the person used that has one. A notice is not sent yet.                                                                                                                                                                                                                                                                                                                                                                                              |

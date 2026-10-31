@@ -103,6 +103,7 @@ describe('what an app form sends, as the registry takes it', () => {
         ['redirectUris', 'https://notes.example/cb'],
         ['postLogoutRedirectUris', 'https://notes.example/bye\nhttps://notes.example/out'],
         ['backchannelLogoutUri', ' https://notes.example/logout '],
+        ['accountDeletedUri', ' https://notes.example/gone '],
         ['endSession', 'on'],
         ['scope', 'openid'],
         ['scope', 'email'],
@@ -118,6 +119,7 @@ describe('what an app form sends, as the registry takes it', () => {
       redirectUris: ['https://notes.example/cb'],
       postLogoutRedirectUris: ['https://notes.example/bye', 'https://notes.example/out'],
       backchannelLogoutUri: 'https://notes.example/logout',
+      accountDeletedUri: 'https://notes.example/gone',
       endSession: true,
       scopes: ['openid', 'email'],
       appScopes: [],
@@ -143,6 +145,7 @@ describe('what an app form sends, as the registry takes it', () => {
       trusted: false,
       scopes: [],
       backchannelLogoutUri: '',
+      accountDeletedUri: '',
       launcher: { show: false, launchUrl: '', icon: '' },
     });
   });
@@ -207,6 +210,12 @@ describe('what was wrong, beside the field it belongs to', () => {
         { field: 'redirectUris', message: 'address 2 is listed twice' },
       ]).redirectUris,
     ).toBe('Address 1 is not an address. Address 2 is listed twice.');
+  });
+
+  it('shows a problem with the account-deleted address beside its own field', () => {
+    expect(
+      fieldProblems([{ field: 'accountDeletedUri', message: 'must be https' }]).accountDeletedUri,
+    ).toBe('The account-deleted address must be https.');
   });
 
   it('keeps a problem with a field it does not know, under that name', () => {

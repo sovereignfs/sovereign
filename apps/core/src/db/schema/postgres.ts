@@ -308,6 +308,33 @@ export const activity = pgTable(
 );
 
 /**
+ * Telling an app that a person who used it deleted their account (core-app §4.5): one row for each app that must be told, written by
+ * the deletion's own transaction and kept until the app answers. It is not tied to the account, which is gone; `sub` is never reused.
+ * `state` is `pending`, `delivered`, `given_up` or `resolved`. Times are milliseconds since the epoch. `last_failure` is the kind of
+ * the last failure and never what the app said. `lease_until` stops two instances of core sending one notice at once. Written only by
+ * `DeletionNotices`.
+ */
+export const accountDeletionNotices = pgTable(
+  'account_deletion_notices',
+  {
+    id: text('id').primaryKey(),
+    clientId: text('client_id').notNull(),
+    sub: text('sub').notNull(),
+    deletedAt: bigint('deleted_at', { mode: 'number' }).notNull(),
+    state: text('state').notNull(),
+    attempts: integer('attempts').notNull(),
+    nextAttemptAt: bigint('next_attempt_at', { mode: 'number' }),
+    leaseUntil: bigint('lease_until', { mode: 'number' }),
+    lastFailure: text('last_failure'),
+    doneAt: bigint('done_at', { mode: 'number' }),
+  },
+  (table) => [
+    index('account_deletion_notices_due_idx').on(table.state, table.nextAttemptAt),
+    index('account_deletion_notices_client_idx').on(table.clientId, table.sub),
+  ],
+);
+
+/**
  * When an app's own tokens (core-app §3.6.6) were last revoked: its secret was rotated, or it was switched off. An app token is a
  * signed JWT that leaves no row to mark, so the time is recorded and everything issued up to it is no longer good
  * (`isAppTokenRevoked`). One row for each app; the time is milliseconds since the epoch, an integer on both dialects.

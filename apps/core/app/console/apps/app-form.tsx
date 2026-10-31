@@ -41,6 +41,7 @@ export const NEW_APP: Pick<
   | 'redirectUris'
   | 'postLogoutRedirectUris'
   | 'backchannelLogoutUri'
+  | 'accountDeletedUri'
   | 'endSession'
   | 'scopes'
   | 'appScopes'
@@ -54,6 +55,7 @@ export const NEW_APP: Pick<
   redirectUris: [],
   postLogoutRedirectUris: [],
   backchannelLogoutUri: undefined,
+  accountDeletedUri: undefined,
   endSession: false,
   scopes: ['openid', 'profile', 'email'],
   appScopes: [],
@@ -80,6 +82,7 @@ export function AppForm({ id, initial }: { id?: string; initial: Initial }) {
   const [redirectUris, setRedirectUris] = useState(initial.redirectUris.join('\n'));
   const [postLogout, setPostLogout] = useState(initial.postLogoutRedirectUris.join('\n'));
   const [backchannel, setBackchannel] = useState(initial.backchannelLogoutUri ?? '');
+  const [accountDeleted, setAccountDeleted] = useState(initial.accountDeletedUri ?? '');
   const [endSession, setEndSession] = useState(initial.endSession);
   const [scopes, setScopes] = useState(new Set(initial.scopes));
   const [appScopes, setAppScopes] = useState(new Set(initial.appScopes));
@@ -310,6 +313,21 @@ export function AppForm({ id, initial }: { id?: string; initial: Initial }) {
                 inputMode="url"
                 value={backchannel}
                 onChange={(event) => setBackchannel(event.target.value)}
+              />
+            )}
+          </FormField>
+          <FormField
+            label="Account-deleted address"
+            hint="When a person who used the app deletes their account, core calls this with a signed notice, and keeps trying until the app answers, so the app can delete what it holds of them. Leave it empty if the app holds nothing of people."
+            error={fields.accountDeletedUri}
+          >
+            {(field) => (
+              <Input
+                {...field}
+                name="accountDeletedUri"
+                inputMode="url"
+                value={accountDeleted}
+                onChange={(event) => setAccountDeleted(event.target.value)}
               />
             )}
           </FormField>

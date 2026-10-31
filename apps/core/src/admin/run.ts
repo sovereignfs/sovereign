@@ -22,6 +22,7 @@ export function inputOf(app: Extract<Command, { name: 'ensure' }>['app']): Regis
     redirectUris: app.redirect,
     postLogoutRedirectUris: app.postLogout,
     backchannelLogoutUri: app.backChannel ?? '',
+    accountDeletedUri: app.accountDeleted ?? '',
     scopes: app.scopes.length > 0 ? app.scopes : [...DEFAULT_SCOPES],
     appScopes: app.appScopes,
     trusted: app.trusted,

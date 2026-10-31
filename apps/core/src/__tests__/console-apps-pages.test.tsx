@@ -40,6 +40,7 @@ const app = (id: string, extra: Partial<ClientView> = {}): ClientView => ({
   redirectUris: ['https://a.example/cb'],
   postLogoutRedirectUris: [],
   backchannelLogoutUri: undefined,
+  accountDeletedUri: undefined,
   endSession: false,
   scopes: ['openid', 'profile'],
   appScopes: [],

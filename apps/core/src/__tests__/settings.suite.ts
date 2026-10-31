@@ -103,6 +103,7 @@ export function settingsSuite(createDatabase: () => Promise<TestDatabase>): void
         '0015_notifications',
         '0016_app_mail',
         '0017_activity',
+        '0018_account_deletion_notices',
       ]);
     });
   });

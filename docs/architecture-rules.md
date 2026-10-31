@@ -240,6 +240,9 @@ pointing here.
   does; a link goes only to an `https` address on one of the app's own origins; text is plain. The Core API's person calls act on
   the calling app's own notifications only, and core's own panel route (`/api/notifications`) acts on the session's account and
   checks the request's origin. Remove access, deleting an app and deleting an account delete them in the same transaction.
+- **A deletion records who must be told in its own transaction** (`planDeletionNotices`, core-app §4.5). The apps are read from the
+  consents, tokens and removal records before the same transaction deletes them, so a deletion that rolls back leaves no notice and one
+  that commits always has them. A notice holds the app and the `sub` and nothing else of the person; deleting an app deletes its notices.
 - **A restore is recorded once, only forward, and by one command** (`sovereign-admin instance restored`, `src/instance/restore.ts`,
   core-app §4.4). It writes `instance.restored_at`, deletes every session and revokes every token row in one transaction; the Core API
   refuses a signed access token or an app token issued at or before the marker. The marker is not one of the Console's settings, and a

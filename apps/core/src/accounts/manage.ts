@@ -6,6 +6,7 @@ import { NAMES } from '../oauth/schema-names';
 import { can } from '../roles/capabilities';
 import { loadMatrix } from '../roles/matrix';
 import { mayActOn } from '../roles/people';
+import { planDeletionNotices } from './deletion-notices';
 import type { AccountStates } from './states';
 
 /** One account as the Console lists it (core-app §3.10). */
@@ -241,6 +242,8 @@ export class AccountManager {
         throw new AccountActionError('owner', 'The owner cannot be deleted.');
       }
       const planned = await planLogoutNotices(tx, id);
+      // Read before the consents and tokens that say which apps the person used are deleted (core-app §4.5).
+      await planDeletionNotices(tx, id);
       await revokeAllTokens(tx, at, id);
       await removeAccount(tx, id);
       return planned;

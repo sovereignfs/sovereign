@@ -4,6 +4,10 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { NOTES_IMAGE, setUpWorld, sv } from '../testing/commands.js';
 import { makeWorld, manifestOf, type World } from '../testing/world.js';
+import { RELEASE } from '../release.js';
+
+/** The core `sv setup` writes into suite.yml. */
+const CORE = RELEASE.newestCore;
 
 let world: World;
 afterEach(() => world.cleanup());
@@ -94,11 +98,11 @@ describe('sv push', () => {
     const bad = await sv(world, 'push');
     expect(bad.code).toBe(2);
     expect(bad.text).toContain('suite.yml is not valid');
-    write('suite.yml', text.replace('version: 0.71.0', 'version: 0.70.0'));
+    write('suite.yml', text.replace(`version: ${CORE}`, 'version: 0.70.0'));
     const stale = await sv(world, 'push');
     expect(stale.code).toBe(2);
     expect(stale.text).toContain(
-      'images.core: is ghcr.io/sovereignfs/sovereign:0.71.0, and suite.yml wants ghcr.io/sovereignfs/sovereign:0.70.0',
+      `images.core: is ghcr.io/sovereignfs/sovereign:${CORE}, and suite.yml wants ghcr.io/sovereignfs/sovereign:0.70.0`,
     );
     expect(committed()).toBe(false);
   });
@@ -113,8 +117,8 @@ describe('sv push', () => {
     write(
       'suite.yml',
       read('suite.yml').replace(
-        'core:\n  version: 0.71.0',
-        'core:\n  version: 0.71.0\n  env:\n    SV_SMTP_USER: postgres://u:pw@h/db',
+        `core:\n  version: ${CORE}`,
+        `core:\n  version: ${CORE}\n  env:\n    SV_SMTP_USER: postgres://u:pw@h/db`,
       ),
     );
     const open = await sv(world, 'push');

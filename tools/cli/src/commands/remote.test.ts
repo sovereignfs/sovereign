@@ -4,6 +4,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { NOTES_IMAGE, sv, setUpWorld } from '../testing/commands.js';
 import { makeWorld, manifestOf, type World } from '../testing/world.js';
 import type { Remote } from '../server/remote.js';
+import { RELEASE } from '../release.js';
+
+/** The core `sv setup` writes into suite.yml. */
+const CORE = RELEASE.newestCore;
 
 let world: World;
 afterEach(() => world.cleanup());
@@ -44,7 +48,7 @@ describe('sv status', () => {
     const state = {
       state: {
         commit: head(),
-        core: { version: '0.71.0', healthy: true },
+        core: { version: CORE, healthy: true },
         apps: {
           notes: { kind: 'hosted', healthy: true, version: 'x:1.2.0' },
           old: { kind: 'hosted', healthy: true },
@@ -80,7 +84,7 @@ describe('sv status', () => {
     }).remote;
     const behind = await sv(world, 'status');
     expect(behind.text).toContain('bbbbbbbbbbbb');
-    expect(behind.text).toContain('suite.yml wants 0.71.0');
+    expect(behind.text).toContain(`suite.yml wants ${CORE}`);
     expect(behind.text).toContain('a deployment is running');
     world.ctx.remote = answering({
       status: { stdout: JSON.stringify({ state: null, containers: [], deploying: false }) },

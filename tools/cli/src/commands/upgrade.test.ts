@@ -1,11 +1,15 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { inc } from 'semver';
 import { parse } from 'yaml';
 import { RELEASE } from '../release.js';
 import { NOTES_IMAGE, sv, setUpWorld } from '../testing/commands.js';
 import { makeWorld, manifestOf, type World } from '../testing/world.js';
 import type { Lock, Suite } from '../suite/types.js';
+
+/** A release newer than the running toolkit, however far its own version has come. */
+const NEWER = inc(RELEASE.version, 'minor') as string;
 
 let world: World;
 afterEach(() => world.cleanup());
@@ -141,7 +145,7 @@ describe('sv upgrade', () => {
     const cli = path.join(world.root, 'node_modules', '@sovereignfs', 'cli', 'dist');
     (await import('node:fs')).mkdirSync(cli, { recursive: true });
     writeFileSync(path.join(cli, 'sv.mjs'), '');
-    const done = await sv(world, 'upgrade', '--to', 'v0.2.0');
+    const done = await sv(world, 'upgrade', '--to', `v${NEWER}`);
     expect(done.code).toBe(0);
     expect(ran[0]).toEqual({
       command: 'npm',
@@ -151,7 +155,7 @@ describe('sv upgrade', () => {
         '--ignore-scripts',
         '--no-audit',
         '--no-fund',
-        '@sovereignfs/cli@0.2.0',
+        `@sovereignfs/cli@${NEWER}`,
       ],
     });
     expect(ran[1]).toEqual({
@@ -183,7 +187,7 @@ describe('sv upgrade', () => {
     pinTo(RELEASE.version);
     const before = read('suite.yml');
     world.ctx.exec = async () => ({ code: 1, stdout: '', stderr: 'npm error 404 Not Found' });
-    const failed = await sv(world, 'upgrade', '--to', '0.2.0');
+    const failed = await sv(world, 'upgrade', '--to', NEWER);
     expect(failed.code).toBe(1);
     expect(failed.text).toContain('404 Not Found');
     expect(read('suite.yml')).toBe(before);

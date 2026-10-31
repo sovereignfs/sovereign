@@ -20,6 +20,11 @@ export interface TokenStore {
    * one: two processes sending the same refresh token are indistinguishable from theft (sdk §5.1).
    */
   lock?<T>(sub: string, work: () => Promise<T>): Promise<T>;
+  /**
+   * Forgets the person's refresh token. Optional: the SDK calls it when core says the person deleted their account (sdk §9.1), and
+   * an app whose store has no such call deletes the token in its own handler.
+   */
+  delete?(sub: string): Promise<void> | void;
 }
 
 /** Who a call is made as: a person, or the app itself. */

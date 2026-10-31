@@ -15,7 +15,7 @@ vi.mock('next/navigation', () => ({
 
 const { nextAuth } = await import('../next/index');
 
-function setup() {
+function setup(options: Parameters<typeof nextAuth>[1] = {}) {
   const time = clock();
   const core = createFakeCore({ now: time.environment.now });
   core.addPerson({ sub: 'u1', name: 'Ada Lovelace' });
@@ -29,7 +29,7 @@ function setup() {
     environment: time.environment,
     timeoutMs: 100,
   });
-  return { core, sv, handlers: nextAuth(sv).handlers, next: nextAuth(sv) };
+  return { core, sv, handlers: nextAuth(sv, options).handlers, next: nextAuth(sv, options) };
 }
 
 const cookiesOf = (reply: Response) =>
@@ -112,6 +112,24 @@ describe('the Next.js adapter (sdk §9)', () => {
     expect(reply.status).toBe(200);
     jar.value = cookiesOf(callback);
     expect(await next.getSession()).toBeNull();
+  });
+
+  it('receives an account-deleted notice at its route, only when the app gave a handler', async () => {
+    const deleted: string[] = [];
+    const { core, handlers } = setup({ onAccountDeleted: ({ sub }) => void deleted.push(sub) });
+    const request = async () =>
+      at('/auth/account-deleted', {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          account_deleted_token: await core.accountDeletedToken({ sub: 'u1' }),
+        }).toString(),
+      });
+    expect((await handlers.POST(await request())).status).toBe(200);
+    expect(deleted).toEqual(['u1']);
+
+    const without = setup();
+    expect((await without.handlers.POST(await request())).status).toBe(404);
   });
 
   it('sends a person with no session to sign in, and back to where they were', async () => {

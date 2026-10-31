@@ -106,7 +106,9 @@ export function clock(start = Date.now()) {
 }
 
 /** A token store with a conditional update, as the specification asks, and a lock when asked. */
-export function memoryStore(options: { lock?: boolean; failWrites?: boolean } = {}) {
+export function memoryStore(
+  options: { lock?: boolean; failWrites?: boolean; deletes?: boolean } = {},
+) {
   const tokens = new Map<string, string>();
   const writes: { sub: string; next: string; previous: string | undefined }[] = [];
   const queues = new Map<string, Promise<unknown>>();
@@ -119,6 +121,13 @@ export function memoryStore(options: { lock?: boolean; failWrites?: boolean } = 
       tokens.set(sub, next);
       return true;
     },
+    ...(options.deletes
+      ? {
+          delete: (sub: string) => {
+            tokens.delete(sub);
+          },
+        }
+      : {}),
     ...(options.lock
       ? {
           lock: <T>(sub: string, work: () => Promise<T>): Promise<T> => {

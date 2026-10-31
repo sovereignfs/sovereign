@@ -23,6 +23,7 @@ import type { Transport } from './transport';
 const PENDING_SECONDS = 10 * 60;
 const DEFAULT_SESSION_SECONDS = 30 * 24 * 60 * 60;
 const BACK_CHANNEL_EVENT = 'http://schemas.openid.net/event/backchannel-logout';
+const ACCOUNT_DELETED_EVENT = 'urn:sovereignfs:event:account-deleted';
 /** How far an `iat` may be ahead of this clock before a logout token is refused. */
 const SKEW_SECONDS = 60;
 
@@ -246,7 +247,64 @@ export class Auth {
     return new Response(null, { status: 200, headers: { 'cache-control': 'no-store' } });
   }
 
+  /**
+   * Handles core's account-deleted notice (sdk §9.1, core-app §4.5): the person deleted their account, and the app must delete what it
+   * holds of them. The token is refused, `400` and `invalid_request`, by the rules of a logout token for its own type and event. For a
+   * good one the SDK ends the person's sessions and forgets their stored refresh token (when the token store can), runs `handler`, and
+   * answers `200` only after it has resolved. When the handler throws it answers `500` and says nothing of why, and core sends the
+   * notice again, so the handler must be safe to run twice.
+   */
+  async handleAccountDeleted(
+    request: Request,
+    handler: (person: { readonly sub: string }) => Promise<void> | void,
+  ): Promise<Response> {
+    const reply = (status: number, error?: string) =>
+      new Response(error ? JSON.stringify({ error }) : null, {
+        status,
+        headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+      });
+    if (request.method !== 'POST') return reply(400, 'invalid_request');
+    let token: string | null;
+    try {
+      token = new URLSearchParams(await request.text()).get('account_deleted_token');
+    } catch {
+      return reply(400, 'invalid_request');
+    }
+    if (!token) return reply(400, 'invalid_request');
+
+    const verified = await this.#verifyNotice(
+      token,
+      'account-deleted+jwt',
+      ACCOUNT_DELETED_EVENT,
+    ).catch((error: unknown) => {
+      // Core being unreachable is not a bad token: say we could not tell, and core tries again.
+      if (error instanceof CoreUnavailableError) throw error;
+      return undefined;
+    });
+    if (!verified?.sub) return reply(400, 'invalid_request');
+
+    const store = this.#o.sessionStore;
+    await store.set(
+      `seen:${verified.jti}`,
+      { kind: 'seen', data: {} },
+      Math.max(verified.exp * 1000, this.#now()) + 1000,
+    );
+    await store.deleteMatching({ sub: verified.sub });
+    await this.#o.tokenStore?.delete?.(verified.sub);
+    try {
+      await handler({ sub: verified.sub });
+    } catch {
+      return reply(500, 'server_error');
+    }
+    return reply(200);
+  }
+
   async #verifyLogoutToken(token: string) {
+    return this.#verifyNotice(token, 'logout+jwt', BACK_CHANNEL_EVENT);
+  }
+
+  /** Checks a notice core signed (a logout token or an account-deleted token): the same rules, for its own type and event. */
+  async #verifyNotice(token: string, typ: string, event: string) {
     const config = await this.#configuration();
     const jwksUri = config.serverMetadata().jwks_uri;
     if (!jwksUri) return undefined;
@@ -263,7 +321,7 @@ export class Auth {
       ({ payload } = await jwtVerify(token, keys, {
         issuer: this.#o.coreUrl,
         audience: this.#o.clientId,
-        typ: 'logout+jwt',
+        typ,
         currentDate: new Date(this.#now()),
         requiredClaims: ['iat', 'exp', 'jti'],
       }));
@@ -279,7 +337,7 @@ export class Auth {
     const now = Math.floor(this.#now() / 1000);
     if (typeof payload.iat !== 'number' || payload.iat > now + SKEW_SECONDS) return undefined;
     const events = payload.events as Record<string, unknown> | undefined;
-    if (!events || typeof events !== 'object' || !(BACK_CHANNEL_EVENT in events)) return undefined;
+    if (!events || typeof events !== 'object' || !(event in events)) return undefined;
     if ('nonce' in payload) return undefined;
     const sub = typeof payload.sub === 'string' && payload.sub !== '' ? payload.sub : undefined;
     const sid = typeof payload.sid === 'string' && payload.sid !== '' ? payload.sid : undefined;

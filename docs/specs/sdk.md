@@ -107,7 +107,8 @@ Core rotates a refresh token on every use, and treats one used twice as stolen: 
 
 - An app gives the SDK a token store, with `read(sub)` and `write(sub, next, previous)`. `write` MUST be atomic and MUST fail when the
   stored token is no longer `previous`, as with a database's conditional update: it resolves to `true` when it stored `next`, and to
-  `false` (or rejects) when it did not. The SDK ships none, since the app owns its data.
+  `false` (or rejects) when it did not. A store MAY also have `delete(sub)`, which the SDK calls when core says the person deleted their
+  account (§9.1). The SDK ships none, since the app owns its data.
 - Within a process, the SDK MUST run one refresh at a time for each person and app, and let the others wait for its result.
 - Across processes, a refresh reads the stored token when it starts and MUST use the one it finds, whoever wrote it. Two processes that
   both send the same token are indistinguishable from theft, so an app that runs more than one process MUST give its store a
@@ -360,3 +361,4 @@ of its own; an app catalogue.
 | 2026-10-30 | §5.1: the token store's `write` says whether it stored, and an optional `lock` closes the window between processes, which a conditional update cannot. §14: what two processes can promise. |
 | 2026-10-30 | §9.1: the session store the app provides, what each function does with it, how a logout token is refused, the cookie, `sv.links`.                                                           |
 | 2026-10-31 | §9, §8, §10: `handleAccountDeleted`, the app's part of account-deletion fan-out (core-app §4.5); legacy `portability` waits for export. Not built.                                          |
+| 2026-10-31 | §5.1, §9.1: built. A token store MAY have `delete(sub)`; `nextAuth` takes `onAccountDeleted` and mounts `/auth/account-deleted`; the fake core makes `accountDeletedToken`.                 |

@@ -16,6 +16,7 @@ public name, and takes the **client id** and **secret** it is given:
 | Sign-in             | `https://notes.example.test/auth/callback`           |
 | After signing out   | `https://notes.example.test/`                        |
 | Back-channel logout | `https://notes.example.test/auth/backchannel-logout` |
+| Account deleted     | `https://notes.example.test/auth/account-deleted`    |
 
 The app is told where core is, and who it is, in four variables with its own prefix ([`spec/env.md`](../spec/env.md)):
 `NOTES_URL`, `NOTES_CORE_URL`, `NOTES_CORE_CLIENT_ID` and `NOTES_CORE_CLIENT_SECRET` (or `NOTES_CORE_CLIENT_SECRET_FILE`).
@@ -69,6 +70,26 @@ Elsewhere, `sv.auth` has the same steps for a web `Request`: `beginSignIn`, `com
 core. A person can sign out of core elsewhere: core tells the app (the back-channel address above), and the SDK ends the sessions it
 names. `sv.links` has the addresses of core's own pages (`profile`, `security`, `connectedApps`, ...) for changing a password or
 ending other sessions, which the app does not do itself.
+
+### When a person deletes their account
+
+If the app holds anything of a person (their notes, their settings, a stored refresh token), core tells it when they delete their account
+on the instance, at the **account-deleted** address above, and keeps telling it until it answers. Give `nextAuth` the function that
+deletes what the app holds:
+
+```ts
+export const { GET, POST } = nextAuth(sv, {
+  onAccountDeleted: async ({ sub }) => {
+    await db.notes.deleteMany({ where: { owner: sub } });
+    await db.tokens.delete({ where: { sub } }); // if your token store does not have a delete(sub)
+  },
+}).handlers;
+```
+
+The SDK checks the notice, ends the person's sessions and, if your token store has `delete(sub)`, forgets their refresh token. It answers
+core `200` **only after your function has finished**, and `500` if it throws, so core sends the notice again. That means the function
+must be safe to run twice, and must not finish before the data is gone. An app that holds nothing of people does not need it, and leaves
+the address empty. Elsewhere, `sv.auth.handleAccountDeleted(request, handler)` does the same for a web `Request`.
 
 ## 4. Call core
 

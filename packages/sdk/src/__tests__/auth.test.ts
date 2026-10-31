@@ -10,6 +10,7 @@ import { createFakeCore, memorySessionStore, type WrongLogoutToken } from '../te
 import { checkedAgainstContract, clock, memoryStore } from './helpers';
 
 type Options = {
+  deletes?: boolean;
   appUrl?: string;
   coreUrl?: string;
   scopes?: string[];
@@ -24,7 +25,7 @@ function setup(options: Options = {}) {
   });
   core.addPerson({ sub: 'u1', name: 'Ada Lovelace' });
   const sessions = memorySessionStore(time.environment.now);
-  const tokens = memoryStore();
+  const tokens = memoryStore(options.deletes ? { deletes: true } : {});
   const sv = createSovereign({
     appUrl: options.appUrl ?? 'https://notes.example.test',
     coreUrl: core.url,
@@ -386,3 +387,135 @@ describe('a back-channel logout (sdk §9.1)', () => {
     expect(await world.sv.auth.getSession(withCookie(cookie))).toBeNull();
   });
 });
+
+describe('an account-deleted notice (sdk §9.1, core-app §4.5)', () => {
+  const post = (token: string | undefined, method = 'POST') =>
+    new Request('https://notes.example.test/auth/account-deleted', {
+      method,
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      ...(method === 'POST'
+        ? { body: new URLSearchParams(token ? { account_deleted_token: token } : {}).toString() }
+        : {}),
+    });
+  const deleted = async (world: World, sub = 'u1') =>
+    post(await world.core.accountDeletedToken({ sub }));
+
+  it('ends every session of the person, runs the handler with the sub, and answers 200 after it', async () => {
+    const world = setup();
+    const first = await signIn(world);
+    const second = await signIn(world);
+    const calls: string[] = [];
+    let finished = false;
+    const reply = await world.sv.auth.handleAccountDeleted(await deleted(world), async (person) => {
+      calls.push(person.sub);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      finished = true;
+    });
+    expect(reply.status).toBe(200);
+    expect(finished).toBe(true);
+    expect(calls).toEqual(['u1']);
+    expect(await world.sv.auth.getSession(withCookie(first.cookie))).toBeNull();
+    expect(await world.sv.auth.getSession(withCookie(second.cookie))).toBeNull();
+  });
+
+  it('forgets the stored refresh token when the token store can, and leaves another person’s alone', async () => {
+    const world = setup({ deletes: true });
+    world.core.addPerson({ sub: 'u2', name: 'Grace Hopper' });
+    world.tokens.tokens.set('u1', 'rt-1');
+    world.tokens.tokens.set('u2', 'rt-2');
+    await world.sv.auth.handleAccountDeleted(await deleted(world), () => undefined);
+    expect([...world.tokens.tokens.entries()]).toEqual([['u2', 'rt-2']]);
+  });
+
+  it('works with a token store that cannot delete, leaving that to the handler', async () => {
+    const world = setup();
+    world.tokens.tokens.set('u1', 'rt-1');
+    const reply = await world.sv.auth.handleAccountDeleted(await deleted(world), () => undefined);
+    expect(reply.status).toBe(200);
+    expect(world.tokens.tokens.get('u1')).toBe('rt-1');
+  });
+
+  it('leaves another person’s sessions alone', async () => {
+    const world = setup();
+    world.core.addPerson({ sub: 'u2', name: 'Grace Hopper' });
+    await signIn(world, 'u1');
+    const two = await signIn(world, 'u2');
+    await world.sv.auth.handleAccountDeleted(await deleted(world), () => undefined);
+    expect((await world.sv.auth.getSession(withCookie(two.cookie)))?.sub).toBe('u2');
+  });
+
+  it('answers 500, saying nothing of why, when the handler throws, so core sends it again', async () => {
+    const world = setup();
+    const reply = await world.sv.auth.handleAccountDeleted(await deleted(world), () => {
+      throw new Error('the database is down at db.internal');
+    });
+    expect(reply.status).toBe(500);
+    expect(await reply.json()).toEqual({ error: 'server_error' });
+    // Core's next try has a token of its own, and works.
+    const again = await world.sv.auth.handleAccountDeleted(await deleted(world), () => undefined);
+    expect(again.status).toBe(200);
+  });
+
+  it.each(wrongWays())('refuses a token that is wrong in this way: %s', async (way) => {
+    const world = setup();
+    const { cookie } = await signIn(world);
+    let ran = false;
+    const token = await world.core.accountDeletedToken({ sub: 'u1' }, { wrong: way });
+    const reply = await world.sv.auth.handleAccountDeleted(post(token), () => {
+      ran = true;
+    });
+    expect(reply.status).toBe(400);
+    expect(await reply.json()).toEqual({ error: 'invalid_request' });
+    expect(ran).toBe(false);
+    expect((await world.sv.auth.getSession(withCookie(cookie)))?.sub).toBe('u1');
+  });
+
+  it('refuses a logout token, and a deletion token as a logout token', async () => {
+    const world = setup();
+    await signIn(world);
+    const logout = await world.core.logoutToken({ sub: 'u1' });
+    expect((await world.sv.auth.handleAccountDeleted(post(logout), () => undefined)).status).toBe(
+      400,
+    );
+    const deletion = await world.core.accountDeletedToken({ sub: 'u1' });
+    expect(
+      (
+        await world.sv.auth.handleBackChannelLogout(
+          new Request('https://notes.example.test/auth/backchannel-logout', {
+            method: 'POST',
+            headers: { 'content-type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ logout_token: deletion }).toString(),
+          }),
+        )
+      ).status,
+    ).toBe(400);
+  });
+
+  it('refuses a token it has seen before, a missing token, junk, and anything but a POST', async () => {
+    const world = setup();
+    const token = await world.core.accountDeletedToken({ sub: 'u1' });
+    const handler = () => undefined;
+    expect((await world.sv.auth.handleAccountDeleted(post(token), handler)).status).toBe(200);
+    expect((await world.sv.auth.handleAccountDeleted(post(token), handler)).status).toBe(400);
+    expect((await world.sv.auth.handleAccountDeleted(post(undefined), handler)).status).toBe(400);
+    expect((await world.sv.auth.handleAccountDeleted(post('not.a.jwt'), handler)).status).toBe(400);
+    expect((await world.sv.auth.handleAccountDeleted(post(token, 'GET'), handler)).status).toBe(
+      400,
+    );
+  });
+});
+
+function wrongWays(): WrongLogoutToken[] {
+  return [
+    'signature',
+    'issuer',
+    'audience',
+    'expired',
+    'future',
+    'event',
+    'nonce',
+    'type',
+    'no-subject',
+    'no-jti',
+  ];
+}

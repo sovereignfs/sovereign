@@ -9,13 +9,18 @@ export type NextAuthOptions = {
   basePath?: string;
   /** Where a person goes when a sign-in fails. `/` with `?error=signin` unless changed. */
   errorPath?: string;
+  /**
+   * Deletes what the app holds of a person who deleted their account, and mounts `/auth/account-deleted` for core to tell it so (sdk §9.1). Without
+   * it that address is not there. It must be safe to run twice, and it must not resolve until the data is gone.
+   */
+  onAccountDeleted?: (person: { readonly sub: string }) => Promise<void> | void;
 };
 
 type RouteHandler = (request: Request) => Promise<Response>;
 
 /**
  * Binds the SDK's sign-in to Next.js (sdk §9): the route handlers for `/auth/login`, `/auth/callback`, `/auth/logout` and
- * `/auth/backchannel-logout`, and the session as a Server Component, route or action reads it. Mount the handlers once:
+ * `/auth/backchannel-logout` (and `/auth/account-deleted` when `onAccountDeleted` is given), and the session as a Server Component, route or action reads it. Mount the handlers once:
  *
  *   // app/auth/[action]/route.ts
  *   export const { GET, POST } = nextAuth(sv).handlers;
@@ -66,6 +71,10 @@ export function nextAuth(sv: Sovereign, options: NextAuthOptions = {}) {
       }
       case 'backchannel-logout':
         return sv.auth.handleBackChannelLogout(request);
+      case 'account-deleted':
+        return options.onAccountDeleted
+          ? sv.auth.handleAccountDeleted(request, options.onAccountDeleted)
+          : new Response('Not found', { status: 404 });
       default:
         return new Response('Not found', { status: 404 });
     }

@@ -135,6 +135,14 @@ export type FakeCore = {
     who: { sub?: string; sid?: string },
     options?: { wrong?: WrongLogoutToken },
   ): Promise<string>;
+  /**
+   * A signed account-deleted token, as core sends to an app's account-deleted address when a person who used it deleted their account
+   * (core-app §4.5). `wrong` makes one that is wrong in one way, as for `logoutToken`.
+   */
+  accountDeletedToken(
+    who: { sub: string },
+    options?: { wrong?: WrongLogoutToken },
+  ): Promise<string>;
   /** Ends a person's tokens, as core does when their sessions end: the next use of any is refused. */
   revoke(sub: string): void;
   /** Ends every access token but keeps the refresh tokens, so the next call must refresh. */
@@ -717,6 +725,33 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
     return answer;
   }) as typeof fetch;
 
+  /** A token core signs for an app about a person, of the given type and event, wrong in the one way asked. */
+  const notice = async (
+    typ: string,
+    event: string,
+    who: { sub?: string; sid?: string },
+    wrong: WrongLogoutToken | undefined,
+  ): Promise<string> => {
+    const issued = Math.floor(now() / 1000);
+    const claims: Record<string, unknown> = { events: { [event]: {} } };
+    if (who.sub && wrong !== 'no-subject') claims.sub = who.sub;
+    if (who.sid && wrong !== 'no-subject') claims.sid = who.sid;
+    if (wrong === 'event') claims.events = {};
+    if (wrong === 'nonce') claims.nonce = 'a-nonce';
+    let jwt = new SignJWT(claims)
+      .setProtectedHeader({ alg: 'EdDSA', kid: 'fake-1', typ: wrong === 'type' ? 'JWT' : typ })
+      .setIssuer(wrong === 'issuer' ? 'https://elsewhere.test' : url)
+      .setAudience(wrong === 'audience' ? 'another-app' : credentials.clientId)
+      .setIssuedAt(wrong === 'future' ? issued + 3600 : issued)
+      .setExpirationTime(wrong === 'expired' ? issued - 10 : issued + 120);
+    if (wrong !== 'no-jti') jwt = jwt.setJti(random('jti'));
+    if (wrong === 'signature') {
+      const other = await generateKeyPair('EdDSA');
+      return jwt.sign(other.privateKey);
+    }
+    return jwt.sign((await keys()).privateKey);
+  };
+
   return {
     url,
     credentials,
@@ -782,31 +817,10 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
     },
     sessionIdOf: (sub) => sessionOf.get(sub),
     async logoutToken(who, { wrong } = {}) {
-      const issued = Math.floor(now() / 1000);
-      const claims: Record<string, unknown> = {
-        events: { 'http://schemas.openid.net/event/backchannel-logout': {} },
-      };
-      if (who.sub && wrong !== 'no-subject') claims.sub = who.sub;
-      if (who.sid && wrong !== 'no-subject') claims.sid = who.sid;
-      if (wrong === 'no-subject') delete claims.sub;
-      if (wrong === 'event') claims.events = {};
-      if (wrong === 'nonce') claims.nonce = 'a-nonce';
-      let jwt = new SignJWT(claims)
-        .setProtectedHeader({
-          alg: 'EdDSA',
-          kid: 'fake-1',
-          typ: wrong === 'type' ? 'JWT' : 'logout+jwt',
-        })
-        .setIssuer(wrong === 'issuer' ? 'https://elsewhere.test' : url)
-        .setAudience(wrong === 'audience' ? 'another-app' : credentials.clientId)
-        .setIssuedAt(wrong === 'future' ? issued + 3600 : issued)
-        .setExpirationTime(wrong === 'expired' ? issued - 10 : issued + 120);
-      if (wrong !== 'no-jti') jwt = jwt.setJti(random('jti'));
-      if (wrong === 'signature') {
-        const other = await generateKeyPair('EdDSA');
-        return jwt.sign(other.privateKey);
-      }
-      return jwt.sign((await keys()).privateKey);
+      return notice('logout+jwt', 'http://schemas.openid.net/event/backchannel-logout', who, wrong);
+    },
+    async accountDeletedToken(who, { wrong } = {}) {
+      return notice('account-deleted+jwt', 'urn:sovereignfs:event:account-deleted', who, wrong);
     },
     get notificationsSent() {
       return [...sent.values()];

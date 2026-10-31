@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/sdk",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "type": "module",
   "description": "How a JavaScript app's server talks to the Sovereign server it signs people in with: tokens, failure, version support.",
   "license": "MPL-2.0",

@@ -81,7 +81,7 @@ of it is built.
 
 **Deliverables:**
 
-- `apps/cli`, in the workspace and CI's change classification, with its licence
+- `tools/cli`, in the workspace and CI's change classification, with its licence
 - Steps 1 to 5, 8 and 9 of the RFC's `sv apply`: checks, a lock, rendering, networks, PostgreSQL, Caddy, core, verifying,
   releases and `state.json`
 - Generated secrets on the server, and the refusals of operator-cli §6.5
@@ -165,7 +165,7 @@ of it is built.
 - `sv server bootstrap`: Docker, directories, the server's key, a deployment key limited with `command=`, address pools
 - `sv deploy --ssh`: refuses unpushed work, sends the commit as an archive, runs `sv apply` from the pinned image
 - `sv status`, `sv logs`, `sv doctor`, `sv app show`, `sv secret rotate`
-- The toolkit as an image (`apps/cli/Dockerfile`), which is what the server runs; publishing it is 13.7
+- The toolkit as an image (`tools/cli/Dockerfile`), which is what the server runs; publishing it is 13.7
 
 **Not verified here:** following the guide on a new virtual machine, and Docker's installation on one. The checklist's last item is done by hand on the first real instance (operator-cli §13).
 

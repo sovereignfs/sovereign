@@ -37,7 +37,7 @@ describe.skipIf(!runnable)('the server receiving a deployment against the real D
 
   beforeAll(async () => {
     execFileSync('pnpm', ['--filter', '@sovereignfs/cli', 'build'], { cwd: root, stdio: 'ignore' });
-    execFileSync('docker', ['build', '--quiet', '--tag', image, path.join(root, 'apps/cli')], {
+    execFileSync('docker', ['build', '--quiet', '--tag', image, path.join(root, 'tools/cli')], {
       stdio: 'ignore',
     });
     source = await makeSource({ suite: { domain: 'sv-test.example.test' } });

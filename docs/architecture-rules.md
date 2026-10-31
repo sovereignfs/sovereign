@@ -246,17 +246,17 @@ pointing here.
 - **Every deletion is remembered for 90 days, so a restore can delete the account again** (`deleted_accounts`, `deletion-ledger.ts`, core-app
   §4.5). `export` and `apply` carry the `sub`s across; an export is applied once, an owner is never deleted by it, and the file holds
   nothing of a person but the `sub`.
-- **The operator's commands change files, and `suite.lock` is written by `sv` alone** (`apps/cli`, operator-cli §1.1, §5). A command on
+- **The operator's commands change files, and `suite.lock` is written by `sv` alone** (`tools/cli`, operator-cli §1.1, §5). A command on
   the operator's machine reads and writes the instance repository and nothing else; a lock is resolved before anything is written, so a
   failed lookup leaves the files as they were; a ref already pinned is kept, so a tag that moved cannot change what runs. A secret is
   taken from a hidden prompt or standard input and never from an argument, is written only as age ciphertext, and is never printed;
   `sv push` stages its own known files and nothing else, and its checks are a guard and not a guarantee.
-- **`sv apply` changes only what differs, and fails by stopping** (`apps/cli/src/apply`, operator-cli §6). Every step is checked against what
+- **`sv apply` changes only what differs, and fails by stopping** (`tools/cli/src/apply`, operator-cli §6). Every step is checked against what
   is already true; a container's configuration is inline and its mounts are at stable paths, so a second deployment recreates nothing; a
   run takes a lock and a dead process's lock does not block the next; nothing after a failed step has happened and `current` has not moved.
   The generated secrets are made once in files, reach a container only through `_FILE`, and are never in a log, a command line or the
   release directory. It is proved against the real Docker by `pnpm test:docker` and not only against a pretended one.
-- **`./sv` runs the pinned toolkit and nothing else** (`apps/create/src/templates.ts`, operator-cli §3). It installs with `npm ci`
+- **`./sv` runs the pinned toolkit and nothing else** (`tools/create/src/templates.ts`, operator-cli §3). It installs with `npm ci`
   from the lockfile if the toolkit is missing and never with `npx`, which can fetch an unrelated package of the same name.
 - **A deletion records who must be told in its own transaction** (`planDeletionNotices`, core-app §4.5). The apps are read from the
   consents, tokens and removal records before the same transaction deletes them, so a deletion that rolls back leaves no notice and one

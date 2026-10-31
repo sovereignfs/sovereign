@@ -47,6 +47,7 @@ export default defineConfig({
             'scripts/**/*.test.ts',
             'packages/*/src/**/*.test.{ts,tsx}',
             'apps/*/src/**/*.test.{ts,tsx}',
+            'tools/*/src/**/*.test.{ts,tsx}',
           ],
           exclude: ['**/node_modules/**', '**/*.db.test.ts', '**/*.docker.test.ts'],
         },

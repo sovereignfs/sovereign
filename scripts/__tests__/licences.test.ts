@@ -66,9 +66,12 @@ describe('core and the repository are AGPL-3.0-or-later', () => {
     expect(read('LICENSE')).toContain(AGPL_HEADING);
   });
 
-  it.each(directories('apps'))('%s declares AGPL-3.0-or-later', (dir) => {
-    expect(manifestOf(dir).license).toBe('AGPL-3.0-or-later');
-  });
+  it.each([...directories('apps'), ...directories('tools')])(
+    '%s declares AGPL-3.0-or-later',
+    (dir) => {
+      expect(manifestOf(dir).license).toBe('AGPL-3.0-or-later');
+    },
+  );
 });
 
 describe('the README says the same', () => {

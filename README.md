@@ -40,8 +40,8 @@ and more. The spec lists what is in and out of each phase.
 | Path                  | What                                                            | State                                       |
 | --------------------- | --------------------------------------------------------------- | ------------------------------------------- |
 | `apps/core`           | Core: the sign-in server, Console and launcher                  | Built, with Phase 1 acceptance (`apps/e2e`) |
-| `apps/cli`            | The operator toolkit, `sv`, and the image the server runs it in | Built, not published yet                    |
-| `apps/create`         | `npm create @sovereignfs`: an instance, or an app               | Built, not published yet                    |
+| `tools/cli`           | The operator toolkit, `sv`, and the image the server runs it in | Built, not published yet                    |
+| `tools/create`        | `npm create @sovereignfs`: an instance, or an app               | Built, not published yet                    |
 | `packages/tsconfig`   | Shared TypeScript configuration                                 | In the workspace                            |
 | `packages/ui`         | The design system, `@sovereignfs/ui`                            | Published                                   |
 | `packages/bridge`     | The device bridge, `@sovereignfs/bridge`                        | In the workspace                            |
@@ -102,11 +102,11 @@ rules; [`AGENTS.md`](AGENTS.md) has the same conventions written for AI agents.
 
 ## Licence
 
-| Path                      | Licence                                         |
-| ------------------------- | ----------------------------------------------- |
-| `apps/core`               | [AGPL-3.0-or-later](LICENSE)                    |
-| `apps/cli`, `apps/create` | [AGPL-3.0-or-later](LICENSE)                    |
-| `packages/*`              | MPL-2.0, so apps under any licence can use them |
+| Path                        | Licence                                         |
+| --------------------------- | ----------------------------------------------- |
+| `apps/core`                 | [AGPL-3.0-or-later](LICENSE)                    |
+| `tools/cli`, `tools/create` | [AGPL-3.0-or-later](LICENSE)                    |
+| `packages/*`                | MPL-2.0, so apps under any licence can use them |
 
 Each package declares MPL-2.0 in its `package.json` and carries the licence text in its own
 `LICENSE`; a test keeps them in agreement. The `LICENSE` at the root is the AGPL text. The design

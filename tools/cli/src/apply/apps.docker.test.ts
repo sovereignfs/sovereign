@@ -1,6 +1,6 @@
 /**
  * `sv apply` hosting apps, against the real Docker: two hosted apps and an external one next to core, a third that cannot start, and
- * an app taken out and then purged. It runs the test app of `apps/cli/test-app` and needs the same free names as
+ * an app taken out and then purged. It runs the test app of `tools/cli/test-app` and needs the same free names as
  * `apply.docker.test.ts`, plus those of its apps, and skips itself when any is taken. Run it with `pnpm test:docker`.
  */
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -87,7 +87,7 @@ describe.skipIf(!runnable)('sv apply hosting apps against the real Docker', () =
     registry: fakeRegistry({
       [REF]: {
         manifest: JSON.parse(
-          readFileSync(path.join(root, 'apps/cli/test-app/manifest.json'), 'utf8'),
+          readFileSync(path.join(root, 'tools/cli/test-app/manifest.json'), 'utf8'),
         ),
       },
     }).registry,
@@ -130,7 +130,7 @@ describe.skipIf(!runnable)('sv apply hosting apps against the real Docker', () =
     if (!process.env.SV_TEST_CORE_IMAGE)
       execFileSync('docker', ['build', '--tag', coreImage, root], { stdio: 'inherit' });
     appImage = 'sv-test-app:local';
-    execFileSync('docker', ['build', '--tag', appImage, path.join(root, 'apps/cli/test-app')], {
+    execFileSync('docker', ['build', '--tag', appImage, path.join(root, 'tools/cli/test-app')], {
       stdio: 'inherit',
     });
     first = await again(suiteOf({ alpha: { image: REF }, beta: { image: REF }, wiki }));

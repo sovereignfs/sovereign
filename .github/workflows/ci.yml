@@ -157,7 +157,7 @@ jobs:
       - run: bash scripts/docker-smoke.sh
 
   # The operator CLI's `sv apply` against the real Docker (operator-cli §6): core built from this repository, PostgreSQL and
-  # Caddy pulled by digest, the whole base started twice, and stopped after each step and resumed (apps/cli, `pnpm test:docker`).
+  # Caddy pulled by digest, the whole base started twice, and stopped after each step and resumed (tools/cli, `pnpm test:docker`).
   operator-cli:
     name: Operator CLI (Docker)
     runs-on: ubuntu-latest

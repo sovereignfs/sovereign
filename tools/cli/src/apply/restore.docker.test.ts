@@ -76,7 +76,7 @@ describe.skipIf(!runnable)('a backup and a restore against the real Docker', () 
     registry: fakeRegistry({
       [REF]: {
         manifest: JSON.parse(
-          readFileSync(path.join(root, 'apps/cli/test-app/manifest.json'), 'utf8'),
+          readFileSync(path.join(root, 'tools/cli/test-app/manifest.json'), 'utf8'),
         ),
       },
     }).registry,
@@ -90,13 +90,13 @@ describe.skipIf(!runnable)('a backup and a restore against the real Docker', () 
       execFileSync('docker', ['build', '--tag', coreImage, root], { stdio: 'inherit' });
     execFileSync('pnpm', ['--filter', '@sovereignfs/cli', 'build'], { cwd: root, stdio: 'ignore' });
     cliImage = 'sv-test-cli:local';
-    execFileSync('docker', ['build', '--quiet', '--tag', cliImage, path.join(root, 'apps/cli')], {
+    execFileSync('docker', ['build', '--quiet', '--tag', cliImage, path.join(root, 'tools/cli')], {
       stdio: 'ignore',
     });
     appImage = 'sv-test-app:local';
     execFileSync(
       'docker',
-      ['build', '--quiet', '--tag', appImage, path.join(root, 'apps/cli/test-app')],
+      ['build', '--quiet', '--tag', appImage, path.join(root, 'tools/cli/test-app')],
       { stdio: 'ignore' },
     );
     source = await makeSource({

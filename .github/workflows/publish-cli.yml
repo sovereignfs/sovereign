@@ -54,9 +54,9 @@ jobs:
             exit 1
           fi
           for dir in cli create; do
-            actual="$(node -p "require('./apps/$dir/package.json').version")"
+            actual="$(node -p "require('./tools/$dir/package.json').version")"
             if [[ "$actual" != "$expected" ]]; then
-              echo "The tag $TAG expects version $expected, but apps/$dir/package.json is $actual." >&2
+              echo "The tag $TAG expects version $expected, but tools/$dir/package.json is $actual." >&2
               exit 1
             fi
           done
@@ -92,7 +92,7 @@ jobs:
 
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          context: apps/cli
+          context: tools/cli
           platforms: linux/amd64,linux/arm64
           push: true
           no-cache: true
@@ -130,9 +130,9 @@ jobs:
         run: |
           expected="${TAG#cli-v}"
           for dir in cli create; do
-            actual="$(node -p "require('./apps/$dir/package.json').version")"
+            actual="$(node -p "require('./tools/$dir/package.json').version")"
             if [[ "$actual" != "$expected" ]]; then
-              echo "The tag $TAG expects version $expected, but apps/$dir/package.json is $actual." >&2
+              echo "The tag $TAG expects version $expected, but tools/$dir/package.json is $actual." >&2
               exit 1
             fi
           done

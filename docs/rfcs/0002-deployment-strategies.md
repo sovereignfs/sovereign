@@ -1,13 +1,13 @@
 # RFC 0002 — Deployment: the operator CLI
 
-|                |                                                                                                                                                                                             |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**     | Accepted; not implemented                                                                                                                                                                   |
-| **Date**       | October 2026                                                                                                                                                                                |
-| **Author**     | Claude Code, for review                                                                                                                                                                     |
-| **Scope**      | New `apps/cli`; `sovereign-admin` in the image; a managed key on clients; `docs/specs/operator-cli.md`, `spec/suite.md`, `spec/app-manifest.md`; `docs/specs/core-app.md` §3.6, §3.7, §3.15 |
-| **Tasks**      | [Epic 12](../epics/release.md), [Epic 13](../epics/operator-cli.md)                                                                                                                         |
-| **Supersedes** | Nothing in this repository. The legacy `sovereign-infra` had a template for the old single platform; this replaces the need for a new one                                                   |
+|                |                                                                                                                                                                                              |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**     | Accepted; not implemented                                                                                                                                                                    |
+| **Date**       | October 2026                                                                                                                                                                                 |
+| **Author**     | Claude Code, for review                                                                                                                                                                      |
+| **Scope**      | New `tools/cli`; `sovereign-admin` in the image; a managed key on clients; `docs/specs/operator-cli.md`, `spec/suite.md`, `spec/app-manifest.md`; `docs/specs/core-app.md` §3.6, §3.7, §3.15 |
+| **Tasks**      | [Epic 12](../epics/release.md), [Epic 13](../epics/operator-cli.md)                                                                                                                          |
+| **Supersedes** | Nothing in this repository. The legacy `sovereign-infra` had a template for the old single platform; this replaces the need for a new one                                                    |
 
 ## Summary
 
@@ -109,8 +109,8 @@ smallest case of one with many, and adding the first app changes nothing that wa
 
 | Part                | Where it lives                                       | Where it runs           | What it does                                                  |
 | ------------------- | ---------------------------------------------------- | ----------------------- | ------------------------------------------------------------- |
-| `sv`                | `apps/cli` in this repository                        | The operator's machine  | Edits the instance repository, checks it, starts a deployment |
-| `sv apply`          | `apps/cli`, published as an image as well            | The server              | Makes the server match the instance repository                |
+| `sv`                | `tools/cli` in this repository                       | The operator's machine  | Edits the instance repository, checks it, starts a deployment |
+| `sv apply`          | `tools/cli`, published as an image as well           | The server              | Makes the server match the instance repository                |
 | `sovereign-admin`   | `apps/core`, in core's image                         | Inside core's container | Registers apps through `ClientRegistry`                       |
 | Instance repository | Made by `@sovereignfs/create`, owned by the operator | Any git host, or none   | Holds the operator's choices and their encrypted secrets      |
 
@@ -392,7 +392,7 @@ to the published contract, and it can wait until an app wants it.
 
 ### Packaging and release
 
-- **`apps/cli`** is a workspace app, licensed AGPL-3.0-or-later like core. It reuses `packages/config`, and adds `yaml` and
+- **`tools/cli`** is a workspace app, licensed AGPL-3.0-or-later like core. It reuses `packages/config`, and adds `yaml` and
   `age-encryption`.
 - **One tag publishes three things,** `cli-vX.Y.Z`, like `ui-v`, by the same guards as core: `@sovereignfs/cli` and
   `@sovereignfs/create` to npm, so that they cannot drift apart, and the image `ghcr.io/sovereignfs/cli`.

@@ -10,7 +10,7 @@ conventions — do not duplicate them elsewhere.
 can deploy **core**, its sign-in server, and point any OpenID Connect application at it for
 sign-in; in later phases core also offers shared services (mail, notifications, activity, backups)
 to apps. Core is **generic**: it knows OAuth clients, never particular apps. This repository also
-holds the operator toolkit that deploys it (`apps/cli`, `apps/create`) and the shared packages every
+holds the operator toolkit that deploys it (`tools/cli`, `tools/create`) and the shared packages every
 Sovereign app uses (`@sovereignfs/ui`, `sdk`, `config`, `database`, `crypto`, `mailer`, `api-client`, …).
 Open source, privacy-first.
 
@@ -24,7 +24,7 @@ assumptions:
 
 - `docs/specs/core-app.md` — what `apps/core` must do, phase by phase. Wins over
   code, epics and issues until it is changed.
-- `docs/specs/operator-cli.md` — what `apps/cli` must do. Holds the same place
+- `docs/specs/operator-cli.md` — what `tools/cli` must do. Holds the same place
   for it as `core-app.md` does for `apps/core`.
 - `spec/core-api/` — the HTTP contract apps call; `spec/env.md` — the
   environment variable convention; `spec/suite.md` and `spec/app-manifest.md` —
@@ -369,8 +369,9 @@ Playwright · OpenAPI 3.1 (`spec/core-api/`) · Docker Compose.
 ```
 apps/core/          the core app — identity, sign-in server, Console, launcher
 apps/e2e/           Phase 1 acceptance — Playwright, run against a built core
-apps/cli/           the operator toolkit, sv — files on the operator's machine, sv apply and sv receive on the server
-apps/create/        npm create @sovereignfs — makes an instance repository, or an app
+tools/              things that are run, never imported (AGPL; published, but not libraries)
+  cli/              the operator toolkit, sv — files on the operator's machine, sv apply and sv receive on the server
+  create/           npm create @sovereignfs — makes an instance repository, or an app
 packages/
   ui/               design system — published
   bridge/           device bridge — release-ready, not published yet

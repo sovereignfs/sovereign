@@ -87,7 +87,7 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
       execFileSync('docker', ['build', '--tag', coreImage, root], { stdio: 'inherit' });
     execFileSync('pnpm', ['--filter', '@sovereignfs/cli', 'build'], { cwd: root, stdio: 'ignore' });
     cliImage = 'sv-test-cli:local';
-    execFileSync('docker', ['build', '--quiet', '--tag', cliImage, path.join(root, 'apps/cli')], {
+    execFileSync('docker', ['build', '--quiet', '--tag', cliImage, path.join(root, 'tools/cli')], {
       stdio: 'ignore',
     });
 

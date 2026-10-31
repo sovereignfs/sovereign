@@ -27,7 +27,7 @@ const published: Candidate[] = [
     .filter((entry) => entry.isDirectory())
     .map((entry) => ({ dir: path.join(packagesDir, entry.name), kind: 'library' as const })),
   ...['cli', 'create'].map((name) => ({
-    dir: path.join(root, 'apps', name),
+    dir: path.join(root, 'tools', name),
     kind: 'tool' as const,
   })),
 ].filter(({ dir }) => manifestOf(dir).private !== true);

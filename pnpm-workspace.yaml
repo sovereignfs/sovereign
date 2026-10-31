@@ -1,5 +1,6 @@
 packages:
   - 'apps/*'
+  - 'tools/*'
   - 'packages/*'
 
 # Refuse to install on a Node outside package.json "engines".

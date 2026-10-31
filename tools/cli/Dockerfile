@@ -2,7 +2,7 @@
 #
 # It holds the bundled toolkit and the Docker client and Compose plugin it drives the server's Docker with, through the socket the
 # server's wrapper mounts. Build `dist/sv.mjs` first: `pnpm --filter @sovereignfs/cli build`, then
-# `docker build -t sv-cli apps/cli`.
+# `docker build -t sv-cli tools/cli`.
 FROM node:24-alpine
 RUN apk add --no-cache docker-cli docker-cli-compose
 WORKDIR /app

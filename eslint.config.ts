@@ -17,7 +17,7 @@ export default defineConfig(
       '**/coverage/**',
       '**/storybook-static/**',
       // An app that `npm create @sovereignfs app` writes: it is built where it is made, with its own dependencies.
-      'apps/create/template/**',
+      'tools/create/template/**',
       '.claude/worktrees/**',
       '.remember/**',
     ],

@@ -25,16 +25,16 @@ describe('the toolkit release workflow', () => {
     expect(workflow).toContain('pnpm --filter @sovereignfs/cli publish');
     expect(workflow).toContain('pnpm --filter @sovereignfs/create publish');
     for (const dir of ['cli', 'create']) {
-      const manifest = json(`apps/${dir}/package.json`);
+      const manifest = json(`tools/${dir}/package.json`);
       expect(manifest.private, dir).not.toBe(true);
       expect(manifest.license).toBe('AGPL-3.0-or-later');
     }
   });
 
   it('keeps the two packages at one version, and the toolkit’s own version with them', () => {
-    expect(json('apps/create/package.json').version).toBe(json('apps/cli/package.json').version);
-    expect(read('apps/cli/src/release.ts')).toContain(
-      `version: '${json('apps/cli/package.json').version as string}'`,
+    expect(json('tools/create/package.json').version).toBe(json('tools/cli/package.json').version);
+    expect(read('tools/cli/src/release.ts')).toContain(
+      `version: '${json('tools/cli/package.json').version as string}'`,
     );
   });
 
@@ -55,7 +55,7 @@ describe('the toolkit release workflow', () => {
       workflow.match(/git merge-base --is-ancestor "\$GITHUB_SHA" origin\/main/g),
     ).toHaveLength(2);
     expect(
-      workflow.match(/expects version \$expected, but apps\/\$dir\/package\.json/g),
+      workflow.match(/expects version \$expected, but tools\/\$dir\/package\.json/g),
     ).toHaveLength(2);
   });
 
@@ -70,7 +70,7 @@ describe('the toolkit release workflow', () => {
     expect(workflow.indexOf('pnpm --filter @sovereignfs/cli build')).toBeLessThan(
       workflow.indexOf('docker/build-push-action'),
     );
-    expect(workflow).toContain('context: apps/cli');
+    expect(workflow).toContain('context: tools/cli');
     expect(workflow).toContain('platforms: linux/amd64,linux/arm64');
     expect(workflow).toContain('${{ env.IMAGE }}:${{ steps.version.outputs.version }}');
     expect(workflow).toContain('${{ env.IMAGE }}:latest');
@@ -97,8 +97,8 @@ describe('the toolkit release workflow', () => {
   });
 
   it('ships an image whose Dockerfile copies only the bundled toolkit', () => {
-    expect(read('apps/cli/Dockerfile')).toContain('COPY dist/sv.mjs');
-    expect(read('apps/cli/.dockerignore')).toBe('*\n!dist/sv.mjs\n');
+    expect(read('tools/cli/Dockerfile')).toContain('COPY dist/sv.mjs');
+    expect(read('tools/cli/.dockerignore')).toBe('*\n!dist/sv.mjs\n');
   });
 });
 
@@ -140,7 +140,7 @@ describe('the workflow an instance calls to deploy from GitHub', () => {
   });
 
   it('is the one the instance repository’s own workflow calls', async () => {
-    const { REUSABLE } = await import('../../apps/cli/src/suite/workflow');
+    const { REUSABLE } = await import('../../tools/cli/src/suite/workflow');
     expect(REUSABLE).toBe('sovereignfs/sovereign/.github/workflows/deploy.yml');
   });
 });

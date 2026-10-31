@@ -136,12 +136,12 @@ the image the server runs `sv apply` from. They are one release at one version, 
 check treats them apart from the libraries above (a `bin` and not an exports map).
 
 The workflow **publishes nothing unless** the full CI passes on the tagged commit, the commit is on `main`, and the tag matches the
-`version` of both `apps/cli` and `apps/create`. The order is the image, then `@sovereignfs/cli`, then `@sovereignfs/create`, because a
+`version` of both `tools/cli` and `tools/create`. The order is the image, then `@sovereignfs/cli`, then `@sovereignfs/create`, because a
 repository made by `create@X` pins the image of toolkit X and cannot be set up until it exists. The image is signed by the build with
 the run's `GITHUB_TOKEN`; the packages are published with provenance by `NPM_TOKEN`, which only the last step holds.
 
-The toolkit's own version appears in three places that a test holds together: `apps/cli/package.json`, `apps/create/package.json`
-and `RELEASE.version` in `apps/cli/src/release.ts`. A toolkit release also says which core it was made for (`RELEASE.newestCore`), and
+The toolkit's own version appears in three places that a test holds together: `tools/cli/package.json`, `tools/create/package.json`
+and `RELEASE.version` in `tools/cli/src/release.ts`. A toolkit release also says which core it was made for (`RELEASE.newestCore`), and
 `sv upgrade` moves an instance to that core with it.
 
 To release: land the commit that sets those versions and `newestCore` on `main`, tag it `cli-vX.Y.Z`, push the tag, and watch the run.

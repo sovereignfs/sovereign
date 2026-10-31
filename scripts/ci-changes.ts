@@ -81,7 +81,7 @@ function touchesDependencies(path: string): boolean {
     path === 'package.json' ||
     path === 'pnpm-lock.yaml' ||
     path === 'pnpm-workspace.yaml' ||
-    /^(apps|packages)\/[^/]+\/package\.json$/.test(path)
+    /^(apps|tools|packages)\/[^/]+\/package\.json$/.test(path)
   );
 }
 

@@ -55,6 +55,8 @@ package's `package.json` and `LICENSE` in agreement.
 `devDependencies` of the SDK for that reason; the check refuses a published package that depends on an unpublished one. Publishing
 them on their own is a later decision.
 
+- **Its versions start at `2.0.0`.** The legacy repository published the legacy SDK under this name up to `1.25.0`, and npm does
+  not make a lower version `latest`, so the first release from here is `sdk-v2.0.0` ([sdk §12](specs/sdk.md)).
 - **Its exports are marked** stable or experimental in `packages/sdk/src/stability.ts`, and a test holds that list to what each
   entry point exports and to [sdk §12](specs/sdk.md).
 - **Each release states the core versions it supports**, in `sovereign.core` of its `package.json` and in its README. Raise the

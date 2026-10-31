@@ -330,8 +330,11 @@ Every namespace of the legacy `sdk` object:
   has `fetch` and Web Crypto.
 - Its entry points are the root, `/next` and `/testing`.
 - It has its own `sdk-vX.Y.Z` tag ([`docs/releasing.md`](../releasing.md)).
+- Its first release is `2.0.0`. The legacy SDK (§10) was published under the same name up to `1.25.0`, and npm will not make a lower
+  version `latest`. A version of the legacy SDK is not an earlier release of this one.
 - Every export is **stable** or **experimental**, and versions follow the same rules as the design system
-  ([design-system §3 and §4](design-system.md)). In this version the stable exports are `createSovereign`, the error types of §6, §4's
+  ([design-system §3 and §4](design-system.md)), in its "From `1.0.0`" column: breaking something stable is a major version. In this
+  version the stable exports are `createSovereign`, the error types of §6, §4's
   actors, and §8's capabilities. Everything else is experimental.
 - Each release states the core versions it supports.
 

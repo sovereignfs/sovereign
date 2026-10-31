@@ -3,6 +3,7 @@ import { getAuth } from '../auth';
 import { revokeOnDeactivation } from '../oauth/logout';
 import { getEmailService } from '../mail';
 import { sendLogoutNotices } from '../oauth/logout';
+import { sendDueDeletionNotices } from './deletion-scheduler';
 import { AccountManager } from './manage';
 import { AccountStates } from './states';
 
@@ -54,6 +55,11 @@ export function getAccountManager(): Promise<AccountManager> {
       ([database, states]) =>
         new AccountManager(database, states, {
           logoutNotices: async (notices) => sendLogoutNotices(await getAuth(), notices),
+          // Not waited for: the answer to a person deleting their account does not depend on an app answering.
+          deletionNotices: () => {
+            void sendDueDeletionNotices();
+            return Promise.resolve();
+          },
           mfaReset: async (to) => {
             const emails = await getEmailService();
             await emails.send(to.email, { template: 'mfaReset', link: emails.link('/sign-in') });

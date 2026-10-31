@@ -52,6 +52,14 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
     capability: 'client:manage',
   },
   {
+    id: 'deletions',
+    description: 'See apps that have not yet deleted what they held of someone who left.',
+    label: 'Deletions',
+    href: '/console/deletions',
+    icon: 'trash-2',
+    capability: 'client:manage',
+  },
+  {
     id: 'settings',
     description: 'The instance’s name, logo, sign-up rule and email.',
     label: 'Settings',

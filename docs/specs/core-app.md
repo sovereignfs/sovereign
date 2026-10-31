@@ -798,6 +798,9 @@ Operators with `client:manage` register clients in the Console.
 - Deleting an app removes its tokens and consents first, explicitly, then the
   app, so the result does not depend on a database's cascade.
 
+Apps that have not yet answered an account-deletion notice (§4.5) are listed on **Deletions** (`/console/deletions`, needing
+`client:manage`).
+
 The Console lists apps on **Apps** (`/console/apps`, needing `client:manage`), where
 an operator adds, changes, switches off and on, gives a new secret to, and
 deletes an app. In the Console an app is an "app"; the protocol's word "client"
@@ -1618,8 +1621,7 @@ would be wrong about the keys.
 
 ### 4.5 Account deletion: telling the apps
 
-Specified. The notices are recorded when an account is deleted and an app can be given the address (built); sending them, the Console list
-and the restore commands are not built yet. When a person deletes their account, each app that holds something of theirs is told, so that it can delete it. This
+Specified. The notices are recorded, sent and listed in the Console (built); the restore commands are not built yet. When a person deletes their account, each app that holds something of theirs is told, so that it can delete it. This
 runs from core to an app, unlike every other service in this phase, and it is the one place where an app being down must not lose
 something: a person who deleted their account must not find their data still held by an app because it was restarting that day.
 
@@ -1655,6 +1657,13 @@ when the account was deleted, the attempts, the state and the kind of the last f
 which let the owner of an app find the person in the app's own records and which are not enough to find anyone in core's. An operator
 can mark a notice `resolved` once the app's owner says the data is gone by other means. The list shows nothing of an account that
 still exists. The count of notices given up appears on the page, so that an app that never answers is not only in a log.
+
+**As built (delivery).** `DeletionDelivery` (`src/accounts/deletion-delivery.ts`) reads what is due from the table at start-up and every
+minute, and again straight after a deletion commits. It claims a notice with a conditional update that sets a lease of two minutes, makes
+one attempt (the token, a form `POST`, five seconds, no redirect followed, the answer's body never read), and writes the result with a
+condition on the notice still being pending, so a notice an operator marked done meanwhile is not undone. The last attempt is made at
+the 30 days and not skipped when the usual wait would run past them. A failure is kept as a kind (`http_<status>`, `timeout`,
+`network` or `no_address`), and the Console says it in words.
 
 **After a restore.** A restore returns the database to the time of the backup, deleted accounts and the list of notices with it, so the
 list cannot be what remembers a deletion made after the backup. `sv restore` therefore asks the running core for its deletions
@@ -1751,3 +1760,4 @@ operator's guide says so.
 | 2026-10-31 | §4.4, §3.7.4: the restore marker is built: `sovereign-admin instance restored` records `restored_at`, ends every session and every token the provider keeps a row for, and the Core API refuses any signed access token or app token issued before it. The marker only moves forward.                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2026-10-31 | §4.5, §3.3, §3.7.1, §4.4, §2: account deletion is specified: each app the person used that has an account-deleted address is sent a signed notice, kept in a table written by the deletion's own transaction and retried (1 minute up to 24 hours, for 30 days) until the app answers `2xx`; an operator sees what is not delivered, with eight characters of the `sub`; `sv restore` carries deletions across a restore. Not built.                                                                                                                                                                                                                                                                                          |
 | 2026-10-31 | §4.5, §3.7.1, §3.7.4: the notices are recorded: an app can be given an account-deleted address (the Console, `sovereign-admin apps ensure --account-deleted`), and deleting an account, a person's own or an operator's, writes a notice in its transaction for each app the person used that has one. A notice is not sent yet.                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-10-31 | §4.5, §3.10: account-deletion notices are sent: each is tried at once after the deletion and again from the table on the schedule, with a lease so two instances do not send it twice, until the app answers `2xx` or the 30 days end; the Console's Deletions page lists those not delivered and lets an operator mark one done. Only the restore commands remain.                                                                                                                                                                                                                                                                                                                                                           |

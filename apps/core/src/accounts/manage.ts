@@ -138,6 +138,8 @@ export type Actor = { id: string; role: unknown };
 export type AccountManagerHooks = {
   /** Tells the apps that registered a back-channel logout address that sessions ended. */
   logoutNotices?: (notices: readonly LogoutNotice[]) => Promise<void>;
+  /** Called after an account was deleted and notices were written for apps, so they are sent now and not at the next round. */
+  deletionNotices?: () => Promise<void>;
   /** Tells the account holder that an operator reset their two-factor sign-in. Resolves true when it was sent. */
   mfaReset?: (to: { email: string; name: string }) => Promise<boolean>;
   log?: (message: string) => void;
@@ -236,6 +238,7 @@ export class AccountManager {
 
   async #erase(id: string): Promise<void> {
     const at = this.#database.family === 'postgres' ? new Date() : Date.now();
+    let queued = false;
     const notices = await this.#database.transaction(async (tx) => {
       const found = await tx.run('select role from users where id = ?', [id]);
       if (found.rows[0]?.role === ROLE_OWNER) {
@@ -243,11 +246,20 @@ export class AccountManager {
       }
       const planned = await planLogoutNotices(tx, id);
       // Read before the consents and tokens that say which apps the person used are deleted (core-app §4.5).
-      await planDeletionNotices(tx, id);
+      queued = (await planDeletionNotices(tx, id)).length > 0;
       await revokeAllTokens(tx, at, id);
       await removeAccount(tx, id);
       return planned;
     });
+    if (queued) {
+      try {
+        await this.#hooks.deletionNotices?.();
+      } catch (error) {
+        this.#log(
+          `Sending the account-deletion notices failed: ${error instanceof Error ? error.message : 'unknown error'}`,
+        );
+      }
+    }
     if (notices.length > 0) {
       try {
         await this.#hooks.logoutNotices?.(notices);

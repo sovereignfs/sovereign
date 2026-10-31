@@ -182,6 +182,46 @@ export function deletionNoticesSuite(createDatabase: () => Promise<TestDatabase>
     });
   });
 
+  describe('sent now, not at the next round', () => {
+    it('is asked for after the deletion has committed, and only when there is something to send', async () => {
+      const ctx = await instance();
+      const calls: number[] = [];
+      const hooked = new AccountManager(db, new AccountStates(db, { log: () => undefined }), {
+        log: () => undefined,
+        deletionNotices: () => {
+          calls.push(Date.now());
+          return Promise.resolve();
+        },
+      });
+      await hooked.deleteSelf({ id: ctx.ada.id, role: 'platform:user' });
+      expect(calls).toHaveLength(1);
+      // The notice was already in the table when the hook ran.
+      expect(await notices()).toHaveLength(1);
+      const other = await signUp(ctx.auth, { name: 'Bo', email: 'bo@example.com' });
+      const boId = String(
+        (await db.run('select id from users where email = ?', ['bo@example.com'])).rows[0]?.id,
+      );
+      expect(other).toBeDefined();
+      await hooked.deleteSelf({ id: boId, role: 'platform:user' });
+      expect(calls).toHaveLength(1);
+    });
+
+    it('does not fail the deletion when sending it fails', async () => {
+      const ctx = await instance();
+      const lines: string[] = [];
+      const hooked = new AccountManager(db, new AccountStates(db, { log: () => undefined }), {
+        log: (line) => lines.push(line),
+        deletionNotices: () => Promise.reject(new Error('the sender broke')),
+      });
+      await hooked.deleteSelf({ id: ctx.ada.id, role: 'platform:user' });
+      expect(await db.run('select id from users where id = ?', [ctx.ada.id])).toMatchObject({
+        rows: [],
+      });
+      expect(lines.join('\n')).toContain('the sender broke');
+      expect(await notices()).toHaveLength(1);
+    });
+  });
+
   describe('written with the deletion', () => {
     it('is left out when the deletion does not happen: the owner cannot be deleted', async () => {
       const ctx = await instance();

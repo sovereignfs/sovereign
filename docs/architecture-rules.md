@@ -240,6 +240,9 @@ pointing here.
   does; a link goes only to an `https` address on one of the app's own origins; text is plain. The Core API's person calls act on
   the calling app's own notifications only, and core's own panel route (`/api/notifications`) acts on the session's account and
   checks the request's origin. Remove access, deleting an app and deleting an account delete them in the same transaction.
+- **An account-deleted notice is sent until the app answers, and only the table remembers it** (`DeletionDelivery`, core-app §4.5). What
+  is due is read from the table at start-up and every minute, an attempt is claimed with a lease, the result is written only while the
+  notice is still pending, and what the app said is never read or logged. The logout notice is still sent once.
 - **A deletion records who must be told in its own transaction** (`planDeletionNotices`, core-app §4.5). The apps are read from the
   consents, tokens and removal records before the same transaction deletes them, so a deletion that rolls back leaves no notice and one
   that commits always has them. A notice holds the app and the `sub` and nothing else of the person; deleting an app deletes its notices.

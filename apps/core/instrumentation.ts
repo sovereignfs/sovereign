@@ -17,4 +17,7 @@ export async function register(): Promise<void> {
   validateConfigOrExit();
   await migrateDatabaseOrExit();
   await warnIfMailNotConfigured();
+  // Account-deletion notices that were not answered before core stopped are sent again (core-app §4.5).
+  const { startDeletionDelivery } = await import('./src/accounts/deletion-scheduler');
+  startDeletionDelivery();
 }

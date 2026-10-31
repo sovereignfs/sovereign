@@ -1,6 +1,8 @@
-import { cpSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, extname, join, relative } from 'node:path';
-import { defineConfig } from 'tsup';
+import { defineConfig, type Options } from 'tsup';
+
+type Plugin = NonNullable<Options['esbuildPlugins']>[number];
 
 const SRC = 'src';
 const DIST = 'dist';
@@ -63,22 +65,52 @@ function copyFontsToDist(): void {
   cpSync(join(SRC, 'fonts'), join(DIST, 'fonts'), { recursive: true });
 }
 
+/**
+ * A CSS Module is shipped flat in `dist/`, so every import of one is rewritten to `./<basename>`, wherever in `src/` it is imported from.
+ * `ButtonLink` shares `Button`'s styles with `../Button/Button.module.css`, which is a place that exists only in `src/`: left as it was,
+ * the published bundle could not be built by an app.
+ */
+const flatCssModules: Plugin = {
+  name: 'flat-css-modules',
+  setup(build) {
+    build.onResolve({ filter: /\.css$/ }, (args) => ({
+      path: args.path.endsWith('.module.css') ? `./${basename(args.path)}` : args.path,
+      external: true,
+    }));
+  },
+};
+
+/** Every CSS file the bundle imports must be in `dist/`: a published package whose import does not resolve breaks the app that installs it. */
+function checkBundleImports(): void {
+  const bundle = readFileSync(join(DIST, 'index.js'), 'utf8');
+  const missing = [...bundle.matchAll(/from "(\.[^"]+\.css)"/g)]
+    .map((match) => match[1] as string)
+    .filter((specifier) => !existsSync(join(DIST, specifier)));
+  if (missing.length > 0) {
+    throw new Error(
+      `[ui build] dist/index.js imports CSS that is not in dist/: ${missing.join(', ')}`,
+    );
+  }
+}
+
 export default defineConfig({
   entry: ['src/index.ts'],
   format: ['esm'],
   dts: true,
   clean: true,
-  // CSS Modules and token CSS are left external — tsup/esbuild can't scope-hash
+  // CSS Modules and token CSS are left external (by the plugin above) — tsup/esbuild can't scope-hash
   // CSS Modules. The consuming app (via transpilePackages in v1, its own bundler
   // when installed from npm) processes the CSS. `onSuccess` copies the .css into
   // dist/ so the published package's imports resolve; `publishConfig` (in
   // package.json) repoints exports at dist/ on publish.
-  external: [/\.css$/, 'react', 'react-dom', 'react/jsx-runtime', /^@dnd-kit\//],
+  external: ['react', 'react-dom', 'react/jsx-runtime', /^@dnd-kit\//],
+  esbuildPlugins: [flatCssModules],
   esbuildOptions(options) {
     options.jsx = 'automatic';
   },
   onSuccess: async () => {
     copyCssToDist();
     copyFontsToDist();
+    checkBundleImports();
   },
 });

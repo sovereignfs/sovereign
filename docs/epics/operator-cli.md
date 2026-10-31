@@ -250,7 +250,7 @@ of it is built.
 - A runner decrypts nothing
 - Every action is pinned to a commit
 
-#### 📋 13.10 — The operator's guide
+#### ✅ 13.10 — The operator's guide
 
 **Goal:** Someone who has not seen this repository can run an instance from the documents alone.
 
@@ -260,6 +260,8 @@ of it is built.
 
 - `docs/operating.md`: from an empty folder to two apps, updating, backing up, and what to do when a deployment fails
 - `docs/deploying.md` points to it, and keeps the plain Compose route
+
+**Not verified here:** the guide has not been walked through on a new machine. It was written from the commands as built, and its commands, flags and promises were checked against them. Walking it is the first thing to do with the first release.
 
 **Dependencies:** 13.8
 

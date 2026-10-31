@@ -130,21 +130,28 @@ says what installing needs (https, a proxy that does not cache `/sw.js` or the m
 that apps open outside the window); Chromium's registration, caches and offline page are covered by the acceptance
 suite.
 
-**Outstanding, which needs a person with the devices:** the checklist below. Nothing in it has been run, and the
-review checklist above is not met until it has.
+**Run on an iPhone simulator** (iPhone 17 Pro, iOS 26.5, a built core on `http://localhost:3000`, so not a real device and
+not over https): the iPhone column below. It found two defects, both fixed: page text scrolled under the clock and the Dynamic
+Island of an installed app (the body's safe-area padding scrolls away with the page; a fixed strip of the page's colour now
+holds the status bar, `globals.css`), and the offline page's "Try again" button took the browser's link colour (purple, as the
+link points at its own page) instead of the text colour (`color: inherit`, `sw/source.ts`). Each has a test that failed before.
+The simulator would not take a typed password (only the first character arrived), so the signed-in rows were not run.
 
-| Check                                                                                            | Chrome or Edge, desktop | Android Chrome | iPhone Safari |
-| ------------------------------------------------------------------------------------------------ | ----------------------- | -------------- | ------------- |
-| An "Install" or "Add to Home Screen" offer is made, over https                                   |                         |                |               |
-| The installed icon is the Sovereign mark (or masked cleanly), named for the instance             |                         |                |               |
-| It opens in a window of its own, with no browser bars (iPhone: no Safari bars)                   |                         |                |               |
-| The title or status bar takes the page's colour, in the light and the dark theme                 |                         |                |               |
-| Nothing is hidden by a notch, a rounded corner or the home bar; no strip below the page          |                         |                |               |
-| The viewport height is right at launch (iPhone standalone: the legacy viewport sync only if not) |                         |                |               |
-| Sign in, open the launcher, open an app on another address, and come back                        |                         |                |               |
-| With the network off, a page shows "You're offline"; back on, "Try again" loads it               |                         |                |               |
-| After signing out, no page of the person can be opened offline                                   |                         |                |               |
-| Renaming the instance renames the installed app (after the next launch)                          |                         |                |               |
+**Outstanding, which needs a person with the devices:** the Chrome or Edge and Android columns, the iPhone rows marked "not
+run", and a run of the iPhone column on a real phone over https. The review checklist above is not met until they are run.
+
+| Check                                                                                            | Chrome or Edge, desktop | Android Chrome | iPhone Safari                   |
+| ------------------------------------------------------------------------------------------------ | ----------------------- | -------------- | ------------------------------- |
+| An "Install" or "Add to Home Screen" offer is made, over https                                   |                         |                | ✅ (simulator, http)            |
+| The installed icon is the Sovereign mark (or masked cleanly), named for the instance             |                         |                | ✅                              |
+| It opens in a window of its own, with no browser bars (iPhone: no Safari bars)                   |                         |                | ✅                              |
+| The title or status bar takes the page's colour, in the light and the dark theme                 |                         |                | ✅ (after the fix)              |
+| Nothing is hidden by a notch, a rounded corner or the home bar; no strip below the page          |                         |                | ✅ (after the fix)              |
+| The viewport height is right at launch (iPhone standalone: the legacy viewport sync only if not) |                         |                | ✅ (sign-in and legal pages)    |
+| Sign in, open the launcher, open an app on another address, and come back                        |                         |                | not run                         |
+| With the network off, a page shows "You're offline"; back on, "Try again" loads it               |                         |                | ✅ (core stopped, then started) |
+| After signing out, no page of the person can be opened offline                                   |                         |                | not run                         |
+| Renaming the instance renames the installed app (after the next launch)                          |                         |                | not run                         |
 
 #### ✅ 11.4 — Icons made from the instance's own logo `[parallel]`
 

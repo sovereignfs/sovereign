@@ -204,6 +204,18 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
     );
   });
 
+  it('asks core for scopes core gives it: the sign-in is not refused before a person is asked', () => {
+    const login = probe('GET', '/auth/login');
+    const answer = fromCore(
+      "fetch(process.argv[1], { redirect: 'manual' }).then(async (r) => console.log(JSON.stringify({ status: r.status, location: r.headers.get('location'), body: (await r.text()).slice(0, 400) })))",
+      login.location as string,
+    );
+    const seen = JSON.parse(answer.stdout) as { location: string | null; body: string };
+    // Core sends someone who is not signed in to its sign-in page; a refusal is an error in the address instead.
+    expect(`${seen.location ?? ''} ${seen.body}`).not.toMatch(/error=|invalid_scope/);
+    expect(`${seen.location ?? ''} ${seen.body}`).toContain('sign-in');
+  });
+
   it('has its back-channel logout and account-deleted routes where the manifest says, and refuses what core did not sign', () => {
     for (const route of ['/auth/backchannel-logout', '/auth/account-deleted']) {
       const answer = probe('POST', route);

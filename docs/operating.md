@@ -15,6 +15,8 @@ If you only want core on a machine with Docker, without the toolkit, [Deploying 
 - **On your computer:** Node 24 or newer, git, and SSH access to the machine. A git remote to push to (a private repository) is
   where your instance lives.
 - **Ports 80 and 443** reachable on the machine, for certificates and for people.
+- **A free address range.** `bootstrap` widens Docker's address pools to `172.16.0.0/12` so that it does not run out of networks. If your
+  network already uses addresses there, change the pools in `/etc/docker/daemon.json` to a range it does not.
 
 The machine and the repository hold different things, and it helps to know which is which. **The repository** holds what you chose: which
 versions run, which apps, your settings, and your secrets, encrypted. **The machine** holds what it made for itself: the databases, and

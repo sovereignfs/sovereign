@@ -110,7 +110,8 @@ Anything else comes from the operator: `env` in `suite.yml`, or `secrets.age.yml
 - It MUST NOT need an admin credential for its database, or any object outside it.
 - It MUST sign people in through core, with PKCE, as [`docs/connecting-an-app.md`](../docs/connecting-an-app.md) describes. It
   MUST NOT need core's session cookie.
-- It MUST keep what must survive an upgrade only in its database or under `data`.
+- It MUST keep what must survive an upgrade only in its database or under `data`. Each `data` path MUST exist in the image and be writable
+  by the user the app runs as, because Docker makes a new volume from the image's folder at that path and owns it as root otherwise.
 - It MUST stop cleanly on `SIGTERM`.
 - It MUST read core's address from `<PREFIX>_CORE_URL` and not assume one.
 

@@ -13,6 +13,7 @@ import { Decrypter } from 'age-encryption';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Readable } from 'node:stream';
 import { Registry } from '../registry.js';
+import { isBackupPath } from '../server/receive.js';
 import { extract, readArchive } from '../server/tar.js';
 import { makeSource, type Source } from '../testing/source.js';
 import { fakeRegistry } from '../testing/world.js';
@@ -148,7 +149,8 @@ describe.skipIf(!runnable)('a backup and a restore against the real Docker', () 
       ).arrayBuffer(),
     );
     const unpacked = path.join(newState(), 'backup');
-    const entries = readArchive(plain, () => true, { stripDot: true });
+    // Through the same list the server checks a restore against, so a backup it makes is one it accepts.
+    const entries = readArchive(plain, isBackupPath, { stripDot: true });
     expect(entries.map((e) => e.name)).toEqual(
       expect.arrayContaining([
         'databases.sql',

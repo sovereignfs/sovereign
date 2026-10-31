@@ -63,7 +63,11 @@ export async function takeBackup(
 
     const encrypter = new Encrypter();
     for (const recipient of operators) encrypter.addRecipient(recipient);
-    const tar = spawn('tar', ['-C', work, '-cf', '-', '.'], { stdio: ['ignore', 'pipe', 'pipe'] });
+    // COPYFILE_DISABLE keeps a macOS tar from adding `._` files for extended attributes, which a backup does not hold; Linux ignores it.
+    const tar = spawn('tar', ['-C', work, '-cf', '-', '.'], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, COPYFILE_DISABLE: '1' },
+    });
     let tarError = '';
     tar.stderr.on('data', (chunk: Buffer) => (tarError += chunk.toString('utf8')));
     const exited = new Promise<number>((resolve) => tar.on('close', (code) => resolve(code ?? 1)));

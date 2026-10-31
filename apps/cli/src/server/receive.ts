@@ -187,7 +187,7 @@ async function deploy(
 }
 
 /** The backup's files, and nothing else: the databases, the generated secrets, and the app data (operator-cli §10.2). */
-const isBackupPath = (name: string) =>
+export const isBackupPath = (name: string) =>
   name === 'databases.sql' ||
   name === 'state.json' ||
   /^secrets\/[A-Za-z0-9_.-]{1,128}$/.test(name) ||

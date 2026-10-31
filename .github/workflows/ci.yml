@@ -156,6 +156,21 @@ jobs:
           persist-credentials: false
       - run: bash scripts/docker-smoke.sh
 
+  # The operator CLI's `sv apply` against the real Docker (operator-cli §6): core built from this repository, PostgreSQL and
+  # Caddy pulled by digest, the whole base started twice, and stopped after each step and resumed (apps/cli, `pnpm test:docker`).
+  operator-cli:
+    name: Operator CLI (Docker)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm test:docker
+
   # Phase 1 acceptance (core-app §3.17): the browser suite in apps/e2e drives a built core, as a person and as the
   # apps that sign people in, once per supported dialect. Core is built here and run from its standalone output, the
   # server the image runs; the suite makes a database of its own on the dialect's service. Chromium is installed

@@ -1,9 +1,9 @@
 # Sovereign — operator CLI specification
 
-|            |                                                                                                                                                                                                   |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status** | Draft. Specified from [RFC 0002](../rfcs/0002-deployment-strategies.md); the commands on the operator's machine are built, `sv apply` and deploying are not ([epic 13](../epics/operator-cli.md)) |
-| **Covers** | `apps/cli`: the `sv` toolkit, `sv apply`, and `@sovereignfs/create`                                                                                                                               |
+|            |                                                                                                                                                                                                                            |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status** | Draft. Specified from [RFC 0002](../rfcs/0002-deployment-strategies.md); the commands on the operator's machine and `sv apply` for core are built, hosted apps and deploying are not ([epic 13](../epics/operator-cli.md)) |
+| **Covers** | `apps/cli`: the `sv` toolkit, `sv apply`, and `@sovereignfs/create`                                                                                                                                                        |
 
 This document is the single source of truth for what the operator CLI does. Where code, another document or an issue
 disagrees with it, this document wins until it is changed.
@@ -253,6 +253,31 @@ database, role, data volumes and generated secrets, after taking a backup of tha
 - **Certificates** are per host by default (`spec/suite.md`).
 
 What goes into an app's environment is in [`spec/app-manifest.md`](../../spec/app-manifest.md).
+
+### 6.4.1 As built
+
+- **Names.** Compose projects are `sovereign-proxy`, `sovereign-database`, `sovereign-core` and `sovereign-app-<name>`; containers
+  `sv-proxy`, `sv-database`, `sv-core` and `sv-app-<name>`; networks `sv-net-core` and `sv-net-app-<name>`. They are fixed, so a test, `sv
+status` and a person reading `docker ps` agree, and `sv apply` will not run in a way that makes two.
+- **A deployment that changes nothing recreates nothing.** Each Compose file carries its environment inline and mounts only paths that do
+  not change between deployments (`secrets/`, `proxy/`, `pki/`), so Compose recreates a container only when its own configuration
+  differs. The proxy's `Caddyfile` is kept at `proxy/Caddyfile` for the same reason and is reloaded in place when it changes.
+- **Networks.** Compose attaches each container to core's network. The proxy's public names are aliases put on its networks by `sv
+apply` itself after Compose, since an alias set that changes would otherwise recreate the proxy.
+- **Secrets.** `secrets/` is `0700`, and each file in it `0444`: a container's own user is not root, and reads the file Docker mounts, so
+  the protection is the directory's. Each is mounted read-only at `/run/secrets/<NAME>` and named to the container by its `_FILE` form.
+- **The database.** Core's role is made with its password sent to `psql` on standard input, never as an argument, and `PUBLIC` is
+  denied `CONNECT` on its database. The server's administrator password is its own secret, used by `sv apply` alone.
+- **`tls.mode: internal`.** The proxy makes its own authority, whose certificate `sv apply` copies to `pki/root.crt` (replacing it only when it differs) and mounts the
+  `pki/` folder, not the file, into core, with `NODE_EXTRA_CA_CERTS` naming it: a file mounted alone goes stale when it is replaced. Core
+  needs it since core fetches its own signing keys from its public name and must trust the certificate it finds there.
+- **The look at the machine** asks Docker for its version (24 or newer, Compose 2.20 or newer), the free space under the state directory
+  (1 GB), and whether each public name resolves to the server's address. A name that does not is a refusal with `per-host`
+  certificates, which cannot be issued without it, and a warning with `internal`. `--skip-dns` is for a server reached by another address.
+- **A backup (step 3)** is taken before core's or the database's version changes, by the same code `sv backup` uses (§10.2): a
+  `pg_dumpall` of every database, `state.json` and `secrets/`, in one archive encrypted to every recipient but the server's own.
+- **The state directory** is `/var/lib/sovereign`, or `--state-dir` / `SV_STATE_DIR`. `--no-publish-ports` leaves the proxy's ports
+  unpublished, for a test on a machine that has something on 80 or 443.
 
 ### 6.5 What it refuses
 

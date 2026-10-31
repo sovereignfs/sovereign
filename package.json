@@ -21,6 +21,7 @@
     "typecheck": "turbo typecheck && tsc --noEmit",
     "test": "turbo test && vitest run --project unit",
     "test:db": "vitest run --project db",
+    "test:docker": "vitest run --project docker",
     "test:watch": "vitest --project unit",
     "docs:check-links": "tsx scripts/check-doc-links.ts",
     "design:tokens:check": "tsx scripts/design-tokens-check.ts",

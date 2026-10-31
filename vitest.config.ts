@@ -48,7 +48,20 @@ export default defineConfig({
             'packages/*/src/**/*.test.{ts,tsx}',
             'apps/*/src/**/*.test.{ts,tsx}',
           ],
-          exclude: ['**/node_modules/**', '**/*.db.test.ts'],
+          exclude: ['**/node_modules/**', '**/*.db.test.ts', '**/*.docker.test.ts'],
+        },
+      },
+      {
+        // Tests that run the real Docker: `sv apply` against a real engine, with real images. Run by hand
+        // (`pnpm test:docker`) and by CI's operator CLI job; never by `pnpm test`, since they pull images and take minutes.
+        extends: true,
+        test: {
+          name: 'docker',
+          include: ['**/*.docker.test.ts'],
+          exclude: ['**/node_modules/**'],
+          testTimeout: 20 * 60_000,
+          hookTimeout: 20 * 60_000,
+          fileParallelism: false,
         },
       },
       {

@@ -1,4 +1,5 @@
 import { app } from './commands/app.js';
+import { applyCommand } from './commands/apply.js';
 import { push } from './commands/push.js';
 import { secret } from './commands/secret.js';
 import { setup } from './commands/setup.js';
@@ -19,6 +20,7 @@ Secrets
   secret set|remove|list|rekey  keep secrets in secrets.age.yml, encrypted
 Deploying
   push                          check the repository, commit its files, and push
+  apply                         on the server: make it match one commit (sv deploy starts it)
 
 Every command says what it changed. Exit codes: 0 done, 1 failed partway (run it again), 2 refused (nothing changed), 3 locked.`;
 
@@ -40,6 +42,15 @@ export async function run(argv: string[], io: Io, contextFor: () => Context): Pr
     io.out(RELEASE.version);
     return 0;
   }
+  // `apply` runs on the server, where there is no instance repository.
+  if (name === 'apply') {
+    try {
+      await applyCommand(io, rest);
+      return 0;
+    } catch (error) {
+      return report(io, error);
+    }
+  }
   const command = COMMANDS[name];
   if (!command) {
     io.err(`There is no command ${name}.\n\n${USAGE}`);
@@ -50,15 +61,19 @@ export async function run(argv: string[], io: Io, contextFor: () => Context): Pr
     await command(contextFor(), rest);
     return 0;
   } catch (error) {
-    if (error instanceof SvError) {
-      io.err(error.message);
-      if (error.hint) io.err(error.hint);
-      return error.exitCode;
-    }
-    io.err(
-      `sv failed in a way it did not expect: ${error instanceof Error ? error.message : String(error)}`,
-    );
-    io.err('This is a bug in the toolkit. Running the command again is safe.');
-    return 1;
+    return report(io, error);
   }
+}
+
+function report(io: Io, error: unknown): number {
+  if (error instanceof SvError) {
+    io.err(error.message);
+    if (error.hint) io.err(error.hint);
+    return error.exitCode;
+  }
+  io.err(
+    `sv failed in a way it did not expect: ${error instanceof Error ? error.message : String(error)}`,
+  );
+  io.err('This is a bug in the toolkit. Running the command again is safe.');
+  return 1;
 }

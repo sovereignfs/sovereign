@@ -1,9 +1,9 @@
 # Sovereign — operator CLI specification
 
-|            |                                                                                                                                                                                                                                                                                                                |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status** | Draft. Specified from [RFC 0002](../rfcs/0002-deployment-strategies.md); the commands on the operator's machine and `sv apply` for core and apps, deploying over SSH, backups, restores and rollbacks are built; publishing, upgrading and deploying from GitHub are not ([epic 13](../epics/operator-cli.md)) |
-| **Covers** | `apps/cli`: the `sv` toolkit, `sv apply`, and `@sovereignfs/create`                                                                                                                                                                                                                                            |
+|            |                                                                                                                                                                                                                                                                                                            |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status** | Draft. Specified from [RFC 0002](../rfcs/0002-deployment-strategies.md); the commands on the operator's machine and `sv apply` for core and apps, deploying over SSH, backups, restores, rollbacks, publishing and upgrading are built; deploying from GitHub is not ([epic 13](../epics/operator-cli.md)) |
+| **Covers** | `apps/cli`: the `sv` toolkit, `sv apply`, and `@sovereignfs/create`                                                                                                                                                                                                                                        |
 
 This document is the single source of truth for what the operator CLI does. Where code, another document or an issue
 disagrees with it, this document wins until it is changed.
@@ -445,6 +445,21 @@ It MUST NOT move an app's version, or `database.version`. A newer `schema` than 
 migrated only by `sv upgrade`, never in passing by another command.
 
 A dependency bot MAY open the change to `package.json`. `sv upgrade` then finishes it.
+
+#### 10.1.1 As built
+
+- **Two steps, because a toolkit can only describe itself.** `sv upgrade` installs the release asked for (`npm install --save-exact
+--ignore-scripts`, which updates `package.json` and the lockfile), then runs the new toolkit's `sv upgrade --finish`, which does steps
+  2 to 5 with that release's own idea of the core it was made for, the images it uses and the `schema` it reads. `--finish` is also what
+  to run after a dependency bot has changed `package.json` and `npm ci` has installed it; it works offline except for resolving digests.
+  With no `--to` it asks npm for the newest release and does nothing if that is the one running.
+- **What it moves:** the toolkit's image in the lock, `core.version` to the release's `newestCore` (never backward), the schema through the
+  migrations in order (none yet: there is one schema), and the digests of what changed. It shows each change, and writes `suite.yml` and
+  `suite.lock` only when they are all good. A repository from a newer schema than the toolkit reads is refused, as is one that pins a
+  different toolkit than the one running.
+- **Release:** the toolkit, `create` and the image are one release on the tag `cli-vX.Y.Z` ([releasing](../releasing.md#releasing-the-toolkit)).
+- **Not done here:** the CI job that deploys the previous release and upgrades it needs a published release to start from, so it waits
+  for the first one.
 
 ### 10.2 Backing up and restoring
 

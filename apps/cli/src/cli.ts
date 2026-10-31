@@ -8,6 +8,7 @@ import { server } from './commands/server.js';
 import { receiveCommand, serverKeyCommand } from './commands/serve.js';
 import { secret } from './commands/secret.js';
 import { setup } from './commands/setup.js';
+import { upgrade } from './commands/upgrade.js';
 import type { Context } from './context.js';
 import { SvError } from './errors.js';
 import type { Io } from './io.js';
@@ -29,6 +30,7 @@ Deploying
   deploy                        put the pushed commit on the server
   status | logs | doctor        what is running, what it printed, what to fix
 Recovering
+  upgrade [--to vX.Y.Z]         move the repository to a newer release, for you to review
   backup | restore PATH         a backup encrypted to your key alone, and bringing one back
   rollback                      run the previous release again
   apply                         on the server: make it match one commit (sv deploy starts it)
@@ -47,6 +49,7 @@ const COMMANDS: Record<string, Command> = {
   backup,
   restore,
   rollback,
+  upgrade,
   status,
   logs,
   doctor,

@@ -1,0 +1,9 @@
+{
+  "extends": "@sovereignfs/tsconfig/library.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false
+  },
+  "include": ["src/**/*.ts", "tsup.config.ts"]
+}

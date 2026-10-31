@@ -41,6 +41,7 @@
           "uniqueItems": true
         },
         "backChannel": { "$ref": "#/$defs/path" },
+        "accountDeleted": { "$ref": "#/$defs/path" },
         "scopes": {
           "type": "array",
           "items": {

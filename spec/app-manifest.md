@@ -66,12 +66,13 @@ A manifest MUST NOT be extended with fields of its own. An unknown field is refu
 
 ### 2.1 `signIn`
 
-| Field         | Required | Meaning                                                                                                                                  |
-| ------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `redirect`    | yes      | Paths core may send a person back to after sign-in, at least one                                                                         |
-| `postLogout`  | no       | Paths core may return a person to after sign-out                                                                                         |
-| `backChannel` | no       | The path core posts a logout notice to. An app SHOULD have one, or signing out of core leaves it signed in until its tokens stop working |
-| `scopes`      | yes      | What it asks for, from [core-app §3.6.2](../docs/specs/core-app.md). `openid` is required                                                |
+| Field            | Required | Meaning                                                                                                                                                                                                               |
+| ---------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `redirect`       | yes      | Paths core may send a person back to after sign-in, at least one                                                                                                                                                      |
+| `postLogout`     | no       | Paths core may return a person to after sign-out                                                                                                                                                                      |
+| `backChannel`    | no       | The path core posts a logout notice to. An app SHOULD have one, or signing out of core leaves it signed in until its tokens stop working                                                                              |
+| `accountDeleted` | no       | The path core posts an account-deletion notice to ([core-app §4.5](../docs/specs/core-app.md)). An app that holds anything of a person SHOULD have one, or what it holds stays after the person deletes their account |
+| `scopes`         | yes      | What it asks for, from [core-app §3.6.2](../docs/specs/core-app.md). `openid` is required                                                                                                                             |
 
 Every one is a path, which the CLI joins to `https://<name>.<domain>`. An app does not know its own address when it is built, so
 a manifest holds no host. A path MUST begin with `/`, and MUST NOT hold `..`, a query or a fragment.

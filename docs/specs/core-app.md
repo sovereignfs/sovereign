@@ -146,11 +146,11 @@ Roboto, Helvetica, Arial, sans-serif`. A page or component names a family only
 
 ## 2. Phase overview
 
-| Phase | Theme                                                                                    | Status                         |
-| ----- | ---------------------------------------------------------------------------------------- | ------------------------------ |
-| **1** | Identity, sign-in server, app registration                                               | Specified below                |
-| 2     | Core services for apps: mail, notifications, activity, account-deletion fan-out, backups | Notifications specified (§4.1) |
-| Later | Groups and access policies, export, recovery kit, relay, and more                        | Not yet specified              |
+| Phase | Theme                                                                                    | Status                            |
+| ----- | ---------------------------------------------------------------------------------------- | --------------------------------- |
+| **1** | Identity, sign-in server, app registration                                               | Specified below                   |
+| 2     | Core services for apps: mail, notifications, activity, account-deletion fan-out, backups | Specified (§4); fan-out not built |
+| Later | Groups and access policies, export, recovery kit, relay, and more                        | Not yet specified                 |
 
 ---
 
@@ -400,7 +400,9 @@ Editing them is not part of Phase 1.
     what was typed kept. Deleting is the same single step an operator's deletion
     is: the account, its credentials and its sessions, every token and consent
     for it, in one transaction, then the apps that registered a back-channel
-    logout address are told. It is whole or not at all.
+    logout address are told. It is whole or not at all. The same transaction
+    records, for each app the person used that has an account-deleted address, a
+    notice that the app is to be told, and core keeps trying until it is (§4.5).
   - **The owner cannot delete their account.** They are told to hand the
     instance to another admin first, with the way to do it, and are not offered
     the form; a request made by hand is refused the same way, by the role the
@@ -746,6 +748,7 @@ Operators with `client:manage` register clients in the Console.
 | Client type               | Confidential (has a secret) or public (no secret). PKCE is required for both                                                                                                            |
 | Redirect URIs             | One or more; exact match. Must be `https`. `http` is accepted on `localhost` and `*.localhost` only when the instance's own URL (`SV_URL`) is `http`, that is on a development instance |
 | Post-logout redirect URIs | Optional; the only addresses core returns a person to after sign-out                                                                                                                    |
+| Account-deleted address   | Optional, `https` like a redirect address. Core sends a signed notice there when a person who used the app deletes their account, and keeps trying until the app answers (§4.5)         |
 | Back-channel logout URI   | Optional. Core sends a signed logout notice there when a person's session ends (§3.6.5)                                                                                                 |
 | End-session               | Lets the app send people to core's sign-out (§3.6.5). On automatically when a post-logout redirect URI or a back-channel logout URI is set                                              |
 | Secret                    | Confidential apps only. Sent in a header (HTTP Basic; the default) or in the request body (§3.6.1). A public app has none. Changing it needs the app reconfigured.                      |
@@ -1371,8 +1374,8 @@ apps) and §3.15 (image storage, secrets from files).
 ## 4. Phase 2 — Core services for apps
 
 Phase 2 is what core offers an app beyond signing people in. Each service is specified here before it is built, and its operations
-are added to the contract (`spec/core-api/openapi.yaml`) marked `x-planned` until they are served (§3.13.1). Mail, activity,
-account-deletion fan-out and backups are not specified yet (epic 15, task 14.6).
+are added to the contract (`spec/core-api/openapi.yaml`) marked `x-planned` until they are served (§3.13.1). Telling apps that an account
+was deleted (§4.5) is the one service that runs from core to an app, so it is not an operation of the contract.
 
 ### 4.1 Notifications
 
@@ -1598,8 +1601,9 @@ would be wrong about the keys.
 - **After a restore, what was revoked since is alive again**: a session ended, a consent removed and a token revoked after the backup was
   taken are back in the database as they were. So a restore records the time (`restored_at`, an instance setting, written by the
   restore itself), and from then on core refuses every session and token issued before it: people sign in again, and apps ask for tokens
-  again. An account deleted after the backup is not recreated by this; apps are told of deletions again by the fan-out's own record (task
-  14.6). The restore is `sv restore`'s to make and core's to honour.
+  again. An account deleted after the backup comes back with the backup, and this does not remove it: `sv restore` carries the
+  deletions across the restore, and core deletes those accounts again and tells their apps again (§4.5, "After a restore"). The restore is
+  `sv restore`'s to make and core's to honour.
 - **How core honours it** (built). `sovereign-admin instance restored` (§3.7.4), which `sv restore` runs in core's container after the
   database is back and before core starts for people, records `restored_at` and, in the same transaction, ends what the backup brought
   back: it deletes every session and revokes every access and refresh token the provider keeps a row for. A signed access token and an
@@ -1611,6 +1615,65 @@ would be wrong about the keys.
   settings the Console shows, and nothing in core writes it but this command. Core's own pages ask the database for the session every
   time (§3.3), so they need no check of their own: a session the command removed is gone.
 - **Core's Console shows nothing about backups.** An operator who wants to know the state of them asks `sv`.
+
+### 4.5 Account deletion: telling the apps
+
+Specified; not built. When a person deletes their account, each app that holds something of theirs is told, so that it can delete it. This
+runs from core to an app, unlike every other service in this phase, and it is the one place where an app being down must not lose
+something: a person who deleted their account must not find their data still held by an app because it was restarting that day.
+
+**Who is told.** Every app with an account-deleted address (§3.7.1) that the person had **used**: a consent, an access token or a
+refresh token of theirs, revoked or not, in the same sense as §4.1. Core reads that list inside the deletion's own transaction, before
+the same transaction deletes the consents and tokens, since afterwards nothing says which apps they were. An app without an
+account-deleted address is not told, and is as it was before: it has its back-channel logout at most. An operator deleting an account
+(§3.3, §3.11) and a person deleting their own go through the same transaction and so the same notices. Deactivating an account is not
+deleting it, and tells no one.
+
+**What is kept so that it is not lost.** One row for each notice, written in the deletion's transaction: the app, the person's `sub`,
+when the account was deleted, and where the notice stands (`pending`, `delivered`, `given_up` or `resolved`), with the number of
+attempts, when the next is due and the kind of the last failure (never a response body). A notice is not tied to the account, which is
+gone, and the `sub` is never reused (§3.3). A delivered notice is kept for 90 days after delivery, which is how far back a restore is
+expected to reach (below), and then deleted with its `sub`. Deleting an app deletes its notices.
+
+**What an app is sent.** A `POST` to its account-deleted address with the form field `account_deleted_token`, a JWT typed
+`account-deleted+jwt`, signed with the key that signs logout tokens (§3.6.5) and carrying `iss`, `aud` (the app's client ID), `sub`,
+`iat`, an `exp` two minutes on, a fresh `jti` for each attempt, and `events` holding the single event
+`urn:sovereignfs:event:account-deleted`. It carries nothing else of the person: no name, no address. A redirect is not followed and an
+attempt is given five seconds. **Any `2xx` is an answer; anything else, and no answer, is a failure.** The app answers `2xx` only once
+it has deleted what it holds, so a `2xx` is the app's word that it is done, and the SDK handler (sdk §9.1) does exactly this.
+
+**Trying again.** The first attempt is made as soon as the deletion has committed. After a failure core tries again after 1 minute, 5
+minutes, 30 minutes, 2 hours, 6 hours and 12 hours, and then every 24 hours, until 30 days after the account was deleted; a notice
+still unanswered then is `given_up`. A process that stops keeps its notices: what is due is read from the table when core starts and
+every minute after, and an attempt is claimed with a conditional update so that two instances of core do not send the same notice at
+once. Core logs a notice given up, naming the app and not the person.
+
+**What an operator sees.** The Console lists the notices that are not yet delivered, to someone with `client:manage` (§3.7): the app,
+when the account was deleted, the attempts, the state and the kind of the last failure, and the **first eight characters** of the `sub`,
+which let the owner of an app find the person in the app's own records and which are not enough to find anyone in core's. An operator
+can mark a notice `resolved` once the app's owner says the data is gone by other means. The list shows nothing of an account that
+still exists. The count of notices given up appears on the page, so that an app that never answers is not only in a log.
+
+**After a restore.** A restore returns the database to the time of the backup, deleted accounts and the list of notices with it, so the
+list cannot be what remembers a deletion made after the backup. `sv restore` therefore asks the running core for its deletions
+before it restores (`sovereign-admin instance deletions export`: each deleted account's `sub`, when it was deleted and the apps it had
+used) and, once the database is back and the restore marker is recorded (§4.4), gives them to the restored core
+(`sovereign-admin instance deletions apply`). Core deletes any of those accounts the restored database brought back, the way an
+operator's deletion would, and makes a notice for each app of each of them again, whether or not that app was told before. Apps are
+told again for the reason a restore ends sessions: what was done is not undone by going back. An account the restored database does not
+have is not made again, and its apps are still told. The file holds `sub`s and nothing else about a person, is made for this and
+removed after it, and is never written outside the server's own state. **A server that is lost before its deletions can be exported
+cannot remember them**: a person deleted after the last backup reappears when the backup is restored on a new machine, and the
+operator's guide says so.
+
+**Decided here, so that it can be built.**
+
+- **Its own address, not the back-channel logout address.** The two make different promises: a logout notice says a session ended and is
+  sent once; this one says to delete what is held and is sent until it is answered. An app that wants only one has only one.
+- **No acknowledgement of what was deleted.** Core asks for the app's word that it is done and takes nothing more, because anything more
+  would be a way for an app to be asked about a person.
+- **No retry of the logout notice.** §3.6.5 stands: a logout notice is sent once. Only this one is kept.
+- **Not an export.** What a person may take with them is the "Later" row (§2), and the SDK's legacy `portability` waits for it.
 
 ---
 
@@ -1684,3 +1747,4 @@ would be wrong about the keys.
 | 2026-10-31 | §4.2: mail for apps is built: the service and its two small tables, `sendEmail` served (the instance document lists `email` only while the instance can send mail, and the operation is a `404` without it), the app scope `email:send`, the mailer's app-message template and `List-Unsubscribe` header, the Preferences switches, and what Remove access, deleting an app and deleting an account take with them. The address is read only when a send is made and never leaves core.                                                                                                                                                                                                                                       |
 | 2026-10-31 | §4.3: activity is built: the service and its table, `logActivity` served (the instance document lists `activity`), the app scope `activity:write`, core's Activity page (all apps or one, delete one, one app's or all), and what Remove access, deleting an app and deleting an account take with them. Only the person reads it: no operator page, no call for an app.                                                                                                                                                                                                                                                                                                                                                      |
 | 2026-10-31 | §4.4, §3.7.4: the restore marker is built: `sovereign-admin instance restored` records `restored_at`, ends every session and every token the provider keeps a row for, and the Core API refuses any signed access token or app token issued before it. The marker only moves forward.                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 2026-10-31 | §4.5, §3.3, §3.7.1, §4.4, §2: account deletion is specified: each app the person used that has an account-deleted address is sent a signed notice, kept in a table written by the deletion's own transaction and retried (1 minute up to 24 hours, for 30 days) until the app answers `2xx`; an operator sees what is not delivered, with eight characters of the `sub`; `sv restore` carries deletions across a restore. Not built.                                                                                                                                                                                                                                                                                          |

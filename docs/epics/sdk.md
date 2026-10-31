@@ -129,7 +129,7 @@ are added when core's Phase 2 specifies them.
 - `docs/connecting-an-app.md` says the grant exists
 - The security check is run
 
-#### 📋 14.6 — Account-deletion fan-out
+#### ✅ 14.6 — Account-deletion fan-out
 
 **Goal:** When a person deletes their account on core, each app they used finds out and deletes what it holds.
 
@@ -150,3 +150,100 @@ are added when core's Phase 2 specifies them.
 
 - A person's deletion cannot be lost because an app was down
 - An app that never answers is visible to an operator
+
+#### 📋 14.7 — Deletion notices: keep them
+
+**Goal:** Deleting an account records, in the same transaction, a notice for each app that must be told, and an app can say where.
+
+**Priority:** 7.
+
+**Deliverables:**
+
+- The table and a `DeletionNotices` service that is the only writer, and the deletion transaction (a person's own and an operator's) writing
+  one notice for each app the person used that has an account-deleted address, read before the same transaction deletes the consents and
+  tokens (core-app §4.5)
+- The account-deleted address on a client: in `ClientRegistry`, the Console's form, `sovereign-admin apps ensure --account-deleted`, and
+  the same address rules as a redirect address. It is not a Core API operation, so the contract does not change
+- Deleting an app deletes its notices; a delivered notice is deleted 90 days after delivery
+
+**Dependencies:** 14.6
+
+**Spec reference:** core-app §4.5, §3.7.1
+
+**Review checklist:**
+
+- A deletion that rolls back leaves no notice, and one that commits always has them
+- An app that was not used by the person, and an app with no address, get none
+- A notice holds no name, address or other detail of the person
+- The security check is run
+
+#### 📋 14.8 — Deletion notices: send them
+
+**Goal:** Each notice is sent until the app answers, and an operator can see one that is not.
+
+**Priority:** 8.
+
+**Deliverables:**
+
+- The delivery: the signed `account-deleted+jwt`, the form `POST`, the schedule of core-app §4.5, a lease so two instances do not send
+  one notice at once, picking up what is due when core starts and every minute, and giving up after 30 days with a log line that names the
+  app and not the person
+- The Console's list of notices not yet delivered (with `client:manage`), the first eight characters of the `sub`, the count given up, and
+  marking one resolved
+
+**Dependencies:** 14.7
+
+**Spec reference:** core-app §4.5
+
+**Review checklist:**
+
+- A notice survives core stopping between attempts, and is sent again after it starts
+- An app that is down for a day is told when it is back, and one that never answers appears in the Console
+- A redirect is not followed; a body in the app's answer is never kept or logged
+- The security check is run
+
+#### 📋 14.9 — The SDK's part of the deletion
+
+**Goal:** An app handles a deletion notice in one function and cannot answer it before it is done.
+
+**Priority:** 9.
+
+**Deliverables:**
+
+- `sv.auth.handleAccountDeleted(request, handler)` as sdk §9.1 describes, in the Next.js adapter too, and the fake core able to send one
+  (and a wrong one, as it does for logout tokens)
+- `accountDeleted` in the app manifest's schema is read by `sv`; the guide (`docs/using-the-sdk.md`) shows the handler and says what it
+  must delete
+
+**Dependencies:** 14.6, 14.3
+
+**Spec reference:** sdk §9, §9.1
+
+**Review checklist:**
+
+- A token for another app, an expired one, a logout token and a replayed one are each refused
+- The SDK answers `200` only after the handler resolved, and `500` when it throws
+- The SDK's tests hold the fake core to core's token
+
+#### 📋 14.10 — Deletions across a restore
+
+**Goal:** A person who deleted their account after the backup is deleted again when the backup is restored, and their apps are told again.
+
+**Priority:** 10.
+
+**Deliverables:**
+
+- `sovereign-admin instance deletions export` and `apply` (core-app §4.5), going through the registry's system actor and the same deletion
+  transaction as any other deletion
+- The call from `sv restore` is built with that command, in task 13.8, using operator-cli §10.2
+
+**Dependencies:** 14.7, 15.8
+
+**Spec reference:** core-app §4.5, §4.4; operator-cli §10.2
+
+**Review checklist:**
+
+- An account the restored database brought back is deleted again, and one it does not have is not made
+- Applying the same file twice changes nothing the second time
+- The file holds `sub`s and nothing else about a person
+- The security check is run

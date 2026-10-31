@@ -10,7 +10,8 @@
 
 [Core's specification](../specs/core-app.md) §2 leaves Phase 2 unspecified: mail, notifications, activity, account-deletion fan-out and
 backups. Each task here writes one into the specification and the contract. Building each is added here once its specification
-exists, and account-deletion fan-out is task 14.6, since it needs its own design across core and the SDK.
+exists, and account-deletion fan-out is task 14.6, since it needs its own design across core and the SDK. It is specified in core-app §4.5 and
+built by tasks 14.7 to 14.10.
 
 ## Related
 

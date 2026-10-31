@@ -390,7 +390,13 @@ server or a new one. After the database is back and **before core is started for
 `sovereign-admin instance restored` in core's container (`docker compose run --rm core sovereign-admin instance restored`, since core
 is stopped) and MUST fail the restore if that command does not succeed: a backup brings back the sessions, consents and tokens that
 were ended after it was taken, and that command ends them again and records the time, so that core refuses any token issued before it
-([core-app §4.4](core-app.md)). Running it twice is harmless. To move to a new server: `sv backup`, `sv server bootstrap` on the new one, change `server.host`, and
+([core-app §4.4](core-app.md)). Running it twice is harmless.
+
+A restore also has to keep deletions that happened after the backup. `sv restore` MUST, **before** it stops core, run
+`sovereign-admin instance deletions export` and keep the file under the server's own state; and, **after** `sovereign-admin instance
+restored`, run `sovereign-admin instance deletions apply` with it, and remove the file ([core-app §4.5](core-app.md)). When core cannot
+be reached to export (a server that is gone, restoring onto a new one), the restore goes ahead without it and MUST say that people
+deleted since the backup will reappear. The file holds `sub`s and nothing else about a person. To move to a new server: `sv backup`, `sv server bootstrap` on the new one, change `server.host`, and
 `sv restore`. There is no other command for it.
 
 A backup taken by a deployment (§6.1) stays on the server, under the same encryption.

@@ -1,9 +1,9 @@
 # Sovereign SDK — specification
 
-|            |                                                                                                            |
-| ---------- | ---------------------------------------------------------------------------------------------------------- |
-| **Status** | Draft. Built, except account-deletion fan-out and the capabilities of Phase 2 ([epic 14](../epics/sdk.md)) |
-| **Covers** | `@sovereignfs/sdk`                                                                                         |
+|            |                                                                                                        |
+| ---------- | ------------------------------------------------------------------------------------------------------ |
+| **Status** | Draft. Built, except account-deletion fan-out ([epic 14](../epics/sdk.md); specified in core-app §4.5) |
+| **Covers** | `@sovereignfs/sdk`                                                                                     |
 
 This document is the single source of truth for what the SDK does. Where code, another document or an issue disagrees with it,
 this document wins until it is changed.
@@ -200,7 +200,7 @@ list `email`, and the call raises `NotSupportedError` without sending (§7). `ap
 the entry was kept. There is no call to read an entry, as the app or as a person: the record is the person's, read in core. A core that does
 not list `activity` raises `NotSupportedError` without sending.
 
-Account-deletion fan-out runs the other way, from core to an app, and needs its own design.
+Account-deletion fan-out runs the other way, from core to an app: it is specified in [core-app §4.5](core-app.md), and the app's part of it is `sv.auth.handleAccountDeleted` (§9).
 
 ---
 
@@ -208,14 +208,15 @@ Account-deletion fan-out runs the other way, from core to an app, and needs its 
 
 The SDK signs people in through core with an established OpenID Connect client, `openid-client`, and MUST NOT reimplement one.
 
-| Function                          | What it does                                                                   |
-| --------------------------------- | ------------------------------------------------------------------------------ |
-| `sv.auth.beginSignIn`             | Starts sign-in with PKCE `S256`, and returns the address to send the person to |
-| `sv.auth.completeSignIn`          | Handles the return, checks `state` and `nonce`, and returns the session        |
-| `sv.auth.getSession`              | The current session, or `null`                                                 |
-| `sv.auth.requireSession`          | The current session, or throws `NotAuthenticatedError`                         |
-| `sv.auth.signOut`                 | Ends the app's session, and returns the address of core's end-session endpoint |
-| `sv.auth.handleBackChannelLogout` | Verifies a logout token and ends the sessions it names                         |
+| Function                          | What it does                                                                       |
+| --------------------------------- | ---------------------------------------------------------------------------------- |
+| `sv.auth.beginSignIn`             | Starts sign-in with PKCE `S256`, and returns the address to send the person to     |
+| `sv.auth.completeSignIn`          | Handles the return, checks `state` and `nonce`, and returns the session            |
+| `sv.auth.getSession`              | The current session, or `null`                                                     |
+| `sv.auth.requireSession`          | The current session, or throws `NotAuthenticatedError`                             |
+| `sv.auth.signOut`                 | Ends the app's session, and returns the address of core's end-session endpoint     |
+| `sv.auth.handleBackChannelLogout` | Verifies a logout token and ends the sessions it names                             |
+| `sv.auth.handleAccountDeleted`    | Verifies a deletion notice, ends the person's sessions, and runs the app's handler |
 
 - These are framework-neutral: they take a web-standard `Request` and return data and `Set-Cookie` values, and need a **session
   store** from the app (§9.1). `@sovereignfs/sdk/next` binds them to Next.js: cookies, route handlers and redirects. `next` is an
@@ -263,6 +264,13 @@ after its `expiresAt`.
   header `typ` is `logout+jwt`, its signature checks against core's published keys, its `iss` is this core and its `aud` includes this
   app, it is not issued in the future and has not expired, its `events` carry the back-channel logout event, it carries a `jti`, it
   names a `sub` or a `sid`, and it carries no `nonce`. A `jti` seen before is refused.
+- `handleAccountDeleted(request, handler)` takes a `POST` with an `account_deleted_token` (core-app §4.5). The token is refused, with `400`
+  and `invalid_request`, by the rules for a logout token except that its header `typ` is `account-deleted+jwt` and its `events` carry
+  `urn:sovereignfs:event:account-deleted`; a `jti` seen before is refused. For a good one the SDK ends the person's sessions
+  (`deleteMatching`) and removes their stored refresh token, then calls `handler({ sub })`, and **answers `200` only after the handler has
+  resolved**. If the handler throws, the SDK answers `500` and core sends the notice again, so the handler MUST be safe to run twice
+  and MUST delete everything the app holds of that person before it resolves. The SDK keeps no record of the person once the handler
+  has resolved. A token for another app, or for a core other than the one the app was set up with, is refused like any other.
 - The session cookie is `HttpOnly; Secure; SameSite=Lax; Path=/` with no `Domain` and the `__Host-` prefix over https. Over `http`
   (a development instance) it has no `Secure` and no prefix, since a browser would refuse the prefix.
 - `sv.links` has the addresses of core's own pages for a person: `profile`, `security`, `preferences`, `connectedApps` and
@@ -284,7 +292,7 @@ Every namespace of the legacy `sdk` object:
 | `email`         | **SDK** §8 (`app.email.sendToUser`)                                                               |
 | `activity`      | **SDK** §8 (`app.activity.log`)                                                                   |
 | `messages`      | Not carried over (core-app §4.1)                                                                  |
-| `portability`   | Decided with account-deletion fan-out                                                             |
+| `portability`   | **Later**, with export (core-app §2). Nothing is carried over until then                          |
 | `authz`         | Gone: there are no grants between plugins. Core's `roles` and an app's own permissions replace it |
 | `db`            | **Local.** The app's own database                                                                 |
 | `crypto`        | **Local.** `@sovereignfs/crypto`                                                                  |
@@ -351,3 +359,4 @@ of its own; an app catalogue.
 | 2026-10-30 | First draft. Scope, app tokens and explicit actors were decided in discussion.                                                                                                              |
 | 2026-10-30 | §5.1: the token store's `write` says whether it stored, and an optional `lock` closes the window between processes, which a conditional update cannot. §14: what two processes can promise. |
 | 2026-10-30 | §9.1: the session store the app provides, what each function does with it, how a logout token is refused, the cookie, `sv.links`.                                                           |
+| 2026-10-31 | §9, §8, §10: `handleAccountDeleted`, the app's part of account-deletion fan-out (core-app §4.5); legacy `portability` waits for export. Not built.                                          |

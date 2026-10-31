@@ -154,14 +154,18 @@ be argued before anything is built.
 
 [Specification](docs/specs/sdk.md) · epic [14](docs/epics/sdk.md)
 
-| Version | Priority | Task                                     | Status | Epic task                 |
-| ------- | -------- | ---------------------------------------- | ------ | ------------------------- |
-| 0.51.0  | 1        | The specification                        | ✅     | [14.1](docs/epics/sdk.md) |
-| 0.55.0  | 2        | Tokens, failure and today's capabilities | ✅     | [14.2](docs/epics/sdk.md) |
-| 0.56.0  | 3        | Signing in, and the Next.js adapter      | ✅     | [14.3](docs/epics/sdk.md) |
-| 0.57.0  | 4        | Publishing                               | ✅     | [14.4](docs/epics/sdk.md) |
-| 0.61.0  | 5        | App tokens in core                       | ✅     | [14.5](docs/epics/sdk.md) |
-| —       | 6        | Account-deletion fan-out                 | 📋     | [14.6](docs/epics/sdk.md) |
+| Version | Priority | Task                                     | Status | Epic task                  |
+| ------- | -------- | ---------------------------------------- | ------ | -------------------------- |
+| 0.51.0  | 1        | The specification                        | ✅     | [14.1](docs/epics/sdk.md)  |
+| 0.55.0  | 2        | Tokens, failure and today's capabilities | ✅     | [14.2](docs/epics/sdk.md)  |
+| 0.56.0  | 3        | Signing in, and the Next.js adapter      | ✅     | [14.3](docs/epics/sdk.md)  |
+| 0.57.0  | 4        | Publishing                               | ✅     | [14.4](docs/epics/sdk.md)  |
+| 0.61.0  | 5        | App tokens in core                       | ✅     | [14.5](docs/epics/sdk.md)  |
+| —       | 6        | Account-deletion fan-out                 | ✅     | [14.6](docs/epics/sdk.md)  |
+| —       | 7        | Deletion notices: keep them              | 📋     | [14.7](docs/epics/sdk.md)  |
+| —       | 8        | Deletion notices: send them              | 📋     | [14.8](docs/epics/sdk.md)  |
+| —       | 9        | The SDK's part of the deletion           | 📋     | [14.9](docs/epics/sdk.md)  |
+| —       | 10       | Deletions across a restore               | 📋     | [14.10](docs/epics/sdk.md) |
 
 ### M9 — Core's Phase 2 is specified
 

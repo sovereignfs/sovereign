@@ -5,8 +5,18 @@ import {
   type RegisterInput,
 } from '../clients/registry';
 import type { SystemActor } from '../clients/system-actor';
+import { LedgerError, type Applied } from '../accounts/deletion-ledger';
 import type { Restored } from '../instance/restore';
 import { parse, UsageError, USAGE, type Command } from './args';
+
+/** What `sovereign-admin instance ...` does, given by the entry point. */
+export type InstanceOperations = {
+  restore(): Promise<Restored>;
+  /** The deletions this core remembers, as JSON text. */
+  exportDeletions(): Promise<string>;
+  /** Applies deletions read from `file`, or from standard input when there is none. */
+  applyDeletions(file: string | undefined): Promise<Applied>;
+};
 
 /** Where the command writes: what it answers on `out`, and a line for each write on `log`, never a secret. */
 export type Output = { out: (line: string) => void; log: (line: string) => void };
@@ -40,15 +50,15 @@ export function inputOf(app: Extract<Command, { name: 'ensure' }>['app']): Regis
  * Runs one command as the system actor and returns the exit code: 0 when it worked, 1 when core refused it (each
  * thing wrong, one to a line), 2 when the command line is wrong.
  *
- * `restore` records that the instance was restored from a backup (core-app §4.4). It is given only by the entry point, which has the
- * database; a command that needs it and is not given it is a bug, not a usage error.
+ * `instance` is what the instance commands do (core-app §4.4, §4.5): record a restore, and carry deletions across one. It is given only
+ * by the entry point, which has the database; a command that needs it and is not given it is a bug, not a usage error.
  */
 export async function runAdmin(
   argv: string[],
   registry: ClientRegistry,
   actor: SystemActor,
   { out, log }: Output,
-  restore?: () => Promise<Restored>,
+  instance?: InstanceOperations,
 ): Promise<number> {
   let command: Command;
   try {
@@ -112,8 +122,8 @@ export async function runAdmin(
         return 0;
       }
       case 'restored': {
-        if (!restore) throw new Error('the restore marker was not given to sovereign-admin');
-        const { at, moved } = await restore();
+        if (!instance) throw new Error('the instance operations were not given to sovereign-admin');
+        const { at, moved } = await instance.restore();
         log(
           moved
             ? 'sovereign-admin: recorded the restore; every session and token from before it is ended'
@@ -126,6 +136,22 @@ export async function runAdmin(
         );
         return 0;
       }
+      case 'deletions-export': {
+        if (!instance) throw new Error('the instance operations were not given to sovereign-admin');
+        out(await instance.exportDeletions());
+        return 0;
+      }
+      case 'deletions-apply': {
+        if (!instance) throw new Error('the instance operations were not given to sovereign-admin');
+        const done = await instance.applyDeletions(command.file);
+        log(
+          done.skipped
+            ? 'sovereign-admin: these deletions were already applied; nothing changed'
+            : `sovereign-admin: applied the deletions: ${done.deletedAgain} accounts deleted again, ${done.alreadyGone} already gone, ${done.kept} kept, ${done.notices} notices made`,
+        );
+        out(JSON.stringify(done));
+        return 0;
+      }
       case 'remove': {
         await registry.remove(actor, await registry.clientIdOfKey(actor, command.key));
         log(`sovereign-admin: removed app ${command.key}`);
@@ -133,6 +159,10 @@ export async function runAdmin(
       }
     }
   } catch (error) {
+    if (error instanceof LedgerError) {
+      log(`sovereign-admin: ${error.message}`);
+      return 1;
+    }
     if (!(error instanceof ClientRegistryError)) throw error;
     log(`sovereign-admin: ${error.message}`);
     for (const problem of error.problems) log(`  ${problem.field}: ${problem.message}`);

@@ -243,6 +243,9 @@ pointing here.
 - **An account-deleted notice is sent until the app answers, and only the table remembers it** (`DeletionDelivery`, core-app §4.5). What
   is due is read from the table at start-up and every minute, an attempt is claimed with a lease, the result is written only while the
   notice is still pending, and what the app said is never read or logged. The logout notice is still sent once.
+- **Every deletion is remembered for 90 days, so a restore can delete the account again** (`deleted_accounts`, `deletion-ledger.ts`, core-app
+  §4.5). `export` and `apply` carry the `sub`s across; an export is applied once, an owner is never deleted by it, and the file holds
+  nothing of a person but the `sub`.
 - **A deletion records who must be told in its own transaction** (`planDeletionNotices`, core-app §4.5). The apps are read from the
   consents, tokens and removal records before the same transaction deletes them, so a deletion that rolls back leaves no notice and one
   that commits always has them. A notice holds the app and the `sub` and nothing else of the person; deleting an app deletes its notices.

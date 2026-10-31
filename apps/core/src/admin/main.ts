@@ -1,4 +1,8 @@
+import { readFile } from 'node:fs/promises';
 import { ConfigError } from '@sovereignfs/config';
+import { AccountManager } from '../accounts/manage';
+import { AccountStates } from '../accounts/states';
+import { applyDeletions, exportDeletions, parseDeletions } from '../accounts/deletion-ledger';
 import { getClientRegistry } from '../clients';
 import { systemActor } from '../clients/system-actor';
 import { getConfig, getDatabaseSettings } from '../config';
@@ -11,6 +15,12 @@ import { runAdmin } from './run';
  * reads the same environment the server does and acts on the same database. This file is the only place the system
  * actor is built; `system-actor.test.ts` holds that.
  */
+async function readStdin(): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk as Uint8Array));
+  return Buffer.concat(chunks).toString('utf8');
+}
+
 async function main(): Promise<number> {
   try {
     getConfig();
@@ -32,7 +42,18 @@ async function main(): Promise<number> {
         out: (line) => console.log(line),
         log: (line) => console.error(line),
       },
-      () => recordRestore(database),
+      {
+        restore: () => recordRestore(database),
+        exportDeletions: async () => JSON.stringify(await exportDeletions(database), null, 2),
+        applyDeletions: async (file) => {
+          // No sending from here: the notices wait in the table, and core sends them when it starts.
+          const manager = new AccountManager(database, new AccountStates(database), {
+            log: (line) => console.error(line),
+          });
+          const text = file === undefined ? await readStdin() : await readFile(file, 'utf8');
+          return applyDeletions(database, manager, parseDeletions(text));
+        },
+      },
     );
   } finally {
     await database.close();

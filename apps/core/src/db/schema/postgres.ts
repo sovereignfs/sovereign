@@ -335,6 +335,16 @@ export const accountDeletionNotices = pgTable(
 );
 
 /**
+ * That an account was deleted (core-app §4.5): its `sub` and when, so that a restore can delete it again. It is written by the deletion's
+ * own transaction for every deletion, including one that had no app to tell, and removed 90 days after (`purgeDoneNotices`). It holds
+ * nothing else of the person, and the `sub` is never reused.
+ */
+export const deletedAccounts = pgTable('deleted_accounts', {
+  sub: text('sub').primaryKey(),
+  deletedAt: bigint('deleted_at', { mode: 'number' }).notNull(),
+});
+
+/**
  * When an app's own tokens (core-app §3.6.6) were last revoked: its secret was rotated, or it was switched off. An app token is a
  * signed JWT that leaves no row to mark, so the time is recorded and everything issued up to it is no longer good
  * (`isAppTokenRevoked`). One row for each app; the time is milliseconds since the epoch, an integer on both dialects.

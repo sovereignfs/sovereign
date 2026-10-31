@@ -70,7 +70,7 @@ export async function queueDeletionNotice(
   return true;
 }
 
-/** Removes the notices that were done more than 90 days ago, and with them the `sub`s they held. */
+/** Removes the notices that were done more than 90 days ago, and the record of accounts deleted that long ago, and with them the `sub`s they held. */
 export async function purgeDoneNotices(
   tx: Pick<Executor, 'run'>,
   now: number = Date.now(),
@@ -78,6 +78,7 @@ export async function purgeDoneNotices(
   await tx.run(`delete from account_deletion_notices where state <> 'pending' and done_at <= ?`, [
     now - DONE_KEPT_FOR,
   ]);
+  await tx.run('delete from deleted_accounts where deleted_at <= ?', [now - DONE_KEPT_FOR]);
 }
 
 /** Removes every notice for an app: what deleting the app ends. */

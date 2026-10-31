@@ -134,6 +134,13 @@
       "when": 1793407381515,
       "tag": "0018_account_deletion_notices",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793409642572,
+      "tag": "0019_deleted_accounts",
+      "breakpoints": true
     }
   ]
 }

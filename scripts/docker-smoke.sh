@@ -82,6 +82,16 @@ admin_smoke() {
   # A restore is recorded once and only ever moves the marker forward (core-app §4.4).
   docker compose "$@" exec -T core sovereign-admin instance restored --json 2>/dev/null | grep -q '"restoredAt":"' \
     || fail "$name: sovereign-admin could not record a restore"
+  # Deletions are carried across a restore, and a file is applied once (core-app §4.5).
+  local exported applied
+  exported="$(docker compose "$@" exec -T core sovereign-admin instance deletions export)" \
+    || fail "$name: sovereign-admin could not export the deletions"
+  grep -q '"deletions": \[' <<<"$exported" || fail "$name: the export has no deletions list: $exported"
+  applied="$(printf '%s' "$exported" | docker compose "$@" exec -T core sovereign-admin instance deletions apply 2>/dev/null)" \
+    || fail "$name: sovereign-admin could not apply the deletions"
+  grep -q '"skipped":false' <<<"$applied" || fail "$name: the first apply was skipped: $applied"
+  printf '%s' "$exported" | docker compose "$@" exec -T core sovereign-admin instance deletions apply 2>/dev/null \
+    | grep -q '"skipped":true' || fail "$name: the same deletions were applied twice"
 }
 
 smoke "sqld" -f docker-compose.yml

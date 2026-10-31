@@ -236,6 +236,19 @@ export class AccountManager {
     await this.#erase(actor.id);
   }
 
+  /**
+   * Deletes an account a restore brought back (core-app §4.5): the same deletion as any other, for a `sub` named by the deletions
+   * `sv restore` carried across. An account the database does not have is not made, and an owner is left, since an instance is never
+   * left without one.
+   */
+  async deleteAfterRestore(sub: string): Promise<'deleted' | 'absent' | 'owner'> {
+    const account = await getAccount(this.#database, sub);
+    if (!account) return 'absent';
+    if (account.role === ROLE_OWNER) return 'owner';
+    await this.#erase(sub);
+    return 'deleted';
+  }
+
   async #erase(id: string): Promise<void> {
     const at = this.#database.family === 'postgres' ? new Date() : Date.now();
     let queued = false;
@@ -247,6 +260,11 @@ export class AccountManager {
       const planned = await planLogoutNotices(tx, id);
       // Read before the consents and tokens that say which apps the person used are deleted (core-app §4.5).
       queued = (await planDeletionNotices(tx, id)).length > 0;
+      // That it was deleted, so a restore can delete it again (core-app §4.5), even when there was no app to tell.
+      await tx.run(
+        'insert into deleted_accounts (sub, deleted_at) values (?, ?) on conflict (sub) do nothing',
+        [id, Date.now()],
+      );
       await revokeAllTokens(tx, at, id);
       await removeAccount(tx, id);
       return planned;

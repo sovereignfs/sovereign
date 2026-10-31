@@ -27,7 +27,9 @@ export type Command =
   | { name: 'list'; json: boolean }
   | { name: 'rotate-secret'; key: string; json: boolean }
   | { name: 'remove'; key: string }
-  | { name: 'restored'; json: boolean };
+  | { name: 'restored'; json: boolean }
+  | { name: 'deletions-export' }
+  | { name: 'deletions-apply'; file: string | undefined };
 
 export class UsageError extends Error {
   override name = 'UsageError';
@@ -40,7 +42,9 @@ export const USAGE = `Usage:
   sovereign-admin apps list [--json]
   sovereign-admin apps rotate-secret KEY [--json]
   sovereign-admin apps remove KEY
-  sovereign-admin instance restored [--json]`;
+  sovereign-admin instance restored [--json]
+  sovereign-admin instance deletions export
+  sovereign-admin instance deletions apply [FILE]`;
 
 const VALUE = new Set([
   'name',
@@ -107,6 +111,20 @@ function one(rest: string[], what: string): string {
 export function parse(argv: string[]): Command {
   const [group, verb, ...words] = argv;
   if (group === 'instance') {
+    if (verb === 'deletions') {
+      const [what, ...more] = words;
+      const { rest } = flagsOf(more, NONE);
+      if (what === 'export') {
+        if (rest.length > 0) throw new UsageError('deletions export takes no argument');
+        return { name: 'deletions-export' };
+      }
+      if (what === 'apply') {
+        if (rest.length > 1)
+          throw new UsageError('deletions apply takes one FILE, or reads standard input');
+        return { name: 'deletions-apply', file: rest[0] };
+      }
+      throw new UsageError('deletions is export or apply');
+    }
     if (verb !== 'restored') {
       throw new UsageError(
         verb === undefined ? 'a command is needed' : `unknown instance command ${verb}`,

@@ -394,7 +394,7 @@ were ended after it was taken, and that command ends them again and records the 
 
 A restore also has to keep deletions that happened after the backup. `sv restore` MUST, **before** it stops core, run
 `sovereign-admin instance deletions export` and keep the file under the server's own state; and, **after** `sovereign-admin instance
-restored`, run `sovereign-admin instance deletions apply` with it, and remove the file ([core-app §4.5](core-app.md)). When core cannot
+restored`, run `sovereign-admin instance deletions apply` with it (on standard input, or as a file), and remove the file ([core-app §4.5](core-app.md)). When core cannot
 be reached to export (a server that is gone, restoring onto a new one), the restore goes ahead without it and MUST say that people
 deleted since the backup will reappear. The file holds `sub`s and nothing else about a person. To move to a new server: `sv backup`, `sv server bootstrap` on the new one, change `server.host`, and
 `sv restore`. There is no other command for it.

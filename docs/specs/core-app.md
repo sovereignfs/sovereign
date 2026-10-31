@@ -1621,7 +1621,7 @@ would be wrong about the keys.
 
 ### 4.5 Account deletion: telling the apps
 
-Specified. The notices are recorded, sent and listed in the Console (built); the restore commands are not built yet. When a person deletes their account, each app that holds something of theirs is told, so that it can delete it. This
+Built, except `sv`'s call of the restore commands (task 13.8). When a person deletes their account, each app that holds something of theirs is told, so that it can delete it. This
 runs from core to an app, unlike every other service in this phase, and it is the one place where an app being down must not lose
 something: a person who deleted their account must not find their data still held by an app because it was restarting that day.
 
@@ -1637,7 +1637,8 @@ deleting it, and tells no one.
 when the account was deleted, and where the notice stands (`pending`, `delivered`, `given_up` or `resolved`), with the number of
 attempts, when the next is due and the kind of the last failure (never a response body). A notice is not tied to the account, which is
 gone, and the `sub` is never reused (§3.3). A delivered notice is kept for 90 days after delivery, which is how far back a restore is
-expected to reach (below), and then deleted with its `sub`. Deleting an app deletes its notices.
+expected to reach (below), and then deleted with its `sub`. Deleting an app deletes its notices. So that a deletion which had no app to
+tell is also remembered, the same transaction writes the `sub` and the time to `deleted_accounts`, which goes after the same 90 days.
 
 **What an app is sent.** A `POST` to its account-deleted address with the form field `account_deleted_token`, a JWT typed
 `account-deleted+jwt`, signed with the key that signs logout tokens (§3.6.5) and carrying `iss`, `aud` (the app's client ID), `sub`,
@@ -1667,12 +1668,15 @@ the 30 days and not skipped when the usual wait would run past them. A failure i
 
 **After a restore.** A restore returns the database to the time of the backup, deleted accounts and the list of notices with it, so the
 list cannot be what remembers a deletion made after the backup. `sv restore` therefore asks the running core for its deletions
-before it restores (`sovereign-admin instance deletions export`: each deleted account's `sub`, when it was deleted and the apps it had
-used) and, once the database is back and the restore marker is recorded (§4.4), gives them to the restored core
+before it restores (`sovereign-admin instance deletions export`: each account in `deleted_accounts` with its `sub`, when it was deleted and the apps that
+were to be told, as JSON on standard output) and, once the database is back and the restore marker is recorded (§4.4), gives them to the restored core
 (`sovereign-admin instance deletions apply`). Core deletes any of those accounts the restored database brought back, the way an
 operator's deletion would, and makes a notice for each app of each of them again, whether or not that app was told before. Apps are
 told again for the reason a restore ends sessions: what was done is not undone by going back. An account the restored database does not
-have is not made again, and its apps are still told. The file holds `sub`s and nothing else about a person, is made for this and
+have is not made again, and its apps are still told. An owner is never deleted by it. The notices it makes start their 30 days when
+they are made, and the deletion keeps the date it had. `apply` reads standard input or a file, is done once for a given export (the time
+of the newest export applied is kept as `instance.deletions_applied`, and a file at or before it changes nothing), and sends nothing
+itself: the notices wait in the table and core sends them when it starts. The file holds `sub`s and nothing else about a person, is made for this and
 removed after it, and is never written outside the server's own state. **A server that is lost before its deletions can be exported
 cannot remember them**: a person deleted after the last backup reappears when the backup is restored on a new machine, and the
 operator's guide says so.
@@ -1761,3 +1765,4 @@ operator's guide says so.
 | 2026-10-31 | §4.5, §3.3, §3.7.1, §4.4, §2: account deletion is specified: each app the person used that has an account-deleted address is sent a signed notice, kept in a table written by the deletion's own transaction and retried (1 minute up to 24 hours, for 30 days) until the app answers `2xx`; an operator sees what is not delivered, with eight characters of the `sub`; `sv restore` carries deletions across a restore. Not built.                                                                                                                                                                                                                                                                                          |
 | 2026-10-31 | §4.5, §3.7.1, §3.7.4: the notices are recorded: an app can be given an account-deleted address (the Console, `sovereign-admin apps ensure --account-deleted`), and deleting an account, a person's own or an operator's, writes a notice in its transaction for each app the person used that has one. A notice is not sent yet.                                                                                                                                                                                                                                                                                                                                                                                              |
 | 2026-10-31 | §4.5, §3.10: account-deletion notices are sent: each is tried at once after the deletion and again from the table on the schedule, with a lease so two instances do not send it twice, until the app answers `2xx` or the 30 days end; the Console's Deletions page lists those not delivered and lets an operator mark one done. Only the restore commands remain.                                                                                                                                                                                                                                                                                                                                                           |
+| 2026-10-31 | §4.5: deletions across a restore are built: every deletion is written to `deleted_accounts` (90 days), `sovereign-admin instance deletions export` and `apply` carry them across a restore, deleting a brought-back account again and making its apps' notices, once for a given export. `sv` calls them with `sv restore` (task 13.8).                                                                                                                                                                                                                                                                                                                                                                                       |

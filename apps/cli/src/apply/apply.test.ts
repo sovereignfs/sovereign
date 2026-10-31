@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import { Failed, Locked, Refused } from '../errors.js';
 import { FakeDocker, fakeHost } from '../testing/fake-host.js';
+import { fakeRegistry, manifestOf } from '../testing/world.js';
 import { makeSource, type Source } from '../testing/source.js';
 import { apply, type ApplyOptions } from './apply.js';
 import type { State } from './state.js';
@@ -303,7 +304,8 @@ describe('a deployment that stops', () => {
         const probe =
           args[0] === 'inspect' ||
           (args[0] === 'network' && args[1] === 'inspect') ||
-          args.includes('node');
+          args.includes('node') ||
+          args.includes('cat');
         expect(probe, args[0]).toBe(true);
         continue;
       }
@@ -581,15 +583,6 @@ describe('what it refuses, with nothing changed', () => {
     await apply(lan.host, options(internal, { skipDns: false }));
     expect(lan.logs.join('\n')).toContain('Warning: sovereign.example.com resolves to 192.168.1.5');
   });
-
-  it('apps, for now', async () => {
-    const made = await source({
-      suite: {
-        apps: { wiki: { external: true, name: 'W', redirect: ['https://w.example.com/cb'] } },
-      },
-    });
-    expect((await refused(made)).message).toContain('Apps are not applied by this version');
-  });
 });
 
 describe('operator secrets', () => {
@@ -667,5 +660,164 @@ describe('what the server keeps', () => {
     ]) {
       expect(existsSync(path.join(release, file)), file).toBe(true);
     }
+  });
+});
+
+describe('apps', () => {
+  const NOTES = { image: 'ghcr.io/example/notes:1' };
+  const registry = () =>
+    fakeRegistry({ 'ghcr.io/example/notes:1': { manifest: manifestOf() } }).registry;
+  const withNotes = (extra: Partial<Parameters<typeof makeSource>[0]> = {}) =>
+    source({ suite: { apps: { notes: NOTES } }, ...extra });
+  const caddyfile = (made: Source) =>
+    readFileSync(path.join(made.stateDir, 'proxy', 'Caddyfile'), 'utf8');
+
+  it('registers an external app and runs nothing for it', async () => {
+    const made = await source({
+      suite: {
+        apps: { wiki: { external: true, name: 'Wiki', redirect: ['https://w.example.com/cb'] } },
+      },
+    });
+    const { host, docker } = fakeHost();
+    await apply(host, options(made));
+    expect(docker.clients.get('wiki')?.clientId).toBe('client-wiki');
+    expect(
+      readFileSync(path.join(made.stateDir, 'secrets', 'app-wiki-client-secret'), 'utf8'),
+    ).toBe('secret-of-wiki');
+    expect(docker.containers.has('sv-app-wiki')).toBe(false);
+    expect(caddyfile(made)).not.toContain('wiki');
+    expect(state(made).apps.wiki).toEqual({ kind: 'external', clientId: 'client-wiki' });
+  });
+
+  it('brings a hosted app up on a network of its own, with its own database, its client, and an address at the proxy', async () => {
+    const made = await withNotes();
+    const { host, docker } = fakeHost({ registry: registry() });
+    await apply(host, options(made));
+    expect(docker.networks).toEqual(new Set(['sv-net-core', 'sv-net-app-notes']));
+    expect(docker.containers.get('sv-app-notes')?.networks).toHaveProperty('sv-net-app-notes');
+    expect(docker.containers.get('sv-app-notes')?.networks).not.toHaveProperty('sv-net-core');
+    expect(docker.psql.join('\n')).toContain('app_notes');
+    expect(caddyfile(made)).toContain(
+      'notes.sovereign.example.com {\n\treverse_proxy sv-app-notes:3000',
+    );
+    expect(docker.caddyReloads).toBe(1);
+    expect(state(made).apps.notes).toMatchObject({
+      kind: 'hosted',
+      clientId: 'client-notes',
+      database: 'app_notes',
+      healthy: true,
+    });
+    expect(secretFiles(made)).toEqual(
+      expect.arrayContaining([
+        'app-notes-client-secret',
+        'app-notes-postgres-url',
+        'app-notes-NOTES_AUTH_SECRET',
+        'role-app-notes-password',
+      ]),
+    );
+    // No secret is on a command line, and the app is given its secrets by file.
+    expect(docker.calls.flatMap((c) => c.args).join(' ')).not.toContain('secret-of-notes');
+    const rendered = readFileSync(
+      path.join(made.stateDir, 'releases', 'a'.repeat(40), 'apps', 'notes', 'compose.yml'),
+      'utf8',
+    );
+    expect(rendered).toContain('NOTES_CORE_CLIENT_SECRET_FILE');
+    expect(rendered).not.toContain('secret-of-notes');
+  });
+
+  it('changes nothing the second time, not even the proxy', async () => {
+    const made = await withNotes();
+    const { host, docker } = fakeHost({ registry: registry() });
+    await apply(host, options(made));
+    const again = await apply(host, options(made, { commit: 'b'.repeat(40) }));
+    expect(again.changed).toBe(false);
+    expect(docker.caddyReloads).toBe(1);
+  });
+
+  it('stops only the app that fails: the others come up, core stays, and the run fails and does not record', async () => {
+    const made = await source({
+      suite: {
+        apps: {
+          notes: NOTES,
+          wiki: { external: true, name: 'Wiki', redirect: ['https://w.example.com/cb'] },
+        },
+      },
+    });
+    const docker = new FakeDocker();
+    docker.unhealthy.add('notes');
+    const { host } = fakeHost({ docker, registry: registry() });
+    const failure = await apply(host, options(made)).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(Failed);
+    expect((failure as Failed).message).toContain('notes');
+    expect(docker.containers.has('sv-core')).toBe(true);
+    expect(docker.clients.has('wiki')).toBe(true);
+    expect(caddyfile(made)).not.toContain('notes.sovereign.example.com');
+    expect(existsSync(path.join(made.stateDir, 'state.json'))).toBe(false);
+  });
+
+  it('carries on from a run that stopped between making an app’s client and writing its secret', async () => {
+    const made = await withNotes();
+    const docker = new FakeDocker();
+    docker.clients.set('notes', { clientId: 'client-notes', confidential: true });
+    const { host } = fakeHost({ docker, registry: registry() });
+    await apply(host, options(made));
+    expect(
+      readFileSync(path.join(made.stateDir, 'secrets', 'app-notes-client-secret'), 'utf8'),
+    ).toBe('rotated-secret-of-notes');
+  });
+
+  it('stops an app that is no longer in suite.yml and removes its client, and keeps its data', async () => {
+    const made = await withNotes();
+    const docker = new FakeDocker();
+    const { host } = fakeHost({ docker, registry: registry() });
+    await apply(host, options(made));
+    const without = await source();
+    await apply(host, options(without, { commit: 'b'.repeat(40), stateDir: made.stateDir }));
+    expect(docker.containers.has('sv-app-notes')).toBe(false);
+    expect(docker.clients.has('notes')).toBe(false);
+    expect(docker.networks.has('sv-net-app-notes')).toBe(false);
+    expect(docker.psql.join('\n')).not.toContain('DROP');
+    expect(secretFiles(made)).toContain('role-app-notes-password');
+    expect(caddyfile(made)).not.toContain('notes');
+    expect(state(made).apps).toEqual({});
+  });
+
+  it('deletes an app’s database, data and secrets when it is purged, after a backup', async () => {
+    const made = await withNotes();
+    const docker = new FakeDocker();
+    docker.volumes['sovereign-app-notes'] = ['sovereign-app-notes_data'];
+    const { host } = fakeHost({ docker, registry: registry() });
+    await apply(host, options(made));
+    const purged = await source({ suite: { purge: ['notes'] } });
+    await apply(host, options(purged, { commit: 'b'.repeat(40), stateDir: made.stateDir }));
+    expect(docker.psql.join('\n')).toContain('DROP DATABASE IF EXISTS "app_notes"');
+    expect(docker.volumes['sovereign-app-notes']).toEqual([]);
+    expect(secretFiles(made).filter((file) => file.includes('notes'))).toEqual([]);
+    expect(readdirSync(path.join(made.stateDir, 'backups')).length).toBeGreaterThan(0);
+  });
+
+  it('refuses an override that publishes a port or changes a network of an app', async () => {
+    const made = await withNotes({
+      overrides: {
+        'overrides/compose/notes.yml': 'services:\n  app:\n    ports:\n      - "8080:3000"\n',
+      },
+    });
+    const failure = await apply(fakeHost({ registry: registry() }).host, options(made)).catch(
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(Refused);
+    expect((failure as Refused).message).toContain('publishes a port');
+  });
+
+  it('refuses an app whose manifest cannot be used, naming the app', async () => {
+    const made = await withNotes();
+    const bad = fakeRegistry({
+      'ghcr.io/example/notes:1': { manifest: manifestOf({ core: '>=9.0.0' }) },
+    }).registry;
+    const failure = await apply(fakeHost({ registry: bad }).host, options(made)).catch(
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(Refused);
+    expect((failure as Refused).message).toContain('notes');
   });
 });

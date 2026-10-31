@@ -142,6 +142,18 @@ describe('the containers and networks', () => {
     for (const text of [coreCompose(i), databaseCompose(i)]) expect(text).not.toContain('ports:');
   });
 
+  it('mount folders, not files, for what is replaced while they run: the proxy’s configuration and the authority core trusts', async () => {
+    const i = await input(suite());
+    const mounts = (text: string) =>
+      (parse(text) as { services: Record<string, { volumes: (string | { target: string })[] }> })
+        .services;
+    const proxy = Object.values(mounts(proxyCompose(i)))[0]?.volumes ?? [];
+    expect(proxy).toContainEqual(expect.objectContaining({ target: '/etc/caddy' }));
+    const internal = await input(suite({ tls: { mode: 'internal' } }), { internalCa: true });
+    const core = Object.values(mounts(coreCompose(internal)))[0]?.volumes ?? [];
+    expect(core).toContainEqual(expect.objectContaining({ target: '/run/sovereign' }));
+  });
+
   it('have fixed names and sit on core’s network, which already exists', async () => {
     const i = await input(suite());
     for (const [text, name] of [

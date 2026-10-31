@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { parse } from 'yaml';
 import type { Host, Ran } from '../apply/host.js';
 import type { Registry } from '../registry.js';
 
@@ -22,6 +24,8 @@ export class FakeDocker {
   containers = new Map<string, Container>();
   psql: string[] = [];
   caddyReloads = 0;
+  /** Where the proxy’s folder is on the host, from the compose file it was started with. */
+  caddyDir: string | undefined;
   /** Fails the n-th call (counting from 0) with this message, once. */
   failAt: { n: number; message: string } | undefined;
   /** Fails any call whose joined arguments contain this text. */
@@ -79,6 +83,10 @@ export class FakeDocker {
       return ok('');
     }
     if (command === 'exec') return this.#exec(rest, options);
+    if (command === 'ps') {
+      const prefix = (rest[rest.indexOf('--filter') + 1] ?? '').replace('name=^', '');
+      return ok([...this.containers.keys()].filter((name) => name.startsWith(prefix)).join('\n'));
+    }
     if (command === 'rm') {
       for (const name of rest.filter((word) => !word.startsWith('-'))) this.containers.delete(name);
       return ok('');
@@ -155,6 +163,14 @@ export class FakeDocker {
     const hash = createHash('sha256')
       .update(files.map((file) => readFileSync(file, 'utf8')).join('\n---\n'))
       .digest('hex');
+    if (project === 'sovereign-proxy') {
+      const parsed = parse(readFileSync(files[0] as string, 'utf8')) as {
+        services: Record<string, { volumes: { target: string; source: string }[] }>;
+      };
+      this.caddyDir = Object.values(parsed.services)[0]?.volumes.find(
+        (volume) => volume.target === '/etc/caddy',
+      )?.source;
+    }
     if (this.wontStart.has(name))
       return { code: 1, stdout: '', stderr: `${name} exited with code 1` };
     const existing = this.containers.get(name);
@@ -237,6 +253,8 @@ export class FakeDocker {
       this.caddyReloads += 1;
       return ok('');
     }
+    if (program === 'cat' && more[0] === '/etc/caddy/Caddyfile' && this.caddyDir)
+      return ok(readFileSync(path.join(this.caddyDir, 'Caddyfile'), 'utf8'));
     if (program === 'test') return ok('');
     if (program === 'wget') {
       const app = /sv-app-([a-z0-9-]+)/.exec(more.join(' '))?.[1] ?? '';

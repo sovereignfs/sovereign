@@ -158,16 +158,12 @@ export function proxyCompose(input: BaseInput): string {
         volumes: [
           'caddy-data:/data',
           'caddy-config:/config',
+          // The folder, not the Caddyfile: a file mounted alone goes stale in the container when it is replaced, and it is replaced
+          // each time it changes.
           {
             type: 'bind',
-            source: `${stateDir}/proxy/Caddyfile`,
-            target: '/etc/caddy/Caddyfile',
-            read_only: true,
-          },
-          {
-            type: 'bind',
-            source: `${stateDir}/proxy/overrides`,
-            target: '/etc/caddy/overrides',
+            source: `${stateDir}/proxy`,
+            target: '/etc/caddy',
             read_only: true,
           },
         ],

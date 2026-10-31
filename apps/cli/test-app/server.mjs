@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 
-const port = Number(process.env.PORT ?? 3000);
+const port = Number(process.env.TESTAPP_LISTEN_PORT ?? 3000);
 const prefix = 'TESTAPP';
 
 function given() {

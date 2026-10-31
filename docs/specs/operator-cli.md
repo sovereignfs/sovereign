@@ -1,9 +1,9 @@
 # Sovereign — operator CLI specification
 
-|            |                                                                                                                                                                                                                            |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status** | Draft. Specified from [RFC 0002](../rfcs/0002-deployment-strategies.md); the commands on the operator's machine and `sv apply` for core are built, hosted apps and deploying are not ([epic 13](../epics/operator-cli.md)) |
-| **Covers** | `apps/cli`: the `sv` toolkit, `sv apply`, and `@sovereignfs/create`                                                                                                                                                        |
+|            |                                                                                                                                                                                                                    |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Status** | Draft. Specified from [RFC 0002](../rfcs/0002-deployment-strategies.md); the commands on the operator's machine and `sv apply` for core and apps are built, deploying is not ([epic 13](../epics/operator-cli.md)) |
+| **Covers** | `apps/cli`: the `sv` toolkit, `sv apply`, and `@sovereignfs/create`                                                                                                                                                |
 
 This document is the single source of truth for what the operator CLI does. Where code, another document or an issue
 disagrees with it, this document wins until it is changed.
@@ -274,6 +274,18 @@ apply` itself after Compose, since an alias set that changes would otherwise rec
 - **The look at the machine** asks Docker for its version (24 or newer, Compose 2.20 or newer), the free space under the state directory
   (1 GB), and whether each public name resolves to the server's address. A name that does not is a refusal with `per-host`
   certificates, which cannot be issued without it, and a warning with `internal`. `--skip-dns` is for a server reached by another address.
+- **An app (step 6)** gets, in this order: a network of its own, which the database server and the proxy join (the proxy with every
+  public name as an alias); a role and a database named for it (`app_<name>`, a hyphen made an underscore) that only that role may open;
+  its client at core, made by `sovereign-admin apps ensure` run inside core, whose secret is written to `secrets/` before anything else is
+  done with it, and which is given a new secret if it exists with none on disk (a run stopped between the two); its environment and
+  secrets by the `_FILE` form (`spec/app-manifest.md` §3); its own Compose project; and a wait for its health path, asked from the proxy,
+  which is on the app's network. The proxy answers for an app only once it is healthy, and keeps answering for those that were up while
+  the others are looked at. An external app gets its client and nothing else.
+- **An app taken out of `suite.yml`** (step 7) has its container removed, its client removed at core and its network removed. Its
+  database, role, data volumes and secrets stay until a purge, which takes a backup first and then deletes them. What is running is
+  looked at as well as `state.json`, since an app that never came up is not in it.
+- **Verifying (step 8)** asks every public name, with a certificate that must verify, from inside core and from inside each hosted
+  app's network namespace, using the toolkit's own image, since an app's image may have nothing to ask with.
 - **A backup (step 3)** is taken before core's or the database's version changes, by the same code `sv backup` uses (§10.2): a
   `pg_dumpall` of every database, `state.json` and `secrets/`, in one archive encrypted to every recipient but the server's own.
 - **The state directory** is `/var/lib/sovereign`, or `--state-dir` / `SV_STATE_DIR`. `--no-publish-ports` leaves the proxy's ports

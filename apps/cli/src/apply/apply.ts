@@ -13,12 +13,21 @@ import {
 } from 'node:fs/promises';
 import path from 'node:path';
 import { parse } from 'yaml';
-import { Failed, Refused } from '../errors.js';
+import { Failed, Refused, SvError } from '../errors.js';
 import { SecretsFile, decryptValue } from '../secrets/store.js';
 import { SuiteFile, readLock, writeAtomically } from '../suite/files.js';
 import { lockProblems } from '../suite/lock.js';
 import type { Problem } from '../suite/schema.js';
-import type { Suite } from '../suite/types.js';
+import { isExternal, type Manifest, type Suite } from '../suite/types.js';
+import {
+  applyExternalApp,
+  applyHostedApp,
+  purgeApp,
+  readManifests,
+  removeApp,
+  type AppResult,
+  type AppRun,
+} from './apps.js';
 import { takeBackup } from './backup.js';
 import { look, refusals, refuseIfAny } from './checks.js';
 import { composeUp, docker, ensureDatabase, ensureNetwork, ensureOnNetwork } from './docker.js';
@@ -27,6 +36,7 @@ import { withLock } from './lock.js';
 import { CONTAINER, CORE_DATABASE, CORE_ROLE, NETWORK, PROJECT } from './names.js';
 import {
   GENERATED_FOR_CORE,
+  byDigest,
   caddyfile,
   coreCompose,
   databaseCompose,
@@ -92,15 +102,10 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
     throw new Refused('There is no suite.lock in this commit.', 'Run sv push; it needs one.');
   const stale = lockProblems(suite, lock);
   refuseIfAny('suite.lock does not match suite.yml:', stale);
-  if (Object.values(suite.apps ?? {}).some(() => true)) {
-    throw new Refused(
-      'Apps are not applied by this version of the toolkit yet.',
-      'Remove them from suite.yml for now.',
-    );
-  }
   const secrets = (await SecretsFile.load(options.from)).value;
-  const overrides = await readOverrides(options.from);
+  const overrides = await readOverrides(options.from, Object.keys(suite.apps ?? {}));
   const state = await readState(options.stateDir);
+  const read = await readManifests(host, suite, lock);
   refuseIfAny('sv apply will not run:', [
     ...refusals({
       suite,
@@ -110,26 +115,29 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
       restore: options.restore,
     }),
     ...overrides.problems,
+    ...read.problems,
   ]);
-  say('Checked suite.yml, suite.lock and the overrides.');
+  const manifests = read.manifests;
+  say('Checked suite.yml, suite.lock, the manifests and the overrides.');
 
   // 2. Look.
   const names = publicNames(suite);
+  const everyName = [names.core, ...Object.values(names.apps)];
   const looked = await look({
     host,
     suite,
     stateDir: options.stateDir,
     skipDns: options.skipDns,
-    publicNames: [names.core, ...Object.values(names.apps)],
+    publicNames: everyName,
   });
   for (const warning of looked.warnings) host.log(`Warning: ${warning}`);
   refuseIfAny('The machine is not ready:', looked.problems);
   say('Docker, disk space and DNS are as they should be.');
 
-  const before = await fingerprint(host);
+  const before = await fingerprint(host, Object.keys(names.apps));
   const generated = new GeneratedSecrets(paths.secrets, host);
 
-  // 3. Back up, when core or the database server changes version.
+  // 3. Back up, when core or the database server changes version, or an app’s data is about to be deleted.
   if (
     state &&
     (state.core.version !== suite.core.version || state.database.version !== suite.database.version)
@@ -140,6 +148,17 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
       reason: 'before-change',
     });
     say(`Backed up to ${archive}, because core or the database server is changing version.`);
+  }
+  const purging = suite.purge ?? [];
+  if (purging.length > 0 && (await containerId(host, CONTAINER.database)) !== undefined) {
+    const archive = await takeBackup(host, {
+      stateDir: options.stateDir,
+      recipients: suite.secrets.recipients,
+      reason: 'before-purge',
+    });
+    say(
+      `Backed up to ${archive}, because ${purging.join(', ')} ${purging.length === 1 ? 'is' : 'are'} to be purged.`,
+    );
   }
 
   // 4. Render.
@@ -157,26 +176,28 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
     publishPorts: options.publishPorts,
     coreSecrets: coreSecretNames,
     internalCa,
-    names: [names.core, ...Object.values(names.apps)],
+    names: everyName,
   };
   const release = path.join(paths.releases, options.commit);
   await renderRelease(release, options, input, overrides);
-  const caddyChanged = await writeProxyFiles(paths.proxy, suite, overrides);
+  // Until each app has been looked at again, the proxy keeps answering for those that were up, so a deployment does not interrupt them.
+  const served = Object.entries(suite.apps ?? {}).flatMap(([name, app]) => {
+    const manifest = manifests[name];
+    return !isExternal(app) && manifest && state?.apps[name]?.healthy
+      ? [{ host: names.apps[name] as string, container: CONTAINER.app(name), port: manifest.port }]
+      : [];
+  });
+  let caddyChanged = await writeProxyFiles(paths.proxy, suite, overrides, served);
   say(`Rendered release ${options.commit}.`);
 
   // 5. Start the base.
   await ensureNetwork(host, NETWORK.core);
-  const adminPassword = await generated.ensure('postgres-admin-password', () =>
-    generated.random(24),
-  );
+  await generated.ensure('postgres-admin-password', () => generated.random(24));
   const rolePassword = await generated.ensure('role-core-password', () => generated.random(24));
-  const authSecret = await generated.ensure('SV_AUTH_SECRET', () => generated.random(48));
-  const keys = await generated.ensure(
+  await generated.ensure('SV_AUTH_SECRET', () => generated.random(48));
+  await generated.ensure(
     'SV_FIELD_ENCRYPTION_KEYS',
     () => `k1:${host.random(32).toString('base64url')}`,
-  );
-  const secretsMade = [adminPassword, rolePassword, authSecret, keys].some(
-    (secret) => secret.created,
   );
   await generated.write(
     'SV_POSTGRES_URL',
@@ -188,7 +209,7 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
 
   await composeUp(host, {
     project: PROJECT.database,
-    files: [path.join(release, 'database', 'compose.yml'), ...overrides.files.database],
+    files: [path.join(release, 'database', 'compose.yml'), ...(overrides.files.database ?? [])],
   });
   await ensureDatabase(host, CORE_DATABASE, CORE_ROLE, rolePassword.value);
   say('The database server is up, with core’s database.');
@@ -196,15 +217,24 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
   const proxyBefore = await containerId(host, CONTAINER.proxy);
   await composeUp(host, {
     project: PROJECT.proxy,
-    files: [path.join(release, 'proxy', 'compose.yml'), ...overrides.files.proxy],
+    files: [path.join(release, 'proxy', 'compose.yml'), ...(overrides.files.proxy ?? [])],
   });
-  await ensureOnNetwork(host, CONTAINER.proxy, NETWORK.core, input.names);
+  await ensureOnNetwork(host, CONTAINER.proxy, NETWORK.core, everyName);
   // A proxy that was already running and is still the same one is told to read its configuration again; a new one has just read it.
-  if (
-    caddyChanged &&
-    proxyBefore !== undefined &&
-    proxyBefore === (await containerId(host, CONTAINER.proxy))
-  ) {
+  const reload = async () => {
+    // The proxy reads the file through a mount, which on some machines shows a replaced file a moment late; it is told to read it
+    // only once it sees what was written.
+    const wanted = await readFile(path.join(paths.proxy, 'Caddyfile'), 'utf8');
+    for (let attempt = 0; ; attempt += 1) {
+      const seen = await host.docker(['exec', CONTAINER.proxy, 'cat', '/etc/caddy/Caddyfile']);
+      if (seen.code === 0 && seen.stdout === wanted) break;
+      if (attempt === 29)
+        throw new Failed(
+          'The proxy does not see the configuration that was written for it.',
+          'Look at sv logs proxy, then run sv deploy again: it carries on from here.',
+        );
+      await host.sleep(1000);
+    }
     await docker(host, 'Reloading the proxy', [
       'exec',
       CONTAINER.proxy,
@@ -213,22 +243,126 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
       '--config',
       '/etc/caddy/Caddyfile',
     ]);
+  };
+  if (
+    caddyChanged &&
+    proxyBefore !== undefined &&
+    proxyBefore === (await containerId(host, CONTAINER.proxy))
+  ) {
+    await reload();
+    caddyChanged = false;
   }
   if (internalCa) await fetchCertificateAuthority(host, paths.pki);
   say('The proxy is up.');
 
   await composeUp(host, {
     project: PROJECT.core,
-    files: [path.join(release, 'core', 'compose.yml'), ...overrides.files.core],
+    files: [path.join(release, 'core', 'compose.yml'), ...(overrides.files.core ?? [])],
   });
   say(`Core ${suite.core.version} is up and healthy.`);
 
+  // 6. Each app, in the order of suite.yml. One that fails does not stop the others (operator-cli §6.3).
+  const appRun: AppRun = {
+    host,
+    suite,
+    lock,
+    release,
+    stateDir: options.stateDir,
+    generated,
+    internalCa,
+    names: everyName,
+    ...(options.imageOverrides ? { imageOverrides: options.imageOverrides } : {}),
+    overrideFiles: (name) => overrides.files[name] ?? [],
+    operatorSecrets,
+  };
+  const results: Record<string, AppResult> = {};
+  const failures: { name: string; message: string }[] = [];
+  for (const [name, app] of Object.entries(suite.apps ?? {})) {
+    try {
+      results[name] = isExternal(app)
+        ? await applyExternalApp(appRun, name, app)
+        : await applyHostedApp(appRun, name, app, manifests[name] as Manifest);
+      say(
+        isExternal(app)
+          ? `${name} has its sign-in.`
+          : `${name} is up at https://${names.apps[name]}.`,
+      );
+    } catch (error) {
+      if (!(error instanceof SvError)) throw error;
+      failures.push({ name, message: error.message });
+      host.log(`${name} failed: ${error.message}`);
+    }
+  }
+  // The proxy answers for an app only once it is up.
+  const upstreams = Object.values(results).flatMap((result) =>
+    result.host
+      ? [{ host: result.host, container: result.container as string, port: result.port as number }]
+      : [],
+  );
+  const changedNow = await writeProxyFiles(paths.proxy, suite, overrides, upstreams);
+  if (caddyChanged || changedNow) {
+    await reload();
+    caddyChanged = true;
+  }
+
+  // 7. Apps that were running and are no longer in suite.yml, and the data of those to be purged.
+  // Found by what is running as well as by state.json, which an app that never came up is not in.
+  const running = await docker(host, 'Listing the apps that are running', [
+    'ps',
+    '--all',
+    '--filter',
+    'name=^sv-app-',
+    '--format',
+    '{{.Names}}',
+  ]);
+  const gone = new Set([
+    ...Object.keys(state?.apps ?? {}),
+    ...running.stdout
+      .split('\n')
+      .filter((line) => line.startsWith('sv-app-'))
+      .map((line) => line.slice('sv-app-'.length)),
+  ]);
+  for (const name of gone) {
+    if (name in (suite.apps ?? {})) continue;
+    await removeApp(host, name);
+    say(`${name} is stopped and no longer registered; its data stays.`);
+  }
+  for (const name of purging) {
+    await purgeApp(host, generated, name);
+    say(`${name}’s database, data and secrets are deleted.`);
+  }
+
+  if (failures.length > 0) {
+    throw new Failed(
+      `${failures.length === 1 ? 'One app' : `${failures.length} apps`} did not start: ${failures
+        .map((failure) => `${failure.name} (${failure.message})`)
+        .join('; ')}. Core and the other apps are running.`,
+      'Fix what is named, then run sv deploy again: it carries on from here.',
+    );
+  }
+
   // 8. Verify.
-  await verify(host, names);
-  say('Core answers on its public name, over https, with the issuer it should have.');
+  await verify(host, names, {
+    hosted: Object.keys(results).filter((name) => results[name]?.kind === 'hosted'),
+    cliImage: options.imageOverrides?.cli ?? byDigest(lock.images.cli),
+    internalCa,
+    pki: paths.pki,
+  });
+  say('Every public name answers over https, from inside core and from inside each app.');
 
   // 9. Record.
   await point(paths.current, release);
+  const apps: State['apps'] = {};
+  for (const [name, result] of Object.entries(results)) {
+    const {
+      host: _host,
+      container: _container,
+      port: _port,
+      created: _created,
+      ...recorded
+    } = result;
+    apps[name] = recorded;
+  }
   const next: State = {
     schema: 1,
     commit: options.commit,
@@ -236,45 +370,54 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
     core: { version: suite.core.version, image: lock.images.core.digest, healthy: true },
     database: { version: suite.database.version },
     tls: suite.tls?.mode ?? 'per-host',
-    apps: state?.apps ?? {},
-    operatorSecrets: { core: Object.keys(operatorSecrets.core ?? {}) },
+    apps,
+    operatorSecrets: Object.fromEntries(
+      Object.entries(operatorSecrets).map(([owner, values]) => [owner, Object.keys(values)]),
+    ),
   };
   await writeState(options.stateDir, next);
   await pruneReleases(paths.releases, options.commit);
-  const after = await fingerprint(host);
+  const after = await fingerprint(host, Object.keys(names.apps));
   const changed =
-    secretsMade ||
+    generated.created > 0 ||
     caddyChanged ||
     before !== after ||
-    (state?.commit !== options.commit && state === undefined);
+    Object.values(results).some((result) => result.created) ||
+    purging.length > 0 ||
+    state === undefined;
   say(changed ? 'Done.' : 'Nothing needed changing.');
   return { changed, release, steps };
 }
 
 type Overrides = {
-  /** The contents of each Compose override, by project. */
-  compose: Partial<Record<'core' | 'proxy' | 'database', string>>;
-  /** Their paths in the release, which `docker compose` is given after the generated file. */
-  files: Record<'core' | 'proxy' | 'database', string[]>;
+  /** The contents of each Compose override, by project: core, proxy, database, or a hosted app’s name. */
+  compose: Record<string, string>;
+  /** Their paths, relative to the commit and then to the release, which `docker compose` is given after the generated file. */
+  files: Record<string, string[]>;
   caddy: Record<string, string>;
   problems: Problem[];
 };
 
 /** Reads `overrides/` (spec/suite.md §5) and refuses what it must not do: publish a port, or change a network. */
-async function readOverrides(from: string): Promise<Overrides> {
-  const out: Overrides = {
-    compose: {},
-    files: { core: [], proxy: [], database: [] },
-    caddy: {},
-    problems: [],
-  };
+async function readOverrides(from: string, appNames: string[]): Promise<Overrides> {
+  const out: Overrides = { compose: {}, files: {}, caddy: {}, problems: [] };
+  const valid = ['core', 'proxy', 'database', ...appNames];
   const composeDir = path.join(from, 'overrides', 'compose');
   if (existsSync(composeDir)) {
     for (const entry of await readdir(composeDir)) {
       const name = entry.replace(/\.ya?ml$/, '');
-      if (!['core', 'proxy', 'database'].includes(name) || !/\.ya?ml$/.test(entry)) continue;
+      if (!/\.ya?ml$/.test(entry)) continue;
+      if (!valid.includes(name)) {
+        out.problems.push({
+          at: `overrides/compose/${entry}`,
+          message:
+            'is for something that is not core, the proxy, the database or an app in suite.yml',
+        });
+        continue;
+      }
       const text = await readFile(path.join(composeDir, entry), 'utf8');
-      out.compose[name as 'core'] = text;
+      out.compose[name] = text;
+      out.files[name] = [path.join('overrides', 'compose', entry)];
       const document = parse(text) as {
         services?: Record<string, Record<string, unknown>>;
         networks?: unknown;
@@ -378,21 +521,21 @@ async function renderRelease(
     await mkdir(path.join(release, name), { recursive: true });
     await writeFile(path.join(release, name, 'compose.yml'), text);
   }
-  for (const name of ['core', 'proxy', 'database'] as const) {
-    if (overrides.compose[name] !== undefined) {
-      overrides.files[name] = [path.join(release, 'overrides', 'compose', `${name}.yml`)];
-      // An override named .yaml is read as it is; the copy keeps the name it had.
-      if (!existsSync(overrides.files[name][0] as string)) {
-        overrides.files[name] = [path.join(release, 'overrides', 'compose', `${name}.yaml`)];
-      }
-    }
+  // The overrides are read from the release, where the commit’s own copy of them is.
+  for (const [name, files] of Object.entries(overrides.files)) {
+    overrides.files[name] = files.map((file) => path.join(release, file));
   }
 }
 
 /** The proxy’s own files, at paths that do not change between deployments, so a deployment that changes nothing recreates nothing. */
-async function writeProxyFiles(dir: string, suite: Suite, overrides: Overrides): Promise<boolean> {
+async function writeProxyFiles(
+  dir: string,
+  suite: Suite,
+  overrides: Overrides,
+  apps: { host: string; container: string; port: number }[],
+): Promise<boolean> {
   const names = publicNames(suite);
-  const upstreams = [{ host: names.core, container: CONTAINER.core, port: 3000 }];
+  const upstreams = [{ host: names.core, container: CONTAINER.core, port: 3000 }, ...apps];
   const text = caddyfile(suite, upstreams);
   await mkdir(path.join(dir, 'overrides'), { recursive: true });
   const target = path.join(dir, 'Caddyfile');
@@ -446,12 +589,27 @@ async function fetchCertificateAuthority(host: Host, pkiDir: string): Promise<vo
   }
 }
 
+/** Fetches each address and fails on a certificate that does not verify or a name that does not resolve; any answer from a live app is enough. */
+const FETCH_PEERS = `
+(async () => {
+  for (const url of process.argv.slice(1)) {
+    const response = await fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(10000) });
+    if ([502, 503, 504].includes(response.status)) throw new Error(url + ' answered ' + response.status);
+  }
+})().catch((error) => { console.error((error.cause && error.cause.code) || error.message); process.exit(1); });`;
+
 /**
- * From inside core (operator-cli §6.1, step 8): its public name answers over https, with a certificate that verifies, and core’s
- * discovery document names the issuer it should. Certificates are asked for on the first request, so it tries for a while.
+ * Verifies the instance from the inside (operator-cli §6.1, step 8). From inside core: its public name answers over https with the
+ * issuer it should, and so does each app’s. From inside each hosted app, as the app sees the network: every peer’s public name
+ * answers, on a certificate that verifies. That is checked from a container that shares the app’s network and nothing else of it, since
+ * the app’s own image may have nothing to ask with. Certificates are asked for on the first request, so each check tries for a while.
  */
-async function verify(host: Host, names: ReturnType<typeof publicNames>): Promise<void> {
-  const script = `
+async function verify(
+  host: Host,
+  names: ReturnType<typeof publicNames>,
+  from: { hosted: string[]; cliImage: string; internalCa: boolean; pki: string },
+): Promise<void> {
+  const discovery = `
 const origin = process.argv[1];
 (async () => {
   const response = await fetch(origin + '/.well-known/openid-configuration', { signal: AbortSignal.timeout(10000) });
@@ -460,17 +618,50 @@ const origin = process.argv[1];
   if (issuer !== origin) throw new Error('discovery names the issuer ' + issuer);
 })().catch((error) => { console.error(error.message); process.exit(1); });`;
   const origin = `https://${names.core}`;
-  let last = '';
-  for (let attempt = 0; attempt < 30; attempt += 1) {
-    const done = await host.docker(['exec', CONTAINER.core, 'node', '-e', script, origin]);
-    if (done.code === 0) return;
-    last = (done.stderr || done.stdout).trim().split('\n').pop() ?? '';
-    await host.sleep(3000);
-  }
-  throw new Failed(
-    `${origin} did not answer from inside core: ${last}`,
-    'Check DNS and that ports 80 and 443 reach this server; sv doctor looks at both.',
+  const everyone = [origin, ...Object.values(names.apps).map((name) => `https://${name}`)];
+
+  const tries = async (what: string, args: string[], hint: string) => {
+    let last = '';
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      const done = await host.docker(args);
+      if (done.code === 0) return;
+      last = (done.stderr || done.stdout).trim().split('\n').pop() ?? '';
+      await host.sleep(3000);
+    }
+    throw new Failed(`${what}: ${last}`, hint);
+  };
+  const hint = 'Check DNS and that ports 80 and 443 reach this server; sv doctor looks at both.';
+  await tries(
+    `${origin} did not answer from inside core`,
+    ['exec', CONTAINER.core, 'node', '-e', discovery, origin],
+    hint,
   );
+  await tries(
+    'A public name did not answer from inside core',
+    ['exec', CONTAINER.core, 'node', '-e', FETCH_PEERS, ...everyone],
+    hint,
+  );
+  for (const name of from.hosted) {
+    await tries(
+      `A public name did not answer from inside ${name}`,
+      [
+        'run',
+        '--rm',
+        '--network',
+        `container:${CONTAINER.app(name)}`,
+        '--entrypoint',
+        'node',
+        ...(from.internalCa
+          ? ['--volume', `${from.pki}/root.crt:/ca.crt:ro`, '--env', 'NODE_EXTRA_CA_CERTS=/ca.crt']
+          : []),
+        from.cliImage,
+        '-e',
+        FETCH_PEERS,
+        ...everyone,
+      ],
+      hint,
+    );
+  }
 }
 
 /** Points `current` at a release in one step, so it is never missing or half-written. */
@@ -504,7 +695,7 @@ async function containerId(host: Host, name: string): Promise<string | undefined
 }
 
 /** What is running, as ids and start times: two of these being equal is how a deployment knows it changed nothing. */
-async function fingerprint(host: Host): Promise<string> {
+async function fingerprint(host: Host, apps: string[]): Promise<string> {
   const done = await host.docker([
     'inspect',
     '--format',
@@ -512,6 +703,7 @@ async function fingerprint(host: Host): Promise<string> {
     CONTAINER.proxy,
     CONTAINER.database,
     CONTAINER.core,
+    ...apps.map((name) => CONTAINER.app(name)),
   ]);
   return done.stdout.trim();
 }

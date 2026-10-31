@@ -47,9 +47,22 @@ describe.skipIf(!runnable)('the server receiving a deployment against the real D
     docker('rm', '--force', ...NAMES);
     docker('compose', '--project-name', 'sovereign-database', 'down', '--volumes');
     docker('network', 'rm', 'sv-net-core');
-    for (const dir of [state, source && path.dirname(source.dir)]) {
-      if (dir) rmSync(dir, { recursive: true, force: true });
+    // The deployment ran as root in a container, so what it wrote in the state directory is root's, and a runner's own user cannot remove it.
+    if (state) {
+      docker(
+        'run',
+        '--rm',
+        '--entrypoint',
+        'sh',
+        '--volume',
+        `${state}:/state`,
+        image,
+        '-c',
+        'rm -rf /state/* /state/.[!.]*',
+      );
+      rmSync(state, { recursive: true, force: true });
     }
+    if (source) rmSync(path.dirname(source.dir), { recursive: true, force: true });
   });
 
   const deploy = (commit: string, archive: Buffer) =>

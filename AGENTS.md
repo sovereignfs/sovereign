@@ -366,6 +366,8 @@ Playwright · OpenAPI 3.1 (`spec/core-api/`) · Docker Compose.
 ```
 apps/core/          the core app — identity, sign-in server, Console, launcher
 apps/e2e/           Phase 1 acceptance — Playwright, run against a built core
+apps/cli/           the operator toolkit, sv — files on the operator's machine, sv apply on the server
+apps/create/        npm create @sovereignfs — makes an instance repository
 packages/
   ui/               design system — published
   bridge/           device bridge — release-ready, not published yet

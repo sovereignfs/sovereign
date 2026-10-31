@@ -246,6 +246,13 @@ pointing here.
 - **Every deletion is remembered for 90 days, so a restore can delete the account again** (`deleted_accounts`, `deletion-ledger.ts`, core-app
   §4.5). `export` and `apply` carry the `sub`s across; an export is applied once, an owner is never deleted by it, and the file holds
   nothing of a person but the `sub`.
+- **The operator's commands change files, and `suite.lock` is written by `sv` alone** (`apps/cli`, operator-cli §1.1, §5). A command on
+  the operator's machine reads and writes the instance repository and nothing else; a lock is resolved before anything is written, so a
+  failed lookup leaves the files as they were; a ref already pinned is kept, so a tag that moved cannot change what runs. A secret is
+  taken from a hidden prompt or standard input and never from an argument, is written only as age ciphertext, and is never printed;
+  `sv push` stages its own known files and nothing else, and its checks are a guard and not a guarantee.
+- **`./sv` runs the pinned toolkit and nothing else** (`apps/create/src/templates.ts`, operator-cli §3). It installs with `npm ci`
+  from the lockfile if the toolkit is missing and never with `npx`, which can fetch an unrelated package of the same name.
 - **A deletion records who must be told in its own transaction** (`planDeletionNotices`, core-app §4.5). The apps are read from the
   consents, tokens and removal records before the same transaction deletes them, so a deletion that rolls back leaves no notice and one
   that commits always has them. A notice holds the app and the `sub` and nothing else of the person; deleting an app deletes its notices.

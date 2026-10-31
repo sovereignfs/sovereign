@@ -139,7 +139,7 @@ be argued before anything is built.
 | 0.76.0  | 8        | Backup, restore and rollback       | ✅     | [13.8](docs/epics/operator-cli.md)  |
 | 0.78.0  | 9        | Deploying from GitHub `[parallel]` | ✅     | [13.9](docs/epics/operator-cli.md)  |
 | 0.79.0  | 10       | The operator's guide               | ✅     | [13.10](docs/epics/operator-cli.md) |
-| —       | 11       | The app template                   | 📋     | [13.11](docs/epics/operator-cli.md) |
+| 0.80.0  | 11       | The app template                   | ✅     | [13.11](docs/epics/operator-cli.md) |
 
 ### M7 — The design system has a contract
 

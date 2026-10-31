@@ -271,7 +271,7 @@ of it is built.
 
 - Walked through as written on a new machine
 
-#### 📋 13.11 — The app template
+#### ✅ 13.11 — The app template
 
 **Goal:** `npm create @sovereignfs app <dir>` makes a Next.js app that can be hosted as it stands.
 
@@ -285,9 +285,11 @@ of it is built.
   route, its own migrations, an image, and the manifest label
 - CI that creates an app from it, builds it, and hosts it with `sv apply`
 
+**Verified:** a generated app was installed against this repository's packages, type-checked and built with Next.js. The test that builds its image and hosts it with `sv apply` (`app-template.docker.test.ts`) is run by CI. It also found that `@sovereignfs/ui`'s published bundle imported a CSS file that is not in `dist/` (fixed in `ui` 0.89.1, with a build check), and that a Server Component cannot import the bundle directly (the template re-exports it from a client module).
+
 **Dependencies:** 13.4, 14.3
 
-**Spec reference:** operator-cli §2; `spec/app-manifest.md`
+**Spec reference:** operator-cli §2, §2.2; `spec/app-manifest.md`
 
 **Review checklist:**
 

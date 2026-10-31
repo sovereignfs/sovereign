@@ -1,5 +1,5 @@
 /**
- * Packs every package that is published to npm and checks the tarball (scripts/lib/package-check.ts),
+ * Packs every package that is published to npm (the libraries under packages/, and the operator's toolkit and `create` under apps/) and checks the tarball (scripts/lib/package-check.ts),
  * then runs the real `pnpm publish --dry-run` on it. Nothing is published. Needs the packages built:
  * `pnpm build` first.
  *
@@ -15,29 +15,30 @@ import { tarballProblems, type PackedManifest } from './lib/package-check';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const packagesDir = path.join(root, 'packages');
 
-const published = readdirSync(packagesDir, { withFileTypes: true })
-  .filter((entry) => entry.isDirectory())
-  .map((entry) => path.join(packagesDir, entry.name))
-  .filter((dir) => {
-    const manifest = JSON.parse(
-      readFileSync(path.join(dir, 'package.json'), 'utf8'),
-    ) as PackedManifest;
-    return manifest.private !== true;
-  });
+const manifestOf = (dir: string) =>
+  JSON.parse(readFileSync(path.join(dir, 'package.json'), 'utf8')) as PackedManifest;
 
-const publishedNames = new Set(
-  published.map(
-    (dir) =>
-      (JSON.parse(readFileSync(path.join(dir, 'package.json'), 'utf8')) as PackedManifest).name ??
-      '',
-  ),
-);
+type Candidate = { dir: string; kind: 'library' | 'tool' };
+
+// The libraries under packages/, and the operator's tools under apps/: a tool is published when it is not private, and is run and not
+// imported (AGPL-3.0-or-later, a `bin`).
+const published: Candidate[] = [
+  ...readdirSync(packagesDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => ({ dir: path.join(packagesDir, entry.name), kind: 'library' as const })),
+  ...['cli', 'create'].map((name) => ({
+    dir: path.join(root, 'apps', name),
+    kind: 'tool' as const,
+  })),
+].filter(({ dir }) => manifestOf(dir).private !== true);
+
+const publishedNames = new Set(published.map(({ dir }) => manifestOf(dir).name ?? ''));
 
 const out = mkdtempSync(path.join(tmpdir(), 'sv-pack-'));
 let failed = false;
 
 try {
-  for (const dir of published) {
+  for (const { dir, kind } of published) {
     const name = path.basename(dir);
     const packed = execFileSync('pnpm', ['pack', '--pack-destination', out], {
       cwd: dir,
@@ -59,7 +60,7 @@ try {
     const licenseText = execFileSync('tar', ['-xzOf', tarball, 'package/LICENSE'], {
       encoding: 'utf8',
     });
-    const problems = tarballProblems(manifest, files, { licenseText, publishedNames });
+    const problems = tarballProblems(manifest, files, { licenseText, publishedNames, kind });
     execFileSync('pnpm', ['publish', '--dry-run', '--no-git-checks'], { cwd: dir, stdio: 'pipe' });
 
     if (problems.length > 0) {

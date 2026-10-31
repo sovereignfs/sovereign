@@ -1,7 +1,7 @@
 # Releasing
 
-Two things are released from this repository: a package to npm, and core's image to the GitHub Container Registry
-([below](#releasing-the-image)).
+Three things are released from this repository: a package to npm, core's image to the GitHub Container Registry
+([below](#releasing-the-image)), and the operator's toolkit, which is both ([below](#releasing-the-toolkit)).
 
 ## Packages
 
@@ -127,6 +127,27 @@ To release:
 A published version is not replaced. If a release is bad, fix it and release the next version, and say so in
 `docs/upgrade.md` if operators need to act. On the first release, check the package's visibility in the
 organization's Packages settings: it must be public for the `docker pull` above to work.
+
+## Releasing the toolkit
+
+The operator's toolkit is `@sovereignfs/cli` (`sv`), `@sovereignfs/create` (`npm create @sovereignfs`) and `ghcr.io/sovereignfs/cli`,
+the image the server runs `sv apply` from. They are one release at one version, on the tag `cli-vX.Y.Z`, and
+`.github/workflows/publish-cli.yml` does the rest. They are AGPL-3.0-or-later and are run, not imported, which is why the package
+check treats them apart from the libraries above (a `bin` and not an exports map).
+
+The workflow **publishes nothing unless** the full CI passes on the tagged commit, the commit is on `main`, and the tag matches the
+`version` of both `apps/cli` and `apps/create`. The order is the image, then `@sovereignfs/cli`, then `@sovereignfs/create`, because a
+repository made by `create@X` pins the image of toolkit X and cannot be set up until it exists. The image is signed by the build with
+the run's `GITHUB_TOKEN`; the packages are published with provenance by `NPM_TOKEN`, which only the last step holds.
+
+The toolkit's own version appears in three places that a test holds together: `apps/cli/package.json`, `apps/create/package.json`
+and `RELEASE.version` in `apps/cli/src/release.ts`. A toolkit release also says which core it was made for (`RELEASE.newestCore`), and
+`sv upgrade` moves an instance to that core with it.
+
+To release: land the commit that sets those versions and `newestCore` on `main`, tag it `cli-vX.Y.Z`, push the tag, and watch the run.
+Then, from a machine that has never logged in to GitHub's registry, check `docker pull ghcr.io/sovereignfs/cli:X.Y.Z`, and that
+`npm create @sovereignfs@X.Y.Z` makes a repository that `./sv setup` can finish. On the first release, make the `cli` package public
+in the organization's Packages settings, and check the `@sovereignfs` scope on npm is yours.
 
 ## Storybook
 

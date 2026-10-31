@@ -158,3 +158,60 @@ describe('tarballProblems', () => {
     ).toEqual([]);
   });
 });
+
+describe('tarballProblems for a tool that is run and not imported', () => {
+  const tool = (extra: Partial<PackedManifest> = {}): PackedManifest => ({
+    name: '@sovereignfs/cli',
+    version: '1.2.3',
+    license: 'AGPL-3.0-or-later',
+    files: ['dist'],
+    bin: { sv: './dist/sv.mjs' },
+    ...extra,
+  });
+  const toolFiles = [
+    'package/package.json',
+    'package/LICENSE',
+    'package/README.md',
+    'package/dist/sv.mjs',
+  ];
+  const facts = {
+    kind: 'tool' as const,
+    licenseText: '                    GNU AFFERO GENERAL PUBLIC LICENSE\n',
+  };
+
+  it('accepts a bin under dist, an AGPL licence, and no exports map', () => {
+    expect(tarballProblems(tool(), toolFiles, facts)).toEqual([]);
+  });
+
+  it('wants the AGPL licence and its text, and not the MPL', () => {
+    expect(tarballProblems(tool({ license: 'MPL-2.0' }), toolFiles, facts)).toContain(
+      'the licence is MPL-2.0, not AGPL-3.0-or-later',
+    );
+    expect(
+      tarballProblems(tool(), toolFiles, {
+        ...facts,
+        licenseText: 'Mozilla Public License Version 2.0',
+      }),
+    ).toContain(
+      'the LICENSE in the tarball is not the AGPL-3.0-or-later text (does the package have its own LICENSE file?)',
+    );
+  });
+
+  it('wants a bin, that points into dist, at a file that is in the tarball', () => {
+    expect(tarballProblems(tool({ bin: undefined }), toolFiles, facts)).toContain(
+      'there is no bin',
+    );
+    expect(tarballProblems(tool({ bin: { sv: './src/main.ts' } }), toolFiles, facts)).toContain(
+      './src/main.ts points outside dist/',
+    );
+    expect(tarballProblems(tool(), toolFiles.slice(0, 3), facts)).toContain(
+      './dist/sv.mjs is not in the tarball',
+    );
+  });
+
+  it('still refuses what never belongs in a tarball', () => {
+    expect(tarballProblems(tool(), [...toolFiles, 'package/src/main.ts'], facts)).toContain(
+      'src/main.ts is in the tarball: source files do not ship',
+    );
+  });
+});

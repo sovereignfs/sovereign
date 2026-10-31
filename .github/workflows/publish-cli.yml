@@ -1,0 +1,167 @@
+name: Publish toolkit
+
+# Releases the operator toolkit when its tag is pushed:
+#   cli-vX.Y.Z  -> ghcr.io/sovereignfs/cli:X.Y.Z, :X.Y and :latest (linux/amd64 and linux/arm64),
+#                  then @sovereignfs/cli and @sovereignfs/create on npm.
+# The image comes first and `create` last, because a repository made by `create@X` pins the image of toolkit X and cannot be set up
+# until it exists. The toolkit and `create` are released together at one version. docs/releasing.md has the whole process.
+#
+# Nothing publishes unless the full CI passes on the tagged commit, the commit is on `main`, and the tag matches the version of both
+# packages. The image authenticates with the job's own GITHUB_TOKEN; npm with the Actions secret NPM_TOKEN, in the publish step only.
+on:
+  push:
+    tags:
+      - 'cli-v*.*.*'
+
+permissions:
+  contents: read
+
+# Never two releases of one tag at once, and never cancel one that has begun publishing.
+concurrency:
+  group: publish-cli-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # The full validation suite, on the tagged commit.
+  validate:
+    name: Validate
+    uses: ./.github/workflows/ci.yml
+
+  image:
+    name: Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: validate
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE: ghcr.io/${{ github.repository_owner }}/cli
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Work out the version this tag releases
+        id: version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          expected="${TAG#cli-v}"
+          if [[ ! "$expected" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "The tag $TAG is not a release tag: it needs a plain X.Y.Z version." >&2
+            exit 1
+          fi
+          for dir in cli create; do
+            actual="$(node -p "require('./apps/$dir/package.json').version")"
+            if [[ "$actual" != "$expected" ]]; then
+              echo "The tag $TAG expects version $expected, but apps/$dir/package.json is $actual." >&2
+              exit 1
+            fi
+          done
+          {
+            echo "version=$expected"
+            echo "minor=${expected%.*}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Releasing $expected"
+
+      # A release is made from `main`, never from a branch that was tagged by mistake.
+      - name: Check the tagged commit is on main
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "The tagged commit is not on main; refusing to publish." >&2
+            exit 1
+          fi
+
+      - uses: ./.github/actions/setup
+        with:
+          cache: 'false'
+      # The image holds the bundled toolkit, which is built here and copied in.
+      - run: pnpm --filter @sovereignfs/cli build
+
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: apps/cli
+          platforms: linux/amd64,linux/arm64
+          push: true
+          no-cache: true
+          provenance: mode=max
+          sbom: true
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.version.outputs.version }}
+            ${{ env.IMAGE }}:${{ steps.version.outputs.minor }}
+            ${{ env.IMAGE }}:latest
+          labels: |
+            org.opencontainers.image.title=Sovereign operator toolkit
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.licenses=AGPL-3.0-or-later
+
+  npm:
+    name: npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: image
+    permissions:
+      contents: read
+      # Lets npm sign a provenance statement: the package is shown as built from this repository and this commit.
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Check the tag matches both packages
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          expected="${TAG#cli-v}"
+          for dir in cli create; do
+            actual="$(node -p "require('./apps/$dir/package.json').version")"
+            if [[ "$actual" != "$expected" ]]; then
+              echo "The tag $TAG expects version $expected, but apps/$dir/package.json is $actual." >&2
+              exit 1
+            fi
+          done
+
+      - name: Check the tagged commit is on main
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "The tagged commit is not on main; refusing to publish." >&2
+            exit 1
+          fi
+
+      - uses: ./.github/actions/setup
+        with:
+          cache: 'false'
+      # A second setup-node, with the registry, writes the .npmrc that reads NODE_AUTH_TOKEN.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - run: pnpm build
+      - run: pnpm packages:check
+
+      # The toolkit first and `create` last: `create` pins the toolkit of its own version.
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          pnpm --filter @sovereignfs/cli publish --no-git-checks --access public --provenance
+          pnpm --filter @sovereignfs/create publish --no-git-checks --access public --provenance

@@ -11,6 +11,7 @@ export type PackedManifest = {
   private?: boolean;
   files?: string[];
   types?: string;
+  bin?: string | Record<string, string>;
   exports?: unknown;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
@@ -48,9 +49,12 @@ export type TarballFacts = {
   licenseText?: string;
   /** The names of the packages that are published. A published package may depend on no other `@sovereignfs/*` package. */
   publishedNames?: ReadonlySet<string>;
+  /** A library is imported (MPL-2.0, an exports map); a tool is run (AGPL-3.0-or-later, a `bin`). */
+  kind?: 'library' | 'tool';
 };
 
 const MPL_HEADING = 'Mozilla Public License Version 2.0';
+const AGPL_HEADING = 'GNU AFFERO GENERAL PUBLIC LICENSE';
 
 export function tarballProblems(
   manifest: PackedManifest,
@@ -65,15 +69,20 @@ export function tarballProblems(
   if (!manifest.version || !/^\d+\.\d+\.\d+$/.test(manifest.version))
     problems.push('the version is not a plain x.y.z');
   if (manifest.private === true) problems.push('the package is private, so it cannot be published');
-  if (manifest.license !== 'MPL-2.0')
-    problems.push(`the licence is ${manifest.license ?? 'missing'}, not MPL-2.0`);
+  const tool = facts.kind === 'tool';
+  const licence = tool ? 'AGPL-3.0-or-later' : 'MPL-2.0';
+  if (manifest.license !== licence)
+    problems.push(`the licence is ${manifest.license ?? 'missing'}, not ${licence}`);
 
   for (const required of ['package.json', 'LICENSE', 'README.md']) {
     if (!inTarball.has(required)) problems.push(`${required} is not in the tarball`);
   }
-  if (facts.licenseText !== undefined && !facts.licenseText.startsWith(MPL_HEADING)) {
+  if (
+    facts.licenseText !== undefined &&
+    !facts.licenseText.trimStart().startsWith(tool ? AGPL_HEADING : MPL_HEADING)
+  ) {
     problems.push(
-      'the LICENSE in the tarball is not the MPL-2.0 text (does the package have its own LICENSE file?)',
+      `the LICENSE in the tarball is not the ${licence} text (does the package have its own LICENSE file?)`,
     );
   }
   // A file the manifest says to ship by name (NOTICE, say) must really be there.
@@ -84,8 +93,10 @@ export function tarballProblems(
     }
   }
 
-  const entryPoints = [...targets(manifest.exports), ...(manifest.types ? [manifest.types] : [])];
-  if (entryPoints.length === 0) problems.push('there is no exports map');
+  const entryPoints = tool
+    ? targets(manifest.bin)
+    : [...targets(manifest.exports), ...(manifest.types ? [manifest.types] : [])];
+  if (entryPoints.length === 0) problems.push(tool ? 'there is no bin' : 'there is no exports map');
   for (const target of entryPoints) {
     if (!target.startsWith('./dist/')) problems.push(`${target} points outside dist/`);
     else if (!inTarball.has(target.slice(2))) problems.push(`${target} is not in the tarball`);

@@ -1,7 +1,6 @@
 {
   "name": "@sovereignfs/create",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "description": "npm create @sovereignfs: makes an instance repository, pinned to the toolkit (sv) of the same version.",
   "license": "AGPL-3.0-or-later",

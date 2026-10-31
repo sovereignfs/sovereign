@@ -9,6 +9,7 @@ export type PackedManifest = {
   version?: string;
   license?: string;
   private?: boolean;
+  repository?: string | { type?: string; url?: string; directory?: string };
   files?: string[];
   types?: string;
   bin?: string | Record<string, string>;
@@ -56,6 +57,9 @@ export type TarballFacts = {
 const MPL_HEADING = 'Mozilla Public License Version 2.0';
 const AGPL_HEADING = 'GNU AFFERO GENERAL PUBLIC LICENSE';
 
+/** This repository, which a published package's provenance names. */
+const REPOSITORY = 'https://github.com/sovereignfs/sovereign';
+
 export function tarballProblems(
   manifest: PackedManifest,
   files: readonly string[],
@@ -69,6 +73,13 @@ export function tarballProblems(
   if (!manifest.version || !/^\d+\.\d+\.\d+$/.test(manifest.version))
     problems.push('the version is not a plain x.y.z');
   if (manifest.private === true) problems.push('the package is private, so it cannot be published');
+  // npm checks a provenance statement against repository.url, and refuses the upload when it is not this repository.
+  const repository =
+    typeof manifest.repository === 'string' ? manifest.repository : manifest.repository?.url;
+  if (repository?.replace(/^git\+/, '').replace(/\.git$/, '') !== REPOSITORY)
+    problems.push(
+      `repository.url is ${repository ?? 'missing'}, not ${REPOSITORY}, so npm refuses its provenance`,
+    );
   const tool = facts.kind === 'tool';
   const licence = tool ? 'AGPL-3.0-or-later' : 'MPL-2.0';
   if (manifest.license !== licence)

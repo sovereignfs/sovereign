@@ -1,9 +1,18 @@
 {
   "name": "@sovereignfs/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "The operator toolkit: sv. Deploys core, with or without apps, to one machine with Docker.",
   "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sovereignfs/sovereign.git",
+    "directory": "tools/cli"
+  },
+  "homepage": "https://github.com/sovereignfs/sovereign/tree/main/tools/cli#readme",
+  "bugs": {
+    "url": "https://github.com/sovereignfs/sovereign/issues"
+  },
   "bin": {
     "sv": "./dist/sv.mjs"
   },

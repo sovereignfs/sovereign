@@ -5,6 +5,7 @@ const manifest = (overrides: Partial<PackedManifest> = {}): PackedManifest => ({
   name: '@sovereignfs/thing',
   version: '1.2.3',
   license: 'MPL-2.0',
+  repository: { type: 'git', url: 'git+https://github.com/sovereignfs/sovereign.git' },
   files: ['dist', 'LICENSE', 'README.md'],
   types: './dist/index.d.ts',
   exports: { '.': { types: './dist/index.d.ts', default: './dist/index.js' } },
@@ -61,6 +62,21 @@ describe('tarballProblems', () => {
     expect(found).toContain('the package is private, so it cannot be published');
     expect(found).toContain('the name is not under @sovereignfs/');
     expect(found).toContain('the version is not a plain x.y.z');
+  });
+
+  it('flags a repository that is missing or another one, which npm refuses with provenance', () => {
+    expect(tarballProblems(manifest({ repository: undefined }), files)).toEqual([
+      'repository.url is missing, not https://github.com/sovereignfs/sovereign, so npm refuses its provenance',
+    ]);
+    expect(
+      tarballProblems(
+        manifest({ repository: 'https://github.com/sovereignfs/sovereign-legacy' }),
+        files,
+      ),
+    ).toHaveLength(1);
+    expect(
+      tarballProblems(manifest({ repository: 'https://github.com/sovereignfs/sovereign' }), files),
+    ).toEqual([]);
   });
 
   it('flags an exports map that points at source, or at nothing', () => {
@@ -164,6 +180,7 @@ describe('tarballProblems for a tool that is run and not imported', () => {
     name: '@sovereignfs/cli',
     version: '1.2.3',
     license: 'AGPL-3.0-or-later',
+    repository: { type: 'git', url: 'git+https://github.com/sovereignfs/sovereign.git' },
     files: ['dist'],
     bin: { sv: './dist/sv.mjs' },
     ...extra,

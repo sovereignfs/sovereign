@@ -1,9 +1,18 @@
 {
   "name": "@sovereignfs/create",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "npm create @sovereignfs: makes an instance repository, pinned to the toolkit (sv) of the same version.",
   "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sovereignfs/sovereign.git",
+    "directory": "tools/create"
+  },
+  "homepage": "https://github.com/sovereignfs/sovereign/tree/main/tools/create#readme",
+  "bugs": {
+    "url": "https://github.com/sovereignfs/sovereign/issues"
+  },
   "bin": {
     "create": "./dist/create.mjs"
   },

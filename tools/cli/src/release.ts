@@ -4,7 +4,7 @@
  */
 export const RELEASE = {
   /** The toolkit's own version: the one in `package.json`, written here so a test can hold the two together. */
-  version: '0.1.0',
+  version: '0.1.1',
   /** The `schema` versions of `suite.yml`, `suite.lock` and `secrets.age.yml` it reads. */
   schemas: [1],
   /** The core versions it can deploy, as an npm-style range. */

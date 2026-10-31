@@ -5,6 +5,7 @@ import { parse } from 'yaml';
 import { sv, setUpWorld } from '../testing/commands.js';
 import { makeWorld, type World } from '../testing/world.js';
 import type { Lock, Suite } from '../suite/types.js';
+import { RELEASE } from '../release.js';
 
 let world: World;
 afterEach(() => world.cleanup());
@@ -115,7 +116,9 @@ describe('sv setup', () => {
     world = makeWorld();
     await setUpWorld(world, '--deploy', 'github');
     const workflow = read('.github/workflows/deploy.yml');
-    expect(workflow).toContain('sovereignfs/sovereign/.github/workflows/deploy.yml@cli-v0.1.0');
+    expect(workflow).toContain(
+      `sovereignfs/sovereign/.github/workflows/deploy.yml@cli-v${RELEASE.version}`,
+    );
     expect(workflow).toContain('SV_DEPLOY_KEY: ${{ secrets.SV_DEPLOY_KEY }}');
     expect(workflow).not.toMatch(/AGE|age\.key|SECRET_KEY/);
     world.cleanup();

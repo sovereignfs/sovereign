@@ -7,6 +7,7 @@ import type { Context } from '../context.js';
 import { Failed, Locked, Refused } from '../errors.js';
 import {
   DEPLOY_KEY_PREFIX,
+  HOST_KEY_PREFIX,
   SERVER_KEY_PREFIX,
   bootstrapScript,
 } from '../server/bootstrap-script.js';
@@ -105,6 +106,11 @@ async function bootstrap(ctx: Context, argv: string[]): Promise<void> {
     throw new Failed('The server did not say what its key is.', 'Run sv server bootstrap again.');
   }
   const installed = result.stdout.includes(`${DEPLOY_KEY_PREFIX}installed`);
+  const hostKey = result.stdout
+    .split('\n')
+    .find((line) => line.startsWith(HOST_KEY_PREFIX))
+    ?.slice(HOST_KEY_PREFIX.length)
+    .trim();
 
   // The server can decrypt only what is encrypted to its key, so its key joins the recipients and what is already encrypted follows.
   let added = false;
@@ -127,6 +133,19 @@ async function bootstrap(ctx: Context, argv: string[]): Promise<void> {
         );
       }
     }
+  }
+  // A runner has no known_hosts of its own, so the server's host key is kept with the rest of what describes it.
+  if (
+    hostKey &&
+    /^ssh-(ed25519|rsa) [A-Za-z0-9+/]+={0,2}$/.test(hostKey) &&
+    hostKey !== suite.server.hostKey
+  ) {
+    await file.edit((doc) => doc.setIn(['server', 'hostKey'], hostKey));
+    ctx.io.err(
+      suite.server.hostKey
+        ? 'The server’s host key has changed since it was last written; suite.yml has the new one.'
+        : 'Wrote the server’s host key to suite.yml, so a runner can check it is deploying to the right machine.',
+    );
   }
   ctx.io.err(
     added

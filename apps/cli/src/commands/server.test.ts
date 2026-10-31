@@ -58,6 +58,25 @@ describe('sv server bootstrap', () => {
     expect(done.text).toContain('sv push');
   });
 
+  it('writes the server’s host key to suite.yml, so a runner can check the machine, and says when it changes', async () => {
+    world = makeWorld();
+    await setUpWorld(world, '--deploy', 'github');
+    const first =
+      'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+    const second =
+      'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB';
+    const server = await serverAnswering(['SV_DEPLOY_KEY=installed', `SV_HOST_KEY=${first}`]);
+    world.ctx.remote = server.answer(server.lines);
+    const done = await sv(world, 'server', 'bootstrap');
+    expect(suite().server.hostKey).toBe(first);
+    expect(done.text).toContain('Wrote the server’s host key');
+    const again = await serverAnswering([`SV_HOST_KEY=${second}`]);
+    world.ctx.remote = again.answer(`SV_SERVER_KEY=${server.recipient}\nSV_HOST_KEY=${second}`);
+    const changed = await sv(world, 'server', 'bootstrap');
+    expect(suite().server.hostKey).toBe(second);
+    expect(changed.text).toContain('host key has changed');
+  });
+
   it('is safe to run again: the key is already there, and nothing is added twice', async () => {
     world = makeWorld();
     await setUpWorld(world, '--deploy', 'ssh');

@@ -6,6 +6,8 @@ const PUBLIC_KEY = /^ssh-ed25519 [A-Za-z0-9+/]+={0,2}$/;
 
 /** The line the script prints with the server’s public key, which `sv server bootstrap` reads. */
 export const SERVER_KEY_PREFIX = 'SV_SERVER_KEY=';
+/** And the server's SSH host key, which a runner trusts instead of asking. */
+export const HOST_KEY_PREFIX = 'SV_HOST_KEY=';
 /** And whether it installed the deployment key or left the one that was there. */
 export const DEPLOY_KEY_PREFIX = 'SV_DEPLOY_KEY=';
 
@@ -130,6 +132,8 @@ if [ -n "$DEPLOY_KEY" ]; then
     printf 'SV_DEPLOY_KEY=installed\\n'
   fi
 fi
+hostkey="$(cut -d' ' -f1,2 /etc/ssh/ssh_host_ed25519_key.pub 2>/dev/null || true)"
+printf 'SV_HOST_KEY=%s\\n' "$hostkey"
 say "Ready."
 `;
 }

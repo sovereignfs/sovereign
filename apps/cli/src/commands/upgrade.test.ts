@@ -55,6 +55,24 @@ describe('sv upgrade --finish', () => {
     expect(done.text).toContain('App versions and database.version are not moved');
   });
 
+  it('moves the pin of the workflow that deploys from GitHub with the toolkit, and leaves one that calls something else', async () => {
+    await ready();
+    pinTo(RELEASE.version);
+    const file = path.join(world.root, '.github', 'workflows', 'deploy.yml');
+    (await import('node:fs')).mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(
+      file,
+      'jobs:\n  deploy:\n    uses: sovereignfs/sovereign/.github/workflows/deploy.yml@cli-v0.0.9\n',
+    );
+    const done = await sv(world, 'upgrade', '--finish');
+    expect(done.code).toBe(0);
+    expect(readFileSync(file, 'utf8')).toContain(`deploy.yml@cli-v${RELEASE.version}`);
+    expect(done.text).toContain('.github/workflows/deploy.yml: calls the toolkit’s workflow');
+    writeFileSync(file, 'jobs:\n  deploy:\n    uses: someone/else/.github/workflows/x.yml@v1\n');
+    await sv(world, 'upgrade', '--finish');
+    expect(readFileSync(file, 'utf8')).toContain('someone/else');
+  });
+
   it('keeps what the operator wrote in suite.yml, comments included', async () => {
     await ready();
     pinTo(RELEASE.version);

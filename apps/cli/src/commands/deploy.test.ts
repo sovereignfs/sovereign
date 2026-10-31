@@ -1,7 +1,8 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
+import { realExec } from '../context.js';
 import { readArchive } from '../server/tar.js';
 import { isKnownPath } from '../suite/files.js';
 import { sv, setUpWorld } from '../testing/commands.js';
@@ -102,14 +103,14 @@ describe('sv deploy', () => {
     }
   });
 
-  it('uses server.deploy when told nothing, refuses when that says nothing, and says --github is not here yet', async () => {
+  it('uses server.deploy when told nothing, refuses when that says nothing, and says what --github needs', async () => {
     await ready();
     await sv(world, 'push');
     world.ctx.remote = server().remote;
     expect((await sv(world, 'deploy')).code).toBe(0);
     const github = await sv(world, 'deploy', '--github');
     expect(github.code).toBe(2);
-    expect(github.text).toContain('not in this version');
+    expect(github.text).toContain('There is no .github/workflows/deploy.yml');
     const both = await sv(world, 'deploy', '--ssh', '--github');
     expect(both.code).toBe(2);
     const text = readFileSync(path.join(world.root, 'suite.yml'), 'utf8').replace(
@@ -134,5 +135,152 @@ describe('sv deploy', () => {
     expect(done.code).toBe(0);
     expect(parse(readFileSync(path.join(world.root, 'suite.yml'), 'utf8')).purge).toBeUndefined();
     expect(done.text).toContain('no longer recorded');
+  });
+});
+
+describe('sv deploy --github', () => {
+  it('starts the workflow on the pushed commit, with the branch, and says how to watch it', async () => {
+    await ready();
+    write('.github/workflows/deploy.yml', 'name: Deploy\n');
+    await sv(world, 'push');
+    const ran: { command: string; args: string[] }[] = [];
+    world.ctx.exec = async (command, args, options) => {
+      ran.push({ command, args: [...args] });
+      if (command === 'gh') return { code: 0, stdout: '', stderr: '' };
+      return realExec(command, args, options);
+    };
+    const done = await sv(world, 'deploy', '--github');
+    expect(done.code).toBe(0);
+    expect(ran.find((r) => r.command === 'gh')).toEqual({
+      command: 'gh',
+      args: ['workflow', 'run', 'deploy.yml', '--ref', 'main'],
+    });
+    expect(done.text).toContain('gh run watch');
+  });
+
+  it('refuses work that is not pushed, and says what to install when the GitHub CLI is not there', async () => {
+    await ready();
+    write('.github/workflows/deploy.yml', 'name: Deploy\n');
+    expect((await sv(world, 'deploy', '--github')).code).toBe(2);
+    await sv(world, 'push');
+    world.ctx.exec = async (command, args, options) =>
+      command === 'gh'
+        ? { code: 127, stdout: '', stderr: 'gh: command not found' }
+        : realExec(command, args, options);
+    const done = await sv(world, 'deploy', '--github');
+    expect(done.code).toBe(1);
+    expect(done.text).toContain('gh auth login');
+  });
+});
+
+describe('sv deploy --ci (a runner)', () => {
+  const HOST_KEY =
+    'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl';
+  const withHostKey = () => {
+    const file = path.join(world.root, 'suite.yml');
+    writeFileSync(
+      file,
+      readFileSync(file, 'utf8').replace(
+        'host: 203.0.113.7',
+        `host: 203.0.113.7\n  hostKey: ${HOST_KEY}`,
+      ),
+    );
+    world.git('commit', '-am', 'host key');
+  };
+
+  it('deploys the checkout with the deployment key and the server’s host key, from files that are gone afterwards', async () => {
+    await ready();
+    await sv(world, 'push');
+    withHostKey();
+    const seen: {
+      identity: string;
+      known: string;
+      file: string;
+      known_file: string;
+      words: string[];
+    }[] = [];
+    world.ctx.env = { ...world.ctx.env, SV_DEPLOY_KEY: 'PRIVATE-KEY-TEXT' };
+    world.ctx.remote = async (target, words) => {
+      seen.push({
+        identity: readFileSync(target.identityFile as string, 'utf8'),
+        known: readFileSync(target.knownHostsFile as string, 'utf8'),
+        file: target.identityFile as string,
+        known_file: target.knownHostsFile as string,
+        words: [...words],
+      });
+      return { code: 0, stdout: '', stderr: '' };
+    };
+    const done = await sv(world, 'deploy', '--ci');
+    expect(done.code).toBe(0);
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.identity).toBe('PRIVATE-KEY-TEXT\n');
+    expect(seen[0]?.known).toBe(`203.0.113.7 ${HOST_KEY}\n`);
+    expect(seen[0]?.words.slice(0, 2)).toEqual(['/usr/local/sbin/sovereign-receive', 'deploy']);
+    expect(existsSync(seen[0]?.file as string)).toBe(false);
+    expect(existsSync(seen[0]?.known_file as string)).toBe(false);
+    expect(done.text).not.toContain('PRIVATE-KEY-TEXT');
+  });
+
+  it('uses a bracketed host for another port, and does not need the commit to be pushed', async () => {
+    await ready();
+    await sv(world, 'push');
+    const file = path.join(world.root, 'suite.yml');
+    writeFileSync(
+      file,
+      readFileSync(file, 'utf8').replace(
+        'host: 203.0.113.7',
+        `host: 203.0.113.7\n  port: 2222\n  hostKey: ${HOST_KEY}`,
+      ),
+    );
+    world.git('commit', '-am', 'port');
+    world.ctx.env = { ...world.ctx.env, SV_DEPLOY_KEY: 'k' };
+    let known = '';
+    world.ctx.remote = async (target) => {
+      known = readFileSync(target.knownHostsFile as string, 'utf8');
+      return { code: 0, stdout: '', stderr: '' };
+    };
+    expect((await sv(world, 'deploy', '--ci')).code).toBe(0);
+    expect(known).toBe(`[203.0.113.7]:2222 ${HOST_KEY}\n`);
+  });
+
+  it('refuses without the key, without the server’s host key, and on a checkout that is not clean, reaching nothing', async () => {
+    await ready();
+    await sv(world, 'push');
+    let reached = false;
+    world.ctx.remote = async () => ((reached = true), { code: 0, stdout: '', stderr: '' });
+    const noKey = await sv(world, 'deploy', '--ci');
+    expect(noKey.code).toBe(2);
+    expect(noKey.text).toContain('SV_DEPLOY_KEY is not set');
+    world.ctx.env = { ...world.ctx.env, SV_DEPLOY_KEY: 'k' };
+    const noHost = await sv(world, 'deploy', '--ci');
+    expect(noHost.code).toBe(2);
+    expect(noHost.text).toContain('host key');
+    withHostKey();
+    writeFileSync(
+      path.join(world.root, 'suite.yml'),
+      `${readFileSync(path.join(world.root, 'suite.yml'), 'utf8')}\n# edited\n`,
+    );
+    expect((await sv(world, 'deploy', '--ci')).code).toBe(2);
+    expect(reached).toBe(false);
+  });
+
+  it('passes the key by file and never on a command line', async () => {
+    const { sshArgs } = await import('../server/remote.js');
+    const args = sshArgs(
+      { host: 'h', user: 'root', identityFile: '/tmp/k', knownHostsFile: '/tmp/kh' },
+      ['x'],
+    );
+    expect(args).toEqual(
+      expect.arrayContaining([
+        '-i',
+        '/tmp/k',
+        'IdentitiesOnly=yes',
+        'BatchMode=yes',
+        'UserKnownHostsFile=/tmp/kh',
+        'StrictHostKeyChecking=yes',
+      ]),
+    );
+    expect(args.indexOf('--')).toBeGreaterThan(args.indexOf('-i'));
+    expect(args.join(' ')).not.toContain('PRIVATE');
   });
 });

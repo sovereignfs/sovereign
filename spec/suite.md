@@ -92,12 +92,13 @@ PostgreSQL is the only engine in this version, so there is no field for it.
 
 ### 1.4 `server`
 
-| Field    | Required | Meaning                                               |
-| -------- | -------- | ----------------------------------------------------- |
-| `host`   | yes      | A host name or an IP address                          |
-| `port`   | no       | Its SSH port. Default `22`                            |
-| `user`   | no       | The SSH user. Default `sovereign`                     |
-| `deploy` | no       | `ssh` (the default) or `github`: how `sv deploy` goes |
+| Field     | Required | Meaning                                                                                                                                                            |
+| --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `host`    | yes      | A host name or an IP address                                                                                                                                       |
+| `port`    | no       | Its SSH port. Default `22`                                                                                                                                         |
+| `user`    | no       | The SSH user. Default `sovereign`                                                                                                                                  |
+| `deploy`  | no       | `ssh` (the default) or `github`: how `sv deploy` goes                                                                                                              |
+| `hostKey` | no       | The server's SSH host key (`ssh-ed25519 AAAA…`), written by `sv server bootstrap`. A runner checks the server against it, since it has no `known_hosts` of its own |
 
 ### 1.5 `tls`
 

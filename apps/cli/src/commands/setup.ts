@@ -7,7 +7,9 @@ import { ensureOperatorKey } from '../secrets/keys.js';
 import { FILE, SuiteFile, readLock, writeLock } from '../suite/files.js';
 import { refreshedLock } from '../suite/lock.js';
 import type { Suite } from '../suite/types.js';
+import { DEPLOY_WORKFLOW, deployWorkflow } from '../suite/workflow.js';
 import { existsSync } from 'node:fs';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const OPTIONS = {
@@ -92,6 +94,16 @@ export async function setup(ctx: Context, argv: string[]): Promise<void> {
   );
   await file.save();
   await writeLock(ctx.root, lock);
+  if (deploy === 'github') {
+    const workflow = path.join(ctx.root, DEPLOY_WORKFLOW);
+    if (!existsSync(workflow)) {
+      await mkdir(path.dirname(workflow), { recursive: true });
+      await writeFile(workflow, deployWorkflow());
+      io.err(
+        `Wrote ${DEPLOY_WORKFLOW}, which deploys on every push to main with the deployment key.`,
+      );
+    }
+  }
 
   io.err(`Wrote ${FILE.suite} for ${domain}, and ${FILE.lock} with the digests it resolves to.`);
   io.err(

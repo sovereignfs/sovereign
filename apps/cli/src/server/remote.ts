@@ -4,7 +4,14 @@ import { Refused } from '../errors.js';
 import type { Suite } from '../suite/types.js';
 
 /** Where the server is, and who to be there (`server` in suite.yml). */
-export type Target = { host: string; port?: number; user: string };
+export type Target = {
+  host: string;
+  port?: number;
+  user: string;
+  /** A runner’s way in: the deployment key’s file and a `known_hosts` file that holds the server’s key, which are all it trusts. */
+  identityFile?: string;
+  knownHostsFile?: string;
+};
 
 export type RemoteResult = { code: number; stdout: string; stderr: string };
 
@@ -49,6 +56,12 @@ export function sshArgs(target: Target, words: readonly string[]): string[] {
     '-o',
     'ServerAliveCountMax=4',
     ...(target.port === undefined ? [] : ['-p', String(target.port)]),
+    ...(target.identityFile
+      ? ['-i', target.identityFile, '-o', 'IdentitiesOnly=yes', '-o', 'BatchMode=yes']
+      : []),
+    ...(target.knownHostsFile
+      ? ['-o', `UserKnownHostsFile=${target.knownHostsFile}`, '-o', 'StrictHostKeyChecking=yes']
+      : []),
     '--',
     `${target.user}@${target.host}`,
     ...words,

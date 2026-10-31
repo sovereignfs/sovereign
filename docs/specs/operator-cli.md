@@ -1,9 +1,9 @@
 # Sovereign — operator CLI specification
 
-|            |                                                                                                                                                                                                                                                                                                            |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status** | Draft. Specified from [RFC 0002](../rfcs/0002-deployment-strategies.md); the commands on the operator's machine and `sv apply` for core and apps, deploying over SSH, backups, restores, rollbacks, publishing and upgrading are built; deploying from GitHub is not ([epic 13](../epics/operator-cli.md)) |
-| **Covers** | `apps/cli`: the `sv` toolkit, `sv apply`, and `@sovereignfs/create`                                                                                                                                                                                                                                        |
+|            |                                                                                                                                                                                                                                                                                                     |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status** | Draft. Specified from [RFC 0002](../rfcs/0002-deployment-strategies.md); the commands on the operator's machine and `sv apply` for core and apps, deploying over SSH, backups, restores, rollbacks, publishing, upgrading and deploying from GitHub are built ([epic 13](../epics/operator-cli.md)) |
+| **Covers** | `apps/cli`: the `sv` toolkit, `sv apply`, and `@sovereignfs/create`                                                                                                                                                                                                                                 |
 
 This document is the single source of truth for what the operator CLI does. Where code, another document or an issue
 disagrees with it, this document wins until it is changed.
@@ -348,6 +348,22 @@ repository at the toolkit's version. It needs the server to be reachable from th
 
 - It authenticates with the deployment key (§8.3) and nothing else.
 - A runner MUST NOT hold a key that decrypts `secrets.age.yml`.
+
+#### 8.2.1 As built
+
+- **Three pieces.** The reusable workflow in this repository (`.github/workflows/deploy.yml`, called at `@cli-vX.Y.Z`), the thin workflow
+  in the instance repository (`.github/workflows/deploy.yml`, written by `sv setup --deploy github`, which runs on every push to `main`
+  and on demand), and `sv deploy --ci`, which is what the runner runs. `sv upgrade` moves the version the thin workflow calls with the
+  toolkit.
+- **What the runner holds:** one secret, `SV_DEPLOY_KEY`. It checks out the repository without keeping a credential, installs the
+  toolkit the repository pins with `npm ci --ignore-scripts`, and runs `./sv deploy --ci`, which writes the key and a `known_hosts` to a
+  temporary folder, deploys, and removes them. It has no key that decrypts `secrets.age.yml`, and `sv deploy --ci` never decrypts.
+- **The server is checked, not trusted at first sight.** A runner has no `known_hosts`, so `sv server bootstrap` writes the server's SSH
+  host key to `server.hostKey` in `suite.yml` (and says when it changes), and the runner connects with `StrictHostKeyChecking=yes` against
+  only that. `--ci` refuses when there is none.
+- **`sv deploy --github`** starts that workflow on the pushed commit with `gh workflow run`, and refuses work that is not pushed. A push to
+  `main` deploys without it.
+- **Not tried here:** a run on a GitHub runner against a server.
 
 ### 8.3 `sv server bootstrap`
 

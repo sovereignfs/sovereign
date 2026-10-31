@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { gt, valid } from 'semver';
 import type { Document } from 'yaml';
@@ -9,6 +9,7 @@ import { Failed, Locked, Refused } from '../errors.js';
 import { RELEASE } from '../release.js';
 import { SuiteFile, readLock, writeLock } from '../suite/files.js';
 import { refreshedLock } from '../suite/lock.js';
+import { DEPLOY_WORKFLOW, pinnedWorkflowVersion, repinWorkflow } from '../suite/workflow.js';
 
 const PACKAGE = '@sovereignfs/cli';
 
@@ -152,6 +153,17 @@ async function finish(ctx: Context): Promise<void> {
     }
   }
 
+  // The workflow that deploys from GitHub calls the toolkit's own at a version, and follows the toolkit.
+  const workflowFile = path.join(ctx.root, DEPLOY_WORKFLOW);
+  const workflowText = existsSync(workflowFile) ? await readFile(workflowFile, 'utf8') : undefined;
+  const repinned =
+    workflowText === undefined ? undefined : repinWorkflow(workflowText, RELEASE.version);
+  if (workflowText !== undefined && repinned !== workflowText) {
+    changes.push(
+      `${DEPLOY_WORKFLOW}: calls the toolkit’s workflow at ${RELEASE.version}, not ${pinnedWorkflowVersion(workflowText)}`,
+    );
+  }
+
   if (changes.length === 0) {
     ctx.io.err(
       `Already at toolkit ${RELEASE.version}, core ${before.core.version}. Nothing to change.`,
@@ -159,6 +171,8 @@ async function finish(ctx: Context): Promise<void> {
     return;
   }
   await file.edit((doc) => change(doc, []));
+  if (workflowText !== undefined && repinned !== undefined && repinned !== workflowText)
+    await writeFile(workflowFile, repinned);
   await writeLock(ctx.root, refreshed);
   ctx.io.err('Changed:');
   for (const line of changes) ctx.io.err(`  ${line}`);

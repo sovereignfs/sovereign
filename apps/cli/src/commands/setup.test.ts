@@ -110,4 +110,17 @@ describe('sv setup', () => {
       second.cleanup();
     }
   });
+
+  it('writes the workflow that deploys from GitHub, calling the toolkit’s at this version, only for deploy: github', async () => {
+    world = makeWorld();
+    await setUpWorld(world, '--deploy', 'github');
+    const workflow = read('.github/workflows/deploy.yml');
+    expect(workflow).toContain('sovereignfs/sovereign/.github/workflows/deploy.yml@cli-v0.1.0');
+    expect(workflow).toContain('SV_DEPLOY_KEY: ${{ secrets.SV_DEPLOY_KEY }}');
+    expect(workflow).not.toMatch(/AGE|age\.key|SECRET_KEY/);
+    world.cleanup();
+    world = makeWorld();
+    await setUpWorld(world, '--deploy', 'ssh');
+    expect(existsSync(path.join(world.root, '.github/workflows/deploy.yml'))).toBe(false);
+  });
 });

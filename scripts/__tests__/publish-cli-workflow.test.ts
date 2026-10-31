@@ -101,3 +101,46 @@ describe('the toolkit release workflow', () => {
     expect(read('apps/cli/.dockerignore')).toBe('*\n!dist/sv.mjs\n');
   });
 });
+
+describe('the workflow an instance calls to deploy from GitHub', () => {
+  // What the workflow does, without what its comments say about it.
+  const deploy = read('.github/workflows/deploy.yml').replace(/^\s*#.*$/gm, '');
+
+  it('is reusable, and is called with the one secret it needs', () => {
+    expect(deploy).toMatch(/^on:\s+workflow_call:/m);
+    expect(deploy.match(/secrets\.[A-Z_]+/g)).toEqual(['secrets.SV_DEPLOY_KEY']);
+    expect(deploy).toContain('SV_DEPLOY_KEY:');
+  });
+
+  it('holds no key that opens secrets, and does not decrypt anything', () => {
+    expect(deploy).not.toMatch(/age\.key|AGE-SECRET-KEY|SV_AGE|decrypt/i);
+    expect(deploy).toContain('./sv deploy --ci');
+  });
+
+  it('reads the repository and writes nothing to it, and keeps no credential in the checkout', () => {
+    expect(deploy).toMatch(/permissions:\s+contents: read/);
+    expect(deploy).not.toContain('write');
+    expect(deploy).toContain('persist-credentials: false');
+  });
+
+  it('installs the toolkit the repository pins, from its lockfile, running no script', () => {
+    expect(deploy).toContain('npm ci --ignore-scripts');
+    expect(deploy).not.toContain('npx');
+  });
+
+  it('never cancels a deployment that has begun, and runs one at a time', () => {
+    expect(deploy).toContain('cancel-in-progress: false');
+    expect(deploy).toMatch(/concurrency:\s+group: sovereign-deploy-/);
+  });
+
+  it('pins every action to a commit', () => {
+    const actions = [...deploy.matchAll(/uses: ([^.\s][^\s]*)/g)].map((match) => match[1]);
+    expect(actions.length).toBeGreaterThan(0);
+    for (const action of actions) expect(action).toMatch(/@[0-9a-f]{40}$/);
+  });
+
+  it('is the one the instance repository’s own workflow calls', async () => {
+    const { REUSABLE } = await import('../../apps/cli/src/suite/workflow');
+    expect(REUSABLE).toBe('sovereignfs/sovereign/.github/workflows/deploy.yml');
+  });
+});

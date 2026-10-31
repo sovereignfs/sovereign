@@ -34,7 +34,13 @@ export type Suite = {
   domain: string;
   core: { version: string; env?: Record<string, string> };
   database: { version: string };
-  server: { host: string; port?: number; user?: string; deploy?: 'ssh' | 'github' };
+  server: {
+    host: string;
+    port?: number;
+    user?: string;
+    deploy?: 'ssh' | 'github';
+    hostKey?: string;
+  };
   tls?: { mode?: 'per-host' | 'internal'; email?: string };
   secrets: { recipients: string[] };
   apps?: Record<string, App>;

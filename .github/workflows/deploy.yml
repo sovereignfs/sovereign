@@ -1,0 +1,47 @@
+name: Deploy an instance
+
+# The workflow an instance repository calls to deploy itself from GitHub (operator-cli §8.2):
+#   uses: sovereignfs/sovereign/.github/workflows/deploy.yml@cli-vX.Y.Z
+# at the version of the toolkit the repository pins; `sv upgrade` moves the pin. `sv setup --deploy github` writes the caller.
+#
+# The runner holds one credential, SV_DEPLOY_KEY, the deployment key `sv server bootstrap` made. It can send a deployment to the server
+# and run nothing else there, and it opens nothing: the runner never has a key that decrypts secrets.age.yml. The server it deploys to
+# is the one `server.hostKey` in the repository names, checked strictly, so the first connection is not trusted blindly.
+on:
+  workflow_call:
+    secrets:
+      SV_DEPLOY_KEY:
+        description: The deployment key sv server bootstrap printed, stored as an Actions secret.
+        required: true
+
+permissions:
+  contents: read
+
+# One deployment at a time, and one that has begun is never cancelled: it carries on on the server whatever happens here.
+concurrency:
+  group: sovereign-deploy-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      # The toolkit the repository pins, installed from its lockfile and from nothing else.
+      - name: Install the toolkit
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Deploy
+        env:
+          SV_DEPLOY_KEY: ${{ secrets.SV_DEPLOY_KEY }}
+        run: ./sv deploy --ci

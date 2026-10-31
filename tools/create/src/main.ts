@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { execFile } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 import pkg from '../package.json' with { type: 'json' };

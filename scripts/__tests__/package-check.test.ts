@@ -214,6 +214,14 @@ describe('tarballProblems for a tool that is run and not imported', () => {
     );
   });
 
+  it('wants a bin that starts with a #! line, because npm runs it with sh otherwise', () => {
+    const headed = { ...facts, binHeads: { 'dist/sv.mjs': '#!/usr/bin/env node\nimport x' } };
+    expect(tarballProblems(tool(), toolFiles, headed)).toEqual([]);
+    expect(
+      tarballProblems(tool(), toolFiles, { ...facts, binHeads: { 'dist/sv.mjs': 'import x' } }),
+    ).toEqual(['./dist/sv.mjs does not start with a #! line, so npm would run it with sh']);
+  });
+
   it('wants a bin, that points into dist, at a file that is in the tarball', () => {
     expect(tarballProblems(tool({ bin: undefined }), toolFiles, facts)).toContain(
       'there is no bin',

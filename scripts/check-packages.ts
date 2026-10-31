@@ -60,7 +60,25 @@ try {
     const licenseText = execFileSync('tar', ['-xzOf', tarball, 'package/LICENSE'], {
       encoding: 'utf8',
     });
-    const problems = tarballProblems(manifest, files, { licenseText, publishedNames, kind });
+    const binHeads: Record<string, string> = {};
+    for (const bin of Object.values(
+      typeof manifest.bin === 'string' ? { bin: manifest.bin } : (manifest.bin ?? {}),
+    )) {
+      const file = bin.replace(/^\.\//, '');
+      if (files.includes(`package/${file}`)) {
+        const text = execFileSync('tar', ['-xzOf', tarball, `package/${file}`], {
+          encoding: 'utf8',
+          maxBuffer: 64 * 1024 * 1024,
+        });
+        binHeads[file] = text.slice(0, 64);
+      }
+    }
+    const problems = tarballProblems(manifest, files, {
+      licenseText,
+      publishedNames,
+      kind,
+      binHeads,
+    });
     execFileSync('pnpm', ['publish', '--dry-run', '--no-git-checks'], { cwd: dir, stdio: 'pipe' });
 
     if (problems.length > 0) {

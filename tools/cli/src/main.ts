@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { run } from './cli.js';
 import { makeContext } from './context.js';
 import { findRoot } from './suite/files.js';

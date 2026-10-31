@@ -52,6 +52,8 @@ export type TarballFacts = {
   publishedNames?: ReadonlySet<string>;
   /** A library is imported (MPL-2.0, an exports map); a tool is run (AGPL-3.0-or-later, a `bin`). */
   kind?: 'library' | 'tool';
+  /** The first line of each file a tool's `bin` names, by path in the tarball (`dist/sv.mjs`). */
+  binHeads?: Readonly<Record<string, string>>;
 };
 
 const MPL_HEADING = 'Mozilla Public License Version 2.0';
@@ -111,6 +113,14 @@ export function tarballProblems(
   for (const target of entryPoints) {
     if (!target.startsWith('./dist/')) problems.push(`${target} points outside dist/`);
     else if (!inTarball.has(target.slice(2))) problems.push(`${target} is not in the tarball`);
+  }
+  // npm links a bin so that the shell runs it. Without a shebang that is `sh`, which cannot read JavaScript.
+  if (tool) {
+    for (const target of entryPoints) {
+      const head = facts.binHeads?.[target.slice(2)];
+      if (head !== undefined && !head.startsWith('#!'))
+        problems.push(`${target} does not start with a #! line, so npm would run it with sh`);
+    }
   }
 
   for (const file of inTarball) {

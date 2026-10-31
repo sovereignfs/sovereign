@@ -1,4 +1,4 @@
-# Sovereign Core — Epics
+# Sovereign — Epics
 
 A domain-first map of the work on `sovereign`. An epic groups the tasks of
 one domain, whichever phase they belong to; later phases add tasks to the same

@@ -1,6 +1,6 @@
 ---
 name: sv-security-check
-description: Review a Sovereign Core branch diff for security-sensitive regressions against the hard architectural rules. Use when changes touch auth, the proxy, API routes, server actions, the OIDC provider, CSP, cookies, sessions, tokens, secrets, spawned processes, Docker/env files, or when the user asks for a security check before PR or merge.
+description: Review a Sovereign branch diff for security-sensitive regressions against the hard architectural rules. Use when changes touch auth, the proxy, API routes, server actions, the OIDC provider, CSP, cookies, sessions, tokens, secrets, spawned processes, Docker/env files, or when the user asks for a security check before PR or merge.
 ---
 
 # Sovereign Security Check

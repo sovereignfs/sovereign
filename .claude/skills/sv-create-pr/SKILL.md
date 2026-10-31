@@ -1,6 +1,6 @@
 ---
 name: sv-create-pr
-description: Create a Sovereign Core pull request from the current branch. Use when the user asks to create, open, or prepare a PR, or when a Sovereign workflow reaches PR creation; always creates a GitHub draft PR first.
+description: Create a Sovereign pull request from the current branch. Use when the user asks to create, open, or prepare a PR, or when a Sovereign workflow reaches PR creation; always creates a GitHub draft PR first.
 ---
 
 # Sovereign Create PR

@@ -459,7 +459,7 @@ reference implementation of this constraint. Leaf tokens (e.g.
 ## Using the design system in an app
 
 `@sovereignfs/ui` works as an ordinary npm dependency in any React app,
-including one that has no relationship with Sovereign Core: it needs no core
+including one that has no relationship with Sovereign: it needs no core
 session, no core package, and no provider. Core's own pages use it exactly
 this way. Check `npm view @sovereignfs/ui` for the current version.
 

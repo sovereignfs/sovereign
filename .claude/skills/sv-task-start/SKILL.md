@@ -1,6 +1,6 @@
 ---
 name: sv-task-start
-description: Start an assigned Sovereign Core roadmap task or workstream leg. Use when the user asks to begin, prepare, or set up a task by epic ID, title, or description, or a workstream leg by workstream number and leg number; inspects roadmap/epic/spec/workstream docs, writes CURRENT_TASK.md, summarizes scope, and creates the branch.
+description: Start an assigned Sovereign roadmap task or workstream leg. Use when the user asks to begin, prepare, or set up a task by epic ID, title, or description, or a workstream leg by workstream number and leg number; inspects roadmap/epic/spec/workstream docs, writes CURRENT_TASK.md, summarizes scope, and creates the branch.
 ---
 
 # Sovereign Task Start

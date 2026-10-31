@@ -6,13 +6,16 @@ conventions — do not duplicate them elsewhere.
 
 ## What this is
 
-**Sovereign Core** — a self-hostable identity and foundation service. Anyone
-can deploy it and point any OpenID Connect application at it for sign-in; in
-later phases it also offers shared services (mail, notifications, activity,
-backups) to apps. Core is **generic**: it knows OAuth clients, never particular
-apps. This repository also holds the shared packages every Sovereign app uses
-(`@sovereignfs/ui`, `config`, `database`, `crypto`, `mailer`, `api-client`, …).
+**Sovereign** — a self-hostable identity and foundation service, and the tools to run it. Anyone
+can deploy **core**, its sign-in server, and point any OpenID Connect application at it for
+sign-in; in later phases core also offers shared services (mail, notifications, activity, backups)
+to apps. Core is **generic**: it knows OAuth clients, never particular apps. This repository also
+holds the operator toolkit that deploys it (`apps/cli`, `apps/create`) and the shared packages every
+Sovereign app uses (`@sovereignfs/ui`, `sdk`, `config`, `database`, `crypto`, `mailer`, `api-client`, …).
 Open source, privacy-first.
+
+**Naming:** _Sovereign_ is the project and this repository; _core_ (_Sovereign core_) is the
+sign-in server in `apps/core`, the thing `ghcr.io/sovereignfs/sovereign` runs.
 
 ## Source of truth
 
@@ -367,7 +370,7 @@ Playwright · OpenAPI 3.1 (`spec/core-api/`) · Docker Compose.
 apps/core/          the core app — identity, sign-in server, Console, launcher
 apps/e2e/           Phase 1 acceptance — Playwright, run against a built core
 apps/cli/           the operator toolkit, sv — files on the operator's machine, sv apply and sv receive on the server
-apps/create/        npm create @sovereignfs — makes an instance repository
+apps/create/        npm create @sovereignfs — makes an instance repository, or an app
 packages/
   ui/               design system — published
   bridge/           device bridge — release-ready, not published yet
@@ -375,7 +378,7 @@ packages/
   database/         sqld / PostgreSQL / SQLite file
   crypto/           field encryption (later: end-to-end, recovery kit)
   mailer/           mail delivery
-  api-client/       typed Core API client — published
+  api-client/       typed Core API client
   sdk/              how an app's server calls core — tokens, failure, version support
   tsconfig/         shared TS configs — extend these
 spec/               core-api/ (OpenAPI), env.md, suite.md, app-manifest.md, schemas/
@@ -444,8 +447,8 @@ them (0.5, 1.2).
 
 ## Status
 
-Current platform version: **`0.47.0`**. `ROADMAP.md` is the canonical task queue
-and completion record.
+The current platform version is the root `package.json`'s, and `ROADMAP.md` (its header
+and its rows) is the canonical task queue and completion record.
 
 **The next task is assigned by the developer at session start.** Read
 `ROADMAP.md` to find pending tasks, then ask which one to pick up — do not

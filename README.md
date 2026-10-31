@@ -1,19 +1,21 @@
-# Sovereign Core
+# Sovereign
 
-Sovereign Core is a self-hostable identity and foundation service. Anyone can
-deploy it, point any OpenID Connect application at it for sign-in, and keep the
-accounts, the sign-in policy and the data on infrastructure they own.
+Sovereign is a self-hostable identity and foundation service, and the tools to run it. Anyone can
+deploy **core**, its sign-in server, point any OpenID Connect application at it for sign-in, and keep
+the accounts, the sign-in policy and the data on infrastructure they own. The operator toolkit, `sv`,
+deploys core and the apps that sign in through it to one machine, and keeps them up to date, backed up
+and restorable: see [Running an instance](docs/operating.md).
 
 Core is deliberately **generic**: it knows about OAuth clients and, optionally,
 a launcher entry for each one — never about a particular application. Apps live
 in their own repositories and can run on their own, with their own database, or
 alongside core as one suite.
 
-> **Status: early development. Nothing is released.** The workspace and its
-> tooling are in place; the core app itself is being built, milestone by
-> milestone, from the [roadmap](ROADMAP.md).
+> **Status: early development. Nothing is released yet.** Core, the operator toolkit, the SDK and the
+> design system are built and tested, milestone by milestone, from the [roadmap](ROADMAP.md); the first
+> release is next.
 
-## What core will do
+## What core does
 
 Phase 1 of the MVP, specified in [`docs/specs/core-app.md`](docs/specs/core-app.md):
 
@@ -35,22 +37,24 @@ and more. The spec lists what is in and out of each phase.
 
 ## Repository layout
 
-| Path                  | What                                                            | State                                           |
-| --------------------- | --------------------------------------------------------------- | ----------------------------------------------- |
-| `apps/core`           | The core app: sign-in server, Console, launcher                 | Built; Phase 1 acceptance is the next milestone |
-| `packages/tsconfig`   | Shared TypeScript configuration                                 | In the workspace                                |
-| `packages/ui`         | The design system, `@sovereignfs/ui`                            | In the workspace (Storybook runs and builds)    |
-| `packages/bridge`     | The device bridge, `@sovereignfs/bridge`                        | In the workspace                                |
-| `packages/mailer`     | Mail delivery                                                   | In the workspace                                |
-| `packages/config`     | The environment convention and start-up validation              | In the workspace                                |
-| `packages/database`   | One interface over sqld, PostgreSQL and a SQLite file           | In the workspace                                |
-| `packages/crypto`     | Field encryption with a key ring (end-to-end later)             | In the workspace                                |
-| `packages/api-client` | The typed Core API client, generated from the contract          | In the workspace                                |
-| `packages/sdk`        | The SDK: tokens, failure and version support for an app         | In the workspace, not published yet             |
-| `packages/*` (later)  | `auth`, …                                                       | Planned                                         |
-| `spec/`               | `env.md` (the environment convention) and the Core API contract | Written                                         |
-| `docs/`               | The spec, epics, research, RFCs and decisions                   | [Index below](#documentation)                   |
-| `scripts/`            | Repository tooling and the tests that guard the repo's rules    | In use                                          |
+| Path                  | What                                                            | State                                       |
+| --------------------- | --------------------------------------------------------------- | ------------------------------------------- |
+| `apps/core`           | Core: the sign-in server, Console and launcher                  | Built, with Phase 1 acceptance (`apps/e2e`) |
+| `apps/cli`            | The operator toolkit, `sv`, and the image the server runs it in | Built, not published yet                    |
+| `apps/create`         | `npm create @sovereignfs`: an instance, or an app               | Built, not published yet                    |
+| `packages/tsconfig`   | Shared TypeScript configuration                                 | In the workspace                            |
+| `packages/ui`         | The design system, `@sovereignfs/ui`                            | Published                                   |
+| `packages/bridge`     | The device bridge, `@sovereignfs/bridge`                        | In the workspace                            |
+| `packages/mailer`     | Mail delivery                                                   | In the workspace                            |
+| `packages/config`     | The environment convention and start-up validation              | In the workspace                            |
+| `packages/database`   | One interface over sqld, PostgreSQL and a SQLite file           | In the workspace                            |
+| `packages/crypto`     | Field encryption with a key ring (end-to-end later)             | In the workspace                            |
+| `packages/api-client` | The typed Core API client, generated from the contract          | In the workspace                            |
+| `packages/sdk`        | The SDK: sign-in, tokens, failure and version support for apps  | In the workspace, not published yet         |
+| `packages/*` (later)  | `auth`, …                                                       | Planned                                     |
+| `spec/`               | `env.md` (the environment convention) and the Core API contract | Written                                     |
+| `docs/`               | The spec, epics, research, RFCs and decisions                   | [Index below](#documentation)               |
+| `scripts/`            | Repository tooling and the tests that guard the repo's rules    | In use                                      |
 
 ## Getting started
 
@@ -78,8 +82,12 @@ rules; [`AGENTS.md`](AGENTS.md) has the same conventions written for AI agents.
   disagree with it, it wins until it is changed.
 - [`ROADMAP.md`](ROADMAP.md) and [`docs/epics/`](docs/epics/) — the ordered
   task list and the detail of each task.
-- [`docs/deploying.md`](docs/deploying.md) — running core: the image, the three
+- [`docs/operating.md`](docs/operating.md) — running an instance with the toolkit: from an
+  empty folder to two apps, updating, backing up, and putting a failed deployment right.
+- [`docs/specs/operator-cli.md`](docs/specs/operator-cli.md) — what the toolkit does.
+- [`docs/deploying.md`](docs/deploying.md) — running core alone: the image, the three
   databases, the address it must reach, backing up and upgrading.
+- [`docs/releasing.md`](docs/releasing.md) — what is published, and how a release is made.
 - [`docs/connecting-an-app.md`](docs/connecting-an-app.md) and
   [`docs/using-the-sdk.md`](docs/using-the-sdk.md) — connecting any app to core,
   and a JavaScript app's way to sign people in and call it.
@@ -94,10 +102,11 @@ rules; [`AGENTS.md`](AGENTS.md) has the same conventions written for AI agents.
 
 ## Licence
 
-| Path         | Licence                                         |
-| ------------ | ----------------------------------------------- |
-| `apps/core`  | [AGPL-3.0-or-later](LICENSE)                    |
-| `packages/*` | MPL-2.0, so apps under any licence can use them |
+| Path                      | Licence                                         |
+| ------------------------- | ----------------------------------------------- |
+| `apps/core`               | [AGPL-3.0-or-later](LICENSE)                    |
+| `apps/cli`, `apps/create` | [AGPL-3.0-or-later](LICENSE)                    |
+| `packages/*`              | MPL-2.0, so apps under any licence can use them |
 
 Each package declares MPL-2.0 in its `package.json` and carries the licence text in its own
 `LICENSE`; a test keeps them in agreement. The `LICENSE` at the root is the AGPL text. The design

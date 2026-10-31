@@ -1,6 +1,6 @@
 ---
 name: sv-task-complete
-description: Finish a Sovereign Core task or workstream leg and prepare it for PR. Use when implementation is done and the user asks to complete, wrap up, finalize, or get a task ready for review; runs verification, the conditional security check, version bumps, task-doc updates, and drafts the PR description.
+description: Finish a Sovereign task or workstream leg and prepare it for PR. Use when implementation is done and the user asks to complete, wrap up, finalize, or get a task ready for review; runs verification, the conditional security check, version bumps, task-doc updates, and drafts the PR description.
 ---
 
 # Sovereign Task Complete

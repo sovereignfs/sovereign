@@ -1,4 +1,4 @@
-# Sovereign Core — Development Workflow
+# Sovereign — Development Workflow
 
 How tasks are planned, started, implemented, and closed out. Designed for
 agentic execution with human oversight.

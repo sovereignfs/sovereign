@@ -1,4 +1,4 @@
-# Contributing to Sovereign Core
+# Contributing to Sovereign
 
 Thank you for helping. This guide covers how work gets into `main`. Agents
 follow the same rules, written for them in [AGENTS.md](AGENTS.md).
@@ -171,7 +171,7 @@ run `pnpm test:db`. `ci.yml` shows the exact commands.
 
 ## Proposing a feature (RFCs)
 
-Have a feature request or an idea to improve Sovereign Core? Three paths,
+Have a feature request or an idea to improve Sovereign? Three paths,
 depending on how fleshed-out it is:
 
 - **Just an idea or a request?** Open a GitHub **issue / feature request**.

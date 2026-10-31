@@ -1,6 +1,6 @@
 ---
 name: sv-update-task-docs
-description: Update Sovereign Core task-completion docs for a task or workstream leg. Use when a task or leg is complete or the user asks to mark one done; records the final platform version, marks roadmap rows and epic headings complete, syncs RFC and workstream status, and removes CURRENT_TASK.md.
+description: Update Sovereign task-completion docs for a task or workstream leg. Use when a task or leg is complete or the user asks to mark one done; records the final platform version, marks roadmap rows and epic headings complete, syncs RFC and workstream status, and removes CURRENT_TASK.md.
 ---
 
 # Sovereign Update Task Docs

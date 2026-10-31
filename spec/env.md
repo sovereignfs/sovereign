@@ -1,6 +1,6 @@
 # Environment variables
 
-How Sovereign Core and the apps built to run beside it are configured. It is the
+How Sovereign core and the apps built to run beside it are configured. It is the
 convention the shared package [`@sovereignfs/config`](../packages/config) implements;
 where the two disagree, this document wins and the package is the bug.
 

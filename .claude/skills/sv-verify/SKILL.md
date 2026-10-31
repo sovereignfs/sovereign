@@ -1,6 +1,6 @@
 ---
 name: sv-verify
-description: Run Sovereign Core verification checks for the current task or leg. Use when the user asks to verify, validate, run checks, prepare for PR, or confirm an implementation is ready; reads CURRENT_TASK.md when present and reports structured pass/fail results without raw command dumps.
+description: Run Sovereign verification checks for the current task or leg. Use when the user asks to verify, validate, run checks, prepare for PR, or confirm an implementation is ready; reads CURRENT_TASK.md when present and reports structured pass/fail results without raw command dumps.
 ---
 
 # Sovereign Verify

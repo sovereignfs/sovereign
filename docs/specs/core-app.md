@@ -837,7 +837,7 @@ CLI calls it ([operator-cli §6](operator-cli.md)), and it is not run by hand.
 ```text
 sovereign-admin apps ensure KEY --name NAME --redirect URL ... [--post-logout URL ...]
                 [--back-channel URL] [--account-deleted URL] [--scope SCOPE ...] [--public] [--trusted]
-                [--launch-url URL] [--description TEXT] [--icon URL] [--json]
+                [--launch-url URL] [--description TEXT] [--icon URL] [--hide] [--json]
 sovereign-admin apps list [--json]
 sovereign-admin apps rotate-secret KEY [--json]
 sovereign-admin apps remove KEY

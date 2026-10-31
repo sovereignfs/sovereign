@@ -41,7 +41,7 @@ export function inputOf(app: Extract<Command, { name: 'ensure' }>['app']): Regis
       description: app.description ?? '',
       icon: app.icon ?? '',
       launchUrl: app.launchUrl ?? '',
-      show: true,
+      show: !app.hidden,
     },
   };
 }

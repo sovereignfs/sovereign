@@ -34,6 +34,7 @@ describe('the command line of sovereign-admin', () => {
       'Writes things down',
       '--icon',
       'https://a.test/i.png',
+      '--hide',
       '--json',
     );
     expect(command).toEqual({
@@ -53,6 +54,7 @@ describe('the command line of sovereign-admin', () => {
         launchUrl: 'https://a.test/',
         description: 'Writes things down',
         icon: 'https://a.test/i.png',
+        hidden: true,
       },
     });
   });
@@ -107,6 +109,8 @@ describe('the command line of sovereign-admin', () => {
 
   it('asks for the whole of an app, so what is left out is the default and not what was there', () => {
     const { app } = ensure('k', '--name', 'N', '--redirect', 'https://a.test/cb');
+    expect(app.hidden).toBe(false);
+    expect(inputOf({ ...app, hidden: true }).launcher?.show).toBe(false);
     expect(inputOf(app)).toEqual({
       name: 'N',
       type: 'confidential',

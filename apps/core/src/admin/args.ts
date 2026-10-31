@@ -22,6 +22,8 @@ export type Command =
         launchUrl: string | undefined;
         description: string | undefined;
         icon: string | undefined;
+        /** Keeps the app out of the launcher. */
+        hidden: boolean;
       };
     }
   | { name: 'list'; json: boolean }
@@ -38,7 +40,7 @@ export class UsageError extends Error {
 export const USAGE = `Usage:
   sovereign-admin apps ensure KEY --name NAME --redirect URL... [--post-logout URL...]
                   [--back-channel URL] [--account-deleted URL] [--scope SCOPE...] [--app-scope SCOPE...] [--public] [--trusted]
-                  [--launch-url URL] [--description TEXT] [--icon URL] [--json]
+                  [--launch-url URL] [--description TEXT] [--icon URL] [--hide] [--json]
   sovereign-admin apps list [--json]
   sovereign-admin apps rotate-secret KEY [--json]
   sovereign-admin apps remove KEY
@@ -55,7 +57,7 @@ const VALUE = new Set([
   'icon',
 ]);
 const LIST = new Set(['redirect', 'post-logout', 'scope', 'app-scope']);
-const SWITCH = new Set(['public', 'trusted', 'json']);
+const SWITCH = new Set(['public', 'trusted', 'json', 'hide']);
 
 type Flags = {
   values: Map<string, string>;
@@ -160,6 +162,7 @@ export function parse(argv: string[]): Command {
           launchUrl: flags.values.get('launch-url'),
           description: flags.values.get('description'),
           icon: flags.values.get('icon'),
+          hidden: flags.switches.has('hide'),
         },
       };
     }

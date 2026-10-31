@@ -94,6 +94,16 @@ describe('the files of an app', () => {
     expect(code).toContain("prefix: 'MYNOTES'");
   });
 
+  it('ask core for the scopes the SDK asks for, which includes the one that gives it a refresh token', async () => {
+    const target = path.join(temp(), 'my-notes');
+    await writeApp(target, namesOf(target));
+    const manifest = JSON.parse(read(target, 'sovereign.manifest.json')) as {
+      signIn: { scopes: string[] };
+    };
+    // The SDK asks for offline_access on every sign-in, and core refuses a scope the app was not registered with.
+    expect(manifest.signIn.scopes).toEqual(expect.arrayContaining(['openid', 'offline_access']));
+  });
+
   it('carry the manifest as the label of the image, equal to the manifest file', async () => {
     const target = path.join(temp(), 'my-notes');
     await writeApp(target, namesOf(target));

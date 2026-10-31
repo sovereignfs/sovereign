@@ -11,7 +11,7 @@
     "postLogout": ["/"],
     "backChannel": "/auth/backchannel-logout",
     "accountDeleted": "/auth/account-deleted",
-    "scopes": ["openid", "profile", "email"]
+    "scopes": ["openid", "profile", "email", "offline_access"]
   },
   "database": true,
   "generate": ["__PREFIX___AUTH_SECRET"],

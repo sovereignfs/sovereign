@@ -28,7 +28,7 @@ describe('a short name', () => {
   it.each([
     ['Sovereign', 'Sovereign'],
     ['  Acme  ', 'Acme'],
-    ['Sovereign Core', 'Sovereign'],
+    ['Sovereign Home', 'Sovereign'],
     ['Acme Family Cloud', 'Acme Family'],
     ['Supercalifragilistic', 'Supercalifra'],
     ['', ''],

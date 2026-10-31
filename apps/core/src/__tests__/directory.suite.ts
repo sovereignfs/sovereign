@@ -169,7 +169,7 @@ export function directorySuite(createDatabase: () => Promise<TestDatabase>): voi
       });
       const error = await refused(() => authenticate(ctx.deps(), request, 'directory'));
       expect(error).toMatchObject({ status: 401, code: 'invalid_token' });
-      expect(error?.headers['www-authenticate']).toBe('Bearer realm="Sovereign Core API"');
+      expect(error?.headers['www-authenticate']).toBe('Bearer realm="Sovereign API"');
     });
 
     it.each([

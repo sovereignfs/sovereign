@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
-  title: Sovereign Core API
+  title: Sovereign API
   version: 1.0.0
-  summary: What an app calls on a Sovereign Core instance.
+  summary: What an app calls on a Sovereign instance.
   description: |
     The HTTP contract between an app and the Core it signs people in with. This file is the one definition of it:
     `packages/api-client` is generated from it, and Core's own handlers are tested against it, so neither can move
@@ -29,7 +29,7 @@ info:
     identifier: MPL-2.0
 servers:
   - url: https://core.example.com
-    description: A Sovereign Core instance. Use its own address (its `SV_URL`).
+    description: A Sovereign instance. Use its own address (its `SV_URL`).
 tags:
   - name: Directory
     description: Finding the people on an instance, to share something with them.

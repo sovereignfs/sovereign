@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "A typed client for the Sovereign Core API, generated from its OpenAPI contract.",
+  "description": "A typed client for the Sovereign API, generated from its OpenAPI contract.",
   "license": "MPL-2.0",
   "repository": {
     "type": "git",

@@ -1,6 +1,6 @@
 # @sovereignfs/api-client
 
-A typed client for the Sovereign Core API. It is **generated** from the contract, `spec/core-api/openapi.yaml`, so it
+A typed client for the Sovereign API. It is **generated** from the contract, `spec/core-api/openapi.yaml`, so it
 cannot describe anything the contract does not.
 
 ```ts

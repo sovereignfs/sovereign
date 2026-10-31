@@ -1,4 +1,4 @@
-# Sovereign Core with sqld (libSQL server): the default, and the one for an instance that will grow.
+# Sovereign core with sqld (libSQL server): the default, and the one for an instance that will grow.
 #
 #   cp apps/core/.env.example .env        # then fill in SV_URL and SV_AUTH_SECRET at least
 #   docker compose up -d

@@ -24,7 +24,7 @@ export type TokenDeps = {
 };
 
 const MAX_TOKEN_LENGTH = 4096;
-const REALM = 'Sovereign Core API';
+const REALM = 'Sovereign API';
 
 const unauthorized = (message: string, error?: 'invalid_token'): ApiError =>
   new ApiError(401, 'invalid_token', message, {

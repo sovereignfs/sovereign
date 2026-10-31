@@ -230,7 +230,7 @@ describe('who may call', () => {
     async (_name, call) => {
       guard.mockRejectedValue(
         new ApiError(401, 'invalid_token', 'The access token is not valid.', {
-          'www-authenticate': 'Bearer realm="Sovereign Core API", error="invalid_token"',
+          'www-authenticate': 'Bearer realm="Sovereign API", error="invalid_token"',
         }),
       );
       const reply = await call();

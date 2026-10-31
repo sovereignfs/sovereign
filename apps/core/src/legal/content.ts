@@ -19,7 +19,7 @@ export type LegalDocument = {
 export const PRIVACY: LegalDocument = {
   title: 'Privacy Policy',
   intro: [
-    'This describes what Sovereign Core, the open-source software this instance runs, does with your information. It says only what is true of the software itself, for any instance: nothing here is specific to who runs this one.',
+    'This describes what Sovereign, the open-source software this instance runs, does with your information. It says only what is true of the software itself, for any instance: nothing here is specific to who runs this one.',
     'The Sovereign project does not run this instance and has no access to its data. Whoever runs it answers for how it is run, and for anything this page does not cover.',
   ],
   sections: [
@@ -86,7 +86,7 @@ export const PRIVACY: LegalDocument = {
 export const TERMS: LegalDocument = {
   title: 'Terms of Service',
   intro: [
-    'These are the default terms for using an instance of Sovereign Core, the open-source software it runs. They say only what is true of the software itself, for any instance: nothing here is specific to who runs this one.',
+    'These are the default terms for using an instance of Sovereign, the open-source software it runs. They say only what is true of the software itself, for any instance: nothing here is specific to who runs this one.',
     'The Sovereign project is not a party to your use of this instance.',
   ],
   sections: [

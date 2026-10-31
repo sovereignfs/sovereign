@@ -1,6 +1,6 @@
 # Core API
 
-`openapi.yaml` is the one definition of what an app may call on a Sovereign Core instance (OpenAPI 3.1).
+`openapi.yaml` is the one definition of what an app may call on a Sovereign instance (OpenAPI 3.1).
 Nothing else describes it:
 
 - [`packages/api-client`](../../packages/api-client) is **generated** from it (`pnpm generate:api-client`), and a test

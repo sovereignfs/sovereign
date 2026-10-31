@@ -1,4 +1,4 @@
-# Sovereign Core — app specification
+# Sovereign core — app specification
 
 |                      |                    |
 | -------------------- | ------------------ |

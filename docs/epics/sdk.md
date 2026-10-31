@@ -151,7 +151,7 @@ are added when core's Phase 2 specifies them.
 - A person's deletion cannot be lost because an app was down
 - An app that never answers is visible to an operator
 
-#### 📋 14.7 — Deletion notices: keep them
+#### ✅ 14.7 — Deletion notices: keep them
 
 **Goal:** Deleting an account records, in the same transaction, a notice for each app that must be told, and an app can say where.
 

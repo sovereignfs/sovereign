@@ -162,7 +162,7 @@ be argued before anything is built.
 | 0.57.0  | 4        | Publishing                               | ✅     | [14.4](docs/epics/sdk.md)  |
 | 0.61.0  | 5        | App tokens in core                       | ✅     | [14.5](docs/epics/sdk.md)  |
 | —       | 6        | Account-deletion fan-out                 | ✅     | [14.6](docs/epics/sdk.md)  |
-| —       | 7        | Deletion notices: keep them              | 📋     | [14.7](docs/epics/sdk.md)  |
+| 0.68.0  | 7        | Deletion notices: keep them              | ✅     | [14.7](docs/epics/sdk.md)  |
 | —       | 8        | Deletion notices: send them              | 📋     | [14.8](docs/epics/sdk.md)  |
 | —       | 9        | The SDK's part of the deletion           | 📋     | [14.9](docs/epics/sdk.md)  |
 | —       | 10       | Deletions across a restore               | 📋     | [14.10](docs/epics/sdk.md) |

@@ -4,12 +4,11 @@
 
 ## Status
 
-⏳ In Progress
+✅ Complete
 
 ## Overview
 
-Core has never been released: the repository holds no tag, and the image the compose files name has not been published.
-This epic publishes it, writes what an operator needs to run it alone and connect their apps, and settles the design of
+This epic published core's first image, writes what an operator needs to run it alone and connect their apps, and settles the design of
 how operators deploy and manage it, in [RFC 0002](../rfcs/0002-deployment-strategies.md). Building that follows the RFC's
 acceptance, in [epic 13](operator-cli.md).
 
@@ -75,7 +74,7 @@ runs only on a tag, so its first real run is the first release.
 - What the guide says an app needs matches what core does
 - No app is named
 
-#### 📋 12.3 — First release
+#### ✅ 12.3 — First release
 
 **Goal:** `docker compose up -d` works on a clean machine with the published image.
 
@@ -96,6 +95,14 @@ runs only on a tag, so its first real run is the first release.
 
 - The image pulls without logging in, on both architectures
 - Following `docs/deploying.md` as written reaches a healthy core
+
+**Result:** core's image was released as `v0.80.0` for `linux/amd64` and `linux/arm64`, and its package made public on GHCR (an
+anonymous pull of the manifest lists both architectures). The legacy repository's Publish and Deploy Storybook workflows were
+disabled before the first tag. The release also published `@sovereignfs/ui` 0.89.1, `@sovereignfs/sdk` 2.0.0 (the first release of the
+SDK in this repository: the legacy SDK held `1.25.0` as `latest` on npm, so this one starts above it) and the toolkit: `cli` and
+`create` 0.1.2 and `ghcr.io/sovereignfs/cli`. Two defects in the toolkit's first releases were found by publishing and are now
+guarded in `packages:check`: a `package.json` with no `repository`, which npm refuses with provenance, and a `bin` with no `#!` line,
+which npm runs with `sh`. `0.1.0` was never published to npm and `0.1.1` is deprecated.
 
 #### ✅ 12.4 — The deployment design `[parallel]`
 

@@ -42,7 +42,7 @@ the task is corrected.
 | 9   | [Identity Pages](identity-pages.md)           | ⏳ In Progress | A person's own account pages                                                                                                  |
 | 10  | [Core API](core-api.md)                       | 📋 Planned     | `spec/core-api`, `packages/api-client`, Directory API, branding                                                               |
 | 11  | [Installable app (PWA)](pwa.md)               | ⏳ In Progress | Manifest, mobile metadata, service worker, offline page ([RFC 0001](../rfcs/0001-installable-core.md))                        |
-| 12  | [Release and deployment](release.md)          | ⏳ In Progress | The published image, guides for operators, the deployment design ([RFC 0002](../rfcs/0002-deployment-strategies.md))          |
+| 12  | [Release and deployment](release.md)          | ✅ Complete    | The published image, guides for operators, the deployment design ([RFC 0002](../rfcs/0002-deployment-strategies.md))          |
 | 13  | [Operator CLI](operator-cli.md)               | ⏳ In Progress | `sv`, `sv apply` and `sovereign-admin`: deploying and running an instance ([RFC 0002](../rfcs/0002-deployment-strategies.md)) |
 | 14  | [SDK](sdk.md)                                 | ⏳ In Progress | `@sovereignfs/sdk`: tokens, failure, version support and sign-in over the Core API                                            |
 | 15  | [Core services](core-services.md)             | 📋 Planned     | Specifying Phase 2: notifications, mail, activity and backups                                                                 |

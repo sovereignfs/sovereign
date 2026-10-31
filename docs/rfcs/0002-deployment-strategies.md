@@ -2,7 +2,7 @@
 
 |                |                                                                                                                                                                                              |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**     | Accepted; not implemented                                                                                                                                                                    |
+| **Status**     | Implemented                                                                                                                                                                                  |
 | **Date**       | October 2026                                                                                                                                                                                 |
 | **Author**     | Claude Code, for review                                                                                                                                                                      |
 | **Scope**      | New `tools/cli`; `sovereign-admin` in the image; a managed key on clients; `docs/specs/operator-cli.md`, `spec/suite.md`, `spec/app-manifest.md`; `docs/specs/core-app.md` §3.6, §3.7, §3.15 |

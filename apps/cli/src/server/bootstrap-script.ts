@@ -65,6 +65,15 @@ if ! command -v docker >/dev/null 2>&1; then
   apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin </dev/null
 fi
 
+# Some images and provisioning tools stop a package from starting its service, so it is started here, and waited for.
+if command -v systemctl >/dev/null 2>&1; then
+  systemctl enable --now docker </dev/null || true
+fi
+for _ in $(seq 1 30); do
+  docker info >/dev/null 2>&1 </dev/null && break
+  sleep 1
+done
+
 engine="$(docker version --format '{{.Server.Version}}' 2>/dev/null || true)"
 compose="$(docker compose version --short 2>/dev/null || true)"
 compose="\${compose#v}"

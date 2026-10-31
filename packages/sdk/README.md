@@ -1,11 +1,16 @@
 # @sovereignfs/sdk
 
-How a JavaScript app's **server** talks to the Sovereign server it signs people in with. It wraps the generated
-[`@sovereignfs/api-client`](../api-client) with what is tedious to do by hand: tokens, failure, and version support. What it
-promises is in [`docs/specs/sdk.md`](../../docs/specs/sdk.md); the contract it never goes beyond is
-[`spec/core-api/openapi.yaml`](../../spec/core-api/openapi.yaml).
+How a JavaScript app's **server** talks to the Sovereign server it signs people in with. It wraps a client generated from core's
+API contract (bundled in, so there is nothing else to install) with what is tedious to do by hand: tokens, failure, and version
+support. What it promises is in [`docs/specs/sdk.md`](https://github.com/sovereignfs/sovereign/blob/main/docs/specs/sdk.md); the
+contract it never goes beyond is
+[`spec/core-api/openapi.yaml`](https://github.com/sovereignfs/sovereign/blob/main/spec/core-api/openapi.yaml).
 
-> Not published yet.
+```sh
+npm install @sovereignfs/sdk
+```
+
+It runs on Node 22.3 or later, and on any server runtime that has `fetch` and Web Crypto.
 
 ```ts
 import { createSovereign } from '@sovereignfs/sdk';
@@ -80,12 +85,13 @@ const notice = await core.logoutToken({ sub: 'u1' }, { wrong: 'expired' });
 
 This release supports core `>=0.46.0` (`sovereign.core` in `package.json`). A core too old to say what it serves is treated as
 serving the Directory and the instance document, and nothing else. The guide for an app's developer is
-[Using the SDK](../../docs/using-the-sdk.md).
+[Using the SDK](https://github.com/sovereignfs/sovereign/blob/main/docs/using-the-sdk.md).
 
 ## Which exports are stable
 
 `createSovereign` and the error types are **stable** and change only in a major version; everything else is **experimental** and may
-change in a minor version ([`src/stability.ts`](src/stability.ts) lists both).
+change in a minor version
+([`src/stability.ts`](https://github.com/sovereignfs/sovereign/blob/main/packages/sdk/src/stability.ts) lists both).
 
 ## Versions
 

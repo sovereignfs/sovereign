@@ -213,6 +213,14 @@ describe('the service worker: a page that cannot be reached', () => {
     expect(worker.stores.size).toBe(0);
   });
 
+  it('draws its button in the page’s text colour, not the browser’s link colour', async () => {
+    worker.network.mockRejectedValue(new TypeError('Failed to fetch'));
+    const html = (await (await ask(worker, navigation()))?.text()) ?? '';
+    // `background: currentColor` on a link is the link colour (blue, or purple once visited, and the button
+    // points at the page it is on) unless the link takes its colour from the page.
+    expect(html).toMatch(/a\{[^}]*color:inherit[^}]*background:currentColor/);
+  });
+
   it('answers the same way when the server does not answer in time', async () => {
     vi.useFakeTimers();
     try {

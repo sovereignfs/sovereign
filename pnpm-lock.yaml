@@ -202,39 +202,6 @@ importers:
         specifier: ^2.9.1
         version: 2.9.1
 
-  apps/cli:
-    devDependencies:
-      '@sovereignfs/tsconfig':
-        specifier: workspace:*
-        version: link:../../packages/tsconfig
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.19.2
-      '@types/semver':
-        specifier: ^7.7.1
-        version: 7.8.0
-      age-encryption:
-        specifier: ^0.3.1
-        version: 0.3.1
-      ajv:
-        specifier: ^8.20.0
-        version: 8.20.0
-      ajv-formats:
-        specifier: ^3.0.1
-        version: 3.0.1(ajv@8.20.0)
-      semver:
-        specifier: ^7.8.5
-        version: 7.8.5
-      tsup:
-        specifier: 'catalog:'
-        version: 9.0.0(jiti@2.7.0)(postcss@8.5.23)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1)
-      typescript:
-        specifier: 'catalog:'
-        version: 6.0.3
-      yaml:
-        specifier: ^2.9.1
-        version: 2.9.1
-
   apps/core:
     dependencies:
       '@better-auth/oauth-provider':
@@ -304,33 +271,6 @@ importers:
       drizzle-kit:
         specifier: 'catalog:'
         version: 0.31.11
-      tsup:
-        specifier: 'catalog:'
-        version: 9.0.0(jiti@2.7.0)(postcss@8.5.23)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1)
-      typescript:
-        specifier: 'catalog:'
-        version: 6.0.3
-
-  apps/create:
-    devDependencies:
-      '@sovereignfs/tsconfig':
-        specifier: workspace:*
-        version: link:../../packages/tsconfig
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.19.2
-      '@types/semver':
-        specifier: ^7.7.1
-        version: 7.8.0
-      ajv:
-        specifier: ^8.20.0
-        version: 8.20.0
-      ajv-formats:
-        specifier: ^3.0.1
-        version: 3.0.1(ajv@8.20.0)
-      semver:
-        specifier: ^7.8.5
-        version: 7.8.5
       tsup:
         specifier: 'catalog:'
         version: 9.0.0(jiti@2.7.0)(postcss@8.5.23)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1)
@@ -583,6 +523,66 @@ importers:
       storybook:
         specifier: catalog:storybook
         version: 10.6.4(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1)
+      tsup:
+        specifier: 'catalog:'
+        version: 9.0.0(jiti@2.7.0)(postcss@8.5.23)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+
+  tools/cli:
+    devDependencies:
+      '@sovereignfs/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/tsconfig
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      '@types/semver':
+        specifier: ^7.7.1
+        version: 7.8.0
+      age-encryption:
+        specifier: ^0.3.1
+        version: 0.3.1
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
+      ajv-formats:
+        specifier: ^3.0.1
+        version: 3.0.1(ajv@8.20.0)
+      semver:
+        specifier: ^7.8.5
+        version: 7.8.5
+      tsup:
+        specifier: 'catalog:'
+        version: 9.0.0(jiti@2.7.0)(postcss@8.5.23)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      yaml:
+        specifier: ^2.9.1
+        version: 2.9.1
+
+  tools/create:
+    devDependencies:
+      '@sovereignfs/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/tsconfig
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      '@types/semver':
+        specifier: ^7.7.1
+        version: 7.8.0
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
+      ajv-formats:
+        specifier: ^3.0.1
+        version: 3.0.1(ajv@8.20.0)
+      semver:
+        specifier: ^7.8.5
+        version: 7.8.5
       tsup:
         specifier: 'catalog:'
         version: 9.0.0(jiti@2.7.0)(postcss@8.5.23)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1)

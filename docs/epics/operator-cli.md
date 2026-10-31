@@ -202,7 +202,7 @@ of it is built.
 - Images run by digest
 - Every past schema version upgrades cleanly
 
-#### 📋 13.8 — Backup, restore and rollback
+#### ✅ 13.8 — Backup, restore and rollback
 
 **Goal:** A lost server is a recovery, not a rebuild from nothing, and a bad deployment can be undone.
 
@@ -218,6 +218,8 @@ of it is built.
 **Dependencies:** 13.6
 
 **Spec reference:** operator-cli §10.2, §10.3
+
+**Verified here:** against real Docker, an instance with an app holding data in its database and a volume is backed up, lost with every container, volume and the state directory, and restored on a fresh state directory: the app's data, its client and its secret come back, and what was written after the backup does not. People staying signed in to their apps is not tried: a restore ends every session by design (core-app §4.4).
 
 **Review checklist:**
 

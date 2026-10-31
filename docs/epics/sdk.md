@@ -225,7 +225,7 @@ are added when core's Phase 2 specifies them.
 - The SDK answers `200` only after the handler resolved, and `500` when it throws
 - The SDK's tests hold the fake core to core's token
 
-#### 📋 14.10 — Deletions across a restore
+#### ✅ 14.10 — Deletions across a restore
 
 **Goal:** A person who deleted their account after the backup is deleted again when the backup is restored, and their apps are told again.
 
@@ -233,8 +233,8 @@ are added when core's Phase 2 specifies them.
 
 **Deliverables:**
 
-- `sovereign-admin instance deletions export` and `apply` (core-app §4.5), going through the registry's system actor and the same deletion
-  transaction as any other deletion
+- `sovereign-admin instance deletions export` and `apply` (core-app §4.5), going through the same deletion transaction as any other
+  deletion, and a record of every deletion (`deleted_accounts`), since a deletion with no app to tell leaves no notice to export
 - The call from `sv restore` is built with that command, in task 13.8, using operator-cli §10.2
 
 **Dependencies:** 14.7, 15.8

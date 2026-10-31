@@ -33,7 +33,9 @@ const TABLES = [
   'users',
 ];
 const DAY = 24 * 60 * 60 * 1000;
-const NOW = Date.UTC(2026, 9, 29, 12, 0, 0);
+// The real clock decides when a sign-up checks an invitation, so the invitations here are made relative to it: a fixed date made this
+// suite fail two days after it was written, when its two-day invitation ran out.
+const NOW = Date.now();
 
 export function inviteManageSuite(createDatabase: () => Promise<TestDatabase>): void {
   let target: TestDatabase;

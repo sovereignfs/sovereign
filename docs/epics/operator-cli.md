@@ -127,7 +127,7 @@ of it is built.
 - Removing an app keeps its data, and only a purge deletes it
 - A run stopped between making a client and saving its secret gives the app a new secret
 
-#### 📋 13.5 — Commands on the operator's machine
+#### ✅ 13.5 — Commands on the operator's machine
 
 **Goal:** An operator never edits `suite.yml` by hand unless they want to.
 
@@ -149,7 +149,7 @@ of it is built.
 - These commands change only files
 - `./sv` never fetches anything but what the lockfile names
 
-**Not here:** `app <dir>`, the Next.js app template (13.11).
+**Not here:** `app <dir>`, the Next.js app template (13.11), and the server's own key as a recipient, which `sv server bootstrap` adds (13.6).
 
 - A plain value never reaches the disk or the command history
 - `sv push` stages only known files

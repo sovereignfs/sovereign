@@ -117,7 +117,7 @@ be argued before anything is built.
 | 0.59.0  | 1        | Publish the image                  | ✅     | [12.1](docs/epics/release.md) |
 | 0.59.0  | 2        | Guides for operators `[parallel]`  | ✅     | [12.2](docs/epics/release.md) |
 | —       | 3        | First release                      | 📋     | [12.3](docs/epics/release.md) |
-| —       | 4        | The deployment design `[parallel]` | ✅     | [12.4](docs/epics/release.md) |
+| 0.67.0  | 4        | The deployment design `[parallel]` | ✅     | [12.4](docs/epics/release.md) |
 | 0.48.0  | 5        | Host-only cookies                  | ✅     | [12.5](docs/epics/release.md) |
 | 0.52.0  | 6        | Try real third-party apps          | ✅     | [12.6](docs/epics/release.md) |
 | 0.53.0  | 7        | Compatibility settings             | ✅     | [12.7](docs/epics/release.md) |
@@ -133,7 +133,7 @@ be argued before anything is built.
 | 0.54.0  | 2        | `sovereign-admin` in the image     | ✅     | [13.2](docs/epics/operator-cli.md)  |
 | —       | 3        | `sv apply`: the base               | 📋     | [13.3](docs/epics/operator-cli.md)  |
 | —       | 4        | `sv apply`: apps                   | 📋     | [13.4](docs/epics/operator-cli.md)  |
-| —       | 5        | Commands on the operator's machine | 📋     | [13.5](docs/epics/operator-cli.md)  |
+| 0.72.0  | 5        | Commands on the operator's machine | ✅     | [13.5](docs/epics/operator-cli.md)  |
 | —       | 6        | Deploying over SSH `[parallel]`    | 📋     | [13.6](docs/epics/operator-cli.md)  |
 | —       | 7        | Publishing and upgrading           | 📋     | [13.7](docs/epics/operator-cli.md)  |
 | —       | 8        | Backup, restore and rollback       | 📋     | [13.8](docs/epics/operator-cli.md)  |

@@ -202,7 +202,7 @@ are added when core's Phase 2 specifies them.
 - A redirect is not followed; a body in the app's answer is never kept or logged
 - The security check is run
 
-#### 📋 14.9 — The SDK's part of the deletion
+#### ✅ 14.9 — The SDK's part of the deletion
 
 **Goal:** An app handles a deletion notice in one function and cannot answer it before it is done.
 
@@ -212,8 +212,8 @@ are added when core's Phase 2 specifies them.
 
 - `sv.auth.handleAccountDeleted(request, handler)` as sdk §9.1 describes, in the Next.js adapter too, and the fake core able to send one
   (and a wrong one, as it does for logout tokens)
-- `accountDeleted` in the app manifest's schema is read by `sv`; the guide (`docs/using-the-sdk.md`) shows the handler and says what it
-  must delete
+- The guide (`docs/using-the-sdk.md`) shows the handler and says what it must delete. `sv` reading `accountDeleted` from the manifest is
+  built with the operator CLI (task 13.4)
 
 **Dependencies:** 14.6, 14.3
 

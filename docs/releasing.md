@@ -143,8 +143,9 @@ repository made by `create@X` pins the image of toolkit X and cannot be set up u
 the run's `GITHUB_TOKEN`; the packages are published with provenance by `NPM_TOKEN`, which only the last step holds.
 
 The toolkit's own version appears in three places that a test holds together: `tools/cli/package.json`, `tools/create/package.json`
-and `RELEASE.version` in `tools/cli/src/release.ts`. A toolkit release also says which core it was made for (`RELEASE.newestCore`), and
-`sv upgrade` moves an instance to that core with it.
+and `RELEASE.version` in `tools/cli/src/release.ts`. A toolkit release also says which core it was made for (`RELEASE.newestCore`): `sv upgrade` moves an instance to it, and `sv setup`
+starts a new instance on the newest published core in the supported range, never older than it (and on it when the registry cannot be
+asked), so a core release needs no toolkit release to be what new instances start on.
 
 To release: land the commit that sets those versions and `newestCore` on `main`, tag it `cli-vX.Y.Z`, push the tag, and watch the run.
 Then, from a machine that has never logged in to GitHub's registry, check `docker pull ghcr.io/sovereignfs/cli:X.Y.Z`, and that

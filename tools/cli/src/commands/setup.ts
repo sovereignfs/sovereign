@@ -1,5 +1,6 @@
 import { parseArgs } from '../args.js';
 import type { Context } from '../context.js';
+import { newestPublishedCore } from '../core-version.js';
 import { Refused } from '../errors.js';
 import { askOrRefuse } from '../io.js';
 import { RELEASE } from '../release.js';
@@ -23,8 +24,8 @@ const OPTIONS = {
 } as const;
 
 /**
- * `sv setup` (operator-cli §4.1): asks for the domain, the server and how to deploy, writes `suite.yml`, pins what it resolves to in
- * `suite.lock`, and makes the operator's key if there is none. It changes files and nothing else, and it will not overwrite a
+ * `sv setup` (operator-cli §4.1): asks for the domain, the server and how to deploy, writes `suite.yml` on the newest core this toolkit
+ * supports, pins what it resolves to in `suite.lock`, and makes the operator's key if there is none. It changes files and nothing else, and it will not overwrite a
  * `suite.yml` that is there.
  */
 export async function setup(ctx: Context, argv: string[]): Promise<void> {
@@ -76,7 +77,7 @@ export async function setup(ctx: Context, argv: string[]): Promise<void> {
   const suite: Suite = {
     schema: 1,
     domain,
-    core: { version: RELEASE.newestCore },
+    core: { version: await newestPublishedCore(ctx.registry, (message) => io.err(message)) },
     database: { version: RELEASE.database },
     server: {
       host,

@@ -105,6 +105,24 @@ export class Registry {
     return body.config?.Labels?.[name];
   }
 
+  /** Every tag of an image's repository (`ghcr.io/sovereignfs/sovereign`), which a registry lists a page at a time. */
+  async tags(name: string): Promise<string[]> {
+    const image = parseImageRef(`${name}:tags`);
+    const found: string[] = [];
+    let next: string | undefined = `/v2/${image.repository}/tags/list?n=1000`;
+    // A bound, so a registry that never stops pointing at a next page cannot keep this running.
+    for (let page = 0; next && page < 20; page += 1) {
+      const response = await this.#get(image, next, undefined);
+      const body = (await response.json()) as { tags?: string[] | null };
+      found.push(...(body.tags ?? []));
+      const link = /<([^>]+)>\s*;\s*rel="next"/.exec(response.headers.get('link') ?? '')?.[1];
+      next = link
+        ? ((url) => `${url.pathname}${url.search}`)(new URL(link, 'https://registry'))
+        : undefined;
+    }
+    return found;
+  }
+
   async #manifest(image: ImageRef, reference: string) {
     const response = await this.#get(
       image,

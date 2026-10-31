@@ -6,6 +6,7 @@ import { sv, setUpWorld } from '../testing/commands.js';
 import { makeWorld, type World } from '../testing/world.js';
 import type { Lock, Suite } from '../suite/types.js';
 import { RELEASE } from '../release.js';
+import { Failed } from '../errors.js';
 
 let world: World;
 afterEach(() => world.cleanup());
@@ -42,6 +43,31 @@ describe('sv setup', () => {
     expect(lock.apps).toBeUndefined();
     expect(done.text).toContain('Made your key');
     expect(read('suite.lock')).toMatch(/^# Written by sv\. Do not edit it by hand/);
+  });
+
+  it('starts the instance on the newest core that is published and supported, and pins that image', async () => {
+    world = makeWorld({ coreTags: [RELEASE.newestCore, '0.99.3', '0.99.10', '1.0.0', 'latest'] });
+    const done = await setUpWorld(world);
+    expect((parse(read('suite.yml')) as Suite).core.version).toBe('0.99.10');
+    expect((parse(read('suite.lock')) as Lock).images.core.ref).toBe(
+      `${RELEASE.images.core}:0.99.10`,
+    );
+    expect(done.text).not.toContain('Could not look up');
+  });
+
+  it('starts on the core this toolkit was made for when nothing newer is published', async () => {
+    world = makeWorld({ coreTags: [RELEASE.newestCore] });
+    await setUpWorld(world);
+    expect((parse(read('suite.yml')) as Suite).core.version).toBe(RELEASE.newestCore);
+  });
+
+  it('still sets up, on that core, and says why, when the registry cannot be asked', async () => {
+    world = makeWorld({ coreTags: new Failed('Could not reach ghcr.io: offline.') });
+    const done = await setUpWorld(world);
+    expect(done.code).toBe(0);
+    expect((parse(read('suite.yml')) as Suite).core.version).toBe(RELEASE.newestCore);
+    expect(done.text).toContain('Could not look up the newest core');
+    expect(done.text).toContain('Could not reach ghcr.io: offline');
   });
 
   it('keeps the key it made out of the repository and out of what it says', async () => {

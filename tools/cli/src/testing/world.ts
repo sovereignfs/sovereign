@@ -71,7 +71,10 @@ export function manifestOf(extra: Record<string, unknown> = {}) {
 }
 
 /** A registry that knows a few images: what they resolve to, and the manifest each carries. */
-export function fakeRegistry(images: Record<string, { digest?: string; manifest?: unknown }> = {}) {
+export function fakeRegistry(
+  images: Record<string, { digest?: string; manifest?: unknown }> = {},
+  coreTags: string[] | Error = [],
+) {
   const asked: string[] = [];
   const repositoryOf = (ref: string) =>
     ref.replace(/(@sha256:[0-9a-f]{64})$/, '').replace(/:[^/:]+$/, '');
@@ -100,6 +103,10 @@ export function fakeRegistry(images: Record<string, { digest?: string; manifest?
       }
       if (!found) throw new Error(`the test registry has no ${ref}`);
       return found.digest ?? `sha256:${'a'.repeat(64)}`;
+    },
+    async tags(_name: string) {
+      if (coreTags instanceof Error) throw coreTags;
+      return coreTags;
     },
     async label(ref: string, name: string) {
       const found = find(ref);
@@ -134,6 +141,8 @@ export function makeWorld(
     hidden?: string[];
     stdin?: string;
     images?: Record<string, { digest?: string; manifest?: unknown }>;
+    /** The tags core's repository lists, or the error asking for them fails with. None by default. */
+    coreTags?: string[] | Error;
     withGit?: boolean;
   } = {},
 ): World {
@@ -174,7 +183,7 @@ export function makeWorld(
     hidden: options.hidden ?? [],
     stdin: options.stdin ?? '',
   });
-  const { registry, asked: registryAsked } = fakeRegistry(options.images);
+  const { registry, asked: registryAsked } = fakeRegistry(options.images, options.coreTags);
   const ctx: Context = {
     io,
     root,

@@ -126,11 +126,11 @@ Each command MUST state what it changed, and MUST exit as §11 says.
 
 ### 4.1 Setting up
 
-| Command               | What it does                                                                                                                | Reaches the server |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| `sv setup`            | Asks for the domain, the server and how to deploy, and writes `suite.yml`. Makes the operator's key if there is none (§9.1) | no                 |
-| `sv server bootstrap` | Prepares a fresh machine (§8.3) and records its public key in `suite.yml`                                                   | yes                |
-| `sv doctor`           | Checks DNS, ports, certificates, the toolkit's versions and the server's Docker, and says what to fix. Changes nothing      | yes, read only     |
+| Command               | What it does                                                                                                                                                             | Reaches the server |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------ |
+| `sv setup`            | Asks for the domain, the server and how to deploy, and writes `suite.yml` on the newest core the toolkit supports (§5). Makes the operator's key if there is none (§9.1) | no                 |
+| `sv server bootstrap` | Prepares a fresh machine (§8.3) and records its public key in `suite.yml`                                                                                                | yes                |
+| `sv doctor`           | Checks DNS, ports, certificates, the toolkit's versions and the server's Docker, and says what to fix. Changes nothing                                                   | yes, read only     |
 
 ### 4.2 Apps
 
@@ -206,6 +206,9 @@ described to operators as one.
 - `sv` MUST be the only thing that writes `suite.lock`, and MUST refresh it when `suite.yml` changes what runs.
 - Each toolkit release states the core versions and `schema` versions it supports, and the proxy and toolkit images it uses.
 - A toolkit that does not support the instance's core version or `schema` MUST refuse, and name the version that does.
+- `sv setup` starts an instance on the newest published core within the range the toolkit supports, never older than the toolkit's
+  `newestCore`, the core it was made for. Only a plain `X.Y.Z` tag counts. If the registry cannot be asked, setup uses `newestCore`
+  and says so. The version it writes is exact, and `suite.lock` pins its digest, as for any version (§6.3).
 
 ---
 

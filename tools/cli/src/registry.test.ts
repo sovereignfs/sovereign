@@ -77,6 +77,15 @@ describe('a registry', () => {
           'www-authenticate': `Bearer realm="http://${host}/token",service="registry",scope="repository:private/app:pull"`,
         });
       }
+      // A repository that lists its tags in two pages, the first of which points at the second.
+      if (url === '/v2/paged/tags/list?n=1000') {
+        return send(200, JSON.stringify({ tags: ['0.1.0', '0.2.0'] }), {
+          link: '</v2/paged/tags/list?last=0.2.0&n=1000>; rel="next"',
+        });
+      }
+      if (url === '/v2/paged/tags/list?last=0.2.0&n=1000')
+        return send(200, JSON.stringify({ tags: ['0.3.0', 'latest'] }));
+      if (url === '/v2/empty/tags/list?n=1000') return send(200, JSON.stringify({ tags: null }));
       if (url.endsWith('/manifests/2'))
         return send(200, index, { 'docker-content-digest': sha(index) });
       if (url.endsWith(`/manifests/${sha(amd)}`)) return send(200, amd);
@@ -90,6 +99,20 @@ describe('a registry', () => {
     host = `127.0.0.1:${(server.address() as AddressInfo).port}`;
   });
   afterAll(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  it('lists every tag of a repository, following the pages it comes in', async () => {
+    expect(await new Registry().tags(`${host}/paged`)).toEqual([
+      '0.1.0',
+      '0.2.0',
+      '0.3.0',
+      'latest',
+    ]);
+  });
+
+  it('lists nothing for a repository with no tags, and refuses one that is not there', async () => {
+    expect(await new Registry().tags(`${host}/empty`)).toEqual([]);
+    await expect(new Registry().tags(`${host}/missing`)).rejects.toThrow(Refused);
+  });
 
   it('says the digest of the index a tag names, which is the one that runs on any machine', async () => {
     expect(await new Registry().digest(`${host}/app:2`)).toBe(sha(index));

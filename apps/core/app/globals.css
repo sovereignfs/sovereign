@@ -20,6 +20,22 @@ body {
     env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
 }
 
+/* The padding above scrolls away with the page, and an installed app's status bar is translucent, so text would
+   slide under the clock. A strip of the page's colour stays fixed behind the bar. It is as tall as the inset, so
+   where there is no bar it is nothing, and it lies below a sticky header (the design system's is at 101), which
+   pads for the inset itself. */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top, 0px);
+  background: var(--sv-color-surface);
+  z-index: 100;
+  pointer-events: none;
+}
+
 /* The height of the screen less those margins, for a page that fills it. */
 :root {
   --page-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));

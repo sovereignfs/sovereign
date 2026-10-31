@@ -113,7 +113,9 @@ Roboto, Helvetica, Arial, sans-serif`. A page or component names a family only
   `/icons/icon-maskable-512.png`, served with no session), or the operator's own
   app icons when they have set them (§3.12). Every page tells a
   device how to meet its screen: it runs to the edges (`viewport-fit: cover`),
-  what matters stays clear of a notch and a home bar by the safe-area insets, the
+  what matters stays clear of a notch and a home bar by the safe-area insets, a
+  strip of the page's colour holds the status bar of an installed app so that a
+  page that scrolls does not slide under the clock, the
   browser's bar takes the page's colour in the person's chosen theme, or else in the
   system's colour scheme, and an
   iPhone opens a page added to its home screen as an app, named for the instance.

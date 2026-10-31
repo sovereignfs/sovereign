@@ -73,7 +73,7 @@ of it is built.
 - `ensure` run twice changes nothing and makes one client
 - The image gains no package manager and no `tsx`
 
-#### 📋 13.3 — `sv apply`: the base
+#### ✅ 13.3 — `sv apply`: the base
 
 **Goal:** A hand-written `suite.yml` becomes a running core behind a proxy, and running it again changes nothing.
 

@@ -131,7 +131,7 @@ be argued before anything is built.
 | ------- | -------- | ---------------------------------- | ------ | ----------------------------------- |
 | 0.49.0  | 1        | The specifications                 | ✅     | [13.1](docs/epics/operator-cli.md)  |
 | 0.54.0  | 2        | `sovereign-admin` in the image     | ✅     | [13.2](docs/epics/operator-cli.md)  |
-| —       | 3        | `sv apply`: the base               | 📋     | [13.3](docs/epics/operator-cli.md)  |
+| 0.73.0  | 3        | `sv apply`: the base               | ✅     | [13.3](docs/epics/operator-cli.md)  |
 | —       | 4        | `sv apply`: apps                   | 📋     | [13.4](docs/epics/operator-cli.md)  |
 | 0.72.0  | 5        | Commands on the operator's machine | ✅     | [13.5](docs/epics/operator-cli.md)  |
 | —       | 6        | Deploying over SSH `[parallel]`    | 📋     | [13.6](docs/epics/operator-cli.md)  |

@@ -100,7 +100,7 @@ of it is built.
 - A run stopped after any step finishes when run again
 - No secret reaches a log or the release directory's world-readable files
 
-#### 📋 13.4 — `sv apply`: apps
+#### ✅ 13.4 — `sv apply`: apps
 
 **Goal:** Listing an app in `suite.yml` gives it a sign-in, and a hosted one a subdomain and a database.
 
@@ -114,7 +114,7 @@ of it is built.
 - Reading the manifest from an image's label, or a given address
 - Purging: `--purge`, its typed confirmation, and step 7 deleting the app's data after backing it up (operator-cli §6.2)
 - `overrides/` for each app
-- The two-app acceptance test: moving between apps with no second password, signing out of core ending both
+- The two-app acceptance test: two apps and an external one up together, kept apart, a failing one stopping only itself, removal and purge, against real Docker (the sign-in half, moving between apps with no second password and signing out of core ending both, needs an app that signs in and is done by hand on the first real instance, operator-cli §13)
 
 **Dependencies:** 13.2, 13.3
 

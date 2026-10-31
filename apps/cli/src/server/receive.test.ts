@@ -348,6 +348,21 @@ describe('a restore', () => {
     expect(out.join('')).toContain('and a backup of 3 files');
   });
 
+  it('takes the backup as the server makes one, which holds state.json, and does not unpack it', async () => {
+    const { archive } = await archiveOf();
+    const dir = stateDir();
+    const { host, calls } = receiver(idle);
+    const body = sent(
+      archive,
+      backupOf(['./databases.sql', './state.json', './secrets/role-core-password']),
+    );
+    const { options: o } = options(dir, `restore ${commit}`, { stdin: async () => body });
+    expect(await receive(host, o)).toBe(0);
+    expect(calls.some((c) => c[0] === 'run')).toBe(true);
+    expect(existsSync(path.join(dir, 'incoming', 'restore', 'state.json'))).toBe(false);
+    expect(existsSync(path.join(dir, 'incoming', 'restore', 'databases.sql'))).toBe(true);
+  });
+
   it('refuses a backup that holds no databases, and a file a backup does not hold, starting nothing', async () => {
     const { archive } = await archiveOf();
     const { host, calls } = receiver(idle);

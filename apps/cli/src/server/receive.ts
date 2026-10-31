@@ -189,6 +189,7 @@ async function deploy(
 /** The backup's files, and nothing else: the databases, the generated secrets, and the app data (operator-cli §10.2). */
 const isBackupPath = (name: string) =>
   name === 'databases.sql' ||
+  name === 'state.json' ||
   /^secrets\/[A-Za-z0-9_.-]{1,128}$/.test(name) ||
   /^volumes\/sovereign-app-[a-z0-9-]+_data-[0-9]+\.tar$/.test(name);
 const MAX_RESTORE_BYTES = 1024 ** 3;
@@ -212,7 +213,11 @@ async function restore(
   const { dir, pinned, files } = await unpack(options, commit, sent.deployment);
   const data = path.join(incoming, 'restore');
   await mkdir(data, { recursive: true, mode: 0o700 });
-  await extract(backup, data);
+  // state.json is in the backup for a person to read; the restore makes its own, from the files it applies.
+  await extract(
+    backup.filter((entry) => entry.name !== 'state.json'),
+    data,
+  );
   options.out(
     `Received ${files} files for ${commit.slice(0, 12)} and a backup of ${backup.length} files.\n`,
   );

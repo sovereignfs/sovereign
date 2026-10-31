@@ -177,7 +177,7 @@ are added when core's Phase 2 specifies them.
 - A notice holds no name, address or other detail of the person
 - The security check is run
 
-#### 📋 14.8 — Deletion notices: send them
+#### ✅ 14.8 — Deletion notices: send them
 
 **Goal:** Each notice is sent until the app answers, and an operator can see one that is not.
 

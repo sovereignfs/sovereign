@@ -16,6 +16,7 @@ export const CORE_RESERVED = [
   'SV_SQLITE_URL',
   'SV_AUTH_COOKIE_DOMAIN',
   'SV_AUTH_WEBAUTHN_RP_ID',
+  'SV_ENVIRONMENT',
 ] as const;
 
 /** Whether a name is one the deployment owns, in either form (`NAME` or `NAME_FILE`). */

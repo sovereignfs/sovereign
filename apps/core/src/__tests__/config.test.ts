@@ -62,4 +62,22 @@ describe("core's configuration", () => {
     expect(JSON.stringify(loaded)).not.toContain(SECRET);
     expect(String(loaded.authSecret)).not.toContain(SECRET);
   });
+
+  describe('what the instance is for', () => {
+    it('is production when it is not set, so nothing is permitted by leaving it out', () => {
+      expect(config.load(GOOD).environment).toBe('production');
+    });
+
+    it.each(['development', 'staging', 'production'])('accepts %s', (value) => {
+      expect(config.load({ ...GOOD, SV_ENVIRONMENT: value }).environment).toBe(value);
+    });
+
+    it('stops core on any other value, naming the three, so a misspelling is never a permission', () => {
+      for (const value of ['Development', 'dev', 'prod', 'test', 'stage']) {
+        expect(problems({ ...GOOD, SV_ENVIRONMENT: value }), value).toEqual([
+          'SV_ENVIRONMENT must be one of: development, staging, production',
+        ]);
+      }
+    });
+  });
 });

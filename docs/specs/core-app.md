@@ -1292,7 +1292,7 @@ What an app may call on core is defined once, in `spec/core-api/openapi.yaml`
 | `SV_AUTH_WEBAUTHN_RP_ID`, `_RP_NAME`, `_ORIGIN`                                                                                      | no              | Passkey relying party (§3.4.2)                                                                                                                                                                                                                                             |
 | `SV_DB_DIALECT`, `SV_SQLD_URL`, `SV_SQLD_ADMIN_URL`, `SV_SQLD_NAMESPACE`, `SV_SQLITE_URL`, `SV_POSTGRES_URL`, `SV_POSTGRES_POOL_MAX` | yes, by dialect | Database                                                                                                                                                                                                                                                                   |
 | `SV_FIELD_ENCRYPTION_KEYS` / `_FILE`                                                                                                 | yes             | Key ring for stored secrets: `id:key` entries, newest first (`spec/env.md`)                                                                                                                                                                                                |
-| `SV_ENVIRONMENT`                                                                                                                     | no              | `development`, `staging` or `production`; default `production`. What the instance is for. Not built yet (§3.15.1)                                                                                                                                                          |
+| `SV_ENVIRONMENT`                                                                                                                     | no              | `development`, `staging` or `production`; default `production`. What the instance is for (§3.15.1)                                                                                                                                                                         |
 | `SV_SMTP_HOST`, `_PORT`, `_USER`, `_PASSWORD` / `_PASSWORD_FILE`, `_FROM`                                                            | no              | Mail defaults (§3.12)                                                                                                                                                                                                                                                      |
 
 Database variables name the engine (`SV_POSTGRES_URL`, `SV_SQLD_URL`,
@@ -1330,8 +1330,8 @@ How an operator runs core is in `docs/deploying.md`; what is promised:
 
 #### 3.15.1 Environment and the seed
 
-Not built yet ([workstream 0002](../workstreams/0002-test-instances.md)). Core is told what the instance is for, and a development or
-staging instance can be given the accounts and the app to try it with, which a production instance never can.
+Core is told what the instance is for (built), and a development or staging instance can be given the accounts and the app to try
+it with, which a production instance never can (the seed, not built yet: [workstream 0002](../workstreams/0002-test-instances.md)).
 
 - **`SV_ENVIRONMENT`** is `development`, `staging` or `production`, and `production` when it is not set. Any other value is a start-up
   error, since a misspelling must never read as a permission. It changes nothing in how core runs; the only thing it decides is whether

@@ -493,6 +493,23 @@ describe('what it refuses, with nothing changed', () => {
     expect((await refused(viaOverride)).message).toContain('SV_AUTH_WEBAUTHN_RP_ID');
   });
 
+  it('SV_ENVIRONMENT anywhere core would be given it: the instance is what suite.yml says', async () => {
+    const viaSecrets = await source({
+      serverKey: true,
+      secrets: { core: { SV_ENVIRONMENT: 'development' } },
+    });
+    expect((await refused(viaSecrets)).message).toContain('made or refused by the deployment');
+    const viaOverride = await source({
+      overrides: {
+        'overrides/compose/core.yml':
+          'services:\n  core:\n    environment:\n      SV_ENVIRONMENT: development\n',
+      },
+    });
+    const error = await refused(viaOverride);
+    expect(error.message).toContain('SV_ENVIRONMENT');
+    expect(error.message).toContain('overrides/compose/core.yml');
+  });
+
   it('an operator’s secret that is a name the deployment makes or refuses', async () => {
     const made = await source({ serverKey: true, secrets: { core: { SV_AUTH_SECRET: 'mine' } } });
     expect((await refused(made)).message).toContain('made or refused by the deployment itself');
@@ -917,5 +934,36 @@ describe('Mailpit on a development or staging instance', () => {
     expect(docker.containers.has('sv-mailpit')).toBe(false);
     expect(docker.calls.some((c) => c.args.join(' ') === 'rm --force sv-mailpit')).toBe(true);
     expect(docker.calls.some((c) => c.args[0] === 'volume')).toBe(false);
+  });
+});
+
+describe('what core is told the instance is for', () => {
+  it.each(['development', 'staging', 'production'] as const)(
+    'is %s when suite.yml says so',
+    async (environment) => {
+      const made = await source({ suite: { environment } });
+      await apply(fakeHost().host, options(made));
+      expect(compose(made, 'core').services.core?.environment?.SV_ENVIRONMENT).toBe(environment);
+    },
+  );
+
+  it('is production when suite.yml does not say, so a file written before the field means what it did', async () => {
+    const made = await source();
+    await apply(fakeHost().host, options(made));
+    expect(compose(made, 'core').services.core?.environment?.SV_ENVIRONMENT).toBe('production');
+  });
+
+  it('follows suite.yml when it is changed, in the next release', async () => {
+    const first = await source({ suite: { environment: 'development' } });
+    const { host } = fakeHost();
+    await apply(host, options(first));
+    const second = await source({ suite: { environment: 'staging' } });
+    await apply(host, { ...options(second), stateDir: first.stateDir, commit: 'b'.repeat(40) });
+    expect(compose(first, 'core', 'a'.repeat(40)).services.core?.environment?.SV_ENVIRONMENT).toBe(
+      'development',
+    );
+    expect(compose(first, 'core', 'b'.repeat(40)).services.core?.environment?.SV_ENVIRONMENT).toBe(
+      'staging',
+    );
   });
 });

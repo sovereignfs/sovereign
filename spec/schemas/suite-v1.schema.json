@@ -24,7 +24,7 @@
               { "$ref": "#/$defs/notSecretName" },
               {
                 "not": {
-                  "pattern": "^SV_(URL|AUTH_SECRET|FIELD_ENCRYPTION_KEYS|DB_DIALECT|POSTGRES_URL|SQLD_URL|SQLD_ADMIN_URL|SQLD_NAMESPACE|SQLITE_URL|AUTH_COOKIE_DOMAIN|AUTH_WEBAUTHN_RP_ID)(_FILE)?$"
+                  "pattern": "^SV_(URL|AUTH_SECRET|FIELD_ENCRYPTION_KEYS|DB_DIALECT|POSTGRES_URL|SQLD_URL|SQLD_ADMIN_URL|SQLD_NAMESPACE|SQLITE_URL|AUTH_COOKIE_DOMAIN|AUTH_WEBAUTHN_RP_ID|ENVIRONMENT)(_FILE)?$"
                 }
               }
             ]

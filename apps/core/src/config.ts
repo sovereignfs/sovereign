@@ -1,4 +1,13 @@
-import { boolean, defineConfig, integer, list, secret, string, url } from '@sovereignfs/config';
+import {
+  boolean,
+  defineConfig,
+  integer,
+  list,
+  oneOf,
+  secret,
+  string,
+  url,
+} from '@sovereignfs/config';
 import { fieldEncryptionVariables, resolveFieldEncryption } from '@sovereignfs/crypto';
 import { databaseVariables, resolveDatabase } from '@sovereignfs/database';
 
@@ -10,6 +19,9 @@ import { databaseVariables, resolveDatabase } from '@sovereignfs/database';
  * or keys yet, so without them it runs as before (they become required with the first
  * stored secret).
  */
+/** What an instance can be for (core-app §3.15.1). Anything else is a start-up error, so a misspelling is never a permission. */
+export const ENVIRONMENTS = ['development', 'staging', 'production'] as const;
+
 export const config = defineConfig({
   prefix: 'SV',
   variables: {
@@ -19,6 +31,12 @@ export const config = defineConfig({
       origin: true,
       description:
         "Core's public address, with no path. It is also the issuer apps sign in against",
+    }),
+    environment: oneOf(ENVIRONMENTS, {
+      name: 'ENVIRONMENT',
+      default: 'production',
+      description:
+        'What the instance is for. It changes nothing in how core runs; it decides only whether the development and staging seed may run (core-app §3.15.1). The operator CLI sets it from suite.yml, and an unset value is production',
     }),
     authSecret: secret({
       name: 'AUTH_SECRET',

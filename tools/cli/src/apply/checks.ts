@@ -32,7 +32,7 @@ export function refusals(input: {
   const problems: Problem[] = [];
   const add = (at: string, message: string) => problems.push({ at, message });
 
-  const forbidden = ['SV_AUTH_COOKIE_DOMAIN', 'SV_AUTH_WEBAUTHN_RP_ID'];
+  const forbidden = ['SV_AUTH_COOKIE_DOMAIN', 'SV_AUTH_WEBAUTHN_RP_ID', 'SV_ENVIRONMENT'];
   const given = [...Object.keys(suite.core.env ?? {}), ...Object.keys(secrets.core ?? {})];
   for (const name of forbidden) {
     if (given.some((variable) => variable.replace(/_FILE$/, '') === name)) {
@@ -40,7 +40,9 @@ export function refusals(input: {
         name,
         name === 'SV_AUTH_COOKIE_DOMAIN'
           ? 'would send core’s session cookie to every app, and any app could then act as the person on core'
-          : 'would be fixed for passkeys, and changing it later breaks every one',
+          : name === 'SV_ENVIRONMENT'
+            ? 'is what suite.yml says the instance is for, and core refuses to seed anything but a development or staging instance on it'
+            : 'would be fixed for passkeys, and changing it later breaks every one',
       );
     }
     if (coreOverride && new RegExp(`\\b${name}\\b`).test(coreOverride)) {

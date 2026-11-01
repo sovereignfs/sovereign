@@ -1,6 +1,6 @@
 # Workstream 0002 — Test instances
 
-**Status:** 📋 Planned\
+**Status:** ⏳ In Progress (leg 1 done)\
 **Date:** November 2026\
 **Author:** kasunben\
 **Goal owner:** kasunben\
@@ -20,7 +20,7 @@ account would need is Mailpit's, which already exists (`sv mail`).
 
 ## Definition of done
 
-- [ ] `13.20` — Core knows what the instance is for
+- [x] `13.20` — Core knows what the instance is for
 - [ ] `13.21` — Seeding development and staging instances
 - [ ] operator-cli §13 item 17 holds, shown by a test and by a run on a development instance and a staging one
 
@@ -104,6 +104,7 @@ harmless. Each leg ships on its own.
 
 ## Changelog
 
-| Version | Date     | Change                                                          |
-| ------- | -------- | --------------------------------------------------------------- |
-| 0.1     | Nov 2026 | Initial draft, with the specification it governs (13.20, 13.21) |
+| Version | Date     | Change                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | Nov 2026 | Initial draft, with the specification it governs (13.20, 13.21)                                                                                                                                                                                                                                                                                                                                                                 |
+| 0.2     | Nov 2026 | Leg 1 done (13.20, root 0.82.0, core 0.56.0): `SV_ENVIRONMENT` is read by core (an unknown value stops it, an unset one is `production`), `sv apply` sets it from `suite.yml`, and nothing else can: `core.env`, a secret and an override of core's Compose file are each refused. An older core ignores the variable, since core's configuration does not reject names it does not know, so the "do not proceed" check passed. |

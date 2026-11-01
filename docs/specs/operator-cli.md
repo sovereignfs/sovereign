@@ -314,7 +314,7 @@ database, role, data volumes and generated secrets, after taking a backup of tha
 - **One PostgreSQL server per instance,** with one database and one role per hosted app, and one for core. Its admin
   credential stays with `sv apply`, and is given to neither core nor an app. An app applies its own migrations.
 - **Certificates** are per host by default (`spec/suite.md`).
-- **Core is told what the instance is for.** Not built yet: core's `SV_ENVIRONMENT` is the `environment` of `suite.yml`, and `core.env` MUST
+- **Core is told what the instance is for.** Core's `SV_ENVIRONMENT` is the `environment` of `suite.yml`, and `core.env` MUST
   NOT set it, since a deployment that can be told otherwise would let the seed run on production (`spec/suite.md` §1.1.1).
 
 What goes into an app's environment is in [`spec/app-manifest.md`](../../spec/app-manifest.md).

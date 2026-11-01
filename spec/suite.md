@@ -101,7 +101,7 @@ means what it did.
 `core.env` MUST NOT hold a variable the deployment provides or refuses:
 
 `SV_URL`, `SV_AUTH_SECRET`, `SV_FIELD_ENCRYPTION_KEYS`, `SV_DB_DIALECT`, `SV_POSTGRES_URL`, `SV_SQLD_URL`,
-`SV_SQLD_ADMIN_URL`, `SV_SQLD_NAMESPACE`, `SV_SQLITE_URL`, `SV_AUTH_COOKIE_DOMAIN`, `SV_AUTH_WEBAUTHN_RP_ID`, or any of these
+`SV_SQLD_ADMIN_URL`, `SV_SQLD_NAMESPACE`, `SV_SQLITE_URL`, `SV_AUTH_COOKIE_DOMAIN`, `SV_AUTH_WEBAUTHN_RP_ID`, `SV_ENVIRONMENT`, or any of these
 with `_FILE`.
 
 A secret MUST NOT be in `env`. A name ending in `_PASSWORD`, `_SECRET`, `_KEY`, `_KEYS` or `_TOKEN` is refused, and belongs in

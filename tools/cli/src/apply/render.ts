@@ -1,5 +1,11 @@
 import { stringify } from 'yaml';
-import { MAIL_HOST, MAIL_SMTP_PORT, MAIL_UI_PORT, usesMailpit } from '../suite/environment.js';
+import {
+  MAIL_HOST,
+  MAIL_SMTP_PORT,
+  MAIL_UI_PORT,
+  environmentOf,
+  usesMailpit,
+} from '../suite/environment.js';
 import type { Digest, Lock, Manifest, Suite } from '../suite/types.js';
 import {
   CA_DIR_IN_CONTAINER,
@@ -71,6 +77,8 @@ export function coreEnvironment(input: BaseInput): Record<string, string> {
     ...mailDefaults(suite),
     ...(suite.core.env ?? {}),
     SV_URL: `https://${suite.domain}`,
+    // What the instance is for, from suite.yml and from nowhere else: core refuses its seed on anything but development and staging.
+    SV_ENVIRONMENT: environmentOf(suite),
     SV_DB_DIALECT: 'postgres',
     SV_POSTGRES_URL_FILE: `${SECRETS_IN_CONTAINER}/SV_POSTGRES_URL`,
     SV_AUTH_SECRET_FILE: `${SECRETS_IN_CONTAINER}/SV_AUTH_SECRET`,

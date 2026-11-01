@@ -484,7 +484,7 @@ the runner still holding nothing that decrypts.
 - Bootstrap and restore cannot be run from GitHub
 - Every action is pinned to a commit
 
-#### 📋 13.20 — Core knows what the instance is for
+#### ✅ 13.20 — Core knows what the instance is for
 
 **Goal:** Core is told whether it is a development, staging or production instance, so that what only a test instance may do can be refused anywhere else, and a mistake cannot read as a permission.
 

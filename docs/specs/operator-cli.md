@@ -191,13 +191,14 @@ name that image, and only an app that carries a manifest (`spec/app-manifest.md`
 
 ### 4.4 Deploying
 
-| Command                       | What it does                                                      | Reaches the server |
-| ----------------------------- | ----------------------------------------------------------------- | ------------------ |
-| `sv push`                     | Checks the repository (§4.5), commits its known files, and pushes | no                 |
-| `sv deploy [--ssh\|--github]` | Runs `sv apply` on the server for the pushed commit (§8)          | yes                |
-| `sv status`                   | What is running, against what the repository says                 | yes, read only     |
-| `sv mail [--port N]`          | Opens Mailpit's inbox on this machine, over SSH (below)           | yes, read only     |
-| `sv logs [NAME]`              | What core, an app or the last deployment printed                  | yes, read only     |
+| Command                       | What it does                                                                      | Reaches the server |
+| ----------------------------- | --------------------------------------------------------------------------------- | ------------------ |
+| `sv push`                     | Checks the repository (§4.5), commits its known files, and pushes                 | no                 |
+| `sv deploy [--ssh\|--github]` | Runs `sv apply` on the server for the pushed commit (§8)                          | yes                |
+| `sv status`                   | What is running, against what the repository says                                 | yes, read only     |
+| `sv mail [--port N]`          | Opens Mailpit's inbox on this machine, over SSH (below)                           | yes, read only     |
+| `sv logs [NAME]`              | What core, an app or the last deployment printed                                  | yes, read only     |
+| `sv seed [--json]`            | Makes test accounts and a sample app on a development or staging instance (below) | yes                |
 
 `sv deploy` with neither flag uses `server.deploy` in `suite.yml`.
 
@@ -205,6 +206,15 @@ name that image, and only an app that carries a manifest (`spec/app-manifest.md`
 (`spec/suite.md` §1.1.1), and refuses any other. It MUST listen on this machine's loopback address only, reach the server's loopback
 address only, run no command on the server, and stay open until the operator ends it. The inbox holds the links that verify and reset
 accounts, so there MUST be no other way to it: it has no public name, and the server publishes it nowhere but its own loopback address.
+
+`sv seed` runs `sovereign-admin seed` in core's container ([core-app §3.15.1](core-app.md)). It is not built yet
+([workstream 0002](../workstreams/0002-test-instances.md)).
+
+- It MUST refuse on a `production` instance, and exit 2, **before it connects**: the first of two checks, the second being core's own.
+- Core MUST be running, and the answer is the command's: what it made and what it kept, and on `staging` each new account's password.
+  `sv seed` MUST NOT write a password to a file or a log. The passwords are shown once, to the operator who asked.
+- It is the operator's alone. The deployment key MUST NOT be able to run it (§8.2): a runner has no reason to seed an instance, and the
+  output holds passwords.
 
 ### 4.5 What `sv push` checks
 
@@ -304,6 +314,8 @@ database, role, data volumes and generated secrets, after taking a backup of tha
 - **One PostgreSQL server per instance,** with one database and one role per hosted app, and one for core. Its admin
   credential stays with `sv apply`, and is given to neither core nor an app. An app applies its own migrations.
 - **Certificates** are per host by default (`spec/suite.md`).
+- **Core is told what the instance is for.** Not built yet: core's `SV_ENVIRONMENT` is the `environment` of `suite.yml`, and `core.env` MUST
+  NOT set it, since a deployment that can be told otherwise would let the seed run on production (`spec/suite.md` §1.1.1).
 
 What goes into an app's environment is in [`spec/app-manifest.md`](../../spec/app-manifest.md).
 
@@ -687,6 +699,8 @@ with a DNS provider's module, which the stock image does not carry.
 15. `sv backup --app` and `sv restore --app` bring one app back without touching core or another app.
 16. From GitHub, deploy, rollback and backup run against a server the runners reach, and against one reached through a self-hosted
     runner.
+17. `sv seed` makes the accounts and the sample app on a development instance and on a staging one, with a random password on staging,
+    and is refused on production by `sv` before it connects and by core when it is asked to anyway.
 
 ## Changelog
 
@@ -694,3 +708,4 @@ with a DNS provider's module, which the stock image does not carry.
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-10-30 | First draft, from the accepted RFC 0002.                                                                                                                                                                                                                                                            |
 | 2026-11-01 | Apps from git and app upgrades (§4.2.1), backups before an app changes version, scheduled backups to S3, git or SFTP and per-app backups (§6.4.3, §10.2.2), rollback to a named release (§10.3), and more commands from GitHub (§8.2): [workstream 0001](../workstreams/0001-operator-workflow.md). |
+| 2026-11-01 | `sv seed` and core's `SV_ENVIRONMENT` (§4.4, §6.4, §13): test accounts and a sample app on development and staging instances, refused on production: [workstream 0002](../workstreams/0002-test-instances.md).                                                                                      |

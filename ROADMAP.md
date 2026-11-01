@@ -197,3 +197,13 @@ Epic [15](docs/epics/core-services.md)
 | —       | 6        | Scheduled backups to S3, and one app's backup          | 📋     | [13.17](docs/epics/operator-cli.md) |
 | —       | 7        | Backups to git and SFTP `[parallel]`                   | 📋     | [13.18](docs/epics/operator-cli.md) |
 | —       | 8        | More from GitHub, and servers its runners cannot reach | 📋     | [13.19](docs/epics/operator-cli.md) |
+
+### M11 — Development and staging instances can be tried
+
+[RFC 0002](docs/rfcs/0002-deployment-strategies.md) (Accepted) · epic [13](docs/epics/operator-cli.md) · workstream
+[0002](docs/workstreams/0002-test-instances.md)
+
+| Version | Priority | Task                                      | Status | Epic task                           |
+| ------- | -------- | ----------------------------------------- | ------ | ----------------------------------- |
+| —       | 1        | Core knows what the instance is for       | 📋     | [13.20](docs/epics/operator-cli.md) |
+| —       | 2        | Seeding development and staging instances | 📋     | [13.21](docs/epics/operator-cli.md) |

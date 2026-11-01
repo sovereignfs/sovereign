@@ -1292,6 +1292,7 @@ What an app may call on core is defined once, in `spec/core-api/openapi.yaml`
 | `SV_AUTH_WEBAUTHN_RP_ID`, `_RP_NAME`, `_ORIGIN`                                                                                      | no              | Passkey relying party (§3.4.2)                                                                                                                                                                                                                                             |
 | `SV_DB_DIALECT`, `SV_SQLD_URL`, `SV_SQLD_ADMIN_URL`, `SV_SQLD_NAMESPACE`, `SV_SQLITE_URL`, `SV_POSTGRES_URL`, `SV_POSTGRES_POOL_MAX` | yes, by dialect | Database                                                                                                                                                                                                                                                                   |
 | `SV_FIELD_ENCRYPTION_KEYS` / `_FILE`                                                                                                 | yes             | Key ring for stored secrets: `id:key` entries, newest first (`spec/env.md`)                                                                                                                                                                                                |
+| `SV_ENVIRONMENT`                                                                                                                     | no              | `development`, `staging` or `production`; default `production`. What the instance is for. Not built yet (§3.15.1)                                                                                                                                                          |
 | `SV_SMTP_HOST`, `_PORT`, `_USER`, `_PASSWORD` / `_PASSWORD_FILE`, `_FROM`                                                            | no              | Mail defaults (§3.12)                                                                                                                                                                                                                                                      |
 
 Database variables name the engine (`SV_POSTGRES_URL`, `SV_SQLD_URL`,
@@ -1326,6 +1327,31 @@ How an operator runs core is in `docs/deploying.md`; what is promised:
   chooses sqld, and `pnpm seed` makes an owner, an admin and an ordinary person
   to try it with. The seed refuses any address that is not on the machine it
   runs on.
+
+#### 3.15.1 Environment and the seed
+
+Not built yet ([workstream 0002](../workstreams/0002-test-instances.md)). Core is told what the instance is for, and a development or
+staging instance can be given the accounts and the app to try it with, which a production instance never can.
+
+- **`SV_ENVIRONMENT`** is `development`, `staging` or `production`, and `production` when it is not set. Any other value is a start-up
+  error, since a misspelling must never read as a permission. It changes nothing in how core runs; the only thing it decides is whether
+  the seed below may run. The operator CLI sets it from `environment` in `suite.yml` ([spec/suite.md](../../spec/suite.md) §1.1.1), and an
+  operator cannot set it in `core.env`.
+- **`sovereign-admin seed [--json]`** is run in core's container (§3.7.4). It MUST refuse, making nothing, when `SV_ENVIRONMENT` is
+  `production` or unset, and when the database holds any account that is not one of the seed accounts. The two are separate checks, so
+  a mistake in one is not a hole: a variable set wrongly cannot seed a real instance, and an instance made by hand cannot be seeded by
+  setting the variable. It MUST be safe to run again: it makes what is missing, leaves what is there, and says which.
+- **What it makes:** an owner, an admin and an ordinary person (`owner@sovereign.local`, `admin@sovereign.local`,
+  `user@sovereign.local`), the owner first since the first account always is, each with a verified address and its role, made through core's
+  own sign-up so that every rule applies; and one public sample app, a client with a managed key, made through the registry as the system
+  actor (§3.7.4), so that signing in to core from an app can be tried at once. The sample app has no secret to leak, since it is public and
+  signs in with PKCE.
+- **Passwords.** On `development` every seeded account has one documented password, `SEED_PASSWORD` when it is set. On `staging`, which may
+  be reachable from the internet, each account gets a random password of at least 24 characters, written once, to the command's output
+  and nowhere else, when the account is made. A password is never shown again, and an account that was kept keeps what it had. A
+  documented password on a server anyone can reach would be a way in for anyone who read the documentation.
+- **`pnpm seed`** is the same code, run on a development machine. It sets the environment to `development` itself and keeps its other
+  rule: it refuses unless core's address is on the machine it runs on.
 
 ### 3.16 Not in Phase 1
 
@@ -1768,3 +1794,4 @@ operator's guide says so.
 | 2026-10-31 | §4.5, §3.7.1, §3.7.4: the notices are recorded: an app can be given an account-deleted address (the Console, `sovereign-admin apps ensure --account-deleted`), and deleting an account, a person's own or an operator's, writes a notice in its transaction for each app the person used that has one. A notice is not sent yet.                                                                                                                                                                                                                                                                                                                                                                                              |
 | 2026-10-31 | §4.5, §3.10: account-deletion notices are sent: each is tried at once after the deletion and again from the table on the schedule, with a lease so two instances do not send it twice, until the app answers `2xx` or the 30 days end; the Console's Deletions page lists those not delivered and lets an operator mark one done. Only the restore commands remain.                                                                                                                                                                                                                                                                                                                                                           |
 | 2026-10-31 | §4.5: deletions across a restore are built: every deletion is written to `deleted_accounts` (90 days), `sovereign-admin instance deletions export` and `apply` carry them across a restore, deleting a brought-back account again and making its apps' notices, once for a given export. `sv` calls them with `sv restore` (task 13.8).                                                                                                                                                                                                                                                                                                                                                                                       |
+| 2026-11-01 | §3.15.1: `SV_ENVIRONMENT`, and a seed for development and staging instances (accounts, a sample app, passwords by environment), specified and not built: [workstream 0002](../workstreams/0002-test-instances.md).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |

@@ -23,6 +23,7 @@ and the hardest part, `sv apply`, comes before the commands that drive it.
 - [spec/env.md](../../spec/env.md): the rules an app's variables follow
 - Epic 12 releases the image that this epic deploys
 - [docs/workstreams/0001-operator-workflow.md](../workstreams/0001-operator-workflow.md): the order 13.13–13.19 are built in, and the decisions behind them
+- [docs/workstreams/0002-test-instances.md](../workstreams/0002-test-instances.md): 13.20–13.21, and the decisions behind them
 
 ## Tasks
 
@@ -482,3 +483,50 @@ the runner still holding nothing that decrypts.
 - A runner decrypts nothing, and receives no backup
 - Bootstrap and restore cannot be run from GitHub
 - Every action is pinned to a commit
+
+#### 📋 13.20 — Core knows what the instance is for
+
+**Goal:** Core is told whether it is a development, staging or production instance, so that what only a test instance may do can be refused anywhere else, and a mistake cannot read as a permission.
+
+**Priority:** 20.
+
+**Deliverables:**
+
+- `SV_ENVIRONMENT` in core's configuration: `development`, `staging` or `production`, `production` when unset, and any other value a start-up error. Declared in `apps/core/.env.example` and in core-app §3.15's table
+- `sv apply` gives core `SV_ENVIRONMENT` from `environment` in `suite.yml`; `core.env` cannot set it (the schema and `suiteProblems` refuse it, as they refuse the other names the deployment provides)
+- The spec's "not built yet" notes for this removed
+
+**Dependencies:** 13.12
+
+**Spec reference:** core-app §3.15.1; operator-cli §6.4; `spec/suite.md` §1.1.1, §1.2
+
+**Review checklist:**
+
+- An instance with no `environment` is told `production`
+- A value that is not one of the three stops core, naming the three
+- `core.env` setting `SV_ENVIRONMENT` is refused, with or without `_FILE`
+
+#### 📋 13.21 — Seeding development and staging instances
+
+**Goal:** A development or staging instance can be tried at once, with accounts to sign in as and an app to sign in from, and a production instance can never be seeded.
+
+**Priority:** 21.
+
+**Deliverables:**
+
+- `sovereign-admin seed [--json]`: an owner, an admin and an ordinary person at `@sovereign.local`, and one public sample app made through the registry as the system actor; idempotent; refused when `SV_ENVIRONMENT` is not `development` or `staging`, and when any account that is not a seed account exists
+- Passwords by environment: one documented password on `development` (`SEED_PASSWORD` to change it), a random one of at least 24 characters per account on `staging`, written once to the command's output and never logged or shown again
+- `pnpm seed` moved onto the same code, keeping its rule that core's address must be on the machine
+- `sv seed [--json]`: refused on production before it connects, not available to the deployment key, and the passwords never written to a file
+- `docs/operating.md`: how to seed and sign in; the "not built yet" notes removed from the specs
+
+**Dependencies:** 13.20
+
+**Spec reference:** core-app §3.15.1, §3.7.4; operator-cli §4.4; `spec/suite.md` §1.1.1
+
+**Review checklist:**
+
+- Each of the two checks refuses on its own: the environment alone, and an existing real account alone
+- Running it twice makes nothing the second time
+- A staging password cannot be read back from anywhere after it is shown
+- The sample app's redirect is settled against core-app §3.7.3 and holds on a development machine and on a server

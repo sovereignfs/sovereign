@@ -75,8 +75,8 @@ tasks must land in dependency order. It is divided into **legs**:
 - The workstream document records legs, decisions already locked, and a
   changelog row per completed leg.
 
-There are no workstreams yet; `docs/workstreams/README.md` is created with the
-first one.
+The index of workstreams, and the template for a new one, are in
+[`docs/workstreams/README.md`](workstreams/README.md).
 
 ---
 

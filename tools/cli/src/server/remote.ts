@@ -96,3 +96,36 @@ export const sshRemote: Remote = (target, words, options = {}) =>
     if (options.inputStream) options.inputStream.pipe(child.stdin);
     else child.stdin.end(options.input);
   });
+
+/** Holds a local port open to one on the server, until the operator ends it. Its output is the operator's, so it goes to their terminal. */
+export type Tunnel = (target: Target, localPort: number, remotePort: number) => Promise<number>;
+
+/**
+ * The `ssh` command line for a tunnel. It listens on this machine's loopback address only, so nothing else on the operator's network can
+ * use it, and reaches the server's loopback address only, where an inbox that is not for anyone else is published.
+ */
+export function tunnelArgs(target: Target, localPort: number, remotePort: number): string[] {
+  return [
+    '-N',
+    '-T',
+    '-o',
+    'ExitOnForwardFailure=yes',
+    '-o',
+    'ServerAliveInterval=15',
+    '-o',
+    'ServerAliveCountMax=4',
+    ...(target.port === undefined ? [] : ['-p', String(target.port)]),
+    '-L',
+    `127.0.0.1:${localPort}:127.0.0.1:${remotePort}`,
+    '--',
+    `${target.user}@${target.host}`,
+  ];
+}
+
+export const sshTunnel: Tunnel = (target, localPort, remotePort) =>
+  new Promise((resolve) => {
+    const child = spawn('ssh', tunnelArgs(target, localPort, remotePort), { stdio: 'inherit' });
+    child.on('error', () => resolve(255));
+    // Ctrl-C ends ssh by a signal, which is how this is meant to end.
+    child.on('close', (code, signal) => resolve(signal ? 0 : (code ?? 255)));
+  });

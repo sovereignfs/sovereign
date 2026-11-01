@@ -53,6 +53,7 @@ export class FakeDocker {
     'sovereign-database': 'sv-database',
     'sovereign-proxy': 'sv-proxy',
     'sovereign-core': 'sv-core',
+    'sovereign-mailpit': 'sv-mailpit',
   };
 
   async run(

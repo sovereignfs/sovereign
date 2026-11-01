@@ -152,4 +152,37 @@ describe('sv setup', () => {
     await setUpWorld(world, '--deploy', 'ssh');
     expect(existsSync(path.join(world.root, '.github/workflows/deploy.yml'))).toBe(false);
   });
+
+  it('writes the environment, and pins Mailpit only when the instance is not production', async () => {
+    world = makeWorld();
+    const done = await setUpWorld(world, '--deploy', 'ssh', '--environment', 'staging');
+    expect(done.code).toBe(0);
+    expect((parse(read('suite.yml')) as Suite).environment).toBe('staging');
+    expect((parse(read('suite.lock')) as Lock).images.mail?.ref).toBe(RELEASE.images.mail);
+    expect(done.text).toContain('sv mail');
+    world.cleanup();
+
+    world = makeWorld();
+    const production = await setUpWorld(world, '--deploy', 'ssh');
+    expect((parse(read('suite.yml')) as Suite).environment).toBe('production');
+    expect((parse(read('suite.lock')) as Lock).images.mail).toBeUndefined();
+    expect(production.text).not.toContain('Mailpit');
+  });
+
+  it('refuses an environment it does not know, and writes nothing', async () => {
+    world = makeWorld();
+    const done = await sv(
+      world,
+      'setup',
+      '--domain',
+      'sovereign.example.com',
+      '--host',
+      '203.0.113.7',
+      '--environment',
+      'testing',
+    );
+    expect(done.code).toBe(2);
+    expect(done.text).toContain('development, staging or production');
+    expect(existsSync(path.join(world.root, 'suite.yml'))).toBe(false);
+  });
 });

@@ -49,11 +49,13 @@ import {
   caddyfile,
   coreCompose,
   databaseCompose,
+  mailCompose,
   proxyCompose,
   publicNames,
   type BaseInput,
   type ImageOverrides,
 } from './render.js';
+import { usesMailpit } from '../suite/environment.js';
 import { GeneratedSecrets } from './secrets.js';
 import { layout, readState, writeState, type State } from './state.js';
 
@@ -304,6 +306,20 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
   }
   if (internalCa) await fetchCertificateAuthority(host, paths.pki);
   say('The proxy is up.');
+
+  // Mailpit, on a development or staging instance, is up before core, so that the first mail core sends has somewhere to go.
+  if (usesMailpit(suite)) {
+    await composeUp(host, {
+      project: PROJECT.mail,
+      files: [path.join(release, 'mail', 'compose.yml')],
+    });
+    say('Mailpit is up: mail from core is kept in its inbox, which sv mail opens.');
+  } else if ((await containerId(host, CONTAINER.mail)) !== undefined) {
+    await docker(host, 'Removing Mailpit', ['rm', '--force', CONTAINER.mail]);
+    say(
+      'Mailpit is removed, since this instance sends mail on its own. What it kept stays in its volume.',
+    );
+  }
 
   await composeUp(host, {
     project: PROJECT.core,
@@ -576,6 +592,7 @@ async function renderRelease(
     core: coreCompose(input),
     proxy: proxyCompose(input),
     database: databaseCompose(input),
+    ...(usesMailpit(input.suite) ? { mail: mailCompose(input) } : {}),
   };
   for (const [name, text] of Object.entries(projects)) {
     await mkdir(path.join(release, name), { recursive: true });

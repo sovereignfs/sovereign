@@ -51,7 +51,7 @@ describe('sv app add', () => {
   it('does nothing when the answer is not a yes', async () => {
     world = makeWorld({
       interactive: true,
-      answers: ['sovereign.example.com', '', 'ssh', 'per-host', '', 'no'],
+      answers: ['sovereign.example.com', '', 'ssh', 'per-host', '', '', 'no'],
       images: { [NOTES_IMAGE]: { manifest: manifestOf() } },
     });
     await sv(world, 'setup');
@@ -314,7 +314,7 @@ describe('sv app remove', () => {
   it('asks for the name when it can, and does nothing if it is not typed', async () => {
     world = makeWorld({
       interactive: true,
-      answers: ['sovereign.example.com', '', 'ssh', 'per-host', ''],
+      answers: ['sovereign.example.com', '', 'ssh', 'per-host', '', ''],
       images: { [NOTES_IMAGE]: { manifest: manifestOf() } },
     });
     await sv(world, 'setup');

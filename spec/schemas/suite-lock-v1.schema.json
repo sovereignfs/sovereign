@@ -16,7 +16,8 @@
         "cli": { "$ref": "#/$defs/image" },
         "core": { "$ref": "#/$defs/image" },
         "database": { "$ref": "#/$defs/image" },
-        "proxy": { "$ref": "#/$defs/image" }
+        "proxy": { "$ref": "#/$defs/image" },
+        "mail": { "$ref": "#/$defs/image" }
       }
     },
     "apps": {

@@ -42,7 +42,11 @@ const options = (made: Source, extra: Partial<ApplyOptions> = {}): ApplyOptions 
 const state = (made: Source) =>
   JSON.parse(readFileSync(path.join(made.stateDir, 'state.json'), 'utf8')) as State;
 const secretFiles = (made: Source) => readdirSync(path.join(made.stateDir, 'secrets')).sort();
-const compose = (made: Source, project: 'core' | 'proxy' | 'database', commit = 'a'.repeat(40)) =>
+const compose = (
+  made: Source,
+  project: 'core' | 'proxy' | 'database' | 'mail',
+  commit = 'a'.repeat(40),
+) =>
   parse(
     readFileSync(path.join(made.stateDir, 'releases', commit, project, 'compose.yml'), 'utf8'),
   ) as {
@@ -819,5 +823,101 @@ describe('apps', () => {
     );
     expect(failure).toBeInstanceOf(Refused);
     expect((failure as Refused).message).toContain('notes');
+  });
+});
+
+describe('Mailpit on a development or staging instance', () => {
+  const upProjects = (docker: FakeDocker) =>
+    docker.calls
+      .filter((c) => c.args[0] === 'compose' && c.args.includes('up'))
+      .map((c) => c.args[c.args.indexOf('--project-name') + 1]);
+
+  it('starts before core, and core is sent to it with a from address on the domain', async () => {
+    for (const environment of ['development', 'staging'] as const) {
+      const made = await source({ suite: { environment } });
+      const { host, docker } = fakeHost();
+      await apply(host, options(made));
+      expect(upProjects(docker)).toEqual([
+        'sovereign-database',
+        'sovereign-proxy',
+        'sovereign-mailpit',
+        'sovereign-core',
+      ]);
+      expect(compose(made, 'core').services.core?.environment).toMatchObject({
+        SV_SMTP_HOST: 'sv-mailpit',
+        SV_SMTP_PORT: '1025',
+        SV_SMTP_FROM: 'noreply@sovereign.example.com',
+      });
+    }
+  });
+
+  it('runs by digest on core’s network, and only its inbox is published, on the loopback address', async () => {
+    const made = await source({ suite: { environment: 'development' } });
+    await apply(fakeHost().host, options(made));
+    const mail = compose(made, 'mail').services.mail;
+    expect(mail?.image).toMatch(/^axllent\/mailpit:v[0-9.]+@sha256:[0-9a-f]{64}$/);
+    expect(mail?.ports).toEqual(['127.0.0.1:8025:8025']);
+    expect(mail?.networks).toEqual(['sv-net-core']);
+    const rest = compose(made, 'proxy').services.proxy?.ports;
+    expect(rest).toEqual(['80:80', '443:443']);
+  });
+
+  it('publishes nothing when told not to', async () => {
+    const made = await source({ suite: { environment: 'development' } });
+    await apply(fakeHost().host, options(made, { publishPorts: false }));
+    expect(compose(made, 'mail').services.mail?.ports).toBeUndefined();
+  });
+
+  it('is not started on production, and core is given no mail settings of its own', async () => {
+    const made = await source();
+    const { host, docker } = fakeHost();
+    await apply(host, options(made));
+    expect(upProjects(docker)).not.toContain('sovereign-mailpit');
+    expect(existsSync(path.join(made.stateDir, 'releases', 'a'.repeat(40), 'mail'))).toBe(false);
+    expect(compose(made, 'core').services.core?.environment).not.toHaveProperty('SV_SMTP_HOST');
+  });
+
+  it('gives way to a mail server the operator names, setting by setting', async () => {
+    const made = await source({
+      suite: {
+        environment: 'staging',
+        core: {
+          version: '0.71.0',
+          env: { SV_SMTP_HOST: 'smtp.example.com', SV_SMTP_PORT: '2525' },
+        },
+      },
+    });
+    const { host, docker } = fakeHost();
+    await apply(host, options(made));
+    expect(upProjects(docker)).not.toContain('sovereign-mailpit');
+    const env = compose(made, 'core').services.core?.environment ?? {};
+    expect(env).toMatchObject({ SV_SMTP_HOST: 'smtp.example.com', SV_SMTP_PORT: '2525' });
+    expect(env).not.toHaveProperty('SV_SMTP_FROM');
+  });
+
+  it('lets the operator change one setting and keep Mailpit', async () => {
+    const made = await source({
+      suite: {
+        environment: 'development',
+        core: { version: '0.71.0', env: { SV_SMTP_FROM: 'dev@example.test' } },
+      },
+    });
+    await apply(fakeHost().host, options(made));
+    expect(compose(made, 'core').services.core?.environment).toMatchObject({
+      SV_SMTP_HOST: 'sv-mailpit',
+      SV_SMTP_FROM: 'dev@example.test',
+    });
+  });
+
+  it('is removed when the instance becomes production, and what it kept stays in its volume', async () => {
+    const dev = await source({ suite: { environment: 'development' } });
+    const { host, docker } = fakeHost();
+    await apply(host, options(dev));
+    expect(docker.containers.has('sv-mailpit')).toBe(true);
+    const prod = await source({ lockFrom: undefined });
+    await apply(host, { ...options(prod), stateDir: dev.stateDir });
+    expect(docker.containers.has('sv-mailpit')).toBe(false);
+    expect(docker.calls.some((c) => c.args.join(' ') === 'rm --force sv-mailpit')).toBe(true);
+    expect(docker.calls.some((c) => c.args[0] === 'volume')).toBe(false);
   });
 });

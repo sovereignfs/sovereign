@@ -19,6 +19,8 @@ export const RELEASE = {
     core: 'ghcr.io/sovereignfs/sovereign',
     database: 'postgres',
     proxy: 'caddy:2.10',
+    /** The inbox that catches mail on a development or staging instance (operator-cli §6.4.2). */
+    mail: 'axllent/mailpit:v1.33.0',
   },
   /** The PostgreSQL major version `sv setup` writes. */
   database: '18',

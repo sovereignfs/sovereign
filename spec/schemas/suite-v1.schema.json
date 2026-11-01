@@ -9,6 +9,7 @@
   "properties": {
     "schema": { "const": 1 },
     "domain": { "$ref": "#/$defs/hostname" },
+    "environment": { "enum": ["development", "staging", "production"] },
     "core": {
       "type": "object",
       "additionalProperties": false,

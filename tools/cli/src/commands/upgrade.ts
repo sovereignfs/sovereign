@@ -145,10 +145,10 @@ async function finish(ctx: Context): Promise<void> {
 
   const was = lock?.images.cli.ref.split(':').pop();
   if (was !== RELEASE.version) changes.unshift(`toolkit: ${was ?? 'none'} → ${RELEASE.version}`);
-  for (const key of ['cli', 'core', 'database', 'proxy'] as const) {
+  for (const key of ['cli', 'core', 'database', 'proxy', 'mail'] as const) {
     const old = lock?.images[key];
     const now = refreshed.images[key];
-    if (old && (old.ref !== now.ref || old.digest !== now.digest)) {
+    if (old && now && (old.ref !== now.ref || old.digest !== now.digest)) {
       changes.push(`image ${key}: ${old.ref} → ${now.ref} (${now.digest.slice(0, 19)}…)`);
     }
   }

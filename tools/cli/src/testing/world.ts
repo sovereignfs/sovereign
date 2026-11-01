@@ -95,7 +95,8 @@ export function fakeRegistry(
       if (
         ref.startsWith('ghcr.io/sovereignfs/') ||
         ref.startsWith('postgres:') ||
-        ref.startsWith('caddy:')
+        ref.startsWith('caddy:') ||
+        ref.startsWith('axllent/mailpit:')
       ) {
         return (
           found?.digest ?? `sha256:${Buffer.from(ref).toString('hex').padEnd(64, '0').slice(0, 64)}`
@@ -198,6 +199,7 @@ export function makeWorld(
       reachable: async () => false,
     },
     remote: () => Promise.reject(new Error('the test has no server')),
+    tunnel: () => Promise.reject(new Error('the test has no server')),
     archive: gitArchive,
   };
   // A commit needs an author, and a test machine may have none.

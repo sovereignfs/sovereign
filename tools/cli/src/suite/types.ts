@@ -29,9 +29,12 @@ export type App = HostedApp | ExternalApp;
 
 export const isExternal = (app: App): app is ExternalApp => 'external' in app;
 
+export type Environment = 'development' | 'staging' | 'production';
+
 export type Suite = {
   schema: 1;
   domain: string;
+  environment?: Environment;
   core: { version: string; env?: Record<string, string> };
   database: { version: string };
   server: {
@@ -52,7 +55,7 @@ export type Digest = { ref: string; digest: string };
 /** `suite.lock` (spec/suite.md §2). */
 export type Lock = {
   schema: 1;
-  images: { cli: Digest; core: Digest; database: Digest; proxy: Digest };
+  images: { cli: Digest; core: Digest; database: Digest; proxy: Digest; mail?: Digest };
   apps?: Record<string, Digest>;
 };
 

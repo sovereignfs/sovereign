@@ -54,17 +54,38 @@ apps:
 
 ### 1.1 Top level
 
-| Field      | Required | Meaning                                                                                                                             |
-| ---------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `schema`   | yes      | This file's format version. `1` here (§4)                                                                                           |
-| `domain`   | yes      | Core's host, with no scheme. Core is `https://<domain>`, and a hosted app `https://<name>.<domain>`                                 |
-| `core`     | yes      | §1.2                                                                                                                                |
-| `database` | yes      | §1.3                                                                                                                                |
-| `server`   | yes      | §1.4                                                                                                                                |
-| `tls`      | no       | §1.5. Default `mode: per-host`                                                                                                      |
-| `secrets`  | yes      | §1.6                                                                                                                                |
-| `apps`     | no       | §1.7. An instance with none is complete                                                                                             |
-| `purge`    | no       | Names of removed apps whose data the next deployment deletes. Written by `sv app remove --purge`, and no name may also be in `apps` |
+| Field         | Required | Meaning                                                                                                                             |
+| ------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `schema`      | yes      | This file's format version. `1` here (§4)                                                                                           |
+| `domain`      | yes      | Core's host, with no scheme. Core is `https://<domain>`, and a hosted app `https://<name>.<domain>`                                 |
+| `environment` | no       | `development`, `staging` or `production`: what the instance is for. Default `production`. §1.1.1                                    |
+| `core`        | yes      | §1.2                                                                                                                                |
+| `database`    | yes      | §1.3                                                                                                                                |
+| `server`      | yes      | §1.4                                                                                                                                |
+| `tls`         | no       | §1.5. Default `mode: per-host`                                                                                                      |
+| `secrets`     | yes      | §1.6                                                                                                                                |
+| `apps`        | no       | §1.7. An instance with none is complete                                                                                             |
+| `purge`       | no       | Names of removed apps whose data the next deployment deletes. Written by `sv app remove --purge`, and no name may also be in `apps` |
+
+### 1.1.1 `environment`
+
+An instance that is not `production` catches the mail it sends instead of sending it, so that someone can read the links that verify
+and reset accounts without a mail server. An instance that does not say is `production`, so a file written before this field existed
+means what it did.
+
+| `environment`            | Mail                                                                                               |
+| ------------------------ | -------------------------------------------------------------------------------------------------- |
+| `development`, `staging` | Core is sent to Mailpit, which `sv apply` runs beside it, unless `SV_SMTP_HOST` is set             |
+| `production`             | Core is given no mail settings. Mail is the operator's: `core.env`, `secrets.age.yml`, the Console |
+
+- On `development` and `staging`, core's `SV_SMTP_HOST`, `SV_SMTP_PORT` and `SV_SMTP_FROM` default to Mailpit's address inside core's
+  network, port 1025 and `noreply@<domain>`. Each is replaced by the same name in `core.env`. An operator who sets `SV_SMTP_HOST` has
+  chosen where mail goes: Mailpit is not run, and the other two defaults are not given.
+- `SV_SMTP_USER` in `core.env` with no `SV_SMTP_HOST` is refused outside `production`, since Mailpit takes no login.
+- Mail saved in the Console takes precedence over all of this, as it does over the environment ([core-app §3.6](../docs/specs/core-app.md)).
+- Mailpit's inbox is on the server's own loopback address and is never given a public name or a port on its network. It is read through
+  `sv mail`, which opens it over SSH (operator-cli §4.4).
+- `staging` differs from `development` in what the operator means by it, and in nothing the toolkit does.
 
 ### 1.2 `core`
 
@@ -174,13 +195,16 @@ images:
   proxy:
     ref: caddy:2.10
     digest: sha256:4444444444444444444444444444444444444444444444444444444444444444
+  mail: # only when the instance runs Mailpit (§1.1.1)
+    ref: axllent/mailpit:v1.33.0
+    digest: sha256:6666666666666666666666666666666666666666666666666666666666666666
 apps:
   notes:
     ref: ghcr.io/example/notes:1.2.0
     digest: sha256:5555555555555555555555555555555555555555555555555555555555555555
 ```
 
-A digest is the image's multi-architecture one, so a lockfile written on one machine runs on another. Every hosted app in
+A digest is the image's multi-architecture one, so a lockfile written on one machine runs on another. `images.mail` MUST be here when the instance runs Mailpit, and MUST NOT be otherwise. Every hosted app in
 `suite.yml` MUST be here, and nothing else may be. An external app runs nothing, and is not.
 
 ---

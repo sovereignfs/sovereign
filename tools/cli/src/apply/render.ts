@@ -1,4 +1,5 @@
 import { stringify } from 'yaml';
+import { MAIL_HOST, MAIL_SMTP_PORT, MAIL_UI_PORT, usesMailpit } from '../suite/environment.js';
 import type { Digest, Lock, Manifest, Suite } from '../suite/types.js';
 import {
   CA_DIR_IN_CONTAINER,
@@ -15,7 +16,9 @@ export function byDigest(image: Digest): string {
 }
 
 /** The images to run, by the digest the lock pins unless a test says otherwise. */
-export type ImageOverrides = Partial<Record<'core' | 'proxy' | 'database' | 'cli', string>> & {
+export type ImageOverrides = Partial<
+  Record<'core' | 'proxy' | 'database' | 'cli' | 'mail', string>
+> & {
   /** Images for hosted apps, by name. */
   apps?: Record<string, string>;
 };
@@ -47,10 +50,25 @@ export function publicNames(suite: Suite): { core: string; apps: Record<string, 
   return { core: suite.domain, apps };
 }
 
-/** Core’s environment: what the deployment provides, then the operator’s own settings, which may not set what the deployment provides. */
+/** Where core sends mail on a development or staging instance, until the operator says otherwise (spec/suite.md §1.1). */
+function mailDefaults(suite: Suite): Record<string, string> {
+  return usesMailpit(suite)
+    ? {
+        SV_SMTP_HOST: MAIL_HOST,
+        SV_SMTP_PORT: String(MAIL_SMTP_PORT),
+        SV_SMTP_FROM: `noreply@${suite.domain}`,
+      }
+    : {};
+}
+
+/**
+ * Core’s environment: what the deployment provides, then the operator’s own settings, which may not set what the deployment provides.
+ * The mail settings Mailpit needs come first, so any the operator sets win.
+ */
 export function coreEnvironment(input: BaseInput): Record<string, string> {
   const { suite, coreSecrets, internalCa } = input;
   const env: Record<string, string> = {
+    ...mailDefaults(suite),
     ...(suite.core.env ?? {}),
     SV_URL: `https://${suite.domain}`,
     SV_DB_DIALECT: 'postgres',
@@ -141,6 +159,45 @@ export function databaseCompose(input: BaseInput): string {
     },
     networks: { [NETWORK.core]: { external: true } },
     volumes: { 'postgres-data': {} },
+  });
+}
+
+/**
+ * Mailpit, on a development or staging instance (operator-cli §6.4.2): it takes the mail core sends and keeps it for someone to read. Its
+ * SMTP port is on core’s network and nowhere else. Its inbox is published on the server’s loopback address only, so that the one way to read
+ * it is through SSH (`sv mail`): it holds the links that verify and reset accounts.
+ */
+export function mailCompose(input: BaseInput): string {
+  const { lock, publishPorts } = input;
+  const image = input.imageOverrides?.mail ?? (lock.images.mail && byDigest(lock.images.mail));
+  if (!image) throw new Error('suite.lock has no image for Mailpit');
+  return yaml({
+    name: PROJECT.mail,
+    services: {
+      mail: {
+        image,
+        container_name: CONTAINER.mail,
+        restart: 'unless-stopped',
+        environment: {
+          // Core sends without a login and without TLS, on a network of its own: nothing here is worth protecting in transit.
+          MP_SMTP_AUTH_ACCEPT_ANY: 'true',
+          MP_SMTP_AUTH_ALLOW_INSECURE: 'true',
+          MP_DATABASE: '/data/mailpit.db',
+        },
+        ...(publishPorts ? { ports: [`127.0.0.1:${MAIL_UI_PORT}:8025`] } : {}),
+        volumes: ['mailpit-data:/data'],
+        healthcheck: {
+          test: ['CMD', '/mailpit', 'readyz'],
+          interval: '5s',
+          timeout: '5s',
+          retries: 12,
+          start_period: '5s',
+        },
+        networks: [NETWORK.core],
+      },
+    },
+    networks: { [NETWORK.core]: { external: true } },
+    volumes: { 'mailpit-data': {} },
   });
 }
 

@@ -193,6 +193,15 @@ git diff
 your database version stay where they are. Read the diff, then deploy it like any other change. A dependency bot may open the
 `package.json` change for you; run `./sv upgrade --finish` on it to complete it.
 
+If you edit `suite.yml` yourself (a version, `environment`, an app), `./sv push` writes `suite.lock` again for you, keeping the
+digest of everything you did not change, and says what it changed. A `suite.lock` that is damaged is not rewritten, because the digests in
+it are what runs: restore it from git.
+
+`./sv deploy` first checks which toolkit the server runs. When it is not the one `suite.lock` pins, as after an upgrade, it brings the
+server to it, over your own SSH access (as root, or through `sudo` without a password), and says so before it sends anything. A runner's
+deployment key cannot do this: if a deployment from GitHub is refused for its `suite.lock`, run `./sv deploy --ssh` once from your own
+machine.
+
 When a deployment would change core's version or the database server's, it **takes a backup first**, on the machine. If it cannot
 (the machine has no key of yours to encrypt it to), it stops and says so.
 

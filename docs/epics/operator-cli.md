@@ -600,7 +600,7 @@ it returned `max_connections`, the three open (not counting itself), and each ro
 - No limit can be set that the budget refuses
 - The connection counts are read without a password leaving the server
 
-#### 📋 13.24 — A new lock on an older server `[parallel]`
+#### ✅ 13.24 — A new lock on an older server `[parallel]`
 
 **Goal:** A release that adds to `suite.lock` deploys to a server bootstrapped by an older toolkit, and a hand-edited `suite.yml` cannot
 leave the lock behind. Both stopped the first real deployment.
@@ -616,9 +616,19 @@ leave the lock behind. Both stopped the first real deployment.
 - A refused lock says what to do, once (it is printed twice today), and `sv doctor`'s note that the next deployment updates the
   server's toolkit becomes true
 
+**Verified here:** the tests were seen to fail against the old code. `sv push` writes a stale lock again, keeping the digest of what did not
+change and asking the registry only for what did, and writes nothing when another check then fails; a lock that is not valid is not
+rewritten. `sv upgrade --finish` counts an image added or removed as a change. `sv deploy` asks `doctor` which toolkit the server runs and,
+when it is not the pinned one, runs a short script as root (`sudo -n` for another user), before it sends anything; a runner does not, and is
+told to bootstrap or deploy from the operator's machine. The refusal is said once. The script is checked to be a program a shell reads and to
+take only an image by digest.
+
+**Not verified here:** the script on a real server, with Docker pulling the image, and a deployment over SSH to a server whose toolkit is
+older, which needs a published toolkit and a machine.
+
 **Dependencies:** none
 
-**Spec reference:** operator-cli §4.5, §5, §8.3, §8.4
+**Spec reference:** operator-cli §4.5, §5, §8.1, §8.3, §8.4, §10.1
 
 **Review checklist:**
 

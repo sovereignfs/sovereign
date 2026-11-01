@@ -247,7 +247,10 @@ export async function doctor(ctx: Context, argv: string[]): Promise<void> {
         name: 'The toolkit on the server',
         status: 'warn',
         detail: 'it runs a different release from the one this repository pins',
-        fix: 'The next sv deploy brings the server to the pinned toolkit.',
+        fix:
+          suite.server.deploy === 'github'
+            ? 'A runner’s key cannot update it: run sv deploy --ssh once from your own machine, which brings the server to the pinned toolkit.'
+            : 'The next sv deploy brings the server to the pinned toolkit.',
       });
     }
   }

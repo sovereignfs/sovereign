@@ -17,9 +17,14 @@ const write = (name: string, text: string) => {
 };
 
 type Call = { words: string[]; input: Buffer };
+/**
+ * A server that answers a deployment as asked. `doctor`, which `sv deploy` asks first which toolkit the server runs, is answered with
+ * nothing, so a test about something else sees only the requests it cares about in `calls`.
+ */
 function server(code = 0, lines: string[] = ['Applied.'], stderr = '') {
   const calls: Call[] = [];
   const remote: Remote = async (_target, words, options) => {
+    if (words[1] === 'doctor') return { code: 0, stdout: '', stderr: '' };
     calls.push({ words: [...words], input: Buffer.from(options?.input ?? '') });
     for (const line of lines) options?.onStdout?.(`${line}\n`);
     return { code, stdout: lines.join('\n'), stderr };
@@ -282,5 +287,183 @@ describe('sv deploy --ci (a runner)', () => {
     );
     expect(args.indexOf('--')).toBeGreaterThan(args.indexOf('-i'));
     expect(args.join(' ')).not.toContain('PRIVATE');
+  });
+});
+
+describe('sv deploy and the server’s toolkit', () => {
+  const OLD = `ghcr.io/sovereignfs/cli:0.0.9@sha256:${'b'.repeat(64)}`;
+  const pinned = () => {
+    const lock = parse(readFileSync(path.join(world.root, 'suite.lock'), 'utf8')) as {
+      images: { cli: { ref: string; digest: string } };
+    };
+    return `${lock.images.cli.ref}@${lock.images.cli.digest}`;
+  };
+  /** A server that says which toolkit it runs, keeps what it is sent, and can refuse. */
+  function answering(
+    runs: string | null,
+    options: {
+      doctor?: { code: number; stderr?: string };
+      script?: { code: number; stderr?: string };
+    } = {},
+  ) {
+    const seen: { words: string[]; input: string; user: string }[] = [];
+    const remote: Remote = async (target, words, opts) => {
+      seen.push({
+        words: [...words],
+        input: Buffer.from(opts?.input ?? '').toString(),
+        user: target.user,
+      });
+      if (words[1] === 'doctor') {
+        if (options.doctor?.code)
+          return { code: options.doctor.code, stdout: '', stderr: options.doctor.stderr ?? '' };
+        return { code: 0, stdout: JSON.stringify({ protocol: 1, toolkitImage: runs }), stderr: '' };
+      }
+      if (words.includes('sh')) {
+        if (options.script?.code) {
+          opts?.onStderr?.(`${options.script.stderr ?? ''}\n`);
+          return { code: options.script.code, stdout: '', stderr: options.script.stderr ?? '' };
+        }
+        opts?.onStderr?.('sv: Pulling the toolkit the lock pins.\n');
+        return { code: 0, stdout: '', stderr: 'sv: Pulling the toolkit the lock pins.' };
+      }
+      opts?.onStdout?.('Applied.\n');
+      return { code: 0, stdout: 'Applied.', stderr: '' };
+    };
+    const verbs = () => seen.map((call) => (call.words.includes('sh') ? 'script' : call.words[1]));
+    return { seen, remote, verbs };
+  }
+
+  it('brings the server to the toolkit the lock pins before it sends the commit, and says so', async () => {
+    await ready();
+    await sv(world, 'push');
+    const fake = answering(OLD);
+    world.ctx.remote = fake.remote;
+    const done = await sv(world, 'deploy');
+    expect(done.code).toBe(0);
+    expect(fake.verbs()).toEqual(['doctor', 'script', 'deploy']);
+    const script = fake.seen.find((call) => call.words.includes('sh'));
+    expect(script?.words).toEqual(['sh', '-s']);
+    expect(script?.input).toContain(`IMAGE='${pinned()}'`);
+    expect(done.text).toContain('toolkit');
+    expect(done.text).toContain('Deployed');
+  });
+
+  it('does nothing about the toolkit when the server already runs the one the lock pins', async () => {
+    await ready();
+    await sv(world, 'push');
+    const fake = answering(pinned());
+    world.ctx.remote = fake.remote;
+    expect((await sv(world, 'deploy')).code).toBe(0);
+    expect(fake.verbs()).toEqual(['doctor', 'deploy']);
+  });
+
+  it('brings it up when the server names no toolkit at all', async () => {
+    await ready();
+    await sv(world, 'push');
+    const fake = answering(null);
+    world.ctx.remote = fake.remote;
+    expect((await sv(world, 'deploy')).code).toBe(0);
+    expect(fake.verbs()).toEqual(['doctor', 'script', 'deploy']);
+  });
+
+  it('uses sudo, without a password, for a user who is not root, and says what to do when that is refused, sending nothing', async () => {
+    await ready('--user', 'ops');
+    await sv(world, 'push');
+    const fake = answering(OLD);
+    world.ctx.remote = fake.remote;
+    expect((await sv(world, 'deploy')).code).toBe(0);
+    expect(fake.seen.find((call) => call.input.includes('IMAGE='))?.words).toEqual([
+      'sudo',
+      '-n',
+      'sh',
+      '-s',
+    ]);
+
+    const refused = answering(OLD, { script: { code: 1, stderr: 'sudo: a password is required' } });
+    world.ctx.remote = refused.remote;
+    const done = await sv(world, 'deploy');
+    expect(done.code).toBe(2);
+    expect(done.text).toContain('cannot use sudo without a password');
+    expect(refused.verbs()).toEqual(['doctor', 'script']);
+  });
+
+  it('leaves a server that cannot answer, because it is not prepared, to the refusal the deployment gets', async () => {
+    await ready();
+    await sv(world, 'push');
+    const fake = answering(OLD, { doctor: { code: 2, stderr: 'sovereign-receive: not found' } });
+    world.ctx.remote = fake.remote;
+    await sv(world, 'deploy');
+    expect(fake.verbs()).toEqual(['doctor', 'deploy']);
+  });
+
+  it('stops, and sends nothing, when the toolkit cannot be brought up', async () => {
+    await ready();
+    await sv(world, 'push');
+    const fake = answering(OLD, {
+      script: { code: 1, stderr: 'Error response from daemon: manifest unknown' },
+    });
+    world.ctx.remote = fake.remote;
+    const done = await sv(world, 'deploy');
+    expect(done.code).toBe(1);
+    expect(fake.verbs()).toEqual(['doctor', 'script']);
+    expect(done.text).toContain('manifest unknown');
+  });
+
+  it('does not touch the toolkit from a runner, whose key may do nothing but deploy', async () => {
+    await ready();
+    await sv(world, 'push');
+    const file = path.join(world.root, 'suite.yml');
+    writeFileSync(
+      file,
+      readFileSync(file, 'utf8').replace(
+        'host: 203.0.113.7',
+        'host: 203.0.113.7\n  hostKey: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl',
+      ),
+    );
+    world.git('commit', '-am', 'host key');
+    world.ctx.env = { ...world.ctx.env, SV_DEPLOY_KEY: 'k' };
+    const fake = answering(OLD);
+    world.ctx.remote = fake.remote;
+    expect((await sv(world, 'deploy', '--ci')).code).toBe(0);
+    expect(fake.verbs()).toEqual(['deploy']);
+  });
+
+  it('tells a runner, whose server cannot read the lock, to bootstrap from the operator’s machine, and does not say the refusal twice', async () => {
+    await ready();
+    await sv(world, 'push');
+    const file = path.join(world.root, 'suite.yml');
+    writeFileSync(
+      file,
+      readFileSync(file, 'utf8').replace(
+        'host: 203.0.113.7',
+        'host: 203.0.113.7\n  hostKey: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl',
+      ),
+    );
+    world.git('commit', '-am', 'host key');
+    world.ctx.env = { ...world.ctx.env, SV_DEPLOY_KEY: 'k' };
+    const reason = 'suite.lock is not valid: images.mail is not allowed';
+    world.ctx.remote = async (_target, _words, opts) => {
+      opts?.onStderr?.(`${reason}\n`);
+      return { code: 2, stdout: '', stderr: reason };
+    };
+    const done = await sv(world, 'deploy', '--ci');
+    expect(done.code).toBe(2);
+    expect(done.text.split(reason).length - 1).toBe(1);
+    expect(done.text).toContain('sv server bootstrap');
+    expect(done.text).toContain('from your own machine');
+  });
+
+  it('shows the server’s reason once, for any refusal it has already streamed', async () => {
+    await ready();
+    await sv(world, 'push');
+    const reason = 'The archive holds a file that is not an instance file: x.';
+    world.ctx.remote = async (_target, words, opts) => {
+      if (words[1] === 'doctor') return { code: 0, stdout: '', stderr: '' };
+      opts?.onStderr?.(`${reason}\n`);
+      return { code: 2, stdout: '', stderr: reason };
+    };
+    const done = await sv(world, 'deploy');
+    expect(done.code).toBe(2);
+    expect(done.text.split(reason).length - 1).toBe(1);
   });
 });

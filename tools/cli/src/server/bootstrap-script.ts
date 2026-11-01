@@ -152,3 +152,35 @@ printf 'SV_HOST_KEY=%s\\n' "$hostkey"
 say "Ready."
 `;
 }
+
+/**
+ * The script `sv deploy` runs as root when the server's toolkit is not the one `suite.lock` pins (operator-cli §8.1): it pulls the image
+ * and names it in `toolkit-image`, as `sv server bootstrap` does, and does nothing else. It makes no state of its own, so a machine that
+ * was never bootstrapped is refused and told to be. Given only an image by digest, like the bootstrap script.
+ */
+export function toolkitScript(image: string): string {
+  if (!IMAGE_BY_DIGEST.test(image)) {
+    throw new Refused(`${image} is not an image by digest.`, 'Run sv push to refresh suite.lock.');
+  }
+  return `set -eu
+STATE=/var/lib/sovereign
+IMAGE='${image}'
+say() { printf 'sv: %s\\n' "$*" >&2; }
+
+if [ "$(id -u)" != 0 ]; then
+  say "This must run as root, or through sudo without a password."
+  exit 2
+fi
+
+if [ ! -d "$STATE" ] || ! command -v docker >/dev/null 2>&1; then
+  say "This machine has not been prepared. Run sv server bootstrap."
+  exit 2
+fi
+
+say "Pulling the toolkit that suite.lock pins."
+docker pull "$IMAGE" >/dev/null </dev/null
+printf '%s\\n' "$IMAGE" > "$STATE/toolkit-image.new"
+mv "$STATE/toolkit-image.new" "$STATE/toolkit-image"
+say "The server now runs that toolkit."
+`;
+}

@@ -219,6 +219,25 @@ describe('sv doctor', () => {
     expect(done.text).toContain('Run sv server bootstrap');
   });
 
+  it('says a different toolkit on the server is brought up by the next sv deploy, or by sv deploy --ssh when a runner deploys', async () => {
+    await ready();
+    world.ctx.network = { resolve: async () => ['203.0.113.7'], reachable: async () => true };
+    const other = `ghcr.io/sovereignfs/cli:0.0.9@sha256:${'b'.repeat(64)}`;
+    world.ctx.remote = answering({ doctor: { stdout: server({ toolkitImage: other }) } }).remote;
+    const ssh = await sv(world, 'doctor');
+    expect(ssh.code).toBe(0);
+    expect(ssh.text).toContain('warn  The toolkit on the server');
+    expect(ssh.text).toContain('The next sv deploy brings the server to the pinned toolkit.');
+    const file = path.join(world.root, 'suite.yml');
+    (await import('node:fs')).writeFileSync(
+      file,
+      readFileSync(file, 'utf8').replace('deploy: ssh', 'deploy: github'),
+    );
+    const github = await sv(world, 'doctor');
+    expect(github.text).toContain('sv deploy --ssh');
+    expect(github.text).not.toContain('The next sv deploy brings');
+  });
+
   it('only warns about DNS and ports when the certificates are the proxy’s own', async () => {
     await ready();
     const path_ = path.join(world.root, 'suite.yml');

@@ -11,10 +11,11 @@ import {
   SuiteFile,
   isKnownPath,
   readLock,
+  writeLock,
 } from '../suite/files.js';
-import { lockProblems } from '../suite/lock.js';
+import { lockProblems, refreshedLock } from '../suite/lock.js';
 import type { Problem } from '../suite/schema.js';
-import { isExternal } from '../suite/types.js';
+import { isExternal, type Lock } from '../suite/types.js';
 
 const list = (problems: Problem[]) => problems.map((p) => `  ${p.at}: ${p.message}`).join('\n');
 
@@ -23,20 +24,39 @@ async function git(ctx: Context, args: string[]) {
   return done;
 }
 
+/** What `checkRepository` found that `sv push` writes again: the lock that `suite.yml` now asks for, and how the one held differs. */
+export type LockRefresh = { lock: Lock; changes: Problem[] };
+
 /**
  * What `sv push` checks before it stages anything (operator-cli §4.5): the files meet their schemas, `suite.lock` matches
  * `suite.yml`, every app's manifest is good and its `env` is allowed, every secret is age ciphertext, and nothing that looks like a
  * secret is in the open. It is a guard and not a guarantee, and says so.
+ *
+ * With `refresh`, a `suite.lock` that is valid but does not match `suite.yml` is not a problem: the lock it would be is resolved
+ * (what did not change keeps its digest) and returned, for the caller to write once every check has passed. A lock that is not
+ * valid is never refreshed. Without it, such a lock is a problem, which is what `sv deploy` wants, since it sends what is committed.
  */
-export async function checkRepository(ctx: Context): Promise<void> {
+export async function checkRepository(
+  ctx: Context,
+  options: { refresh?: boolean } = {},
+): Promise<LockRefresh | undefined> {
   const file = await SuiteFile.load(ctx.root);
   const suite = file.value;
-  const lock = await readLock(ctx.root);
+  let lock = await readLock(ctx.root);
   if (!lock) {
     throw new Refused(
       'There is no suite.lock.',
       'sv setup writes one, and every sv command that changes what runs refreshes it.',
     );
+  }
+  let refresh: LockRefresh | undefined;
+  const stale = lockProblems(suite, lock);
+  if (options.refresh && stale.length > 0) {
+    refresh = {
+      lock: await refreshedLock(suite, lock, (ref) => ctx.registry.digest(ref)),
+      changes: stale,
+    };
+    lock = refresh.lock;
   }
   const problems: Problem[] = lockProblems(suite, lock);
   for (const [name, app] of Object.entries(suite.apps ?? {})) {
@@ -67,11 +87,15 @@ export async function checkRepository(ctx: Context): Promise<void> {
     }
   }
   if (problems.length > 0) {
+    const lockOnly = problems.every((problem) => stale.some((one) => one.at === problem.at));
     throw new Refused(
       `The repository does not pass its checks:\n${list(problems)}`,
-      'Fix these and run sv push again. These checks are a guard and not a guarantee: they catch common mistakes, not every one.',
+      lockOnly
+        ? 'suite.yml changed what runs and suite.lock was not written again. Run sv push: it refreshes the lock, checks, commits and pushes.'
+        : 'Fix these and run sv push again. These checks are a guard and not a guarantee: they catch common mistakes, not every one.',
     );
   }
+  return refresh;
 }
 
 /** The paths git has staged, so none outside the known files is committed by this command. */
@@ -102,7 +126,11 @@ export async function push(ctx: Context, argv: string[]): Promise<void> {
     throw new Refused('The repository has no remote to push to.', 'git remote add origin <url>');
   }
 
-  await checkRepository(ctx);
+  const refresh = await checkRepository(ctx, { refresh: true });
+  if (refresh) {
+    await writeLock(ctx.root, refresh.lock);
+    ctx.io.err(`Refreshed suite.lock for what suite.yml now says:\n${list(refresh.changes)}`);
+  }
 
   const already = (await staged(ctx)).filter((path_) => !isKnownPath(path_));
   if (already.length > 0) {

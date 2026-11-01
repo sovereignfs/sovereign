@@ -11,7 +11,7 @@ import {
   SERVER_KEY_PREFIX,
   bootstrapScript,
 } from '../server/bootstrap-script.js';
-import { targetOf, type RemoteResult } from '../server/remote.js';
+import { targetOf, type RemoteResult, type Target } from '../server/remote.js';
 import { SecretsFile } from '../secrets/store.js';
 import { SuiteFile, readLock } from '../suite/files.js';
 import { reencrypt } from './secret.js';
@@ -32,21 +32,68 @@ export function sayingOf(text: string): string {
   return said.pop() ?? lines.pop() ?? '';
 }
 
-/** Turns a command that ended badly on the server into the error the operator sees (operator-cli §11). */
-export function remoteFailure(result: RemoteResult, what: string): never {
+/**
+ * Turns a command that ended badly on the server into the error the operator sees (operator-cli §11). `shown` is what was already
+ * printed as it ran: the server's reason is in it, and the error then does not say it a second time. `hint` says what to do, when the
+ * caller knows more than the server's words do.
+ */
+export function remoteFailure(
+  result: RemoteResult,
+  what: string,
+  options: { shown?: string; hint?: string } = {},
+): never {
   const said = sayingOf(result.stderr) || sayingOf(result.stdout);
+  const again = said !== '' && (options.shown ?? '').includes(said);
+  const reason = again ? '' : said;
   if (result.code === 255) {
     throw new Failed(
       `Could not reach the server over SSH: ${said || 'no answer'}`,
       'Check server.host, server.port and server.user in suite.yml, and that ssh to it works from this machine.',
     );
   }
-  if (result.code === 2) throw new Refused(said || `The server refused ${what}.`);
-  if (result.code === 3) throw new Locked(said || 'Another deployment holds the lock.');
+  if (result.code === 2)
+    throw new Refused(
+      reason || `${what} was refused by the server${again ? ', as it said above' : ''}.`,
+      options.hint,
+    );
+  if (result.code === 3) throw new Locked(reason || 'Another deployment holds the lock.');
   throw new Failed(
-    `${what} failed on the server${said ? `: ${said}` : ''}.`,
-    'Running it again is safe.',
+    `${what} failed on the server${reason ? `: ${reason}` : again ? ', as it said above' : ''}.`,
+    options.hint ?? 'Running it again is safe.',
   );
+}
+
+/**
+ * Runs a script on the server as root: directly for root, and through `sudo -n` for another user, which must not ask for a password.
+ * It returns what the script printed. A script that fails is the error `what` says, and a refused `sudo` says what to do about it.
+ */
+export async function runAsRoot(
+  ctx: Context,
+  target: Target,
+  script: string,
+  what: string,
+): Promise<RemoteResult> {
+  let shown = '';
+  const result = await ctx.remote(
+    target,
+    target.user === 'root' ? ['sh', '-s'] : ['sudo', '-n', 'sh', '-s'],
+    {
+      input: script,
+      onStderr: (chunk) => {
+        shown += chunk;
+        ctx.io.err(chunk.replace(/\n$/, ''));
+      },
+    },
+  );
+  if (result.code !== 0) {
+    if (target.user !== 'root' && /sudo/.test(result.stderr))
+      throw new Refused(
+        `${target.user} cannot use sudo without a password.`,
+        'Use server.user: root, or let that user run sudo without a password for this.',
+      );
+    remoteFailure(result, what, { shown });
+  }
+  return result;
 }
 
 /** A key pair for the deployment key, made here so the private half never exists on the server. */
@@ -94,22 +141,7 @@ async function bootstrap(ctx: Context, argv: string[]): Promise<void> {
     ...(deployKey ? { deployKey: deployKey.publicKey } : {}),
     rotate: args.switches.has('new-deploy-key'),
   });
-  const result = await ctx.remote(
-    target,
-    target.user === 'root' ? ['sh', '-s'] : ['sudo', '-n', 'sh', '-s'],
-    {
-      input: script,
-      onStderr: (chunk) => ctx.io.err(chunk.replace(/\n$/, '')),
-    },
-  );
-  if (result.code !== 0) {
-    if (target.user !== 'root' && /sudo/.test(result.stderr))
-      throw new Refused(
-        `${target.user} cannot use sudo without a password.`,
-        'Use server.user: root, or let that user run sudo without a password for this.',
-      );
-    remoteFailure(result, 'Preparing the server');
-  }
+  const result = await runAsRoot(ctx, target, script, 'Preparing the server');
 
   const serverKey = result.stdout
     .split('\n')

@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { Refused } from '../errors.js';
-import { bootstrapScript } from './bootstrap-script.js';
+import { bootstrapScript, toolkitScript } from './bootstrap-script.js';
 import { WRAPPER, WRAPPER_PATH, authorizedKeysLine } from './wrapper.js';
 
 const image = `ghcr.io/sovereignfs/cli:0.1.0@sha256:${'a'.repeat(64)}`;
@@ -71,5 +71,37 @@ describe('the script that prepares a machine', () => {
         script.indexOf('if [ -n "$DEPLOY_KEY" ]'),
       );
     }
+  });
+});
+
+describe('the script that brings the server’s toolkit up to date', () => {
+  it('is a program a shell reads, and puts in only an image by digest', () => {
+    expect(parses(toolkitScript(image))).toBe(true);
+    for (const bad of ["x'; id; '", 'ghcr.io/x:1', `a b@sha256:${'a'.repeat(64)}`]) {
+      expect(() => toolkitScript(bad), bad).toThrow(Refused);
+    }
+  });
+
+  it('pulls the image and names it in toolkit-image, as bootstrap does, and installs and changes nothing else', () => {
+    const script = toolkitScript(image);
+    expect(script).toContain(`IMAGE='${image}'`);
+    expect(script).toContain('docker pull "$IMAGE"');
+    expect(script).toContain('"$STATE/toolkit-image"');
+    expect(script).not.toContain('authorized_keys');
+    expect(script).not.toContain('apt-get');
+    expect(script).not.toContain(WRAPPER_PATH);
+  });
+
+  it('refuses to run as anyone but root, and on a machine that has not been prepared, so it never makes the state it needs', () => {
+    const script = toolkitScript(image);
+    expect(script).toContain('id -u');
+    expect(script).toContain('sv server bootstrap');
+    expect(script).not.toContain('mkdir');
+  });
+
+  it('writes toolkit-image whole or not at all, since the next request reads it', () => {
+    const script = toolkitScript(image);
+    expect(script).toMatch(/toolkit-image\.new/);
+    expect(script).toMatch(/mv "\$STATE\/toolkit-image\.new" "\$STATE\/toolkit-image"/);
   });
 });

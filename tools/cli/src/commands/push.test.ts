@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
+import { parse } from 'yaml';
 import { afterEach, describe, expect, it } from 'vitest';
 import { NOTES_IMAGE, setUpWorld, sv } from '../testing/commands.js';
 import { makeWorld, manifestOf, type World } from '../testing/world.js';
@@ -16,6 +17,8 @@ const write = (name: string, text: string) => {
   writeFileSync(path.join(world.root, name), text);
 };
 const read = (name: string) => readFileSync(path.join(world.root, name), 'utf8');
+type LockFile = { images: Record<string, { ref: string; digest: string }> };
+const lockOf = () => parse(read('suite.lock')) as LockFile;
 const committed = () => {
   try {
     world.git('rev-parse', '--verify', 'HEAD');
@@ -91,20 +94,64 @@ describe('sv push', () => {
     expect(committed()).toBe(false);
   });
 
-  it('refuses a suite.yml that is not valid, and one whose lock is out of date, saying what is wrong', async () => {
+  it('refuses a suite.yml that is not valid, saying what is wrong, and changes nothing', async () => {
     await ready();
     const text = read('suite.yml');
     write('suite.yml', text.replace('domain: sovereign.local', 'domain: NO'));
     const bad = await sv(world, 'push');
     expect(bad.code).toBe(2);
     expect(bad.text).toContain('suite.yml is not valid');
-    write('suite.yml', text.replace(`version: ${CORE}`, 'version: 0.70.0'));
-    const stale = await sv(world, 'push');
-    expect(stale.code).toBe(2);
-    expect(stale.text).toContain(
-      `images.core: is ghcr.io/sovereignfs/sovereign:${CORE}, and suite.yml wants ghcr.io/sovereignfs/sovereign:0.70.0`,
-    );
     expect(committed()).toBe(false);
+  });
+
+  it('writes suite.lock again when suite.yml has changed what runs, keeping what did not change, and says so', async () => {
+    await ready();
+    const before = lockOf();
+    write('suite.yml', read('suite.yml').replace(`version: ${CORE}`, 'version: 0.70.0'));
+    world.registryAsked.length = 0;
+    const done = await sv(world, 'push');
+    expect(done.code).toBe(0);
+    const after = lockOf();
+    expect(after.images.core?.ref).toBe('ghcr.io/sovereignfs/sovereign:0.70.0');
+    expect(after.images.database).toEqual(before.images.database);
+    expect(after.images.proxy).toEqual(before.images.proxy);
+    expect(world.registryAsked).toEqual(['ghcr.io/sovereignfs/sovereign:0.70.0']);
+    expect(done.text).toContain('Refreshed suite.lock');
+    expect(done.text).toContain('images.core');
+    expect(remoteFiles()).toContain('suite.lock');
+  });
+
+  it('adds the mail image to the lock when the environment is changed to one that runs Mailpit', async () => {
+    await ready();
+    expect(lockOf().images.mail).toBeUndefined();
+    write('suite.yml', read('suite.yml').replace(/environment: \w+/, 'environment: staging'));
+    const done = await sv(world, 'push');
+    expect(done.code).toBe(0);
+    expect(lockOf().images.mail?.ref).toContain('axllent/mailpit');
+    expect(done.text).toContain('images.mail');
+  });
+
+  it('does not rewrite a suite.lock that is not valid: the digests in it are what runs, so it says to restore it', async () => {
+    await ready();
+    write('suite.lock', '{"schema": 1, "images": {"cli": 3}}');
+    const done = await sv(world, 'push');
+    expect(done.code).toBe(2);
+    expect(done.text).toContain('suite.lock is not valid');
+    expect(done.text).toContain('restore it from git');
+    expect(done.text).not.toContain('sv app update');
+    expect(read('suite.lock')).toBe('{"schema": 1, "images": {"cli": 3}}');
+    expect(committed()).toBe(false);
+  });
+
+  it('writes nothing, when the lock is refreshed and then something else fails the checks', async () => {
+    await ready();
+    const lock = read('suite.lock');
+    write('suite.yml', read('suite.yml').replace(`version: ${CORE}`, 'version: 0.70.0'));
+    write('secrets.age.yml', 'core:\n  SV_SMTP_PASSWORD: hunter2\n');
+    const done = await sv(world, 'push');
+    expect(done.code).toBe(2);
+    expect(done.text).toContain('is not age ciphertext');
+    expect(read('suite.lock')).toBe(lock);
   });
 
   it('refuses a secret in plain text in secrets.age.yml and one in the open in suite.yml', async () => {

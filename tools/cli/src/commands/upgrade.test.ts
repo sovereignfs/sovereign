@@ -106,6 +106,28 @@ describe('sv upgrade --finish', () => {
     expect(done.text).toContain('Nothing to change');
   });
 
+  it('counts an image the lock gains, or loses, as a change, and writes the lock', async () => {
+    await ready();
+    pinTo(RELEASE.version);
+    writeFileSync(
+      path.join(world.root, 'suite.yml'),
+      read('suite.yml').replace(/^environment: .*$/m, 'environment: staging'),
+    );
+    expect(lock().images.mail).toBeUndefined();
+    const added = await sv(world, 'upgrade', '--finish');
+    expect(added.code).toBe(0);
+    expect(added.text).not.toContain('Nothing to change');
+    expect(added.text).toContain(`image mail: added ${RELEASE.images.mail}`);
+    expect(lock().images.mail?.ref).toBe(RELEASE.images.mail);
+    writeFileSync(
+      path.join(world.root, 'suite.yml'),
+      read('suite.yml').replace(/^environment: .*$/m, 'environment: production'),
+    );
+    const removed = await sv(world, 'upgrade', '--finish');
+    expect(removed.text).toContain(`image mail: removed ${RELEASE.images.mail}`);
+    expect(lock().images.mail).toBeUndefined();
+  });
+
   it('refuses when package.json pins another toolkit than the one running, changing nothing', async () => {
     await ready();
     pinTo('9.9.9');

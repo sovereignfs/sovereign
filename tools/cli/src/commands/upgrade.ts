@@ -150,6 +150,10 @@ async function finish(ctx: Context): Promise<void> {
     const now = refreshed.images[key];
     if (old && now && (old.ref !== now.ref || old.digest !== now.digest)) {
       changes.push(`image ${key}: ${old.ref} → ${now.ref} (${now.digest.slice(0, 19)}…)`);
+    } else if (!old && now) {
+      changes.push(`image ${key}: added ${now.ref} (${now.digest.slice(0, 19)}…)`);
+    } else if (old && !now) {
+      changes.push(`image ${key}: removed ${old.ref}`);
     }
   }
 

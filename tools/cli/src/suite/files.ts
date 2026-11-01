@@ -185,7 +185,7 @@ export async function readLock(root: string): Promise<Lock | undefined> {
   if (problems.length > 0) {
     throw new Refused(
       `suite.lock is not valid:\n${describe(problems)}`,
-      'Do not edit it by hand. Run sv push after sv app update, or restore it from git.',
+      'Do not edit it by hand: restore it from git. sv push writes it again when suite.yml changes, but not when it is damaged.',
     );
   }
   return value as Lock;

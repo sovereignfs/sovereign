@@ -244,6 +244,11 @@ accounts, so there MUST be no other way to it: it has no public name, and the se
 It MUST stage only the files of §2.1. It MUST NOT stage everything. These checks are a guard, not a guarantee, and MUST NOT be
 described to operators as one.
 
+`suite.lock` that is valid but no longer matches `suite.yml` is not one of those refusals: it is what an edit to `suite.yml` leaves, and
+§5 says `sv` refreshes it. `sv push` MUST write it again, keeping the digest of everything that did not change and resolving only what
+did, say what it changed, and then run its checks. A `suite.lock` that does not meet its schema is never rewritten for the operator: the
+digests in it are what the instance runs, so it is restored from git.
+
 ### 4.6 Updating and recovering
 
 | Command                                         | What it does                                                                                              | Reaches the server |
@@ -462,6 +467,12 @@ From the operator's machine, over the operator's own SSH access. It needs no Git
 reach the server. Its output is shown as it happens, and it fails if the connection is lost before `sv apply` has been handed
 the archive. After that, `sv apply` MUST carry on without the connection, and `sv logs` shows how it went.
 
+Before it sends the commit, `sv deploy --ssh` MUST bring the server's toolkit to the one `suite.lock` pins, when the server runs another,
+as `sv server bootstrap` installs it (§8.3), since that toolkit is what reads the lock first and an older one refuses a lock that
+names what it does not know. This needs root on the server, which the operator's own access has and a runner's deployment key does not:
+a deployment that the server refuses for its lock tells a runner to run `sv server bootstrap` or `sv deploy` from the operator's machine.
+A server that is not prepared yet is left to the refusal it gets.
+
 ### 8.2 `--github`
 
 From a runner. `sv deploy --github` starts a workflow in the instance repository, which calls a reusable workflow in this
@@ -523,6 +534,9 @@ Runs over the operator's SSH access, once, and is safe to run again. It MUST:
   or leaves the server; it answers `null` when the database server cannot be asked. A server whose toolkit is older leaves the field out,
   and `sv status` and `sv doctor` then say nothing of connections. `sv doctor` warns when a role holds four fifths of its limit or more,
   or the server four fifths of what it leaves for the roles.
+- **The toolkit is brought up by `sv deploy --ssh`** with a short script run as root, as bootstrap runs its own (`sudo -n` when the user
+  is not root): it pulls the image the lock names, by digest, and writes `toolkit-image`, and nothing else. `sv deploy` asks `doctor` which
+  toolkit the server runs first, and does nothing when it is the pinned one. The deployment says it is doing this.
 - **The archive** is what `git archive` writes for the pushed commit's `suite.yml`, `suite.lock`, `secrets.age.yml` and `overrides/`. The
   toolkit reads it with its own reader and writes nothing until the whole archive is accepted: a link, a device, a name that climbs out of
   the folder or is not an instance file, an archive over 32 MB or one that is cut short is refused. It is written to `incoming/<commit>/`.
@@ -610,7 +624,7 @@ A dependency bot MAY open the change to `package.json`. `sv upgrade` then finish
   With no `--to` it asks npm for the newest release and does nothing if that is the one running.
 - **What it moves:** the toolkit's image in the lock, `core.version` to the release's `newestCore` (never backward; step 2 above, the
   newest published core, is not built yet), the schema through the
-  migrations in order (none yet: there is one schema), and the digests of what changed. It shows each change, and writes `suite.yml` and
+  migrations in order (none yet: there is one schema), and the digests of what changed. It shows each change (an image the lock gains or loses counts as one), and writes `suite.yml` and
   `suite.lock` only when they are all good. A repository from a newer schema than the toolkit reads is refused, as is one that pins a
   different toolkit than the one running.
 - **Release:** the toolkit, `create` and the image are one release on the tag `cli-vX.Y.Z` ([releasing](../releasing.md#releasing-the-toolkit)).
@@ -751,3 +765,4 @@ with a DNS provider's module, which the stock image does not carry.
 | 2026-10-30 | First draft, from the accepted RFC 0002.                                                                                                                                                                                                                                                            |
 | 2026-11-01 | Apps from git and app upgrades (§4.2.1), backups before an app changes version, scheduled backups to S3, git or SFTP and per-app backups (§6.4.3, §10.2.2), rollback to a named release (§10.3), and more commands from GitHub (§8.2): [workstream 0001](../workstreams/0001-operator-workflow.md). |
 | 2026-11-01 | `sv seed` and core's `SV_ENVIRONMENT` (§4.4, §6.4, §13): test accounts and a sample app on development and staging instances, refused on production: [workstream 0002](../workstreams/0002-test-instances.md).                                                                                      |
+| 2026-11-02 | `sv push` refreshes a lock that no longer matches `suite.yml`, and `sv deploy --ssh` brings the server's toolkit to the pinned one before it sends the commit (§4.5, §8.1, §8.4, §10.1.1): [research 0003](../research/0003-database-connections.md).                                               |

@@ -3,14 +3,16 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import { parseArgs, positionals } from '../args.js';
 import type { Context } from '../context.js';
+import { byDigest } from '../apply/render.js';
 import { Failed, Refused } from '../errors.js';
+import { toolkitScript } from '../server/bootstrap-script.js';
 import { WRAPPER_PATH } from '../server/wrapper.js';
 import { targetOf, type Target } from '../server/remote.js';
-import { SuiteFile } from '../suite/files.js';
+import { SuiteFile, readLock } from '../suite/files.js';
 import type { Suite } from '../suite/types.js';
 import { DEPLOY_WORKFLOW } from '../suite/workflow.js';
 import { checkRepository } from './push.js';
-import { remoteFailure } from './server.js';
+import { remoteFailure, runAsRoot } from './server.js';
 import path from 'node:path';
 
 /** The files of the commit that go to the server: what `sv apply` reads, and nothing else of the repository. */
@@ -93,6 +95,7 @@ export async function deploy(ctx: Context, argv: string[]): Promise<void> {
   if (method === 'github') return startOnGitHub(ctx);
   const target = targetOf(suite);
   const { commit, archive } = await prepareDeployment(ctx);
+  await bringToolkitUp(ctx, target);
   await send(ctx, target, commit, archive);
 
   // A purge has happened; the record of it is cleared here, and the next sv push commits that.
@@ -103,15 +106,60 @@ export async function deploy(ctx: Context, argv: string[]): Promise<void> {
   ctx.io.err(`Deployed ${commit.slice(0, 12)}. sv status shows how it is running.`);
 }
 
+/**
+ * Makes the server run the toolkit `suite.lock` pins, before the commit is sent (operator-cli §8.1). The toolkit already there is what
+ * reads the archive and its lock first, and an older one refuses a lock that names what it does not know, so it is brought up over the
+ * operator's own access, as `sv server bootstrap` installs it. A server that cannot answer is left to the refusal the deployment gets.
+ */
+async function bringToolkitUp(ctx: Context, target: Target): Promise<void> {
+  const lock = await readLock(ctx.root);
+  if (!lock) return;
+  const wanted = byDigest(lock.images.cli);
+  const asked = await ctx.remote(target, [WRAPPER_PATH, 'doctor']);
+  if (asked.code !== 0) return;
+  let runs: unknown;
+  try {
+    runs = (JSON.parse(asked.stdout) as { toolkitImage?: unknown }).toolkitImage;
+  } catch {
+    return;
+  }
+  if (runs === wanted) return;
+  ctx.io.err(
+    `${target.host} runs ${typeof runs === 'string' ? runs.split('@')[0] : 'no toolkit'}, and suite.lock pins ${lock.images.cli.ref}. Bringing it up to date first.`,
+  );
+  await runAsRoot(ctx, target, toolkitScript(wanted), 'Bringing the server’s toolkit up to date');
+}
+
 /** Sends the archive and shows what the server prints as it does. */
-async function send(ctx: Context, target: Target, commit: string, archive: Buffer): Promise<void> {
+async function send(
+  ctx: Context,
+  target: Target,
+  commit: string,
+  archive: Buffer,
+  fromRunner = false,
+): Promise<void> {
   ctx.io.err(`Sending ${commit.slice(0, 12)} to ${target.host}.`);
+  let shown = '';
+  const show = (chunk: string) => {
+    shown += chunk;
+    ctx.io.err(chunk.replace(/\n$/, ''));
+  };
   const result = await ctx.remote(target, [WRAPPER_PATH, 'deploy', commit], {
     input: archive,
-    onStdout: (chunk) => ctx.io.err(chunk.replace(/\n$/, '')),
-    onStderr: (chunk) => ctx.io.err(chunk.replace(/\n$/, '')),
+    onStdout: show,
+    onStderr: show,
   });
-  if (result.code !== 0) remoteFailure(result, 'The deployment');
+  if (result.code === 0) return;
+  // A server whose toolkit is older cannot read a lock that names what it does not know. A runner's key cannot update it.
+  const lockRefused = fromRunner && /suite\.lock is not valid/.test(`${shown}${result.stderr}`);
+  remoteFailure(result, 'The deployment', {
+    shown,
+    ...(lockRefused
+      ? {
+          hint: 'The server’s toolkit is older than the one suite.lock pins, and a runner’s deployment key cannot update it. Run sv deploy, or sv server bootstrap, from your own machine.',
+        }
+      : {}),
+  });
 }
 
 /** `sv deploy --github`: starts the workflow that deploys, on the pushed commit, and says how to watch it. The runner does the rest. */
@@ -175,7 +223,7 @@ async function fromRunner(ctx: Context, suite: Suite): Promise<void> {
     const entry =
       base.port === undefined || base.port === 22 ? base.host : `[${base.host}]:${base.port}`;
     await writeFile(knownHostsFile, `${entry} ${suite.server.hostKey}\n`, { mode: 0o600 });
-    await send(ctx, { ...base, identityFile, knownHostsFile }, commit, archive);
+    await send(ctx, { ...base, identityFile, knownHostsFile }, commit, archive, true);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

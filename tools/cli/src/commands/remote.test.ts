@@ -202,6 +202,23 @@ describe('sv doctor', () => {
     expect((await sv(world, 'doctor')).text).toContain('Run sv server bootstrap');
   });
 
+  it('says what the server answered when it is prepared but cannot run the toolkit, and not that it is unprepared', async () => {
+    await ready();
+    world.ctx.remote = answering({
+      doctor: {
+        code: 1,
+        stderr:
+          'permission denied while trying to connect to the docker API at unix:///var/run/docker.sock',
+      },
+    }).remote;
+    world.ctx.network = { resolve: async () => ['203.0.113.7'], reachable: async () => true };
+    const done = await sv(world, 'doctor');
+    expect(done.code).toBe(1);
+    expect(done.text).toContain('permission denied while trying to connect to the docker API');
+    expect(done.text).not.toContain('has not been prepared');
+    expect(done.text).toContain('Run sv server bootstrap');
+  });
+
   it('only warns about DNS and ports when the certificates are the proxy’s own', async () => {
     await ready();
     const path_ = path.join(world.root, 'suite.yml');

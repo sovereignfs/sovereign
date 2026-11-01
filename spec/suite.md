@@ -96,7 +96,7 @@ PostgreSQL is the only engine in this version, so there is no field for it.
 | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `host`    | yes      | A host name or an IP address                                                                                                                                       |
 | `port`    | no       | Its SSH port. Default `22`                                                                                                                                         |
-| `user`    | no       | The SSH user. Default `sovereign`                                                                                                                                  |
+| `user`    | no       | The SSH user. Default `root`. Any other user needs `sudo` without a password for `sv server bootstrap`, which then lets it use Docker                              |
 | `deploy`  | no       | `ssh` (the default) or `github`: how `sv deploy` goes                                                                                                              |
 | `hostKey` | no       | The server's SSH host key (`ssh-ed25519 AAAA…`), written by `sv server bootstrap`. A runner checks the server against it, since it has no `known_hosts` of its own |
 

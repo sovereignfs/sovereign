@@ -88,6 +88,14 @@ if [ -z "$compose" ] || [ "$cmajor" -lt 2 ] || { [ "$cmajor" -eq 2 ] && [ "$cmin
   exit 2
 fi
 
+# Every sv command runs the toolkit's image through the wrapper as the user it connects as, and Docker's socket is root's and
+# the docker group's. A user that is not root needs the group, for any way of deploying.
+user="\${SUDO_USER:-root}"
+if [ "$user" != root ] && getent group docker >/dev/null 2>&1 && ! id -nG "$user" | tr ' ' '\\n' | grep -qx docker; then
+  say "Letting $user use Docker (the docker group), which every sv command needs."
+  usermod -aG docker "$user"
+fi
+
 say "Making $STATE."
 mkdir -p "$STATE"
 chmod 755 "$STATE"
@@ -120,7 +128,6 @@ key="$(docker run --rm --volume "$STATE:$STATE" --env SV_STATE_DIR="$STATE" "$IM
 printf '${SERVER_KEY_PREFIX}%s\\n' "$key"
 
 if [ -n "$DEPLOY_KEY" ]; then
-  user="\${SUDO_USER:-root}"
   home="$(getent passwd "$user" | cut -d: -f6)"
   file="$home/.ssh/authorized_keys"
   if grep -q ' sovereign-deploy$' "$file" 2>/dev/null && [ "$ROTATE" != 1 ]; then
@@ -137,7 +144,6 @@ if [ -n "$DEPLOY_KEY" ]; then
     chmod 600 "$temporary"
     chown "$user" "$temporary"
     mv "$temporary" "$file"
-    if [ "$user" != root ]; then usermod -aG docker "$user"; fi
     printf 'SV_DEPLOY_KEY=installed\\n'
   fi
 fi

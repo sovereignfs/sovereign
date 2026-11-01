@@ -5,6 +5,7 @@ import { generateX25519Identity, identityToRecipient } from 'age-encryption';
 import { parse } from 'yaml';
 import type { Remote } from '../server/remote.js';
 import { decryptValue } from '../secrets/store.js';
+import { remoteFailure } from './server.js';
 import { sv, setUpWorld } from '../testing/commands.js';
 import { makeWorld, type World } from '../testing/world.js';
 import type { Suite } from '../suite/types.js';
@@ -155,5 +156,16 @@ describe('sv server bootstrap', () => {
     const done = await sv(world, 'server', 'bootstrap');
     expect(done.code).toBe(1);
     expect(suite().secrets.recipients).toHaveLength(1);
+  });
+
+  it('names the error the server printed, not the usage hint a tool prints after it', () => {
+    const stderr =
+      "docker: Error response from daemon: failed to mount the layer: invalid argument\n\nRun 'docker run --help' for more information\n";
+    expect(() => remoteFailure({ code: 1, stdout: '', stderr }, 'Preparing the server')).toThrow(
+      /failed to mount the layer: invalid argument/,
+    );
+    expect(() =>
+      remoteFailure({ code: 1, stdout: '', stderr: "Run 'x --help' for more information\n" }, 'It'),
+    ).toThrow(/Run 'x --help'/);
   });
 });

@@ -3,18 +3,22 @@ import { parseArgs, positionals } from '../args.js';
 import type { Context } from '../context.js';
 import { Failed, Refused } from '../errors.js';
 import { confirm } from '../io.js';
-import { targetOf, type Target } from '../server/remote.js';
+import { targetOf, type RemoteResult, type Target } from '../server/remote.js';
 import { WRAPPER_PATH } from '../server/wrapper.js';
 import { SuiteFile, readLock } from '../suite/files.js';
 import { isExternal, type Suite } from '../suite/types.js';
 import { publicNames } from '../apply/render.js';
-import { remoteFailure } from './server.js';
+import { remoteFailure, sayingOf } from './server.js';
+
+/** Whether the server has no wrapper to run: bootstrap has not been run. Any other failure is the server's own, and is said as it is. */
+const notPrepared = (result: RemoteResult) =>
+  result.code === 127 || /not found|No such file/.test(result.stderr);
 
 /** Asks the server one thing and returns what it printed, or ends the command as the server’s answer says. */
 async function ask(ctx: Context, target: Target, words: string[], what: string): Promise<string> {
   const result = await ctx.remote(target, [WRAPPER_PATH, ...words]);
   if (result.code !== 0) {
-    if (result.code === 127 || /not found|No such file/.test(result.stderr)) {
+    if (notPrepared(result)) {
       throw new Refused('The server has not been prepared.', 'Run sv server bootstrap.');
     }
     remoteFailure(result, what);
@@ -153,17 +157,20 @@ export async function doctor(ctx: Context, argv: string[]): Promise<void> {
 
   const reached = await ctx.remote(target, [WRAPPER_PATH, 'doctor']);
   if (reached.code !== 0) {
+    const said = sayingOf(reached.stderr) || sayingOf(reached.stdout);
     checks.push({
       name: 'The server',
       status: 'fail',
       detail:
         reached.code === 255
-          ? `ssh to ${target.user}@${target.host} did not work: ${reached.stderr.trim().split('\n').pop() ?? ''}`
-          : 'ssh works but the server has not been prepared.',
+          ? `ssh to ${target.user}@${target.host} did not work: ${said}`
+          : notPrepared(reached)
+            ? 'ssh works but the server has not been prepared.'
+            : `ssh works but the server could not answer: ${said || `it exited with ${reached.code}`}`,
       fix:
         reached.code === 255
           ? 'Check server.host, server.port and server.user in suite.yml, and that ssh to it works.'
-          : 'Run sv server bootstrap.',
+          : 'Run sv server bootstrap, which is safe to repeat and sets up what the toolkit needs.',
     });
   } else {
     const server = json<{

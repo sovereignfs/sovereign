@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/cli",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "description": "The operator toolkit: sv. Deploys core, with or without apps, to one machine with Docker.",
   "license": "AGPL-3.0-or-later",

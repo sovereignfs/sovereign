@@ -38,6 +38,11 @@ describe('the notification settings', () => {
   });
 
   it('switches an app off and on, by its id', async () => {
+    // Every switch is disabled while a change is being saved. The first save is slow so that this holds when the test reaches the second
+    // switch, as it does on a busy machine, instead of by luck.
+    setApp.mockImplementationOnce(
+      () => new Promise((resolve) => setTimeout(() => resolve({ ok: true, message: 'Off.' }), 100)),
+    );
     render(<NotificationSettings apps={APPS} />);
     fireEvent.click(screen.getByRole('switch', { name: 'Notifications from Reminders' }));
     await waitFor(() => expect(setApp).toHaveBeenCalledWith('a', false));
@@ -46,7 +51,9 @@ describe('the notification settings', () => {
         .getByRole('switch', { name: 'Notifications from Reminders' })
         .getAttribute('aria-checked'),
     ).toBe('false');
-    fireEvent.click(screen.getByRole('switch', { name: 'Notifications from Photos' }));
+    const photos = screen.getByRole('switch', { name: 'Notifications from Photos' });
+    await waitFor(() => expect(photos.hasAttribute('disabled')).toBe(false));
+    fireEvent.click(photos);
     await waitFor(() => expect(setApp).toHaveBeenCalledWith('b', true));
   });
 

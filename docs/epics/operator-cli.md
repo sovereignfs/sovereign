@@ -24,6 +24,7 @@ and the hardest part, `sv apply`, comes before the commands that drive it.
 - Epic 12 releases the image that this epic deploys
 - [docs/workstreams/0001-operator-workflow.md](../workstreams/0001-operator-workflow.md): the order 13.13–13.19 are built in, and the decisions behind them
 - [docs/workstreams/0002-test-instances.md](../workstreams/0002-test-instances.md): 13.20–13.21, and the decisions behind them
+- [docs/research/0003-database-connections.md](../research/0003-database-connections.md): why 13.22–13.26, and in that order
 
 ## Tasks
 
@@ -534,3 +535,129 @@ the runner still holding nothing that decrypts.
 - Running it twice makes nothing the second time
 - A staging password cannot be read back from anywhere after it is shown
 - The sample app's redirect is settled against core-app §3.7.3 and holds on a development machine and on a server
+
+#### 📋 13.22 — Connection guardrails
+
+**Goal:** No app can take every connection the database server has, and core, which everyone signs in through, always has its own.
+
+**Priority:** 22.
+
+**Deliverables:**
+
+- `suite.yml`: `database.maxConnections` (default 100), `database.connections.core` (default 20) and `.app` (default 10), and
+  `apps.<name>.connections`, in the spec and the schema
+- `sv apply` sets `max_connections` on the database server, saying before it does that a change restarts it; sets each role's
+  `CONNECTION LIMIT` on every deployment; and gives each pool the same number (`SV_POSTGRES_POOL_MAX`, `<PREFIX>_POSTGRES_POOL_MAX`)
+- The app template reads `<PREFIX>_POSTGRES_POOL_MAX` instead of its fixed 10
+- A budget check: limits that add up to more than the server allows, less the superuser's reserve and a margin for `sv apply` and
+  backups, are refused, by the schema rules and again by `sv apply`
+- The default numbers settled by measuring what an app holds under load (research 0003, "To settle")
+
+**Dependencies:** 13.20
+
+**Spec reference:** operator-cli §6.4; `contracts/suite.md` §1.3, §1.7; `contracts/app-manifest.md` §3; `contracts/env.md` §2
+
+**Review checklist:**
+
+- An instance that sets nothing behaves as today: the limits are at least what each pool already uses
+- A changed limit takes effect on the next deployment, and a lower one does not cut connections in use
+- The budget is refused before anything is written
+
+#### 📋 13.23 — Configuring and seeing the database from sv
+
+**Goal:** An operator sets the database's limits with `sv`, never by editing a file, and can see how close the instance is to them.
+
+**Priority:** 23.
+
+**Deliverables:**
+
+- `sv database`: the server's version, `maxConnections`, every limit and the budget left
+- `sv database set [--max-connections N] [--core N] [--app N]` and `sv app update NAME --connections N`, which write `suite.yml`,
+  check the budget and refresh `suite.lock`, and change nothing on the server
+- `sv doctor` and `sv status`: the connections each role holds against its limit, and the server's total against `max_connections`,
+  answered by a request the server already takes
+- `docs/operating.md`: when and how to change them
+
+**Dependencies:** 13.22
+
+**Spec reference:** operator-cli §4.1, §4.2, §4.4
+
+**Review checklist:**
+
+- No limit can be set that the budget refuses
+- The connection counts are read without a password leaving the server
+
+#### 📋 13.24 — A new lock on an older server `[parallel]`
+
+**Goal:** A release that adds to `suite.lock` deploys to a server bootstrapped by an older toolkit, and a hand-edited `suite.yml` cannot
+leave the lock behind. Both stopped the first real deployment.
+
+**Priority:** 24.
+
+**Deliverables:**
+
+- `sv deploy` brings the server's toolkit to the one `suite.lock` pins before it sends the commit, over the operator's own access, as
+  `sv server bootstrap` installs it; a runner's deployment key, which cannot, is told to bootstrap
+- `sv push` refreshes a lock that no longer matches `suite.yml` (resolving what changed, keeping what did not), as the spec says `sv`
+  must, instead of refusing it with no way out; `sv upgrade --finish` counts an image added to the lock as a change
+- A refused lock says what to do, once (it is printed twice today), and `sv doctor`'s note that the next deployment updates the
+  server's toolkit becomes true
+
+**Dependencies:** none
+
+**Spec reference:** operator-cli §4.5, §5, §8.3, §8.4
+
+**Review checklist:**
+
+- A lock with an image the server's toolkit does not know deploys without running bootstrap by hand
+- Nothing the deployment key may do widens
+
+#### 📋 13.25 — Apps that can be pooled `[parallel]`
+
+**Goal:** An app can say it works through a transaction pooler, and the app template does, so that turning a pooler on changes nothing
+for an app that has not said so.
+
+**Priority:** 25.
+
+**Deliverables:**
+
+- The app manifest gains `database.pooling: transaction` (absent means the app needs a session), in the contract and its schema
+- Every app with a database is also given `<PREFIX>_POSTGRES_DIRECT_URL`, the server itself, in the contract and `contracts/env.md`
+- The template uses a small direct pool for its migrations and its token-refresh lock, everything else through
+  `<PREFIX>_POSTGRES_URL`, and declares `transaction`
+- `sv app add` and `sv app upgrade` show whether an app can be pooled
+
+**Dependencies:** 13.22
+
+**Spec reference:** `contracts/app-manifest.md` §2, §3; `contracts/env.md` §2; operator-cli §2.2
+
+**Review checklist:**
+
+- An app made before this keeps working, with no change to it
+- No session-scoped statement in the template is left on the pooled address
+
+#### 📋 13.26 — An optional PgBouncer
+
+**Goal:** An operator with many apps turns on a connection pooler with one command, and off again, and the guardrails still hold.
+
+**Priority:** 26.
+
+**Deliverables:**
+
+- `ghcr.io/sovereignfs/pgbouncer`, built from Alpine's package, for linux/amd64 and linux/arm64, released with the toolkit and pinned
+  by digest in `suite.lock` (`images.pooler`)
+- `database.pooler` in `suite.yml`; `sv database pooler enable [--pool-size N] [--max-clients N]` and `sv database pooler disable`
+- `sv apply` runs `sv-pooler` in transaction mode on the database server's network and each app's, with an `auth_file` in `secrets/`
+  made from the role passwords it generated (SCRAM); points an app's `<PREFIX>_POSTGRES_URL` at it only when the app's manifest says
+  `transaction`; never routes core through it; keeps each app's pool within its role's limit; and removes it when it is turned off
+- `sv status` shows the pooler's pools; `docs/operating.md` says when to turn it on
+
+**Dependencies:** 13.23, 13.24, 13.25
+
+**Spec reference:** operator-cli §4, §6.4; `contracts/suite.md` §1.3, §2
+
+**Review checklist:**
+
+- An app that has not declared `transaction` connects directly, pooler or not
+- The pooler holds no credential the server did not generate, and publishes no port
+- Turning it off and on again loses nothing

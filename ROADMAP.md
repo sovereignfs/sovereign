@@ -207,3 +207,15 @@ Epic [15](docs/epics/core-services.md)
 | ------- | -------- | ----------------------------------------- | ------ | ----------------------------------- |
 | 0.82.0  | 1        | Core knows what the instance is for       | ✅     | [13.20](docs/epics/operator-cli.md) |
 | 0.83.0  | 2        | Seeding development and staging instances | ✅     | [13.21](docs/epics/operator-cli.md) |
+
+### M12 — Many apps share one database safely
+
+[Research 0003](docs/research/0003-database-connections.md) · epic [13](docs/epics/operator-cli.md)
+
+| Version | Priority | Task                                        | Status | Epic task                           |
+| ------- | -------- | ------------------------------------------- | ------ | ----------------------------------- |
+| —       | 1        | Connection guardrails                       | 📋     | [13.22](docs/epics/operator-cli.md) |
+| —       | 2        | Configuring and seeing the database from sv | 📋     | [13.23](docs/epics/operator-cli.md) |
+| —       | 3        | A new lock on an older server `[parallel]`  | 📋     | [13.24](docs/epics/operator-cli.md) |
+| —       | 4        | Apps that can be pooled `[parallel]`        | 📋     | [13.25](docs/epics/operator-cli.md) |
+| —       | 5        | An optional PgBouncer                       | 📋     | [13.26](docs/epics/operator-cli.md) |

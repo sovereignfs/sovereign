@@ -72,6 +72,7 @@ Task 2.3 runs throughout M1 and M2.
 | **M9 — Core's Phase 2 is specified**                     | What core offers apps beyond sign-in is written down, ready to build                                                                                                                                                | 15.1–15.8   |
 | **M10 — Operators run apps and recover with one tool**   | Apps come from their repositories and upgrade, a release can be chosen to roll back to, backups leave the server on a schedule, and GitHub can do what the operator's machine does, short of anything that decrypts | 13.12–13.19 |
 | **M11 — Development and staging instances can be tried** | Core knows what the instance is for, and a development or staging instance can be given accounts and an app to try it with, never a production one                                                                  | 13.20–13.21 |
+| **M12 — Many apps share one database safely**            | No app can take every connection, an operator sets and sees the limits from `sv`, and can turn on a connection pooler                                                                                               | 13.22–13.26 |
 
 ## Open spec questions
 

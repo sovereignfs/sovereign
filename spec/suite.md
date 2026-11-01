@@ -64,6 +64,7 @@ apps:
 | `server`      | yes      | §1.4                                                                                                                                |
 | `tls`         | no       | §1.5. Default `mode: per-host`                                                                                                      |
 | `secrets`     | yes      | §1.6                                                                                                                                |
+| `backup`      | no       | §1.8. Where backups go besides the operator's machine, and when. Not built yet                                                      |
 | `apps`        | no       | §1.7. An instance with none is complete                                                                                             |
 | `purge`       | no       | Names of removed apps whose data the next deployment deletes. Written by `sv app remove --purge`, and no name may also be in `apps` |
 
@@ -144,7 +145,7 @@ A map from an app's name to what it is. A name:
 - is a DNS label: lower-case letters, digits and hyphens, 2 to 32 characters, starting with a letter and ending with a letter
   or digit;
 - is a hosted app's subdomain, and core's managed key for the app in either case, so changing it makes a different app;
-- MUST NOT be `core`, `proxy`, `database`, `www`, `api` or `auth`.
+- MUST NOT be `core`, `proxy`, `database`, `mailpit`, `www`, `api` or `auth`.
 
 A **hosted app**:
 
@@ -152,6 +153,7 @@ A **hosted app**:
 | ---------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `image`    | yes      | The image, with a tag or digest. Never `latest`, and never with no tag                                                                                                                              |
 | `manifest` | no       | An `https` address of its manifest, for an image with no label                                                                                                                                      |
+| `source`   | no       | The GitHub repository the image was found from (`https://github.com/OWNER/REPO`), written by `sv app add --git`, which `sv app upgrade` follows. Not built yet                                      |
 | `env`      | no       | Other settings for the app. Names begin with the manifest's prefix, and values are strings. Holds to §1.2's rule on secrets, and MUST NOT set what [`app-manifest.md`](app-manifest.md) §3 provides |
 | `launcher` | no       | Changes to its launcher entry (below)                                                                                                                                                               |
 
@@ -173,6 +175,26 @@ An **external app**:
 
 A `launcher`: `description`, `icon` and `launchUrl` are text, and `show` is true or false. An address follows
 [core-app §3.7.3](../docs/specs/core-app.md).
+
+### 1.8 `backup`
+
+Not built yet ([operator-cli §10.2.2](../docs/specs/operator-cli.md)). Without it, backups go to the operator's machine and are kept on the
+server, as before.
+
+| Field         | Required | Meaning                                                                                              |
+| ------------- | -------- | ---------------------------------------------------------------------------------------------------- |
+| `destination` | yes      | Where a backup is sent: one of the three below                                                       |
+| `schedule`    | no       | `daily` or `weekly`. Without it, only deployments and `sv backup` take one                           |
+| `at`          | no       | With `schedule`, the server's local time to start, `HH:MM`. Default `03:00`                          |
+| `keep`        | no       | How many backups are kept at the destination; older ones are deleted. `0` deletes none. Default `14` |
+
+A `destination` has a `type` and what that type needs:
+
+| `type` | Fields                                                                   | Its credential (§3, under `backup`)                               |
+| ------ | ------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| `s3`   | `endpoint` (`https`), `bucket`, `prefix` (optional), `region` (optional) | `SV_BACKUP_S3_ACCESS_KEY_ID` and `SV_BACKUP_S3_SECRET_ACCESS_KEY` |
+| `git`  | `repository` (an SSH address), which is not the instance's own           | `SV_BACKUP_GIT_KEY`, a deploy key for that repository alone       |
+| `sftp` | `host`, `port` (default `22`), `user`, `path`, `hostKey`                 | `SV_BACKUP_SFTP_KEY`                                              |
 
 ---
 
@@ -211,7 +233,8 @@ A digest is the image's multi-architecture one, so a lockfile written on one mac
 
 ## 3. `secrets.age.yml`
 
-Secrets the operator entered. It is YAML, a map from `core` or a hosted app's name to a map of variable names to values:
+Secrets the operator entered. It is YAML, a map from `core`, a hosted app's name or `backup` (§1.8) to a map of variable names to
+values:
 
 ```yaml
 core:
@@ -222,7 +245,7 @@ core:
 ```
 
 - A value MUST be armored age ciphertext, encrypted to every recipient in `suite.yml`.
-- A name MUST carry the prefix of what it belongs to. It reaches the container through the `_FILE` form.
+- A name MUST carry the prefix of what it belongs to (`SV_BACKUP_` under `backup`). It reaches the container through the `_FILE` form.
 - It MUST NOT set what the deployment generates.
 - The names are in the open, so a name MUST NOT itself be secret.
 

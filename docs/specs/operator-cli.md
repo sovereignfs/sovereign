@@ -1,9 +1,9 @@
 # Sovereign — operator CLI specification
 
-|            |                                                                                                                                                                                                                                                                                                     |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status** | Draft. Specified from [RFC 0002](../rfcs/0002-deployment-strategies.md); the commands on the operator's machine and `sv apply` for core and apps, deploying over SSH, backups, restores, rollbacks, publishing, upgrading and deploying from GitHub are built ([epic 13](../epics/operator-cli.md)) |
-| **Covers** | `tools/cli`: the `sv` toolkit, `sv apply`, and `@sovereignfs/create`                                                                                                                                                                                                                                |
+|            |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status** | Draft. Specified from [RFC 0002](../rfcs/0002-deployment-strategies.md); the commands on the operator's machine and `sv apply` for core and apps, deploying over SSH, backups, restores, rollbacks, publishing, upgrading and deploying from GitHub are built ([epic 13](../epics/operator-cli.md)). Apps from git, app upgrades, rollback to a chosen release, backups to a destination and more commands from GitHub are specified and not built yet ([workstream 0001](../workstreams/0001-operator-workflow.md)) |
+| **Covers** | `tools/cli`: the `sv` toolkit, `sv apply`, and `@sovereignfs/create`                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 
 This document is the single source of truth for what the operator CLI does. Where code, another document or an issue
 disagrees with it, this document wins until it is changed.
@@ -82,7 +82,10 @@ It MUST meet [`spec/app-manifest.md`](../../spec/app-manifest.md), and so MUST h
 - a page behind sign-in using `@sovereignfs/ui`, whose every server action asks who is calling and whose every delete names the owner;
 - a health route that answers 200 when its database does;
 - its own migrations, applied once each when it starts, behind a lock;
-- an image that does not run as root, listens on 3000 and is configured by its environment alone.
+- an image that does not run as root, listens on 3000 and is configured by its environment alone;
+- a workflow, `.github/workflows/publish.yml`, that on a `vX.Y.Z` tag builds that image for linux/amd64 and linux/arm64, with the
+  manifest label, and publishes it to `ghcr.io/<owner>/<repository>` tagged `X.Y.Z`, which is where `sv app add --git` looks for it
+  (§4.2.1).
 
 `create` writes the files, runs `git init`, resolves the lockfile and makes the first commit. It MUST NOT install or build, and it
 writes nothing outside the folder. The versions it writes are held by a test to the packages of this repository.
@@ -138,6 +141,8 @@ Each command MUST state what it changed, and MUST exit as §11 says.
 | -------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------ |
 | `sv app add NAME --image REF`    | Adds a hosted app: reads its manifest, shows the scopes it asks for, and writes it to `suite.yml`               | no                 |
 | `sv app add NAME --external ...` | Adds an external app, with its sign-in addresses                                                                | no                 |
+| `sv app add NAME --git URL`      | Adds a hosted app from the image its repository publishes (§4.2.1)                                              | no                 |
+| `sv app upgrade [NAME \| --all]` | Moves hosted apps to a newer release of their image, for review (§4.2.1)                                        | no                 |
 | `sv app update NAME [...]`       | Changes what an app runs, or its settings                                                                       | no                 |
 | `sv app remove NAME [--purge]`   | Takes an app out of `suite.yml`. With `--purge`, also records that its data goes (§6.2)                         | no                 |
 | `sv app list`                    | Lists the apps in `suite.yml`                                                                                   | no                 |
@@ -152,6 +157,25 @@ Each command MUST state what it changed, and MUST exit as §11 says.
 - `--purge` MUST ask for the app's name to be typed, and with no terminal MUST need `--yes-delete-data NAME`.
 - `sv app show --secret` is how an operator gets the secret an external app needs. It MUST NOT be offered by the deployment
   itself, whose output may be kept in a log.
+
+#### 4.2.1 Apps from git, and upgrading apps
+
+An app is deployed by its image and is never built on the server, which holds no credential for an app's repository. `--git` is a way to
+name that image, and only an app that carries a manifest (`spec/app-manifest.md`) can be added either way.
+
+- `sv app add NAME --git URL [--tag X.Y.Z]` MUST take a GitHub repository address (`https://github.com/OWNER/REPO`, with or without
+  `.git`) and look for its image at `ghcr.io/OWNER/REPO`, lower-cased. It takes the newest tag of the form `X.Y.Z`, or the one `--tag`
+  names. A repository with no such image is refused, and the refusal names the workflow the app template carries (§2.2).
+- From there it MUST do exactly what `--image` does: read the manifest from the label, show the scopes, refuse what `--image` refuses,
+  and pin the digest in `suite.lock`. It MUST record the repository as the app's `source` (`spec/suite.md` §1.7) and the image it found
+  as its `image`.
+- `sv app upgrade [NAME | --all] [--to X.Y.Z]` MUST, for each hosted app it names, list its image's tags, take the newest `X.Y.Z`
+  newer than the one in `suite.yml` (or the one `--to` names), read that release's manifest, and refuse it when its `core` range
+  excludes the instance's core, naming the core it needs. It MUST NOT move an app backward: that is `sv rollback` (§10.3).
+- It MUST show each change of version and every scope added or removed, ask before writing when a scope is added (or need `--yes` with
+  no terminal), and write `suite.yml` and `suite.lock` only. It changes nothing on the server: `sv push` and `sv deploy` do.
+- An app added with `--image` is upgraded from its image's repository, and one with a `source` from that. An external app runs
+  nothing, and is not upgraded by `sv`.
 
 ### 4.3 Secrets
 
@@ -195,12 +219,13 @@ described to operators as one.
 
 ### 4.6 Updating and recovering
 
-| Command                    | What it does                                                                              | Reaches the server |
-| -------------------------- | ----------------------------------------------------------------------------------------- | ------------------ |
-| `sv upgrade [--to vX.Y.Z]` | Moves the repository to a newer release (§10)                                             | no                 |
-| `sv rollback`              | Returns the server to the last release that worked (§10.3)                                | yes                |
-| `sv backup [--to PATH]`    | Copies the databases, app data and the server's secrets to the operator's machine (§10.2) | yes                |
-| `sv restore PATH`          | Restores a backup to the server (§10.2)                                                   | yes                |
+| Command                                         | What it does                                                                                              | Reaches the server |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------ |
+| `sv upgrade [--to vX.Y.Z]`                      | Moves the repository to a newer release (§10)                                                             | no                 |
+| `sv rollback [--to RELEASE \| --list]`          | Returns the server to an earlier release that worked: the previous one, or one it names (§10.3)           | yes                |
+| `sv backup [--app NAME] [--to PATH]`            | Takes a backup and copies it to the operator's machine, or sends it to the instance's destination (§10.2) | yes                |
+| `sv backups`                                    | Lists the backups at the instance's destination and those kept on the server (§10.2.2)                    | yes, read only     |
+| `sv restore PATH \| --from BACKUP [--app NAME]` | Restores a backup to the server, from a file or from the destination (§10.2)                              | yes                |
 
 ---
 
@@ -230,8 +255,8 @@ Every step MUST do nothing when its result is already true. In order:
 1. **Check.** Take the lock (§6.3). Validate `suite.yml`, `suite.lock` and every manifest. Refuse anything in §6.5.
 2. **Look.** Check Docker, free disk space, and that DNS for each name in the instance answers with this server. A problem
    stops the run here, with nothing changed.
-3. **Back up.** When core or the database server would change version, take a backup (§10.2) and keep it on the server. If it
-   fails, stop.
+3. **Back up.** When core, the database server or a hosted app would change version, take a backup (§10.2) and keep it on the
+   server, and send it to the instance's destination when there is one (§10.2.2). If it fails, stop.
 4. **Render.** Write the Compose files, the proxy's configuration and each environment into a new release directory (§7).
 5. **Start the base.** Create the networks (§6.4), start the database server, generate any secret that does not exist yet,
    start core, and wait for its health check. Core applies its own migrations when it starts.
@@ -332,6 +357,13 @@ Compose project of its own, `sovereign-mailpit`, container `sv-mailpit`, from th
 - When the instance becomes `production`, or the operator names a mail server, the next deployment removes the container and leaves the
   volume. `sv logs mailpit` shows what it printed.
 
+### 6.4.3 Scheduled backups
+
+When `backup.schedule` is set (`spec/suite.md` §1.8), `sv apply` runs a container of its own, `sv-backup`, from the toolkit's image at the
+digest in `suite.lock`, with the Docker socket and the state directory, as `sv-apply` has them. It takes a backup on the schedule and sends
+it to the destination (§10.2.2). It publishes no port and joins no network but the default. When the schedule is removed, the next
+deployment removes the container. A scheduled backup that fails is recorded in `state.json`, and `sv status` and `sv doctor` report it.
+
 ### 6.5 What it refuses
 
 `sv apply` MUST refuse to run, changing nothing, when:
@@ -385,10 +417,19 @@ the archive. After that, `sv apply` MUST carry on without the connection, and `s
 ### 8.2 `--github`
 
 From a runner. `sv deploy --github` starts a workflow in the instance repository, which calls a reusable workflow in this
-repository at the toolkit's version. It needs the server to be reachable from the internet.
+repository at the toolkit's version. The runner must reach the server over SSH (below).
 
 - It authenticates with the deployment key (§8.3) and nothing else.
 - A runner MUST NOT hold a key that decrypts `secrets.age.yml`.
+- The thin workflow MUST also run by hand (`workflow_dispatch`), with a command: `deploy`; `rollback`, to the previous release or one
+  named; `backup`, which the server sends to the instance's destination (§10.2.2), so the runner never receives an archive; and
+  `app-upgrade`, which runs `sv app upgrade` on the runner and opens a pull request with the change, to be reviewed and merged before
+  anything is deployed.
+- The deployment key MUST allow exactly `version`, `deploy`, `rollback` and `backup` (§8.3). As built it allows `version` and `deploy` (§8.4).
+- `sv server bootstrap`, `sv restore`, `sv secret` and anything else that needs the operator's key MUST stay on the operator's machine.
+- A server that GitHub's runners cannot reach MUST be deployable in one of two ways that change nothing the runner holds: a self-hosted
+  runner on a network that reaches it (the thin workflow takes the runner's labels), or a Tailscale network the workflow joins for the
+  run, with its auth key kept as a repository secret.
 
 #### 8.2.1 As built
 
@@ -416,7 +457,7 @@ Runs over the operator's SSH access, once, and is safe to run again. It MUST:
 - create §7's directories;
 - generate the server's age key, and add its public key to `secrets.recipients` in `suite.yml`;
 - widen Docker's default address pools, which run out after a few dozen networks;
-- install a deployment key in `authorized_keys`, limited with `command=` to receiving an archive and starting `sv apply`, and
+- install a deployment key in `authorized_keys`, limited with `command=` to the requests §8.2 allows it, and
   with no forwarding, no terminal and no other command, and print the private half once for the operator to store as a
   secret in the repository's Actions settings. With `server.deploy: ssh` it installs none.
 
@@ -495,12 +536,13 @@ and the command MUST say so before it runs.
 `sv upgrade [--to vX.Y.Z]` changes the repository and nothing else. Given a release, or the newest one, it MUST:
 
 1. update `@sovereignfs/cli` in `package.json` and its lockfile;
-2. update `core.version` in `suite.yml`;
+2. update `core.version` in `suite.yml` to the newest published core within the range the toolkit supports, as `sv setup` chooses one
+   (§5): never older than the toolkit's `newestCore`, and never backward;
 3. rewrite `suite.yml` if its `schema` changed, and only then;
 4. refresh `suite.lock`;
 5. show what changed, for the operator to review before `sv push` and `sv deploy`.
 
-It MUST NOT move an app's version, or `database.version`. A newer `schema` than the toolkit knows is refused, and an older one is
+It MUST NOT move an app's version, which `sv app upgrade` does (§4.2.1), or `database.version`. A newer `schema` than the toolkit knows is refused, and an older one is
 migrated only by `sv upgrade`, never in passing by another command.
 
 A dependency bot MAY open the change to `package.json`. `sv upgrade` then finishes it.
@@ -512,7 +554,8 @@ A dependency bot MAY open the change to `package.json`. `sv upgrade` then finish
   2 to 5 with that release's own idea of the core it was made for, the images it uses and the `schema` it reads. `--finish` is also what
   to run after a dependency bot has changed `package.json` and `npm ci` has installed it; it works offline except for resolving digests.
   With no `--to` it asks npm for the newest release and does nothing if that is the one running.
-- **What it moves:** the toolkit's image in the lock, `core.version` to the release's `newestCore` (never backward), the schema through the
+- **What it moves:** the toolkit's image in the lock, `core.version` to the release's `newestCore` (never backward; step 2 above, the
+  newest published core, is not built yet), the schema through the
   migrations in order (none yet: there is one schema), and the digests of what changed. It shows each change, and writes `suite.yml` and
   `suite.lock` only when they are all good. A repository from a newer schema than the toolkit reads is refused, as is one that pins a
   different toolkit than the one running.
@@ -561,11 +604,39 @@ A backup taken by a deployment (§6.1) stays on the server, under the same encry
 - **Not done:** the volumes of the proxy (certificates are issued again), and restoring a backup taken by a newer toolkit than the one
   restoring it.
 
+#### 10.2.2 Destinations, schedules and one app
+
+Not built yet. A backup leaves the server for the operator's machine (`sv backup`), and may also go to a **destination**, on a
+schedule, without the operator's machine.
+
+- **What is sent** is the archive `sv backup` makes: encrypted to the operator's recipients and not the server's own key, so the
+  destination need not be trusted and the server cannot read what it sent.
+- **Destinations** (`backup.destination` in `suite.yml`, `spec/suite.md` §1.8): `s3`, any S3-compatible store (an endpoint, a bucket, a
+  prefix); `git`, a repository kept for backups alone; `sftp`, a directory on a machine reached over SSH, whose host key is pinned as
+  `server.hostKey` is. With a destination, a backup taken by a deployment (§6.1) or by the schedule (§6.4.3) is sent to it, and
+  `sv backup` sends to it when it is given no `--to`.
+- **A git destination** MUST NOT be the instance's own repository: `sv push` refuses one with the same address as `origin`. Each backup
+  is one commit with no parent, on a branch of its own, `backup/<timestamp>`, so that deleting the branch frees what it held; its archive
+  is split into parts of at most 95 MB, beside a list of the parts and their SHA-256, since GitHub refuses a file over 100 MB.
+- **Credentials** for a destination are secrets the operator enters (`spec/suite.md` §3, under `backup`), decrypted only on the server,
+  and SHOULD be able to write and nothing more: an S3 key that may put objects, a git deploy key for that repository alone, an SFTP
+  account in that directory alone.
+- **Retention:** `backup.keep` is how many backups are kept at the destination; after one is sent, older ones beyond that are deleted.
+  `0` deletes none, for a store whose own rules expire them, so that its credential need not be able to delete.
+- **Listing and restoring:** `sv backups` lists what is at the destination and what is kept on the server. `sv restore --from BACKUP`
+  fetches one with the operator's own access to the destination (their S3 credentials in the environment, their git or SSH access),
+  never with the server's, and then restores it as `sv restore PATH` does: it is decrypted on the operator's machine.
+- **One app:** `sv backup --app NAME` holds that app's database and role and its data volumes, under the same encryption.
+  `sv restore --app NAME` stops that app, puts them back and starts it, and touches neither core nor another app. Core's record of the app
+  (its client and the consents people gave it) is not in such a backup and is not changed.
+
 ### 10.3 Rolling back
 
-`sv rollback` applies the previous release's files. Core's migrations go forward only, so when the previous release has an
-older core `sv rollback` MUST refuse, and point to `sv restore`. Rolling an app back does not undo its migrations, and the
-command MUST say so before it runs.
+`sv rollback` applies the previous release's files, and `sv rollback --to RELEASE` those of a release the server still keeps (§7);
+`sv rollback --list` lists them, each with its commit, when it was applied, and the versions of core and of each app it ran. Core's
+migrations go forward only, so when the release has an older core `sv rollback` MUST refuse, and point to `sv restore`. Rolling an app back
+does not undo its migrations: the command MUST say so before it runs, and name the backup taken before that app's version last changed
+(§6.1).
 
 ---
 
@@ -587,7 +658,8 @@ command MUST say so before it runs.
 
 ## 12. Not in this version
 
-A suite across several machines; Kubernetes; sqld or SQLite under `sv apply` (the plain Compose files keep both for running
+A suite across several machines; Kubernetes; building an app's image on the server; an app with no manifest; pulling a private image
+on the server; restoring through GitHub; sqld or SQLite under `sv apply` (the plain Compose files keep both for running
 core alone); wildcard certificates; an app catalogue; a standalone binary; automatic upgrades; `app <dir>`; a Core API call
 listing a person's apps; changing `database.version` on a running instance.
 
@@ -607,9 +679,18 @@ with a DNS provider's module, which the stock image does not carry.
 8. `sv upgrade` moves an instance from the previous release, on every release.
 9. A backup restored to a new machine gives a working instance.
 10. `sv deploy --ssh` works with no GitHub, and a runner decrypts nothing.
+11. An app made from the template is hosted with `sv app add --git`, from the image its own workflow published, and `sv app upgrade`
+    moves it to its next release.
+12. `sv upgrade` moves core to the newest published release, and never backward.
+13. `sv rollback --to` returns to a named release, and refuses as §10.3 says.
+14. A scheduled backup reaches each kind of destination, and is restored from it to a new machine with `sv restore --from`.
+15. `sv backup --app` and `sv restore --app` bring one app back without touching core or another app.
+16. From GitHub, deploy, rollback and backup run against a server the runners reach, and against one reached through a self-hosted
+    runner.
 
 ## Changelog
 
-| Date       | Change                                   |
-| ---------- | ---------------------------------------- |
-| 2026-10-30 | First draft, from the accepted RFC 0002. |
+| Date       | Change                                                                                                                                                                                                                                                                                              |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-30 | First draft, from the accepted RFC 0002.                                                                                                                                                                                                                                                            |
+| 2026-11-01 | Apps from git and app upgrades (§4.2.1), backups before an app changes version, scheduled backups to S3, git or SFTP and per-app backups (§6.4.3, §10.2.2), rollback to a named release (§10.3), and more commands from GitHub (§8.2): [workstream 0001](../workstreams/0001-operator-workflow.md). |

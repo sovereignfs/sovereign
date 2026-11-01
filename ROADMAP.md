@@ -181,3 +181,19 @@ Epic [15](docs/epics/core-services.md)
 | 0.65.0  | 6        | Mail for apps: build  | ✅     | [15.6](docs/epics/core-services.md) |
 | 0.66.0  | 7        | Activity: build       | ✅     | [15.7](docs/epics/core-services.md) |
 | 0.67.0  | 8        | The restore marker    | ✅     | [15.8](docs/epics/core-services.md) |
+
+### M10 — Operators run apps and recover with one tool
+
+[RFC 0002](docs/rfcs/0002-deployment-strategies.md) (Accepted) · epic [13](docs/epics/operator-cli.md) · workstream
+[0001](docs/workstreams/0001-operator-workflow.md)
+
+| Version | Priority | Task                                                   | Status | Epic task                           |
+| ------- | -------- | ------------------------------------------------------ | ------ | ----------------------------------- |
+| —       | 1        | The specification for the operator workflow            | ✅     | [13.12](docs/epics/operator-cli.md) |
+| —       | 2        | The SSH path, walked on a server                       | 📋     | [13.13](docs/epics/operator-cli.md) |
+| —       | 3        | Upgrades for core and apps                             | 📋     | [13.14](docs/epics/operator-cli.md) |
+| —       | 4        | Apps from git                                          | 📋     | [13.15](docs/epics/operator-cli.md) |
+| —       | 5        | Rollback to a chosen release `[parallel]`              | 📋     | [13.16](docs/epics/operator-cli.md) |
+| —       | 6        | Scheduled backups to S3, and one app's backup          | 📋     | [13.17](docs/epics/operator-cli.md) |
+| —       | 7        | Backups to git and SFTP `[parallel]`                   | 📋     | [13.18](docs/epics/operator-cli.md) |
+| —       | 8        | More from GitHub, and servers its runners cannot reach | 📋     | [13.19](docs/epics/operator-cli.md) |

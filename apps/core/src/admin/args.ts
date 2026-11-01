@@ -1,6 +1,6 @@
 /**
  * The command line of `sovereign-admin` (core-app §3.7.4, §4.4): `apps ensure|list|rotate-secret|remove` and
- * `instance restored`. Parsing only, so it
+ * `instance restored`, `instance deletions ...` and `seed`. Parsing only, so it
  * can be tested without a database. A flag that takes several values takes every word after it up to the next flag,
  * and may also be given again.
  */
@@ -30,6 +30,7 @@ export type Command =
   | { name: 'rotate-secret'; key: string; json: boolean }
   | { name: 'remove'; key: string }
   | { name: 'restored'; json: boolean }
+  | { name: 'seed'; local: boolean; json: boolean }
   | { name: 'deletions-export' }
   | { name: 'deletions-apply'; file: string | undefined };
 
@@ -45,6 +46,7 @@ export const USAGE = `Usage:
   sovereign-admin apps rotate-secret KEY [--json]
   sovereign-admin apps remove KEY
   sovereign-admin instance restored [--json]
+  sovereign-admin seed [--local] [--json]
   sovereign-admin instance deletions export
   sovereign-admin instance deletions apply [FILE]`;
 
@@ -57,7 +59,7 @@ const VALUE = new Set([
   'icon',
 ]);
 const LIST = new Set(['redirect', 'post-logout', 'scope', 'app-scope']);
-const SWITCH = new Set(['public', 'trusted', 'json', 'hide']);
+const SWITCH = new Set(['public', 'trusted', 'json', 'hide', 'local']);
 
 type Flags = {
   values: Map<string, string>;
@@ -104,6 +106,7 @@ function flagsOf(words: string[], allowed: ReadonlySet<string>): { rest: string[
 const ALL = new Set([...VALUE, ...LIST, ...SWITCH]);
 const JSON_ONLY = new Set(['json']);
 const NONE = new Set<string>();
+const SEED_FLAGS = new Set(['json', 'local']);
 
 function one(rest: string[], what: string): string {
   if (rest.length !== 1) throw new UsageError(`${what} needs exactly one KEY`);
@@ -112,6 +115,11 @@ function one(rest: string[], what: string): string {
 
 export function parse(argv: string[]): Command {
   const [group, verb, ...words] = argv;
+  if (group === 'seed') {
+    const { rest, flags } = flagsOf(argv.slice(1), SEED_FLAGS);
+    if (rest.length > 0) throw new UsageError('seed takes no argument');
+    return { name: 'seed', local: flags.switches.has('local'), json: flags.switches.has('json') };
+  }
   if (group === 'instance') {
     if (verb === 'deletions') {
       const [what, ...more] = words;
@@ -136,7 +144,7 @@ export function parse(argv: string[]): Command {
     if (rest.length > 0) throw new UsageError('restored takes no argument');
     return { name: 'restored', json: flags.switches.has('json') };
   }
-  if (group !== 'apps') throw new UsageError('the groups are apps and instance');
+  if (group !== 'apps') throw new UsageError('the groups are apps, instance and seed');
   switch (verb) {
     case 'ensure': {
       const { rest, flags } = flagsOf(words, ALL);

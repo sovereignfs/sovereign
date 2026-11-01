@@ -15,7 +15,12 @@ const notPrepared = (result: RemoteResult) =>
   result.code === 127 || /not found|No such file/.test(result.stderr);
 
 /** Asks the server one thing and returns what it printed, or ends the command as the server’s answer says. */
-async function ask(ctx: Context, target: Target, words: string[], what: string): Promise<string> {
+export async function ask(
+  ctx: Context,
+  target: Target,
+  words: string[],
+  what: string,
+): Promise<string> {
   const result = await ctx.remote(target, [WRAPPER_PATH, ...words]);
   if (result.code !== 0) {
     if (notPrepared(result)) {

@@ -506,7 +506,7 @@ the runner still holding nothing that decrypts.
 - A value that is not one of the three stops core, naming the three
 - `core.env` setting `SV_ENVIRONMENT` is refused, with or without `_FILE`
 
-#### 📋 13.21 — Seeding development and staging instances
+#### ✅ 13.21 — Seeding development and staging instances
 
 **Goal:** A development or staging instance can be tried at once, with accounts to sign in as and an app to sign in from, and a production instance can never be seeded.
 
@@ -519,6 +519,10 @@ the runner still holding nothing that decrypts.
 - `pnpm seed` moved onto the same code, keeping its rule that core's address must be on the machine
 - `sv seed [--json]`: refused on production before it connects, not available to the deployment key, and the passwords never written to a file
 - `docs/operating.md`: how to seed and sign in; the "not built yet" notes removed from the specs
+
+**Verified here:** `sovereign-admin seed`, built as the image builds it and run with plain Node on a SQLite file, is refused on production and on an unset environment (exit 3), makes the accounts with random passwords and the sample app on staging, and keeps what is there when run again; `pnpm seed` does the same on a development address and refuses an instance that holds a real account. `sv seed` is tested against a fake server, and the server's side against a fake Docker.
+
+**Not verified here:** `sv seed` against a real server over SSH, which needs a published core that has the seed, and the seeded sample app signing a person in.
 
 **Dependencies:** 13.20
 

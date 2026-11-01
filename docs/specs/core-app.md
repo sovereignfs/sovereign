@@ -844,6 +844,7 @@ sovereign-admin apps list [--json]
 sovereign-admin apps rotate-secret KEY [--json]
 sovereign-admin apps remove KEY
 sovereign-admin instance restored [--json]
+sovereign-admin seed [--local] [--json]
 ```
 
 - **It goes through the registry.** Every rule of §3.7 applies, with the same
@@ -870,7 +871,8 @@ sovereign-admin instance restored [--json]
 - **Output and exit codes.** The answer goes to standard output and the log to
   standard error, so `--json` output can be read as it is. The exit code is 0
   when it worked, 1 when core refused (each thing wrong is a line `field:
-message`) and 2 when the command line is wrong or core is not configured. A
+message`), 2 when the command line is wrong or core is not configured, and 3 when `seed` is
+  refused (§3.15.1). A
   list flag takes every word after it up to the next flag, so the key comes first.
 - **What `ensure` asks for is the whole app.** An option left out is its default,
   not what the app had: no `--scope` is `openid profile email`, no `--post-logout`
@@ -1324,20 +1326,21 @@ How an operator runs core is in `docs/deploying.md`; what is promised:
 - The image ships `sovereign-admin` (§3.7.4), so a deployment needs nothing
   installed beside it. It holds no package manager and no `tsx`.
 - For development, `pnpm dev` starts a persistent sqld when the environment
-  chooses sqld, and `pnpm seed` makes an owner, an admin and an ordinary person
-  to try it with. The seed refuses any address that is not on the machine it
-  runs on.
+  chooses sqld, and `pnpm seed` makes an owner, an admin, an ordinary person
+  and a sample app to try it with (§3.15.1). The seed refuses any address that is
+  not on the machine it runs on.
 
 #### 3.15.1 Environment and the seed
 
-Core is told what the instance is for (built), and a development or staging instance can be given the accounts and the app to try
-it with, which a production instance never can (the seed, not built yet: [workstream 0002](../workstreams/0002-test-instances.md)).
+Core is told what the instance is for, and a development or staging instance can be given the accounts and the app to try it with,
+which a production instance never can ([workstream 0002](../workstreams/0002-test-instances.md)).
 
 - **`SV_ENVIRONMENT`** is `development`, `staging` or `production`, and `production` when it is not set. Any other value is a start-up
   error, since a misspelling must never read as a permission. It changes nothing in how core runs; the only thing it decides is whether
   the seed below may run. The operator CLI sets it from `environment` in `suite.yml` ([spec/suite.md](../../spec/suite.md) §1.1.1), and an
   operator cannot set it in `core.env`.
-- **`sovereign-admin seed [--json]`** is run in core's container (§3.7.4). It MUST refuse, making nothing, when `SV_ENVIRONMENT` is
+- **`sovereign-admin seed [--local] [--json]`** is run in core's container (§3.7.4). It exits 3 when it is refused, which it is before it
+  writes anything, and 1 when it stops partway (running it again is safe). It MUST refuse, making nothing, when `SV_ENVIRONMENT` is
   `production` or unset, and when the database holds any account that is not one of the seed accounts. The two are separate checks, so
   a mistake in one is not a hole: a variable set wrongly cannot seed a real instance, and an instance made by hand cannot be seeded by
   setting the variable. It MUST be safe to run again: it makes what is missing, leaves what is there, and says which.
@@ -1350,8 +1353,10 @@ it with, which a production instance never can (the seed, not built yet: [workst
   be reachable from the internet, each account gets a random password of at least 24 characters, written once, to the command's output
   and nowhere else, when the account is made. A password is never shown again, and an account that was kept keeps what it had. A
   documented password on a server anyone can reach would be a way in for anyone who read the documentation.
-- **`pnpm seed`** is the same code, run on a development machine. It sets the environment to `development` itself and keeps its other
-  rule: it refuses unless core's address is on the machine it runs on.
+- **The sample app's address** follows core's own: `http://localhost:3001/callback` when core's address is `http` (a development machine, the
+  only instance that may send an app to `localhost`, §3.7.1), and `https://sample.<core's host>/callback` otherwise, which nothing serves.
+- **`pnpm seed`** is `sovereign-admin seed --local`, run on a development machine. It sets the environment to `development` itself and keeps
+  its other rule: it refuses unless core's address is on the machine it runs on. `SEED_PASSWORD` is read there, and by nothing on a server.
 
 ### 3.16 Not in Phase 1
 

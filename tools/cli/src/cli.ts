@@ -4,6 +4,7 @@ import { backup, restore, rollback } from './commands/backup.js';
 import { deploy } from './commands/deploy.js';
 import { mail } from './commands/mail.js';
 import { push } from './commands/push.js';
+import { seed } from './commands/seed.js';
 import { doctor, logs, status } from './commands/remote.js';
 import { server } from './commands/server.js';
 import { receiveCommand, serverKeyCommand } from './commands/serve.js';
@@ -31,6 +32,7 @@ Deploying
   deploy                        put the pushed commit on the server
   status | logs | doctor        what is running, what it printed, what to fix
   mail                          open the inbox that catches mail on a development or staging instance
+  seed                          make test accounts and a sample app on a development or staging instance
 Recovering
   upgrade [--to vX.Y.Z]         move the repository to a newer release, for you to review
   backup | restore PATH         a backup encrypted to your key alone, and bringing one back
@@ -56,6 +58,7 @@ const COMMANDS: Record<string, Command> = {
   logs,
   doctor,
   mail,
+  seed,
 };
 
 /**

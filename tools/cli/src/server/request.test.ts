@@ -10,6 +10,8 @@ describe('what the server is asked', () => {
     expect(parseRequest('status')).toEqual({ verb: 'status' });
     expect(parseRequest('logs notes 50')).toEqual({ verb: 'logs', target: 'notes', lines: 50 });
     expect(parseRequest('logs deploy')).toEqual({ verb: 'logs', target: 'deploy', lines: 200 });
+    expect(parseRequest('seed')).toEqual({ verb: 'seed', json: false });
+    expect(parseRequest('seed --json')).toEqual({ verb: 'seed', json: true });
     expect(parseRequest('logs mailpit 20')).toEqual({ verb: 'logs', target: 'mailpit', lines: 20 });
     expect(parseRequest('app notes --secret')).toEqual({
       verb: 'app',
@@ -27,6 +29,9 @@ describe('what the server is asked', () => {
       'deploy abc',
       'deploy $(id)',
       'logs ../etc',
+      'seed now',
+      'seed --json --local',
+      'seed; id',
       'logs notes 1; id',
       'app Notes',
       'rotate notes extra',

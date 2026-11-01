@@ -14,10 +14,19 @@ import { migrateCore } from '../db/migrate';
 import {
   DEFAULT_SEED_PASSWORD,
   SEED_ACCOUNTS,
+  SEED_APP_KEY,
   SeedError,
+  generatePassword,
   isLocalAddress,
+  sampleApp,
+  sampleRedirect,
   seedAccounts,
+  seedInstance,
 } from '../dev/seed';
+import { passwordProblems } from '../auth/password-policy';
+import { urlProblem } from '../clients/validate';
+import type { RegisterInput } from '../clients/registry';
+import type { SystemActor } from '../clients/system-actor';
 import { BASE_URL, INVITE_ONLY, Jar, call, makeAuth } from './auth-harness';
 
 const MIGRATIONS = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../migrations');
@@ -57,7 +66,7 @@ export function seedSuite(createDatabase: () => Promise<TestDatabase>): void {
       database: db,
       baseUrl: BASE_URL,
     });
-    expect(result).toEqual({ created: SEED_ACCOUNTS.map((a) => a.email), existing: [] });
+    expect(result).toMatchObject({ created: SEED_ACCOUNTS.map((a) => a.email), existing: [] });
     expect(await roles()).toEqual({
       'owner@sovereign.local': { role: ROLE_OWNER, verified: true },
       'admin@sovereign.local': { role: ROLE_ADMIN, verified: true },
@@ -96,6 +105,7 @@ export function seedSuite(createDatabase: () => Promise<TestDatabase>): void {
     expect(await seedAccounts(deps)).toEqual({
       created: [],
       existing: SEED_ACCOUNTS.map((a) => a.email),
+      passwords: {},
     });
     await db.run(
       "delete from sessions where user_id in (select id from users where email = 'user@sovereign.local')",
@@ -107,6 +117,7 @@ export function seedSuite(createDatabase: () => Promise<TestDatabase>): void {
     expect(await seedAccounts(deps)).toEqual({
       created: ['user@sovereign.local'],
       existing: ['owner@sovereign.local', 'admin@sovereign.local'],
+      passwords: { 'user@sovereign.local': DEFAULT_SEED_PASSWORD },
     });
   });
 
@@ -152,11 +163,171 @@ export function seedSuite(createDatabase: () => Promise<TestDatabase>): void {
       expect(isLocalAddress(other), other).toBe(false);
     }
   });
+  describe('seeding an instance', () => {
+    const actor = {} as SystemActor;
+    /** Stands in for the registry, which has its own suite: what matters here is what is asked of it, and whether it is asked. */
+    const fakeRegistry = () => {
+      const calls: { key: string; input: RegisterInput }[] = [];
+      return {
+        calls,
+        ensure: (_actor: unknown, key: string, input: RegisterInput) => {
+          calls.push({ key, input });
+          return Promise.resolve({
+            client: { clientId: 'sample-client' },
+            secret: undefined,
+            created: calls.length === 1,
+          });
+        },
+      };
+    };
+    const seed = (
+      environment: string,
+      registry = fakeRegistry(),
+      extra: Partial<Parameters<typeof seedInstance>[0]> = {},
+    ) =>
+      seedInstance({
+        auth: makeAuth(db, {}, INVITE_ONLY),
+        database: db,
+        baseUrl: BASE_URL,
+        environment,
+        registry: registry as never,
+        actor,
+        local: false,
+        ...extra,
+      });
+    const signIn = (email: string, password: string) =>
+      call(makeAuth(db, {}, INVITE_ONLY), 'POST', '/sign-in/email', {
+        jar: new Jar(),
+        body: { email, password },
+      });
+
+    it.each(['production', 'Production', '', 'test', 'dev'])(
+      'is refused, making nothing, when the environment is %j',
+      async (environment) => {
+        const registry = fakeRegistry();
+        await expect(seed(environment, registry)).rejects.toThrow(SeedError);
+        expect(Object.keys(await roles())).toHaveLength(0);
+        expect(registry.calls).toHaveLength(0);
+      },
+    );
+
+    it.each(['development', 'staging'])(
+      'is refused on %s too, when an account that no seed made is there, whatever the variable says',
+      async (environment) => {
+        await seedAccounts(
+          { auth: makeAuth(db, {}, INVITE_ONLY), database: db, baseUrl: BASE_URL },
+          'a-password-for-the-test',
+          [{ name: 'Real Person', email: 'real@person.test', role: ROLE_OWNER }],
+        );
+        const registry = fakeRegistry();
+        await expect(seed(environment, registry)).rejects.toThrow(/no seed made/);
+        expect(Object.keys(await roles())).toEqual(['real@person.test']);
+        expect(registry.calls).toHaveLength(0);
+      },
+    );
+
+    it('gives a development instance the documented password, or SEED_PASSWORD, and makes the sample app', async () => {
+      const registry = fakeRegistry();
+      const report = await seed('development', registry, { password: 'chosen-for-this-run' });
+      expect(report.accounts.created.map((a) => a.email)).toEqual(
+        SEED_ACCOUNTS.map((a) => a.email),
+      );
+      for (const made of report.accounts.created) {
+        expect(made.password).toBe('chosen-for-this-run');
+        expect((await signIn(made.email, made.password)).status, made.email).toBe(200);
+      }
+      expect(registry.calls).toHaveLength(1);
+      expect(registry.calls[0]?.key).toBe(SEED_APP_KEY);
+      expect(report.app).toMatchObject({
+        key: SEED_APP_KEY,
+        clientId: 'sample-client',
+        created: true,
+      });
+      const plain = await seed('development', fakeRegistry());
+      expect(plain.accounts.created).toEqual([]);
+    });
+
+    it('gives a staging instance a different random password to each account, and ignores SEED_PASSWORD', async () => {
+      const report = await seed('staging', fakeRegistry(), { password: 'must-not-be-used-here' });
+      const passwords = report.accounts.created.map((a) => a.password);
+      expect(passwords).toHaveLength(SEED_ACCOUNTS.length);
+      expect(new Set(passwords).size).toBe(passwords.length);
+      for (const made of report.accounts.created) {
+        expect(made.password.length).toBeGreaterThanOrEqual(24);
+        expect([DEFAULT_SEED_PASSWORD, 'must-not-be-used-here']).not.toContain(made.password);
+        expect((await signIn(made.email, made.password)).status, made.email).toBe(200);
+        expect((await signIn(made.email, DEFAULT_SEED_PASSWORD)).status).toBeGreaterThanOrEqual(
+          400,
+        );
+      }
+    });
+
+    it('shows a password once: run again, it makes and shows nothing, and the sample app is kept', async () => {
+      const registry = fakeRegistry();
+      const first = await seed('staging', registry);
+      const again = await seed('staging', registry);
+      expect(again.accounts).toEqual({
+        created: [],
+        existing: SEED_ACCOUNTS.map((a) => a.email),
+      });
+      expect(again.app.created).toBe(false);
+      for (const made of first.accounts.created)
+        expect(JSON.stringify(again)).not.toContain(made.password);
+    });
+
+    it('will not seed an address that is not on this machine when it is asked to be local', async () => {
+      await expect(
+        seed('development', fakeRegistry(), {
+          baseUrl: 'https://core.sovereign.test',
+          local: true,
+        }),
+      ).rejects.toThrow(/not one/);
+      expect(Object.keys(await roles())).toHaveLength(0);
+    });
+  });
 }
 
 describe('the seed', () => {
   // The suite is run from seed.test.ts and seed.db.test.ts.
   it('is listed for what it makes', () => {
     expect(SEED_ACCOUNTS.map((a) => a.role)).toEqual([ROLE_OWNER, ROLE_ADMIN, ROLE_USER]);
+  });
+
+  it('has a sample app that is public, outside the launcher, and sent to an address core accepts', () => {
+    const app = sampleApp('http://localhost:3000');
+    expect(app.type).toBe('public');
+    expect(app.launcher?.show).toBe(false);
+    expect(app.backchannelLogoutUri).toBe('');
+    expect(app.trusted).toBe(false);
+    // A development instance (its own address is http) may send an app to localhost; any other must use https.
+    expect(sampleRedirect('http://localhost:3000')).toBe('http://localhost:3001/callback');
+    expect(urlProblem(sampleRedirect('http://localhost:3000'), true)).toBeUndefined();
+    expect(sampleRedirect('https://core.sovereign.test')).toBe(
+      'https://sample.core.sovereign.test/callback',
+    );
+    expect(urlProblem(sampleRedirect('https://core.sovereign.test'), false)).toBeUndefined();
+    expect(sampleApp('https://core.sovereign.test').redirectUris).toEqual([
+      'https://sample.core.sovereign.test/callback',
+    ]);
+  });
+
+  it('makes passwords that are random, at least 24 characters, and meet the policy it is given', () => {
+    const strict = {
+      minLength: 30,
+      maxLength: 128,
+      requireUppercase: true,
+      requireLowercase: true,
+      requireNumber: true,
+      requireSymbol: true,
+    };
+    const made = new Set<string>();
+    for (let i = 0; i < 200; i += 1) {
+      const password = generatePassword(strict);
+      expect(passwordProblems(password, strict)).toEqual([]);
+      expect(password.length).toBeGreaterThanOrEqual(30);
+      made.add(password);
+    }
+    expect(made.size).toBe(200);
+    expect(generatePassword().length).toBeGreaterThanOrEqual(24);
   });
 });

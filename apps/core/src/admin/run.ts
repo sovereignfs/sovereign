@@ -6,6 +6,7 @@ import {
 } from '../clients/registry';
 import type { SystemActor } from '../clients/system-actor';
 import { LedgerError, type Applied } from '../accounts/deletion-ledger';
+import { SeedError, type SeedReport } from '../dev/seed';
 import type { Restored } from '../instance/restore';
 import { parse, UsageError, USAGE, type Command } from './args';
 
@@ -16,6 +17,8 @@ export type InstanceOperations = {
   exportDeletions(): Promise<string>;
   /** Applies deletions read from `file`, or from standard input when there is none. */
   applyDeletions(file: string | undefined): Promise<Applied>;
+  /** Seeds a development or staging instance (core-app §3.15.1). `local` also requires core's address to be on this machine. */
+  seed(options: { local: boolean }): Promise<SeedReport>;
 };
 
 /** Where the command writes: what it answers on `out`, and a line for each write on `log`, never a secret. */
@@ -48,7 +51,7 @@ export function inputOf(app: Extract<Command, { name: 'ensure' }>['app']): Regis
 
 /**
  * Runs one command as the system actor and returns the exit code: 0 when it worked, 1 when core refused it (each
- * thing wrong, one to a line), 2 when the command line is wrong.
+ * thing wrong, one to a line), 2 when the command line is wrong, 3 when the seed was refused.
  *
  * `instance` is what the instance commands do (core-app §4.4, §4.5): record a restore, and carry deletions across one. It is given only
  * by the entry point, which has the database; a command that needs it and is not given it is a bug, not a usage error.
@@ -136,6 +139,26 @@ export async function runAdmin(
         );
         return 0;
       }
+      case 'seed': {
+        if (!instance) throw new Error('the instance operations were not given to sovereign-admin');
+        const report = await instance.seed({ local: command.local });
+        // The log holds what was done and never a password: those go to the answer, once, and nowhere else.
+        for (const { email, role } of report.accounts.created)
+          log(`sovereign-admin: made ${role} ${email}`);
+        for (const email of report.accounts.existing) log(`sovereign-admin: kept ${email}`);
+        log(`sovereign-admin: ${report.app.created ? 'made' : 'kept'} app ${report.app.key}`);
+        if (command.json) {
+          out(JSON.stringify(report));
+        } else {
+          for (const { email, role, password } of report.accounts.created)
+            out(`${email}\t${role}\tpassword: ${password}`);
+          for (const email of report.accounts.existing) out(`${email}\tkept`);
+          out(
+            `app ${report.app.key}\tclient id: ${report.app.clientId}\tredirect: ${report.app.redirect}`,
+          );
+        }
+        return 0;
+      }
       case 'deletions-export': {
         if (!instance) throw new Error('the instance operations were not given to sovereign-admin');
         out(await instance.exportDeletions());
@@ -159,6 +182,11 @@ export async function runAdmin(
       }
     }
   } catch (error) {
+    if (error instanceof SeedError) {
+      // Its own code: a refusal made before anything was written, which `sv seed` reports as one.
+      log(`sovereign-admin: ${error.message}`);
+      return 3;
+    }
     if (error instanceof LedgerError) {
       log(`sovereign-admin: ${error.message}`);
       return 1;

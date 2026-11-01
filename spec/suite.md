@@ -87,7 +87,7 @@ means what it did.
 - Mailpit's inbox is on the server's own loopback address and is never given a public name or a port on its network. It is read through
   `sv mail`, which opens it over SSH (operator-cli §4.4).
 - `staging` differs from `development` in what the operator means by it, and in one thing the toolkit does: the seed (below).
-- **The seed.** Not built yet. On `development` and `staging`, `sv seed` ([operator-cli §4.4](../docs/specs/operator-cli.md)) makes test
+- **The seed.** On `development` and `staging`, `sv seed` ([operator-cli §4.4](../docs/specs/operator-cli.md)) makes test
   accounts and a sample app on the instance, and it is refused on `production`. Core is told the environment as `SV_ENVIRONMENT`
   ([core-app §3.15.1](../docs/specs/core-app.md)), which is set from this field, and `core.env` MUST NOT set it.
 

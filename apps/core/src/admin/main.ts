@@ -3,10 +3,13 @@ import { ConfigError } from '@sovereignfs/config';
 import { AccountManager } from '../accounts/manage';
 import { AccountStates } from '../accounts/states';
 import { applyDeletions, exportDeletions, parseDeletions } from '../accounts/deletion-ledger';
+import { getAuth } from '../auth';
+import { getAuthSettings } from '../auth/settings';
 import { getClientRegistry } from '../clients';
 import { systemActor } from '../clients/system-actor';
 import { getConfig, getDatabaseSettings } from '../config';
 import { getDatabase } from '../database';
+import { seedInstance } from '../dev/seed';
 import { recordRestore } from '../instance/restore';
 import { runAdmin } from './run';
 
@@ -21,6 +24,9 @@ async function readStdin(): Promise<string> {
   return Buffer.concat(chunks).toString('utf8');
 }
 
+// A seeded account is made verified, so no mail is sent for it: with verification asked for, sign-up would try to send one.
+if (process.argv[2] === 'seed') process.env.SV_AUTH_REQUIRE_EMAIL_VERIFICATION = 'false';
+
 async function main(): Promise<number> {
   try {
     getConfig();
@@ -34,10 +40,12 @@ async function main(): Promise<number> {
   }
   const database = await getDatabase();
   try {
+    const registry = await getClientRegistry();
+    const actor = systemActor();
     return await runAdmin(
       process.argv.slice(2),
-      await getClientRegistry(),
-      systemActor(),
+      registry,
+      actor,
       {
         out: (line) => console.log(line),
         log: (line) => console.error(line),
@@ -45,6 +53,20 @@ async function main(): Promise<number> {
       {
         restore: () => recordRestore(database),
         exportDeletions: async () => JSON.stringify(await exportDeletions(database), null, 2),
+        seed: async ({ local }) => {
+          const config = getConfig();
+          return seedInstance({
+            auth: await getAuth(),
+            database,
+            baseUrl: config.url,
+            environment: config.environment,
+            registry,
+            actor,
+            passwordPolicy: getAuthSettings().passwordPolicy,
+            password: process.env.SEED_PASSWORD,
+            local,
+          });
+        },
         applyDeletions: async (file) => {
           // No sending from here: the notices wait in the table, and core sends them when it starts.
           const manager = new AccountManager(database, new AccountStates(database), {

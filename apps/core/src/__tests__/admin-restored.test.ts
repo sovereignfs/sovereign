@@ -32,6 +32,7 @@ describe('sovereign-admin instance restored', () => {
             restore,
             exportDeletions: () => Promise.resolve(''),
             applyDeletions: () => Promise.reject(new Error('unused')),
+            seed: () => Promise.reject(new Error('unused')),
           }
         : undefined,
     );
@@ -93,6 +94,7 @@ describe('sovereign-admin instance deletions', () => {
     exportDeletions: () => Promise.resolve('{"version":1}'),
     applyDeletions: () =>
       Promise.resolve({ skipped: false, deletedAgain: 2, alreadyGone: 1, kept: 0, notices: 3 }),
+    seed: () => Promise.reject(new Error('unused')),
     ...extra,
   });
   const run = async (argv: string[], instance: InstanceOperations | undefined) => {

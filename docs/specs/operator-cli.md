@@ -207,8 +207,7 @@ name that image, and only an app that carries a manifest (`spec/app-manifest.md`
 address only, run no command on the server, and stay open until the operator ends it. The inbox holds the links that verify and reset
 accounts, so there MUST be no other way to it: it has no public name, and the server publishes it nowhere but its own loopback address.
 
-`sv seed` runs `sovereign-admin seed` in core's container ([core-app §3.15.1](core-app.md)). It is not built yet
-([workstream 0002](../workstreams/0002-test-instances.md)).
+`sv seed` runs `sovereign-admin seed` in core's container ([core-app §3.15.1](core-app.md); [workstream 0002](../workstreams/0002-test-instances.md)).
 
 - It MUST refuse on a `production` instance, and exit 2, **before it connects**: the first of two checks, the second being core's own.
 - Core MUST be running, and the answer is the command's: what it made and what it kept, and on `staging` each new account's password.

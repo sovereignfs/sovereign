@@ -57,6 +57,15 @@ Mailpit is only the default. To send mail somewhere real from a staging instance
 under `core.env` in `suite.yml`; the next deployment stops running Mailpit. Set `SV_SMTP_FROM` alone to keep Mailpit and change the sender.
 `production` runs no Mailpit and gives core no mail settings: they are yours, from `core.env`, `./sv secret set SV_SMTP_PASSWORD`, or the Console.
 
+A development or staging instance can also be given something to try: `./sv seed` makes an owner, an admin and an ordinary person
+(`owner@`, `admin@` and `user@sovereign.local`) and a sample app to sign in from. It runs once and leaves what is there when run
+again. On a **development** instance every account has the same password, `sovereign-dev-password`. On a **staging** instance, which may be
+reachable from the internet, each account has a random password, shown **once** when the account is made and never again: copy
+it then. `./sv seed` is refused on a production instance, and core refuses as well, on production, and on any instance that has an
+account a seed did not make. It needs core to be running (`./sv deploy` first) and a core new enough to have it.
+
+On your own machine, `pnpm seed` in the core repository does the same for a local instance, with `SEED_PASSWORD` to choose the password.
+
 ## Prepare the machine
 
 Point the DNS name at the machine first, then:

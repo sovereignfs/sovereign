@@ -73,6 +73,8 @@ export async function receive(host: ReceiverHost, options: ReceiveOptions): Prom
       return app(host, options, request);
     case 'rotate':
       return rotate(host, options, request.name);
+    case 'seed':
+      return seed(host, options, request.json);
     case 'backup':
       return backup(host, options);
     case 'restore':
@@ -383,6 +385,47 @@ async function app(
   }
   options.out(`${JSON.stringify({ name: request.name, ...found })}\n`);
   return 0;
+}
+
+/**
+ * Runs `sovereign-admin seed` in core's container (operator-cli §4.4, core-app §3.15.1) and hands on what it printed, which holds the
+ * password of each account it made. Core decides whether it may: it refuses unless it is a development or staging instance, and
+ * unless no account that no seed made is there. This does not ask the instance's files, since core's own word is the one that counts.
+ */
+async function seed(host: Host, options: ReceiveOptions, json: boolean): Promise<number> {
+  const done = await host.docker([
+    'exec',
+    CONTAINER.core,
+    'sovereign-admin',
+    'seed',
+    ...(json ? ['--json'] : []),
+  ]);
+  if (done.code === 0) {
+    options.out(done.stdout.endsWith('\n') ? done.stdout : `${done.stdout}\n`);
+    return 0;
+  }
+  const said = done.stderr
+    .trim()
+    .split('\n')
+    .map((line) => line.replace(/^sovereign-admin: /, '').trim())
+    .filter(Boolean)
+    .pop();
+  if (/No such container|is not running/.test(done.stderr)) {
+    throw new Refused('Core is not running.', 'sv status says what is; sv deploy starts it.');
+  }
+  // An older core has no seed, and says what it does have.
+  if (done.code === 2 && /Usage:|unknown command|the groups are/.test(done.stderr)) {
+    throw new Refused(
+      'This core cannot seed: it came before the seed did.',
+      'sv upgrade, then sv push and sv deploy, moves it to one that can.',
+    );
+  }
+  // Core's own refusal, made before anything was written.
+  if (done.code === 3) throw new Refused(said ?? 'Core refused to seed.');
+  throw new Failed(
+    `Seeding failed${said ? `: ${said}` : ''}`,
+    'Running it again is safe: it leaves what it made.',
+  );
 }
 
 /** Gives an app a new client secret and restarts it (operator-cli §9.3). The old one stops working at once. */

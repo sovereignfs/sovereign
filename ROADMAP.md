@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.82.0 · **Last updated:** 2026-11-01
+**Version:** 0.83.0 · **Last updated:** 2026-11-01
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -206,4 +206,4 @@ Epic [15](docs/epics/core-services.md)
 | Version | Priority | Task                                      | Status | Epic task                           |
 | ------- | -------- | ----------------------------------------- | ------ | ----------------------------------- |
 | 0.82.0  | 1        | Core knows what the instance is for       | ✅     | [13.20](docs/epics/operator-cli.md) |
-| —       | 2        | Seeding development and staging instances | 📋     | [13.21](docs/epics/operator-cli.md) |
+| 0.83.0  | 2        | Seeding development and staging instances | ✅     | [13.21](docs/epics/operator-cli.md) |

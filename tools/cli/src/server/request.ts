@@ -9,6 +9,7 @@ export type Request =
   | { verb: 'logs'; target: string; lines: number }
   | { verb: 'app'; name: string; secret: boolean }
   | { verb: 'rotate'; name: string }
+  | { verb: 'seed'; json: boolean }
   | { verb: 'backup' }
   | { verb: 'restore'; commit: string }
   | { verb: 'rollback' };
@@ -24,7 +25,7 @@ export function parseRequest(line: string): Request {
   const usage = () =>
     new Refused(
       `The server does not understand “${words.slice(0, 4).join(' ').slice(0, 60)}”.`,
-      'It answers: version, deploy, status, doctor, logs, app, rotate, backup, restore, rollback.',
+      'It answers: version, deploy, status, doctor, logs, app, rotate, seed, backup, restore, rollback.',
     );
   switch (verb) {
     case 'version':
@@ -67,6 +68,10 @@ export function parseRequest(line: string): Request {
     case 'restore':
       if (rest.length === 1 && COMMIT.test(rest[0] as string))
         return { verb, commit: rest[0] as string };
+      break;
+    case 'seed':
+      if (rest.length === 0) return { verb, json: false };
+      if (rest.length === 1 && rest[0] === '--json') return { verb, json: true };
       break;
     case 'rotate':
       if (rest.length === 1 && NAME.test(rest[0] as string))

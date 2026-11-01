@@ -10,7 +10,7 @@ import {
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { Locked, Refused } from '../errors.js';
+import { Failed, Locked, Refused } from '../errors.js';
 import { fakeHost } from '../testing/fake-host.js';
 import { makeSource, type Source } from '../testing/source.js';
 import { receive, type ReceiveOptions, type ReceiverHost } from './receive.js';
@@ -187,7 +187,15 @@ describe('a deployment', () => {
 describe('the key that only deploys', () => {
   it('may deploy and ask the version, and nothing else', async () => {
     const { host } = receiver();
-    for (const line of ['status', 'doctor', 'logs core', 'app notes --secret', 'rotate notes']) {
+    for (const line of [
+      'status',
+      'doctor',
+      'logs core',
+      'app notes --secret',
+      'rotate notes',
+      'seed',
+      'seed --json',
+    ]) {
       const { options: o } = options(stateDir(), line, { deployOnly: true });
       await expect(receive(host, o), line).rejects.toThrow(/deploy and do nothing else/);
     }
@@ -498,5 +506,63 @@ describe('a backup', () => {
     await expect(receive(host, options(stateDir(), 'backup').options)).rejects.toThrow(
       /cannot carry/,
     );
+  });
+});
+
+describe('seeding, which core decides', () => {
+  const ask = (line: string, handle: Parameters<typeof receiver>[0]) => {
+    const { host, calls } = receiver(handle);
+    const { options: o, out } = options(stateDir(), line);
+    return { run: () => receive(host, o), calls, out };
+  };
+
+  it('runs sovereign-admin seed in core’s container and hands on what it printed, with --json when asked', async () => {
+    const plain = ask('seed', () => ({
+      stdout: 'owner@sovereign.local\tplatform:owner\tpassword: x',
+    }));
+    expect(await plain.run()).toBe(0);
+    expect(plain.calls).toEqual([['exec', 'sv-core', 'sovereign-admin', 'seed']]);
+    expect(plain.out.join('')).toBe('owner@sovereign.local\tplatform:owner\tpassword: x\n');
+    const json = ask('seed --json', () => ({ stdout: '{"ok":true}\n' }));
+    await json.run();
+    expect(json.calls).toEqual([['exec', 'sv-core', 'sovereign-admin', 'seed', '--json']]);
+    expect(json.out.join('')).toBe('{"ok":true}\n');
+  });
+
+  it('refuses, in core’s words, when core refuses (exit 3), and leaves it at that', async () => {
+    const refused = ask('seed', () => ({
+      code: 3,
+      stderr:
+        'sovereign-admin: This instance has 1 account that no seed made, so it is not seeded.\n',
+    }));
+    await expect(refused.run()).rejects.toThrow(Refused);
+    await expect(refused.run()).rejects.toThrow('This instance has 1 account that no seed made');
+    expect(refused.out).toEqual([]);
+  });
+
+  it('says core is not running when it is not', async () => {
+    const down = ask('seed', () => ({
+      code: 1,
+      stderr: 'Error response from daemon: No such container: sv-core',
+    }));
+    await expect(down.run()).rejects.toThrow('Core is not running');
+  });
+
+  it('says an older core has no seed, and what moves it on', async () => {
+    const older = ask('seed', () => ({
+      code: 2,
+      stderr:
+        'sovereign-admin: the groups are apps and instance\nUsage:\n  sovereign-admin apps ...',
+    }));
+    await expect(older.run()).rejects.toThrow('came before the seed did');
+  });
+
+  it('fails, not refuses, when it stops partway, and says it can be run again', async () => {
+    const partway = ask('seed', () => ({
+      code: 1,
+      stderr: 'sovereign-admin: redirect: must be https\n',
+    }));
+    await expect(partway.run()).rejects.toThrow(Failed);
+    await expect(partway.run()).rejects.toThrow('redirect: must be https');
   });
 });

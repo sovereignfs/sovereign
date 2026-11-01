@@ -167,6 +167,31 @@ PostgreSQL, set `SV_DB_DIALECT` to `sqld`, `sqlite` or `postgres` and the matchi
 `SV_SQLD_URL` and `SV_SQLD_ADMIN_URL`, `SV_SQLITE_URL` or `SV_POSTGRES_URL`, then
 run `pnpm test:db`. `ci.yml` shows the exact commands.
 
+### Labels
+
+The labels are in [`.github/labels.json`](.github/labels.json), and the **Labels** workflow
+(`.github/workflows/labels.yml`) makes the repository match that file when it changes, and on demand
+(**Actions → Labels → Run workflow**). It makes and changes labels and never deletes one. To add or change a
+label, edit the file in a pull request. To check or apply it from your own machine:
+
+```bash
+GITHUB_TOKEN=$(gh auth token) node scripts/sync-labels.ts --repo OWNER/NAME --dry-run   # drop --dry-run to apply
+```
+
+The same file gives any other repository of the organisation the same labels.
+
+| Label                                             | Use                                                                                |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `bug`, `enhancement`, `question`, `documentation` | What an issue or pull request is about. The issue forms add `bug` or `enhancement` |
+| `needs-triage`                                    | New, and not yet looked at. The issue forms add it; take it off when someone has   |
+| `discussion`                                      | No solution decided yet: open for design input before anything is built            |
+| `deferred`                                        | Not for the current focus; to be revisited when higher-priority work is done       |
+| `chore`, `ci`, `dx`                               | Maintenance, CI and workflow changes, and developer experience                     |
+| `dependencies`                                    | Dependency updates. Dependabot adds it (and `ci` for workflow actions)             |
+| `skip-ci`                                         | Skips CI on the pull request (above)                                               |
+| `good first issue`, `help wanted`                 | For newcomers, and where help is wanted                                            |
+| `duplicate`, `invalid`, `wontfix`                 | Why an issue or pull request was closed                                            |
+
 ---
 
 ## Proposing a feature (RFCs)

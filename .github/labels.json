@@ -1,0 +1,51 @@
+[
+  { "name": "bug", "color": "d73a4a", "description": "Something isn't working" },
+  {
+    "name": "documentation",
+    "color": "0075ca",
+    "description": "Improvements or additions to documentation"
+  },
+  {
+    "name": "duplicate",
+    "color": "cfd3d7",
+    "description": "This issue or pull request already exists"
+  },
+  { "name": "enhancement", "color": "a2eeef", "description": "New feature or request" },
+  { "name": "good first issue", "color": "7057ff", "description": "Good for newcomers" },
+  { "name": "help wanted", "color": "008672", "description": "Extra attention is needed" },
+  { "name": "invalid", "color": "e4e669", "description": "This doesn't seem right" },
+  { "name": "question", "color": "d876e3", "description": "Further information is requested" },
+  { "name": "wontfix", "color": "ffffff", "description": "This will not be worked on" },
+  {
+    "name": "skip-ci",
+    "color": "FBCA04",
+    "description": "Skip CI on this PR (jobs evaluate to skipped on next push)"
+  },
+  {
+    "name": "deferred",
+    "color": "0bb086",
+    "description": "Not scheduled for the current focus area. Will be revisited once higher-priority work is complete."
+  },
+  {
+    "name": "chore",
+    "color": "e99695",
+    "description": "Non-functional maintenance — deps, tooling, config, and workflow."
+  },
+  {
+    "name": "discussion",
+    "color": "3225ea",
+    "description": "No solution decided yet — open for design input before implementation"
+  },
+  {
+    "name": "dx",
+    "color": "4ca93b",
+    "description": "Developer experience — docs, setup, error messages, tooling"
+  },
+  { "name": "dependencies", "color": "0366d6", "description": "Dependency updates (Dependabot)" },
+  { "name": "ci", "color": "1d76db", "description": "CI/CD workflow changes" },
+  {
+    "name": "needs-triage",
+    "color": "ededed",
+    "description": "New, and not yet looked at: the issue forms add it"
+  }
+]

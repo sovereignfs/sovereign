@@ -21,7 +21,7 @@ beforeAll(async () => {
   folder = mkdtempSync(path.join(tmpdir(), 'sv-avatar-'));
   vi.stubEnv('SV_URL', ORIGIN);
   vi.stubEnv('SV_AUTH_SECRET', 'a-secret-that-is-long-enough-to-pass-validation');
-  vi.stubEnv('SV_AUTH_TRUSTED_ORIGINS', 'https://app.example.com');
+  vi.stubEnv('SV_AUTH_TRUSTED_ORIGINS', 'https://app.sovereign.local');
   vi.stubEnv('SV_DB_DIALECT', 'sqlite');
   vi.stubEnv('SV_SQLITE_URL', `file:${path.join(folder, 'core.db')}`);
   vi.spyOn(process, 'cwd').mockReturnValue(APP_ROOT);
@@ -44,7 +44,7 @@ beforeEach(async () => {
   await db.run('delete from avatars');
   await db.run('delete from users');
   await db.run(
-    "insert into users (id, name, email, email_verified, role, created_at, updated_at) values (?, 'Ada', 'ada@example.com', 1, 'platform:user', 1, 1)",
+    "insert into users (id, name, email, email_verified, role, created_at, updated_at) values (?, 'Ada', 'ada@sovereign.local', 1, 'platform:user', 1, 1)",
     [ID],
   );
   getSession.mockReset().mockResolvedValue({ user: { id: ID, role: 'platform:user' } });
@@ -158,7 +158,7 @@ describe('uploading a picture', () => {
 
   it('is for the person it checked, never for one named in the request', async () => {
     await db.run(
-      "insert into users (id, name, email, email_verified, role, created_at, updated_at) values ('someone-else-99', 'Eve', 'eve@example.com', 1, 'platform:user', 1, 1)",
+      "insert into users (id, name, email, email_verified, role, created_at, updated_at) values ('someone-else-99', 'Eve', 'eve@sovereign.local', 1, 'platform:user', 1, 1)",
     );
     await post(png(16, 16), { 'x-user-id': 'someone-else-99' });
     expect((await db.run('select user_id from avatars')).rows.map((row) => row.user_id)).toEqual([
@@ -185,7 +185,7 @@ describe('uploading a picture', () => {
 
     it('from an origin the operator trusts, it is accepted', async () => {
       expect(
-        (await post(new Uint8Array(png(8, 8)), { origin: 'https://app.example.com' })).status,
+        (await post(new Uint8Array(png(8, 8)), { origin: 'https://app.sovereign.local' })).status,
       ).toBe(200);
     });
 

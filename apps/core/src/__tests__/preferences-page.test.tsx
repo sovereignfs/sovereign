@@ -29,7 +29,7 @@ beforeEach(() => {
 
 const as = (user: Record<string, unknown>) =>
   getSession.mockResolvedValue({
-    user: { id: 'u1', name: 'Ada', email: 'a@example.com', ...user },
+    user: { id: 'u1', name: 'Ada', email: 'a@sovereign.local', ...user },
   });
 
 describe('the preferences page', () => {

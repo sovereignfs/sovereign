@@ -72,8 +72,8 @@ export function notificationsSuite(createDatabase: () => Promise<TestDatabase>):
   async function instance() {
     const { auth } = makeAuthWithTasks(db);
     const owner = await signUp(auth, { name: 'Olive Owner' });
-    const ada = await signUp(auth, { name: 'Ada Lovelace', email: 'ada@example.com' });
-    const bo = await signUp(auth, { name: 'Bo Barnes', email: 'bo@example.com' });
+    const ada = await signUp(auth, { name: 'Ada Lovelace', email: 'ada@sovereign.local' });
+    const bo = await signUp(auth, { name: 'Bo Barnes', email: 'bo@sovereign.local' });
     const registry = registryFor(auth);
     const asOwner = await actorOf(auth, owner.jar);
     const idOf = async (email: string) =>
@@ -84,7 +84,7 @@ export function notificationsSuite(createDatabase: () => Promise<TestDatabase>):
         redirectUris: [REDIRECT],
         scopes: ['openid', 'profile', 'directory'],
         appScopes: ['notifications:send'],
-        launcher: { launchUrl: 'https://reminders.example.test/' },
+        launcher: { launchUrl: 'https://reminders.sovereign.local/' },
         ...extra,
       });
       return { clientId: client.clientId, secret };
@@ -179,7 +179,7 @@ export function notificationsSuite(createDatabase: () => Promise<TestDatabase>):
           title: 'x'.repeat(121),
           body: 'y'.repeat(501),
           category: 'loud',
-          url: 'http://reminders.example.test/',
+          url: 'http://reminders.sovereign.local/',
           expiresAt: 'tomorrow',
           key: 'k'.repeat(101),
         }),
@@ -213,17 +213,17 @@ export function notificationsSuite(createDatabase: () => Promise<TestDatabase>):
       const ctx = await instance();
       const ok = await service().send(
         ctx.app.clientId,
-        message(ctx.ada.id, { url: 'https://reminders.example.test/tasks/3' }),
+        message(ctx.ada.id, { url: 'https://reminders.sovereign.local/tasks/3' }),
       );
       expect(ok.id).toBeTruthy();
       const redirectOrigin = new URL(REDIRECT).origin;
       await service().send(ctx.app.clientId, message(ctx.ada.id, { url: `${redirectOrigin}/x` }));
       for (const url of [
-        'https://evil.example.test/',
-        'https://user:pw@reminders.example.test/',
+        'https://evil.sovereign.local/',
+        'https://user:pw@reminders.sovereign.local/',
         'javascript:alert(1)',
         'not an address',
-        'http://reminders.example.test/',
+        'http://reminders.sovereign.local/',
       ]) {
         const error = await failed(() =>
           service().send(ctx.app.clientId, message(ctx.ada.id, { url })),

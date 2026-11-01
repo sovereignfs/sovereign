@@ -11,7 +11,7 @@ import {
  * The service worker is tested as the text a browser is sent: it is evaluated here with a stand-in for what a worker
  * is given (its events, a cache, the network), and each request it may see is put to it.
  */
-const ORIGIN = 'https://core.example.com';
+const ORIGIN = 'https://core.sovereign.local';
 
 type Handler = (event: unknown) => void;
 type FakeRequest = {
@@ -141,7 +141,7 @@ describe('the service worker: what it keeps', () => {
     ['a path that only looks like a built file', '/x/_next/static/a.js', {}],
     ['a built file with the wrong prefix', '/_next/static', {}],
     ['a built file that is not under static', '/_next/data/build/index.json', {}],
-    ['a file of another origin', 'https://cdn.example.com/_next/static/a.js', {}],
+    ['a file of another origin', 'https://cdn.sovereign.local/_next/static/a.js', {}],
     [
       'a request with credentials of its own',
       '/icons/favicon.svg',

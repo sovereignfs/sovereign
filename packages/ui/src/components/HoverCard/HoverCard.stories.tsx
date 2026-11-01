@@ -37,7 +37,7 @@ export const Default: Story = {
     >
       <div style={{ padding: 'var(--sv-space-3)', fontSize: 14 }}>
         <div style={{ fontWeight: 600 }}>Jane Smith</div>
-        <div style={{ color: 'var(--sv-color-text-muted)' }}>jane@example.com</div>
+        <div style={{ color: 'var(--sv-color-text-muted)' }}>jane@sovereign.local</div>
       </div>
     </HoverCard>
   ),

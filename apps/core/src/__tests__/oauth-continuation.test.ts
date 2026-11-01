@@ -18,19 +18,19 @@ describe('isContinuation', () => {
 describe('continuationUrl', () => {
   it('is the address the provider says to go to', () => {
     expect(
-      continuationUrl({ redirect: true, url: 'https://rp.example.com/cb?code=abc&state=1' }),
-    ).toBe('https://rp.example.com/cb?code=abc&state=1');
+      continuationUrl({ redirect: true, url: 'https://rp.sovereign.local/cb?code=abc&state=1' }),
+    ).toBe('https://rp.sovereign.local/cb?code=abc&state=1');
   });
 
   it.each([
     ['nothing', undefined],
     ['null', null],
-    ['text', 'https://rp.example.com'],
+    ['text', 'https://rp.sovereign.local'],
     ['no address', { redirect: true }],
     ['an empty address', { redirect: true, url: '' }],
-    ['an address but no redirect', { url: 'https://rp.example.com/cb' }],
-    ['redirect false', { redirect: false, url: 'https://rp.example.com/cb' }],
-    ['redirect as text', { redirect: 'true', url: 'https://rp.example.com/cb' }],
+    ['an address but no redirect', { url: 'https://rp.sovereign.local/cb' }],
+    ['redirect false', { redirect: false, url: 'https://rp.sovereign.local/cb' }],
+    ['redirect as text', { redirect: 'true', url: 'https://rp.sovereign.local/cb' }],
     ['an address that is not text', { redirect: true, url: 5 }],
     ['an ordinary sign-in answer', { session: { id: 's1' }, user: { id: 'u1' } }],
   ])('is nothing for %s', (_name, data) => {

@@ -170,7 +170,7 @@ export async function call(
 export const signedInAs = (reply: Reply) => (reply.body as AuthBody | null)?.user ?? null;
 
 let nextEmail = 1;
-export const freshEmail = () => `person${nextEmail++}@example.com`;
+export const freshEmail = () => `person${nextEmail++}@sovereign.local`;
 
 export async function signUp(
   auth: Auth,

@@ -52,7 +52,7 @@ const AUDIENCE = coreApiResource(new URL(BASE_URL).origin);
 const DAY = 24 * 60 * 60 * 1000;
 const CONFIGURED: SmtpStatus = {
   state: 'configured',
-  settings: { host: 'smtp.example.test', port: 587, from: 'core@example.test' },
+  settings: { host: 'smtp.sovereign.local', port: 587, from: 'core@sovereign.local' },
 };
 const NOT_CONFIGURED: SmtpStatus = {
   state: 'not-configured',
@@ -116,8 +116,8 @@ export function mailForAppsSuite(createDatabase: () => Promise<TestDatabase>): v
   async function instance() {
     const { auth } = makeAuthWithTasks(db);
     const owner = await signUp(auth, { name: 'Olive Owner' });
-    const ada = await signUp(auth, { name: 'Ada Lovelace', email: 'ada@example.com' });
-    const bo = await signUp(auth, { name: 'Bo Barnes', email: 'bo@example.com' });
+    const ada = await signUp(auth, { name: 'Ada Lovelace', email: 'ada@sovereign.local' });
+    const bo = await signUp(auth, { name: 'Bo Barnes', email: 'bo@sovereign.local' });
     const registry = registryFor(auth);
     const asOwner = await actorOf(auth, owner.jar);
     const idOf = async (email: string) =>
@@ -128,7 +128,7 @@ export function mailForAppsSuite(createDatabase: () => Promise<TestDatabase>): v
         redirectUris: [REDIRECT],
         scopes: ['openid', 'profile', 'directory'],
         appScopes: ['email:send'],
-        launcher: { launchUrl: 'https://reminders.example.test/' },
+        launcher: { launchUrl: 'https://reminders.sovereign.local/' },
         ...extra,
       });
       return { clientId: client.clientId, secret };
@@ -183,7 +183,7 @@ export function mailForAppsSuite(createDatabase: () => Promise<TestDatabase>): v
       expect(answer.id).toBeTruthy();
       expect(sent).toHaveLength(1);
       expect(sent[0]).toMatchObject({
-        to: 'ada@example.com',
+        to: 'ada@sovereign.local',
         subject: 'Reminders: Your task is due',
       });
       expect(sent[0]?.text).toContain('Water the plants.');
@@ -198,8 +198,8 @@ export function mailForAppsSuite(createDatabase: () => Promise<TestDatabase>): v
       const answer = await mail.send(ctx.app.clientId, message(ctx.ada.id));
       await mail.settled();
       expect(Object.keys(answer)).toEqual(['id']);
-      expect(JSON.stringify(answer)).not.toContain('ada@example.com');
-      expect(log.join('\n')).not.toContain('ada@example.com');
+      expect(JSON.stringify(answer)).not.toContain('ada@sovereign.local');
+      expect(log.join('\n')).not.toContain('ada@sovereign.local');
     });
 
     it('answers a send to someone who may not receive it exactly as a delivered one, and sends nothing', async () => {
@@ -232,7 +232,7 @@ export function mailForAppsSuite(createDatabase: () => Promise<TestDatabase>): v
       expect(lines).toContain('has not used the app');
       expect(lines).not.toContain('a secret body');
       expect(lines).not.toContain(ctx.bo.id);
-      expect(lines).not.toContain('bo@example.com');
+      expect(lines).not.toContain('bo@sovereign.local');
     });
 
     it('drops a send to someone who switched the app’s email off, and sends again when they switch it on', async () => {
@@ -275,14 +275,14 @@ export function mailForAppsSuite(createDatabase: () => Promise<TestDatabase>): v
 
     it('drops, logs and does not retry a message the mail server could not take', async () => {
       const ctx = await instance();
-      failWith = new Error('connection refused at smtp.example.test for ada@example.com');
+      failWith = new Error('connection refused at smtp.sovereign.local for ada@sovereign.local');
       const mail = service();
       const answer = await mail.send(ctx.app.clientId, message(ctx.ada.id));
       await mail.settled();
       expect(answer.id).toBeTruthy();
       expect(sent).toHaveLength(0);
       expect(log.join('\n')).toContain('could not be sent');
-      expect(log.join('\n')).not.toContain('ada@example.com');
+      expect(log.join('\n')).not.toContain('ada@sovereign.local');
     });
 
     it('refuses what cannot be used, saying every thing wrong, before it counts or keeps anything', async () => {
@@ -292,7 +292,7 @@ export function mailForAppsSuite(createDatabase: () => Promise<TestDatabase>): v
           to: '',
           subject: 'x'.repeat(151),
           body: 'y'.repeat(5001),
-          link: 'http://reminders.example.test/',
+          link: 'http://reminders.sovereign.local/',
           key: 'k'.repeat(101),
         }),
       );
@@ -335,21 +335,21 @@ export function mailForAppsSuite(createDatabase: () => Promise<TestDatabase>): v
       const mail = service();
       await mail.send(
         ctx.app.clientId,
-        message(ctx.ada.id, { link: 'https://reminders.example.test/tasks/3' }),
+        message(ctx.ada.id, { link: 'https://reminders.sovereign.local/tasks/3' }),
       );
       await mail.send(
         ctx.app.clientId,
         message(ctx.ada.id, { link: `${new URL(REDIRECT).origin}/x` }),
       );
       await mail.settled();
-      expect(sent[0]?.text).toContain('Open Reminders: https://reminders.example.test/tasks/3');
+      expect(sent[0]?.text).toContain('Open Reminders: https://reminders.sovereign.local/tasks/3');
       for (const link of [
-        'https://evil.example.test/',
+        'https://evil.sovereign.local/',
         `${BASE_URL}/reset-password`, // core's own address is not the app's
-        'https://user:pw@reminders.example.test/',
+        'https://user:pw@reminders.sovereign.local/',
         'javascript:alert(1)',
         'not an address',
-        'http://reminders.example.test/',
+        'http://reminders.sovereign.local/',
       ]) {
         const error = await failed(() =>
           mail.send(ctx.app.clientId, message(ctx.ada.id, { link })),

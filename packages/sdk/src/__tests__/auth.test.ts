@@ -27,7 +27,7 @@ function setup(options: Options = {}) {
   const sessions = memorySessionStore(time.environment.now);
   const tokens = memoryStore(options.deletes ? { deletes: true } : {});
   const sv = createSovereign({
-    appUrl: options.appUrl ?? 'https://notes.example.test',
+    appUrl: options.appUrl ?? 'https://notes.sovereign.local',
     coreUrl: core.url,
     ...core.credentials,
     sessionStore: sessions,
@@ -65,7 +65,7 @@ async function signIn(
   return { begin, back, done, cookie: cookieHeader(done.setCookies) };
 }
 
-const withCookie = (cookie: string, url = 'https://notes.example.test/') =>
+const withCookie = (cookie: string, url = 'https://notes.sovereign.local/') =>
   new Request(url, { headers: { cookie } });
 
 describe('signing in (sdk §9)', () => {
@@ -96,7 +96,7 @@ describe('signing in (sdk §9)', () => {
     expect(params.get('state')).toBeTruthy();
     expect(params.get('nonce')).toBeTruthy();
     expect(params.get('scope')).toBe('openid email');
-    expect(params.get('redirect_uri')).toBe('https://notes.example.test/auth/callback');
+    expect(params.get('redirect_uri')).toBe('https://notes.sovereign.local/auth/callback');
     expect(params.get('client_id')).toBe('fake-app');
   });
 
@@ -222,7 +222,9 @@ describe('the session', () => {
   it('is nobody without a cookie, with one that names nothing, or with one that has run out', async () => {
     const world = setup({ sessionSeconds: 3600 });
     const { cookie } = await signIn(world);
-    expect(await world.sv.auth.getSession(new Request('https://notes.example.test/'))).toBeNull();
+    expect(
+      await world.sv.auth.getSession(new Request('https://notes.sovereign.local/')),
+    ).toBeNull();
     expect(
       await world.sv.auth.getSession(withCookie('__Host-sv_session=no-such-session')),
     ).toBeNull();
@@ -233,7 +235,7 @@ describe('the session', () => {
   it('is a NotAuthenticatedError when a session is required and there is none', async () => {
     const { sv } = setup();
     await expect(
-      sv.auth.requireSession(new Request('https://notes.example.test/')),
+      sv.auth.requireSession(new Request('https://notes.sovereign.local/')),
     ).rejects.toBeInstanceOf(NotAuthenticatedError);
   });
 
@@ -266,15 +268,15 @@ describe('signing out', () => {
     const url = new URL(out.url);
     expect(`${url.origin}${url.pathname}`).toBe('https://core.test/api/auth/oauth2/end-session');
     expect(url.searchParams.get('id_token_hint')).toBeTruthy();
-    expect(url.searchParams.get('post_logout_redirect_uri')).toBe('https://notes.example.test/');
+    expect(url.searchParams.get('post_logout_redirect_uri')).toBe('https://notes.sovereign.local/');
     expect(out.setCookies[0]).toMatch(/^__Host-sv_session=;.*Max-Age=0/);
     expect(await world.sv.auth.getSession(withCookie(cookie))).toBeNull();
   });
 
   it('goes back to the app when there was no session to end', async () => {
     const { sv } = setup();
-    const out = await sv.auth.signOut(new Request('https://notes.example.test/'));
-    expect(out.url).toBe('https://notes.example.test/');
+    const out = await sv.auth.signOut(new Request('https://notes.sovereign.local/'));
+    expect(out.url).toBe('https://notes.sovereign.local/');
     expect(out.setCookies).toHaveLength(1);
   });
 });
@@ -294,7 +296,7 @@ describe('what the client offers', () => {
   it('needs a session store to sign people in, and says so', () => {
     const core = createFakeCore();
     const sv = createSovereign({
-      appUrl: 'https://notes.example.test',
+      appUrl: 'https://notes.sovereign.local',
       coreUrl: core.url,
       ...core.credentials,
     });
@@ -304,7 +306,7 @@ describe('what the client offers', () => {
 
 describe('a back-channel logout (sdk §9.1)', () => {
   const post = (token: string | undefined, method = 'POST') =>
-    new Request('https://notes.example.test/auth/backchannel-logout', {
+    new Request('https://notes.sovereign.local/auth/backchannel-logout', {
       method,
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
       ...(method === 'POST'
@@ -390,7 +392,7 @@ describe('a back-channel logout (sdk §9.1)', () => {
 
 describe('an account-deleted notice (sdk §9.1, core-app §4.5)', () => {
   const post = (token: string | undefined, method = 'POST') =>
-    new Request('https://notes.example.test/auth/account-deleted', {
+    new Request('https://notes.sovereign.local/auth/account-deleted', {
       method,
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
       ...(method === 'POST'
@@ -481,7 +483,7 @@ describe('an account-deleted notice (sdk §9.1, core-app §4.5)', () => {
     expect(
       (
         await world.sv.auth.handleBackChannelLogout(
-          new Request('https://notes.example.test/auth/backchannel-logout', {
+          new Request('https://notes.sovereign.local/auth/backchannel-logout', {
             method: 'POST',
             headers: { 'content-type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({ logout_token: deletion }).toString(),

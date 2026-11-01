@@ -20,7 +20,7 @@ function setup(options: Parameters<typeof nextAuth>[1] = {}) {
   const core = createFakeCore({ now: time.environment.now });
   core.addPerson({ sub: 'u1', name: 'Ada Lovelace' });
   const sv = createSovereign({
-    appUrl: 'https://notes.example.test',
+    appUrl: 'https://notes.sovereign.local',
     coreUrl: core.url,
     ...core.credentials,
     sessionStore: memorySessionStore(time.environment.now),
@@ -39,7 +39,7 @@ const cookiesOf = (reply: Response) =>
     .map((cookie) => cookie.split(';')[0])
     .join('; ');
 const at = (path: string, init?: RequestInit) =>
-  new Request(`https://notes.example.test${path}`, init);
+  new Request(`https://notes.sovereign.local${path}`, init);
 
 beforeEach(() => {
   jar.value = '';

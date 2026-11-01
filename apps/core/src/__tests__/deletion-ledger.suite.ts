@@ -81,8 +81,8 @@ export function deletionLedgerSuite(createDatabase: () => Promise<TestDatabase>)
   async function instance() {
     const { auth } = makeAuthWithTasks(db);
     const owner = await signUp(auth, { name: 'Olive Owner' });
-    const ada = await signUp(auth, { name: 'Ada Lovelace', email: 'ada@example.com' });
-    const bo = await signUp(auth, { name: 'Bo Barnes', email: 'bo@example.com' });
+    const ada = await signUp(auth, { name: 'Ada Lovelace', email: 'ada@sovereign.local' });
+    const bo = await signUp(auth, { name: 'Bo Barnes', email: 'bo@sovereign.local' });
     const registry = registryFor(auth);
     const asOwner = await actorOf(auth, owner.jar);
     const idOf = async (email: string) =>
@@ -91,7 +91,7 @@ export function deletionLedgerSuite(createDatabase: () => Promise<TestDatabase>)
       name: 'Reminders',
       redirectUris: [REDIRECT],
       scopes: ['openid', 'profile', 'directory'],
-      accountDeletedUri: 'https://reminders.example.test/gone',
+      accountDeletedUri: 'https://reminders.sovereign.local/gone',
     });
     const app = { clientId: client.clientId, secret };
     await personToken(auth, ada.jar, app, { audience: AUDIENCE });
@@ -148,7 +148,7 @@ export function deletionLedgerSuite(createDatabase: () => Promise<TestDatabase>)
       expect(file.deletions).toEqual([
         { sub: ctx.ada, deletedAt: expect.any(String), apps: [ctx.app.clientId] },
       ]);
-      expect(JSON.stringify(file)).not.toContain('ada@example.com');
+      expect(JSON.stringify(file)).not.toContain('ada@sovereign.local');
       expect(JSON.stringify(file)).not.toContain('Ada');
       expect(parseDeletions(JSON.stringify(file))).toEqual(file);
     });

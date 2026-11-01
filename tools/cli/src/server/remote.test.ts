@@ -17,11 +17,11 @@ describe('where sv connects', () => {
 
 describe('the tunnel to the server', () => {
   it('listens on this machine’s loopback address only, reaches the server’s loopback only, and runs no command', () => {
-    const args = tunnelArgs({ host: 'h.example.com', user: 'ops', port: 2222 }, 8025, 8025);
+    const args = tunnelArgs({ host: 'h.sovereign.local', user: 'ops', port: 2222 }, 8025, 8025);
     expect(args).toContain('-N');
     expect(args[args.indexOf('-L') + 1]).toBe('127.0.0.1:8025:127.0.0.1:8025');
     expect(args).toContain('ExitOnForwardFailure=yes');
-    expect(args.slice(args.indexOf('--'))).toEqual(['--', 'ops@h.example.com']);
+    expect(args.slice(args.indexOf('--'))).toEqual(['--', 'ops@h.sovereign.local']);
     expect(args[args.indexOf('-p') + 1]).toBe('2222');
     expect(tunnelArgs({ host: 'h', user: 'root' }, 9000, 8025)).not.toContain('-p');
   });

@@ -47,7 +47,7 @@ const TABLES = [
   'verifications',
   'users',
 ];
-const APP = 'https://rp.example.com';
+const APP = 'https://rp.sovereign.local';
 
 export function accountManageSuite(createDatabase: () => Promise<TestDatabase>): void {
   let target: TestDatabase;
@@ -133,7 +133,7 @@ export function accountManageSuite(createDatabase: () => Promise<TestDatabase>):
       for (let i = 0; i < n; i++) {
         await signUp(auth, {
           name: `Person ${String(i).padStart(2, '0')}`,
-          email: `p${i}@example.com`,
+          email: `p${i}@sovereign.local`,
         });
       }
     }
@@ -165,7 +165,7 @@ export function accountManageSuite(createDatabase: () => Promise<TestDatabase>):
       ]);
       const byAddress = await listAccounts(db, { query: ctx.people.rae.email.toUpperCase() });
       expect(byAddress.accounts.map((a) => a.id)).toEqual([ctx.people.rae.id]);
-      expect((await listAccounts(db, { query: '@example.com' })).total).toBe(6);
+      expect((await listAccounts(db, { query: '@sovereign.local' })).total).toBe(6);
       expect((await listAccounts(db, { query: 'nobody at all' })).accounts).toEqual([]);
     });
 
@@ -345,6 +345,14 @@ export function accountManageSuite(createDatabase: () => Promise<TestDatabase>):
   describe('deactivating', () => {
     it('ends the sessions, and takes back every token, so refreshing and userinfo fail', async () => {
       const ctx = await instance();
+      // The apps are told of the deactivation. That is answered here, so that no name is looked up on the network: a `.local` name is asked
+      // of the local network by multicast on some machines, which takes seconds to give up.
+      vi.stubGlobal('fetch', async (input: RequestInfo | URL) => {
+        const url = String(input);
+        return url.startsWith(APP)
+          ? new Response(null, { status: 200 })
+          : ctx.auth.handler(new Request(url));
+      });
       const client = await app(ctx);
       const { tokens } = await signInTo(ctx.auth, ctx.people.pat.jar, client, {
         scope: 'openid offline_access',
@@ -529,7 +537,7 @@ export function accountManageSuite(createDatabase: () => Promise<TestDatabase>):
       const ctx = await instance();
       await db.run('insert into invites (id, email, invited_by, created_at) values (?, ?, ?, ?)', [
         'inv1',
-        'someone@example.com',
+        'someone@sovereign.local',
         ctx.people.pat.id,
         db.family === 'postgres' ? Date.now() : Date.now(),
       ]);

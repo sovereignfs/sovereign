@@ -11,7 +11,7 @@ const item = (extra: Record<string, unknown> = {}) => ({
   appName: 'Reminders',
   title: 'Due today',
   body: null,
-  url: 'https://reminders.example.test/tasks/3',
+  url: 'https://reminders.sovereign.local/tasks/3',
   category: 'info',
   createdAt: Date.now() - 5 * 60_000,
   readAt: null,
@@ -84,7 +84,7 @@ describe('the bell', () => {
     const link = await screen.findByRole('link', {
       name: /Reminders: <b>Due<\/b> today\. Water the plants/,
     });
-    expect(link.getAttribute('href')).toBe('https://reminders.example.test/tasks/3');
+    expect(link.getAttribute('href')).toBe('https://reminders.sovereign.local/tasks/3');
     expect(document.querySelector('b')).toBeNull();
     expect(screen.getByText('5 min ago')).toBeDefined();
   });

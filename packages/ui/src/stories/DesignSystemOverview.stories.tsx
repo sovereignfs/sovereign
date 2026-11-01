@@ -2099,7 +2099,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               importLine="import { CopyButton } from '@sovereignfs/ui';"
               usage="Copies text to the clipboard and says so. Says plainly when the browser refuses, instead of pretending."
             >
-              <CopyButton text="https://core.example.com/invite/abc123" label="Copy link" />
+              <CopyButton text="https://core.sovereign.local/invite/abc123" label="Copy link" />
             </ComponentCard>
 
             {/* QrCode */}
@@ -2330,7 +2330,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
                 <FormField label="Email" hint="We'll never share this." id="ov-email">
-                  {(field) => <Input {...field} type="email" placeholder="you@example.com" />}
+                  {(field) => <Input {...field} type="email" placeholder="you@sovereign.local" />}
                 </FormField>
                 <FormField label="Password" error="Must be 8+ characters." id="ov-pw">
                   {(field) => <Input {...field} type="password" />}
@@ -3298,7 +3298,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                 <input
                   id="label-demo-input"
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder="you@sovereign.local"
                   style={{
                     padding: 'var(--sv-space-2) var(--sv-space-3)',
                     border: '1px solid var(--sv-color-border-strong)',
@@ -3397,7 +3397,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               >
                 <div style={{ padding: 'var(--sv-space-3)', fontSize: 14 }}>
                   <div style={{ fontWeight: 600 }}>Jane Smith</div>
-                  <div style={{ color: 'var(--sv-color-text-muted)' }}>jane@example.com</div>
+                  <div style={{ color: 'var(--sv-color-text-muted)' }}>jane@sovereign.local</div>
                 </div>
               </HoverCard>
             </ComponentCard>

@@ -188,7 +188,7 @@ export function AppForm({ id, initial }: { id?: string; initial: Initial }) {
             {...field}
             name="launchUrl"
             inputMode="url"
-            placeholder="https://app.example.com"
+            placeholder="https://app.sovereign.local"
             value={launchUrl}
             onChange={(event) => setLaunchUrl(event.target.value)}
           />
@@ -223,7 +223,7 @@ export function AppForm({ id, initial }: { id?: string; initial: Initial }) {
             {...field}
             name="redirectUris"
             rows={3}
-            placeholder="https://app.example.com/auth/callback"
+            placeholder="https://app.sovereign.local/auth/callback"
             value={redirectUris}
             onChange={(event) => setRedirectUris(event.target.value)}
           />

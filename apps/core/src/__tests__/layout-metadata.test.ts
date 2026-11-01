@@ -4,7 +4,7 @@ import { THEME_COLORS } from '../pwa';
 const identity = vi.fn();
 vi.mock('../instance/service', () => ({ getInstanceIdentity: () => identity() as unknown }));
 vi.mock('next/headers', () => ({ headers: () => Promise.resolve(new Headers()) }));
-vi.stubEnv('SV_URL', 'https://core.example.com');
+vi.stubEnv('SV_URL', 'https://core.sovereign.local');
 vi.stubEnv('SV_AUTH_SECRET', 'a-secret-that-is-long-enough-to-pass-validation');
 
 const { generateMetadata, viewport } = await import('../../app/layout');

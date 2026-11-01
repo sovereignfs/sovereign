@@ -46,12 +46,12 @@ afterAll(async () => {
 const user = (id: string) =>
   db.run(
     `insert into users (id, name, email, email_verified, role, created_at, updated_at) values (?, ?, ?, 1, 'platform:user', 1, 1)`,
-    [id, id, `${id}@example.com`],
+    [id, id, `${id}@sovereign.local`],
   );
 const app = (id: string, name: string) =>
   db.run(
     `insert into oauth_clients (id, client_id, name, redirect_uris, scopes, created_at, updated_at) values (?, ?, ?, ?, '[]', 1, 1)`,
-    [id, id, name, JSON.stringify(['https://reminders.example.test/cb'])],
+    [id, id, name, JSON.stringify(['https://reminders.sovereign.local/cb'])],
   );
 const consent = (userId: string, clientId: string) =>
   db.run(
@@ -83,7 +83,7 @@ const valid = { to: 'ada', summary: 'You completed Water the plants' };
 
 describe('recording', () => {
   it('accepts an entry, answers 202 with an id as the contract says, and keeps it', async () => {
-    const reply = await record({ ...valid, link: 'https://reminders.example.test/tasks/3' });
+    const reply = await record({ ...valid, link: 'https://reminders.sovereign.local/tasks/3' });
     expect(reply.status).toBe(202);
     const body = (await reply.json()) as { id: string };
     expectMatchesContract('logActivity', 202, body);
@@ -110,7 +110,7 @@ describe('recording', () => {
     ['no summary', { to: 'ada' }, undefined],
     ['a summary that is too long', { ...valid, summary: 'x'.repeat(201) }, undefined],
     ['a summary on two lines', { ...valid, summary: 'a\nb' }, undefined],
-    ['a link to another site', { ...valid, link: 'https://evil.example.test/' }, undefined],
+    ['a link to another site', { ...valid, link: 'https://evil.sovereign.local/' }, undefined],
     [
       'a time a week ago',
       { ...valid, at: new Date(Date.now() - 7 * 86_400_000).toISOString() },

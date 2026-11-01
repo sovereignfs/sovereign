@@ -30,7 +30,7 @@ const taken =
     NETWORKS.some((network) => docker('network', 'inspect', network).status === 0));
 const runnable = dockerUp && !taken;
 
-const DOMAIN = 'sv-test.example.test';
+const DOMAIN = 'sv-test.sovereign.local';
 const REF = 'ghcr.io/example/testapp:1';
 const PROJECTS = [
   'sovereign-core',

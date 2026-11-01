@@ -39,7 +39,7 @@ export const config = defineConfig({
     authWebauthnRpId: string({
       name: 'AUTH_WEBAUTHN_RP_ID',
       description:
-        "The domain passkeys are bound to: core's own host, or a parent of it that its apps share (example.com). Unset means core's own host. Changing it makes existing passkeys stop working",
+        "The domain passkeys are bound to: core's own host, or a parent of it that its apps share (sovereign.local). Unset means core's own host. Changing it makes existing passkeys stop working",
     }),
     authWebauthnRpName: string({
       name: 'AUTH_WEBAUTHN_RP_NAME',

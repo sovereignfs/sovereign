@@ -15,18 +15,18 @@ const items = [
 
 describe('UserMenu', () => {
   it('renders a closed trigger by default, showing initials from name', () => {
-    render(<UserMenu name="Jamie Doe" email="jamie@example.com" items={items} />);
+    render(<UserMenu name="Jamie Doe" email="jamie@sovereign.local" items={items} />);
     expect(screen.getByRole('button', { name: 'Account' })).toBeTruthy();
     expect(screen.getByText('JD')).toBeTruthy();
     expect(screen.queryByRole('menuitem')).toBeNull();
   });
 
   it('opens the panel on trigger click, showing name, email, and items', () => {
-    render(<UserMenu name="Jamie Doe" email="jamie@example.com" items={items} />);
+    render(<UserMenu name="Jamie Doe" email="jamie@sovereign.local" items={items} />);
     fireEvent.click(screen.getByRole('button', { name: 'Account' }));
 
     expect(screen.getByText('Jamie Doe')).toBeTruthy();
-    expect(screen.getByText('jamie@example.com')).toBeTruthy();
+    expect(screen.getByText('jamie@sovereign.local')).toBeTruthy();
     expect(screen.getByRole('menuitem', { name: /Account/ })).toBeTruthy();
     expect(screen.getByRole('menuitem', { name: /Preferences/ })).toBeTruthy();
     expect(screen.getByRole('menuitem', { name: /Sign out/ })).toBeTruthy();
@@ -59,7 +59,7 @@ describe('UserMenu', () => {
   });
 
   it('falls back to email initials when name is omitted', () => {
-    render(<UserMenu email="jamie@example.com" items={items} />);
+    render(<UserMenu email="jamie@sovereign.local" items={items} />);
     expect(screen.getByText('JA')).toBeTruthy();
   });
 

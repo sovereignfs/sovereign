@@ -286,13 +286,13 @@ describe('the reset-password page', () => {
 
 describe('the sign-up page, reached from an invitation link', () => {
   it('starts with the address the invitation was sent to', async () => {
-    lookupInvite.mockResolvedValue({ state: 'valid', email: 'invited@example.com' });
+    lookupInvite.mockResolvedValue({ state: 'valid', email: 'invited@sovereign.local' });
     const { signUp } = await pages();
     const html = await renderServer(
       await signUp({ searchParams: search(undefined, { invite: 'abc' }) }),
     );
     expect(lookupInvite).toHaveBeenCalledWith({}, 'abc', expect.any(Number));
-    expect(html).toMatch(/<input[^>]*type="email"[^>]*value="invited@example.com"/);
+    expect(html).toMatch(/<input[^>]*type="email"[^>]*value="invited@sovereign.local"/);
   });
 
   it('leaves the address empty for a link that no longer works, and says nothing about why', async () => {

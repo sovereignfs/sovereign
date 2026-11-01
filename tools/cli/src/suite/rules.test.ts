@@ -5,7 +5,7 @@ import type { Suite } from './types.js';
 
 const suite = (extra: Partial<Suite> = {}): Suite => ({
   schema: 1,
-  domain: 'sovereign.example.com',
+  domain: 'sovereign.local',
   core: { version: '0.71.0' },
   database: { version: '18' },
   server: { host: '203.0.113.7' },
@@ -17,7 +17,7 @@ describe('what looks like a secret', () => {
   it.each([
     'AGE-SECRET-KEY-1QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ',
     '-----BEGIN OPENSSH PRIVATE KEY-----',
-    'postgres://app:hunter2@db.example.com/app',
+    'postgres://app:hunter2@db.sovereign.local/app',
     'ghp_abcdefghijklmnopqrstuvwxyz0123456789',
     'sk-abcdefghijklmnopqrstuvwxyz0123456789',
     'dGhpcyBpcyBhIHZlcnkgbG9uZyBiYXNlNjQgdmFsdWUgdGhhdCBsb29rcyBsaWtlIGEga2V5',
@@ -27,12 +27,12 @@ describe('what looks like a secret', () => {
   });
 
   it.each([
-    'smtp.example.com',
+    'smtp.sovereign.local',
     '587',
     'en',
     'true',
-    'https://example.com/a/path',
-    'postgres://db.example.com/app',
+    'https://sovereign.local/a/path',
+    'postgres://db.sovereign.local/app',
     'a short phrase with spaces that is plainly not a key at all, whatever its length',
     'Europe/Paris',
   ])('lets %s through', (value) => {
@@ -56,7 +56,7 @@ describe('the rules a schema cannot say about suite.yml', () => {
       suite({
         core: {
           version: '0.71.0',
-          env: { SV_SMTP_HOST: 'smtp.example.com', SV_SMTP_USER: 'postgres://u:pw@h/db' },
+          env: { SV_SMTP_HOST: 'smtp.sovereign.local', SV_SMTP_USER: 'postgres://u:pw@h/db' },
         },
         apps: { notes: { image: 'ghcr.io/e/notes:1', env: { NOTES_TOKEN_URL: 'a'.repeat(45) } } },
       }),
@@ -102,7 +102,7 @@ describe('the schema', () => {
     const external = {
       external: true as const,
       name: 'Wiki',
-      redirect: ['https://wiki.example.com/cb'],
+      redirect: ['https://wiki.sovereign.local/cb'],
       scopes: ['openid', 'roles'],
     };
     expect(schemaProblems('suite', suite({ apps: { wiki: external } })).length).toBeGreaterThan(0);
@@ -126,7 +126,7 @@ describe('mail settings on a development or staging instance', () => {
   it('accept a user with a server, and anything on production, where Mailpit is not used', () => {
     expect(
       suiteProblems(
-        withEnv('staging', { SV_SMTP_USER: 'someone', SV_SMTP_HOST: 'smtp.example.com' }),
+        withEnv('staging', { SV_SMTP_USER: 'someone', SV_SMTP_HOST: 'smtp.sovereign.local' }),
       ),
     ).toEqual([]);
     expect(suiteProblems(withEnv('production', { SV_SMTP_USER: 'someone' }))).toEqual([]);

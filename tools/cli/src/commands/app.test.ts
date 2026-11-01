@@ -23,7 +23,7 @@ describe('sv app add', () => {
     expect(done.code).toBe(0);
     expect(suite().apps?.notes).toEqual({ image: NOTES_IMAGE });
     expect(lock().apps?.notes).toEqual({ ref: NOTES_IMAGE, digest: `sha256:${'a'.repeat(64)}` });
-    expect(done.text).toContain('Notes (notes) at https://notes.sovereign.example.com');
+    expect(done.text).toContain('Notes (notes) at https://notes.sovereign.local');
     expect(done.text).toContain('openid, profile, email');
     expect(done.text).toContain('It gets its own database.');
   });
@@ -51,7 +51,7 @@ describe('sv app add', () => {
   it('does nothing when the answer is not a yes', async () => {
     world = makeWorld({
       interactive: true,
-      answers: ['sovereign.example.com', '', 'ssh', 'per-host', '', '', 'no'],
+      answers: ['sovereign.local', '', 'ssh', 'per-host', '', '', 'no'],
       images: { [NOTES_IMAGE]: { manifest: manifestOf() } },
     });
     await sv(world, 'setup');
@@ -129,7 +129,7 @@ describe('sv app add', () => {
       '--name',
       'Team wiki',
       '--redirect',
-      'https://wiki.example.com/cb',
+      'https://wiki.sovereign.local/cb',
       '--scope',
       'openid',
       'profile',
@@ -138,7 +138,7 @@ describe('sv app add', () => {
     expect(suite().apps?.wiki).toEqual({
       external: true,
       name: 'Team wiki',
-      redirect: ['https://wiki.example.com/cb'],
+      redirect: ['https://wiki.sovereign.local/cb'],
       scopes: ['openid', 'profile'],
     });
     expect(lock().apps).toBeUndefined();
@@ -159,7 +159,7 @@ describe('sv app add', () => {
       '--name',
       'W',
       '--redirect',
-      'https://w.example.com/cb',
+      'https://w.sovereign.local/cb',
       '--scope',
       'openid',
       'roles',
@@ -176,7 +176,7 @@ describe('sv app add', () => {
           '--name',
           'W',
           '--redirect',
-          'https://w.example.com/cb',
+          'https://w.sovereign.local/cb',
           '--scope',
           'openid',
           'roles',
@@ -238,7 +238,8 @@ describe('sv app update', () => {
   it('refuses an option that is for the other kind of app, and an update that changes nothing', async () => {
     await add();
     expect(
-      (await sv(world, 'app', 'update', 'notes', '--redirect', 'https://x.example.com/cb')).text,
+      (await sv(world, 'app', 'update', 'notes', '--redirect', 'https://x.sovereign.local/cb'))
+        .text,
     ).toContain('--redirect is for external apps');
     expect((await sv(world, 'app', 'update', 'notes')).text).toContain('Nothing to change');
     expect((await sv(world, 'app', 'update', 'missing', '--hide')).text).toContain(
@@ -257,7 +258,7 @@ describe('sv app update', () => {
       '--name',
       'Wiki',
       '--redirect',
-      'https://w.example.com/cb',
+      'https://w.sovereign.local/cb',
     );
     await sv(
       world,
@@ -265,15 +266,15 @@ describe('sv app update', () => {
       'update',
       'wiki',
       '--redirect',
-      'https://w.example.com/a',
-      'https://w.example.com/b',
+      'https://w.sovereign.local/a',
+      'https://w.sovereign.local/b',
       '--trusted',
       '--name',
       'Team wiki',
     );
     expect(suite().apps?.wiki).toMatchObject({
       name: 'Team wiki',
-      redirect: ['https://w.example.com/a', 'https://w.example.com/b'],
+      redirect: ['https://w.sovereign.local/a', 'https://w.sovereign.local/b'],
       trusted: true,
     });
     expect((await sv(world, 'app', 'update', 'wiki', '--image', 'x:1')).text).toContain(
@@ -314,7 +315,7 @@ describe('sv app remove', () => {
   it('asks for the name when it can, and does nothing if it is not typed', async () => {
     world = makeWorld({
       interactive: true,
-      answers: ['sovereign.example.com', '', 'ssh', 'per-host', '', ''],
+      answers: ['sovereign.local', '', 'ssh', 'per-host', '', ''],
       images: { [NOTES_IMAGE]: { manifest: manifestOf() } },
     });
     await sv(world, 'setup');
@@ -353,11 +354,11 @@ describe('sv app list', () => {
       '--name',
       'Wiki',
       '--redirect',
-      'https://w.example.com/cb',
+      'https://w.sovereign.local/cb',
     );
     const text = await sv(world, 'app', 'list');
     expect(text.out).toEqual([
-      `notes\thosted\thttps://notes.sovereign.example.com\t${NOTES_IMAGE}`,
+      `notes\thosted\thttps://notes.sovereign.local\t${NOTES_IMAGE}`,
       'wiki\texternal\tWiki',
     ]);
     const json = await sv(world, 'app', 'list', '--json');
@@ -368,13 +369,13 @@ describe('sv app list', () => {
           name: 'notes',
           kind: 'hosted',
           image: NOTES_IMAGE,
-          address: 'https://notes.sovereign.example.com',
+          address: 'https://notes.sovereign.local',
         },
         {
           name: 'wiki',
           kind: 'external',
           displayName: 'Wiki',
-          redirect: ['https://w.example.com/cb'],
+          redirect: ['https://w.sovereign.local/cb'],
           address: null,
         },
       ],

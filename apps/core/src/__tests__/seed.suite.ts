@@ -59,9 +59,9 @@ export function seedSuite(createDatabase: () => Promise<TestDatabase>): void {
     });
     expect(result).toEqual({ created: SEED_ACCOUNTS.map((a) => a.email), existing: [] });
     expect(await roles()).toEqual({
-      'owner@example.test': { role: ROLE_OWNER, verified: true },
-      'admin@example.test': { role: ROLE_ADMIN, verified: true },
-      'user@example.test': { role: ROLE_USER, verified: true },
+      'owner@sovereign.local': { role: ROLE_OWNER, verified: true },
+      'admin@sovereign.local': { role: ROLE_ADMIN, verified: true },
+      'user@sovereign.local': { role: ROLE_USER, verified: true },
     });
   });
 
@@ -98,23 +98,23 @@ export function seedSuite(createDatabase: () => Promise<TestDatabase>): void {
       existing: SEED_ACCOUNTS.map((a) => a.email),
     });
     await db.run(
-      "delete from sessions where user_id in (select id from users where email = 'user@example.test')",
+      "delete from sessions where user_id in (select id from users where email = 'user@sovereign.local')",
     );
     await db.run(
-      "delete from accounts where user_id in (select id from users where email = 'user@example.test')",
+      "delete from accounts where user_id in (select id from users where email = 'user@sovereign.local')",
     );
-    await db.run("delete from users where email = 'user@example.test'");
+    await db.run("delete from users where email = 'user@sovereign.local'");
     expect(await seedAccounts(deps)).toEqual({
-      created: ['user@example.test'],
-      existing: ['owner@example.test', 'admin@example.test'],
+      created: ['user@sovereign.local'],
+      existing: ['owner@sovereign.local', 'admin@sovereign.local'],
     });
   });
 
   it('will not run for an address that is not on this machine', async () => {
     for (const baseUrl of [
-      'https://core.example.com',
+      'https://core.sovereign.local',
       'http://192.168.1.5:3000',
-      'https://localhost.example.com',
+      'https://localhost.sovereign.local',
     ]) {
       await expect(
         seedAccounts({ auth: makeAuth(db, {}, INVITE_ONLY), database: db, baseUrl }),
@@ -128,7 +128,7 @@ export function seedSuite(createDatabase: () => Promise<TestDatabase>): void {
       seedAccounts(
         { auth: makeAuth(db, {}, INVITE_ONLY), database: db, baseUrl: BASE_URL },
         'pw-for-the-test',
-        [{ name: 'Ada', email: 'a@example.test', role: ROLE_ADMIN }],
+        [{ name: 'Ada', email: 'a@sovereign.local', role: ROLE_ADMIN }],
       ),
     ).rejects.toThrow(/owner must come first/);
   });
@@ -143,8 +143,8 @@ export function seedSuite(createDatabase: () => Promise<TestDatabase>): void {
       expect(isLocalAddress(local), local).toBe(true);
     }
     for (const other of [
-      'https://core.example.com',
-      'http://localhost.example.com',
+      'https://core.sovereign.local',
+      'http://localhost.sovereign.local',
       'http://10.0.0.1',
       'localhost',
       '',

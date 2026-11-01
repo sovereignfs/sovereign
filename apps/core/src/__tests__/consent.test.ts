@@ -7,7 +7,7 @@ import { isTrusted, scopesAllowedFor } from '../oauth/trust';
 const SIGNED = (extra: Record<string, string> = {}) =>
   new URLSearchParams({
     client_id: 'abc',
-    redirect_uri: 'https://rp.example.com/cb',
+    redirect_uri: 'https://rp.sovereign.local/cb',
     scope: 'openid profile email',
     state: 'xyz',
     ...extra,
@@ -79,7 +79,7 @@ describe('reading an app’s request for the consent page', () => {
     const request = await readConsentRequest(SIGNED(), deps({ name: ' Notes ' }));
     expect(request).toEqual({
       appName: 'Notes',
-      returnHost: 'rp.example.com',
+      returnHost: 'rp.sovereign.local',
       scopes: ['openid', 'profile', 'email'],
       permissions: [SCOPE_COPY.openid, SCOPE_COPY.profile, SCOPE_COPY.email],
     });

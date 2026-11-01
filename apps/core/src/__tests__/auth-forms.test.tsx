@@ -45,12 +45,12 @@ describe('the sign-in form', () => {
   it('sends the email and password, then goes where the person was headed', async () => {
     signIn.mockResolvedValue({ data: {}, error: null });
     render(<SignInForm instanceName="Acme" returnTo="/settings" />);
-    type('Email', 'ada@example.com');
+    type('Email', 'ada@sovereign.local');
     type('Password', 'correct horse battery');
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/settings'));
     expect(signIn).toHaveBeenCalledWith({
-      email: 'ada@example.com',
+      email: 'ada@sovereign.local',
       password: 'correct horse battery',
     });
   });
@@ -58,7 +58,7 @@ describe('the sign-in form', () => {
   it('says only that the email or password is incorrect, whatever the reason', async () => {
     signIn.mockResolvedValue({ data: null, error: { status: 401, code: 'USER_NOT_FOUND' } });
     render(<SignInForm instanceName="Acme" returnTo="/" />);
-    type('Email', 'nobody@example.com');
+    type('Email', 'nobody@sovereign.local');
     type('Password', 'whatever');
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(await screen.findByRole('alert')).toHaveProperty(
@@ -71,7 +71,7 @@ describe('the sign-in form', () => {
   it('says to wait when the limit is reached', async () => {
     signIn.mockResolvedValue({ data: null, error: { status: 429 } });
     render(<SignInForm instanceName="Acme" returnTo="/" />);
-    type('Email', 'ada@example.com');
+    type('Email', 'ada@sovereign.local');
     type('Password', 'whatever');
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(await screen.findByText(/Too many attempts/)).toBeTruthy();
@@ -80,18 +80,18 @@ describe('the sign-in form', () => {
   it('keeps what was typed after a failure', async () => {
     signIn.mockResolvedValue({ data: null, error: { status: 401 } });
     render(<SignInForm instanceName="Acme" returnTo="/" />);
-    type('Email', 'ada@example.com');
+    type('Email', 'ada@sovereign.local');
     type('Password', 'wrong');
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
     await screen.findByRole('alert');
-    expect((screen.getByLabelText(/^Email/) as HTMLInputElement).value).toBe('ada@example.com');
+    expect((screen.getByLabelText(/^Email/) as HTMLInputElement).value).toBe('ada@sovereign.local');
   });
 });
 
 describe('the sign-up form', () => {
   const fill = () => {
     type('Name', 'Ada Lovelace');
-    type('Email', 'ada@example.com');
+    type('Email', 'ada@sovereign.local');
     type('Password', 'correct horse battery');
     type('Confirm password', 'correct horse battery');
     fireEvent.click(screen.getByLabelText(/I agree to the/));
@@ -101,7 +101,7 @@ describe('the sign-up form', () => {
   it('will not send the sign-up until the terms are accepted, and says why', () => {
     render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
     type('Name', 'Ada Lovelace');
-    type('Email', 'ada@example.com');
+    type('Email', 'ada@sovereign.local');
     type('Password', 'correct horse battery');
     type('Confirm password', 'correct horse battery');
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
@@ -125,7 +125,7 @@ describe('the sign-up form', () => {
   it('will not send the sign-up when the two passwords differ, and says so', () => {
     render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
     type('Name', 'Ada Lovelace');
-    type('Email', 'ada@example.com');
+    type('Email', 'ada@sovereign.local');
     type('Password', 'correct horse battery');
     type('Confirm password', 'correct horse batteri');
     fireEvent.click(screen.getByLabelText(/I agree to the/));
@@ -146,7 +146,7 @@ describe('the sign-up form', () => {
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/settings'));
     expect(signUp).toHaveBeenCalledWith({
       name: 'Ada Lovelace',
-      email: 'ada@example.com',
+      email: 'ada@sovereign.local',
       password: 'correct horse battery',
       agreedToTerms: true,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -208,7 +208,7 @@ describe('the sign-up form', () => {
 
 describe('the sign-in form, around verification and reset', () => {
   const submit = () => {
-    type('Email', 'ada@example.com');
+    type('Email', 'ada@sovereign.local');
     type('Password', 'correct horse battery');
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
   };
@@ -253,9 +253,9 @@ describe('the sign-in form, around verification and reset', () => {
     expect(screen.queryByText('The email or password is incorrect.')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Send a new link' }));
-    expect(await screen.findByText(/A new link is on its way to ada@example.com/)).toBeTruthy();
+    expect(await screen.findByText(/A new link is on its way to ada@sovereign.local/)).toBeTruthy();
     expect(sendVerificationEmail).toHaveBeenCalledWith({
-      email: 'ada@example.com',
+      email: 'ada@sovereign.local',
       callbackURL: '/sign-in?returnTo=%2Fsettings',
     });
     expect(assign).not.toHaveBeenCalled();
@@ -296,9 +296,9 @@ describe('the sign-in form, around verification and reset', () => {
 
 describe('the sign-in form, when an app sent the person here', () => {
   const REQUEST = '?client_id=abc&response_type=code&scope=openid&sig=signed';
-  const APP = 'https://rp.example.com/cb?code=one&state=two';
+  const APP = 'https://rp.sovereign.local/cb?code=one&state=two';
   const submit = () => {
-    type('Email', 'ada@example.com');
+    type('Email', 'ada@sovereign.local');
     type('Password', 'correct horse battery');
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
   };
@@ -342,7 +342,7 @@ describe('the sign-in form, when an app sent the person here', () => {
 describe('the sign-up form, while the address is not verified', () => {
   const fill = () => {
     type('Name', 'Ada Lovelace');
-    type('Email', 'ada@example.com');
+    type('Email', 'ada@sovereign.local');
     type('Password', 'correct horse battery');
     type('Confirm password', 'correct horse battery');
     fireEvent.click(screen.getByLabelText(/I agree to the/));
@@ -353,7 +353,7 @@ describe('the sign-up form, while the address is not verified', () => {
     signUp.mockResolvedValue({ data: { token: null, user: {} }, error: null });
     render(<SignUpForm instanceName="Acme" returnTo="/settings" passwordHint="" />);
     fill();
-    expect(await screen.findByText(/We have sent a link to ada@example.com/)).toBeTruthy();
+    expect(await screen.findByText(/We have sent a link to ada@sovereign.local/)).toBeTruthy();
     expect(screen.queryByLabelText(/^Password/)).toBeNull();
     expect(assign).not.toHaveBeenCalled();
     expect(signUp).toHaveBeenCalledWith(
@@ -370,7 +370,7 @@ describe('the sign-up form, while the address is not verified', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Send a new link' }));
     expect(await screen.findByText(/A new link is on its way/)).toBeTruthy();
     expect(sendVerificationEmail).toHaveBeenCalledWith({
-      email: 'ada@example.com',
+      email: 'ada@sovereign.local',
       callbackURL: '/sign-in',
     });
   });
@@ -409,7 +409,7 @@ describe('the sign-up form, while the address is not verified', () => {
 
 describe('the forgot-password form', () => {
   const submit = () => {
-    type('Email', 'ada@example.com');
+    type('Email', 'ada@sovereign.local');
     fireEvent.click(screen.getByRole('button', { name: 'Send reset link' }));
   };
 
@@ -417,9 +417,9 @@ describe('the forgot-password form', () => {
     requestPasswordReset.mockResolvedValue({ data: { status: true }, error: null });
     render(<ForgotPasswordForm />);
     submit();
-    expect(await screen.findByText(/If ada@example.com has an account/)).toBeTruthy();
+    expect(await screen.findByText(/If ada@sovereign.local has an account/)).toBeTruthy();
     expect(requestPasswordReset).toHaveBeenCalledWith({
-      email: 'ada@example.com',
+      email: 'ada@sovereign.local',
       redirectTo: '/reset-password',
     });
   });

@@ -20,7 +20,7 @@ services:
       - path: .env
         required: false
     environment:
-      SV_URL: ${SV_URL:?Set SV_URL to the public address of core, for example https://core.example.com}
+      SV_URL: ${SV_URL:?Set SV_URL to the public address of core, for example https://core.sovereign.local}
       SV_AUTH_SECRET: ${SV_AUTH_SECRET:?Set SV_AUTH_SECRET to a long random secret (openssl rand -base64 48)}
       SV_DB_DIALECT: sqlite
       SV_SQLITE_URL: file:/data/core.db

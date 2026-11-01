@@ -5,10 +5,10 @@ import type { Lock, Suite } from './types.js';
 
 const suite = (apps: Suite['apps'] = {}): Suite => ({
   schema: 1,
-  domain: 'sovereign.example.com',
+  domain: 'sovereign.local',
   core: { version: '0.71.0' },
   database: { version: '18' },
-  server: { host: 'h.example.com' },
+  server: { host: 'h.sovereign.local' },
   secrets: { recipients: ['age1zvkyg2lqzraa2lnjvqej32nkuu0ues2s82hzrye869xeexvn73equnujwj'] },
   ...(Object.keys(apps).length > 0 ? { apps } : {}),
 });
@@ -20,7 +20,7 @@ describe('the images a suite runs', () => {
     const wanted = wantedImages(
       suite({
         notes: { image: 'ghcr.io/e/notes:1.2.0' },
-        wiki: { external: true, name: 'Wiki', redirect: ['https://w.example.com/cb'] },
+        wiki: { external: true, name: 'Wiki', redirect: ['https://w.sovereign.local/cb'] },
       }),
     );
     expect(wanted).toEqual({
@@ -39,7 +39,7 @@ describe('writing the lock', () => {
     const lock = await refreshedLock(
       suite({
         notes: { image: 'ghcr.io/e/notes:1' },
-        wiki: { external: true, name: 'W', redirect: ['https://w.example.com/cb'] },
+        wiki: { external: true, name: 'W', redirect: ['https://w.sovereign.local/cb'] },
       }),
       undefined,
       async (ref) => (asked.push(ref), digestOf(ref)),
@@ -125,7 +125,7 @@ describe('Mailpit in the lock', () => {
     const own: Suite = {
       ...suite(),
       environment: 'staging',
-      core: { version: '0.71.0', env: { SV_SMTP_HOST: 'smtp.example.com' } },
+      core: { version: '0.71.0', env: { SV_SMTP_HOST: 'smtp.sovereign.local' } },
     };
     expect(wantedImages(own).mail).toBeUndefined();
   });

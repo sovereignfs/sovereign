@@ -114,9 +114,9 @@ export function authSuite(createDatabase: () => Promise<TestDatabase>): void {
 
     it('treats the same address in another case as the same account', async () => {
       const a = auth();
-      const first = await signUp(a, { email: 'Ada@Example.com' });
+      const first = await signUp(a, { email: 'Ada@Sovereign.local' });
       expect(first.reply.status).toBe(200);
-      const second = await signUp(a, { email: 'ada@example.COM' });
+      const second = await signUp(a, { email: 'ada@sovereign.LOCAL' });
       expect(second.reply.status).toBeGreaterThanOrEqual(400);
       expect(await count('users')).toBe(1);
     });
@@ -141,7 +141,7 @@ export function authSuite(createDatabase: () => Promise<TestDatabase>): void {
 
     it('accepts the address in any case', async () => {
       const a = auth();
-      const { email, password } = await signUp(a, { email: 'grace@example.com' });
+      const { email, password } = await signUp(a, { email: 'grace@sovereign.local' });
       const reply = await call(a, 'POST', '/sign-in/email', {
         body: { email: email.toUpperCase(), password },
       });
@@ -168,7 +168,7 @@ export function authSuite(createDatabase: () => Promise<TestDatabase>): void {
         body: { email, password: 'not the password' },
       });
       const unknown = await call(a, 'POST', '/sign-in/email', {
-        body: { email: 'nobody@example.com', password: 'not the password' },
+        body: { email: 'nobody@sovereign.local', password: 'not the password' },
       });
       expect(unknown.status).toBe(wrong.status);
       expect(unknown.body).toEqual(wrong.body);
@@ -304,7 +304,11 @@ export function authSuite(createDatabase: () => Promise<TestDatabase>): void {
   });
 
   describe('the rate limit', () => {
-    const attempt = (a: ReturnType<typeof auth>, address: string, email = 'someone@example.com') =>
+    const attempt = (
+      a: ReturnType<typeof auth>,
+      address: string,
+      email = 'someone@sovereign.local',
+    ) =>
       call(a, 'POST', '/sign-in/email', { address, body: { email, password: 'a wrong password' } });
 
     it('stops repeated sign-in attempts from one address, and says when to try again', async () => {
@@ -357,7 +361,7 @@ export function authSuite(createDatabase: () => Promise<TestDatabase>): void {
       for (let i = 0; i < 5; i++) {
         const reply = await call(a, 'POST', '/sign-in/email', {
           address: `203.0.113.${i}, 198.51.100.200`,
-          body: { email: 'someone@example.com', password: 'a wrong password' },
+          body: { email: 'someone@sovereign.local', password: 'a wrong password' },
         });
         statuses.push(reply.status);
       }
@@ -417,11 +421,11 @@ export function authSuite(createDatabase: () => Promise<TestDatabase>): void {
     });
 
     it('are accepted from a trusted origin', async () => {
-      const a = makeAuth(db, { SV_AUTH_TRUSTED_ORIGINS: 'https://app.example.com' });
+      const a = makeAuth(db, { SV_AUTH_TRUSTED_ORIGINS: 'https://app.sovereign.local' });
       const { jar } = await signUp(a);
       const reply = await call(a, 'POST', '/sign-out', {
         jar,
-        origin: 'https://app.example.com',
+        origin: 'https://app.sovereign.local',
         body: {},
       });
       expect(reply.status).toBe(200);
@@ -441,7 +445,7 @@ export function authSuite(createDatabase: () => Promise<TestDatabase>): void {
     // A browser keeps a `__Host-` cookie only if it is Secure, has Path=/ and has no Domain. A cookie that fails
     // that is dropped silently, and nobody could sign in, so every one of those is held here.
     describe('over https on its own host', () => {
-      const baseUrl = 'https://core.example.com';
+      const baseUrl = 'https://core.sovereign.local';
       const HOST_SESSION = '__Host-better-auth.session_token';
 
       it('is a host-only cookie: the __Host- name, Secure, Path=/, and no Domain', async () => {
@@ -506,8 +510,8 @@ export function authSuite(createDatabase: () => Promise<TestDatabase>): void {
     });
 
     it('is shared with subdomains only when a cookie domain is set, and is then __Secure-, not __Host-', async () => {
-      const baseUrl = 'https://core.example.com';
-      const a = makeAuth(db, { SV_URL: baseUrl, SV_AUTH_COOKIE_DOMAIN: 'example.com' });
+      const baseUrl = 'https://core.sovereign.local';
+      const a = makeAuth(db, { SV_URL: baseUrl, SV_AUTH_COOKIE_DOMAIN: 'sovereign.local' });
       const reply = await call(a, 'POST', '/sign-up/email', {
         baseUrl,
         body: { name: 'Ada', email: freshEmail(), password: PASSWORD, agreedToTerms: true },
@@ -516,7 +520,7 @@ export function authSuite(createDatabase: () => Promise<TestDatabase>): void {
       const cookie = reply.setCookies.find((c) => c.includes('session_token=')) ?? '';
       expect(cookie).toMatch(/^__Secure-better-auth\.session_token=/);
       expect(cookie).toMatch(/;\s*Secure/i);
-      expect(cookie).toMatch(/Domain=example\.com/i);
+      expect(cookie).toMatch(/Domain=sovereign\.local/i);
     });
   });
 

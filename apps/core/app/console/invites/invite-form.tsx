@@ -38,7 +38,7 @@ export function InviteForm({ mailReady }: { mailReady: boolean }) {
                 type="email"
                 name="email"
                 autoComplete="off"
-                placeholder="name@example.com"
+                placeholder="name@sovereign.local"
                 maxLength={254}
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}

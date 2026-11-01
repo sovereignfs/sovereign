@@ -128,14 +128,18 @@ describe('suite.yml', () => {
     ['no tag', 'ghcr.io/example/notes', true],
     ['latest', 'ghcr.io/example/notes:latest', true],
     ['a tag', 'ghcr.io/example/notes:1.2.0', false],
-    ['a registry port', 'registry.example.com:5000/notes:1.2.0', false],
+    ['a registry port', 'registry.sovereign.local:5000/notes:1.2.0', false],
     ['a digest', `ghcr.io/example/notes@sha256:${'a'.repeat(64)}`, false],
   ])('an image with %s', (_, image, bad) => {
     expect(refused((value) => (value.apps.notes = { image }))).toBe(bad);
   });
 
   it('an app is hosted or external, not both or neither', () => {
-    const external = { external: true, name: 'Wiki', redirect: ['https://wiki.example.com/cb'] };
+    const external = {
+      external: true,
+      name: 'Wiki',
+      redirect: ['https://wiki.sovereign.local/cb'],
+    };
     expect(refused((value) => (value.apps.wiki = external))).toBe(false);
     expect(
       refused((value) => (value.apps.wiki = { ...external, image: 'ghcr.io/x/wiki:1.0.0' })),
@@ -144,12 +148,14 @@ describe('suite.yml', () => {
   });
 
   it('an external app’s addresses are https and exact, and roles needs trust', () => {
-    const wiki = { external: true, name: 'Wiki', redirect: ['https://wiki.example.com/cb'] };
+    const wiki = { external: true, name: 'Wiki', redirect: ['https://wiki.sovereign.local/cb'] };
     const redirect = (url: string) => ({ ...wiki, redirect: [url] });
-    expect(refused((value) => (value.apps.wiki = redirect('http://wiki.example.com/cb')))).toBe(
+    expect(refused((value) => (value.apps.wiki = redirect('http://wiki.sovereign.local/cb')))).toBe(
       true,
     );
-    expect(refused((value) => (value.apps.wiki = redirect('https://*.example.com/cb')))).toBe(true);
+    expect(refused((value) => (value.apps.wiki = redirect('https://*.sovereign.local/cb')))).toBe(
+      true,
+    );
     expect(refused((value) => (value.apps.wiki = { ...wiki, redirect: [] }))).toBe(true);
     expect(refused((value) => (value.apps.wiki = { ...wiki, scopes: ['roles'] }))).toBe(true);
     expect(
@@ -184,7 +190,7 @@ describe('the manifest', () => {
   });
 
   it.each([
-    ['a host', 'https://notes.example.com/cb'],
+    ['a host', 'https://notes.sovereign.local/cb'],
     ['no leading slash', 'cb'],
     ['a way up', '/a/../cb'],
     ['a query', '/cb?x=1'],

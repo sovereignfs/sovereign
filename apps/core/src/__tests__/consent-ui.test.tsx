@@ -24,8 +24,8 @@ const show = (props: Partial<Parameters<typeof ConsentForm>[0]> = {}) =>
   render(
     <ConsentForm
       appName="Notes"
-      returnHost="notes.example.com"
-      email="ada@example.com"
+      returnHost="notes.sovereign.local"
+      email="ada@sovereign.local"
       permissions={['See your name, picture, language and time zone', 'See your email address']}
       scopes={['openid', 'profile', 'email']}
       {...props}
@@ -36,12 +36,12 @@ describe('the consent form', () => {
   it('says which app asks, as whom, what it would be able to do, and where the person goes next', () => {
     show();
     expect(screen.getByText('Notes')).toBeTruthy();
-    expect(screen.getByText(/ada@example\.com/)).toBeTruthy();
+    expect(screen.getByText(/ada@sovereign\.local/)).toBeTruthy();
     expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
       'See your name, picture, language and time zone',
       'See your email address',
     ]);
-    expect(screen.getByText(/notes\.example\.com/)).toBeTruthy();
+    expect(screen.getByText(/notes\.sovereign\.local/)).toBeTruthy();
     expect(screen.getByText(/does not see your password/)).toBeTruthy();
   });
 
@@ -52,26 +52,26 @@ describe('the consent form', () => {
 
   it('allows what was offered and goes where the provider says', async () => {
     consent.mockResolvedValue({
-      data: { redirect: true, url: 'https://notes.example.com/cb?code=one&state=two' },
+      data: { redirect: true, url: 'https://notes.sovereign.local/cb?code=one&state=two' },
       error: null,
     });
     show();
     fireEvent.click(screen.getByRole('button', { name: 'Allow' }));
     await waitFor(() =>
-      expect(assign).toHaveBeenCalledWith('https://notes.example.com/cb?code=one&state=two'),
+      expect(assign).toHaveBeenCalledWith('https://notes.sovereign.local/cb?code=one&state=two'),
     );
     expect(consent).toHaveBeenCalledWith({ accept: true, scope: 'openid profile email' });
   });
 
   it('refuses on request and goes where the provider says, which is back to the app with a refusal', async () => {
     consent.mockResolvedValue({
-      data: { redirect: true, url: 'https://notes.example.com/cb?error=access_denied' },
+      data: { redirect: true, url: 'https://notes.sovereign.local/cb?error=access_denied' },
       error: null,
     });
     show();
     fireEvent.click(screen.getByRole('button', { name: 'Don’t allow' }));
     await waitFor(() =>
-      expect(assign).toHaveBeenCalledWith('https://notes.example.com/cb?error=access_denied'),
+      expect(assign).toHaveBeenCalledWith('https://notes.sovereign.local/cb?error=access_denied'),
     );
     expect(consent).toHaveBeenCalledWith({ accept: false });
   });

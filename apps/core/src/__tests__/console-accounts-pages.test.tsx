@@ -38,7 +38,7 @@ const summary = (
 ): AccountSummary => ({
   id,
   name: `Name of ${id}`,
-  email: `${id}@example.com`,
+  email: `${id}@sovereign.local`,
   role,
   emailVerified: true,
   twoFactorEnabled: false,
@@ -107,7 +107,7 @@ describe('the accounts list', () => {
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
     for (const id of ['o1', 'a1', 'u1']) {
       expect(html).toContain(`href="/console/accounts/${id}"`);
-      expect(html).toContain(`${id}@example.com`);
+      expect(html).toContain(`${id}@sovereign.local`);
     }
     expect(html).toContain('Owner');
     expect(html).toContain('Admin');
@@ -198,7 +198,7 @@ describe('one account', () => {
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
     for (const text of [
       'Name of u1',
-      'u1@example.com',
+      'u1@sovereign.local',
       'Account ID',
       '3 devices',
       'Europe/Paris',

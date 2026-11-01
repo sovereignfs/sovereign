@@ -71,7 +71,7 @@ export function appTokensSuite(createDatabase: () => Promise<TestDatabase>): voi
     const make = async (extra: Record<string, unknown> = {}) => {
       const { client, secret } = await registry.register(asOwner, {
         name: 'Reminders',
-        redirectUris: ['https://reminders.example.test/cb'],
+        redirectUris: ['https://reminders.sovereign.local/cb'],
         scopes: ['openid', 'profile'],
         appScopes: ['notifications:send'],
         ...extra,

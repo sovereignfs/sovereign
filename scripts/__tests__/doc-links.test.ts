@@ -47,7 +47,7 @@ describe('checkDocLinks', () => {
   });
 
   it('ignores external links', () => {
-    write('a.md', '[x](https://example.com/missing) [y](mailto:a@b.c)\n');
+    write('a.md', '[x](https://sovereign.local/missing) [y](mailto:a@b.c)\n');
     expect(checkDocLinks(root, {})).toEqual([]);
   });
 

@@ -50,7 +50,7 @@ const TABLES = [
 ];
 const AUDIENCE = coreApiResource(new URL(BASE_URL).origin);
 const DAY = 24 * 60 * 60 * 1000;
-const NOTICE = 'https://reminders.example.test/hooks/account-deleted';
+const NOTICE = 'https://reminders.sovereign.local/hooks/account-deleted';
 
 export function deletionNoticesSuite(createDatabase: () => Promise<TestDatabase>): void {
   let target: TestDatabase;
@@ -79,7 +79,7 @@ export function deletionNoticesSuite(createDatabase: () => Promise<TestDatabase>
   async function instance() {
     const { auth } = makeAuthWithTasks(db);
     const owner = await signUp(auth, { name: 'Olive Owner' });
-    const ada = await signUp(auth, { name: 'Ada Lovelace', email: 'ada@example.com' });
+    const ada = await signUp(auth, { name: 'Ada Lovelace', email: 'ada@sovereign.local' });
     const registry = registryFor(auth);
     const asOwner = await actorOf(auth, owner.jar);
     const idOf = async (email: string) =>
@@ -97,7 +97,7 @@ export function deletionNoticesSuite(createDatabase: () => Promise<TestDatabase>
       personToken(auth, jar, app, { audience: AUDIENCE });
     const told = await make('Reminders', { accountDeletedUri: NOTICE });
     const silent = await make('Photos');
-    const stranger = await make('Maps', { accountDeletedUri: 'https://maps.example.test/gone' });
+    const stranger = await make('Maps', { accountDeletedUri: 'https://maps.sovereign.local/gone' });
     await use(ada.jar, told);
     await use(ada.jar, silent);
     const ownerId = await idOf(owner.email);
@@ -197,9 +197,9 @@ export function deletionNoticesSuite(createDatabase: () => Promise<TestDatabase>
       expect(calls).toHaveLength(1);
       // The notice was already in the table when the hook ran.
       expect(await notices()).toHaveLength(1);
-      const other = await signUp(ctx.auth, { name: 'Bo', email: 'bo@example.com' });
+      const other = await signUp(ctx.auth, { name: 'Bo', email: 'bo@sovereign.local' });
       const boId = String(
-        (await db.run('select id from users where email = ?', ['bo@example.com'])).rows[0]?.id,
+        (await db.run('select id from users where email = ?', ['bo@sovereign.local'])).rows[0]?.id,
       );
       expect(other).toBeDefined();
       await hooked.deleteSelf({ id: boId, role: 'platform:user' });
@@ -245,7 +245,7 @@ export function deletionNoticesSuite(createDatabase: () => Promise<TestDatabase>
       const ctx = await instance();
       await manager().deleteSelf({ id: ctx.ada.id, role: 'platform:user' });
       const text = JSON.stringify(await notices());
-      expect(text).not.toContain('ada@example.com');
+      expect(text).not.toContain('ada@sovereign.local');
       expect(text).not.toContain('Ada');
       expect(Object.keys((await notices())[0] ?? {}).sort()).toEqual(
         [
@@ -306,11 +306,11 @@ export function deletionNoticesSuite(createDatabase: () => Promise<TestDatabase>
         (await ctx.registry.list(ctx.asOwner)).find((app) => app.clientId === ctx.told.clientId);
       expect((await read())?.accountDeletedUri).toBe(NOTICE);
       await ctx.registry.update(ctx.asOwner, ctx.told.clientId, {
-        accountDeletedUri: 'https://reminders.example.test/other',
+        accountDeletedUri: 'https://reminders.sovereign.local/other',
       });
-      expect((await read())?.accountDeletedUri).toBe('https://reminders.example.test/other');
+      expect((await read())?.accountDeletedUri).toBe('https://reminders.sovereign.local/other');
       await ctx.registry.update(ctx.asOwner, ctx.told.clientId, { name: 'Renamed' });
-      expect((await read())?.accountDeletedUri).toBe('https://reminders.example.test/other');
+      expect((await read())?.accountDeletedUri).toBe('https://reminders.sovereign.local/other');
       await ctx.registry.update(ctx.asOwner, ctx.told.clientId, { accountDeletedUri: '' });
       expect((await read())?.accountDeletedUri).toBeUndefined();
     });
@@ -319,7 +319,7 @@ export function deletionNoticesSuite(createDatabase: () => Promise<TestDatabase>
       const ctx = await instance();
       const error = await ctx.registry
         .update(ctx.asOwner, ctx.told.clientId, {
-          accountDeletedUri: 'http://reminders.example.test/x',
+          accountDeletedUri: 'http://reminders.sovereign.local/x',
         })
         .catch((e: unknown) => e);
       expect(error).toBeInstanceOf(ClientRegistryError);

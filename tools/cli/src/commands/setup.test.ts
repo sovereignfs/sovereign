@@ -22,16 +22,16 @@ describe('sv setup', () => {
       '--tls',
       'per-host',
       '--tls-email',
-      'op@example.com',
+      'op@sovereign.local',
     );
     expect(done.code).toBe(0);
     const suite = parse(read('suite.yml')) as Suite;
     expect(suite).toMatchObject({
       schema: 1,
-      domain: 'sovereign.example.com',
+      domain: 'sovereign.local',
       database: { version: '18' },
       server: { host: '203.0.113.7', deploy: 'ssh' },
-      tls: { mode: 'per-host', email: 'op@example.com' },
+      tls: { mode: 'per-host', email: 'op@sovereign.local' },
     });
     expect(suite.secrets.recipients).toHaveLength(1);
     const key = read('../home/config/age.key');
@@ -83,13 +83,13 @@ describe('sv setup', () => {
   it('asks for what it is not given when there is a terminal, with answers as defaults', async () => {
     world = makeWorld({
       interactive: true,
-      answers: ['sovereign.example.com', '', 'ssh', 'internal', ''],
+      answers: ['sovereign.local', '', 'ssh', 'internal', ''],
     });
     const done = await sv(world, 'setup');
     expect(done.code).toBe(0);
     const suite = parse(read('suite.yml')) as Suite;
     // The server defaulted to the domain, and the certificates to the internal authority.
-    expect(suite.server.host).toBe('sovereign.example.com');
+    expect(suite.server.host).toBe('sovereign.local');
     expect(suite.tls).toEqual({ mode: 'internal' });
   });
 
@@ -103,7 +103,14 @@ describe('sv setup', () => {
 
   it('writes nothing when what it was given is not valid', async () => {
     world = makeWorld();
-    const done = await sv(world, 'setup', '--domain', 'Not A Domain', '--host', 'h.example.com');
+    const done = await sv(
+      world,
+      'setup',
+      '--domain',
+      'Not A Domain',
+      '--host',
+      'h.sovereign.local',
+    );
     expect(done.code).toBe(2);
     expect(done.text).toContain('domain');
     expect(existsSync(path.join(world.root, 'suite.yml'))).toBe(false);
@@ -114,7 +121,7 @@ describe('sv setup', () => {
     world = makeWorld();
     await setUpWorld(world);
     const before = read('suite.yml');
-    const done = await sv(world, 'setup', '--domain', 'other.example.com', '--host', 'h');
+    const done = await sv(world, 'setup', '--domain', 'other.sovereign.local', '--host', 'h');
     expect(done.code).toBe(2);
     expect(done.text).toContain('already here');
     expect(read('suite.yml')).toBe(before);
@@ -175,7 +182,7 @@ describe('sv setup', () => {
       world,
       'setup',
       '--domain',
-      'sovereign.example.com',
+      'sovereign.local',
       '--host',
       '203.0.113.7',
       '--environment',

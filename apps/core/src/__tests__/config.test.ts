@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { config } from '../config';
 
 const SECRET = 'a-secret-that-is-long-enough-to-pass-validation';
-const GOOD = { SV_URL: 'https://core.example.com', SV_AUTH_SECRET: SECRET };
+const GOOD = { SV_URL: 'https://core.sovereign.local', SV_AUTH_SECRET: SECRET };
 
 function problems(env: Record<string, string>, readFile?: (path: string) => string): string[] {
   try {
@@ -19,7 +19,7 @@ function problems(env: Record<string, string>, readFile?: (path: string) => stri
 describe("core's configuration", () => {
   it('loads when the address and the secret are set', () => {
     const loaded = config.load(GOOD);
-    expect(loaded.url).toBe('https://core.example.com');
+    expect(loaded.url).toBe('https://core.sovereign.local');
     expect(loaded.authSecret.reveal()).toBe(SECRET);
   });
 
@@ -38,7 +38,7 @@ describe("core's configuration", () => {
   });
 
   it('refuses an address with a path', () => {
-    expect(problems({ ...GOOD, SV_URL: 'https://core.example.com/app' })).toEqual([
+    expect(problems({ ...GOOD, SV_URL: 'https://core.sovereign.local/app' })).toEqual([
       'SV_URL must be an address with no path, query or fragment',
     ]);
   });

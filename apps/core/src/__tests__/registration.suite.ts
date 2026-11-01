@@ -90,7 +90,7 @@ export function registrationSuite(createDatabase: () => Promise<TestDatabase>): 
   /** An instance that already has its owner, so the next sign-up is an ordinary one. */
   const withOwner = async (registration = INVITE_ONLY) => {
     const auth = makeAuth(db, {}, registration);
-    const owner = await signUp(auth, { email: 'owner@example.com' });
+    const owner = await signUp(auth, { email: 'owner@sovereign.local' });
     expect(owner.reply.status).toBe(200);
     return auth;
   };
@@ -158,7 +158,7 @@ export function registrationSuite(createDatabase: () => Promise<TestDatabase>): 
       const now = new Date();
       await expect(
         db.run(
-          "insert into users (id, name, email, email_verified, role, created_at, updated_at) values ('x', 'X', 'x@example.com', ?, 'platform:owner', ?, ?)",
+          "insert into users (id, name, email, email_verified, role, created_at, updated_at) values ('x', 'X', 'x@sovereign.local', ?, 'platform:owner', ?, ?)",
           db.family === 'postgres' ? [false, now, now] : [0, now.getTime(), now.getTime()],
         ),
       ).rejects.toThrow();
@@ -168,11 +168,11 @@ export function registrationSuite(createDatabase: () => Promise<TestDatabase>): 
   describe('a role is never chosen by the person', () => {
     it('is not taken from the sign-up request, so an invited person cannot ask to be the owner', async () => {
       const auth = await withOwner();
-      await invite('mallory@example.com');
+      await invite('mallory@sovereign.local');
       const reply = await call(auth, 'POST', '/sign-up/email', {
         body: {
           name: 'Mallory',
-          email: 'mallory@example.com',
+          email: 'mallory@sovereign.local',
           password: PASSWORD,
           agreedToTerms: true,
           role: 'platform:owner',
@@ -180,7 +180,7 @@ export function registrationSuite(createDatabase: () => Promise<TestDatabase>): 
       });
       // better-auth drops a field the request may not set: the account is made, as a user.
       expect(reply.status).toBe(200);
-      expect(await roleOf('mallory@example.com')).toBe('platform:user');
+      expect(await roleOf('mallory@sovereign.local')).toBe('platform:user');
       expect(await count('users', "where role = 'platform:owner'")).toBe(1);
     });
 
@@ -238,89 +238,91 @@ export function registrationSuite(createDatabase: () => Promise<TestDatabase>): 
 
     it('lets an invited address sign up, as a user', async () => {
       const auth = await withOwner();
-      await invite('guest@example.com');
-      const { reply } = await signUp(auth, { email: 'guest@example.com' });
+      await invite('guest@sovereign.local');
+      const { reply } = await signUp(auth, { email: 'guest@sovereign.local' });
       expect(reply.status).toBe(200);
-      expect(await roleOf('guest@example.com')).toBe('platform:user');
+      expect(await roleOf('guest@sovereign.local')).toBe('platform:user');
     });
 
     it('looks the address up in lower case, as invitations are stored', async () => {
-      await invite('guest@example.com');
-      expect(await hasValidInvite(db, 'Guest@Example.COM', Date.now())).toBe(true);
-      expect(await hasValidInvite(db, '  guest@example.com ', Date.now())).toBe(true);
-      expect(await hasValidInvite(db, 'other@example.com', Date.now())).toBe(false);
+      await invite('guest@sovereign.local');
+      expect(await hasValidInvite(db, 'Guest@Sovereign.LOCAL', Date.now())).toBe(true);
+      expect(await hasValidInvite(db, '  guest@sovereign.local ', Date.now())).toBe(true);
+      expect(await hasValidInvite(db, 'other@sovereign.local', Date.now())).toBe(false);
     });
 
     it('matches the address whatever its case', async () => {
       const auth = await withOwner();
-      await invite('guest@example.com');
-      const { reply } = await signUp(auth, { email: 'Guest@Example.COM' });
+      await invite('guest@sovereign.local');
+      const { reply } = await signUp(auth, { email: 'Guest@Sovereign.LOCAL' });
       expect(reply.status).toBe(200);
     });
 
     it('accepts an invitation that has not expired yet, and one that never does', async () => {
       const auth = await withOwner();
-      await invite('soon@example.com', { expiresAt: Date.now() + DAY });
-      await invite('never@example.com', { expiresAt: null });
-      expect((await signUp(auth, { email: 'soon@example.com' })).reply.status).toBe(200);
-      expect((await signUp(auth, { email: 'never@example.com' })).reply.status).toBe(200);
+      await invite('soon@sovereign.local', { expiresAt: Date.now() + DAY });
+      await invite('never@sovereign.local', { expiresAt: null });
+      expect((await signUp(auth, { email: 'soon@sovereign.local' })).reply.status).toBe(200);
+      expect((await signUp(auth, { email: 'never@sovereign.local' })).reply.status).toBe(200);
     });
 
     it('refuses an invitation that has expired', async () => {
       const auth = await withOwner();
-      await invite('late@example.com', { expiresAt: Date.now() - 1000 });
-      const { reply } = await signUp(auth, { email: 'late@example.com' });
+      await invite('late@sovereign.local', { expiresAt: Date.now() - 1000 });
+      const { reply } = await signUp(auth, { email: 'late@sovereign.local' });
       expect(reply.status).toBe(422);
-      expect(await roleOf('late@example.com')).toBeUndefined();
+      expect(await roleOf('late@sovereign.local')).toBeUndefined();
     });
 
     it('refuses an invitation that was cancelled', async () => {
       const auth = await withOwner();
-      await invite('changed@example.com', { cancelledAt: Date.now() - 1000 });
-      expect((await signUp(auth, { email: 'changed@example.com' })).reply.status).toBe(422);
+      await invite('changed@sovereign.local', { cancelledAt: Date.now() - 1000 });
+      expect((await signUp(auth, { email: 'changed@sovereign.local' })).reply.status).toBe(422);
     });
 
     it('refuses an address that was invited, when the invitation is for another', async () => {
       const auth = await withOwner();
-      await invite('someone@example.com');
-      expect((await signUp(auth, { email: 'someone-else@example.com' })).reply.status).toBe(422);
-      expect((await signUp(auth, { email: 'xsomeone@example.com' })).reply.status).toBe(422);
-      expect((await signUp(auth, { email: 'someone@example.com.au' })).reply.status).toBe(422);
+      await invite('someone@sovereign.local');
+      expect((await signUp(auth, { email: 'someone-else@sovereign.local' })).reply.status).toBe(
+        422,
+      );
+      expect((await signUp(auth, { email: 'xsomeone@sovereign.local' })).reply.status).toBe(422);
+      expect((await signUp(auth, { email: 'someone@sovereign.local.au' })).reply.status).toBe(422);
     });
 
     it('uses an invitation up: once it has made an account it cannot make another', async () => {
       const auth = await withOwner();
-      const id = await invite('guest@example.com');
-      expect((await signUp(auth, { email: 'guest@example.com' })).reply.status).toBe(200);
+      const id = await invite('guest@sovereign.local');
+      expect((await signUp(auth, { email: 'guest@sovereign.local' })).reply.status).toBe(200);
       const { rows } = await db.run('select accepted_at from invites where id = ?', [id]);
       expect(rows[0]?.accepted_at).not.toBeNull();
 
-      await db.run('delete from users where email = ?', ['guest@example.com']);
-      const again = await signUp(auth, { email: 'guest@example.com' });
+      await db.run('delete from users where email = ?', ['guest@sovereign.local']);
+      const again = await signUp(auth, { email: 'guest@sovereign.local' });
       expect(again.reply.status).toBe(422);
     });
 
     it('does not use an invitation up when the sign-up fails', async () => {
       const auth = await withOwner();
-      const id = await invite('guest@example.com');
-      const weak = await signUp(auth, { email: 'guest@example.com', password: 'x' });
+      const id = await invite('guest@sovereign.local');
+      const weak = await signUp(auth, { email: 'guest@sovereign.local', password: 'x' });
       expect(weak.reply.status).toBe(400);
       const { rows } = await db.run('select accepted_at from invites where id = ?', [id]);
       expect(rows[0]?.accepted_at).toBeNull();
-      expect((await signUp(auth, { email: 'guest@example.com' })).reply.status).toBe(200);
+      expect((await signUp(auth, { email: 'guest@sovereign.local' })).reply.status).toBe(200);
     });
 
     it('answers a missing, an expired, a cancelled and a used invitation alike', async () => {
       const auth = await withOwner();
-      await invite('expired@example.com', { expiresAt: Date.now() - 1000 });
-      await invite('cancelled@example.com', { cancelledAt: Date.now() - 1000 });
-      await invite('used@example.com', { acceptedAt: Date.now() - 1000 });
+      await invite('expired@sovereign.local', { expiresAt: Date.now() - 1000 });
+      await invite('cancelled@sovereign.local', { cancelledAt: Date.now() - 1000 });
+      await invite('used@sovereign.local', { acceptedAt: Date.now() - 1000 });
       const answers = [];
       for (const email of [
-        'nobody@example.com',
-        'expired@example.com',
-        'cancelled@example.com',
-        'used@example.com',
+        'nobody@sovereign.local',
+        'expired@sovereign.local',
+        'cancelled@sovereign.local',
+        'used@sovereign.local',
       ]) {
         const { reply } = await signUp(auth, { email });
         answers.push({ status: reply.status, code: reply.body.code, message: reply.body.message });
@@ -355,7 +357,7 @@ export function registrationSuite(createDatabase: () => Promise<TestDatabase>): 
 
     it('does not mark an unrelated invitation used', async () => {
       const auth = await withOwner(OPEN);
-      const id = await invite('other@example.com');
+      const id = await invite('other@sovereign.local');
       await signUp(auth);
       const { rows } = await db.run('select accepted_at from invites where id = ?', [id]);
       expect(rows[0]?.accepted_at).toBeNull();
@@ -383,7 +385,7 @@ export function registrationSuite(createDatabase: () => Promise<TestDatabase>): 
     };
 
     beforeEach(async () => {
-      await signUp(makeAuth(db, {}, OPEN), { email: 'owner@example.com' });
+      await signUp(makeAuth(db, {}, OPEN), { email: 'owner@sovereign.local' });
     });
 
     it('is invite-only when nothing says otherwise: a setting left unset never opens access', async () => {
@@ -454,9 +456,9 @@ export function registrationSuite(createDatabase: () => Promise<TestDatabase>): 
         const when = (ms: number) => (old.family === 'postgres' ? new Date(ms) : ms);
         const flag = old.family === 'postgres' ? false : 0;
         for (const [id, email, created] of [
-          ['u-late', 'late@example.com', 3000],
-          ['u-first', 'first@example.com', 1000],
-          ['u-mid', 'mid@example.com', 2000],
+          ['u-late', 'late@sovereign.local', 3000],
+          ['u-first', 'first@sovereign.local', 1000],
+          ['u-mid', 'mid@sovereign.local', 2000],
         ] as const) {
           await old.run(
             'insert into users (id, name, email, email_verified, created_at, updated_at) values (?, ?, ?, ?, ?, ?)',

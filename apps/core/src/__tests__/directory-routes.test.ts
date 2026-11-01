@@ -55,9 +55,9 @@ const add = (id: string, name: string, email: string, extra = '') =>
 
 beforeEach(async () => {
   await db.run('delete from users');
-  await add('u1', 'Ada Lovelace', 'ada@example.com', '/api/avatars/u1?v=1');
-  await add('u2', 'Adam Smith', 'adam@example.com');
-  await add('u3', 'Bo Barnes', 'bo@example.com');
+  await add('u1', 'Ada Lovelace', 'ada@sovereign.local', '/api/avatars/u1?v=1');
+  await add('u2', 'Adam Smith', 'adam@sovereign.local');
+  await add('u3', 'Bo Barnes', 'bo@sovereign.local');
   guard.mockReset().mockResolvedValue(PRINCIPAL);
 });
 
@@ -95,7 +95,7 @@ describe('searching', () => {
   });
 
   it('gives ten at most when no limit is given, and the limit when it is', async () => {
-    for (let i = 0; i < 12; i++) await add(`m${i}`, `Match ${i}`, `m${i}@example.com`);
+    for (let i = 0; i < 12; i++) await add(`m${i}`, `Match ${i}`, `m${i}@sovereign.local`);
     expect(
       ((await (await get(search, '?q=match')).json()) as { users: unknown[] }).users,
     ).toHaveLength(10);
@@ -191,7 +191,7 @@ describe('resolving', () => {
 
 describe('finding by email', () => {
   it('answers with the person whose whole address it is, as the contract describes', async () => {
-    const reply = await get(byEmail, '/by-email?email=ADA@example.com');
+    const reply = await get(byEmail, '/by-email?email=ADA@sovereign.local');
     expect(reply.status).toBe(200);
     const body = (await reply.json()) as unknown;
     expectMatchesContract('findDirectoryUserByEmail', 200, body);
@@ -200,7 +200,13 @@ describe('finding by email', () => {
   });
 
   it('answers not found, in the contract’s words, for part of an address, and for an address nobody has', async () => {
-    for (const email of ['ada', 'ada@', '@example.com', 'ada@example.%', 'nobody@example.com']) {
+    for (const email of [
+      'ada',
+      'ada@',
+      '@sovereign.local',
+      'ada@example.%',
+      'nobody@sovereign.local',
+    ]) {
       const reply = await get(byEmail, `/by-email?email=${encodeURIComponent(email)}`);
       expect(reply.status, email).toBe(email.length < 3 ? 400 : 404);
       expectMatchesContract('findDirectoryUserByEmail', reply.status, await reply.json());
@@ -222,7 +228,7 @@ describe('who may call', () => {
   const routes = [
     ['search', () => get(search, '?q=a')],
     ['resolve', () => post({ subs: ['u1'] })],
-    ['by email', () => get(byEmail, '/by-email?email=ada@example.com')],
+    ['by email', () => get(byEmail, '/by-email?email=ada@sovereign.local')],
   ] as const;
 
   it.each(routes)(

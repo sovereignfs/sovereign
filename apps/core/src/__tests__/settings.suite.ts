@@ -137,7 +137,7 @@ export function settingsSuite(createDatabase: () => Promise<TestDatabase>): void
       const s = store({
         env: {
           SV_AUTH_INVITE_ONLY: 'false',
-          SV_SMTP_HOST: 'smtp.example.com',
+          SV_SMTP_HOST: 'smtp.sovereign.local',
           SV_SMTP_PORT: '2525',
         },
       });
@@ -146,7 +146,7 @@ export function settingsSuite(createDatabase: () => Promise<TestDatabase>): void
         source: 'environment',
       });
       expect(await s.get(SETTINGS.smtpHost)).toMatchObject({
-        value: 'smtp.example.com',
+        value: 'smtp.sovereign.local',
         source: 'environment',
       });
       expect(await s.get(SETTINGS.smtpPort)).toMatchObject({ value: 2525, source: 'environment' });
@@ -225,9 +225,9 @@ export function settingsSuite(createDatabase: () => Promise<TestDatabase>): void
       [SETTINGS.instanceName, ''],
       [SETTINGS.instanceName, '   '],
       [SETTINGS.instanceName, 'x'.repeat(101)],
-      [SETTINGS.instanceName, 'Acme\nBcc: x@example.com'],
+      [SETTINGS.instanceName, 'Acme\nBcc: x@sovereign.local'],
       [SETTINGS.instanceName, 'Acme\u0000'],
-      [SETTINGS.smtpHost, 'smtp.example.com\r\n'],
+      [SETTINGS.smtpHost, 'smtp.sovereign.local\r\n'],
       [SETTINGS.smtpPort, 0],
       [SETTINGS.smtpPort, 65536],
       [SETTINGS.smtpPort, 1.5],
@@ -424,9 +424,9 @@ export function settingsSuite(createDatabase: () => Promise<TestDatabase>): void
 
   describe('with no database', () => {
     it('reads the environment and the built-in defaults', async () => {
-      const s = store({ database: undefined, env: { SV_SMTP_HOST: 'smtp.example.com' } });
+      const s = store({ database: undefined, env: { SV_SMTP_HOST: 'smtp.sovereign.local' } });
       expect(await s.get(SETTINGS.smtpHost)).toMatchObject({
-        value: 'smtp.example.com',
+        value: 'smtp.sovereign.local',
         source: 'environment',
       });
       expect(await s.get(SETTINGS.instanceName)).toMatchObject({
@@ -446,7 +446,7 @@ export function settingsSuite(createDatabase: () => Promise<TestDatabase>): void
 
   describe('describeAll', () => {
     it('lists every setting once, with where each comes from', async () => {
-      const s = store({ env: { SV_SMTP_HOST: 'smtp.example.com' } });
+      const s = store({ env: { SV_SMTP_HOST: 'smtp.sovereign.local' } });
       await s.set(SETTINGS.instanceName, 'Acme');
       const all = await s.describeAll();
       expect(all.map((d) => d.key).sort()).toEqual([

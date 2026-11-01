@@ -32,10 +32,10 @@ const admin = { id: 'admin-1', role: ROLE_ADMIN };
 const person = { id: 'person-1', role: ROLE_USER };
 
 const SMTP: SmtpInput = {
-  host: 'mail.example.com',
+  host: 'mail.sovereign.local',
   port: '587',
   user: 'mailer',
-  from: 'Sovereign <noreply@example.com>',
+  from: 'Sovereign <noreply@sovereign.local>',
   password: 'correct horse battery staple',
 };
 
@@ -250,10 +250,12 @@ export function instanceManageSuite(createDatabase: () => Promise<TestDatabase>)
       expect(await refused(() => m.saveSmtp(admin, SMTP))).toBe('forbidden');
       expect(await refused(() => m.resetSmtp(admin))).toBe('forbidden');
       expect(await refused(() => m.saveSmtp(owner, SMTP))).toBeUndefined();
-      expect(await refused(() => m.saveSmtp(admin, { ...SMTP, host: 'evil.example.com' }))).toBe(
-        'forbidden',
-      );
-      expect(await settings().get(SETTINGS.smtpHost)).toMatchObject({ value: 'mail.example.com' });
+      expect(
+        await refused(() => m.saveSmtp(admin, { ...SMTP, host: 'evil.sovereign.local' })),
+      ).toBe('forbidden');
+      expect(await settings().get(SETTINGS.smtpHost)).toMatchObject({
+        value: 'mail.sovereign.local',
+      });
     });
 
     it('cannot be talked into the mail settings by the matrix: the capability is the owner’s alone', async () => {
@@ -302,7 +304,7 @@ export function instanceManageSuite(createDatabase: () => Promise<TestDatabase>)
       ['empty', ''],
       ['only spaces', '   '],
       ['over 100 characters', 'x'.repeat(101)],
-      ['a line break, which would reach an email subject', 'Acme\r\nBcc: spy@example.com'],
+      ['a line break, which would reach an email subject', 'Acme\r\nBcc: spy@sovereign.local'],
     ])('refuses a name that is %s', async (_why, name) => {
       expect(await refused(() => manager().saveName(owner, name))).toBe('invalid');
       expect(await settings().get(SETTINGS.instanceName)).toMatchObject({ source: 'default' });
@@ -331,11 +333,11 @@ export function instanceManageSuite(createDatabase: () => Promise<TestDatabase>)
     it('saves every field, and the password is stored encrypted and never described', async () => {
       const store = settings();
       await new InstanceManager(db, store, branding()).saveSmtp(owner, SMTP);
-      expect(await store.get(SETTINGS.smtpHost)).toMatchObject({ value: 'mail.example.com' });
+      expect(await store.get(SETTINGS.smtpHost)).toMatchObject({ value: 'mail.sovereign.local' });
       expect(await store.get(SETTINGS.smtpPort)).toMatchObject({ value: 587 });
       expect(await store.get(SETTINGS.smtpUser)).toMatchObject({ value: 'mailer' });
       expect(await store.get(SETTINGS.smtpFrom)).toMatchObject({
-        value: 'Sovereign <noreply@example.com>',
+        value: 'Sovereign <noreply@sovereign.local>',
       });
       expect(await store.get(SETTINGS.smtpPassword)).toMatchObject({ value: SMTP.password });
       const stored = (
@@ -354,8 +356,8 @@ export function instanceManageSuite(createDatabase: () => Promise<TestDatabase>)
       const store = settings();
       const m = manager(store);
       await m.saveSmtp(owner, SMTP);
-      await m.saveSmtp(owner, { ...SMTP, host: 'mail2.example.com', password: '' });
-      expect(await store.get(SETTINGS.smtpHost)).toMatchObject({ value: 'mail2.example.com' });
+      await m.saveSmtp(owner, { ...SMTP, host: 'mail2.sovereign.local', password: '' });
+      expect(await store.get(SETTINGS.smtpHost)).toMatchObject({ value: 'mail2.sovereign.local' });
       expect(await store.get(SETTINGS.smtpPassword)).toMatchObject({ value: SMTP.password });
       await m.saveSmtp(owner, { ...SMTP, password: 'a new password' });
       expect(await store.get(SETTINGS.smtpPassword)).toMatchObject({ value: 'a new password' });
@@ -373,16 +375,16 @@ export function instanceManageSuite(createDatabase: () => Promise<TestDatabase>)
     });
 
     it('returns a blank field to the environment’s value', async () => {
-      const store = settings({ env: { SV_SMTP_HOST: 'env.example.com', SV_SMTP_PORT: '25' } });
+      const store = settings({ env: { SV_SMTP_HOST: 'env.sovereign.local', SV_SMTP_PORT: '25' } });
       const m = manager(store);
       await m.saveSmtp(owner, SMTP);
       expect(await store.get(SETTINGS.smtpHost)).toMatchObject({
-        value: 'mail.example.com',
+        value: 'mail.sovereign.local',
         source: 'saved',
       });
       await m.saveSmtp(owner, { host: '', port: '', user: '', from: '', password: '' });
       expect(await store.get(SETTINGS.smtpHost)).toMatchObject({
-        value: 'env.example.com',
+        value: 'env.sovereign.local',
         source: 'environment',
       });
       expect(await store.get(SETTINGS.smtpPort)).toMatchObject({
@@ -409,9 +411,9 @@ export function instanceManageSuite(createDatabase: () => Promise<TestDatabase>)
     });
 
     it.each([
-      ['a host with a space', { host: 'mail example.com' }],
-      ['a host with a path', { host: 'mail.example.com/x' }],
-      ['a host that starts with a dot', { host: '.example.com' }],
+      ['a host with a space', { host: 'mail sovereign.local' }],
+      ['a host with a path', { host: 'mail.sovereign.local/x' }],
+      ['a host that starts with a dot', { host: '.sovereign.local' }],
       ['a port that is not a number', { port: 'smtp' }],
       ['port 0', { port: '0' }],
       ['port 65536', { port: '65536' }],
@@ -420,7 +422,10 @@ export function instanceManageSuite(createDatabase: () => Promise<TestDatabase>)
       ['a user name with a line break', { user: 'a\nb' }],
       ['a user name over 255 characters', { user: 'u'.repeat(256) }],
       ['a from address that is not an address', { from: 'not an address' }],
-      ['a from address with a line break', { from: 'noreply@example.com\r\nBcc: x@example.com' }],
+      [
+        'a from address with a line break',
+        { from: 'noreply@sovereign.local\r\nBcc: x@sovereign.local' },
+      ],
       ['a password over 1024 characters', { password: 'p'.repeat(1025) }],
     ])('refuses %s, and saves nothing', async (_why, change) => {
       const m = manager();
@@ -433,10 +438,10 @@ export function instanceManageSuite(createDatabase: () => Promise<TestDatabase>)
     it('takes a plain address and a named one as the sender', async () => {
       const m = manager();
       expect(
-        await refused(() => m.saveSmtp(owner, { ...SMTP, from: 'noreply@example.com' })),
+        await refused(() => m.saveSmtp(owner, { ...SMTP, from: 'noreply@sovereign.local' })),
       ).toBeUndefined();
       expect(
-        await refused(() => m.saveSmtp(owner, { ...SMTP, from: 'Acme <noreply@example.com>' })),
+        await refused(() => m.saveSmtp(owner, { ...SMTP, from: 'Acme <noreply@sovereign.local>' })),
       ).toBeUndefined();
     });
 
@@ -452,7 +457,7 @@ export function instanceManageSuite(createDatabase: () => Promise<TestDatabase>)
       const m = manager(settings({ cipher: undefined }));
       expect(await refused(() => m.saveSmtp(owner, { ...SMTP, password: '' }))).toBeUndefined();
       expect(await settings({ cipher: undefined }).get(SETTINGS.smtpHost)).toMatchObject({
-        value: 'mail.example.com',
+        value: 'mail.sovereign.local',
       });
     });
   });

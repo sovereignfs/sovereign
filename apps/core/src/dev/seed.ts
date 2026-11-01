@@ -8,9 +8,9 @@ export type SeedAccount = { name: string; email: string; role: Role };
 
 /** An owner, an admin and an ordinary person, with addresses that cannot be anyone's (`.test` never resolves). */
 export const SEED_ACCOUNTS: readonly SeedAccount[] = [
-  { name: 'Olive Owner', email: 'owner@example.test', role: ROLE_OWNER },
-  { name: 'Ada Admin', email: 'admin@example.test', role: ROLE_ADMIN },
-  { name: 'Pat Person', email: 'user@example.test', role: ROLE_USER },
+  { name: 'Olive Owner', email: 'owner@sovereign.local', role: ROLE_OWNER },
+  { name: 'Ada Admin', email: 'admin@sovereign.local', role: ROLE_ADMIN },
+  { name: 'Pat Person', email: 'user@sovereign.local', role: ROLE_USER },
 ];
 
 /** The password every seeded account has, unless `SEED_PASSWORD` says another. It is for development only. */

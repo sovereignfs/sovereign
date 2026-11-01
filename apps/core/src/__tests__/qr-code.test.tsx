@@ -3,7 +3,8 @@ import { encode } from 'uqr';
 import { describe, expect, it } from 'vitest';
 import { QrCode } from '@sovereignfs/ui';
 
-const URI = 'otpauth://totp/Sovereign:ada%40example.com?secret=GEZDGNBVGY3TQOJQ&issuer=Sovereign';
+const URI =
+  'otpauth://totp/Sovereign:ada%40sovereign.local?secret=GEZDGNBVGY3TQOJQ&issuer=Sovereign';
 
 /** Reads the squares back out of the drawn path: the picture as a scanner would see it. */
 function squaresOf(html: string, quiet: number): Set<string> {

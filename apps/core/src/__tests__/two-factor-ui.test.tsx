@@ -24,7 +24,8 @@ const { TwoFactorForm } = await import('../../app/(auth)/sign-in/two-factor/two-
 
 const assign = vi.fn();
 const reload = vi.fn();
-const URI = 'otpauth://totp/Sovereign:ada%40example.com?secret=GEZDGNBVGY3TQOJQ&issuer=Sovereign';
+const URI =
+  'otpauth://totp/Sovereign:ada%40sovereign.local?secret=GEZDGNBVGY3TQOJQ&issuer=Sovereign';
 const CODES = ['aaaaa-11111', 'bbbbb-22222', 'ccccc-33333'];
 
 beforeEach(() => {
@@ -204,13 +205,15 @@ describe('the second sign-in step', () => {
 
   it('goes back to the app, with its code, when an app asked for the sign-in', async () => {
     verifyTotp.mockResolvedValue({
-      data: { redirect: true, url: 'https://rp.example.com/cb?code=one' },
+      data: { redirect: true, url: 'https://rp.sovereign.local/cb?code=one' },
       error: null,
     });
     render(<TwoFactorForm returnTo="/" />);
     typeCode('123456');
     click('Verify');
-    await waitFor(() => expect(assign).toHaveBeenCalledWith('https://rp.example.com/cb?code=one'));
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith('https://rp.sovereign.local/cb?code=one'),
+    );
     expect(assign).not.toHaveBeenCalledWith('/');
   });
 

@@ -64,7 +64,7 @@ afterAll(async () => {
 const addUser = (id: string) =>
   db.run(
     'insert into users (id, name, email, email_verified, role, created_at, updated_at) values (?, ?, ?, 1, ?, 1, 1)',
-    [id, id, `${id}@example.com`, 'platform:user'],
+    [id, id, `${id}@sovereign.local`, 'platform:user'],
   );
 const addSession = (id: string, userId: string) =>
   db.run(

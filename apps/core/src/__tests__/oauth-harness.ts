@@ -5,7 +5,7 @@ import { ClientRegistry, type UserActor } from '../clients/registry';
 import { BASE_URL, call, type Jar } from './auth-harness';
 
 /** A relying party's view of core's OpenID Connect provider: what an off-the-shelf client would send. */
-export const REDIRECT = 'https://rp.example.com/cb';
+export const REDIRECT = 'https://rp.sovereign.local/cb';
 
 export type RegisteredClient = { clientId: string; secret: string | undefined };
 

@@ -70,8 +70,8 @@ export function activitySuite(createDatabase: () => Promise<TestDatabase>): void
   async function instance() {
     const { auth } = makeAuthWithTasks(db);
     const owner = await signUp(auth, { name: 'Olive Owner' });
-    const ada = await signUp(auth, { name: 'Ada Lovelace', email: 'ada@example.com' });
-    const bo = await signUp(auth, { name: 'Bo Barnes', email: 'bo@example.com' });
+    const ada = await signUp(auth, { name: 'Ada Lovelace', email: 'ada@sovereign.local' });
+    const bo = await signUp(auth, { name: 'Bo Barnes', email: 'bo@sovereign.local' });
     const registry = registryFor(auth);
     const asOwner = await actorOf(auth, owner.jar);
     const idOf = async (email: string) =>
@@ -82,7 +82,7 @@ export function activitySuite(createDatabase: () => Promise<TestDatabase>): void
         redirectUris: [REDIRECT],
         scopes: ['openid', 'profile', 'directory'],
         appScopes: ['activity:write'],
-        launcher: { launchUrl: 'https://reminders.example.test/' },
+        launcher: { launchUrl: 'https://reminders.sovereign.local/' },
         ...extra,
       });
       return { clientId: client.clientId, secret };
@@ -164,7 +164,7 @@ export function activitySuite(createDatabase: () => Promise<TestDatabase>): void
         service().record(ctx.app.clientId, {
           to: '',
           summary: 'x'.repeat(201),
-          link: 'http://reminders.example.test/',
+          link: 'http://reminders.sovereign.local/',
           at: 'yesterday',
           key: 'k'.repeat(101),
         }),
@@ -203,17 +203,17 @@ export function activitySuite(createDatabase: () => Promise<TestDatabase>): void
       const ctx = await instance();
       await service().record(
         ctx.app.clientId,
-        entry(ctx.ada.id, { link: 'https://reminders.example.test/tasks/3' }),
+        entry(ctx.ada.id, { link: 'https://reminders.sovereign.local/tasks/3' }),
       );
       expect((await service().list(ctx.ada.id))[0]?.link).toBe(
-        'https://reminders.example.test/tasks/3',
+        'https://reminders.sovereign.local/tasks/3',
       );
       for (const link of [
-        'https://evil.example.test/',
-        'https://user:pw@reminders.example.test/',
+        'https://evil.sovereign.local/',
+        'https://user:pw@reminders.sovereign.local/',
         'javascript:alert(1)',
         'not an address',
-        'http://reminders.example.test/',
+        'http://reminders.sovereign.local/',
       ]) {
         const error = await failed(() =>
           service().record(ctx.app.clientId, entry(ctx.ada.id, { link })),

@@ -84,7 +84,7 @@ test('a signed-in session leaves nothing in any cache but files that are the sam
     ).toBe(true);
   }
   // Nothing of the person is in what is kept: not a page, not a name.
-  expect(found.join(' ')).not.toMatch(/profile|console|accounts|api\/|Olive|example\.test/i);
+  expect(found.join(' ')).not.toMatch(/profile|console|accounts|api\/|Olive|sovereign\.local/i);
   await context.close();
 });
 
@@ -105,7 +105,7 @@ test('with no network, a navigation says so in a page of core’s own, and shows
   await expect(page.getByRole('link', { name: 'Try again' })).toBeVisible();
   // Nothing of the page it was going to, or of the person who was signed in.
   const text = await page.locator('body').innerText();
-  expect(text).not.toMatch(/Olive|example\.test|Accounts|Console|Permissions/);
+  expect(text).not.toMatch(/Olive|sovereign\.local|Accounts|Console|Permissions/);
   // It is its own page, with its own policy: nothing else may run or load there.
   expect(offline?.headers()['content-security-policy']).toBe(
     "default-src 'none'; style-src 'unsafe-inline'",

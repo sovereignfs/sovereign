@@ -53,14 +53,17 @@ describe('the mail warning at start-up', () => {
   });
 
   it('says what is missing when SMTP is half set up', async () => {
-    expect(await startUp({ SV_SMTP_HOST: 'smtp.example.com' })).toContain(
+    expect(await startUp({ SV_SMTP_HOST: 'smtp.sovereign.local' })).toContain(
       'the "from" address is missing',
     );
   });
 
   it('is not logged when SMTP is set up', async () => {
     expect(
-      await startUp({ SV_SMTP_HOST: 'smtp.example.com', SV_SMTP_FROM: 'no-reply@example.com' }),
+      await startUp({
+        SV_SMTP_HOST: 'smtp.sovereign.local',
+        SV_SMTP_FROM: 'no-reply@sovereign.local',
+      }),
     ).toBe('');
   });
 

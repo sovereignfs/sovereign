@@ -16,7 +16,7 @@ import {
 
 const suite = (extra: Partial<Suite> = {}): Suite => ({
   schema: 1,
-  domain: 'sovereign.example.com',
+  domain: 'sovereign.local',
   core: { version: '0.71.0' },
   database: { version: '18' },
   server: { host: '203.0.113.7' },
@@ -34,7 +34,7 @@ const input = async (s: Suite, extra: Partial<BaseInput> = {}): Promise<BaseInpu
   publishPorts: true,
   coreSecrets: ['SV_POSTGRES_URL', 'SV_AUTH_SECRET', 'SV_FIELD_ENCRYPTION_KEYS'],
   internalCa: false,
-  names: ['sovereign.example.com'],
+  names: ['sovereign.local'],
   ...extra,
 });
 
@@ -55,11 +55,11 @@ describe('the public names', () => {
         suite({
           apps: {
             notes: { image: 'ghcr.io/e/notes:1' },
-            wiki: { external: true, name: 'W', redirect: ['https://w.example.com/cb'] },
+            wiki: { external: true, name: 'W', redirect: ['https://w.sovereign.local/cb'] },
           },
         }),
       ),
-    ).toEqual({ core: 'sovereign.example.com', apps: { notes: 'notes.sovereign.example.com' } });
+    ).toEqual({ core: 'sovereign.local', apps: { notes: 'notes.sovereign.local' } });
   });
 });
 
@@ -67,7 +67,7 @@ describe('core', () => {
   it('is given its own address, Postgres, and every secret by the _FILE form', async () => {
     const env = coreEnvironment(await input(suite()));
     expect(env).toMatchObject({
-      SV_URL: 'https://sovereign.example.com',
+      SV_URL: 'https://sovereign.local',
       SV_DB_DIALECT: 'postgres',
     });
     for (const name of ['SV_POSTGRES_URL', 'SV_AUTH_SECRET', 'SV_FIELD_ENCRYPTION_KEYS']) {
@@ -87,7 +87,7 @@ describe('core', () => {
         }),
       ),
     );
-    expect(env.SV_URL).toBe('https://sovereign.example.com');
+    expect(env.SV_URL).toBe('https://sovereign.local');
     expect(env.SV_DB_DIALECT).toBe('postgres');
     expect(env.SV_SMTP_HOST).toBe('smtp');
   });
@@ -186,18 +186,18 @@ describe('the containers and networks', () => {
 
 describe('the proxy’s configuration', () => {
   it('has a site for each name, sent to its container, and the operator’s own sites last', () => {
-    const text = caddyfile(suite({ tls: { mode: 'per-host', email: 'op@example.com' } }), [
-      { host: 'sovereign.example.com', container: 'sv-core', port: 3000 },
-      { host: 'notes.sovereign.example.com', container: 'sv-app-notes', port: 8080 },
+    const text = caddyfile(suite({ tls: { mode: 'per-host', email: 'op@sovereign.local' } }), [
+      { host: 'sovereign.local', container: 'sv-core', port: 3000 },
+      { host: 'notes.sovereign.local', container: 'sv-app-notes', port: 8080 },
     ]);
-    expect(text).toContain('email op@example.com');
-    expect(text).toContain('notes.sovereign.example.com {\n\treverse_proxy sv-app-notes:8080\n}');
+    expect(text).toContain('email op@sovereign.local');
+    expect(text).toContain('notes.sovereign.local {\n\treverse_proxy sv-app-notes:8080\n}');
     expect(text.trimEnd().endsWith('import /etc/caddy/overrides/*.caddy')).toBe(true);
   });
 
   it('uses its own authority when the machine has no public port, and says not to edit the file', () => {
     const text = caddyfile(suite({ tls: { mode: 'internal' } }), [
-      { host: 'sovereign.example.com', container: 'sv-core', port: 3000 },
+      { host: 'sovereign.local', container: 'sv-core', port: 3000 },
     ]);
     expect(text).toContain('local_certs');
     expect(text).toContain('skip_install_trust');

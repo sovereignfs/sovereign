@@ -29,7 +29,7 @@ const app = (id: string, extra: Partial<LauncherApp> = {}): LauncherApp => ({
 });
 const as = (role: unknown) =>
   getSession.mockResolvedValue({
-    user: { id: 'u1', name: 'Ada Lovelace', email: 'ada@example.com', role },
+    user: { id: 'u1', name: 'Ada Lovelace', email: 'ada@sovereign.local', role },
   });
 const links = (html: string) => [...html.matchAll(/<a [^>]*href="([^"]+)"/g)].map((m) => m[1]);
 

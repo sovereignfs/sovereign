@@ -36,16 +36,16 @@ describe('reading an app’s manifest', () => {
     const manifest = await read(
       manifestOf({ name: 'From the label' }),
       '0.71.0',
-      { image: IMAGE, manifest: 'https://example.com/m.json' },
+      { image: IMAGE, manifest: 'https://sovereign.local/m.json' },
       fetchImpl,
     );
     expect(manifest.name).toBe('From the address');
-    expect(fetched).toEqual(['https://example.com/m.json']);
+    expect(fetched).toEqual(['https://sovereign.local/m.json']);
   });
 
   it('refuses an address that is not https', async () => {
     await expect(
-      read(manifestOf(), '0.71.0', { image: IMAGE, manifest: 'http://example.com/m.json' }),
+      read(manifestOf(), '0.71.0', { image: IMAGE, manifest: 'http://sovereign.local/m.json' }),
     ).rejects.toThrow('must be https');
   });
 

@@ -41,7 +41,9 @@ export const Text: Story = {
 };
 
 export const Email: Story = {
-  render: (_args) => <Labeled label="Email address" type="email" placeholder="you@example.com" />,
+  render: (_args) => (
+    <Labeled label="Email address" type="email" placeholder="you@sovereign.local" />
+  ),
 };
 
 export const Password: Story = {

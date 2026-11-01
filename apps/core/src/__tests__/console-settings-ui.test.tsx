@@ -213,10 +213,10 @@ describe('the pictures', () => {
 
 describe('the mail form', () => {
   const smtp = (overrides: Partial<ShownSmtp> = {}): ShownSmtp => ({
-    host: { value: 'mail.example.com', source: 'saved' },
+    host: { value: 'mail.sovereign.local', source: 'saved' },
     port: { value: 25, source: 'environment' },
     user: { value: undefined, source: 'unset' },
-    from: { value: 'noreply@example.com', source: 'saved' },
+    from: { value: 'noreply@sovereign.local', source: 'saved' },
     password: { source: 'saved', hasValue: true, unreadable: false },
     ...overrides,
   });
@@ -224,7 +224,7 @@ describe('the mail form', () => {
   it('puts only what is saved here in the boxes: a value from the environment is a placeholder', () => {
     render(<SmtpForm smtp={smtp()} encryptionReady />);
     expect((screen.getByLabelText('Mail server') as HTMLInputElement).value).toBe(
-      'mail.example.com',
+      'mail.sovereign.local',
     );
     const port = screen.getByLabelText('Port') as HTMLInputElement;
     expect(port.value).toBe('');

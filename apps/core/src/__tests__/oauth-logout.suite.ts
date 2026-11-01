@@ -49,7 +49,7 @@ const TABLES = [
   'verifications',
   'users',
 ];
-const APP = 'https://rp.example.com';
+const APP = 'https://rp.sovereign.local';
 const LOGOUT_URI = `${APP}/backchannel-logout`;
 const POST_LOGOUT = `${APP}/signed-out`;
 
@@ -176,10 +176,10 @@ export function oauthLogoutSuite(createDatabase: () => Promise<TestDatabase>): v
       const { auth, person, personId, client, idToken } = await signedInApp();
       network(auth);
       for (const evil of [
-        'https://evil.example.com/signed-out',
+        'https://evil.sovereign.local/signed-out',
         `${POST_LOGOUT}/extra`,
         `${POST_LOGOUT}?x=1`,
-        'http://rp.example.com/signed-out',
+        'http://rp.sovereign.local/signed-out',
       ]) {
         const reply = await endSessionRequest(auth, person, {
           id_token_hint: idToken,
@@ -201,7 +201,7 @@ export function oauthLogoutSuite(createDatabase: () => Promise<TestDatabase>): v
       const reply = await endSessionRequest(auth, person, {
         id_token_hint: idToken,
         client_id: client.clientId,
-        post_logout_redirect_uri: 'https://evil.example.com/steal',
+        post_logout_redirect_uri: 'https://evil.sovereign.local/steal',
         state: 'secret-state',
       });
       expect(reply.headers.get('location')).toBeNull();

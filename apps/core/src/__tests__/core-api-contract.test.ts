@@ -47,8 +47,8 @@ describe('holding an answer to the contract', () => {
     expect(
       contractProblems('getInstanceBranding', 200, {
         name: 'Acme',
-        url: 'https://core.example.com',
-        logo: { light: 'https://core.example.com/api/branding/logo-light?v=1', dark: null },
+        url: 'https://core.sovereign.local',
+        logo: { light: 'https://core.sovereign.local/api/branding/logo-light?v=1', dark: null },
         favicon: null,
         api: { versions: ['v1'], capabilities: ['directory'] },
       }),
@@ -56,7 +56,7 @@ describe('holding an answer to the contract', () => {
     // The field says what is served, so a document without it, or with a capability the contract lacks, is refused.
     const bare = {
       name: 'Acme',
-      url: 'https://core.example.com',
+      url: 'https://core.sovereign.local',
       logo: { light: null, dark: null },
       favicon: null,
     };
@@ -81,7 +81,7 @@ describe('holding an answer to the contract', () => {
     ).toMatch(/picture/);
     expect(
       contractProblems('searchDirectoryUsers', 200, {
-        users: [{ ...user, email: 'a@example.com' }],
+        users: [{ ...user, email: 'a@sovereign.local' }],
       }).join(),
     ).toMatch(/additional/);
     expect(

@@ -52,7 +52,7 @@ export function proxy(request: NextRequest): NextResponse {
 
 /**
  * Whether core is served over https, read as the configuration reads it: SV_URL is parsed, not matched as text, so
- * `HTTPS://Core.Example.com` is https here as well. The cookie's name depends on it (src/auth/cookies.ts), and a proxy that
+ * `HTTPS://Core.Sovereign.local` is https here as well. The cookie's name depends on it (src/auth/cookies.ts), and a proxy that
  * disagreed with better-auth would look for a name nobody sets and send every signed-in person back to sign-in.
  */
 function isHttps(url: string | undefined): boolean {

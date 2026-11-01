@@ -66,7 +66,7 @@ export function restoreSuite(createDatabase: () => Promise<TestDatabase>): void 
   async function instance() {
     const { auth } = makeAuthWithTasks(db);
     const owner = await signUp(auth, { name: 'Olive Owner' });
-    const ada = await signUp(auth, { name: 'Ada Lovelace', email: 'ada@example.com' });
+    const ada = await signUp(auth, { name: 'Ada Lovelace', email: 'ada@sovereign.local' });
     const registry = registryFor(auth);
     const asOwner = await actorOf(auth, owner.jar);
     const { client, secret } = await registry.register(asOwner, {
@@ -130,7 +130,7 @@ export function restoreSuite(createDatabase: () => Promise<TestDatabase>): void 
       await recordRestore(db, 1_800_000_000_000);
       await personAccess(
         ctx,
-        (await signUp(ctx.auth, { name: 'Bo', email: 'bo@example.com' })).jar,
+        (await signUp(ctx.auth, { name: 'Bo', email: 'bo@sovereign.local' })).jar,
       );
       const sessions = await rows('select count(*) as n from sessions');
       expect(sessions).toBeGreaterThan(0);
@@ -179,7 +179,7 @@ export function restoreSuite(createDatabase: () => Promise<TestDatabase>): void 
       expect(error?.status).toBe(401);
 
       await sleep(1100);
-      const bo = await signUp(ctx.auth, { name: 'Bo Barnes', email: 'bo@example.com' });
+      const bo = await signUp(ctx.auth, { name: 'Bo Barnes', email: 'bo@sovereign.local' });
       const after = await personAccess(ctx, bo.jar);
       expect(await authenticate(deps(ctx), withToken(after), 'directory')).toMatchObject({
         clientId: ctx.app.clientId,

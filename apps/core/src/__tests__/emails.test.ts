@@ -23,12 +23,12 @@ vi.stubEnv('SV_SQLITE_URL', `file:${path.join(tmpdir(), 'sv-core-emails.db')}`);
 
 const MIGRATIONS = path.join(path.dirname(new URL(import.meta.url).pathname), '../../migrations');
 const BASE = {
-  SV_URL: 'https://core.example.com',
+  SV_URL: 'https://core.sovereign.local',
   SV_AUTH_SECRET: 'a-secret-that-is-long-enough-to-pass-validation',
 };
 const SMTP = {
-  SV_SMTP_HOST: 'smtp.example.com',
-  SV_SMTP_FROM: 'Sovereign <no-reply@core.example.com>',
+  SV_SMTP_HOST: 'smtp.sovereign.local',
+  SV_SMTP_FROM: 'Sovereign <no-reply@core.sovereign.local>',
 };
 
 let target: TestDatabase;
@@ -67,13 +67,13 @@ function harness(env: Record<string, string> = SMTP, logoUrl?: string) {
 }
 
 describe('emailLink', () => {
-  const cfg = { url: 'https://core.example.com' };
+  const cfg = { url: 'https://core.sovereign.local' };
 
   it("builds a link on core's public address, with encoded parameters", () => {
     expect(emailLink(cfg, '/reset-password', { token: 'a+b=c&d' })).toBe(
-      'https://core.example.com/reset-password?token=a%2Bb%3Dc%26d',
+      'https://core.sovereign.local/reset-password?token=a%2Bb%3Dc%26d',
     );
-    expect(emailLink(cfg, '/sign-in')).toBe('https://core.example.com/sign-in');
+    expect(emailLink(cfg, '/sign-in')).toBe('https://core.sovereign.local/sign-in');
   });
 
   it.each([
@@ -129,18 +129,18 @@ describe("core's emails", () => {
     'sends the %s email with its subject, HTML and plain text, linked to SV_URL',
     async (_name, build) => {
       const h = harness();
-      await h.emails.send('person@example.com', build(h.emails));
+      await h.emails.send('person@sovereign.local', build(h.emails));
       expect(h.transport.sent).toHaveLength(1);
       const sent = h.transport.last;
       if (!sent) throw new Error('nothing was sent');
-      expect(sent.to).toEqual(['person@example.com']);
-      expect(sent.from).toBe('Sovereign <no-reply@core.example.com>');
+      expect(sent.to).toEqual(['person@sovereign.local']);
+      expect(sent.from).toBe('Sovereign <no-reply@core.sovereign.local>');
       expect(sent.subject).toContain('Sovereign');
-      expect(sent.html).toContain('https://core.example.com/');
-      expect(sent.text).toContain('https://core.example.com/');
-      // The whole origin, parsed: a prefix check would accept https://core.example.com.evil.test.
+      expect(sent.html).toContain('https://core.sovereign.local/');
+      expect(sent.text).toContain('https://core.sovereign.local/');
+      // The whole origin, parsed: a prefix check would accept https://core.sovereign.local.evil.test.
       for (const href of (sent.html ?? '').match(/href="[^"]+"/g) ?? []) {
-        expect(new URL(href.slice(6, -1)).origin).toBe('https://core.example.com');
+        expect(new URL(href.slice(6, -1)).origin).toBe('https://core.sovereign.local');
       }
     },
   );
@@ -153,28 +153,28 @@ describe("core's emails", () => {
     await h.store.set(SETTINGS.instanceName, 'Acme Identity');
     const after = await h.emails.render({ template: 'mfaReset', link: h.emails.link('/sign-in') });
     expect(after.subject).toBe('Two-step verification was reset on your Acme Identity account');
-    expect(after.text).toContain('Acme Identity: https://core.example.com');
+    expect(after.text).toContain('Acme Identity: https://core.sovereign.local');
   });
 
   it('shows the logo when core has one, and the name as text when it does not', async () => {
     const without = await harness().emails.render({
       template: 'mfaReset',
-      link: 'https://core.example.com/sign-in',
+      link: 'https://core.sovereign.local/sign-in',
     });
     expect(without.html).not.toContain('<img');
-    const withLogo = await harness(SMTP, 'https://core.example.com/logo.png').emails.render({
+    const withLogo = await harness(SMTP, 'https://core.sovereign.local/logo.png').emails.render({
       template: 'mfaReset',
-      link: 'https://core.example.com/sign-in',
+      link: 'https://core.sovereign.local/sign-in',
     });
     expect(withLogo.html).toContain('<img');
-    expect(withLogo.html).toContain('src="https://core.example.com/logo.png"');
+    expect(withLogo.html).toContain('src="https://core.sovereign.local/logo.png"');
     expect(withLogo.html).toContain('alt="Sovereign"');
   });
 
   it('refuses a link that is not on SV_URL, and sends nothing: a forged Host header cannot redirect a token', async () => {
     const h = harness();
     const error = await h.emails
-      .send('person@example.com', {
+      .send('person@sovereign.local', {
         template: 'passwordReset',
         link: 'https://evil.example/reset-password?token=secret-token',
       })
@@ -191,7 +191,7 @@ describe("core's emails", () => {
   it('fails, saying email is not set up, when there is no SMTP: the flow does not carry on', async () => {
     const h = harness({});
     const error = await h.emails
-      .send('person@example.com', {
+      .send('person@sovereign.local', {
         template: 'verifyEmail',
         link: h.emails.link('/verify-email', { token: 't' }),
       })
@@ -207,7 +207,7 @@ describe("core's emails", () => {
   it('cannot be given an instance name with a line break: the setting refuses it', async () => {
     const h = harness();
     await expect(
-      h.store.set(SETTINGS.instanceName, 'Acme\nBcc: x@example.com'),
+      h.store.set(SETTINGS.instanceName, 'Acme\nBcc: x@sovereign.local'),
     ).rejects.toMatchObject({ code: 'invalid-value' });
     await expect(h.store.set(SETTINGS.instanceName, 'Acme\u0000')).rejects.toMatchObject({
       code: 'invalid-value',

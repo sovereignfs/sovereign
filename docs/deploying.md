@@ -46,7 +46,7 @@ compose file.
 `Caddyfile`:
 
 ```text
-core.example.com {
+core.sovereign.local {
 	reverse_proxy core:3000
 }
 ```
@@ -72,7 +72,7 @@ services:
       default:
         # Core's public name reaches the proxy from inside the network too (see below).
         aliases:
-          - core.example.com
+          - core.sovereign.local
 
 volumes:
   caddy-data:
@@ -80,7 +80,7 @@ volumes:
 
 Then, in `.env`:
 
-- `SV_URL=https://core.example.com`
+- `SV_URL=https://core.sovereign.local`
 - `SV_AUTH_TRUSTED_PROXIES` set to the compose network's range, shown by `docker network inspect sovereign_default`.
   Sign-in limits count attempts per address, and without this they can count everyone behind the proxy as one.
 
@@ -106,7 +106,7 @@ as from your browser:
   services:
     core:
       extra_hosts:
-        - 'core.example.com:host-gateway'
+        - 'core.sovereign.local:host-gateway'
   ```
 
   When the proxy is another container, give it a network alias of the name on core's network instead, as the example
@@ -163,5 +163,5 @@ network is down. Nothing needs setting up beyond what sign-in already needs.
 `pnpm dev` starts core from source on `:3000`. When `apps/core/.env` chooses sqld, it first starts the persistent sqld
 from [`docker-compose.dev.yml`](../docker-compose.dev.yml) (ports `8080` and `8081`, on this machine only); with SQLite or
 PostgreSQL chosen it starts only core. `pnpm seed` makes an owner, an admin and an ordinary person to try it with
-(`owner@example.test`, `admin@example.test`, `user@example.test`, password `sovereign-dev-password`, or `SEED_PASSWORD`),
+(`owner@sovereign.local`, `admin@sovereign.local`, `user@sovereign.local`, password `sovereign-dev-password`, or `SEED_PASSWORD`),
 and refuses to run for any address that is not on this machine.

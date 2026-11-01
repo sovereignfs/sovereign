@@ -55,12 +55,12 @@ afterAll(async () => {
 const user = (id: string) =>
   db.run(
     `insert into users (id, name, email, email_verified, role, created_at, updated_at) values (?, ?, ?, 1, 'platform:user', 1, 1)`,
-    [id, id, `${id}@example.com`],
+    [id, id, `${id}@sovereign.local`],
   );
 const app = (id: string, name: string) =>
   db.run(
     `insert into oauth_clients (id, client_id, name, redirect_uris, scopes, created_at, updated_at) values (?, ?, ?, ?, '[]', 1, 1)`,
-    [id, id, name, JSON.stringify(['https://reminders.example.test/cb'])],
+    [id, id, name, JSON.stringify(['https://reminders.sovereign.local/cb'])],
   );
 const consent = (userId: string, clientId: string) =>
   db.run(
@@ -126,7 +126,7 @@ describe('sending', () => {
     ['a title that is too long', JSON.stringify({ to: 'ada', title: 'x'.repeat(121) })],
     [
       'a link to another site',
-      JSON.stringify({ to: 'ada', title: 'x', url: 'https://evil.example.test/' }),
+      JSON.stringify({ to: 'ada', title: 'x', url: 'https://evil.sovereign.local/' }),
     ],
   ])('refuses %s with a 400 that matches the contract', async (_name, raw) => {
     const reply = await collection.POST(
@@ -163,7 +163,7 @@ describe('what a person’s token can do', () => {
   const seed = async () => {
     guard.mockResolvedValue(APP);
     await send({ to: 'ada', title: 'first' });
-    await send({ to: 'ada', title: 'second', url: 'https://reminders.example.test/x' });
+    await send({ to: 'ada', title: 'second', url: 'https://reminders.sovereign.local/x' });
     await db.run(
       `insert into notifications (id, user_id, client_id, title, category, created_at, expires_at) values ('o1', 'ada', 'other', 'not yours', 'info', ?, ?)`,
       [Date.now(), Date.now() + 86_400_000],

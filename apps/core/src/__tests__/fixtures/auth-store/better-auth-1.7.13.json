@@ -1,7 +1,7 @@
 {
   "betterAuth": "1.7.13",
   "secret": "a-secret-that-is-long-enough-to-pass-validation",
-  "email": "captured@example.com",
+  "email": "captured@sovereign.local",
   "password": "correct horse battery",
   "cookie": "better-auth.session_token=9fEfhHip5iH39WZjVNm22ziuuwAjMQOD.o9DJlTN0txIW8gk1mNC8Gxdf77qXFwktoEzchPrYJws%3D",
   "tables": {
@@ -9,7 +9,7 @@
       {
         "id": "5vP3xffif5o2u1L8sJe6yGzndIDAVIaf",
         "name": "Captured Person",
-        "email": "captured@example.com",
+        "email": "captured@sovereign.local",
         "email_verified": false,
         "image": null,
         "created_at": 1793133792292,

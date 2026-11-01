@@ -174,12 +174,14 @@ describe('signing in with a passkey, on the sign-in form', () => {
 
   it('goes back to the app when it was an app that asked for the sign-in', async () => {
     signInPasskey.mockResolvedValue({
-      data: { redirect: true, url: 'https://rp.example.com/cb?code=one' },
+      data: { redirect: true, url: 'https://rp.sovereign.local/cb?code=one' },
       error: null,
     });
     render(<SignInForm instanceName="Acme" returnTo="/" />);
     fireEvent.click(await screen.findByRole('button', { name: 'Sign in with a passkey' }));
-    await waitFor(() => expect(assign).toHaveBeenCalledWith('https://rp.example.com/cb?code=one'));
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith('https://rp.sovereign.local/cb?code=one'),
+    );
   });
 
   it('says what to check when the device gives no passkey, and stays put', async () => {

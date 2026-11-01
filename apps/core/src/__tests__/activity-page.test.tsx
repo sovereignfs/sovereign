@@ -21,7 +21,7 @@ const ENTRY = {
   clientId: 'a',
   appName: 'Reminders',
   summary: 'You completed <b>Water</b> the plants',
-  link: 'https://reminders.example.test/tasks/3',
+  link: 'https://reminders.sovereign.local/tasks/3',
   at: Date.UTC(2026, 9, 30, 22, 30),
 };
 const search = (app?: string) => Promise.resolve(app === undefined ? {} : { app });
@@ -57,7 +57,7 @@ describe('the Activity page', () => {
     // 22:30 UTC on 30 October 2026 is 23:30 in Paris (the clocks went back on the 25th).
     expect(html).toContain('30 Oct 2026');
     expect(html).toContain('23:30');
-    expect(html).toContain('href="https://reminders.example.test/tasks/3"');
+    expect(html).toContain('href="https://reminders.sovereign.local/tasks/3"');
     expect(html).toContain('rel="noopener noreferrer"');
   });
 

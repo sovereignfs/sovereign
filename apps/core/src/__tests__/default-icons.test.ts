@@ -3,13 +3,13 @@ import { DEFAULT_ICONS } from '../branding/default-icons';
 
 const identity = vi.fn();
 vi.mock('../instance/service', () => ({ getInstanceIdentity: () => identity() as unknown }));
-vi.stubEnv('SV_URL', 'https://core.example.com');
+vi.stubEnv('SV_URL', 'https://core.sovereign.local');
 vi.stubEnv('SV_AUTH_SECRET', 'a-secret-that-is-long-enough-to-pass-validation');
 
 const { GET: icon } = await import('../../app/icons/[name]/route');
 const { GET: favicon } = await import('../../app/favicon.ico/route');
 const named = (name: string) =>
-  icon(new Request('https://core.example.com/icons/x'), { params: Promise.resolve({ name }) });
+  icon(new Request('https://core.sovereign.local/icons/x'), { params: Promise.resolve({ name }) });
 
 describe('the icons an instance has until it sets a favicon', () => {
   it.each([
@@ -47,14 +47,14 @@ describe('/favicon.ico', () => {
     identity.mockResolvedValue({ favicon: undefined });
     const response = await favicon();
     expect(response.status).toBe(307);
-    expect(response.headers.get('location')).toBe('https://core.example.com/icons/favicon.ico');
+    expect(response.headers.get('location')).toBe('https://core.sovereign.local/icons/favicon.ico');
   });
 
   it('sends it to the instance’s own, as soon as there is one', async () => {
     identity.mockResolvedValue({ favicon: '/api/branding/favicon?v=3' });
     const response = await favicon();
     expect(response.headers.get('location')).toBe(
-      'https://core.example.com/api/branding/favicon?v=3',
+      'https://core.sovereign.local/api/branding/favicon?v=3',
     );
     expect(response.headers.get('cache-control')).toBe('no-cache');
   });

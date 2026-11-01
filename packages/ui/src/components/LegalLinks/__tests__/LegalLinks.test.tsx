@@ -17,12 +17,12 @@ describe('LegalLinks', () => {
   });
 
   it('links where it is told to', () => {
-    render(<LegalLinks privacyHref="/legal/privacy" tosHref="https://example.test/terms" />);
+    render(<LegalLinks privacyHref="/legal/privacy" tosHref="https://sovereign.local/terms" />);
     expect(screen.getByRole('link', { name: 'Privacy Policy' }).getAttribute('href')).toBe(
       '/legal/privacy',
     );
     expect(screen.getByRole('link', { name: 'Terms of Service' }).getAttribute('href')).toBe(
-      'https://example.test/terms',
+      'https://sovereign.local/terms',
     );
   });
 

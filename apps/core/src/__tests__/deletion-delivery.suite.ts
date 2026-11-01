@@ -54,7 +54,7 @@ const ORIGIN = new URL(BASE_URL).origin;
 const AUDIENCE = coreApiResource(ORIGIN);
 const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
-const ADDRESS = 'https://reminders.example.test/hooks/account-deleted';
+const ADDRESS = 'https://reminders.sovereign.local/hooks/account-deleted';
 
 type Sent = { url: string; init: RequestInit };
 
@@ -109,7 +109,7 @@ export function deletionDeliverySuite(createDatabase: () => Promise<TestDatabase
   async function instance() {
     const { auth } = makeAuthWithTasks(db);
     const owner = await signUp(auth, { name: 'Olive Owner' });
-    const ada = await signUp(auth, { name: 'Ada Lovelace', email: 'ada@example.com' });
+    const ada = await signUp(auth, { name: 'Ada Lovelace', email: 'ada@sovereign.local' });
     const registry = registryFor(auth);
     const asOwner = await actorOf(auth, owner.jar);
     const { client, secret } = await registry.register(asOwner, {
@@ -121,7 +121,7 @@ export function deletionDeliverySuite(createDatabase: () => Promise<TestDatabase
     const app = { clientId: client.clientId, secret };
     await personToken(auth, ada.jar, app, { audience: AUDIENCE });
     const adaId = String(
-      (await db.run('select id from users where email = ?', ['ada@example.com'])).rows[0]?.id,
+      (await db.run('select id from users where email = ?', ['ada@sovereign.local'])).rows[0]?.id,
     );
     return { auth, registry, asOwner, app, adaId };
   }
@@ -173,7 +173,7 @@ export function deletionDeliverySuite(createDatabase: () => Promise<TestDatabase
         currentDate: new Date(clock),
       });
       expect(second.payload.jti).not.toBe(payload.jti);
-      expect(JSON.stringify(payload)).not.toContain('ada@example.com');
+      expect(JSON.stringify(payload)).not.toContain('ada@sovereign.local');
     });
 
     it('tells the app after a person deletes their own account, with the sub of the deleted account', async () => {

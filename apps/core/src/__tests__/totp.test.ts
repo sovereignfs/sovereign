@@ -29,7 +29,7 @@ describe('the test authenticator', () => {
 
   it('reads the secret from an otpauth address', () => {
     expect(
-      secretOf(`otpauth://totp/Sovereign:ada@example.com?secret=${RFC_SECRET}&period=30`),
+      secretOf(`otpauth://totp/Sovereign:ada@sovereign.local?secret=${RFC_SECRET}&period=30`),
     ).toBe(RFC_SECRET);
     expect(() => secretOf('otpauth://totp/x')).toThrow();
   });

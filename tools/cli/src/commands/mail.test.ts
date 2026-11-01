@@ -61,7 +61,7 @@ describe('sv mail', () => {
     await setUpWorld(world, '--deploy', 'ssh', '--environment', 'staging');
     const file = path.join(world.root, 'suite.yml');
     const suite = parse(readFileSync(file, 'utf8')) as Suite;
-    suite.core.env = { SV_SMTP_HOST: 'smtp.example.com' };
+    suite.core.env = { SV_SMTP_HOST: 'smtp.sovereign.local' };
     writeFileSync(file, stringify(suite));
     const opened = tunnelling();
     const done = await sv(world, 'mail');

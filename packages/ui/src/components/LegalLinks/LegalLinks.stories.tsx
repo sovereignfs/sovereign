@@ -16,7 +16,7 @@ export const Default: Story = {};
 
 export const CustomHrefs: Story = {
   args: {
-    privacyHref: 'https://example.com/legal/privacy',
-    tosHref: 'https://example.com/legal/tos',
+    privacyHref: 'https://sovereign.local/legal/privacy',
+    tosHref: 'https://sovereign.local/legal/tos',
   },
 };

@@ -422,15 +422,15 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
       const { client } = await registry.register(
         asOwner,
         settings({
-          redirectUris: [REDIRECT, 'https://rp.example.com/other'],
-          postLogoutRedirectUris: ['https://rp.example.com/bye'],
-          backchannelLogoutUri: 'https://rp.example.com/backchannel',
+          redirectUris: [REDIRECT, 'https://rp.sovereign.local/other'],
+          postLogoutRedirectUris: ['https://rp.sovereign.local/bye'],
+          backchannelLogoutUri: 'https://rp.sovereign.local/backchannel',
           trusted: true,
           scopes: ['openid', 'roles'],
           launcher: {
             description: 'Your notes, wherever you are',
-            icon: 'https://rp.example.com/icon.png',
-            launchUrl: 'https://rp.example.com/',
+            icon: 'https://rp.sovereign.local/icon.png',
+            launchUrl: 'https://rp.sovereign.local/',
             show: false,
           },
         }),
@@ -438,15 +438,15 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
       const read = await registry.get(asOwner, client.clientId);
       expect(read).toEqual(client);
       expect(read).toMatchObject({
-        redirectUris: [REDIRECT, 'https://rp.example.com/other'],
-        postLogoutRedirectUris: ['https://rp.example.com/bye'],
-        backchannelLogoutUri: 'https://rp.example.com/backchannel',
+        redirectUris: [REDIRECT, 'https://rp.sovereign.local/other'],
+        postLogoutRedirectUris: ['https://rp.sovereign.local/bye'],
+        backchannelLogoutUri: 'https://rp.sovereign.local/backchannel',
         trusted: true,
         scopes: ['openid', 'roles'],
         launcher: {
           description: 'Your notes, wherever you are',
-          icon: 'https://rp.example.com/icon.png',
-          launchUrl: 'https://rp.example.com/',
+          icon: 'https://rp.sovereign.local/icon.png',
+          launchUrl: 'https://rp.sovereign.local/',
           show: false,
         },
       });
@@ -458,13 +458,13 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
       const withLogout = (
         await registry.register(
           asOwner,
-          settings({ postLogoutRedirectUris: ['https://rp.example.com/bye'] }),
+          settings({ postLogoutRedirectUris: ['https://rp.sovereign.local/bye'] }),
         )
       ).client;
       const withBackchannel = (
         await registry.register(
           asOwner,
-          settings({ backchannelLogoutUri: 'https://rp.example.com/bc' }),
+          settings({ backchannelLogoutUri: 'https://rp.sovereign.local/bc' }),
         )
       ).client;
       const forced = (await registry.register(asOwner, settings({ endSession: true }))).client;
@@ -483,8 +483,8 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
       const error = (await refused(() =>
         registry.register(asOwner, {
           name: '',
-          redirectUris: ['http://example.com/cb'],
-          postLogoutRedirectUris: ['https://rp.example.com/bye#x'],
+          redirectUris: ['http://sovereign.local/cb'],
+          postLogoutRedirectUris: ['https://rp.sovereign.local/bye#x'],
           backchannelLogoutUri: 'ftp://x',
           scopes: ['profile'],
         }),
@@ -516,7 +516,7 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
       for (const uri of [
         'http://localhost:4000/cb',
         'http://app.localhost/cb',
-        'http://rp.example.com/cb',
+        'http://rp.sovereign.local/cb',
       ]) {
         const error = (await refused(() =>
           registry.register(asOwner, settings({ redirectUris: [uri] })),
@@ -528,10 +528,10 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
         (
           await registry.register(
             asOwner,
-            settings({ redirectUris: ['https://rp.example.com/cb'] }),
+            settings({ redirectUris: ['https://rp.sovereign.local/cb'] }),
           )
         ).client.redirectUris,
-      ).toEqual(['https://rp.example.com/cb']);
+      ).toEqual(['https://rp.sovereign.local/cb']);
     });
 
     it('are accepted as http for localhost and *.localhost on a development instance', async () => {
@@ -542,7 +542,7 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
         ).toEqual([uri]);
       }
       const other = (await refused(() =>
-        registry.register(asOwner, settings({ redirectUris: ['http://rp.example.com/cb'] })),
+        registry.register(asOwner, settings({ redirectUris: ['http://rp.sovereign.local/cb'] })),
       )) as ClientRegistryError;
       expect(other.code).toBe('invalid');
     });
@@ -629,18 +629,18 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
       const { registry, asOwner } = await instance();
       const { client } = await registry.register(
         asOwner,
-        settings({ launcher: { description: 'Notes', launchUrl: 'https://rp.example.com/' } }),
+        settings({ launcher: { description: 'Notes', launchUrl: 'https://rp.sovereign.local/' } }),
       );
       const changed = await registry.update(asOwner, client.clientId, {
         name: '  Notes 2  ',
-        redirectUris: ['https://rp.example.com/new'],
+        redirectUris: ['https://rp.sovereign.local/new'],
         launcher: { show: false },
       });
       expect(changed).toMatchObject({
         name: 'Notes 2',
-        redirectUris: ['https://rp.example.com/new'],
+        redirectUris: ['https://rp.sovereign.local/new'],
         scopes: client.scopes,
-        launcher: { description: 'Notes', launchUrl: 'https://rp.example.com/', show: false },
+        launcher: { description: 'Notes', launchUrl: 'https://rp.sovereign.local/', show: false },
       });
     });
 
@@ -649,8 +649,8 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
       const { client } = await registry.register(
         asOwner,
         settings({
-          backchannelLogoutUri: 'https://rp.example.com/bc',
-          launcher: { description: 'x', icon: 'https://rp.example.com/i.png' },
+          backchannelLogoutUri: 'https://rp.sovereign.local/bc',
+          launcher: { description: 'x', icon: 'https://rp.sovereign.local/i.png' },
         }),
       );
       const cleared = await registry.update(asOwner, client.clientId, {
@@ -953,7 +953,7 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
     it('takes the list it is given as the whole list, so an address left out is removed', async () => {
       const { registry } = await instance();
       const system = systemActor();
-      const other = 'https://notes.example.test/second';
+      const other = 'https://notes.sovereign.local/second';
       const { client } = await registry.ensure(
         system,
         key,
@@ -974,7 +974,11 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
       const { registry } = await instance({ development: false });
       const system = systemActor();
       const error = (await refused(() =>
-        registry.ensure(system, key, settings({ redirectUris: ['http://notes.example.test/cb'] })),
+        registry.ensure(
+          system,
+          key,
+          settings({ redirectUris: ['http://notes.sovereign.local/cb'] }),
+        ),
       )) as ClientRegistryError;
       expect(error.code).toBe('invalid');
       expect(error.problems.map((problem) => problem.field)).toContain('redirectUris');
@@ -1163,7 +1167,7 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
         '--name',
         'Notes',
         '--redirect',
-        'http://notes.example.test/cb',
+        'http://notes.sovereign.local/cb',
       );
       expect(refused.code).toBe(1);
       expect(refused.log.join('\n')).toMatch(/redirectUris\[?0?\]?.*https/s);

@@ -51,7 +51,7 @@ smoke() {
     fail "$name is not healthy: $health"
   }
   role="$(curl -s -X POST "$SV_URL/api/auth/sign-up/email" -H 'content-type: application/json' -H "origin: $SV_URL" \
-    -d "{\"name\":\"Smoke Owner\",\"email\":\"owner@example.test\",\"password\":\"$PASSWORD\",\"agreedToTerms\":true}" \
+    -d "{\"name\":\"Smoke Owner\",\"email\":\"owner@sovereign.local\",\"password\":\"$PASSWORD\",\"agreedToTerms\":true}" \
     | sed -n 's/.*"role":"\([^"]*\)".*/\1/p')"
   [ "$role" = platform:owner ] || fail "$name: the first account is not the owner ($role)"
   docker compose "$@" exec -T core node -e \
@@ -67,10 +67,10 @@ admin_smoke() {
   local name="$1"; shift
   local admin=(docker compose "$@" exec -T core sovereign-admin apps)
   local first second
-  first="$("${admin[@]}" ensure smoke --name Smoke --redirect https://smoke.example.test/callback --json)" \
+  first="$("${admin[@]}" ensure smoke --name Smoke --redirect https://smoke.sovereign.local/callback --json)" \
     || fail "$name: sovereign-admin could not register an app"
   grep -q '"secret":"' <<<"$first" || fail "$name: the first ensure gave no secret: $first"
-  second="$("${admin[@]}" ensure smoke --name Smoke --redirect https://smoke.example.test/callback --json)" \
+  second="$("${admin[@]}" ensure smoke --name Smoke --redirect https://smoke.sovereign.local/callback --json)" \
     || fail "$name: sovereign-admin failed the second time"
   grep -q '"secret"' <<<"$second" && fail "$name: the second ensure gave a secret: $second"
   [ "$(sed -n 's/.*"clientId":"\([^"]*\)".*/\1/p' <<<"$first")" = "$(sed -n 's/.*"clientId":"\([^"]*\)".*/\1/p' <<<"$second")" ] \

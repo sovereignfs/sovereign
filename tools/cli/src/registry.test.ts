@@ -13,7 +13,7 @@ describe('taking an image reference apart', () => {
     ['docker.io/someone/thing:3', 'registry-1.docker.io', 'someone/thing', '3'],
     ['someone/thing:3', 'registry-1.docker.io', 'someone/thing', '3'],
     ['localhost:5000/app:1', 'localhost:5000', 'app', '1'],
-    ['registry.example.com:5000/a/b:v1', 'registry.example.com:5000', 'a/b', 'v1'],
+    ['registry.sovereign.local:5000/a/b:v1', 'registry.sovereign.local:5000', 'a/b', 'v1'],
     [`ghcr.io/e/n@sha256:${'a'.repeat(64)}`, 'ghcr.io', 'e/n', `sha256:${'a'.repeat(64)}`],
   ])('%s', (ref, host, repository, reference) => {
     expect(parseImageRef(ref)).toEqual({ host, repository, reference });

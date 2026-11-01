@@ -8,7 +8,7 @@ vi.stubGlobal('fetch', (input: unknown, init?: unknown) => answer(input, init));
 const { authClient } = await import('../auth/client');
 
 /** The address an app's callback is requested at: what the browser is sent to after an authorization code is made. */
-const CALLBACK = 'https://app.example.com/callback?code=abc&state=xyz';
+const CALLBACK = 'https://app.sovereign.local/callback?code=abc&state=xyz';
 
 describe('the browser auth client', () => {
   let navigations: string[];
@@ -35,7 +35,7 @@ describe('the browser auth client', () => {
   });
 
   it('does not follow a redirect answer itself, since the forms that asked do', async () => {
-    const result = await authClient.signIn.email({ email: 'a@example.test', password: 'x' });
+    const result = await authClient.signIn.email({ email: 'a@sovereign.local', password: 'x' });
     // The answer reaches the form untouched, for `continuationUrl`; the form is the only one that navigates.
     expect(result.data).toMatchObject({ redirect: true, url: CALLBACK });
     // Navigating here as well asks for the app's callback twice with one authorization code, and the second fails.

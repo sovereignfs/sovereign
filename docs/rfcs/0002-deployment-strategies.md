@@ -180,7 +180,7 @@ apps:
     external: true
     name: Team wiki
     redirect:
-      - https://wiki.example.com/auth/callback
+      - https://wiki.sovereign.local/auth/callback
 ```
 
 `spec/suite.md` defines this file, versioned by `schema`, with a JSON Schema the CLI validates against.

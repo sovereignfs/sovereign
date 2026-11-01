@@ -116,14 +116,14 @@ describe('list', () => {
 
 describe('url', () => {
   it('accepts http and https by default and trims a trailing slash', () => {
-    expect(load({ u: url({ name: 'U' }) }, { T_U: 'https://example.com/' }).u).toBe(
-      'https://example.com',
+    expect(load({ u: url({ name: 'U' }) }, { T_U: 'https://sovereign.local/' }).u).toBe(
+      'https://sovereign.local',
     );
     expect(load({ u: url({ name: 'U' }) }, { T_U: 'http://sqld:8080' }).u).toBe('http://sqld:8080');
   });
 
   it('trims a very long run of trailing slashes in linear time', () => {
-    const raw = `https://example.com/${'/'.repeat(100_000)}x/${'/'.repeat(100_000)}`;
+    const raw = `https://sovereign.local/${'/'.repeat(100_000)}x/${'/'.repeat(100_000)}`;
     const started = performance.now();
     const value = load({ u: url({ name: 'U', required: true }) }, { T_U: raw }).u;
     expect(performance.now() - started).toBeLessThan(1000);
@@ -131,13 +131,13 @@ describe('url', () => {
   });
 
   it('keeps a path', () => {
-    expect(load({ u: url({ name: 'U' }) }, { T_U: 'https://example.com/api/auth/' }).u).toBe(
-      'https://example.com/api/auth',
+    expect(load({ u: url({ name: 'U' }) }, { T_U: 'https://sovereign.local/api/auth/' }).u).toBe(
+      'https://sovereign.local/api/auth',
     );
   });
 
   it('rejects text that is not an absolute URL', () => {
-    for (const raw of ['not a url', '/relative', 'example.com', 'http://']) {
+    for (const raw of ['not a url', '/relative', 'sovereign.local', 'http://']) {
       expect(problems(() => load({ u: url({ name: 'U' }) }, { T_U: raw }))).toEqual([
         'T_U: is not a valid URL',
       ]);
@@ -146,23 +146,23 @@ describe('url', () => {
 
   it('restricts the scheme', () => {
     const variables = { u: url({ name: 'U', protocols: ['https:'] }) };
-    expect(problems(() => load(variables, { T_U: 'http://example.com' }))).toEqual([
+    expect(problems(() => load(variables, { T_U: 'http://sovereign.local' }))).toEqual([
       'T_U: must use https:',
     ]);
-    expect(problems(() => load(variables, { T_U: 'ftp://example.com' }))).toEqual([
+    expect(problems(() => load(variables, { T_U: 'ftp://sovereign.local' }))).toEqual([
       'T_U: must use https:',
     ]);
   });
 
   it('can require a bare origin, as the issuer needs', () => {
     const variables = { u: url({ name: 'U', origin: true }) };
-    expect(load(variables, { T_U: 'https://core.example.com/' }).u).toBe(
-      'https://core.example.com',
+    expect(load(variables, { T_U: 'https://core.sovereign.local/' }).u).toBe(
+      'https://core.sovereign.local',
     );
     for (const raw of [
-      'https://core.example.com/api',
-      'https://core.example.com/?a=1',
-      'https://core.example.com/#x',
+      'https://core.sovereign.local/api',
+      'https://core.sovereign.local/?a=1',
+      'https://core.sovereign.local/#x',
     ]) {
       expect(problems(() => load(variables, { T_U: raw }))).toEqual([
         'T_U: must be an address with no path, query or fragment',

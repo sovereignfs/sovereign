@@ -11,12 +11,12 @@ It runs on a server only. Importing it in a browser throws, because a token must
 An operator registers the app with core (in the Console, or with the operator tooling), giving it three addresses on the app's own
 public name, and takes the **client id** and **secret** it is given:
 
-| Address             | Is                                                   |
-| ------------------- | ---------------------------------------------------- |
-| Sign-in             | `https://notes.example.test/auth/callback`           |
-| After signing out   | `https://notes.example.test/`                        |
-| Back-channel logout | `https://notes.example.test/auth/backchannel-logout` |
-| Account deleted     | `https://notes.example.test/auth/account-deleted`    |
+| Address             | Is                                                      |
+| ------------------- | ------------------------------------------------------- |
+| Sign-in             | `https://notes.sovereign.local/auth/callback`           |
+| After signing out   | `https://notes.sovereign.local/`                        |
+| Back-channel logout | `https://notes.sovereign.local/auth/backchannel-logout` |
+| Account deleted     | `https://notes.sovereign.local/auth/account-deleted`    |
 
 The app is told where core is, and who it is, in four variables with its own prefix ([`spec/env.md`](../spec/env.md)):
 `NOTES_URL`, `NOTES_CORE_URL`, `NOTES_CORE_CLIENT_ID` and `NOTES_CORE_CLIENT_SECRET` (or `NOTES_CORE_CLIENT_SECRET_FILE`).
@@ -113,7 +113,7 @@ await sv.app.notifications.send({
   to: person.sub,
   title: 'Due today',
   body: 'Water the plants',
-  url: 'https://notes.example.test/tasks/3', // on one of the app's own addresses
+  url: 'https://notes.sovereign.local/tasks/3', // on one of the app's own addresses
   key: 'due-3', // sending it again within a day is the same send
 });
 ```
@@ -132,7 +132,7 @@ await sv.app.email.sendToUser({
   to: person.sub,
   subject: 'Your task is due', // sent as "Notes: Your task is due"
   body: 'Water the plants.', // plain text; line breaks are kept
-  link: 'https://notes.example.test/tasks/3', // on one of the app's own addresses, drawn as a button
+  link: 'https://notes.sovereign.local/tasks/3', // on one of the app's own addresses, drawn as a button
   key: 'due-3', // sending it again within a day is the same send
 });
 ```
@@ -151,7 +151,7 @@ them in one place:
 await sv.app.activity.log({
   to: person.sub,
   summary: 'You completed Water the plants', // one line of text, the words the person should read
-  link: 'https://notes.example.test/tasks/3', // optional, on one of the app's own addresses
+  link: 'https://notes.sovereign.local/tasks/3', // optional, on one of the app's own addresses
   at: new Date().toISOString(), // optional: when it happened, within the last day
   key: 'done-3', // recording it again within a day is the same record
 });
@@ -185,7 +185,7 @@ import { createFakeCore, memorySessionStore } from '@sovereignfs/sdk/testing';
 const core = createFakeCore();
 core.addPerson({ sub: 'u1', name: 'Ada Lovelace' });
 const sv = createSovereign({
-  appUrl: 'https://notes.example.test',
+  appUrl: 'https://notes.sovereign.local',
   coreUrl: core.url,
   ...core.credentials,
   sessionStore: memorySessionStore(),

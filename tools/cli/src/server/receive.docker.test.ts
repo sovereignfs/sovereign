@@ -40,7 +40,7 @@ describe.skipIf(!runnable)('the server receiving a deployment against the real D
     execFileSync('docker', ['build', '--quiet', '--tag', image, path.join(root, 'tools/cli')], {
       stdio: 'ignore',
     });
-    source = await makeSource({ suite: { domain: 'sv-test.example.test' } });
+    source = await makeSource({ suite: { domain: 'sv-test.sovereign.local' } });
     state = mkdtempSync(path.join(os.tmpdir(), 'sv-recv-state-'));
   });
   afterAll(() => {

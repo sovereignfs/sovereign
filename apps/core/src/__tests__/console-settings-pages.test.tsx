@@ -45,10 +45,10 @@ const shown = (overrides: Partial<ShownInstance> = {}): ShownInstance => ({
   ...overrides,
 });
 const SMTP: NonNullable<ShownInstance['smtp']> = {
-  host: { value: 'mail.example.com', source: 'saved' },
+  host: { value: 'mail.sovereign.local', source: 'saved' },
   port: { value: undefined, source: 'unset' },
   user: { value: 'mailer', source: 'saved' },
-  from: { value: 'noreply@example.com', source: 'environment' },
+  from: { value: 'noreply@sovereign.local', source: 'environment' },
   password: { source: 'saved', hasValue: true, unreadable: false },
 };
 const as = (role: unknown) => getSession.mockResolvedValue({ user: { id: 'x', role } });
@@ -100,7 +100,7 @@ describe('the settings page', () => {
     expect(describeInstance).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), {
       withMail: false,
     });
-    expect(forAdmin).not.toContain('mail.example.com');
+    expect(forAdmin).not.toContain('mail.sovereign.local');
     expect(forAdmin).not.toContain('name="host"');
     expect(forAdmin).toContain('Only the owner can see or change how email is sent.');
 
@@ -109,7 +109,7 @@ describe('the settings page', () => {
     expect(describeInstance).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), {
       withMail: true,
     });
-    expect(forOwner).toContain('mail.example.com');
+    expect(forOwner).toContain('mail.sovereign.local');
     expect(forOwner).toMatch(/<input[^>]*name="host"/);
   });
 

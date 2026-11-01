@@ -72,7 +72,7 @@ export function profileSuite(createDatabase: () => Promise<TestDatabase>): void 
       ['empty', ''],
       ['only spaces', '   '],
       ['over 100 characters', 'x'.repeat(101)],
-      ['with a line break, which would reach an email subject', 'Ada\nBcc: evil@example.com'],
+      ['with a line break, which would reach an email subject', 'Ada\nBcc: evil@sovereign.local'],
       ['with a tab', 'Ada\tLovelace'],
       ['with a line separator', 'Ada Lovelace'],
       ['with a NUL', 'Ada\u0000'],
@@ -116,7 +116,7 @@ export function profileSuite(createDatabase: () => Promise<TestDatabase>): void 
       const { jar, email } = await signUp(a);
       await call(a, 'POST', '/update-user', {
         jar,
-        body: { email: 'other@example.com', name: 'Same' },
+        body: { email: 'other@sovereign.local', name: 'Same' },
       });
       expect(await columnOf(email, 'email')).toBe(email);
       expect(await count('users')).toBe(1);
@@ -127,7 +127,7 @@ export function profileSuite(createDatabase: () => Promise<TestDatabase>): void 
       const { jar, email } = await signUp(a);
       const reply = await call(a, 'POST', '/change-email', {
         jar,
-        body: { newEmail: 'other@example.com' },
+        body: { newEmail: 'other@sovereign.local' },
       });
       expect(reply.status).toBeGreaterThanOrEqual(400);
       expect(await columnOf(email, 'email')).toBe(email);

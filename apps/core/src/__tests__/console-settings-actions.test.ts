@@ -63,10 +63,10 @@ const failure = async (run: () => Promise<unknown>) => {
 };
 
 const SMTP = {
-  host: 'mail.example.com',
+  host: 'mail.sovereign.local',
   port: '587',
   user: 'mailer',
-  from: 'noreply@example.com',
+  from: 'noreply@sovereign.local',
   password: 'hunter2-hunter2',
 };
 
@@ -197,7 +197,7 @@ describe('the mail settings', () => {
       message: 'The email settings are saved.',
     });
     const rows = await saved();
-    expect(rows['smtp.host']?.value).toBe('mail.example.com');
+    expect(rows['smtp.host']?.value).toBe('mail.sovereign.local');
     expect(rows['smtp.port']?.value).toBe('587');
     expect(Number(rows['smtp.password']?.encrypted)).toBe(1);
     expect(String(rows['smtp.password']?.value)).not.toContain(SMTP.password);

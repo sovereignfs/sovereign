@@ -71,18 +71,21 @@ describe('proxy', () => {
     expect(
       insecure.proxy(signedIn('http://localhost:3000/')).headers.get('content-security-policy'),
     ).not.toContain('upgrade-insecure-requests');
-    const secure = await loadProxy('https://core.example.com');
+    const secure = await loadProxy('https://core.sovereign.local');
     expect(
-      secure.proxy(signedIn('https://core.example.com/')).headers.get('content-security-policy'),
+      secure
+        .proxy(signedIn('https://core.sovereign.local/'))
+        .headers.get('content-security-policy'),
     ).toContain('upgrade-insecure-requests');
   });
 
   it('lets only the launcher show pictures from other addresses', async () => {
-    const { proxy } = await loadProxy('https://core.example.com');
+    const { proxy } = await loadProxy('https://core.sovereign.local');
     const imgSrc = (path: string) =>
       /img-src ([^;]*)/.exec(
-        proxy(signedIn(`https://core.example.com${path}`)).headers.get('content-security-policy') ??
-          '',
+        proxy(signedIn(`https://core.sovereign.local${path}`)).headers.get(
+          'content-security-policy',
+        ) ?? '',
       )?.[1];
     expect(imgSrc('/')).toBe("'self' blob: data: https:");
     for (const path of [
@@ -133,10 +136,10 @@ describe('proxy', () => {
       expect(
         insecure.proxy(signedIn('http://localhost:3000/')).headers.get('strict-transport-security'),
       ).toBeNull();
-      const secure = await loadProxy('https://core.example.com');
+      const secure = await loadProxy('https://core.sovereign.local');
       for (const request of [
-        signedIn('https://core.example.com/'),
-        new NextRequest('https://core.example.com/profile'),
+        signedIn('https://core.sovereign.local/'),
+        new NextRequest('https://core.sovereign.local/profile'),
       ]) {
         expect(secure.proxy(request).headers.get('strict-transport-security')).toBe(
           'max-age=31536000',
@@ -262,14 +265,14 @@ describe('proxy', () => {
       ['over http', 'http://localhost:3000', undefined, 'better-auth.session_token'],
       [
         'over https on its own host',
-        'https://core.example.com',
+        'https://core.sovereign.local',
         undefined,
         '__Host-better-auth.session_token',
       ],
       [
         'over https with a cookie domain',
-        'https://core.example.com',
-        'example.com',
+        'https://core.sovereign.local',
+        'sovereign.local',
         '__Secure-better-auth.session_token',
       ],
     ])(
@@ -280,7 +283,7 @@ describe('proxy', () => {
     );
 
     it('reads SV_URL as the configuration does, so a differently written one still finds the cookie', async () => {
-      for (const url of ['HTTPS://Core.Example.com', 'HTTPS://core.example.com:8443']) {
+      for (const url of ['HTTPS://Core.Sovereign.local', 'HTTPS://core.sovereign.local:8443']) {
         expect(await through(url, undefined, '__Host-better-auth.session_token'), url).toBe(200);
         expect(await through(url, undefined, 'better-auth.session_token'), url).toBe(303);
       }
@@ -288,10 +291,10 @@ describe('proxy', () => {
 
     it('treats a blank cookie domain as unset, as the configuration does', async () => {
       expect(
-        await through('https://core.example.com', '', '__Host-better-auth.session_token'),
+        await through('https://core.sovereign.local', '', '__Host-better-auth.session_token'),
       ).toBe(200);
       expect(
-        await through('https://core.example.com', '  ', '__Secure-better-auth.session_token'),
+        await through('https://core.sovereign.local', '  ', '__Secure-better-auth.session_token'),
       ).toBe(303);
     });
 
@@ -304,14 +307,14 @@ describe('proxy', () => {
       ],
       [
         'over https on its own host',
-        'https://core.example.com',
+        'https://core.sovereign.local',
         undefined,
         ['better-auth.session_token', '__Secure-better-auth.session_token'],
       ],
       [
         'over https with a cookie domain',
-        'https://core.example.com',
-        'example.com',
+        'https://core.sovereign.local',
+        'sovereign.local',
         ['better-auth.session_token', '__Host-better-auth.session_token'],
       ],
     ])('turns away a session cookie under another name %s', async (_, url, domain, names) => {

@@ -150,7 +150,7 @@ export const settingsFor = (core: {
   url: string;
   credentials: { clientId: string; clientSecret: string };
 }) => ({
-  appUrl: 'https://notes.example.test',
+  appUrl: 'https://notes.sovereign.local',
   coreUrl: core.url,
   clientId: core.credentials.clientId,
   clientSecret: core.credentials.clientSecret,

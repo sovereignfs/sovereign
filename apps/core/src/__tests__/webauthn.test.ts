@@ -23,13 +23,13 @@ describe('the test CBOR', () => {
 });
 
 describe('the virtual authenticator', () => {
-  const origin = 'https://core.example.com';
+  const origin = 'https://core.sovereign.local';
 
   it('answers a registration with a credential id and an attestation object', () => {
     const device = new VirtualAuthenticator({ origin });
     const answer = device.register({
       challenge: 'abc',
-      rp: { name: 'Core', id: 'core.example.com' },
+      rp: { name: 'Core', id: 'core.sovereign.local' },
     });
     expect(answer.id).toBe(device.id);
     expect(
@@ -43,7 +43,7 @@ describe('the virtual authenticator', () => {
 
   it('counts up with every sign-in, and a tampered answer differs only in its signature', () => {
     const device = new VirtualAuthenticator({ origin });
-    const options = { challenge: 'abc', rpId: 'core.example.com' };
+    const options = { challenge: 'abc', rpId: 'core.sovereign.local' };
     const first = device.authenticate(options);
     const second = device.authenticate(options);
     expect(device.counter).toBe(2);

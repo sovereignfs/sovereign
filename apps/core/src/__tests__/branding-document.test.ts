@@ -9,10 +9,10 @@ import { png } from './image-fixtures';
 
 describe('the branding document', () => {
   it('is plain when nothing is set, and matches the contract', () => {
-    const document = brandingDocument(PLAIN_IDENTITY, 'https://core.example.com');
+    const document = brandingDocument(PLAIN_IDENTITY, 'https://core.sovereign.local');
     expect(document).toEqual({
       name: 'Sovereign',
-      url: 'https://core.example.com',
+      url: 'https://core.sovereign.local',
       logo: { light: null, dark: null },
       favicon: null,
       api: { versions: ['v1'], capabilities: ['directory', 'notifications', 'activity'] },
@@ -21,16 +21,16 @@ describe('the branding document', () => {
   });
 
   it('says what this core serves, which an app reads to tell a missing capability from a failure', () => {
-    const { api } = brandingDocument(PLAIN_IDENTITY, 'https://core.example.com');
+    const { api } = brandingDocument(PLAIN_IDENTITY, 'https://core.sovereign.local');
     expect(api).toEqual(SERVED_API);
     // Every capability named is one the contract describes, so the list cannot promise what is not there.
     expect(api.capabilities).toEqual(['directory', 'notifications', 'activity']);
   });
 
   it('lists email only while the instance can send mail, so an app can tell no mail from a failure', () => {
-    const none = brandingDocument(PLAIN_IDENTITY, 'https://core.example.com', { email: false });
+    const none = brandingDocument(PLAIN_IDENTITY, 'https://core.sovereign.local', { email: false });
     expect(none.api?.capabilities).not.toContain('email');
-    const mail = brandingDocument(PLAIN_IDENTITY, 'https://core.example.com', { email: true });
+    const mail = brandingDocument(PLAIN_IDENTITY, 'https://core.sovereign.local', { email: true });
     expect(mail.api?.capabilities).toEqual(['directory', 'notifications', 'activity', 'email']);
     expectMatchesContract('getInstanceBranding', 200, mail);
   });
@@ -44,19 +44,19 @@ describe('the branding document', () => {
         logoDark: '/api/branding/logo-dark?v=def',
         favicon: '/api/branding/favicon?v=123',
       },
-      'https://core.example.com',
+      'https://core.sovereign.local',
     );
     expect(document.logo).toEqual({
-      light: 'https://core.example.com/api/branding/logo-light?v=abc',
-      dark: 'https://core.example.com/api/branding/logo-dark?v=def',
+      light: 'https://core.sovereign.local/api/branding/logo-light?v=abc',
+      dark: 'https://core.sovereign.local/api/branding/logo-dark?v=def',
     });
-    expect(document.favicon).toBe('https://core.example.com/api/branding/favicon?v=123');
+    expect(document.favicon).toBe('https://core.sovereign.local/api/branding/favicon?v=123');
     expectMatchesContract('getInstanceBranding', 200, document);
   });
 
   it('gives the instance’s own origin as its address, whatever path the configured address had', () => {
-    expect(brandingDocument(PLAIN_IDENTITY, 'https://core.example.com/ignored').url).toBe(
-      'https://core.example.com',
+    expect(brandingDocument(PLAIN_IDENTITY, 'https://core.sovereign.local/ignored').url).toBe(
+      'https://core.sovereign.local',
     );
   });
 });

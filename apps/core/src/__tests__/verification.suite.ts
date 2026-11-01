@@ -45,8 +45,8 @@ const SESSION_COOKIE = 'better-auth.session_token';
 const HOUR = 60 * 60 * 1000;
 const NEW_PASSWORD = 'a different long passphrase';
 const SMTP = {
-  SV_SMTP_HOST: 'smtp.example.com',
-  SV_SMTP_FROM: 'Sovereign <no-reply@core.example.com>',
+  SV_SMTP_HOST: 'smtp.sovereign.local',
+  SV_SMTP_FROM: 'Sovereign <no-reply@core.sovereign.local>',
 };
 
 /** The first link in an email's text part. */
@@ -283,7 +283,12 @@ export function verificationSuite(createDatabase: () => Promise<TestDatabase>): 
       await settled();
       const forged = await call(auth, 'POST', '/sign-up/email', {
         headers: { host: 'evil.example', 'x-forwarded-host': 'evil.example' },
-        body: { name: 'Eve', email: 'forged@example.com', password: PASSWORD, agreedToTerms: true },
+        body: {
+          name: 'Eve',
+          email: 'forged@sovereign.local',
+          password: PASSWORD,
+          agreedToTerms: true,
+        },
       });
       await settled();
       expect(forged.status).toBe(200);

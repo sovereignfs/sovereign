@@ -104,8 +104,8 @@ describe('the matrix editor', () => {
 
 describe('the ownership form', () => {
   const targets = [
-    { id: 'a1', name: 'Ada Admin', email: 'ada@example.com' },
-    { id: 'a2', name: 'Bo Admin', email: 'bo@example.com' },
+    { id: 'a1', name: 'Ada Admin', email: 'ada@sovereign.local' },
+    { id: 'a2', name: 'Bo Admin', email: 'bo@sovereign.local' },
   ];
   const fill = (id = 'a1', password = 'my-password') => {
     fireEvent.change(screen.getByLabelText(/New owner/), { target: { value: id } });

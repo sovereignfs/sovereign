@@ -70,22 +70,22 @@ Fill in the launcher entry if people should find the app on core's home page.
 
 Most apps need three values:
 
-| Setting       | Value                                                              |
-| ------------- | ------------------------------------------------------------------ |
-| Issuer        | Core's address, `SV_URL`, with no path: `https://core.example.com` |
-| Client ID     | From the Console                                                   |
-| Client secret | From the Console. A public app has none                            |
+| Setting       | Value                                                                  |
+| ------------- | ---------------------------------------------------------------------- |
+| Issuer        | Core's address, `SV_URL`, with no path: `https://core.sovereign.local` |
+| Client ID     | From the Console                                                       |
+| Client secret | From the Console. A public app has none                                |
 
 An app that asks for the discovery address, or for its endpoints one at a time, can find them all here:
 
 ```text
-https://core.example.com/.well-known/openid-configuration
+https://core.sovereign.local/.well-known/openid-configuration
 ```
 
 Check the address answers before anything else:
 
 ```bash
-curl -s https://core.example.com/.well-known/openid-configuration
+curl -s https://core.sovereign.local/.well-known/openid-configuration
 ```
 
 The endpoints are under `/api/auth/oauth2/`, but use discovery rather than typing them in. Only the issuer is a promise.

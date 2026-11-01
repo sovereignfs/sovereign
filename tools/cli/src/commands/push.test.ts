@@ -94,7 +94,7 @@ describe('sv push', () => {
   it('refuses a suite.yml that is not valid, and one whose lock is out of date, saying what is wrong', async () => {
     await ready();
     const text = read('suite.yml');
-    write('suite.yml', text.replace('domain: sovereign.example.com', 'domain: NO'));
+    write('suite.yml', text.replace('domain: sovereign.local', 'domain: NO'));
     const bad = await sv(world, 'push');
     expect(bad.code).toBe(2);
     expect(bad.text).toContain('suite.yml is not valid');

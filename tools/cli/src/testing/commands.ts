@@ -21,7 +21,7 @@ export async function setUpWorld(world: World, ...extra: string[]) {
     world,
     'setup',
     '--domain',
-    'sovereign.example.com',
+    'sovereign.local',
     '--host',
     '203.0.113.7',
     ...extra,

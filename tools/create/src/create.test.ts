@@ -27,9 +27,9 @@ afterEach(() => {
 
 const git = {
   GIT_AUTHOR_NAME: 'T',
-  GIT_AUTHOR_EMAIL: 't@example.test',
+  GIT_AUTHOR_EMAIL: 't@sovereign.local',
   GIT_COMMITTER_NAME: 'T',
-  GIT_COMMITTER_EMAIL: 't@example.test',
+  GIT_COMMITTER_EMAIL: 't@sovereign.local',
 };
 Object.assign(process.env, git);
 
@@ -68,8 +68,8 @@ describe('what npm create was asked', () => {
       dir: 'my-instance',
       remote: undefined,
     });
-    expect(read(['instance', 'x', '--remote', 'git@example.com:me/x.git']).remote).toBe(
-      'git@example.com:me/x.git',
+    expect(read(['instance', 'x', '--remote', 'git@sovereign.local:me/x.git']).remote).toBe(
+      'git@sovereign.local:me/x.git',
     );
     expect(read(['instance', 'x', '--remote=u']).remote).toBe('u');
     expect(read(['app', 'a']).kind).toBe('app');
@@ -131,13 +131,13 @@ describe('making an instance repository', () => {
   });
 
   it('adds the remote as origin when given one, and still does not push', async () => {
-    const made = await make('x', toolchain(), 'git@example.com:me/x.git');
+    const made = await make('x', toolchain(), 'git@sovereign.local:me/x.git');
     expect(
       execFileSync('git', ['remote', 'get-url', 'origin'], {
         cwd: made.dir,
         encoding: 'utf8',
       }).trim(),
-    ).toBe('git@example.com:me/x.git');
+    ).toBe('git@sovereign.local:me/x.git');
     expect(made.calls.some((call) => call.startsWith('git push'))).toBe(false);
   });
 

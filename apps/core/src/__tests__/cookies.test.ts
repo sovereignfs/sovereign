@@ -16,11 +16,11 @@ describe('which prefix a cookie has', () => {
     ['over https on its own host', { secure: true, domain: undefined }, '__Host-'],
     [
       'over https with a cookie domain, shared with subdomains',
-      { secure: true, domain: 'example.com' },
+      { secure: true, domain: 'sovereign.local' },
       '__Secure-',
     ],
     ['over http', { secure: false, domain: undefined }, ''],
-    ['over http with a cookie domain', { secure: false, domain: 'example.com' }, ''],
+    ['over http with a cookie domain', { secure: false, domain: 'sovereign.local' }, ''],
   ] as const)('%s', (_, policy, prefix) => {
     expect(namePrefix(policy)).toBe(prefix);
     expect(sessionCookieName(policy)).toBe(`${prefix}better-auth.session_token`);
@@ -38,9 +38,9 @@ describe('what better-auth is told', () => {
   });
 
   it.each([
-    [{ secure: true, domain: 'example.com' }, true],
+    [{ secure: true, domain: 'sovereign.local' }, true],
     [{ secure: false, domain: undefined }, false],
-    [{ secure: false, domain: 'example.com' }, false],
+    [{ secure: false, domain: 'sovereign.local' }, false],
   ] as const)('leaves its own prefix to it for %j', (policy, secure) => {
     expect(advancedCookieOptions(policy)).toEqual({ useSecureCookies: secure });
   });
@@ -56,21 +56,21 @@ it('clears the session cache cookie under every name it can have', () => {
 
 describe('removing a cookie', () => {
   it('is Secure for a prefixed name, and never gives a __Host- cookie a domain', () => {
-    expect(removalAttributes('__Host-better-auth.x', 'example.com')).toEqual({
+    expect(removalAttributes('__Host-better-auth.x', 'sovereign.local')).toEqual({
       maxAge: 0,
       path: '/',
       secure: true,
     });
-    expect(removalAttributes('__Secure-better-auth.x', 'example.com')).toEqual({
+    expect(removalAttributes('__Secure-better-auth.x', 'sovereign.local')).toEqual({
       maxAge: 0,
       path: '/',
       secure: true,
-      domain: 'example.com',
+      domain: 'sovereign.local',
     });
-    expect(removalAttributes('better-auth.x', 'example.com')).toEqual({
+    expect(removalAttributes('better-auth.x', 'sovereign.local')).toEqual({
       maxAge: 0,
       path: '/',
-      domain: 'example.com',
+      domain: 'sovereign.local',
     });
     expect(removalAttributes('better-auth.x', undefined)).toEqual({ maxAge: 0, path: '/' });
   });

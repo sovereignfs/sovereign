@@ -12,7 +12,7 @@ const { AuthorizationError, authorizationResponse, requireCapability, requireSes
   await import('../auth/authorize');
 
 const signedInAs = (role: unknown) =>
-  getSession.mockResolvedValue({ user: { id: 'u1', role, email: 'a@example.com' } });
+  getSession.mockResolvedValue({ user: { id: 'u1', role, email: 'a@sovereign.local' } });
 
 beforeEach(() => {
   getSession.mockReset().mockResolvedValue(null);

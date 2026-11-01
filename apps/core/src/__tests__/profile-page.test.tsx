@@ -21,20 +21,20 @@ describe('the profile page', () => {
       user: {
         id: 'u1',
         name: 'Ada Lovelace',
-        email: 'ada@example.com',
+        email: 'ada@sovereign.local',
         image: '/api/avatars/u1?v=abc',
       },
     });
     const html = renderToStaticMarkup(await ProfilePage());
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
-    expect(html).toContain('ada@example.com');
+    expect(html).toContain('ada@sovereign.local');
     expect(html).toContain('value="Ada Lovelace"');
     expect(html).toContain('src="/api/avatars/u1?v=abc"');
   });
 
   it('is drawn with the design system and carries no inline styling or scripts of its own', async () => {
     getSession.mockResolvedValue({
-      user: { id: 'u1', name: 'Ada', email: 'a@example.com', image: null },
+      user: { id: 'u1', name: 'Ada', email: 'a@sovereign.local', image: null },
     });
     expect(renderToStaticMarkup(await ProfilePage())).not.toMatch(/<script|<style|style="/);
   });

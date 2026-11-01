@@ -15,7 +15,7 @@ export const PASSWORD = 'Acceptance-Test-9Qx';
 
 export const person = (name: string) => ({
   name,
-  email: `${name.toLowerCase()}@example.test`,
+  email: `${name.toLowerCase()}@sovereign.local`,
   password: PASSWORD,
 });
 

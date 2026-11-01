@@ -102,7 +102,7 @@ describe('sv secret set', () => {
       '--name',
       'W',
       '--redirect',
-      'https://w.example.com/cb',
+      'https://w.sovereign.local/cb',
     );
     expect((await sv(world, 'secret', 'set', 'WIKI_X', '--app', 'wiki')).text).toContain(
       'external app',

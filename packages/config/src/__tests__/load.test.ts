@@ -29,7 +29,7 @@ const variables = {
 
 const core = defineConfig({ prefix: 'SV', variables });
 const GOOD = {
-  SV_URL: 'https://core.example.com',
+  SV_URL: 'https://core.sovereign.local',
   SV_AUTH_SECRET: SECRET,
   SV_DB_DIALECT: 'sqlite',
 };
@@ -47,7 +47,7 @@ const failure = (fn: () => unknown): ConfigError => {
 describe('a valid environment', () => {
   it('loads typed values, with defaults for what is unset', () => {
     const config = core.load(GOOD);
-    expect(config.url).toBe('https://core.example.com');
+    expect(config.url).toBe('https://core.sovereign.local');
     expect(config.inviteOnly).toBe(false);
     expect(config.dialect).toBe('sqlite');
     expect(config.poolMax).toBe(5);
@@ -244,11 +244,11 @@ describe('the prefix', () => {
     const app = defineConfig({ prefix: 'NOTES', variables });
     expect(
       app.load({
-        NOTES_URL: 'https://notes.example.com',
+        NOTES_URL: 'https://notes.sovereign.local',
         NOTES_AUTH_SECRET: SECRET,
         NOTES_DB_DIALECT: 'postgres',
       }).url,
-    ).toBe('https://notes.example.com');
+    ).toBe('https://notes.sovereign.local');
     expect(failure(() => app.load(GOOD)).problems.map((p) => p.variable)).toContain('NOTES_URL');
   });
 

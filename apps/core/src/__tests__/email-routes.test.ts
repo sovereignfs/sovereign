@@ -38,8 +38,8 @@ beforeAll(async () => {
   vi.stubEnv('SV_AUTH_SECRET', 'a-secret-that-is-long-enough-to-pass-validation');
   vi.stubEnv('SV_DB_DIALECT', 'sqlite');
   vi.stubEnv('SV_SQLITE_URL', `file:${path.join(folder, 'core.db')}`);
-  vi.stubEnv('SV_SMTP_HOST', 'smtp.example.test');
-  vi.stubEnv('SV_SMTP_FROM', 'core@example.test');
+  vi.stubEnv('SV_SMTP_HOST', 'smtp.sovereign.local');
+  vi.stubEnv('SV_SMTP_FROM', 'core@sovereign.local');
   vi.spyOn(process, 'cwd').mockReturnValue(APP_ROOT);
   vi.spyOn(console, 'log').mockImplementation(() => undefined);
   vi.spyOn(console, 'warn').mockImplementation(() => undefined);
@@ -59,12 +59,12 @@ afterAll(async () => {
 const user = (id: string, verified = 1) =>
   db.run(
     `insert into users (id, name, email, email_verified, role, created_at, updated_at) values (?, ?, ?, ?, 'platform:user', 1, 1)`,
-    [id, id, `${id}@example.com`, verified],
+    [id, id, `${id}@sovereign.local`, verified],
   );
 const app = (id: string, name: string) =>
   db.run(
     `insert into oauth_clients (id, client_id, name, redirect_uris, scopes, created_at, updated_at) values (?, ?, ?, ?, '[]', 1, 1)`,
-    [id, id, name, JSON.stringify(['https://reminders.example.test/cb'])],
+    [id, id, name, JSON.stringify(['https://reminders.sovereign.local/cb'])],
   );
 const consent = (userId: string, clientId: string) =>
   db.run(
@@ -115,8 +115,8 @@ describe('sending', () => {
     expect(Object.keys(body)).toEqual(['id']);
     const [mail] = await delivered();
     expect(mail).toMatchObject({
-      to: ['ada@example.com'],
-      from: 'core@example.test',
+      to: ['ada@sovereign.local'],
+      from: 'core@sovereign.local',
       subject: 'Reminders: Your task is due',
     });
     expect(mail?.text).toContain('Water the plants.');
@@ -140,14 +140,14 @@ describe('sending', () => {
   it.each([
     ['a body that is not JSON', undefined, 'not json'],
     ['a list', undefined, '[]'],
-    ['a field it does not have', { ...valid, from: 'evil@example.test' }, undefined],
-    ['a reply address', { ...valid, replyTo: 'evil@example.test' }, undefined],
+    ['a field it does not have', { ...valid, from: 'evil@sovereign.local' }, undefined],
+    ['a reply address', { ...valid, replyTo: 'evil@sovereign.local' }, undefined],
     ['HTML it should not have', { ...valid, html: '<b>x</b>' }, undefined],
     ['no subject', { to: 'ada', body: 'x' }, undefined],
     ['no body', { to: 'ada', subject: 'x' }, undefined],
-    ['a subject on two lines', { ...valid, subject: 'a\nBcc: evil@example.test' }, undefined],
+    ['a subject on two lines', { ...valid, subject: 'a\nBcc: evil@sovereign.local' }, undefined],
     ['a body that is too long', { ...valid, body: 'x'.repeat(5001) }, undefined],
-    ['a link to another site', { ...valid, link: 'https://evil.example.test/' }, undefined],
+    ['a link to another site', { ...valid, link: 'https://evil.sovereign.local/' }, undefined],
   ])('refuses %s with a 400 that matches the contract', async (_name, body, raw) => {
     const reply = await send(body, raw);
     expect(reply.status).toBe(400);

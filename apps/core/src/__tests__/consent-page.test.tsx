@@ -25,7 +25,7 @@ const { default: ConsentPage } = await import('../../app/consent/page');
 
 const signed = {
   client_id: 'abc',
-  redirect_uri: 'https://rp.example.com/cb',
+  redirect_uri: 'https://rp.sovereign.local/cb',
   scope: 'openid profile roles',
   state: 's',
   ba_param: ['client_id', 'redirect_uri', 'scope', 'state', 'ba_param'],
@@ -33,7 +33,7 @@ const signed = {
 };
 
 beforeEach(() => {
-  getSession.mockReset().mockResolvedValue({ user: { id: 'u1', email: 'ada@example.com' } });
+  getSession.mockReset().mockResolvedValue({ user: { id: 'u1', email: 'ada@sovereign.local' } });
   verify.mockReset().mockResolvedValue(true);
   findOne.mockReset().mockResolvedValue({ name: 'Notes', skipConsent: false });
 });
@@ -51,8 +51,8 @@ describe('the consent page', () => {
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
     expect(html).toContain('Allow access to your account?');
     expect(html).toContain('Notes');
-    expect(html).toContain('ada@example.com');
-    expect(html).toContain('rp.example.com');
+    expect(html).toContain('ada@sovereign.local');
+    expect(html).toContain('rp.sovereign.local');
   });
 
   it('checks the provider’s signature on exactly what was signed, with the instance’s own secret', async () => {

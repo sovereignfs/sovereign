@@ -88,8 +88,8 @@ export function directorySuite(createDatabase: () => Promise<TestDatabase>): voi
   async function instance() {
     const { auth } = makeAuthWithTasks(db);
     const owner = await signUp(auth, { name: 'Olive Owner' });
-    const ada = await signUp(auth, { name: 'Ada Lovelace', email: 'ada@example.com' });
-    const bo = await signUp(auth, { name: 'Bo Barnes', email: 'bo@example.com' });
+    const ada = await signUp(auth, { name: 'Ada Lovelace', email: 'ada@sovereign.local' });
+    const bo = await signUp(auth, { name: 'Bo Barnes', email: 'bo@sovereign.local' });
     const states = new AccountStates(db, { log: () => undefined });
     revokeOnDeactivation(states, () => Promise.resolve(auth));
     const manager = new AccountManager(db, states, { log: () => undefined });
@@ -291,7 +291,7 @@ export function directorySuite(createDatabase: () => Promise<TestDatabase>): voi
       expect(
         await refused(() =>
           authenticate(
-            { ...ctx.deps(), issuer: 'https://other.example.com' },
+            { ...ctx.deps(), issuer: 'https://other.sovereign.local' },
             withToken(token),
             'directory',
           ),
@@ -300,7 +300,7 @@ export function directorySuite(createDatabase: () => Promise<TestDatabase>): voi
       expect(
         await refused(() =>
           authenticate(
-            { ...ctx.deps(), audience: 'https://other.example.com/api/v1' },
+            { ...ctx.deps(), audience: 'https://other.sovereign.local/api/v1' },
             withToken(token),
             'directory',
           ),
@@ -544,13 +544,13 @@ export function directorySuite(createDatabase: () => Promise<TestDatabase>): voi
       };
       return {
         ctx,
-        grace: await make('Grace Hopper', 'grace@example.com'),
-        gracie: await make('Gracie Allen', 'gracie@example.com', {
+        grace: await make('Grace Hopper', 'grace@sovereign.local'),
+        gracie: await make('Gracie Allen', 'gracie@sovereign.local', {
           image: '/api/avatars/x?v=1234',
         }),
-        agrace: await make('Agrace Lee', 'agrace@example.com'),
-        gone: await make('Grace Gone', 'gone@example.com', { deactivated: true }),
-        pct: await make('100% Pure_Name', 'pure@example.com'),
+        agrace: await make('Agrace Lee', 'agrace@sovereign.local'),
+        gone: await make('Grace Gone', 'gone@sovereign.local', { deactivated: true }),
+        pct: await make('100% Pure_Name', 'pure@sovereign.local'),
       };
     }
 
@@ -565,7 +565,7 @@ export function directorySuite(createDatabase: () => Promise<TestDatabase>): voi
       await people();
       const result = await searchUsers(db, 'grace hopper', 10, ORIGIN);
       expect(result.map((user) => user.name)).toEqual(['Grace Hopper']);
-      await signUp((await instance()).auth, { name: 'Grace', email: 'plain@example.com' });
+      await signUp((await instance()).auth, { name: 'Grace', email: 'plain@sovereign.local' });
       const both = await searchUsers(db, 'grace', 10, ORIGIN);
       expect(both[0]?.name).toBe('Grace');
     });
@@ -590,7 +590,7 @@ export function directorySuite(createDatabase: () => Promise<TestDatabase>): voi
 
     it('never match an email address, whole or in part', async () => {
       await people();
-      for (const text of ['example.com', 'grace@example.com', '@example', 'grace@']) {
+      for (const text of ['sovereign.local', 'grace@sovereign.local', '@example', 'grace@']) {
         expect(await searchUsers(db, text, 10, ORIGIN), text).toEqual([]);
       }
     });
@@ -625,8 +625,10 @@ export function directorySuite(createDatabase: () => Promise<TestDatabase>): voi
 
     it('are found by the whole of an email address, whatever the case, and nobody else', async () => {
       const found = await people();
-      expect((await findUserByEmail(db, 'Grace@Example.COM', ORIGIN))?.sub).toBe(found.grace);
-      expect((await findUserByEmail(db, '  gracie@example.com ', ORIGIN))?.sub).toBe(found.gracie);
+      expect((await findUserByEmail(db, 'Grace@Sovereign.LOCAL', ORIGIN))?.sub).toBe(found.grace);
+      expect((await findUserByEmail(db, '  gracie@sovereign.local ', ORIGIN))?.sub).toBe(
+        found.gracie,
+      );
     });
 
     it('are not found by part of an address, a wildcard, or an address that is not theirs', async () => {
@@ -634,12 +636,12 @@ export function directorySuite(createDatabase: () => Promise<TestDatabase>): voi
       for (const text of [
         'grace',
         'grace@',
-        '@example.com',
-        'example.com',
+        '@sovereign.local',
+        'sovereign.local',
         '%',
         'grace@example.%',
-        'grac%@example.com',
-        '_race@example.com',
+        'grac%@sovereign.local',
+        '_race@sovereign.local',
       ]) {
         expect(await findUserByEmail(db, text, ORIGIN), text).toBeUndefined();
       }
@@ -647,7 +649,7 @@ export function directorySuite(createDatabase: () => Promise<TestDatabase>): voi
 
     it('are not found by email once the account is deactivated', async () => {
       await people();
-      expect(await findUserByEmail(db, 'gone@example.com', ORIGIN)).toBeUndefined();
+      expect(await findUserByEmail(db, 'gone@sovereign.local', ORIGIN)).toBeUndefined();
     });
   });
 }

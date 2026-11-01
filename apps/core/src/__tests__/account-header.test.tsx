@@ -32,7 +32,7 @@ const { AccountHeader } = await import('../../app/account-header');
 
 const as = (role: unknown, extra: Record<string, unknown> = {}) =>
   getSession.mockResolvedValue({
-    user: { id: 'u1', name: 'Ada Lovelace', email: 'ada@example.com', role, ...extra },
+    user: { id: 'u1', name: 'Ada Lovelace', email: 'ada@sovereign.local', role, ...extra },
   });
 const draw = async () => render(await AccountHeader({}));
 const openMenu = () => fireEvent.click(screen.getByRole('button', { name: 'Your account' }));
@@ -112,7 +112,7 @@ describe('the header every signed-in page has', () => {
     await draw();
     openMenu();
     expect(await screen.findByText('Ada Lovelace')).toBeTruthy();
-    expect(screen.getByText('ada@example.com')).toBeTruthy();
+    expect(screen.getByText('ada@sovereign.local')).toBeTruthy();
     expect(menuLinks()).toEqual([
       ['Account', '/profile'],
       ['Sign out', null],

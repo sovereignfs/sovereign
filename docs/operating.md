@@ -97,7 +97,7 @@ An app is **hosted** (it runs on your machine, from an image) or **external** (i
 ./sv app add notes --image ghcr.io/example/notes:1.2.0
 
 # An external app, with the addresses it signs in at:
-./sv app add wiki --external --name "Team wiki" --redirect https://wiki.example.com/auth/callback
+./sv app add wiki --external --name "Team wiki" --redirect https://wiki.sovereign.local/auth/callback
 ```
 
 For a hosted app `sv` reads the manifest from the image without pulling it, and shows you the scopes it asks for before it writes

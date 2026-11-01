@@ -58,10 +58,12 @@ describe('every method of the capabilities (sdk §8) is checked against the cont
   });
 
   it('directory.findUserByEmail is findDirectoryUserByEmail', async () => {
-    await expect(directory.findUserByEmail({ email: 'ada@example.test' })).rejects.toMatchObject({
-      status: 404,
-      code: 'not_found',
-    });
+    await expect(directory.findUserByEmail({ email: 'ada@sovereign.local' })).rejects.toMatchObject(
+      {
+        status: 404,
+        code: 'not_found',
+      },
+    );
   });
 
   it('instance.getBranding is getInstanceBranding', async () => {

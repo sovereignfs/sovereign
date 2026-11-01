@@ -103,14 +103,14 @@ describe('the ownership page', () => {
   it('offers the admins other than the owner, asked for the owner’s own id', async () => {
     as(ROLE_OWNER, 'owner-1');
     listTransferTargets.mockResolvedValue([
-      { id: 'a1', name: 'Ada Admin', email: 'ada@example.com' },
-      { id: 'a2', name: 'Bo Admin', email: 'bo@example.com' },
+      { id: 'a1', name: 'Ada Admin', email: 'ada@sovereign.local' },
+      { id: 'a2', name: 'Bo Admin', email: 'bo@sovereign.local' },
     ]);
     const html = renderToStaticMarkup(await OwnershipPage());
     expect(listTransferTargets).toHaveBeenCalledWith(expect.anything(), 'owner-1');
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
-    expect(html).toContain('Ada Admin (ada@example.com)');
-    expect(html).toContain('Bo Admin (bo@example.com)');
+    expect(html).toContain('Ada Admin (ada@sovereign.local)');
+    expect(html).toContain('Bo Admin (bo@sovereign.local)');
     expect(html).toContain('Hand over ownership…');
   });
 

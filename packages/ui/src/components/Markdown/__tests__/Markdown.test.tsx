@@ -106,9 +106,9 @@ describe('Markdown — ordered lists and fenced code', () => {
 
 describe('Markdown — link hrefs', () => {
   it('renders an http(s) link as a real anchor', () => {
-    const { container } = render(<Markdown content={'[docs](https://example.com/docs)'} />);
+    const { container } = render(<Markdown content={'[docs](https://sovereign.local/docs)'} />);
     const link = container.querySelector('a');
-    expect(link?.getAttribute('href')).toBe('https://example.com/docs');
+    expect(link?.getAttribute('href')).toBe('https://sovereign.local/docs');
     expect(link?.textContent).toBe('docs');
   });
 
@@ -118,8 +118,8 @@ describe('Markdown — link hrefs', () => {
   });
 
   it('renders a mailto: link as a real anchor', () => {
-    const { container } = render(<Markdown content={'[email](mailto:a@example.com)'} />);
-    expect(container.querySelector('a')?.getAttribute('href')).toBe('mailto:a@example.com');
+    const { container } = render(<Markdown content={'[email](mailto:a@sovereign.local)'} />);
+    expect(container.querySelector('a')?.getAttribute('href')).toBe('mailto:a@sovereign.local');
   });
 
   it('neutralizes a javascript: URL instead of making it clickable', () => {

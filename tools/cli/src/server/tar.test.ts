@@ -38,9 +38,9 @@ describe('reading an archive', () => {
         env: {
           ...process.env,
           GIT_AUTHOR_NAME: 'T',
-          GIT_AUTHOR_EMAIL: 't@example.test',
+          GIT_AUTHOR_EMAIL: 't@sovereign.local',
           GIT_COMMITTER_NAME: 'T',
-          GIT_COMMITTER_EMAIL: 't@example.test',
+          GIT_COMMITTER_EMAIL: 't@sovereign.local',
         },
       });
     git('init', '--initial-branch=main');

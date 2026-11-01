@@ -3,11 +3,11 @@ import { isEmailAddress, isSender } from '../address';
 
 describe('isEmailAddress', () => {
   it.each([
-    'a@example.com',
+    'a@sovereign.local',
     'first.last@example.co.uk',
     'user+tag@sub.example.org',
-    "o'brien@example.com",
-    'x@a-b.example.com',
+    "o'brien@sovereign.local",
+    'x@a-b.sovereign.local',
   ])('accepts %s', (address) => {
     expect(isEmailAddress(address)).toBe(true);
   });
@@ -15,24 +15,24 @@ describe('isEmailAddress', () => {
   it.each([
     '',
     'plain',
-    '@example.com',
+    '@sovereign.local',
     'a@',
     'a@example',
-    'a b@example.com',
+    'a b@sovereign.local',
     'a@exa mple.com',
-    'a@@example.com',
-    '.a@example.com',
-    'a.@example.com',
-    'a..b@example.com',
+    'a@@sovereign.local',
+    '.a@sovereign.local',
+    'a.@sovereign.local',
+    'a..b@sovereign.local',
     'a@-example.com',
     'a@example-.com',
     'a@example..com',
-    'a@example.com\r\nBcc: victim@example.com',
-    'a@example.com, b@example.com',
-    'Name <a@example.com>',
-    '"quoted"@example.com',
+    'a@sovereign.local\r\nBcc: victim@sovereign.local',
+    'a@sovereign.local, b@sovereign.local',
+    'Name <a@sovereign.local>',
+    '"quoted"@sovereign.local',
     'a@exämple.com',
-    `${'a'.repeat(65)}@example.com`,
+    `${'a'.repeat(65)}@sovereign.local`,
     `a@${'b'.repeat(64)}.com`,
     `a@${'b.'.repeat(130)}com`,
   ])('refuses %j', (address) => {
@@ -49,8 +49,8 @@ describe('isEmailAddress', () => {
 
 describe('isSender', () => {
   it.each([
-    'no-reply@example.com',
-    'Sovereign <no-reply@example.com>',
+    'no-reply@sovereign.local',
+    'Sovereign <no-reply@sovereign.local>',
     'Acme Identity <id@acme.test>',
   ])('accepts %s', (sender) => {
     expect(isSender(sender)).toBe(true);
@@ -59,14 +59,14 @@ describe('isSender', () => {
   it.each([
     '',
     'Name <>',
-    'Name <a@example.com',
-    'Name a@example.com>',
-    '<<a@example.com>>',
-    'A <b@example.com> <c@example.com>',
-    'Evil\r\nBcc: x@example.com <a@example.com>',
-    'Name "quoted" <a@example.com>',
+    'Name <a@sovereign.local',
+    'Name a@sovereign.local>',
+    '<<a@sovereign.local>>',
+    'A <b@sovereign.local> <c@sovereign.local>',
+    'Evil\r\nBcc: x@sovereign.local <a@sovereign.local>',
+    'Name "quoted" <a@sovereign.local>',
     'Name <not an address>',
-    `${'n'.repeat(400)} <a@example.com>`,
+    `${'n'.repeat(400)} <a@sovereign.local>`,
   ])('refuses %j', (sender) => {
     expect(isSender(sender)).toBe(false);
   });

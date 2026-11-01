@@ -29,7 +29,7 @@ const { default: InvitesPage } = await import('../../app/console/invites/page');
 
 const invite = (id: string, extra: Partial<InviteSummary> = {}): InviteSummary => ({
   id,
-  email: `${id}@example.com`,
+  email: `${id}@sovereign.local`,
   invitedBy: 'Ada Admin',
   createdAt: Date.UTC(2026, 9, 1, 9, 0),
   expiresAt: undefined,
@@ -89,7 +89,7 @@ describe('the invites page', () => {
       invite('c', { invitedBy: undefined }),
     ]);
     const html = renderToStaticMarkup(await InvitesPage());
-    for (const id of ['a', 'b', 'c']) expect(html).toContain(`${id}@example.com`);
+    for (const id of ['a', 'b', 'c']) expect(html).toContain(`${id}@sovereign.local`);
     expect(html).toContain('Ada Admin');
     expect(html).toContain('Account removed');
     expect(html).toContain('Does not expire');

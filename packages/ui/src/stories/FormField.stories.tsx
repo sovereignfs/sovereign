@@ -15,7 +15,7 @@ export const Default: Story = {
   args: {
     label: 'Email address',
     id: 'email',
-    children: (field) => <Input {...field} type="email" placeholder="you@example.com" />,
+    children: (field) => <Input {...field} type="email" placeholder="you@sovereign.local" />,
   },
 };
 

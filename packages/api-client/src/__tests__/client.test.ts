@@ -20,13 +20,13 @@ const headersOf = (call: Call | undefined) => (call?.init.headers ?? {}) as Reco
 describe('calling an operation', () => {
   it('sends the method and address the contract gives, with the query, and the token as a bearer', async () => {
     const { calls, fetch } = fake(() => json({ users: [] }));
-    const core = createCoreClient({ baseUrl: 'https://core.example.com', token: 'tok', fetch });
+    const core = createCoreClient({ baseUrl: 'https://core.sovereign.local', token: 'tok', fetch });
     expect(await core.searchDirectoryUsers({ query: { q: 'ada', limit: 5 } })).toEqual({
       users: [],
     });
     expect(calls[0]?.init.method).toBe('GET');
     expect(calls[0]?.url.toString()).toBe(
-      'https://core.example.com/api/v1/directory/users?q=ada&limit=5',
+      'https://core.sovereign.local/api/v1/directory/users?q=ada&limit=5',
     );
     expect(headersOf(calls[0]).authorization).toBe('Bearer tok');
     expect(headersOf(calls[0]).accept).toBe('application/json');
@@ -34,14 +34,14 @@ describe('calling an operation', () => {
 
   it('leaves out a query value that was not given, and encodes one that was', async () => {
     const { calls, fetch } = fake(() => json({ users: [] }));
-    const core = createCoreClient({ baseUrl: 'https://core.example.com', token: 'tok', fetch });
+    const core = createCoreClient({ baseUrl: 'https://core.sovereign.local', token: 'tok', fetch });
     await core.searchDirectoryUsers({ query: { q: 'a&b=c d' } });
     expect(calls[0]?.url.search).toBe('?q=a%26b%3Dc+d');
   });
 
   it('sends a JSON body with its type, for an operation that takes one', async () => {
     const { calls, fetch } = fake(() => json({ users: [] }));
-    const core = createCoreClient({ baseUrl: 'https://core.example.com', token: 'tok', fetch });
+    const core = createCoreClient({ baseUrl: 'https://core.sovereign.local', token: 'tok', fetch });
     await core.resolveDirectoryUsers({ body: { subs: ['a', 'b'] } });
     expect(calls[0]?.init.method).toBe('POST');
     expect(calls[0]?.init.body).toBe('{"subs":["a","b"]}');
@@ -52,12 +52,12 @@ describe('calling an operation', () => {
     const { calls, fetch } = fake(() =>
       json({
         name: 'Acme',
-        url: 'https://core.example.com',
+        url: 'https://core.sovereign.local',
         logo: { light: null, dark: null },
         favicon: null,
       }),
     );
-    const core = createCoreClient({ baseUrl: 'https://core.example.com', fetch });
+    const core = createCoreClient({ baseUrl: 'https://core.sovereign.local', fetch });
     expect((await core.getInstanceBranding()).name).toBe('Acme');
     expect(calls[0]?.url.pathname).toBe('/.well-known/sovereign-instance');
     expect(headersOf(calls[0]).authorization).toBeUndefined();
@@ -65,7 +65,7 @@ describe('calling an operation', () => {
 
   it('refuses, before it asks, an operation that needs a token when it has none', async () => {
     const { calls, fetch } = fake(() => json({}));
-    const core = createCoreClient({ baseUrl: 'https://core.example.com', fetch });
+    const core = createCoreClient({ baseUrl: 'https://core.sovereign.local', fetch });
     await expect(core.searchDirectoryUsers({ query: { q: 'a' } })).rejects.toThrow(
       /needs an access token/,
     );
@@ -76,7 +76,7 @@ describe('calling an operation', () => {
     const { calls, fetch } = fake(() => json({ users: [] }));
     let n = 0;
     const core = createCoreClient({
-      baseUrl: 'https://core.example.com',
+      baseUrl: 'https://core.sovereign.local',
       token: () => `t${++n}`,
       fetch,
     });
@@ -88,7 +88,7 @@ describe('calling an operation', () => {
   it('puts a path at the instance’s origin whatever path the base address had', async () => {
     const { calls, fetch } = fake(() => json({ users: [] }));
     const core = createCoreClient({
-      baseUrl: 'https://core.example.com/ignored/',
+      baseUrl: 'https://core.sovereign.local/ignored/',
       token: 't',
       fetch,
     });
@@ -100,7 +100,7 @@ describe('calling an operation', () => {
 describe('when Core refuses', () => {
   const fails = async (reply: Response) => {
     const { fetch } = fake(() => reply);
-    const core = createCoreClient({ baseUrl: 'https://core.example.com', token: 't', fetch });
+    const core = createCoreClient({ baseUrl: 'https://core.sovereign.local', token: 't', fetch });
     return core.searchDirectoryUsers({ query: { q: 'a' } }).catch((error: unknown) => error);
   };
 

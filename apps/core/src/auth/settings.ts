@@ -41,7 +41,7 @@ export function resolveAuthSettings(config: CoreConfig, prefix = 'SV'): AuthSett
     if (!origin) {
       problem(
         'AUTH_TRUSTED_ORIGINS',
-        `entry ${index + 1} must be an origin such as https://app.example.com (no path)`,
+        `entry ${index + 1} must be an origin such as https://app.sovereign.local (no path)`,
       );
     } else {
       trustedOrigins.push(origin.origin);
@@ -64,7 +64,7 @@ export function resolveAuthSettings(config: CoreConfig, prefix = 'SV'): AuthSett
   if (rawDomain !== undefined) {
     const domain = rawDomain.toLowerCase();
     if (!DOMAIN.test(domain)) {
-      problem('AUTH_COOKIE_DOMAIN', 'must be a domain such as example.com');
+      problem('AUTH_COOKIE_DOMAIN', 'must be a domain such as sovereign.local');
     } else if (
       host !== domain.replace(/^\./, '') &&
       !host.endsWith(`.${domain.replace(/^\./, '')}`)
@@ -162,7 +162,7 @@ function resolveWebauthn(
   if (config.authWebauthnRpId !== undefined) {
     const given = config.authWebauthnRpId.toLowerCase();
     if (!DOMAIN.test(given) || given.startsWith('.')) {
-      problem('AUTH_WEBAUTHN_RP_ID', 'must be a domain such as example.com');
+      problem('AUTH_WEBAUTHN_RP_ID', 'must be a domain such as sovereign.local');
     } else if (!isWithin(host, given)) {
       problem(
         'AUTH_WEBAUTHN_RP_ID',
@@ -179,7 +179,7 @@ function resolveWebauthn(
     if (!origin) {
       problem(
         'AUTH_WEBAUTHN_ORIGIN',
-        `entry ${index + 1} must be an origin such as https://core.example.com (no path)`,
+        `entry ${index + 1} must be an origin such as https://core.sovereign.local (no path)`,
       );
     } else if (!isSecureContext(origin)) {
       problem(

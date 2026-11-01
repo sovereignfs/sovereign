@@ -63,7 +63,7 @@ describe.skipIf(!runnable)('sv apply against the real Docker', () => {
       execFileSync('docker', ['build', '--tag', image, root], { stdio: 'inherit' });
     const registry = new Registry();
     source = await makeSource({
-      suite: { domain: 'sv-test.example.test', tls: { mode: 'internal' } },
+      suite: { domain: 'sv-test.sovereign.local', tls: { mode: 'internal' } },
       resolve: (ref) =>
         ref.startsWith('ghcr.io/')
           ? Promise.resolve(`sha256:${'1'.repeat(64)}`)
@@ -143,10 +143,10 @@ describe.skipIf(!runnable)('sv apply against the real Docker', () => {
       'sv-core',
       'node',
       '-e',
-      "fetch('https://sv-test.example.test/.well-known/openid-configuration').then(async (r) => { const d = await r.json(); console.log(d.issuer); process.exit(d.issuer === 'https://sv-test.example.test' ? 0 : 1); })",
+      "fetch('https://sv-test.sovereign.local/.well-known/openid-configuration').then(async (r) => { const d = await r.json(); console.log(d.issuer); process.exit(d.issuer === 'https://sv-test.sovereign.local' ? 0 : 1); })",
     );
     expect(done.status).toBe(0);
-    expect(done.stdout.trim()).toBe('https://sv-test.example.test');
+    expect(done.stdout.trim()).toBe('https://sv-test.sovereign.local');
   });
 
   it('shuts other roles out of core’s database', () => {

@@ -64,7 +64,7 @@ afterAll(async () => {
 const add = (id: string, role: string) =>
   db.run(
     'insert into users (id, name, email, email_verified, role, created_at, updated_at) values (?, ?, ?, 1, ?, 1, 1)',
-    [id, id, `${id}@example.com`, role],
+    [id, id, `${id}@sovereign.local`, role],
   );
 const signedInAs = (id: string, role: unknown) =>
   getSession.mockResolvedValue({ user: { id, role }, session: { id: `s-${id}` } });
@@ -97,7 +97,7 @@ beforeEach(async () => {
 describe('what an operator asks of invitations, as a public endpoint', () => {
   it('refuses both actions for nobody signed in, and changes nothing', async () => {
     expect(
-      await failure(() => actions.inviteAction(null, form({ email: 'a@example.com' }))),
+      await failure(() => actions.inviteAction(null, form({ email: 'a@sovereign.local' }))),
     ).toMatchObject({ code: 'unauthenticated' });
     expect(await failure(() => actions.cancelInviteAction('anything', null))).toMatchObject({
       code: 'unauthenticated',
@@ -109,10 +109,10 @@ describe('what an operator asks of invitations, as a public endpoint', () => {
   it('refuses both actions for a person without user:manage, and changes nothing', async () => {
     signedInAs('pat', ROLE_USER);
     expect(
-      await failure(() => actions.inviteAction(null, form({ email: 'a@example.com' }))),
+      await failure(() => actions.inviteAction(null, form({ email: 'a@sovereign.local' }))),
     ).toMatchObject({ code: 'forbidden' });
     signedInAs('admin', ROLE_ADMIN);
-    await actions.inviteAction(null, form({ email: 'kept@example.com' }));
+    await actions.inviteAction(null, form({ email: 'kept@sovereign.local' }));
     const id = String((await invitations())[0]?.id);
     signedInAs('pat', ROLE_USER);
     expect(await failure(() => actions.cancelInviteAction(id, null))).toMatchObject({
@@ -126,13 +126,16 @@ describe('what an operator asks of invitations, as a public endpoint', () => {
 describe('inviting', () => {
   it('saves the invitation, emails it, says so, and refreshes the page', async () => {
     signedInAs('admin', ROLE_ADMIN);
-    const result = await actions.inviteAction(null, form({ email: 'New@Example.com', days: '7' }));
+    const result = await actions.inviteAction(
+      null,
+      form({ email: 'New@Sovereign.local', days: '7' }),
+    );
     expect(result).toEqual({
       ok: true,
-      message: 'We have emailed an invitation to new@example.com.',
+      message: 'We have emailed an invitation to new@sovereign.local.',
     });
     const [row] = await invitations();
-    expect(row).toMatchObject({ email: 'new@example.com', invited_by: 'admin' });
+    expect(row).toMatchObject({ email: 'new@sovereign.local', invited_by: 'admin' });
     expect(Number(row?.expires_at) - Number(row?.created_at)).toBe(7 * 24 * 60 * 60 * 1000);
     expect(sent).toHaveLength(1);
     expect(sent[0]?.id).toBe(row?.id);
@@ -141,21 +144,24 @@ describe('inviting', () => {
 
   it('treats an empty number of days as no expiry', async () => {
     signedInAs('owner', ROLE_OWNER);
-    await actions.inviteAction(null, form({ email: 'a@example.com', days: '' }));
+    await actions.inviteAction(null, form({ email: 'a@sovereign.local', days: '' }));
     expect((await invitations())[0]?.expires_at ?? null).toBeNull();
-    await actions.inviteAction(null, form({ email: 'b@example.com' }));
+    await actions.inviteAction(null, form({ email: 'b@sovereign.local' }));
     expect((await invitations()).at(-1)?.expires_at ?? null).toBeNull();
   });
 
   it('gives the link to pass on when email is not set up, and keeps the invitation', async () => {
     mailReady = false;
     signedInAs('owner', ROLE_OWNER);
-    const result = await actions.inviteAction(null, form({ email: 'a@example.com', days: '3' }));
+    const result = await actions.inviteAction(
+      null,
+      form({ email: 'a@sovereign.local', days: '3' }),
+    );
     const id = String((await invitations())[0]?.id);
     expect(result).toEqual({
       ok: true,
       message:
-        'a@example.com is invited, but email is not set up, so nothing was sent. Pass this link on yourself:',
+        'a@sovereign.local is invited, but email is not set up, so nothing was sent. Pass this link on yourself:',
       link: `http://localhost:3000/invite/${id}`,
     });
   });
@@ -165,17 +171,17 @@ describe('inviting', () => {
     ['no address', { days: '7' }, 'That is not an email address.'],
     [
       'a number of days that is not one',
-      { email: 'a@example.com', days: 'soon' },
+      { email: 'a@sovereign.local', days: 'soon' },
       'Choose a whole number of days from 1 to 365, or leave it empty for no expiry.',
     ],
     [
       'zero days',
-      { email: 'a@example.com', days: '0' },
+      { email: 'a@sovereign.local', days: '0' },
       'Choose a whole number of days from 1 to 365, or leave it empty for no expiry.',
     ],
     [
       'an address with an account',
-      { email: 'pat@example.com' },
+      { email: 'pat@sovereign.local' },
       'There is already an account for that email address.',
     ],
   ])('says in words, inline, for %s, and saves and sends nothing', async (_name, values, error) => {
@@ -189,7 +195,7 @@ describe('inviting', () => {
   it('does not take the address from anything but the form field', async () => {
     signedInAs('admin', ROLE_ADMIN);
     const data = new FormData();
-    data.set('email', new File(['a@example.com'], 'a.txt'));
+    data.set('email', new File(['a@sovereign.local'], 'a.txt'));
     expect(await actions.inviteAction(null, data)).toMatchObject({ ok: false });
     expect(await invitations()).toEqual([]);
   });
@@ -198,7 +204,7 @@ describe('inviting', () => {
 describe('cancelling', () => {
   it('cancels, says so, and refreshes; says when it was already done', async () => {
     signedInAs('admin', ROLE_ADMIN);
-    await actions.inviteAction(null, form({ email: 'a@example.com' }));
+    await actions.inviteAction(null, form({ email: 'a@sovereign.local' }));
     const id = String((await invitations())[0]?.id);
     revalidatePath.mockReset();
     expect(await actions.cancelInviteAction(id, null)).toEqual({
@@ -219,7 +225,7 @@ describe('cancelling', () => {
       ok: false,
       error: 'There is no such invitation.',
     });
-    await actions.inviteAction(null, form({ email: 'a@example.com' }));
+    await actions.inviteAction(null, form({ email: 'a@sovereign.local' }));
     const id = String((await invitations())[0]?.id);
     await db.run('update invites set accepted_at = 1 where id = ?', [id]);
     expect(await actions.cancelInviteAction(id, null)).toEqual({

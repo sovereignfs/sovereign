@@ -42,7 +42,7 @@ describe('the /api/auth route', () => {
         method: 'POST',
         body: JSON.stringify({
           name: 'Ada Lovelace',
-          email: 'ada@example.com',
+          email: 'ada@sovereign.local',
           password: 'correct horse battery',
           agreedToTerms: true,
         }),
@@ -58,7 +58,7 @@ describe('the /api/auth route', () => {
     const session = await GET(request('/get-session', { headers: { cookie } }));
     expect(session.status).toBe(200);
     expect(((await session.json()) as { user: { email: string } }).user.email).toBe(
-      'ada@example.com',
+      'ada@sovereign.local',
     );
   });
 
@@ -69,7 +69,7 @@ describe('the /api/auth route', () => {
         method: 'POST',
         body: JSON.stringify({
           name: 'Weak',
-          email: 'weak@example.com',
+          email: 'weak@sovereign.local',
           password: 'short',
           agreedToTerms: true,
         }),
@@ -97,7 +97,7 @@ describe('the /api/auth route', () => {
         method: 'POST',
         body: JSON.stringify({
           name: 'Ada',
-          email: 'ada2@example.com',
+          email: 'ada2@sovereign.local',
           password: 'correct horse battery',
           agreedToTerms: true,
         }),

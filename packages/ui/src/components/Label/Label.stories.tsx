@@ -26,7 +26,7 @@ export const WithControl: Story = {
       <input
         id="example-input"
         type="email"
-        placeholder="you@example.com"
+        placeholder="you@sovereign.local"
         style={{
           padding: 'var(--sv-space-2) var(--sv-space-3)',
           border: '1px solid var(--sv-color-border-strong)',

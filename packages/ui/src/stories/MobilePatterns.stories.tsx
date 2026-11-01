@@ -580,7 +580,7 @@ function MobilePatternsDoc() {
                 {(field) => <Input {...field} placeholder="Your name" />}
               </FormField>
               <FormField label="Email" id="mp-email">
-                {(field) => <Input {...field} type="email" placeholder="you@example.com" />}
+                {(field) => <Input {...field} type="email" placeholder="you@sovereign.local" />}
               </FormField>
               <Button type="submit">Save changes</Button>
             </div>

@@ -27,7 +27,7 @@ const stores = (
 });
 const identity = (name: string | undefined, images = {}) => {
   const { settings, branding } = stores(name, images);
-  return loadIdentity(settings, branding, 'https://id.example.com');
+  return loadIdentity(settings, branding, 'https://id.sovereign.local');
 };
 
 describe('how the instance presents itself', () => {
@@ -66,7 +66,7 @@ describe('how the instance presents itself', () => {
 
   it('gives an email the light logo as an absolute address on core', async () => {
     expect((await identity('A', { 'logo-light': picture('logo-light') })).emailLogo).toBe(
-      'https://id.example.com/api/branding/logo-light?v=v1',
+      'https://id.sovereign.local/api/branding/logo-light?v=v1',
     );
   });
 

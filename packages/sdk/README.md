@@ -50,8 +50,8 @@ export const { GET, POST } = nextAuth(sv).handlers;
 const session = await nextAuth(sv).requireSession('/notes'); // sends a person to sign in, and back
 ```
 
-Register `https://notes.example.test/auth/callback` as the app's sign-in address, `https://notes.example.test/` as its address after
-sign-out, and `https://notes.example.test/auth/backchannel-logout` as its back-channel logout address. `next` is an optional peer
+Register `https://notes.sovereign.local/auth/callback` as the app's sign-in address, `https://notes.sovereign.local/` as its address after
+sign-out, and `https://notes.sovereign.local/auth/backchannel-logout` as its back-channel logout address. `next` is an optional peer
 dependency, and nothing outside `/next` needs it.
 
 ## Testing an app
@@ -64,7 +64,7 @@ import { createFakeCore } from '@sovereignfs/sdk/testing';
 const core = createFakeCore();
 core.addPerson({ sub: 'u1', name: 'Ada Lovelace' });
 const sv = createSovereign({
-  appUrl: 'https://notes.example.test',
+  appUrl: 'https://notes.sovereign.local',
   coreUrl: core.url,
   ...core.credentials,
   tokenStore,

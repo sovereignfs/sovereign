@@ -28,14 +28,14 @@ beforeEach(() => lookupInvite.mockReset().mockResolvedValue({ state: 'invalid' }
 
 describe('an invitation link', () => {
   it('goes on to sign-up, carrying the invitation, when it can still be used', async () => {
-    lookupInvite.mockResolvedValue({ state: 'valid', email: 'a@example.com' });
+    lookupInvite.mockResolvedValue({ state: 'valid', email: 'a@sovereign.local' });
     const error = await failure(() => InvitePage({ params: params('abc') }));
     expect(error?.digest).toContain('/sign-up?invite=abc');
     expect(lookupInvite).toHaveBeenCalledWith({ marker: 'database' }, 'abc', expect.any(Number));
   });
 
   it('carries an id that needs escaping without letting it change the address', async () => {
-    lookupInvite.mockResolvedValue({ state: 'valid', email: 'a@example.com' });
+    lookupInvite.mockResolvedValue({ state: 'valid', email: 'a@sovereign.local' });
     const error = await failure(() => InvitePage({ params: params('a&returnTo=//evil.example') }));
     expect(error?.digest).toContain('/sign-up?invite=a%26returnTo%3D%2F%2Fevil.example');
   });

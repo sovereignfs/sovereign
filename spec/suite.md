@@ -22,7 +22,7 @@ domain: sovereign.fs
 core:
   version: 0.49.0
   env:
-    SV_SMTP_HOST: smtp.example.com
+    SV_SMTP_HOST: smtp.sovereign.local
     SV_SMTP_PORT: '587'
 database:
   version: '18'
@@ -31,7 +31,7 @@ server:
   deploy: ssh
 tls:
   mode: per-host
-  email: operator@example.com
+  email: operator@sovereign.local
 secrets:
   recipients:
     - age1zvkyg2lqzraa2lnjvqej32nkuu0ues2s82hzrye869xeexvn73equnujwj
@@ -45,7 +45,7 @@ apps:
     external: true
     name: Team wiki
     redirect:
-      - https://wiki.example.com/auth/callback
+      - https://wiki.sovereign.local/auth/callback
     scopes:
       - openid
       - profile

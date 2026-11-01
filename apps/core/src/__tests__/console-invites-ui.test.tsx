@@ -54,13 +54,15 @@ describe('the form to invite', () => {
   it('sends what was typed and says how it went', async () => {
     invite.mockResolvedValue({
       ok: true,
-      message: 'We have emailed an invitation to a@example.com.',
+      message: 'We have emailed an invitation to a@sovereign.local.',
     });
     render(<InviteForm mailReady />);
-    await submit('a@example.com', '3');
-    expect(await screen.findByText('We have emailed an invitation to a@example.com.')).toBeTruthy();
+    await submit('a@sovereign.local', '3');
+    expect(
+      await screen.findByText('We have emailed an invitation to a@sovereign.local.'),
+    ).toBeTruthy();
     const form = invite.mock.calls[0]?.[1] as FormData;
-    expect(form.get('email')).toBe('a@example.com');
+    expect(form.get('email')).toBe('a@sovereign.local');
     expect(form.get('days')).toBe('3');
     // Done: the address is cleared for the next one, and the number of days stays.
     expect((screen.getByLabelText(/Email address/) as HTMLInputElement).value).toBe('');
@@ -71,13 +73,13 @@ describe('the form to invite', () => {
     invite.mockResolvedValue({
       ok: true,
       message:
-        'a@example.com is invited, but email is not set up, so nothing was sent. Pass this link on yourself:',
+        'a@sovereign.local is invited, but email is not set up, so nothing was sent. Pass this link on yourself:',
       link: 'http://localhost:3000/invite/abc',
     });
     const writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal('navigator', { clipboard: { writeText } });
     render(<InviteForm mailReady={false} />);
-    await submit('a@example.com');
+    await submit('a@sovereign.local');
     expect(await screen.findByText('http://localhost:3000/invite/abc')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('http://localhost:3000/invite/abc'));
@@ -94,7 +96,7 @@ describe('the form to invite', () => {
 
 describe('cancelling an invitation', () => {
   const open = () => {
-    render(<CancelButton id="inv1" email="a@example.com" />);
+    render(<CancelButton id="inv1" email="a@sovereign.local" />);
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     const dialog = document.querySelector('dialog[open]');
     if (!dialog) throw new Error('no dialog is open');
@@ -103,7 +105,7 @@ describe('cancelling an invitation', () => {
 
   it('asks first, naming the address, and does nothing if the person backs out', async () => {
     const dialog = open();
-    expect(within(dialog).getByText(/a@example.com/)).toBeTruthy();
+    expect(within(dialog).getByText(/a@sovereign.local/)).toBeTruthy();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     await act(async () => undefined);
     expect(cancel).not.toHaveBeenCalled();

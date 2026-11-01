@@ -169,9 +169,9 @@ export function makeWorld(
       env: {
         ...process.env,
         GIT_AUTHOR_NAME: 'T',
-        GIT_AUTHOR_EMAIL: 't@example.test',
+        GIT_AUTHOR_EMAIL: 't@sovereign.local',
         GIT_COMMITTER_NAME: 'T',
-        GIT_COMMITTER_EMAIL: 't@example.test',
+        GIT_COMMITTER_EMAIL: 't@sovereign.local',
       },
     });
   if (options.withGit !== false) {
@@ -205,9 +205,9 @@ export function makeWorld(
   // A commit needs an author, and a test machine may have none.
   for (const [name, value] of Object.entries({
     GIT_AUTHOR_NAME: 'T',
-    GIT_AUTHOR_EMAIL: 't@example.test',
+    GIT_AUTHOR_EMAIL: 't@sovereign.local',
     GIT_COMMITTER_NAME: 'T',
-    GIT_COMMITTER_EMAIL: 't@example.test',
+    GIT_COMMITTER_EMAIL: 't@sovereign.local',
   })) {
     process.env[name] ??= value;
   }

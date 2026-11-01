@@ -14,7 +14,7 @@ const status = resolveSmtp({ host, port, user, password, from }); // configured,
 if (status.state === 'configured') {
   const mailer = createMailer(createSmtpTransport(status.settings), { from: status.settings.from });
   await mailer.send({
-    to: 'person@example.com',
+    to: 'person@sovereign.local',
     subject: 'Welcome',
     text: 'Hello',
     html: '<p>Hello</p>',
@@ -26,9 +26,9 @@ In a test, use the memory transport and read what was sent:
 
 ```ts
 const transport = createMemoryTransport();
-const mailer = createMailer(transport, { from: 'no-reply@example.com' });
-await mailer.send({ to: 'a@example.com', subject: 'Hi', text: 'x' });
-transport.last; // { from, to: ['a@example.com'], subject: 'Hi', text: 'x', html: undefined }
+const mailer = createMailer(transport, { from: 'no-reply@sovereign.local' });
+await mailer.send({ to: 'a@sovereign.local', subject: 'Hi', text: 'x' });
+transport.last; // { from, to: ['a@sovereign.local'], subject: 'Hi', text: 'x', html: undefined }
 transport.failNextWith(new Error('boom')); // to test what a flow does when mail fails
 ```
 
@@ -64,11 +64,11 @@ and any line a translation lacks falls back to English.
 
 ```ts
 const email = await renderEmail(
-  { template: 'passwordReset', link: 'https://core.example.com/reset-password?token=…' },
+  { template: 'passwordReset', link: 'https://core.sovereign.local/reset-password?token=…' },
   {
     name: 'Acme Identity',
-    instanceUrl: 'https://core.example.com',
-    logoUrl: 'https://core.example.com/logo.png',
+    instanceUrl: 'https://core.sovereign.local',
+    logoUrl: 'https://core.sovereign.local/logo.png',
   },
 );
 await mailer.send({ to, subject: email.subject, text: email.text, html: email.html });

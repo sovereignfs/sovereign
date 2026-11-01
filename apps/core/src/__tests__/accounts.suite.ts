@@ -179,7 +179,7 @@ export function accountsSuite(createDatabase: () => Promise<TestDatabase>): void
       const { a, email, id } = await people();
       await states.deactivate(id);
       const wrong = await signIn(a, email, `${PASSWORD}x`);
-      const unknown = await signIn(a, 'nobody@example.com');
+      const unknown = await signIn(a, 'nobody@sovereign.local');
       expect(wrong.reply.status).toBe(401);
       expect(wrong.reply.body.code).toBe(unknown.reply.body.code);
     });

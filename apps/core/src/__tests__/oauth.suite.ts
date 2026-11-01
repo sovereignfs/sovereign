@@ -397,7 +397,7 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
     it.each([
       [
         'the redirect address',
-        (q: URLSearchParams) => q.set('redirect_uri', 'https://evil.example.com/cb'),
+        (q: URLSearchParams) => q.set('redirect_uri', 'https://evil.sovereign.local/cb'),
       ],
       ['the client', (q: URLSearchParams) => q.set('client_id', 'someone-else')],
       ['the scopes', (q: URLSearchParams) => q.set('scope', 'openid roles')],
@@ -430,7 +430,11 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
       const { query } = await asked(auth, client);
       const reply = await call(auth, 'POST', '/sign-in/email', {
         jar: new Jar(),
-        body: { email: 'nobody@example.com', password: 'wrong wrong wrong', oauth_query: query },
+        body: {
+          email: 'nobody@sovereign.local',
+          password: 'wrong wrong wrong',
+          oauth_query: query,
+        },
       });
       expect(reply.status).toBeGreaterThanOrEqual(400);
       expect(reply.body.redirect).not.toBe(true);
@@ -458,7 +462,7 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
       const { signed } = await asked(auth, person, client, 'openid profile email');
       expect(await readRequest(auth, signed)).toEqual({
         appName: 'Notes',
-        returnHost: 'rp.example.com',
+        returnHost: 'rp.sovereign.local',
         scopes: ['openid', 'profile', 'email'],
         permissions: [SCOPE_COPY.openid, SCOPE_COPY.profile, SCOPE_COPY.email],
       });
@@ -782,11 +786,11 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
   describe('redirect addresses', () => {
     it.each([
       ['a different path', `${REDIRECT}/x`],
-      ['a different host', 'https://evil.example.com/cb'],
-      ['a different scheme', 'http://rp.example.com/cb'],
+      ['a different host', 'https://evil.sovereign.local/cb'],
+      ['a different scheme', 'http://rp.sovereign.local/cb'],
       ['a trailing slash', `${REDIRECT}/`],
       ['an added query', `${REDIRECT}?a=1`],
-      ['a different port', 'https://rp.example.com:8443/cb'],
+      ['a different port', 'https://rp.sovereign.local:8443/cb'],
     ])('are matched exactly: %s is refused and never followed', async (_name, redirectUri) => {
       const { auth, owner } = await instance();
       const client = await registerClient(auth, owner);
@@ -823,9 +827,9 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
     it('accepts the registered address, and any one of several', async () => {
       const { auth, owner } = await instance();
       const client = await registerClient(auth, owner, {
-        redirectUris: [REDIRECT, 'https://rp.example.com/other'],
+        redirectUris: [REDIRECT, 'https://rp.sovereign.local/other'],
       });
-      for (const redirectUri of [REDIRECT, 'https://rp.example.com/other']) {
+      for (const redirectUri of [REDIRECT, 'https://rp.sovereign.local/other']) {
         const { code: issued } = await authorize(auth, owner, client, {
           redirectUri,
           challenge: pkce().challenge,
@@ -934,7 +938,7 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
       const { idToken, info } = await claimsOf('openid email');
       for (const claims of [idToken, info]) {
         expect(claims).toMatchObject({ email_verified: false });
-        expect(String(claims.email)).toMatch(/@example\.com$/);
+        expect(String(claims.email)).toMatch(/@sovereign\.local$/);
         expect(claims.name).toBeUndefined();
       }
     });

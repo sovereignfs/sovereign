@@ -5,7 +5,7 @@ import { databaseOf, externalClient, hostedClient } from './apps.js';
 
 const suite: Suite = {
   schema: 1,
-  domain: 'sovereign.example.com',
+  domain: 'sovereign.local',
   core: { version: '0.71.0' },
   database: { version: '18' },
   server: { host: 'h' },
@@ -29,15 +29,15 @@ describe('what a hosted app is registered as', () => {
     const args = flags(hostedClient(suite, 'notes', app, manifest()));
     expect(args['--name']).toEqual(['Notes']);
     expect(args['--redirect']).toEqual([
-      'https://notes.sovereign.example.com/api/auth/callback/sovereign',
+      'https://notes.sovereign.local/api/auth/callback/sovereign',
     ]);
-    expect(args['--post-logout']).toEqual(['https://notes.sovereign.example.com/']);
+    expect(args['--post-logout']).toEqual(['https://notes.sovereign.local/']);
     expect(args['--back-channel']).toEqual([
-      'https://notes.sovereign.example.com/api/auth/back-channel-logout',
+      'https://notes.sovereign.local/api/auth/back-channel-logout',
     ]);
     expect(args['--scope']).toEqual(['openid', 'profile', 'email']);
     expect(args['--trusted']).toEqual([]);
-    expect(args['--launch-url']).toEqual(['https://notes.sovereign.example.com/']);
+    expect(args['--launch-url']).toEqual(['https://notes.sovereign.local/']);
     expect(args['--public']).toBeUndefined();
   });
 
@@ -50,7 +50,7 @@ describe('what a hosted app is registered as', () => {
         manifest({ signIn: { redirect: ['/cb'], accountDeleted: '/gone', scopes: ['openid'] } }),
       ),
     );
-    expect(args['--account-deleted']).toEqual(['https://notes.sovereign.example.com/gone']);
+    expect(args['--account-deleted']).toEqual(['https://notes.sovereign.local/gone']);
   });
 
   it('has the launcher the manifest gives, changed by what the operator wrote and nothing else', () => {
@@ -63,8 +63,8 @@ describe('what a hosted app is registered as', () => {
       ),
     );
     expect(plain['--description']).toEqual(['Notes for us']);
-    expect(plain['--icon']).toEqual(['https://notes.sovereign.example.com/icon.png']);
-    expect(plain['--launch-url']).toEqual(['https://notes.sovereign.example.com/home']);
+    expect(plain['--icon']).toEqual(['https://notes.sovereign.local/icon.png']);
+    expect(plain['--launch-url']).toEqual(['https://notes.sovereign.local/home']);
     const changed = flags(
       hostedClient(
         suite,
@@ -73,7 +73,7 @@ describe('what a hosted app is registered as', () => {
           ...app,
           launcher: {
             description: 'Ours',
-            launchUrl: 'https://notes.sovereign.example.com/start',
+            launchUrl: 'https://notes.sovereign.local/start',
             show: false,
           },
         },
@@ -81,7 +81,7 @@ describe('what a hosted app is registered as', () => {
       ),
     );
     expect(changed['--description']).toEqual(['Ours']);
-    expect(changed['--launch-url']).toEqual(['https://notes.sovereign.example.com/start']);
+    expect(changed['--launch-url']).toEqual(['https://notes.sovereign.local/start']);
     expect(changed['--hide']).toEqual([]);
   });
 
@@ -100,21 +100,21 @@ describe('what an external app is registered as', () => {
   const app: ExternalApp = {
     external: true,
     name: 'Team wiki',
-    redirect: ['https://wiki.example.com/cb'],
+    redirect: ['https://wiki.sovereign.local/cb'],
   };
 
   it('is only what the operator wrote, untrusted unless they said, and confidential unless they said', () => {
     const args = flags(externalClient(app));
     expect(args['--name']).toEqual(['Team wiki']);
-    expect(args['--redirect']).toEqual(['https://wiki.example.com/cb']);
+    expect(args['--redirect']).toEqual(['https://wiki.sovereign.local/cb']);
     expect(args['--trusted']).toBeUndefined();
     expect(args['--public']).toBeUndefined();
     expect(args['--scope']).toBeUndefined();
     const full = flags(
       externalClient({
         ...app,
-        postLogout: ['https://wiki.example.com/bye'],
-        backChannel: 'https://wiki.example.com/out',
+        postLogout: ['https://wiki.sovereign.local/bye'],
+        backChannel: 'https://wiki.sovereign.local/out',
         scopes: ['openid', 'roles'],
         type: 'public',
         trusted: true,
@@ -123,7 +123,7 @@ describe('what an external app is registered as', () => {
     expect(full['--public']).toEqual([]);
     expect(full['--trusted']).toEqual([]);
     expect(full['--scope']).toEqual(['openid', 'roles']);
-    expect(full['--back-channel']).toEqual(['https://wiki.example.com/out']);
+    expect(full['--back-channel']).toEqual(['https://wiki.sovereign.local/out']);
   });
 });
 

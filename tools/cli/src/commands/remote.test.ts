@@ -36,7 +36,7 @@ const ready = async () => {
     '--name',
     'Wiki',
     '--redirect',
-    'https://w.example.com/cb',
+    'https://w.sovereign.local/cb',
   );
 };
 const head = () => world.git('rev-parse', 'HEAD').trim();
@@ -133,7 +133,7 @@ describe('sv app show', () => {
     });
     world.ctx.remote = fake.remote;
     const plain = await sv(world, 'app', 'show', 'notes');
-    expect(plain.text).toContain('https://notes.sovereign.example.com');
+    expect(plain.text).toContain('https://notes.sovereign.local');
     expect(plain.text).toContain('c1');
     expect(plain.text).not.toContain('s3cret');
     const secret = await sv(world, 'app', 'show', 'notes', '--secret');
@@ -178,8 +178,8 @@ describe('sv doctor', () => {
     };
     const done = await sv(world, 'doctor');
     expect(done.code).toBe(0);
-    expect(done.text).toContain('DNS for sovereign.example.com');
-    expect(done.text).toContain('DNS for notes.sovereign.example.com');
+    expect(done.text).toContain('DNS for sovereign.local');
+    expect(done.text).toContain('DNS for notes.sovereign.local');
     expect(done.text).not.toContain('FAIL');
     expect(JSON.parse((await sv(world, 'doctor', '--json')).out.join('\n')).ok).toBe(true);
   });
@@ -196,7 +196,7 @@ describe('sv doctor', () => {
     expect(done.code).toBe(1);
     expect(done.text).toContain('FAIL  Docker');
     expect(done.text).toContain('FAIL  Disk');
-    expect(done.text).toContain('Point sovereign.example.com at 203.0.113.7');
+    expect(done.text).toContain('Point sovereign.local at 203.0.113.7');
     expect(done.text).toContain('FAIL  Port 443');
     world.ctx.remote = answering({ doctor: { code: 127, stderr: 'not found' } }).remote;
     expect((await sv(world, 'doctor')).text).toContain('Run sv server bootstrap');

@@ -243,7 +243,14 @@ export function termsSuite(createDatabase: () => Promise<TestDatabase>): void {
         const now = old.family === 'postgres' ? new Date() : Date.now();
         await old.run(
           'insert into users (id, name, email, email_verified, created_at, updated_at) values (?, ?, ?, ?, ?, ?)',
-          ['u-old', 'Old Timer', 'old@example.com', old.family === 'postgres' ? true : 1, now, now],
+          [
+            'u-old',
+            'Old Timer',
+            'old@sovereign.local',
+            old.family === 'postgres' ? true : 1,
+            now,
+            now,
+          ],
         );
 
         await migrateCore(old, MIGRATIONS);
@@ -261,7 +268,7 @@ export function termsSuite(createDatabase: () => Promise<TestDatabase>): void {
         expect([false, 0]).toContain(rows[0]?.agreed_to_terms);
         // and the person can still sign in: nothing about them was invalidated
         const reply = await call(makeAuth(old), 'POST', '/sign-in/email', {
-          body: { email: 'old@example.com', password: PASSWORD },
+          body: { email: 'old@sovereign.local', password: PASSWORD },
         });
         expect(reply.status).toBe(401);
       } finally {

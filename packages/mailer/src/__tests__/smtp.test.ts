@@ -16,7 +16,7 @@ import { createMailer } from '../mailer';
 import { createSmtpTransport } from '../smtp';
 import type { SmtpSettings } from '../types';
 
-const FROM = 'Sovereign <no-reply@example.com>';
+const FROM = 'Sovereign <no-reply@sovereign.local>';
 const USER = 'mailer-user';
 const PASSWORD = 'correct-horse-battery-staple';
 
@@ -126,7 +126,7 @@ const settings = (port: number, extra: Partial<SmtpSettings> = {}): SmtpSettings
   ...extra,
 });
 const message = {
-  to: 'person@example.com',
+  to: 'person@sovereign.local',
   subject: 'Hello there',
   text: 'Plain text',
   html: '<p>HTML <b>body</b></p>',
@@ -148,14 +148,14 @@ describe('sending through a real server', () => {
     const result = await createMailer(transport, { from: FROM }).send(message);
     transport.close?.();
 
-    expect(result).toEqual({ accepted: ['person@example.com'], rejected: [] });
+    expect(result).toEqual({ accepted: ['person@sovereign.local'], rejected: [] });
     expect(server.mails).toHaveLength(1);
     const mail = server.mails[0] as ParsedMail;
     expect(mail.from?.value[0]).toMatchObject({
       name: 'Sovereign',
-      address: 'no-reply@example.com',
+      address: 'no-reply@sovereign.local',
     });
-    expect(mail.to).toMatchObject({ value: [{ address: 'person@example.com' }] });
+    expect(mail.to).toMatchObject({ value: [{ address: 'person@sovereign.local' }] });
     expect(mail.subject).toBe('Hello there');
     expect(mail.text?.trim()).toBe('Plain text');
     expect(mail.html).toContain('<b>body</b>');
@@ -180,12 +180,12 @@ describe('sending through a real server', () => {
     const transport = createSmtpTransport(settings(server.port));
     const result = await createMailer(transport, { from: FROM }).send({
       ...message,
-      to: ['a@example.com', 'b@example.com'],
+      to: ['a@sovereign.local', 'b@sovereign.local'],
     });
     transport.close?.();
-    expect(result.accepted).toEqual(['a@example.com', 'b@example.com']);
+    expect(result.accepted).toEqual(['a@sovereign.local', 'b@sovereign.local']);
     expect(server.mails[0]?.to).toMatchObject({
-      value: [{ address: 'a@example.com' }, { address: 'b@example.com' }],
+      value: [{ address: 'a@sovereign.local' }, { address: 'b@sovereign.local' }],
     });
   });
 
@@ -193,7 +193,7 @@ describe('sending through a real server', () => {
     const server = await startServer();
     const transport = createSmtpTransport(settings(server.port));
     await createMailer(transport, { from: FROM }).send({
-      to: 'person@example.com',
+      to: 'person@sovereign.local',
       subject: 'Zugang für Jürgen 🔐',
       text: 'Grüße 日本語',
     });
@@ -330,26 +330,26 @@ describe('when sending goes wrong', () => {
   });
 
   it('reports a rejected recipient as rejected', async () => {
-    const server = await startServer({ reject: 'blocked@example.com' });
+    const server = await startServer({ reject: 'blocked@sovereign.local' });
     const transport = createSmtpTransport(settings(server.port));
     const error = await failure(
-      createMailer(transport, { from: FROM }).send({ ...message, to: 'blocked@example.com' }),
+      createMailer(transport, { from: FROM }).send({ ...message, to: 'blocked@sovereign.local' }),
     );
     transport.close?.();
     expect(error.code).toBe('rejected');
     expect(error.responseCode).toBe(550);
-    expect(error.message).not.toContain('blocked@example.com');
+    expect(error.message).not.toContain('blocked@sovereign.local');
   });
 
   it('treats a partly refused send as a send, and says who was refused', async () => {
-    const server = await startServer({ reject: 'blocked@example.com' });
+    const server = await startServer({ reject: 'blocked@sovereign.local' });
     const transport = createSmtpTransport(settings(server.port));
     const result = await createMailer(transport, { from: FROM }).send({
       ...message,
-      to: ['ok@example.com', 'blocked@example.com'],
+      to: ['ok@sovereign.local', 'blocked@sovereign.local'],
     });
     transport.close?.();
-    expect(result.accepted).toEqual(['ok@example.com']);
-    expect(result.rejected).toEqual(['blocked@example.com']);
+    expect(result.accepted).toEqual(['ok@sovereign.local']);
+    expect(result.rejected).toEqual(['blocked@sovereign.local']);
   });
 });

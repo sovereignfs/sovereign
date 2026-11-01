@@ -8,8 +8,8 @@ import {
   type RenderedEmail,
 } from '../templates/index';
 
-const INSTANCE = 'https://core.example.com';
-const LOGO = 'https://core.example.com/brand/logo.png';
+const INSTANCE = 'https://core.sovereign.local';
+const LOGO = 'https://core.sovereign.local/brand/logo.png';
 const branding = (extra: Partial<EmailBranding> = {}): EmailBranding => ({
   name: 'Acme Identity',
   instanceUrl: INSTANCE,
@@ -213,12 +213,12 @@ describe('text from the outside is escaped, never trusted', () => {
 
   it('reduces an instance name or person name with line breaks to one line, so a subject cannot gain a header', async () => {
     const email = await renderEmail(
-      { template: 'accountCreated', link, name: 'Ada\r\nBcc: x@example.com' },
-      branding({ name: 'Acme\nBcc: y@example.com' }),
+      { template: 'accountCreated', link, name: 'Ada\r\nBcc: x@sovereign.local' },
+      branding({ name: 'Acme\nBcc: y@sovereign.local' }),
     );
-    expect(email.subject).toBe('Welcome to Acme Bcc: y@example.com');
+    expect(email.subject).toBe('Welcome to Acme Bcc: y@sovereign.local');
     expect(email.subject).not.toMatch(/[\r\n]/);
-    expect(email.text).toContain('Hi Ada Bcc: x@example.com,');
+    expect(email.text).toContain('Hi Ada Bcc: x@sovereign.local,');
   });
 
   it('refuses an empty instance name', async () => {
@@ -254,10 +254,10 @@ describe('branding is checked, because it reaches HTML and CSS', () => {
   it.each([
     'javascript:alert(1)',
     'data:image/png;base64,AAAA',
-    'ftp://core.example.com/logo.png',
+    'ftp://core.sovereign.local/logo.png',
     '/logo.png',
     'not a url',
-    'https://user:pw@core.example.com/logo.png',
+    'https://user:pw@core.sovereign.local/logo.png',
   ])('refuses the logo address %j', async (logoUrl) => {
     expect((await refusal(renderEmail(request, branding({ logoUrl })))).code).toBe(
       'invalid-branding',
@@ -282,11 +282,11 @@ describe('branding is checked, because it reaches HTML and CSS', () => {
 describe('links must be on the instance, or the email is not made', () => {
   it.each([
     ['another host', 'https://evil.example/reset?token=secret'],
-    ['a look-alike host', 'https://core.example.com.evil.test/reset?token=secret'],
-    ['a host that only starts the same', 'https://core.example.community/reset'],
-    ['another port', 'https://core.example.com:8443/reset'],
-    ['the other scheme', 'http://core.example.com/reset'],
-    ['a credentials trick', 'https://core.example.com@evil.test/reset'],
+    ['a look-alike host', 'https://core.sovereign.local.evil.test/reset?token=secret'],
+    ['a host that only starts the same', 'https://core.sovereign.localhost/reset'],
+    ['another port', 'https://core.sovereign.local:8443/reset'],
+    ['the other scheme', 'http://core.sovereign.local/reset'],
+    ['a credentials trick', 'https://core.sovereign.local@evil.test/reset'],
   ])('refuses %s', async (_name, link) => {
     const error = await refusal(renderEmail({ template: 'passwordReset', link }, branding()));
     expect(error.code === 'link-outside-instance' || error.code === 'invalid-link').toBe(true);

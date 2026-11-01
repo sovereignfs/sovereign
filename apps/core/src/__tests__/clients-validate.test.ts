@@ -3,8 +3,8 @@ import { scopeProblems, textProblem, urlListProblems, urlProblem } from '../clie
 
 describe('an address an app may use (core-app §3.7.1)', () => {
   it.each([
-    'https://app.example.com/callback',
-    'https://app.example.com:8443/cb?x=1',
+    'https://app.sovereign.local/callback',
+    'https://app.sovereign.local:8443/cb?x=1',
     'https://localhost/cb',
     'https://sub.localhost:3000/cb',
   ])('accepts %s on any instance', (value) => {
@@ -23,7 +23,7 @@ describe('an address an app may use (core-app §3.7.1)', () => {
   });
 
   it.each([
-    'http://example.com/cb',
+    'http://sovereign.local/cb',
     'http://127.0.0.1:4000/cb',
     'http://[::1]:4000/cb',
     'http://localhost.evil.com/cb',
@@ -34,22 +34,22 @@ describe('an address an app may use (core-app §3.7.1)', () => {
   });
 
   it.each([
-    ['ftp://example.com/cb', 'must be https'],
+    ['ftp://sovereign.local/cb', 'must be https'],
     ['javascript:alert(1)', 'must be https'],
     ['data:text/html,x', 'must be https'],
     ['myapp://callback', 'must be https'],
-    ['https://user:pass@example.com/cb', 'user name'],
-    ['https://user@example.com/cb', 'user name'],
-    ['https://example.com/cb#frag', 'fragment'],
-    ['https://example.com/cb#', 'fragment'],
-    ['https://*.example.com/cb', 'plain address'],
-    ['https://example.com/*', 'plain address'],
-    [' https://example.com/cb', 'plain address'],
-    ['https://example.com/cb ', 'plain address'],
-    ['https://example.com/\ncb', 'plain address'],
-    ['https://example.com/\tcb', 'plain address'],
+    ['https://user:pass@sovereign.local/cb', 'user name'],
+    ['https://user@sovereign.local/cb', 'user name'],
+    ['https://sovereign.local/cb#frag', 'fragment'],
+    ['https://sovereign.local/cb#', 'fragment'],
+    ['https://*.sovereign.local/cb', 'plain address'],
+    ['https://sovereign.local/*', 'plain address'],
+    [' https://sovereign.local/cb', 'plain address'],
+    ['https://sovereign.local/cb ', 'plain address'],
+    ['https://sovereign.local/\ncb', 'plain address'],
+    ['https://sovereign.local/\tcb', 'plain address'],
     ['not an address', 'not an address'],
-    ['example.com/cb', 'not an address'],
+    ['sovereign.local/cb', 'not an address'],
     ['', 'required'],
   ])('refuses %j', (value, why) => {
     expect(urlProblem(value, true)).toMatch(new RegExp(why));
@@ -63,7 +63,7 @@ describe('an address an app may use (core-app §3.7.1)', () => {
   );
 
   it('refuses an address that is too long', () => {
-    expect(urlProblem(`https://example.com/${'a'.repeat(2100)}`, true)).toMatch(/too long/);
+    expect(urlProblem(`https://sovereign.local/${'a'.repeat(2100)}`, true)).toMatch(/too long/);
   });
 });
 

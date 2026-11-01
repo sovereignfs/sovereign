@@ -28,7 +28,7 @@ info:
     name: MPL-2.0
     identifier: MPL-2.0
 servers:
-  - url: https://core.example.com
+  - url: https://core.sovereign.local
     description: A Sovereign instance. Use its own address (its `SV_URL`).
 tags:
   - name: Directory

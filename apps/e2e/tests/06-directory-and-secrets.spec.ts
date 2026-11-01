@@ -61,7 +61,7 @@ test('§3.17.9: an app with the directory scope searches by name, resolves by su
   );
   expect(exact.status).toBe(200);
   expect(await exact.json()).toEqual({ sub: ada.sub, name: admin.name, picture: null });
-  for (const email of ['ada@example', '@example.test', 'ada%', '%@example.test']) {
+  for (const email of ['ada@example', '@sovereign.local', 'ada%', '%@sovereign.local']) {
     const partial = await call(
       `/users/by-email?email=${encodeURIComponent(email)}`,
       directoryToken,
@@ -70,7 +70,7 @@ test('§3.17.9: an app with the directory scope searches by name, resolves by su
   }
 
   // Addresses cannot be listed: a search by any part of one, or by a pattern, finds nobody, and there is no listing.
-  for (const q of ['example.test', 'ada@example.test', '@', '%']) {
+  for (const q of ['sovereign.local', 'ada@sovereign.local', '@', '%']) {
     const found = await call(`/users?q=${encodeURIComponent(q)}`, directoryToken);
     expect(((await found.json()) as { users: unknown[] }).users, q).toEqual([]);
   }

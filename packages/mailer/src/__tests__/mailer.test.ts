@@ -3,24 +3,24 @@ import { isMailError, MailError } from '../errors';
 import { createMailer, createUnavailableMailer } from '../mailer';
 import { createMemoryTransport } from '../memory';
 
-const FROM = 'Sovereign <no-reply@example.com>';
+const FROM = 'Sovereign <no-reply@sovereign.local>';
 
 describe('a mailer over the memory transport', () => {
   it('delivers a message and lets a test read it back', async () => {
     const transport = createMemoryTransport();
     const mailer = createMailer(transport, { from: FROM });
     const result = await mailer.send({
-      to: 'person@example.com',
+      to: 'person@sovereign.local',
       subject: 'Welcome',
       text: 'Hello',
       html: '<p>Hello</p>',
     });
 
-    expect(result).toEqual({ accepted: ['person@example.com'], rejected: [] });
+    expect(result).toEqual({ accepted: ['person@sovereign.local'], rejected: [] });
     expect(transport.sent).toHaveLength(1);
     expect(transport.last).toEqual({
       from: FROM,
-      to: ['person@example.com'],
+      to: ['person@sovereign.local'],
       subject: 'Welcome',
       text: 'Hello',
       html: '<p>Hello</p>',
@@ -30,8 +30,8 @@ describe('a mailer over the memory transport', () => {
   it('keeps messages in order, and can be cleared', async () => {
     const transport = createMemoryTransport();
     const mailer = createMailer(transport, { from: FROM });
-    await mailer.send({ to: 'a@example.com', subject: 'One', text: 'x' });
-    await mailer.send({ to: 'b@example.com', subject: 'Two', text: 'x' });
+    await mailer.send({ to: 'a@sovereign.local', subject: 'One', text: 'x' });
+    await mailer.send({ to: 'b@sovereign.local', subject: 'Two', text: 'x' });
     expect(transport.sent.map((m) => m.subject)).toEqual(['One', 'Two']);
     transport.clear();
     expect(transport.sent).toEqual([]);
@@ -52,7 +52,7 @@ describe('a mailer over the memory transport', () => {
     transport.failNextWith(new Error('connect ECONNREFUSED 10.0.0.5:587 for user hunter2'));
     const mailer = createMailer(transport, { from: FROM });
     const error = await mailer
-      .send({ to: 'a@example.com', subject: 'x', text: 'x' })
+      .send({ to: 'a@sovereign.local', subject: 'x', text: 'x' })
       .catch((e: unknown) => e);
     expect(isMailError(error)).toBe(true);
     expect((error as MailError).code).toBe('send-failed');
@@ -69,7 +69,7 @@ describe('a mailer over the memory transport', () => {
     );
     transport.failNextWith(failure);
     const mailer = createMailer(transport, { from: FROM });
-    await expect(mailer.send({ to: 'a@example.com', subject: 'x', text: 'x' })).rejects.toBe(
+    await expect(mailer.send({ to: 'a@sovereign.local', subject: 'x', text: 'x' })).rejects.toBe(
       failure,
     );
   });
@@ -79,10 +79,10 @@ describe('a mailer over the memory transport', () => {
     const mailer = createMailer(transport, { from: FROM });
     transport.failNextWith(new Error('boom'));
     await expect(
-      mailer.send({ to: 'a@example.com', subject: 'x', text: 'x' }),
+      mailer.send({ to: 'a@sovereign.local', subject: 'x', text: 'x' }),
     ).rejects.toBeInstanceOf(MailError);
     await expect(
-      mailer.send({ to: 'a@example.com', subject: 'x', text: 'x' }),
+      mailer.send({ to: 'a@sovereign.local', subject: 'x', text: 'x' }),
     ).resolves.toBeDefined();
   });
 });
@@ -91,7 +91,7 @@ describe('an unavailable mailer', () => {
   it('fails every send, saying email is not set up, instead of dropping the message', async () => {
     const mailer = createUnavailableMailer('Email is not set up: no SMTP server is set.');
     const error = await mailer
-      .send({ to: 'a@example.com', subject: 'x', text: 'x' })
+      .send({ to: 'a@sovereign.local', subject: 'x', text: 'x' })
       .catch((e: unknown) => e);
     expect(error).toBeInstanceOf(MailError);
     expect(error).toMatchObject({

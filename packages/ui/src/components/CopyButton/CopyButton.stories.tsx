@@ -13,7 +13,7 @@ const meta = {
       },
     },
   },
-  args: { text: 'https://core.example.com/invite/abc123', label: 'Copy link' },
+  args: { text: 'https://core.sovereign.local/invite/abc123', label: 'Copy link' },
   argTypes: {
     variant: { control: 'radio', options: ['primary', 'secondary', 'ghost'] },
     size: { control: 'radio', options: ['sm', 'md', 'lg'] },

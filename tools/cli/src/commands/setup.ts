@@ -49,7 +49,7 @@ export async function setup(ctx: Context, argv: string[]): Promise<void> {
     value('domain') ??
     (await askOrRefuse(
       io,
-      'The domain core is served on (for example sovereign.example.com):',
+      'The domain core is served on (for example sovereign.local):',
       '--domain',
     ));
   const host =

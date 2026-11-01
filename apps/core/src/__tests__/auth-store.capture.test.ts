@@ -33,7 +33,7 @@ describe.skipIf(!process.env.SV_CAPTURE_AUTH_STORE)('capturing the auth store', 
       await migrateCore(db, path.join(import.meta.dirname, '../../migrations'));
       const auth = makeAuth(db);
       const { jar, email } = await signUp(auth, {
-        email: 'captured@example.com',
+        email: 'captured@sovereign.local',
         name: 'Captured Person',
       });
       // A session that is still live whenever the fixture is read.

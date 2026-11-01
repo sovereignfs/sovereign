@@ -142,17 +142,17 @@ describe('the first deployment', () => {
 
   it('gives core its secrets through the _FILE form, and its own settings after the deployment’s', async () => {
     const made = await source({
-      suite: { core: { version: '0.71.0', env: { SV_SMTP_HOST: 'smtp.example.com' } } },
+      suite: { core: { version: '0.71.0', env: { SV_SMTP_HOST: 'smtp.sovereign.local' } } },
     });
     await apply(fakeHost().host, options(made));
     const environment = compose(made, 'core').services.core?.environment ?? {};
     expect(environment).toMatchObject({
-      SV_URL: 'https://sovereign.example.com',
+      SV_URL: 'https://sovereign.local',
       SV_DB_DIALECT: 'postgres',
       SV_POSTGRES_URL_FILE: '/run/secrets/SV_POSTGRES_URL',
       SV_AUTH_SECRET_FILE: '/run/secrets/SV_AUTH_SECRET',
       SV_FIELD_ENCRYPTION_KEYS_FILE: '/run/secrets/SV_FIELD_ENCRYPTION_KEYS',
-      SV_SMTP_HOST: 'smtp.example.com',
+      SV_SMTP_HOST: 'smtp.sovereign.local',
     });
     expect(environment.SV_AUTH_SECRET).toBeUndefined();
     expect(environment.NODE_EXTRA_CA_CERTS).toBeUndefined();
@@ -178,9 +178,7 @@ describe('the first deployment', () => {
     const made = await source();
     const { host, docker } = fakeHost();
     await apply(host, options(made));
-    expect(docker.containers.get('sv-proxy')?.networks['sv-net-core']).toContain(
-      'sovereign.example.com',
-    );
+    expect(docker.containers.get('sv-proxy')?.networks['sv-net-core']).toContain('sovereign.local');
   });
 
   it('sends the domain to core in the proxy’s configuration, with an email for certificates, and an override on the end', async () => {
@@ -189,8 +187,8 @@ describe('the first deployment', () => {
     });
     await apply(fakeHost().host, options(made));
     const caddyfile = readFileSync(path.join(made.stateDir, 'proxy', 'Caddyfile'), 'utf8');
-    expect(caddyfile).toContain('email op@example.com');
-    expect(caddyfile).toContain('sovereign.example.com {\n\treverse_proxy sv-core:3000\n}');
+    expect(caddyfile).toContain('email op@sovereign.local');
+    expect(caddyfile).toContain('sovereign.local {\n\treverse_proxy sv-core:3000\n}');
     expect(caddyfile).toContain('import /etc/caddy/overrides/*.caddy');
     expect(
       readFileSync(path.join(made.stateDir, 'proxy', 'overrides', 'extra.caddy'), 'utf8'),
@@ -468,7 +466,7 @@ describe('what it refuses, with nothing changed', () => {
     const made = await source({
       lockFrom: {
         schema: 1,
-        domain: 'sovereign.example.com',
+        domain: 'sovereign.local',
         core: { version: '0.70.0' },
         database: { version: '18' },
         server: { host: 'h' },
@@ -481,7 +479,7 @@ describe('what it refuses, with nothing changed', () => {
   it('SV_AUTH_COOKIE_DOMAIN and the passkey relying party anywhere core would be given them', async () => {
     const viaSecrets = await source({
       serverKey: true,
-      secrets: { core: { SV_AUTH_COOKIE_DOMAIN: '.example.com' } },
+      secrets: { core: { SV_AUTH_COOKIE_DOMAIN: '.sovereign.local' } },
     });
     const error = await refused(viaSecrets);
     expect(error.message).toContain('SV_AUTH_COOKIE_DOMAIN');
@@ -489,7 +487,7 @@ describe('what it refuses, with nothing changed', () => {
     const viaOverride = await source({
       overrides: {
         'overrides/compose/core.yml':
-          'services:\n  core:\n    environment:\n      SV_AUTH_WEBAUTHN_RP_ID: example.com\n',
+          'services:\n  core:\n    environment:\n      SV_AUTH_WEBAUTHN_RP_ID: sovereign.local\n',
       },
     });
     expect((await refused(viaOverride)).message).toContain('SV_AUTH_WEBAUTHN_RP_ID');
@@ -569,23 +567,23 @@ describe('what it refuses, with nothing changed', () => {
   it('a name that does not point at the server, saying how to go on, unless the certificates are the server’s own', async () => {
     const made = await source();
     const wrong = fakeHost({
-      resolves: { '203.0.113.7': [], 'sovereign.example.com': ['198.51.100.9'] },
+      resolves: { '203.0.113.7': [], 'sovereign.local': ['198.51.100.9'] },
     });
     const error = (await apply(wrong.host, options(made, { skipDns: false })).catch(
       (e: unknown) => e,
     )) as Refused;
     expect(error.message).toContain(
-      'sovereign.example.com resolves to 198.51.100.9, and the server is 203.0.113.7',
+      'sovereign.local resolves to 198.51.100.9, and the server is 203.0.113.7',
     );
     expect(error.message).toContain('--skip-dns');
-    const right = fakeHost({ resolves: { 'sovereign.example.com': ['203.0.113.7'] } });
+    const right = fakeHost({ resolves: { 'sovereign.local': ['203.0.113.7'] } });
     expect((await apply(right.host, options(await source(), { skipDns: false }))).changed).toBe(
       true,
     );
     const internal = await source({ suite: { tls: { mode: 'internal' } } });
-    const lan = fakeHost({ resolves: { 'sovereign.example.com': ['192.168.1.5'] } });
+    const lan = fakeHost({ resolves: { 'sovereign.local': ['192.168.1.5'] } });
     await apply(lan.host, options(internal, { skipDns: false }));
-    expect(lan.logs.join('\n')).toContain('Warning: sovereign.example.com resolves to 192.168.1.5');
+    expect(lan.logs.join('\n')).toContain('Warning: sovereign.local resolves to 192.168.1.5');
   });
 });
 
@@ -679,7 +677,9 @@ describe('apps', () => {
   it('registers an external app and runs nothing for it', async () => {
     const made = await source({
       suite: {
-        apps: { wiki: { external: true, name: 'Wiki', redirect: ['https://w.example.com/cb'] } },
+        apps: {
+          wiki: { external: true, name: 'Wiki', redirect: ['https://w.sovereign.local/cb'] },
+        },
       },
     });
     const { host, docker } = fakeHost();
@@ -701,9 +701,7 @@ describe('apps', () => {
     expect(docker.containers.get('sv-app-notes')?.networks).toHaveProperty('sv-net-app-notes');
     expect(docker.containers.get('sv-app-notes')?.networks).not.toHaveProperty('sv-net-core');
     expect(docker.psql.join('\n')).toContain('app_notes');
-    expect(caddyfile(made)).toContain(
-      'notes.sovereign.example.com {\n\treverse_proxy sv-app-notes:3000',
-    );
+    expect(caddyfile(made)).toContain('notes.sovereign.local {\n\treverse_proxy sv-app-notes:3000');
     expect(docker.caddyReloads).toBe(1);
     expect(state(made).apps.notes).toMatchObject({
       kind: 'hosted',
@@ -743,7 +741,7 @@ describe('apps', () => {
       suite: {
         apps: {
           notes: NOTES,
-          wiki: { external: true, name: 'Wiki', redirect: ['https://w.example.com/cb'] },
+          wiki: { external: true, name: 'Wiki', redirect: ['https://w.sovereign.local/cb'] },
         },
       },
     });
@@ -755,7 +753,7 @@ describe('apps', () => {
     expect((failure as Failed).message).toContain('notes');
     expect(docker.containers.has('sv-core')).toBe(true);
     expect(docker.clients.has('wiki')).toBe(true);
-    expect(caddyfile(made)).not.toContain('notes.sovereign.example.com');
+    expect(caddyfile(made)).not.toContain('notes.sovereign.local');
     expect(existsSync(path.join(made.stateDir, 'state.json'))).toBe(false);
   });
 
@@ -846,7 +844,7 @@ describe('Mailpit on a development or staging instance', () => {
       expect(compose(made, 'core').services.core?.environment).toMatchObject({
         SV_SMTP_HOST: 'sv-mailpit',
         SV_SMTP_PORT: '1025',
-        SV_SMTP_FROM: 'noreply@sovereign.example.com',
+        SV_SMTP_FROM: 'noreply@sovereign.local',
       });
     }
   });
@@ -883,7 +881,7 @@ describe('Mailpit on a development or staging instance', () => {
         environment: 'staging',
         core: {
           version: '0.71.0',
-          env: { SV_SMTP_HOST: 'smtp.example.com', SV_SMTP_PORT: '2525' },
+          env: { SV_SMTP_HOST: 'smtp.sovereign.local', SV_SMTP_PORT: '2525' },
         },
       },
     });
@@ -891,7 +889,7 @@ describe('Mailpit on a development or staging instance', () => {
     await apply(host, options(made));
     expect(upProjects(docker)).not.toContain('sovereign-mailpit');
     const env = compose(made, 'core').services.core?.environment ?? {};
-    expect(env).toMatchObject({ SV_SMTP_HOST: 'smtp.example.com', SV_SMTP_PORT: '2525' });
+    expect(env).toMatchObject({ SV_SMTP_HOST: 'smtp.sovereign.local', SV_SMTP_PORT: '2525' });
     expect(env).not.toHaveProperty('SV_SMTP_FROM');
   });
 
@@ -899,13 +897,13 @@ describe('Mailpit on a development or staging instance', () => {
     const made = await source({
       suite: {
         environment: 'development',
-        core: { version: '0.71.0', env: { SV_SMTP_FROM: 'dev@example.test' } },
+        core: { version: '0.71.0', env: { SV_SMTP_FROM: 'dev@sovereign.local' } },
       },
     });
     await apply(fakeHost().host, options(made));
     expect(compose(made, 'core').services.core?.environment).toMatchObject({
       SV_SMTP_HOST: 'sv-mailpit',
-      SV_SMTP_FROM: 'dev@example.test',
+      SV_SMTP_FROM: 'dev@sovereign.local',
     });
   });
 

@@ -37,13 +37,18 @@ const chooseFile = () =>
   });
 const render9 = (image: string | null = null) =>
   render(
-    <ProfilePanel name="Ada Lovelace" email="ada@example.com" image={image} prepare={prepare} />,
+    <ProfilePanel
+      name="Ada Lovelace"
+      email="ada@sovereign.local"
+      image={image}
+      prepare={prepare}
+    />,
   );
 
 describe('the profile panel', () => {
   it('shows the email address as text, with no way to change it', () => {
     render9();
-    expect(screen.getByText('ada@example.com')).toBeTruthy();
+    expect(screen.getByText('ada@sovereign.local')).toBeTruthy();
     expect(screen.getByText(/cannot be changed here/)).toBeTruthy();
     expect(screen.queryByLabelText(/^Email/)).toBeNull();
   });

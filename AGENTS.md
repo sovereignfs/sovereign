@@ -403,7 +403,7 @@ pnpm typecheck                   # turbo typecheck in every package, then tsc fo
 pnpm test / test:watch           # turbo test in every package, then the repo-level unit tests
 pnpm test:db                     # the *.db.test.ts tests, against the dialect named by SV_DB_DIALECT
 pnpm dev                         # core on :3000 (needs SV_URL and SV_AUTH_SECRET, see apps/core/.env.example); starts sqld first when .env chooses it
-pnpm seed                        # local accounts: owner, admin, user @example.test (development only; refuses a non-local SV_URL)
+pnpm seed                        # local accounts: owner, admin, user @sovereign.local (development only; refuses a non-local SV_URL)
 pnpm e2e                         # Phase 1 acceptance: the Playwright suite against a built core (build core first; SV_DB_DIALECT picks the database)
 pnpm docker:smoke                # build the image and boot sqld, PostgreSQL and SQLite compose setups from it (needs Docker)
 pnpm generate:api-client         # regenerate packages/api-client from spec/core-api/openapi.yaml

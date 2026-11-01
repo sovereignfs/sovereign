@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { ConfigurationError, createSovereign } from '../index';
 
 const env = {
-  NOTES_URL: 'https://notes.example.test',
-  NOTES_CORE_URL: 'https://core.example.test',
+  NOTES_URL: 'https://notes.sovereign.local',
+  NOTES_CORE_URL: 'https://core.sovereign.local',
   NOTES_CORE_CLIENT_ID: 'notes-app',
   NOTES_CORE_CLIENT_SECRET: 'a-very-secret-value',
 };
@@ -39,8 +39,8 @@ describe('creating the client (sdk §2)', () => {
   it('takes the four values one by one, for an app with other names', () => {
     expect(() =>
       createSovereign({
-        appUrl: 'https://notes.example.test',
-        coreUrl: 'https://core.example.test',
+        appUrl: 'https://notes.sovereign.local',
+        coreUrl: 'https://core.sovereign.local',
         clientId: 'notes-app',
         clientSecret: 'secret',
       }),
@@ -51,7 +51,7 @@ describe('creating the client (sdk §2)', () => {
     const error = failure(() =>
       createSovereign({
         prefix: 'NOTES',
-        env: { NOTES_CORE_URL: 'https://user:pw@core.example.test/path' },
+        env: { NOTES_CORE_URL: 'https://user:pw@core.sovereign.local/path' },
       }),
     );
     for (const name of [
@@ -70,13 +70,13 @@ describe('creating the client (sdk §2)', () => {
       failure(() =>
         createSovereign({
           prefix: 'NOTES',
-          env: { ...env, NOTES_CORE_URL: 'https://core.example.test/sub' },
+          env: { ...env, NOTES_CORE_URL: 'https://core.sovereign.local/sub' },
         }),
       ).message,
     ).toContain('NOTES_CORE_URL');
     const error = failure(() =>
       createSovereign({
-        appUrl: 'ftp://notes.example.test',
+        appUrl: 'ftp://notes.sovereign.local',
         coreUrl: 'not an address',
         clientId: 'x',
         clientSecret: 'a-secret-that-must-not-appear',
@@ -91,7 +91,7 @@ describe('creating the client (sdk §2)', () => {
     const error = failure(() =>
       createSovereign({
         appUrl: '',
-        coreUrl: 'https://core.example.test',
+        coreUrl: 'https://core.sovereign.local',
         clientId: ' ',
         clientSecret: 'secret-xyz',
       }),

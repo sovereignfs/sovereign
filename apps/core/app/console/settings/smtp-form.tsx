@@ -74,7 +74,7 @@ export function SmtpForm({ smtp, encryptionReady }: { smtp: ShownSmtp; encryptio
               {...field}
               name="host"
               autoComplete="off"
-              placeholder={fallback(smtp.host) ?? 'smtp.example.com'}
+              placeholder={fallback(smtp.host) ?? 'smtp.sovereign.local'}
               maxLength={255}
               value={host}
               onChange={(event) => setHost(event.target.value)}
@@ -95,13 +95,13 @@ export function SmtpForm({ smtp, encryptionReady }: { smtp: ShownSmtp; encryptio
             />
           )}
         </FormField>
-        <FormField label="From address" hint="For example Acme <noreply@example.com>.">
+        <FormField label="From address" hint="For example Acme <noreply@sovereign.local>.">
           {(field) => (
             <Input
               {...field}
               name="from"
               autoComplete="off"
-              placeholder={fallback(smtp.from) ?? 'noreply@example.com'}
+              placeholder={fallback(smtp.from) ?? 'noreply@sovereign.local'}
               maxLength={255}
               value={from}
               onChange={(event) => setFrom(event.target.value)}

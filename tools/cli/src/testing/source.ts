@@ -48,11 +48,11 @@ export async function makeSource(
   const server = { identity: serverIdentity, recipient: await identityToRecipient(serverIdentity) };
   const suite: Suite = {
     schema: 1,
-    domain: 'sovereign.example.com',
+    domain: 'sovereign.local',
     core: { version: '0.71.0' },
     database: { version: '18' },
     server: { host: '203.0.113.7', deploy: 'ssh' },
-    tls: { mode: 'per-host', email: 'op@example.com' },
+    tls: { mode: 'per-host', email: 'op@sovereign.local' },
     secrets: { recipients: [operator.recipient, server.recipient] },
     ...options.suite,
   };

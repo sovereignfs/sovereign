@@ -29,7 +29,7 @@ const BASE = {
   SV_AUTH_SECRET: 'a-secret-that-is-long-enough-to-pass-validation',
 };
 const key = () => randomBytes(32).toString('base64');
-const message = { to: 'person@example.com', subject: 'Hello', text: 'Hi' };
+const message = { to: 'person@sovereign.local', subject: 'Hello', text: 'Hi' };
 
 let target: TestDatabase;
 let db: Database;
@@ -88,18 +88,21 @@ async function failure(promise: Promise<unknown>): Promise<MailError> {
   return error;
 }
 
-const ENV = { SV_SMTP_HOST: 'smtp.example.com', SV_SMTP_FROM: 'Sovereign <no-reply@example.com>' };
+const ENV = {
+  SV_SMTP_HOST: 'smtp.sovereign.local',
+  SV_SMTP_FROM: 'Sovereign <no-reply@sovereign.local>',
+};
 
 describe('sending with the environment', () => {
   it('sends through the server SV_SMTP_* describes, from the configured address', async () => {
     const h = harness(ENV);
     const result = await h.service.send(message);
-    expect(result.accepted).toEqual(['person@example.com']);
+    expect(result.accepted).toEqual(['person@sovereign.local']);
     expect(h.created).toEqual([
-      { host: 'smtp.example.com', port: 587, from: 'Sovereign <no-reply@example.com>' },
+      { host: 'smtp.sovereign.local', port: 587, from: 'Sovereign <no-reply@sovereign.local>' },
     ]);
     expect(h.transports[0]?.last).toMatchObject({
-      from: 'Sovereign <no-reply@example.com>',
+      from: 'Sovereign <no-reply@sovereign.local>',
       subject: 'Hello',
     });
   });
@@ -145,7 +148,7 @@ describe('when email is not set up', () => {
   });
 
   it('says what is missing when it is only half set up', async () => {
-    const h = harness({ SV_SMTP_HOST: 'smtp.example.com' });
+    const h = harness({ SV_SMTP_HOST: 'smtp.sovereign.local' });
     const error = await failure(h.service.send(message));
     expect(error.code).toBe('not-configured');
     expect(error.message).toContain('the "from" address is missing');
@@ -154,7 +157,7 @@ describe('when email is not set up', () => {
 
   it('reports the status without sending', async () => {
     expect((await harness().service.status()).state).toBe('not-configured');
-    expect((await harness({ SV_SMTP_HOST: 'x.example.com' }).service.status()).state).toBe(
+    expect((await harness({ SV_SMTP_HOST: 'x.sovereign.local' }).service.status()).state).toBe(
       'incomplete',
     );
     expect((await harness(ENV).service.status()).state).toBe('configured');
@@ -167,7 +170,7 @@ describe('the Console overrides the environment, without a restart', () => {
     await h.service.send(message);
     await h.store.set(SETTINGS.smtpHost, 'smtp.console.example');
     await h.service.send(message);
-    expect(h.created.map((s) => s.host)).toEqual(['smtp.example.com', 'smtp.console.example']);
+    expect(h.created.map((s) => s.host)).toEqual(['smtp.sovereign.local', 'smtp.console.example']);
     expect(h.closed, 'the old transport was closed').toEqual([0]);
     expect(h.transports[1]?.sent).toHaveLength(1);
   });
@@ -178,23 +181,23 @@ describe('the Console overrides the environment, without a restart', () => {
     await h.service.send(message);
     await h.store.clear(SETTINGS.smtpHost);
     await h.service.send(message);
-    expect(h.created.map((s) => s.host)).toEqual(['smtp.console.example', 'smtp.example.com']);
+    expect(h.created.map((s) => s.host)).toEqual(['smtp.console.example', 'smtp.sovereign.local']);
   });
 
   it('can set email up entirely from the Console when the environment says nothing', async () => {
     const h = harness();
     await expect(h.service.send(message)).rejects.toMatchObject({ code: 'not-configured' });
     await h.store.set(SETTINGS.smtpHost, 'smtp.console.example');
-    await h.store.set(SETTINGS.smtpFrom, 'console@example.com');
+    await h.store.set(SETTINGS.smtpFrom, 'console@sovereign.local');
     await h.service.send(message);
     expect(h.created).toEqual([
-      { host: 'smtp.console.example', port: 587, from: 'console@example.com' },
+      { host: 'smtp.console.example', port: 587, from: 'console@sovereign.local' },
     ]);
   });
 
   it('stops sending, and says so, when the Console empties what the environment filled', async () => {
-    const h = harness({ SV_SMTP_HOST: 'smtp.example.com' });
-    await h.store.set(SETTINGS.smtpFrom, 'console@example.com');
+    const h = harness({ SV_SMTP_HOST: 'smtp.sovereign.local' });
+    await h.store.set(SETTINGS.smtpFrom, 'console@sovereign.local');
     await h.service.send(message);
     await h.store.clear(SETTINGS.smtpFrom);
     expect((await failure(h.service.send(message))).message).toContain(
@@ -257,7 +260,7 @@ describe('the start-up warning', () => {
 
   it('says what is wrong when it is only half set up', async () => {
     const warning = mailStartupWarning(
-      await harness({ SV_SMTP_HOST: 'smtp.example.com' }).service.status(),
+      await harness({ SV_SMTP_HOST: 'smtp.sovereign.local' }).service.status(),
     );
     expect(warning).toContain('the "from" address is missing');
   });

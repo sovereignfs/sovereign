@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { describeSmtpProblem, resolveSmtp } from '../smtp-config';
 
-const complete = { host: 'smtp.example.com', from: 'Sovereign <no-reply@example.com>' };
+const complete = { host: 'smtp.sovereign.local', from: 'Sovereign <no-reply@sovereign.local>' };
 
 describe('resolveSmtp', () => {
   it('is not configured when nothing is set: email is simply off', () => {
@@ -15,7 +15,11 @@ describe('resolveSmtp', () => {
   it('is configured with a host and a from address, on the submission port by default', () => {
     expect(resolveSmtp(complete)).toEqual({
       state: 'configured',
-      settings: { host: 'smtp.example.com', port: 587, from: 'Sovereign <no-reply@example.com>' },
+      settings: {
+        host: 'smtp.sovereign.local',
+        port: 587,
+        from: 'Sovereign <no-reply@sovereign.local>',
+      },
     });
   });
 
@@ -23,7 +27,7 @@ describe('resolveSmtp', () => {
     expect(
       resolveSmtp({
         ...complete,
-        host: ' smtp.example.com ',
+        host: ' smtp.sovereign.local ',
         port: 465,
         user: ' me ',
         password: 'pw',
@@ -31,18 +35,18 @@ describe('resolveSmtp', () => {
     ).toEqual({
       state: 'configured',
       settings: {
-        host: 'smtp.example.com',
+        host: 'smtp.sovereign.local',
         port: 465,
         user: 'me',
         password: 'pw',
-        from: 'Sovereign <no-reply@example.com>',
+        from: 'Sovereign <no-reply@sovereign.local>',
       },
     });
   });
 
   it.each([
-    [{ host: 'smtp.example.com' }, ['the "from" address is missing']],
-    [{ from: 'a@example.com' }, ['the SMTP server (host) is missing']],
+    [{ host: 'smtp.sovereign.local' }, ['the "from" address is missing']],
+    [{ from: 'a@sovereign.local' }, ['the SMTP server (host) is missing']],
     [{ port: 25 }, ['the SMTP server (host) is missing', 'the "from" address is missing']],
     [{ ...complete, from: 'nope' }, ['the "from" address is not a valid email address']],
     [{ ...complete, user: 'me' }, ['the SMTP user and password must be set together']],
@@ -66,7 +70,7 @@ describe('resolveSmtp', () => {
 
 describe('describeSmtpProblem', () => {
   it('names the variables and the Console, so the operator knows what to do', () => {
-    const status = resolveSmtp({ host: 'smtp.example.com' });
+    const status = resolveSmtp({ host: 'smtp.sovereign.local' });
     if (status.state === 'configured') throw new Error('expected a problem');
     const text = describeSmtpProblem(status);
     expect(text).toContain('Email is not set up: the "from" address is missing.');

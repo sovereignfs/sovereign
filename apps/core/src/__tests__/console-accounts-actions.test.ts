@@ -61,7 +61,7 @@ afterAll(async () => {
 const add = (id: string, role: string) =>
   db.run(
     'insert into users (id, name, email, email_verified, role, created_at, updated_at) values (?, ?, ?, 1, ?, 1, 1)',
-    [id, id, `${id}@example.com`, role],
+    [id, id, `${id}@sovereign.local`, role],
   );
 const signedInAs = (id: string, role: unknown) =>
   getSession.mockResolvedValue({ user: { id, role }, session: { id: `s-${id}` } });

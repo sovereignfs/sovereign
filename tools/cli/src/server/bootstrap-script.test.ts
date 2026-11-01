@@ -61,4 +61,15 @@ describe('the script that prepares a machine', () => {
     expect(bootstrapScript({ image, deployKey: key, rotate: true })).toContain("ROTATE='1'");
     expect(bootstrapScript({ image })).toContain("DEPLOY_KEY=''");
   });
+
+  it('lets a user who is not root use Docker whatever the deployment, since every sv command runs the toolkit as that user', () => {
+    for (const script of [bootstrapScript({ image }), bootstrapScript({ image, deployKey: key })]) {
+      expect(script.match(/usermod -aG docker "\$user"/g)).toHaveLength(1);
+      expect(script).toContain('[ "$user" != root ]');
+      // Before, and so outside, the branch that installs the deployment key: `--deploy ssh` has none.
+      expect(script.indexOf('usermod -aG docker')).toBeLessThan(
+        script.indexOf('if [ -n "$DEPLOY_KEY" ]'),
+      );
+    }
+  });
 });

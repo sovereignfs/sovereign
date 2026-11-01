@@ -18,9 +18,23 @@ import { reencrypt } from './secret.js';
 
 const lastLine = (text: string) => text.trim().split('\n').pop() ?? '';
 
+/**
+ * What a command printed last that says what went wrong. Tools end with a pointer ("Run 'docker run --help' for more information"), which
+ * is no use to someone reading it, so it is passed over for the line above it.
+ */
+export function sayingOf(text: string): string {
+  const lines = text
+    .trim()
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const said = lines.filter((line) => !/^(run|see) '.*--help'/i.test(line));
+  return said.pop() ?? lines.pop() ?? '';
+}
+
 /** Turns a command that ended badly on the server into the error the operator sees (operator-cli §11). */
 export function remoteFailure(result: RemoteResult, what: string): never {
-  const said = lastLine(result.stderr) || lastLine(result.stdout);
+  const said = sayingOf(result.stderr) || sayingOf(result.stdout);
   if (result.code === 255) {
     throw new Failed(
       `Could not reach the server over SSH: ${said || 'no answer'}`,

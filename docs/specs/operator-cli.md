@@ -392,6 +392,8 @@ repository at the toolkit's version. It needs the server to be reachable from th
 Runs over the operator's SSH access, once, and is safe to run again. It MUST:
 
 - install Docker if it is absent, and refuse a version the toolkit does not support;
+- when the SSH user is not root, add it to the `docker` group, since every `sv` command runs the toolkit's image as that user, and
+  Docker's socket belongs to root and that group;
 - create §7's directories;
 - generate the server's age key, and add its public key to `secrets.recipients` in `suite.yml`;
 - widen Docker's default address pools, which run out after a few dozen networks;

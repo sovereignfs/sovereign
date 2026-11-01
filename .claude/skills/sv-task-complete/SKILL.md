@@ -92,7 +92,7 @@ a new rule in docs/architecture-rules.md]
       `docs:check-links`, `test`, `build` pass
 - [ ] Contract tests / env declarations / three-database checks pass (if relevant)
 - [ ] Security check passes (if sensitive paths touched)
-- [ ] Spec, `spec/core-api/` and `.env.example` updated where behaviour changed
+- [ ] Spec, `contracts/core-api/` and `.env.example` updated where behaviour changed
 - [ ] Versions bumped per policy; `docs/upgrade.md` note if breaking
 - [ ] `ROADMAP.md` row(s) ✅, Version cell matches the final root version (or `—`)
 - [ ] Epic task heading(s) ✅

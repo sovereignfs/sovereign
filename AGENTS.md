@@ -26,9 +26,9 @@ assumptions:
   code, epics and issues until it is changed.
 - `docs/specs/operator-cli.md` — what `tools/cli` must do. Holds the same place
   for it as `core-app.md` does for `apps/core`.
-- `spec/core-api/` — the HTTP contract apps call; `spec/env.md` — the
-  environment variable convention; `spec/suite.md` and `spec/app-manifest.md` —
-  the instance repository and what an app provides (`spec/schemas/`).
+- `contracts/core-api/` — the HTTP contract apps call; `contracts/env.md` — the
+  environment variable convention; `contracts/suite.md` and `contracts/app-manifest.md` —
+  the instance repository and what an app provides (`contracts/schemas/`).
 - `ROADMAP.md` — chronological task index (milestone → epic task ID → status).
   Full task detail lives in `docs/epics/`. Each task = one branch = one PR.
 - `docs/development-workflow.md` — how to start, implement, and complete a task
@@ -103,8 +103,8 @@ recorded as an ADR in `docs/adrs/`. A documented "not now" is a valid outcome.
   output means updating the `Dockerfile`, `docker-compose*.yml` and
   `.dockerignore` in the same change.
 - **Docs are part of the change.** A behaviour change updates
-  `docs/specs/core-app.md`; an HTTP change updates `spec/core-api/`; an env var
-  change updates `.env.example`, the spec's variable table and `spec/env.md`;
+  `docs/specs/core-app.md`; an HTTP change updates `contracts/core-api/`; an env var
+  change updates `.env.example`, the spec's variable table and `contracts/env.md`;
   every `process.env` read is declared in `.env.example`.
 - **Version bumps are part of the PR**, semver by change type: `fix/` → patch,
   `feat/` → minor, breaking → major plus a `docs/upgrade.md` note, `chore/` /
@@ -244,7 +244,7 @@ each: `docs/architecture-rules.md`.
 - **A person deletes their own account only through `AccountManager.deleteSelf`**
   (after the password; never an owner's, judged by the stored role); it shares
   the one transaction an operator's deletion uses.
-- **The Core API is defined only in `spec/core-api/openapi.yaml`**; the client in
+- **The Core API is defined only in `contracts/core-api/openapi.yaml`**; the client in
   `packages/api-client` is generated from it (`pnpm generate:api-client`, never
   edited by hand) and every handler's answer is checked against it
   (`expectMatchesContract`).
@@ -362,7 +362,7 @@ TypeScript 6 · Turborepo + pnpm workspaces ·
 better-auth 1.7 + `@better-auth/oauth-provider` · Drizzle ORM (sqld, PostgreSQL,
 SQLite file) · nodemailer SMTP (`packages/mailer`) · CSS Modules + CSS custom
 properties (`packages/ui`) · `tsup` (ESM only) · Vitest + Testing Library ·
-Playwright · OpenAPI 3.1 (`spec/core-api/`) · Docker Compose.
+Playwright · OpenAPI 3.1 (`contracts/core-api/`) · Docker Compose.
 
 ## Repository layout
 
@@ -382,7 +382,7 @@ packages/
   api-client/       typed Core API client
   sdk/              how an app's server calls core — tokens, failure, version support
   tsconfig/         shared TS configs — extend these
-spec/               core-api/ (OpenAPI), env.md, suite.md, app-manifest.md, schemas/
+contracts/          core-api/ (OpenAPI), env.md, suite.md, app-manifest.md, schemas/
 docs/
   specs/            core-app.md, operator-cli.md, design-system.md, sdk.md — source of truth for each
   epics/            task detail;  rfcs/  research/  adrs/
@@ -406,7 +406,7 @@ pnpm dev                         # core on :3000 (needs SV_URL and SV_AUTH_SECRE
 pnpm seed                        # local accounts: owner, admin, user @sovereign.local (development only; refuses a non-local SV_URL)
 pnpm e2e                         # Phase 1 acceptance: the Playwright suite against a built core (build core first; SV_DB_DIALECT picks the database)
 pnpm docker:smoke                # build the image and boot sqld, PostgreSQL and SQLite compose setups from it (needs Docker)
-pnpm generate:api-client         # regenerate packages/api-client from spec/core-api/openapi.yaml
+pnpm generate:api-client         # regenerate packages/api-client from contracts/core-api/openapi.yaml
 pnpm build                       # turbo build
 pnpm storybook / build-storybook # the design system's Storybook (dev server on :6006 / static build)
 pnpm design:tokens:check         # every --sv-* token used is defined; no hard-coded colours

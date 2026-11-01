@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 /**
- * Reads a setting the instance gives this app (spec/app-manifest.md §3). A secret arrives as a file named by `NAME_FILE`, so it is
+ * Reads a setting the instance gives this app (contracts/app-manifest.md §3). A secret arrives as a file named by `NAME_FILE`, so it is
  * never in the process list or a log; the plain `NAME` is read as well, for running it on your own machine.
  */
 export function setting(name: string): string | undefined {

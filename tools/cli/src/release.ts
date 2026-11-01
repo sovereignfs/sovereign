@@ -26,5 +26,5 @@ export const RELEASE = {
   database: '18',
 } as const;
 
-/** The label an app's image carries its manifest in (spec/app-manifest.md §1). */
+/** The label an app's image carries its manifest in (contracts/app-manifest.md §1). */
 export const MANIFEST_LABEL = 'io.github.sovereignfs.app-manifest';

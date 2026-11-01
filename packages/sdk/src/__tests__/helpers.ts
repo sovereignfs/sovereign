@@ -15,7 +15,9 @@ type Operation = {
   responses: Record<string, Json>;
   'x-planned'?: boolean;
 };
-const contract = parse(readFileSync(path.join(ROOT, 'spec/core-api/openapi.yaml'), 'utf8')) as {
+const contract = parse(
+  readFileSync(path.join(ROOT, 'contracts/core-api/openapi.yaml'), 'utf8'),
+) as {
   paths: Record<string, Record<string, Operation>>;
 };
 

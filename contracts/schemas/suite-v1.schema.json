@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/sovereignfs/sovereign/main/spec/schemas/suite-v1.schema.json",
+  "$id": "https://raw.githubusercontent.com/sovereignfs/sovereign/main/contracts/schemas/suite-v1.schema.json",
   "title": "Sovereign suite.yml, version 1",
-  "description": "What an operator chose for an instance. spec/suite.md is the prose, with the rules a schema cannot express.",
+  "description": "What an operator chose for an instance. contracts/suite.md is the prose, with the rules a schema cannot express.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "domain", "core", "database", "server", "secrets"],

@@ -5,7 +5,7 @@ import { isExternal, type Suite } from './types.js';
 import type { Problem } from './schema.js';
 
 /**
- * Whether a value looks like a secret (spec/suite.md §1.2; operator-cli §4.5). A guard and not a guarantee: it catches the common
+ * Whether a value looks like a secret (contracts/suite.md §1.2; operator-cli §4.5). A guard and not a guarantee: it catches the common
  * shapes, and an operator must not be told it catches all of them.
  */
 export function looksLikeSecret(value: string): boolean {
@@ -21,7 +21,7 @@ export function looksLikeSecret(value: string): boolean {
   );
 }
 
-/** What the schema cannot say about `suite.yml` (spec/suite.md), judged against this toolkit's release. */
+/** What the schema cannot say about `suite.yml` (contracts/suite.md), judged against this toolkit's release. */
 export function suiteProblems(suite: Suite): Problem[] {
   const problems: Problem[] = [];
   const add = (at: string, message: string) => problems.push({ at, message });

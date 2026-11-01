@@ -3,7 +3,7 @@ import path from 'node:path';
 import { db } from './db';
 
 /**
- * Applies the files in `migrations/`, in name order, each once (spec/app-manifest.md §4: an app applies its own migrations when it
+ * Applies the files in `migrations/`, in name order, each once (contracts/app-manifest.md §4: an app applies its own migrations when it
  * starts, and is safe to start again). One advisory lock holds a second copy of the app back until the first has finished.
  */
 export async function migrate(): Promise<void> {

@@ -12,7 +12,7 @@ import { fieldEncryptionVariables, resolveFieldEncryption } from '@sovereignfs/c
 import { databaseVariables, resolveDatabase } from '@sovereignfs/database';
 
 /**
- * Every environment variable core reads is declared here (rules: spec/env.md), and
+ * Every environment variable core reads is declared here (rules: contracts/env.md), and
  * `.env.example` lists the same ones; a test keeps the two in step. Variables for
  * mail and registration arrive with the tasks that use them. The database and
  * field-encryption variables come from their packages; core does not require a database

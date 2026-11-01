@@ -3,13 +3,13 @@ import type { Problem } from './schema.js';
 import { usesMailpit } from './environment.js';
 import { isExternal, type Digest, type Lock, type Suite } from './types.js';
 
-/** The image each thing runs, as `suite.yml` and this release say (spec/suite.md §2). External apps run nothing. */
+/** The image each thing runs, as `suite.yml` and this release say (contracts/suite.md §2). External apps run nothing. */
 export function wantedImages(suite: Suite): {
   cli: string;
   core: string;
   database: string;
   proxy: string;
-  /** Only when the instance runs Mailpit (spec/suite.md §1.1). */
+  /** Only when the instance runs Mailpit (contracts/suite.md §1.1). */
   mail?: string;
   apps: Record<string, string>;
 } {

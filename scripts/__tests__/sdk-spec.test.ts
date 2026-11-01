@@ -13,7 +13,7 @@ const read = (file: string) => readFileSync(path.join(root, file), 'utf8');
 const spec = read('docs/specs/sdk.md');
 
 type Operation = { operationId: string; security?: unknown[] };
-const contract = parse(read('spec/core-api/openapi.yaml')) as {
+const contract = parse(read('contracts/core-api/openapi.yaml')) as {
   paths: Record<string, Record<string, Operation>>;
 };
 const operations = Object.values(contract.paths).flatMap((methods) => Object.values(methods));
@@ -91,7 +91,7 @@ describe('the legacy SDK', () => {
 
 describe('where the specifications meet', () => {
   it('reads the variables an app is given', () => {
-    const manifest = read('spec/app-manifest.md');
+    const manifest = read('contracts/app-manifest.md');
     for (const name of ['_URL', '_CORE_URL', '_CORE_CLIENT_ID', '_CORE_CLIENT_SECRET']) {
       expect(spec, name).toContain(`\`<PREFIX>${name}\``);
       expect(manifest, name).toContain(`\`<PREFIX>${name}\``);

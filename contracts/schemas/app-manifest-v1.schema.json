@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/sovereignfs/sovereign/main/spec/schemas/app-manifest-v1.schema.json",
+  "$id": "https://raw.githubusercontent.com/sovereignfs/sovereign/main/contracts/schemas/app-manifest-v1.schema.json",
   "title": "Sovereign app manifest, version 1",
-  "description": "What an app provides so that it can be hosted. spec/app-manifest.md is the prose.",
+  "description": "What an app provides so that it can be hosted. contracts/app-manifest.md is the prose.",
   "type": "object",
   "additionalProperties": false,
   "required": ["manifest", "prefix", "name", "port", "health", "signIn", "core"],

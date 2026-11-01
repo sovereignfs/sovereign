@@ -3,7 +3,7 @@
 How Sovereign core sends email: an SMTP transport, an in-memory transport for tests, and the
 validation and error handling around them. It reads **no environment**: the caller passes the
 settings (core resolves them from the Console and `SV_SMTP_*`, see
-[`spec/env.md`](../../spec/env.md)).
+[`contracts/env.md`](../../contracts/env.md)).
 
 > Not published to npm. It is `private`.
 

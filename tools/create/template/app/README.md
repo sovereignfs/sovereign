@@ -45,4 +45,4 @@ npm run dev
 ```
 
 See [Using the SDK](https://github.com/sovereignfs/sovereign/blob/main/docs/using-the-sdk.md) for what `sv.as(person)` can call, and
-[the app manifest](https://github.com/sovereignfs/sovereign/blob/main/spec/app-manifest.md) for what the instance gives and expects.
+[the app manifest](https://github.com/sovereignfs/sovereign/blob/main/contracts/app-manifest.md) for what the instance gives and expects.

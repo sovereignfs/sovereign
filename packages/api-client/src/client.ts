@@ -45,7 +45,7 @@ export type CoreClient = {
 type Given = { params?: Record<string, string>; query?: Record<string, unknown>; body?: unknown };
 
 /**
- * A client for the Core API, generated from its contract (`spec/core-api/openapi.yaml`): a method for each
+ * A client for the Core API, generated from its contract (`contracts/core-api/openapi.yaml`): a method for each
  * operation, typed from the contract. Every failure is a `CoreApiError` carrying the contract's error body. The
  * token is sent only to an operation that needs one.
  */

@@ -25,7 +25,7 @@ not applicable. -->
 - [ ] `pnpm lint` passes
 - [ ] `pnpm typecheck` passes
 - [ ] Version bumped where required (see [version bump conventions](../AGENTS.md))
-- [ ] Relevant docs updated (spec, `spec/core-api/`, `.env.example`)
+- [ ] Relevant docs updated (spec, `contracts/core-api/`, `.env.example`)
 - [ ] Screenshots included below (delete if no UI changes)
 
 ## Screenshots

@@ -62,7 +62,7 @@ Both agents read the same `docs/` tree without modification:
 - `docs/development-workflow.md` — branch/PR/commit mechanics
 - `docs/architecture-rules.md` — full detail behind every hard rule; where a
   reusable lesson is recorded
-- Everything else in `docs/` and `spec/`
+- Everything else in `docs/` and `contracts/`
 
 Neither agent writes anything to these files that the other would need to
 undo. Completion is recorded once, in `ROADMAP.md`, in the PR that delivers the

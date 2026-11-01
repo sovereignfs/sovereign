@@ -15,8 +15,8 @@ The key words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT** and **MAY** are
 used as described in RFC 2119.
 
 The wire contract for anything an app calls over HTTP is in
-[`spec/core-api/`](../../spec/core-api/), and the environment variable
-convention is in [`spec/env.md`](../../spec/env.md). This document describes
+[`contracts/core-api/`](../../contracts/core-api/), and the environment variable
+convention is in [`contracts/env.md`](../../contracts/env.md). This document describes
 behaviour; those define the exact shapes. How operators deploy core is in
 [`operator-cli.md`](operator-cli.md), and how a JavaScript app calls it in
 [`sdk.md`](sdk.md).
@@ -941,7 +941,7 @@ share something with a person.
   addresses.
 - Calls are rate limited per client and per account.
 
-How it is held to those words (the contract is `spec/core-api/openapi.yaml`,
+How it is held to those words (the contract is `contracts/core-api/openapi.yaml`,
 §3.13.1):
 
 - The token is a JWT the provider issued with `resource=<SV_URL>/api/v1`: core
@@ -1182,7 +1182,7 @@ without it the page does not load them at all.
 
 Core publishes the instance name, logos and favicon at a well-known address so
 that apps can show the same branding. The address and format are defined in
-`spec/core-api/`.
+`contracts/core-api/`.
 
 - The address is `/.well-known/sovereign-instance`. It is public: it needs no
   account and no token, and any origin may read it, since an app's pages fetch
@@ -1205,7 +1205,7 @@ that apps can show the same branding. The address and format are defined in
 
 ### 3.13.1 The Core API contract
 
-What an app may call on core is defined once, in `spec/core-api/openapi.yaml`
+What an app may call on core is defined once, in `contracts/core-api/openapi.yaml`
 (OpenAPI 3.1), and nowhere else:
 
 - Paths are versioned (`/api/v1/...`); a change that could break an app that
@@ -1279,7 +1279,7 @@ What an app may call on core is defined once, in `spec/core-api/openapi.yaml`
   variable is a start-up error.
 - Phase 1 environment variables. The rules every variable follows - the prefix,
   the `_FILE` form, value syntax, start-up validation and what the Console may
-  override - are in [`spec/env.md`](../../spec/env.md):
+  override - are in [`contracts/env.md`](../../contracts/env.md):
 
 | Variable                                                                                                                             | Required        | Purpose                                                                                                                                                                                                                                                                    |
 | ------------------------------------------------------------------------------------------------------------------------------------ | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1293,7 +1293,7 @@ What an app may call on core is defined once, in `spec/core-api/openapi.yaml`
 | `SV_AUTH_PASSWORD_MIN_LENGTH`, `SV_AUTH_PASSWORD_REQUIRE_*`                                                                          | no              | Password policy (§3.3.2)                                                                                                                                                                                                                                                   |
 | `SV_AUTH_WEBAUTHN_RP_ID`, `_RP_NAME`, `_ORIGIN`                                                                                      | no              | Passkey relying party (§3.4.2)                                                                                                                                                                                                                                             |
 | `SV_DB_DIALECT`, `SV_SQLD_URL`, `SV_SQLD_ADMIN_URL`, `SV_SQLD_NAMESPACE`, `SV_SQLITE_URL`, `SV_POSTGRES_URL`, `SV_POSTGRES_POOL_MAX` | yes, by dialect | Database                                                                                                                                                                                                                                                                   |
-| `SV_FIELD_ENCRYPTION_KEYS` / `_FILE`                                                                                                 | yes             | Key ring for stored secrets: `id:key` entries, newest first (`spec/env.md`)                                                                                                                                                                                                |
+| `SV_FIELD_ENCRYPTION_KEYS` / `_FILE`                                                                                                 | yes             | Key ring for stored secrets: `id:key` entries, newest first (`contracts/env.md`)                                                                                                                                                                                           |
 | `SV_ENVIRONMENT`                                                                                                                     | no              | `development`, `staging` or `production`; default `production`. What the instance is for (§3.15.1)                                                                                                                                                                         |
 | `SV_SMTP_HOST`, `_PORT`, `_USER`, `_PASSWORD` / `_PASSWORD_FILE`, `_FROM`                                                            | no              | Mail defaults (§3.12)                                                                                                                                                                                                                                                      |
 
@@ -1337,7 +1337,7 @@ which a production instance never can ([workstream 0002](../workstreams/0002-tes
 
 - **`SV_ENVIRONMENT`** is `development`, `staging` or `production`, and `production` when it is not set. Any other value is a start-up
   error, since a misspelling must never read as a permission. It changes nothing in how core runs; the only thing it decides is whether
-  the seed below may run. The operator CLI sets it from `environment` in `suite.yml` ([spec/suite.md](../../spec/suite.md) §1.1.1), and an
+  the seed below may run. The operator CLI sets it from `environment` in `suite.yml` ([contracts/suite.md](../../contracts/suite.md) §1.1.1), and an
   operator cannot set it in `core.env`.
 - **`sovereign-admin seed [--local] [--json]`** is run in core's container (§3.7.4). It exits 3 when it is refused, which it is before it
   writes anything, and 1 when it stops partway (running it again is safe). It MUST refuse, making nothing, when `SV_ENVIRONMENT` is
@@ -1410,7 +1410,7 @@ apps) and §3.15 (image storage, secrets from files).
 ## 4. Phase 2 — Core services for apps
 
 Phase 2 is what core offers an app beyond signing people in. Each service is specified here before it is built, and its operations
-are added to the contract (`spec/core-api/openapi.yaml`) marked `x-planned` until they are served (§3.13.1). Telling apps that an account
+are added to the contract (`contracts/core-api/openapi.yaml`) marked `x-planned` until they are served (§3.13.1). Telling apps that an account
 was deleted (§4.5) is the one service that runs from core to an app, so it is not an operation of the contract.
 
 ### 4.1 Notifications
@@ -1466,7 +1466,7 @@ manage only what it sent; it never sees another app's, and it can send nothing w
   deleted with the next send; a dismissed one is deleted after seven days.
 - Deleting an account deletes its notifications. Deleting an app deletes what it sent.
 
-**The operations** (`spec/core-api/openapi.yaml`, all `x-planned`):
+**The operations** (`contracts/core-api/openapi.yaml`, all `x-planned`):
 
 | Operation                  | Who                  | Scope                | What                                                                       |
 | -------------------------- | -------------------- | -------------------- | -------------------------------------------------------------------------- |
@@ -1529,7 +1529,7 @@ the operation answers `404`. An SDK sees the capability is missing and raises `N
 is a `429` with `Retry-After`. A message that cannot be used (too long, a bad link) is a `400` before anything is counted. Nothing
 is queued past a restart: a message core could not hand to the mail server is dropped and logged, not kept.
 
-**The operation** (`spec/core-api/openapi.yaml`, `x-planned`):
+**The operation** (`contracts/core-api/openapi.yaml`, `x-planned`):
 
 | Operation   | Who                 | Scope        | What                                                         |
 | ----------- | ------------------- | ------------ | ------------------------------------------------------------ |
@@ -1592,7 +1592,7 @@ most 500 in all, the oldest going first.
 
 **Limits.** 600 a minute for an app, and 120 an hour for one app about one person; over is a `429` with `Retry-After`.
 
-**The operation** (`spec/core-api/openapi.yaml`, `x-planned`):
+**The operation** (`contracts/core-api/openapi.yaml`, `x-planned`):
 
 | Operation     | Who                 | Scope            | What                                                       |
 | ------------- | ------------------- | ---------------- | ---------------------------------------------------------- |
@@ -1734,9 +1734,9 @@ operator's guide says so.
 | 2026-10-26 | Answered the open questions: token lifetimes and refresh rotation (§3.6.1), secret rotation choice (§3.7.3), launcher opens apps in the same tab (§3.8), images stored in the database and `_FILE` for every secret (§3.15).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | 2026-10-26 | §1.3: core's UI follows the established Sovereign UI page by page; §3.11: identity pages open as an overlay.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | 2026-10-27 | Applied research 0001 (better-auth's OAuth provider): issuer is the instance URL with discovery at the root, PKCE required for every client, signing-key rotation, reuse detection removes all of a client's tokens for the account (§3.6.1); claims in the ID token as well as userinfo (§3.6.2); deactivation and deletion revoke every token including `offline_access` (§3.3.6, §3.6.3); Remove access revokes tokens (§3.6.4, §3.11); new §3.6.5 on sign-out and back-channel logout, now in Phase 1 (§3.16); redirect URI rule with development `http` (§3.7.1); secret rotation is immediate (§3.7.3); Directory API tokens are resource-scoped JWTs with a revocation check (§3.9); acceptance criteria 7–12 (§3.17). |
-| 2026-10-27 | §3.15: the environment variable names are no longer provisional; the rules they follow are in `spec/env.md`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 2026-10-27 | §3.15: the environment variable names are no longer provisional; the rules they follow are in `contracts/env.md`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | 2026-10-27 | §3.15: added `SV_SQLD_NAMESPACE` (the sqld namespace core uses, default `default`, so apps can share one sqld server) and `SV_POSTGRES_POOL_MAX`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| 2026-10-27 | §3.15: the format of `SV_FIELD_ENCRYPTION_KEYS` is a key ring of `id:key` entries, newest first, in `spec/env.md`; rotation puts a new key in front and keeps the old ones.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-10-27 | §3.15: the format of `SV_FIELD_ENCRYPTION_KEYS` is a key ring of `id:key` entries, newest first, in `contracts/env.md`; rotation puts a new key in front and keeps the old ones.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | 2026-10-27 | §3.3.1, §3.12: a setting left unset never opens access, so invite-only is on when neither the Console nor `SV_AUTH_INVITE_ONLY` sets it; §3.12 describes how a setting resolves and what an unreadable saved secret does.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | 2026-10-27 | §3.14: SMTP credentials are sent only over an encrypted connection (implicit TLS, or STARTTLS that is required), and the server's certificate is verified.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | 2026-10-27 | §3.14: every email is sent as HTML and plain text, and every link in it is on core's public address (`SV_URL`); an invitation states its expiry only when it has one.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |

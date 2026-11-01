@@ -1,9 +1,9 @@
 /**
  * The variable names a deployment provides or refuses, so that neither `env` nor `secrets.age.yml` sets them
- * (spec/suite.md §1.2, §3; spec/app-manifest.md §3).
+ * (contracts/suite.md §1.2, §3; contracts/app-manifest.md §3).
  */
 
-/** Core's, which the deployment provides or refuses (spec/suite.md §1.2). */
+/** Core's, which the deployment provides or refuses (contracts/suite.md §1.2). */
 export const CORE_RESERVED = [
   'SV_URL',
   'SV_AUTH_SECRET',
@@ -25,7 +25,7 @@ export function isReservedCore(name: string): boolean {
   return (CORE_RESERVED as readonly string[]).includes(bare);
 }
 
-/** An app's, under its prefix (spec/app-manifest.md §3), and what its manifest asks to be generated. */
+/** An app's, under its prefix (contracts/app-manifest.md §3), and what its manifest asks to be generated. */
 export function reservedForApp(prefix: string, generate: readonly string[] = []): string[] {
   return [
     `${prefix}_URL`,
@@ -47,10 +47,10 @@ export function isReservedForApp(
   return reservedForApp(prefix, generate).includes(bare);
 }
 
-/** A name that is a secret by its ending (spec/suite.md §1.2): it belongs in `secrets.age.yml`, not in `env`. */
+/** A name that is a secret by its ending (contracts/suite.md §1.2): it belongs in `secrets.age.yml`, not in `env`. */
 export const SECRET_NAME = /_(PASSWORD|SECRET|KEY|KEYS|TOKEN)(_FILE)?$/;
 
-/** Names an app may not be called (spec/suite.md §1.7). */
+/** Names an app may not be called (contracts/suite.md §1.7). */
 export const RESERVED_APP_NAMES = [
   'core',
   'proxy',

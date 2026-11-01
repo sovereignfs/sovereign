@@ -4,7 +4,7 @@ How a JavaScript app's **server** talks to the Sovereign server it signs people 
 API contract (bundled in, so there is nothing else to install) with what is tedious to do by hand: tokens, failure, and version
 support. What it promises is in [`docs/specs/sdk.md`](https://github.com/sovereignfs/sovereign/blob/main/docs/specs/sdk.md); the
 contract it never goes beyond is
-[`spec/core-api/openapi.yaml`](https://github.com/sovereignfs/sovereign/blob/main/spec/core-api/openapi.yaml).
+[`contracts/core-api/openapi.yaml`](https://github.com/sovereignfs/sovereign/blob/main/contracts/core-api/openapi.yaml).
 
 ```sh
 npm install @sovereignfs/sdk

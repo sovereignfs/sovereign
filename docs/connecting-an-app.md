@@ -149,7 +149,7 @@ the same treatment as core's own ([Core must be able to reach its own address](d
 An app with the `directory` scope can look people up on the instance by name or exact email address. The Directory needs
 a token of its own: ask for one with `resource` set to `<SV_URL>/api/v1`, using the refresh token once the person is
 signed in. A token asked for that way is for the Directory alone and comes with no ID token, so sign people in as usual
-first. The contract is [`spec/core-api/openapi.yaml`](../spec/core-api/openapi.yaml).
+first. The contract is [`contracts/core-api/openapi.yaml`](../contracts/core-api/openapi.yaml).
 
 ## When it does not work
 

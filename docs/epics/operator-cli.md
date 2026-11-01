@@ -18,9 +18,9 @@ and the hardest part, `sv apply`, comes before the commands that drive it.
 
 - [docs/rfcs/0002-deployment-strategies.md](../rfcs/0002-deployment-strategies.md): the design, the alternatives, the open questions
 - [docs/specs/operator-cli.md](../specs/operator-cli.md): what the CLI must do, and where every task below is checked
-- [spec/suite.md](../../spec/suite.md) and [spec/app-manifest.md](../../spec/app-manifest.md): the files it reads
+- [contracts/suite.md](../../contracts/suite.md) and [contracts/app-manifest.md](../../contracts/app-manifest.md): the files it reads
 - [docs/specs/core-app.md](../specs/core-app.md): §3.5, §3.7.4, §3.15, §3.16
-- [spec/env.md](../../spec/env.md): the rules an app's variables follow
+- [contracts/env.md](../../contracts/env.md): the rules an app's variables follow
 - Epic 12 releases the image that this epic deploys
 - [docs/workstreams/0001-operator-workflow.md](../workstreams/0001-operator-workflow.md): the order 13.13–13.19 are built in, and the decisions behind them
 - [docs/workstreams/0002-test-instances.md](../workstreams/0002-test-instances.md): 13.20–13.21, and the decisions behind them
@@ -37,10 +37,10 @@ of it is built.
 **Deliverables:**
 
 - `docs/specs/operator-cli.md`: every command, the steps of `sv apply`, deploying, secrets, upgrades and recovery
-- `spec/suite.md` and `spec/app-manifest.md`, with JSON Schemas under `spec/schemas/`, and a test that holds the documents'
+- `contracts/suite.md` and `contracts/app-manifest.md`, with JSON Schemas under `contracts/schemas/`, and a test that holds the documents'
   examples to them
 - The RFC's outcome in core's spec: `sovereign-admin`, the managed key and the system actor (§3.7.4)
-- The shared variable names apps are given, in `spec/env.md`
+- The shared variable names apps are given, in `contracts/env.md`
 
 **Dependencies:** 12.4
 
@@ -88,7 +88,7 @@ of it is built.
   releases and `state.json`
 - Generated secrets on the server, and the refusals of operator-cli §6.5
 - Certificates in both `tls` modes, `per-host` and `internal`
-- `overrides/` for core, the proxy and the database (`spec/suite.md` §5)
+- `overrides/` for core, the proxy and the database (`contracts/suite.md` §5)
 - A small test app, with a manifest, for this task and 13.4 to deploy
 - A CI job that runs it against real Docker, twice, and stops it after each step and resumes
 
@@ -120,7 +120,7 @@ of it is built.
 
 **Dependencies:** 13.2, 13.3
 
-**Spec reference:** operator-cli §6.1, §6.2, §6.4; `spec/app-manifest.md`; core-app §3.6.5, §3.7.4
+**Spec reference:** operator-cli §6.1, §6.2, §6.4; `contracts/app-manifest.md`; core-app §3.6.5, §3.7.4
 
 **Review checklist:**
 
@@ -144,7 +144,7 @@ of it is built.
 
 **Dependencies:** 13.1
 
-**Spec reference:** operator-cli §2, §3, §4, §9.1; `spec/suite.md`
+**Spec reference:** operator-cli §2, §3, §4, §9.1; `contracts/suite.md`
 
 **Review checklist:**
 
@@ -199,7 +199,7 @@ of it is built.
 
 **Dependencies:** 13.6
 
-**Spec reference:** operator-cli §5, §10.1; `spec/suite.md` §2, §4
+**Spec reference:** operator-cli §5, §10.1; `contracts/suite.md` §2, §4
 
 **Review checklist:**
 
@@ -283,7 +283,7 @@ of it is built.
 
 - Its design, in `docs/specs/operator-cli.md`, replacing the line that reserves it. `support/sovereign-plugin-template` is a possible
   starting point, though it was built for the plugin model
-- A template that meets `spec/app-manifest.md`: sign-in through the SDK, `@sovereignfs/ui`, a health route, a back-channel logout
+- A template that meets `contracts/app-manifest.md`: sign-in through the SDK, `@sovereignfs/ui`, a health route, a back-channel logout
   route, its own migrations, an image, and the manifest label
 - CI that creates an app from it, builds it, and hosts it with `sv apply`
 
@@ -291,7 +291,7 @@ of it is built.
 
 **Dependencies:** 13.4, 14.3
 
-**Spec reference:** operator-cli §2, §2.2; `spec/app-manifest.md`
+**Spec reference:** operator-cli §2, §2.2; `contracts/app-manifest.md`
 
 **Review checklist:**
 
@@ -311,12 +311,12 @@ chosen release, and backing up to somewhere other than their own machine, is wri
   app changes version (§6.1), scheduled backups (§6.4.3), destinations and one-app backups (§10.2.2), rollback to a named release
   (§10.3), the newest published core in `sv upgrade` (§10.1), more commands from GitHub and servers its runners cannot reach (§8.2), and
   the acceptance items that go with them (§13)
-- `spec/suite.md`: an app's `source` (§1.7) and `backup` (§1.8)
+- `contracts/suite.md`: an app's `source` (§1.7) and `backup` (§1.8)
 - Tasks 13.13–13.19, and [workstream 0001](../workstreams/0001-operator-workflow.md), which orders them
 
 **Dependencies:** 13.11
 
-**Spec reference:** operator-cli §2.2, §4.2.1, §6.1, §6.4.3, §8.2, §10; `spec/suite.md` §1.7, §1.8
+**Spec reference:** operator-cli §2.2, §4.2.1, §6.1, §6.4.3, §8.2, §10; `contracts/suite.md` §1.7, §1.8
 
 **Review checklist:**
 
@@ -387,7 +387,7 @@ it is deployed.
 
 **Dependencies:** 13.14
 
-**Spec reference:** operator-cli §2.2, §4.2.1; `spec/suite.md` §1.7
+**Spec reference:** operator-cli §2.2, §4.2.1; `contracts/suite.md` §1.7
 
 **Review checklist:**
 
@@ -431,7 +431,7 @@ restored alone.
 
 **Dependencies:** 13.13
 
-**Spec reference:** operator-cli §6.4.3, §10.2.2; `spec/suite.md` §1.8, §3
+**Spec reference:** operator-cli §6.4.3, §10.2.2; `contracts/suite.md` §1.8, §3
 
 **Review checklist:**
 
@@ -453,7 +453,7 @@ restored alone.
 
 **Dependencies:** 13.17
 
-**Spec reference:** operator-cli §10.2.2; `spec/suite.md` §1.8
+**Spec reference:** operator-cli §10.2.2; `contracts/suite.md` §1.8
 
 **Review checklist:**
 
@@ -498,7 +498,7 @@ the runner still holding nothing that decrypts.
 
 **Dependencies:** 13.12
 
-**Spec reference:** core-app §3.15.1; operator-cli §6.4; `spec/suite.md` §1.1.1, §1.2
+**Spec reference:** core-app §3.15.1; operator-cli §6.4; `contracts/suite.md` §1.1.1, §1.2
 
 **Review checklist:**
 
@@ -526,7 +526,7 @@ the runner still holding nothing that decrypts.
 
 **Dependencies:** 13.20
 
-**Spec reference:** core-app §3.15.1, §3.7.4; operator-cli §4.4; `spec/suite.md` §1.1.1
+**Spec reference:** core-app §3.15.1, §3.7.4; operator-cli §4.4; `contracts/suite.md` §1.1.1
 
 **Review checklist:**
 

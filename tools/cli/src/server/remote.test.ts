@@ -5,7 +5,7 @@ import { targetOf, tunnelArgs } from './remote.js';
 const suite = (server: Record<string, unknown>) => ({ server }) as unknown as Suite;
 
 describe('where sv connects', () => {
-  it('is root unless suite.yml names another user, as spec/suite.md says', () => {
+  it('is root unless suite.yml names another user, as contracts/suite.md says', () => {
     expect(targetOf(suite({ host: '203.0.113.7' })).user).toBe('root');
     expect(targetOf(suite({ host: '203.0.113.7', user: 'ops', port: 2222 }))).toEqual({
       host: '203.0.113.7',

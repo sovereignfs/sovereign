@@ -10,8 +10,8 @@ disagrees with it, this document wins until it is changed.
 
 The key words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT** and **MAY** are used as described in RFC 2119.
 
-The files it reads have their exact shapes elsewhere: [`spec/suite.md`](../../spec/suite.md) for the instance repository,
-[`spec/app-manifest.md`](../../spec/app-manifest.md) for what an app provides, and [`spec/env.md`](../../spec/env.md) for
+The files it reads have their exact shapes elsewhere: [`contracts/suite.md`](../../contracts/suite.md) for the instance repository,
+[`contracts/app-manifest.md`](../../contracts/app-manifest.md) for what an app provides, and [`contracts/env.md`](../../contracts/env.md) for
 variable names. `sovereign-admin`, which ships in core's image, is in [core-app §3.7.4](core-app.md). This document
 describes behaviour; those define the shapes.
 
@@ -73,7 +73,7 @@ npm create @sovereignfs instance my-instance
 app's name (it MUST be one `sv app add` accepts, and not `sv`), its variable prefix is that name upper-cased without hyphens, and its title
 is the name in words.
 
-It MUST meet [`spec/app-manifest.md`](../../spec/app-manifest.md), and so MUST hold:
+It MUST meet [`contracts/app-manifest.md`](../../contracts/app-manifest.md), and so MUST hold:
 
 - `sovereign.manifest.json`, valid against the manifest schema, and a `Dockerfile` whose `io.github.sovereignfs.app-manifest` label is that
   manifest, with a script that checks the two agree and one that copies the manifest over the label;
@@ -99,7 +99,7 @@ sv                    the launcher (§3)
 suite.yml             what the operator chose
 suite.lock            the image digests those choices resolved to; generated
 secrets.age.yml       secrets the operator entered, encrypted
-overrides/            optional additions (spec/suite.md)
+overrides/            optional additions (contracts/suite.md)
 .github/workflows/    a thin deployment workflow
 .gitignore
 README.md
@@ -161,13 +161,13 @@ Each command MUST state what it changed, and MUST exit as §11 says.
 #### 4.2.1 Apps from git, and upgrading apps
 
 An app is deployed by its image and is never built on the server, which holds no credential for an app's repository. `--git` is a way to
-name that image, and only an app that carries a manifest (`spec/app-manifest.md`) can be added either way.
+name that image, and only an app that carries a manifest (`contracts/app-manifest.md`) can be added either way.
 
 - `sv app add NAME --git URL [--tag X.Y.Z]` MUST take a GitHub repository address (`https://github.com/OWNER/REPO`, with or without
   `.git`) and look for its image at `ghcr.io/OWNER/REPO`, lower-cased. It takes the newest tag of the form `X.Y.Z`, or the one `--tag`
   names. A repository with no such image is refused, and the refusal names the workflow the app template carries (§2.2).
 - From there it MUST do exactly what `--image` does: read the manifest from the label, show the scopes, refuse what `--image` refuses,
-  and pin the digest in `suite.lock`. It MUST record the repository as the app's `source` (`spec/suite.md` §1.7) and the image it found
+  and pin the digest in `suite.lock`. It MUST record the repository as the app's `source` (`contracts/suite.md` §1.7) and the image it found
   as its `image`.
 - `sv app upgrade [NAME | --all] [--to X.Y.Z]` MUST, for each hosted app it names, list its image's tags, take the newest `X.Y.Z`
   newer than the one in `suite.yml` (or the one `--to` names), read that release's manifest, and refuse it when its `core` range
@@ -203,7 +203,7 @@ name that image, and only an app that carries a manifest (`spec/app-manifest.md`
 `sv deploy` with neither flag uses `server.deploy` in `suite.yml`.
 
 `sv mail` is for an instance whose `environment` is `development` or `staging` and that has not named its own mail server
-(`spec/suite.md` §1.1.1), and refuses any other. It MUST listen on this machine's loopback address only, reach the server's loopback
+(`contracts/suite.md` §1.1.1), and refuses any other. It MUST listen on this machine's loopback address only, reach the server's loopback
 address only, run no command on the server, and stay open until the operator ends it. The inbox holds the links that verify and reset
 accounts, so there MUST be no other way to it: it has no public name, and the server publishes it nowhere but its own loopback address.
 
@@ -220,7 +220,7 @@ accounts, so there MUST be no other way to it: it has no public name, and the se
 `sv push` MUST refuse, changing nothing, when:
 
 - `suite.yml`, `suite.lock` or a manifest does not meet its schema, or `suite.lock` does not match `suite.yml`;
-- a value in `secrets.age.yml` is not age ciphertext, or `suite.yml` holds a value that looks like a secret (`spec/suite.md`);
+- a value in `secrets.age.yml` is not age ciphertext, or `suite.yml` holds a value that looks like a secret (`contracts/suite.md`);
 - a file it would commit is outside the list of §2.1.
 
 It MUST stage only the files of §2.1. It MUST NOT stage everything. These checks are a guard, not a guarantee, and MUST NOT be
@@ -312,11 +312,11 @@ database, role, data volumes and generated secrets, after taking a backup of tha
 - **Each hosted app is its own Compose project,** so it can be started, upgraded and removed alone.
 - **One PostgreSQL server per instance,** with one database and one role per hosted app, and one for core. Its admin
   credential stays with `sv apply`, and is given to neither core nor an app. An app applies its own migrations.
-- **Certificates** are per host by default (`spec/suite.md`).
+- **Certificates** are per host by default (`contracts/suite.md`).
 - **Core is told what the instance is for.** Core's `SV_ENVIRONMENT` is the `environment` of `suite.yml`, and `core.env` MUST
-  NOT set it, since a deployment that can be told otherwise would let the seed run on production (`spec/suite.md` §1.1.1).
+  NOT set it, since a deployment that can be told otherwise would let the seed run on production (`contracts/suite.md` §1.1.1).
 
-What goes into an app's environment is in [`spec/app-manifest.md`](../../spec/app-manifest.md).
+What goes into an app's environment is in [`contracts/app-manifest.md`](../../contracts/app-manifest.md).
 
 ### 6.4.1 As built
 
@@ -342,7 +342,7 @@ apply` itself after Compose, since an alias set that changes would otherwise rec
   public name as an alias); a role and a database named for it (`app_<name>`, a hyphen made an underscore) that only that role may open;
   its client at core, made by `sovereign-admin apps ensure` run inside core, whose secret is written to `secrets/` before anything else is
   done with it, and which is given a new secret if it exists with none on disk (a run stopped between the two); its environment and
-  secrets by the `_FILE` form (`spec/app-manifest.md` §3); its own Compose project; and a wait for its health path, asked from the proxy,
+  secrets by the `_FILE` form (`contracts/app-manifest.md` §3); its own Compose project; and a wait for its health path, asked from the proxy,
   which is on the app's network. The proxy answers for an app only once it is healthy, and keeps answering for those that were up while
   the others are looked at. An external app gets its client and nothing else.
 - **An app taken out of `suite.yml`** (step 7) has its container removed, its client removed at core and its network removed. Its
@@ -357,7 +357,7 @@ apply` itself after Compose, since an alias set that changes would otherwise rec
 
 ### 6.4.2 Mailpit
 
-On a `development` or `staging` instance (`spec/suite.md` §1.1.1), after the proxy and before core, `sv apply` starts Mailpit as a
+On a `development` or `staging` instance (`contracts/suite.md` §1.1.1), after the proxy and before core, `sv apply` starts Mailpit as a
 Compose project of its own, `sovereign-mailpit`, container `sv-mailpit`, from the image `suite.lock` pins.
 
 - It is on core's network. Its SMTP port is on that network and nowhere else, and takes mail without a login, since nothing outside the
@@ -370,7 +370,7 @@ Compose project of its own, `sovereign-mailpit`, container `sv-mailpit`, from th
 
 ### 6.4.3 Scheduled backups
 
-When `backup.schedule` is set (`spec/suite.md` §1.8), `sv apply` runs a container of its own, `sv-backup`, from the toolkit's image at the
+When `backup.schedule` is set (`contracts/suite.md` §1.8), `sv apply` runs a container of its own, `sv-backup`, from the toolkit's image at the
 digest in `suite.lock`, with the Docker socket and the state directory, as `sv-apply` has them. It takes a backup on the schedule and sends
 it to the destination (§10.2.2). It publishes no port and joins no network but the default. When the schedule is removed, the next
 deployment removes the container. A scheduled backup that fails is recorded in `state.json`, and `sv status` and `sv doctor` report it.
@@ -382,7 +382,7 @@ deployment removes the container. A scheduled backup that fails is recorded in `
 - `SV_AUTH_COOKIE_DOMAIN` is set in anything it would give core. A parent domain would send core's session cookie to every app,
   and any app could then act as the person on core ([core-app §3.5](core-app.md));
 - `SV_AUTH_WEBAUTHN_RP_ID` is set, since apps never run a passkey ceremony and changing it later breaks passkeys;
-- `suite.yml` names a value `sv apply` itself provides (`spec/suite.md`);
+- `suite.yml` names a value `sv apply` itself provides (`contracts/suite.md`);
 - the toolkit does not support the instance's core version or `schema`;
 - core's version would go backward, unless the run is a restore;
 - `database.version` differs from the running server's major version;
@@ -408,7 +408,7 @@ deployment removes the container. A scheduled backup that fails is recorded in `
 - `state.json` records, for each app, its client ID, its database and role, the version last started and whether it is
   healthy. It holds no secret.
 - Nothing in `releases/` is a secret. An environment file names a secret by its path, through the `_FILE` form
-  (`spec/env.md`).
+  (`contracts/env.md`).
 - Decrypted operator secrets MUST be written only to `secrets/`.
 - The last five releases are kept, and always the one `current` names.
 
@@ -622,14 +622,14 @@ schedule, without the operator's machine.
 
 - **What is sent** is the archive `sv backup` makes: encrypted to the operator's recipients and not the server's own key, so the
   destination need not be trusted and the server cannot read what it sent.
-- **Destinations** (`backup.destination` in `suite.yml`, `spec/suite.md` §1.8): `s3`, any S3-compatible store (an endpoint, a bucket, a
+- **Destinations** (`backup.destination` in `suite.yml`, `contracts/suite.md` §1.8): `s3`, any S3-compatible store (an endpoint, a bucket, a
   prefix); `git`, a repository kept for backups alone; `sftp`, a directory on a machine reached over SSH, whose host key is pinned as
   `server.hostKey` is. With a destination, a backup taken by a deployment (§6.1) or by the schedule (§6.4.3) is sent to it, and
   `sv backup` sends to it when it is given no `--to`.
 - **A git destination** MUST NOT be the instance's own repository: `sv push` refuses one with the same address as `origin`. Each backup
   is one commit with no parent, on a branch of its own, `backup/<timestamp>`, so that deleting the branch frees what it held; its archive
   is split into parts of at most 95 MB, beside a list of the parts and their SHA-256, since GitHub refuses a file over 100 MB.
-- **Credentials** for a destination are secrets the operator enters (`spec/suite.md` §3, under `backup`), decrypted only on the server,
+- **Credentials** for a destination are secrets the operator enters (`contracts/suite.md` §3, under `backup`), decrypted only on the server,
   and SHOULD be able to write and nothing more: an S3 key that may put objects, a git deploy key for that repository alone, an SFTP
   account in that directory alone.
 - **Retention:** `backup.keep` is how many backups are kept at the destination; after one is sent, older ones beyond that are deleted.

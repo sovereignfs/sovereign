@@ -64,7 +64,7 @@ const absolute = (suite: Suite, name: string, pathOrUrl: string) =>
     ? pathOrUrl
     : `${appOrigin(suite, name)}${pathOrUrl}`;
 
-/** What `sovereign-admin apps ensure` is asked for a hosted app: everything from its manifest and its name, and nothing the operator typed but the launcher (spec/suite.md §1.7). */
+/** What `sovereign-admin apps ensure` is asked for a hosted app: everything from its manifest and its name, and nothing the operator typed but the launcher (contracts/suite.md §1.7). */
 export function hostedClient(
   suite: Suite,
   name: string,
@@ -91,7 +91,7 @@ export function hostedClient(
       : []),
     '--scope',
     ...manifest.signIn.scopes,
-    // A hosted app is the operator's own: people are not asked about it, and it may ask for roles (spec/app-manifest.md §2.1).
+    // A hosted app is the operator's own: people are not asked about it, and it may ask for roles (contracts/app-manifest.md §2.1).
     '--trusted',
     '--launch-url',
     launchUrl,
@@ -305,7 +305,7 @@ export async function applyExternalApp(
   return { kind: 'external', clientId: client.clientId, created: client.created };
 }
 
-/** Waits for the app to answer its health path, asked from the proxy, which is on its network (spec/app-manifest.md §2). */
+/** Waits for the app to answer its health path, asked from the proxy, which is on its network (contracts/app-manifest.md §2). */
 async function waitHealthy(host: Host, name: string, manifest: Manifest): Promise<void> {
   const url = `http://${CONTAINER.app(name)}:${manifest.port}${manifest.health}`;
   let last = '';

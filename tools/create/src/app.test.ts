@@ -80,10 +80,12 @@ describe('the files of an app', () => {
     const ajv = new Ajv2020({ allErrors: true, strict: false });
     addFormats(ajv);
     const validate = ajv.compile(
-      JSON.parse(readFileSync(path.join(root, 'spec/schemas/app-manifest-v1.schema.json'), 'utf8')),
+      JSON.parse(
+        readFileSync(path.join(root, 'contracts/schemas/app-manifest-v1.schema.json'), 'utf8'),
+      ),
     );
     expect(validate(manifest), JSON.stringify(validate.errors)).toBe(true);
-    // What the code reads is what the manifest gives it (spec/app-manifest.md §3).
+    // What the code reads is what the manifest gives it (contracts/app-manifest.md §3).
     const code = all(target)
       .filter((file) => /\.(ts|tsx)$/.test(file))
       .map((file) => read(target, file))

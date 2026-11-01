@@ -11,15 +11,15 @@
 
 The legacy SDK ran inside the platform. Apps are now separate programs, so [`@sovereignfs/sdk`](../specs/sdk.md) wraps the generated
 API client with what is tedious to do by hand: tokens, failure, version support and sign-in. The contract stays
-`spec/core-api/openapi.yaml`, and the SDK never offers what it lacks. Capabilities beyond today's Directory and instance document
+`contracts/core-api/openapi.yaml`, and the SDK never offers what it lacks. Capabilities beyond today's Directory and instance document
 are added when core's Phase 2 specifies them.
 
 ## Related
 
 - [docs/specs/sdk.md](../specs/sdk.md): what the SDK does
 - [docs/specs/core-app.md](../specs/core-app.md): §3.6.1, §3.6.6, §3.9, §3.13
-- [spec/core-api/](../../spec/core-api/): the contract
-- [spec/env.md](../../spec/env.md) and [spec/app-manifest.md](../../spec/app-manifest.md): how an app is configured
+- [contracts/core-api/](../../contracts/core-api/): the contract
+- [contracts/env.md](../../contracts/env.md) and [contracts/app-manifest.md](../../contracts/app-manifest.md): how an app is configured
 
 ## Tasks
 

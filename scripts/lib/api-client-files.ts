@@ -3,7 +3,7 @@ import path from 'node:path';
 import { format, resolveConfig } from 'prettier';
 import { generateOperations, generateSchema, readContract } from './api-client-generator';
 
-export const CONTRACT = 'spec/core-api/openapi.yaml';
+export const CONTRACT = 'contracts/core-api/openapi.yaml';
 export const OUTPUT_DIRECTORY = 'packages/api-client/src/generated';
 
 /** The files the contract produces, formatted the way the repository formats its code, keyed by their path. */

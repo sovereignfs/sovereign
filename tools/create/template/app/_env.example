@@ -1,4 +1,4 @@
-# What the instance gives this app (spec/app-manifest.md §3), for running it on your own machine against a core you can reach.
+# What the instance gives this app (contracts/app-manifest.md §3), for running it on your own machine against a core you can reach.
 # A secret may be given as NAME_FILE=/path instead of NAME=value.
 __PREFIX___URL=http://localhost:3000
 __PREFIX___CORE_URL=https://core.sovereign.local

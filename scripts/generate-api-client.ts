@@ -1,5 +1,5 @@
 /**
- * Writes `packages/api-client/src/generated/` from the Core API contract (`spec/core-api/openapi.yaml`).
+ * Writes `packages/api-client/src/generated/` from the Core API contract (`contracts/core-api/openapi.yaml`).
  *
  * Run: `pnpm generate:api-client`. With `--check` it writes nothing and fails when what is committed is not what
  * the contract produces, which is what CI runs, so the client cannot be edited by hand or left behind.
@@ -25,7 +25,7 @@ for (const [file, text] of Object.entries(await generatedFiles(root))) {
   if (check) {
     stale = true;
     console.error(
-      `${file} is not what spec/core-api/openapi.yaml produces. Run: pnpm generate:api-client`,
+      `${file} is not what contracts/core-api/openapi.yaml produces. Run: pnpm generate:api-client`,
     );
   } else {
     writeFileSync(target, text);

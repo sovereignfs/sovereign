@@ -474,7 +474,7 @@ type Overrides = {
   problems: Problem[];
 };
 
-/** Reads `overrides/` (spec/suite.md §5) and refuses what it must not do: publish a port, or change a network. */
+/** Reads `overrides/` (contracts/suite.md §5) and refuses what it must not do: publish a port, or change a network. */
 async function readOverrides(from: string, appNames: string[]): Promise<Overrides> {
   const out: Overrides = { compose: {}, files: {}, caddy: {}, problems: [] };
   const valid = ['core', 'proxy', 'database', ...appNames];

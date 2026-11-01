@@ -6,7 +6,7 @@ import { Document, parseDocument } from 'yaml';
 import { Refused } from '../errors.js';
 import { FILE, writeAtomically } from '../suite/files.js';
 
-/** `secrets.age.yml`: who a secret belongs to (`core` or an app's name), then its variable name, then armored age ciphertext (spec/suite.md §3). */
+/** `secrets.age.yml`: who a secret belongs to (`core` or an app's name), then its variable name, then armored age ciphertext (contracts/suite.md §3). */
 export type SecretsDocument = Record<string, Record<string, string>>;
 
 const ARMOR_START = '-----BEGIN AGE ENCRYPTED FILE-----';

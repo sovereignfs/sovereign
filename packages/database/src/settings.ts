@@ -5,7 +5,7 @@ export const DIALECTS = ['sqld', 'sqlite', 'postgres'] as const;
 export type Dialect = (typeof DIALECTS)[number];
 
 /**
- * The database variables of spec/env.md, to spread into an app's `defineConfig`:
+ * The database variables of contracts/env.md, to spread into an app's `defineConfig`:
  *
  *   defineConfig({ prefix: 'SV', variables: { url: …, ...databaseVariables } })
  *

@@ -26,7 +26,7 @@ export async function manifestOf(
   );
 }
 
-/** What an app's `env` may and may not hold, given its manifest (spec/suite.md §1.7, spec/app-manifest.md §3). */
+/** What an app's `env` may and may not hold, given its manifest (contracts/suite.md §1.7, contracts/app-manifest.md §3). */
 export function appEnvProblems(name: string, app: HostedApp, manifest: Manifest): Problem[] {
   const problems: Problem[] = [];
   for (const variable of Object.keys(app.env ?? {})) {

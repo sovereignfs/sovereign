@@ -30,7 +30,7 @@ The hooks run Prettier and ESLint on the files you commit and the full
 `pnpm verify:push` before a push.
 
 To run core, give it the two variables it cannot start without (`SV_URL` and
-`SV_AUTH_SECRET`; the rules are in [`spec/env.md`](spec/env.md)):
+`SV_AUTH_SECRET`; the rules are in [`contracts/env.md`](contracts/env.md)):
 
 ```bash
 cp apps/core/.env.example apps/core/.env.local

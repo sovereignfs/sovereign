@@ -5,7 +5,7 @@
 **Author:** kasunben\
 **Goal owner:** kasunben\
 **Governs:** [core-app](../specs/core-app.md) §3.15.1; [operator-cli](../specs/operator-cli.md) §4.4, §6.4;
-[`spec/suite.md`](../../spec/suite.md) §1.1.1; epic [13](../epics/operator-cli.md) (Operator CLI), tasks 13.20 and 13.21\
+[`contracts/suite.md`](../../contracts/suite.md) §1.1.1; epic [13](../epics/operator-cli.md) (Operator CLI), tasks 13.20 and 13.21\
 **Research:** none. The Decisions locked table below was settled with the goal owner in a planning conversation (2026-11-01), and is that
 record.
 
@@ -63,7 +63,7 @@ Leg 2 needs leg 1. Releasing the toolkit and core after leg 2 lets `sv seed` be 
 
 **Technical notes:** core's settings are in `apps/core/src/config.ts`, with `apps/core/.env.example` declaring every variable (a test holds
 the two together). The names the deployment provides, which `core.env` may not set, are a pattern in
-`spec/schemas/suite-v1.schema.json` and the list in `spec/suite.md` §1.2, held together by `scripts/__tests__/operator-specs.test.ts`:
+`contracts/schemas/suite-v1.schema.json` and the list in `contracts/suite.md` §1.2, held together by `scripts/__tests__/operator-specs.test.ts`:
 `SV_ENVIRONMENT` goes in both, or that test fails. `coreEnvironment` in `tools/cli/src/apply/render.ts` is where `sv apply` builds core's
 variables, and `environmentOf` in `tools/cli/src/suite/environment.ts` already reads the field. The image takes the new variable with no
 Dockerfile change, but a core release is needed before `sv apply` can pass it to a published image, since an older core would ignore it.

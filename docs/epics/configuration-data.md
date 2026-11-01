@@ -19,7 +19,7 @@ the SMTP password.
 ## Related
 
 - [docs/specs/core-app.md](../specs/core-app.md) — §1.1.3, §1.1.4, §3.15
-- `spec/env.md` (written in 1.1)
+- `contracts/env.md` (written in 1.1)
 
 ## Tasks
 
@@ -30,12 +30,12 @@ per-app prefix.
 
 **Deliverables:**
 
-- `spec/env.md`: the prefix rule (`SV` for core, the app's own prefix otherwise),
+- `contracts/env.md`: the prefix rule (`SV` for core, the app's own prefix otherwise),
   the names every app shares, database variables named by engine
   (`SV_POSTGRES_URL`, `SV_SQLD_URL`, `SV_SQLITE_URL`), the `_FILE` rule (every
   secret accepts a `_FILE` form; setting both forms is an error; no secret has a
   default), value syntax, start-up validation, and how a value saved in the
-  Console overrides an environment default. The `spec/env.md` entry is gone from
+  Console overrides an environment default. The `contracts/env.md` entry is gone from
   `PLANNED_TARGETS` in `scripts/lib/doc-links.ts`
 - `packages/config` (`@sovereignfs/config`, MPL-2.0, `private` until an app outside
   this repository needs it): `defineConfig({ prefix, variables })` with typed
@@ -77,7 +77,7 @@ a SQLite file.
 - `@sovereignfs/database` (private, MPL-2.0): `connect(resolveDatabase(settings))` opens
   sqld (a namespace per app, `x-namespace` on every request, `default` included), a
   PostgreSQL pool, or a SQLite file; `databaseVariables` are the variables of
-  `spec/env.md`, to spread into an app's `defineConfig`. A URL that does not fit the
+  `contracts/env.md`, to spread into an app's `defineConfig`. A URL that does not fit the
   dialect is an error, not a guess. `SV_SQLD_NAMESPACE` is new (the spec's table has it)
 - One async interface: `run` with `?` placeholders on every dialect, integers as numbers
   everywhere (node-postgres's `bigint` and `count(*)` included, exact or an error),

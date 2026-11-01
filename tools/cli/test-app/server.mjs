@@ -1,4 +1,4 @@
-// A small app that meets spec/app-manifest.md, for `sv apply` to host in its tests: it listens on one port, answers its health path,
+// A small app that meets contracts/app-manifest.md, for `sv apply` to host in its tests: it listens on one port, answers its health path,
 // and says what it was given, so a test can see that its environment and secrets reached it. It is not an example of how to write an app.
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';

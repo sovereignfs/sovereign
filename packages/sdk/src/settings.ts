@@ -13,7 +13,7 @@ export type Settings = {
   clientSecret: string;
 };
 
-/** How an app names its settings: by the prefix `spec/env.md` defines, or one by one (an external app). */
+/** How an app names its settings: by the prefix `contracts/env.md` defines, or one by one (an external app). */
 export type SettingsSource =
   | {
       /** The app's prefix: `NOTES` reads `NOTES_URL`, `NOTES_CORE_URL`, `NOTES_CORE_CLIENT_ID` and `NOTES_CORE_CLIENT_SECRET`. */

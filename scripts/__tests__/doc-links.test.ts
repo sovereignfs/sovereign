@@ -57,14 +57,14 @@ describe('checkDocLinks', () => {
   });
 
   it('accepts a planned target only while it is missing', () => {
-    write('a.md', '[spec](spec/env.md)\n');
-    expect(checkDocLinks(root, { 'spec/env.md': 'task 1.1' })).toEqual([]);
+    write('a.md', '[spec](contracts/env.md)\n');
+    expect(checkDocLinks(root, { 'contracts/env.md': 'task 1.1' })).toEqual([]);
     expect(checkDocLinks(root, {})).toHaveLength(1);
   });
 
   it('accepts a planned directory written with a trailing slash', () => {
-    write('docs/a.md', '[api](../spec/core-api/)\n');
-    expect(checkDocLinks(root, { 'spec/core-api': 'task 10.1' })).toEqual([]);
+    write('docs/a.md', '[api](../contracts/core-api/)\n');
+    expect(checkDocLinks(root, { 'contracts/core-api': 'task 10.1' })).toEqual([]);
   });
 
   it('does not scan dependencies', () => {

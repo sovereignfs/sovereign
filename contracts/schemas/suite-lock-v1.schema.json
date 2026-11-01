@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/sovereignfs/sovereign/main/spec/schemas/suite-lock-v1.schema.json",
+  "$id": "https://raw.githubusercontent.com/sovereignfs/sovereign/main/contracts/schemas/suite-lock-v1.schema.json",
   "title": "Sovereign suite.lock, version 1",
-  "description": "The image digests suite.yml resolved to. spec/suite.md is the prose.",
+  "description": "The image digests suite.yml resolved to. contracts/suite.md is the prose.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "images"],

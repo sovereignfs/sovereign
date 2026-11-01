@@ -1,13 +1,13 @@
 # RFC 0002 — Deployment: the operator CLI
 
-|                |                                                                                                                                                                                              |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**     | Implemented                                                                                                                                                                                  |
-| **Date**       | October 2026                                                                                                                                                                                 |
-| **Author**     | Claude Code, for review                                                                                                                                                                      |
-| **Scope**      | New `tools/cli`; `sovereign-admin` in the image; a managed key on clients; `docs/specs/operator-cli.md`, `spec/suite.md`, `spec/app-manifest.md`; `docs/specs/core-app.md` §3.6, §3.7, §3.15 |
-| **Tasks**      | [Epic 12](../epics/release.md), [Epic 13](../epics/operator-cli.md)                                                                                                                          |
-| **Supersedes** | Nothing in this repository. The legacy `sovereign-infra` had a template for the old single platform; this replaces the need for a new one                                                    |
+|                |                                                                                                                                                                                                        |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Status**     | Implemented                                                                                                                                                                                            |
+| **Date**       | October 2026                                                                                                                                                                                           |
+| **Author**     | Claude Code, for review                                                                                                                                                                                |
+| **Scope**      | New `tools/cli`; `sovereign-admin` in the image; a managed key on clients; `docs/specs/operator-cli.md`, `contracts/suite.md`, `contracts/app-manifest.md`; `docs/specs/core-app.md` §3.6, §3.7, §3.15 |
+| **Tasks**      | [Epic 12](../epics/release.md), [Epic 13](../epics/operator-cli.md)                                                                                                                                    |
+| **Supersedes** | Nothing in this repository. The legacy `sovereign-infra` had a template for the old single platform; this replaces the need for a new one                                                              |
 
 ## Summary
 
@@ -52,7 +52,7 @@ Checked in the repository, October 2026:
 - **An `http` address that is not `localhost` gets an `https` issuer** in discovery, so it does not match `SV_URL`. An
   instance needs TLS from the start, including a test one.
 - **Migrations go forward only**, applied when core starts (`docs/deploying.md`).
-- **`packages/config` already implements** the environment rules, including `_FILE` secrets (`spec/env.md`).
+- **`packages/config` already implements** the environment rules, including `_FILE` secrets (`contracts/env.md`).
 - **Provisioning databases for apps is out of scope for core** (§3.16).
 - **Core sends HSTS without `includeSubDomains`**, and its cookies use the `__Secure-` prefix, not `__Host-`.
 
@@ -129,7 +129,7 @@ cd my-instance
   code: that is generated on the server, from these files, by the pinned toolkit.
 - **`app <dir>`** comes later and is out of scope here. It makes a Next.js app that already meets the app manifest: sign-in
   with core, `@sovereignfs/ui`, a health route, a back-channel logout route, its own migrations and an image. It needs its
-  own design, and `spec/app-manifest.md` is what it has to satisfy.
+  own design, and `contracts/app-manifest.md` is what it has to satisfy.
 
 With no word, it asks. `--instance` and `--app` are accepted as well, for anyone who prefers them, but the documented form
 is the word: npm keeps a flag for itself unless it follows a `--`, and warns that such a flag stops working in its next
@@ -183,7 +183,7 @@ apps:
       - https://wiki.sovereign.local/auth/callback
 ```
 
-`spec/suite.md` defines this file, versioned by `schema`, with a JSON Schema the CLI validates against.
+`contracts/suite.md` defines this file, versioned by `schema`, with a JSON Schema the CLI validates against.
 
 ### Commands
 
@@ -367,7 +367,7 @@ alone.
 
 ### The app manifest
 
-What an app must provide to be hosted, defined in `spec/app-manifest.md` so that this repository still names no app. It is
+What an app must provide to be hosted, defined in `contracts/app-manifest.md` so that this repository still names no app. It is
 carried as a label on the app's image, so `sv app add` can read it from the registry without pulling, or given with
 `--manifest URL`:
 
@@ -375,7 +375,7 @@ carried as a label on the app's image, so `sv app add` can read it from the regi
 - its redirect, post-logout and back-channel paths;
 - the scopes it needs, which `sv app add` shows the operator;
 - the names of the variables it reads for its public address, issuer, client ID, client secret and database URL, each
-  secret also as `_FILE` (`spec/env.md`);
+  secret also as `_FILE` (`contracts/env.md`);
 - the core versions it supports.
 
 It applies its own migrations when it starts.
@@ -387,7 +387,7 @@ this repository and is fetched when the command runs.
 
 The launcher on core's address is the suite's home page, and that works today. An app that wants a switcher of its own needs
 to know which apps a person can open. **Proposal:** add a Core API call listing the launcher's tiles (name, icon, launch
-address), for a token with a new `launcher` scope, in `spec/core-api/openapi.yaml`. It is the only part of this RFC that adds
+address), for a token with a new `launcher` scope, in `contracts/core-api/openapi.yaml`. It is the only part of this RFC that adds
 to the published contract, and it can wait until an app wants it.
 
 ### Packaging and release
@@ -465,7 +465,7 @@ to the published contract, and it can wait until an app wants it.
 ## Rollout
 
 1. Try real third-party apps and release core (tasks 12.1 to 12.3, 12.6 and 12.8). Scenario 1 needs nothing more.
-2. Write this RFC's outcome into the spec, with `spec/suite.md` and `spec/app-manifest.md`.
+2. Write this RFC's outcome into the spec, with `contracts/suite.md` and `contracts/app-manifest.md`.
 3. `sovereign-admin` in the image.
 4. `sv apply` on a hand-written `suite.yml`: core, the proxy and the database.
 5. Hosted and external apps in `sv apply`.
@@ -509,12 +509,12 @@ The owner confirmed the outcome above on 2026-10-31, including the four changes 
 deliverable one of task 13.11, not a prerequisite of epic 13.
 
 The outcome goes into the spec in task 13.1, before any code in epic 13. That is
-[`docs/specs/operator-cli.md`](../specs/operator-cli.md), `spec/suite.md`, `spec/app-manifest.md` and core-app §3.7.4, which
+[`docs/specs/operator-cli.md`](../specs/operator-cli.md), `contracts/suite.md`, `contracts/app-manifest.md` and core-app §3.7.4, which
 now win over this document. Writing them changed four things:
 
 - **Wildcard certificates are not in the first version.** The stock proxy image has no DNS provider module, so a server with
   no public port uses `tls: internal`, and its devices must trust the server's authority.
-- **A manifest names its prefix, not each variable,** and an app is given `spec/env.md`'s shared names under it, with
+- **A manifest names its prefix, not each variable,** and an app is given `contracts/env.md`'s shared names under it, with
   `CORE_CLIENT_ID` and `CORE_CLIENT_SECRET` added. It also gains `generate` and `data`, since most apps need a secret of their
   own and somewhere to keep files.
 - **`sv app show --secret`** is how an operator gets an external app's secret, which stays on the server.

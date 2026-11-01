@@ -1,5 +1,5 @@
 /**
- * Holds Core's handlers to the Core API contract (`spec/core-api/openapi.yaml`). Every answer a handler gives is
+ * Holds Core's handlers to the Core API contract (`contracts/core-api/openapi.yaml`). Every answer a handler gives is
  * checked against the schema the contract gives that operation and status, so a response that changes shape
  * without the contract changing fails, and so does one the contract does not describe at all.
  */
@@ -21,7 +21,7 @@ type Operation = {
 };
 
 export const contract = parse(
-  readFileSync(path.join(ROOT, 'spec/core-api/openapi.yaml'), 'utf8'),
+  readFileSync(path.join(ROOT, 'contracts/core-api/openapi.yaml'), 'utf8'),
 ) as {
   paths: Record<string, Record<string, Operation>>;
   components: { responses: Record<string, Json> };

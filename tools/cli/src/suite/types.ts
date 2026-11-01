@@ -1,4 +1,4 @@
-/** `suite.yml`, as the schema allows it (spec/suite.md §1). Read from a file that has passed the schema. */
+/** `suite.yml`, as the schema allows it (contracts/suite.md §1). Read from a file that has passed the schema. */
 export type Launcher = {
   description?: string;
   icon?: string;
@@ -52,14 +52,14 @@ export type Suite = {
 
 export type Digest = { ref: string; digest: string };
 
-/** `suite.lock` (spec/suite.md §2). */
+/** `suite.lock` (contracts/suite.md §2). */
 export type Lock = {
   schema: 1;
   images: { cli: Digest; core: Digest; database: Digest; proxy: Digest; mail?: Digest };
   apps?: Record<string, Digest>;
 };
 
-/** An app's manifest (spec/app-manifest.md §2). */
+/** An app's manifest (contracts/app-manifest.md §2). */
 export type Manifest = {
   manifest: 1;
   prefix: string;

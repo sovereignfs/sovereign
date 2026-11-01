@@ -3,7 +3,7 @@
 Core ships as one image, `ghcr.io/sovereignfs/sovereign`, and three ways to run it with a database. Nothing is
 baked into the image: it holds no environment file, and it refuses to start, saying what is missing, until it is
 given `SV_URL` and `SV_AUTH_SECRET`. Every variable core reads is in
-[`apps/core/.env.example`](../apps/core/.env.example), and [`spec/env.md`](../spec/env.md) says how they work.
+[`apps/core/.env.example`](../apps/core/.env.example), and [`contracts/env.md`](../contracts/env.md) says how they work.
 
 > **Running an instance with apps?** The operator toolkit, `sv`, deploys core, a proxy and your apps to one machine and keeps them up
 > to date, backed up and restorable. Start with [Running an instance](operating.md). This page is the plain Compose route: core on its own,

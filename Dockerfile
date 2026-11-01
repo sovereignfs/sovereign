@@ -5,7 +5,7 @@
 # - Multi-stage on node:24-alpine. The last stage holds only what Next traced for the running server, the
 #   migrations it applies when it starts, and nothing else: no source, no dev dependencies, no package manager.
 # - No environment is baked in. Core refuses to start without SV_URL and SV_AUTH_SECRET and says what is wrong
-#   (spec/env.md); everything is given when the container is run.
+#   (contracts/env.md); everything is given when the container is run.
 # - It runs as an unprivileged user and listens on 3000.
 
 ARG NODE_VERSION=24

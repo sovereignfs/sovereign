@@ -4,7 +4,7 @@ One async database interface over **sqld**, **PostgreSQL** and a **SQLite file**
 migration runner and the helpers for the data-layer rules in
 [`docs/architecture-rules.md`](../../docs/architecture-rules.md). Apps pick the dialect
 with `SV_DB_DIALECT` (the rules for every variable are in
-[`spec/env.md`](../../spec/env.md)); nothing infers it from a URL.
+[`contracts/env.md`](../../contracts/env.md)); nothing infers it from a URL.
 
 > Not yet published to npm. It is `private` until the first app outside this repository
 > needs it.

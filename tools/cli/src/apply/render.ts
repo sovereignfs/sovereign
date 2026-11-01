@@ -56,7 +56,7 @@ export function publicNames(suite: Suite): { core: string; apps: Record<string, 
   return { core: suite.domain, apps };
 }
 
-/** Where core sends mail on a development or staging instance, until the operator says otherwise (spec/suite.md §1.1). */
+/** Where core sends mail on a development or staging instance, until the operator says otherwise (contracts/suite.md §1.1). */
 function mailDefaults(suite: Suite): Record<string, string> {
   return usesMailpit(suite)
     ? {
@@ -273,7 +273,7 @@ export function caddyfile(
   ].join('\n');
 }
 
-/** What a hosted app is given to run with (spec/app-manifest.md §3), and what it needs mounted. */
+/** What a hosted app is given to run with (contracts/app-manifest.md §3), and what it needs mounted. */
 export type AppInput = {
   name: string;
   suite: Suite;
@@ -291,7 +291,7 @@ export type AppInput = {
 export const appOrigin = (suite: Suite, name: string) => `https://${name}.${suite.domain}`;
 
 /**
- * An app's environment (spec/app-manifest.md §3): its address, core's, its client ID, and its secrets by their `_FILE` form, then the
+ * An app's environment (contracts/app-manifest.md §3): its address, core's, its client ID, and its secrets by their `_FILE` form, then the
  * operator's own settings, which may not set what the deployment provides.
  */
 export function appEnvironment(input: AppInput): Record<string, string> {

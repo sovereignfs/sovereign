@@ -17,7 +17,7 @@ built by tasks 14.7 to 14.10.
 
 - [docs/specs/core-app.md](../specs/core-app.md): §2, §3.6.6, §3.16
 - [docs/specs/sdk.md](../specs/sdk.md): §8 reserves the names
-- [spec/core-api/](../../spec/core-api/): each adds its operations here
+- [contracts/core-api/](../../contracts/core-api/): each adds its operations here
 
 ## Tasks
 

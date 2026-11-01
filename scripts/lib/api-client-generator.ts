@@ -1,5 +1,5 @@
 /**
- * Turns the Core API contract (`spec/core-api/openapi.yaml`) into the typed pieces of `packages/api-client`: the
+ * Turns the Core API contract (`contracts/core-api/openapi.yaml`) into the typed pieces of `packages/api-client`: the
  * types of every schema, and for every operation its method, path, the scope it needs and the shape of its
  * request and answer. It reads only what the contract says, so the client cannot describe anything the contract
  * does not, and a test fails when the committed files are not what this produces.
@@ -48,7 +48,7 @@ export type Contract = {
 };
 
 export const GENERATED_HEADER =
-  '// Generated from spec/core-api/openapi.yaml by scripts/generate-api-client.ts. Do not edit it: change the contract and run `pnpm generate:api-client`.\n';
+  '// Generated from contracts/core-api/openapi.yaml by scripts/generate-api-client.ts. Do not edit it: change the contract and run `pnpm generate:api-client`.\n';
 
 const METHODS = ['get', 'post', 'put', 'patch', 'delete'] as const;
 const SCHEMA_REF = '#/components/schemas/';

@@ -13,8 +13,8 @@ Run the standard quality checks and return a compact result table.
 ## Workflow
 
 1. **Read `CURRENT_TASK.md`** if it exists. Note whether the task/leg or the
-   diff (`git diff main...HEAD --name-only`) touches: `spec/core-api/` or an
-   API route; env vars / `.env.example` / `spec/env.md`; `packages/ui/src/`;
+   diff (`git diff main...HEAD --name-only`) touches: `contracts/core-api/` or an
+   API route; env vars / `.env.example` / `contracts/env.md`; `packages/ui/src/`;
    database schemas or migrations; `docs/specs/core-app.md`.
 
 2. **Run each check separately** so failures are isolated:
@@ -39,10 +39,10 @@ Run the standard quality checks and return a compact result table.
 
 3. **Conditional checks:**
    - Core API or an API route changed → the contract tests (core's handlers
-     against `spec/core-api/`), and `packages/api-client` regenerated with no
+     against `contracts/core-api/`), and `packages/api-client` regenerated with no
      diff left over.
    - Env vars changed → every `process.env` read is declared in `.env.example`,
-     the spec's variable table and `spec/env.md` agree.
+     the spec's variable table and `contracts/env.md` agree.
    - Schema or migrations changed → migrations apply from empty on sqld,
      PostgreSQL and a SQLite file, and the dialect parity test passes.
    - `packages/ui/src/` changed → `pnpm --filter @sovereignfs/ui typecheck`

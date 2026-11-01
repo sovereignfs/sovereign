@@ -15,7 +15,7 @@ export const SERVED_API = {
 };
 
 /**
- * The instance's branding as the Core API publishes it (`getInstanceBranding` in `spec/core-api/openapi.yaml`):
+ * The instance's branding as the Core API publishes it (`getInstanceBranding` in `contracts/core-api/openapi.yaml`):
  * what an app needs to look like it belongs to this instance. Typed from the contract, so a field the contract
  * does not have does not compile. The pictures are absolute addresses on the instance, which carry the picture's
  * version, so a changed picture is a new address; when only one logo is set it is given for both.

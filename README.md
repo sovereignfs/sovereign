@@ -52,7 +52,7 @@ and more. The spec lists what is in and out of each phase.
 | `packages/api-client` | The typed Core API client, generated from the contract          | In the workspace                            |
 | `packages/sdk`        | The SDK: sign-in, tokens, failure and version support for apps  | In the workspace, not published yet         |
 | `packages/*` (later)  | `auth`, …                                                       | Planned                                     |
-| `spec/`               | `env.md` (the environment convention) and the Core API contract | Written                                     |
+| `contracts/`          | The Core API, the file formats and the environment convention   | Written                                     |
 | `docs/`               | The spec, epics, research, RFCs and decisions                   | [Index below](#documentation)               |
 | `scripts/`            | Repository tooling and the tests that guard the repo's rules    | In use                                      |
 

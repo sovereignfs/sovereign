@@ -8,7 +8,7 @@ import type { HostedApp, Manifest } from './suite/types.js';
 const MAX_BYTES = 64 * 1024;
 
 /**
- * Reads an app's manifest (spec/app-manifest.md §1): from the `https` address the operator gave, which wins when an image has
+ * Reads an app's manifest (contracts/app-manifest.md §1): from the `https` address the operator gave, which wins when an image has
  * both, or from the label on the image, read from the registry without pulling it. Refuses one that does not meet the schema, one
  * whose version this toolkit does not read, and one whose `core` range leaves out the instance's core.
  */

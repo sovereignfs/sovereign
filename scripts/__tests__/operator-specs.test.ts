@@ -12,7 +12,8 @@ import { describe, expect, it } from 'vitest';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
 const read = (file: string) => readFileSync(path.join(root, file), 'utf8');
-const schema = (name: string) => JSON.parse(read(`spec/schemas/${name}.schema.json`)) as object;
+const schema = (name: string) =>
+  JSON.parse(read(`contracts/schemas/${name}.schema.json`)) as object;
 const ajv = new Ajv2020({ allErrors: true });
 const validSuite = ajv.compile(schema('suite-v1'));
 const validLock = ajv.compile(schema('suite-lock-v1'));
@@ -24,8 +25,8 @@ const blocks = (file: string, language: string) =>
     (match) => match[1] ?? '',
   );
 
-const [suiteYaml = '', lockYaml = '', secretsYaml = ''] = blocks('spec/suite.md', 'yaml');
-const [manifestJson = ''] = blocks('spec/app-manifest.md', 'json');
+const [suiteYaml = '', lockYaml = '', secretsYaml = ''] = blocks('contracts/suite.md', 'yaml');
+const [manifestJson = ''] = blocks('contracts/app-manifest.md', 'json');
 type Suite = {
   domain: string;
   core: { version: string; env?: Record<string, string> };
@@ -90,7 +91,9 @@ describe('suite.yml', () => {
   });
 
   it('refuses every variable the deployment provides or refuses, with or without _FILE', () => {
-    const names = /`core\.env` MUST NOT hold[\s\S]*?\n\n([\s\S]*?)\n\n/.exec(read('spec/suite.md'));
+    const names = /`core\.env` MUST NOT hold[\s\S]*?\n\n([\s\S]*?)\n\n/.exec(
+      read('contracts/suite.md'),
+    );
     const listed = [...(names?.[1] ?? '').matchAll(/`(SV_[A-Z_]+)`/g)].map((match) => match[1]);
     expect(listed).toContain('SV_AUTH_COOKIE_DOMAIN');
     expect(listed.length).toBeGreaterThan(8);
@@ -212,9 +215,11 @@ describe('the manifest', () => {
 });
 
 describe('where the specifications meet', () => {
-  it('every variable an app is given is a shared name of spec/env.md', () => {
-    const shared = read('spec/env.md');
-    const given = /## 3\. What an app is given([\s\S]*?)\n## /.exec(read('spec/app-manifest.md'));
+  it('every variable an app is given is a shared name of contracts/env.md', () => {
+    const shared = read('contracts/env.md');
+    const given = /## 3\. What an app is given([\s\S]*?)\n## /.exec(
+      read('contracts/app-manifest.md'),
+    );
     const names = [...(given?.[1] ?? '').matchAll(/`<PREFIX>_([A-Z_]+)`/g)].map(
       (match) => match[1],
     );

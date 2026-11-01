@@ -10,8 +10,8 @@ this document wins until it is changed.
 
 The key words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT** and **MAY** are used as described in RFC 2119.
 
-What an app may call is defined by [`spec/core-api/openapi.yaml`](../../spec/core-api/openapi.yaml), what core does by
-[`core-app.md`](core-app.md), and how an app is configured by [`spec/env.md`](../../spec/env.md). This document says only what the
+What an app may call is defined by [`contracts/core-api/openapi.yaml`](../../contracts/core-api/openapi.yaml), what core does by
+[`core-app.md`](core-app.md), and how an app is configured by [`contracts/env.md`](../../contracts/env.md). This document says only what the
 SDK adds.
 
 ---
@@ -21,7 +21,7 @@ SDK adds.
 `@sovereignfs/sdk` is how a JavaScript app's server talks to the Sovereign server it signs people in with.
 
 ```text
-spec/core-api/openapi.yaml     the one contract; any language can call it
+contracts/core-api/openapi.yaml     the one contract; any language can call it
   ↓ generated
 @sovereignfs/api-client        typed calls, one per operation
   ↓ wrapped by
@@ -61,8 +61,8 @@ export const sv = createSovereign({ prefix: 'NOTES' });
 ```
 
 - With `prefix`, the SDK MUST read `<PREFIX>_URL`, `<PREFIX>_CORE_URL`, `<PREFIX>_CORE_CLIENT_ID` and `<PREFIX>_CORE_CLIENT_SECRET`,
-  each secret also in its `_FILE` form, as [`spec/env.md`](../../spec/env.md) defines and
-  [`spec/app-manifest.md`](../../spec/app-manifest.md) §3 provides.
+  each secret also in its `_FILE` form, as [`contracts/env.md`](../../contracts/env.md) defines and
+  [`contracts/app-manifest.md`](../../contracts/app-manifest.md) §3 provides.
 - An app with other names MAY pass `appUrl`, `coreUrl`, `clientId` and `clientSecret` instead, so an external app can use it.
 - Anything missing or malformed MUST throw when the client is created, naming the variable and never its value.
 - `createSovereign` MUST make no network call, so an app starts while core is down.
@@ -298,7 +298,7 @@ Every namespace of the legacy `sdk` object:
 | `db`            | **Local.** The app's own database                                                                 |
 | `crypto`        | **Local.** `@sovereignfs/crypto`                                                                  |
 | `mailer`        | **Local.** `@sovereignfs/mailer`, with the app's own mail settings                                |
-| `env`           | **Local.** `spec/env.md`                                                                          |
+| `env`           | **Local.** `contracts/env.md`                                                                     |
 | `id`            | **Local.** The app's own                                                                          |
 | `jobs`          | **Local.** The app runs its own, and acts as `sv.app`                                             |
 | `secrets`       | **Local.** The app's own field encryption                                                         |

@@ -9,7 +9,7 @@
 
 ## Overview
 
-`spec/core-api/` is the canonical contract, written in OpenAPI 3.1.
+`contracts/core-api/` is the canonical contract, written in OpenAPI 3.1.
 `packages/api-client` is generated from it, and core is tested against it, so
 the two cannot drift. Later phases add mail, notifications, activity and
 account-deletion endpoints here.
@@ -17,7 +17,7 @@ account-deletion endpoints here.
 ## Related
 
 - [docs/specs/core-app.md](../specs/core-app.md) — §3.9, §3.13
-- `spec/core-api/` (written in 10.1)
+- `contracts/core-api/` (written in 10.1)
 
 ## Tasks
 
@@ -27,9 +27,9 @@ account-deletion endpoints here.
 
 **Deliverables:**
 
-- Delete the `spec/core-api` entry from `PLANNED_TARGETS` in
+- Delete the `contracts/core-api` entry from `PLANNED_TARGETS` in
   `scripts/lib/doc-links.ts` once the directory exists
-- `spec/core-api/`: OpenAPI 3.1, versioned paths (`/api/v1/…`), bearer token
+- `contracts/core-api/`: OpenAPI 3.1, versioned paths (`/api/v1/…`), bearer token
   authentication, error format
 - `packages/api-client`: a typed client generated from the contract
 - Contract tests that run core's handlers against the definition

@@ -1,4 +1,4 @@
-# This app as one image (spec/app-manifest.md §4): a process that is not root, configured by its environment alone, listening on
+# This app as one image (contracts/app-manifest.md §4): a process that is not root, configured by its environment alone, listening on
 # 3000, that applies its own migrations when it starts. `docker build -t __NAME__ .`
 
 ARG NODE_VERSION=24

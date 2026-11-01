@@ -4,7 +4,7 @@ import { KeyRingError } from './errors.js';
 import { FieldCipher } from './field-cipher.js';
 
 /**
- * The field-encryption variable of spec/env.md, to spread into an app's `defineConfig`.
+ * The field-encryption variable of contracts/env.md, to spread into an app's `defineConfig`.
  * Optional here, because whether an app needs it depends on whether it stores secrets;
  * `resolveFieldEncryption` says which, and reports a problem naming the variable.
  */

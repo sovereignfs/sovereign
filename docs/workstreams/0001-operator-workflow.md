@@ -5,7 +5,7 @@
 **Author:** kasunben\
 **Goal owner:** kasunben\
 **Governs:** [RFC 0002](../rfcs/0002-deployment-strategies.md) (Accepted, Implemented), extended within its design;
-[operator-cli](../specs/operator-cli.md) §2.2, §4.2.1, §6.1, §6.4.3, §8.2, §10; [`spec/suite.md`](../../spec/suite.md) §1.7, §1.8;
+[operator-cli](../specs/operator-cli.md) §2.2, §4.2.1, §6.1, §6.4.3, §8.2, §10; [`contracts/suite.md`](../../contracts/suite.md) §1.7, §1.8;
 epic [13](../epics/operator-cli.md) (Operator CLI)\
 **Research:** none. The Decisions locked table below was settled with the goal owner in a planning conversation (2026-11-01), and is
 that record.
@@ -138,7 +138,7 @@ a request the server already parses (`tools/cli/src/server/request.ts`) and answ
 **Technical notes:** backups are made in `tools/cli/src/apply/backup.ts`, sent down by `tools/cli/src/commands/backup.ts`, and restored
 by `tools/cli/src/apply/restore.ts`. `sv-backup` joins the fixed names in `tools/cli/src/apply/names.ts`. Choose the S3 client in the leg
 for size in the toolkit's image (a small request signer over a full SDK). Test against a MinIO container. `backup` also goes into
-`spec/schemas/suite-v1.schema.json` here.
+`contracts/schemas/suite-v1.schema.json` here.
 
 **Do not proceed if:** a backup cannot reach the destination without the server holding a key that reads it.
 

@@ -1,8 +1,8 @@
 import Ajv2020 from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
-import manifestSchema from '../../../../spec/schemas/app-manifest-v1.schema.json' with { type: 'json' };
-import lockSchema from '../../../../spec/schemas/suite-lock-v1.schema.json' with { type: 'json' };
-import suiteSchema from '../../../../spec/schemas/suite-v1.schema.json' with { type: 'json' };
+import manifestSchema from '../../../../contracts/schemas/app-manifest-v1.schema.json' with { type: 'json' };
+import lockSchema from '../../../../contracts/schemas/suite-lock-v1.schema.json' with { type: 'json' };
+import suiteSchema from '../../../../contracts/schemas/suite-v1.schema.json' with { type: 'json' };
 
 /** One thing wrong with a document, with where it is, in words an operator can act on. */
 export type Problem = { at: string; message: string };
@@ -17,7 +17,7 @@ const validators = {
 
 export type SchemaName = keyof typeof validators;
 
-/** What is wrong with a document against one of the schemas under `spec/schemas`, each thing once. */
+/** What is wrong with a document against one of the schemas under `contracts/schemas`, each thing once. */
 export function schemaProblems(name: SchemaName, document: unknown): Problem[] {
   const validate = validators[name];
   if (validate(document)) return [];

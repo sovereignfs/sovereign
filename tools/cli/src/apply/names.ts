@@ -23,7 +23,7 @@ export const PROJECT = {
   app: (name: string) => `sovereign-app-${name}`,
 } as const;
 
-/** Where a container finds the secrets it is given, one file each (spec/env.md §3). */
+/** Where a container finds the secrets it is given, one file each (contracts/env.md §3). */
 export const SECRETS_IN_CONTAINER = '/run/secrets';
 /** Where a container finds the proxy’s own certificate authority, with `tls.mode: internal`. */
 /** The folder holding the proxy’s authority is mounted, not the file: a file mounted alone goes stale when it is replaced. */

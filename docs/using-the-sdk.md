@@ -2,7 +2,7 @@
 
 `@sovereignfs/sdk` is how a JavaScript app's **server** signs people in with a Sovereign server, and calls it. This is for the
 person writing the app. What the package promises is in [`docs/specs/sdk.md`](specs/sdk.md); an app in another language, or one
-that cannot use it, can do the same with [OpenID Connect](connecting-an-app.md) and the [contract](../spec/core-api/openapi.yaml).
+that cannot use it, can do the same with [OpenID Connect](connecting-an-app.md) and the [contract](../contracts/core-api/openapi.yaml).
 
 It runs on a server only. Importing it in a browser throws, because a token must never reach one.
 
@@ -18,7 +18,7 @@ public name, and takes the **client id** and **secret** it is given:
 | Back-channel logout | `https://notes.sovereign.local/auth/backchannel-logout` |
 | Account deleted     | `https://notes.sovereign.local/auth/account-deleted`    |
 
-The app is told where core is, and who it is, in four variables with its own prefix ([`spec/env.md`](../spec/env.md)):
+The app is told where core is, and who it is, in four variables with its own prefix ([`contracts/env.md`](../contracts/env.md)):
 `NOTES_URL`, `NOTES_CORE_URL`, `NOTES_CORE_CLIENT_ID` and `NOTES_CORE_CLIENT_SECRET` (or `NOTES_CORE_CLIENT_SECRET_FILE`).
 
 ## 2. Create the client

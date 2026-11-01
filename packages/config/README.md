@@ -3,7 +3,7 @@
 The environment variable convention for Sovereign core and the apps that run beside
 it: declare your settings once, read them in one place, and fail at start-up, naming
 the variable, when one is wrong. The convention itself is
-[`spec/env.md`](../../spec/env.md); this package implements it.
+[`contracts/env.md`](../../contracts/env.md); this package implements it.
 
 > Not yet published to npm. It is `private` until the first app outside this
 > repository needs it.

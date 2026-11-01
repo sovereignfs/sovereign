@@ -403,7 +403,7 @@ pointing here.
   one transaction that revokes every token and removes what belongs to the
   account, and tell the apps afterwards.
 - **The Core API contract is the only definition, the client is generated from
-  it, and every handler is held to it.** `spec/core-api/openapi.yaml` is edited
+  it, and every handler is held to it.** `contracts/core-api/openapi.yaml` is edited
   first; `pnpm generate:api-client` rewrites `packages/api-client/src/generated/`
   (a test fails if the committed files differ); a handler's answer is checked in
   its test with `expectMatchesContract(operationId, status, body)`

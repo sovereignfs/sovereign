@@ -74,14 +74,19 @@ instance; how many connections a busy app takes was not measured.
 
 ### 1. Guardrails, for every instance
 
-- **`suite.yml`** gains `database.maxConnections` (default 100, PostgreSQL's own), `database.connections.core` (default 20) and
-  `database.connections.app` (default 10, each hosted app), and `apps.<name>.connections` for one app. The defaults change nothing a
-  service does today: core's and the template's pools are 10.
-- **`sv apply`** sets `max_connections` on the server (a change restarts it, and the deployment says so before it does), sets each role's
-  `CONNECTION LIMIT` on every deployment, so a limit that changes is applied, and gives each pool the same number:
-  `SV_POSTGRES_POOL_MAX` to core and `<PREFIX>_POSTGRES_POOL_MAX` to each app, which the template then reads.
-- **A budget, checked:** `sv` refuses limits that add up to more than `maxConnections`, less the superuser's reserve and a few for
-  `sv apply` and backups. The check runs where the limits are written and again in `sv apply`.
+- **`suite.yml`** gains `database.maxConnections` (default 100, PostgreSQL's own), `database.connections.core` and
+  `database.connections.app` (each hosted app), both defaulting to 10, and `apps.<name>.connections` for one app. The defaults change
+  nothing a service does today: core's and the template's pools are 10.
+- **`sv apply`** sets `max_connections` on the server only when it is not 100, so an instance that says nothing is not restarted (a
+  change restarts it, and the deployment says so before it does), sets each role's `CONNECTION LIMIT` on every deployment, so a limit
+  that changes is applied, and gives each pool its size: `SV_POSTGRES_POOL_MAX` to core and `<PREFIX>_POSTGRES_POOL_MAX` to each app,
+  which the template then reads. _Built:_ a role's limit is its pool size plus 2, so a connection that a killed container left behind
+  does not keep its replacement out.
+- **A budget, checked:** the limits of core and of each app that has a database may add up to no more than `maxConnections` less 3, the
+  superuser's reserve, which `sv apply` and backups connect through. _Built:_ `sv apply` checks it, since only the manifest says which
+  apps have a database, and refuses when the operator set `maxConnections` or `connections`; when they set none it warns and deploys,
+  so an instance that already has more apps than the defaults hold keeps deploying. The commands that set the limits (13.23) check it
+  as well. Eight apps at the defaults are enough to exceed it.
 
 ### 2. Configured and seen from `sv`
 
@@ -136,6 +141,7 @@ Never by editing `suite.yml`, which finding 7 shows leaves the lock behind:
 
 ## Changelog
 
-| Date       | Change                                     |
-| ---------- | ------------------------------------------ |
-| 2026-11-01 | First version, with the tasks it proposes. |
+| Date       | Change                                                                                                                                                                                                                   |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-11-01 | First version, with the tasks it proposes.                                                                                                                                                                               |
+| 2026-11-02 | Guardrails built (task 13.22): a role's limit is its pool plus 2, `max_connections` is passed only when it is not 100, and a budget the operator did not set is a warning. Core's default is 10, as its pool is, not 20. |

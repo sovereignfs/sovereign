@@ -17,6 +17,7 @@ export const CORE_RESERVED = [
   'SV_AUTH_COOKIE_DOMAIN',
   'SV_AUTH_WEBAUTHN_RP_ID',
   'SV_ENVIRONMENT',
+  'SV_POSTGRES_POOL_MAX',
 ] as const;
 
 /** Whether a name is one the deployment owns, in either form (`NAME` or `NAME_FILE`). */
@@ -34,6 +35,7 @@ export function reservedForApp(prefix: string, generate: readonly string[] = [])
     `${prefix}_CORE_CLIENT_SECRET`,
     `${prefix}_DB_DIALECT`,
     `${prefix}_POSTGRES_URL`,
+    `${prefix}_POSTGRES_POOL_MAX`,
     ...generate,
   ];
 }

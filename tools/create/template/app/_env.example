@@ -6,4 +6,7 @@ __PREFIX___CORE_CLIENT_ID=
 __PREFIX___CORE_CLIENT_SECRET=
 __PREFIX___DB_DIALECT=postgres
 __PREFIX___POSTGRES_URL=postgres://user:password@localhost:5432/__NAME__
+# The most connections the pool may hold (2 or more). An instance sets it, and limits the app's database role to that number plus 2.
+# Without it the pool holds 10.
+__PREFIX___POSTGRES_POOL_MAX=10
 __PREFIX___AUTH_SECRET=change-me-to-something-long-and-random

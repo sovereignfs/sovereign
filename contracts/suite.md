@@ -101,7 +101,7 @@ means what it did.
 `core.env` MUST NOT hold a variable the deployment provides or refuses:
 
 `SV_URL`, `SV_AUTH_SECRET`, `SV_FIELD_ENCRYPTION_KEYS`, `SV_DB_DIALECT`, `SV_POSTGRES_URL`, `SV_SQLD_URL`,
-`SV_SQLD_ADMIN_URL`, `SV_SQLD_NAMESPACE`, `SV_SQLITE_URL`, `SV_AUTH_COOKIE_DOMAIN`, `SV_AUTH_WEBAUTHN_RP_ID`, `SV_ENVIRONMENT`, or any of these
+`SV_SQLD_ADMIN_URL`, `SV_SQLD_NAMESPACE`, `SV_SQLITE_URL`, `SV_AUTH_COOKIE_DOMAIN`, `SV_AUTH_WEBAUTHN_RP_ID`, `SV_ENVIRONMENT`, `SV_POSTGRES_POOL_MAX`, or any of these
 with `_FILE`.
 
 A secret MUST NOT be in `env`. A name ending in `_PASSWORD`, `_SECRET`, `_KEY`, `_KEYS` or `_TOKEN` is refused, and belongs in
@@ -109,11 +109,26 @@ A secret MUST NOT be in `env`. A name ending in `_PASSWORD`, `_SECRET`, `_KEY`, 
 
 ### 1.3 `database`
 
-| Field     | Required | Meaning                                                                         |
-| --------- | -------- | ------------------------------------------------------------------------------- |
-| `version` | yes      | PostgreSQL's major version, as a string. It cannot change on a running instance |
+| Field            | Required | Meaning                                                                                                                                                  |
+| ---------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `version`        | yes      | PostgreSQL's major version, as a string. It cannot change on a running instance                                                                          |
+| `maxConnections` | no       | The server's `max_connections`, 20 to 1000. Default 100, which is PostgreSQL's own                                                                       |
+| `connections`    | no       | How many connections each may hold: `core` and `app` (each hosted app), 2 to 100. Default 10 for both, which is what core's and the template's pools are |
 
 PostgreSQL is the only engine in this version, so there is no field for it.
+
+**Connection limits** ([operator-cli §6.4.4](../docs/specs/operator-cli.md)). A service's `connections` is the size of its connection
+pool, given to it as `SV_POSTGRES_POOL_MAX` or `<PREFIX>_POSTGRES_POOL_MAX`. Its role's `CONNECTION LIMIT` is that number plus **2**, so
+that a connection the server has not yet seen close, left by a container that was killed, does not keep its replacement out. An
+app's own number is `connections` under its entry in `apps` (§1.7), and the default `connections.app` otherwise.
+
+- The limits of core and of every hosted app that has a database MUST add up to no more than `maxConnections` less 3, which PostgreSQL
+  keeps for the superuser and `sv apply` and backups use. `sv apply` refuses a deployment that does not, **when the operator has set
+  `maxConnections` or `connections`**. When they have set none, it warns and deploys, so an instance that already has more apps than the
+  defaults hold keeps deploying.
+- The server is given `max_connections` only when `maxConnections` is not 100, so that an instance that sets nothing is not restarted
+  by this. A change restarts the server, and the deployment says so before it does.
+- A lower limit does not end a connection already open. It applies to the next one.
 
 ### 1.4 `server`
 
@@ -152,15 +167,19 @@ A map from an app's name to what it is. A name:
 
 A **hosted app**:
 
-| Field      | Required | Meaning                                                                                                                                                                                             |
-| ---------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `image`    | yes      | The image, with a tag or digest. Never `latest`, and never with no tag                                                                                                                              |
-| `manifest` | no       | An `https` address of its manifest, for an image with no label                                                                                                                                      |
-| `source`   | no       | The GitHub repository the image was found from (`https://github.com/OWNER/REPO`), written by `sv app add --git`, which `sv app upgrade` follows. Not built yet                                      |
-| `env`      | no       | Other settings for the app. Names begin with the manifest's prefix, and values are strings. Holds to §1.2's rule on secrets, and MUST NOT set what [`app-manifest.md`](app-manifest.md) §3 provides |
-| `launcher` | no       | Changes to its launcher entry (below)                                                                                                                                                               |
+| Field         | Required | Meaning                                                                                                                                                                                             |
+| ------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `image`       | yes      | The image, with a tag or digest. Never `latest`, and never with no tag                                                                                                                              |
+| `connections` | no       | Its connection pool size (§1.3), instead of `database.connections.app`                                                                                                                              |
+| `manifest`    | no       | An `https` address of its manifest, for an image with no label                                                                                                                                      |
+| `source`      | no       | The GitHub repository the image was found from (`https://github.com/OWNER/REPO`), written by `sv app add --git`, which `sv app upgrade` follows. Not built yet                                      |
+| `env`         | no       | Other settings for the app. Names begin with the manifest's prefix, and values are strings. Holds to §1.2's rule on secrets, and MUST NOT set what [`app-manifest.md`](app-manifest.md) §3 provides |
+| `launcher`    | no       | Changes to its launcher entry (below)                                                                                                                                                               |
 
 A hosted app's trust, addresses and scopes are not here: they come from the manifest and its name.
+
+A hosted app MAY also have `connections`: its pool size, 2 to 100, instead of `database.connections.app` (§1.3). It is used only by an app
+whose manifest has `database`.
 
 An **external app**:
 

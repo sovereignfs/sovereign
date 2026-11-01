@@ -144,7 +144,11 @@ export async function ensureDatabase(
   name: string,
   role: string,
   password: string,
+  /** The most connections the role may hold (operator-cli §6.4.4). It applies to the next connection and ends none. */
+  connectionLimit: number,
 ): Promise<void> {
+  if (!Number.isInteger(connectionLimit) || connectionLimit < 1)
+    throw new Error(`${connectionLimit} is not a connection limit`);
   const quoted = `'${password.replace(/'/g, "''")}'`;
   await psql(
     host,
@@ -156,6 +160,7 @@ export async function ensureDatabase(
     ALTER ROLE "${role}" PASSWORD ${quoted};
   END IF;
 END $$;
+ALTER ROLE "${role}" CONNECTION LIMIT ${connectionLimit};
 SELECT 'CREATE DATABASE "${name}" OWNER "${role}"' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '${name}')\\gexec
 REVOKE ALL ON DATABASE "${name}" FROM PUBLIC;
 GRANT CONNECT ON DATABASE "${name}" TO "${role}";

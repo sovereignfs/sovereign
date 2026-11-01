@@ -3,6 +3,7 @@ import path from 'node:path';
 import { Failed, Refused } from '../errors.js';
 import { readManifest } from '../manifest.js';
 import { Registry } from '../registry.js';
+import { appPool, roleLimit } from '../suite/connections.js';
 import { appEnvProblems } from '../suite/apps.js';
 import type { Problem } from '../suite/schema.js';
 import {
@@ -223,7 +224,7 @@ export async function applyHostedApp(
     const password = await generated.ensure(`role-app-${name}-password`, () =>
       generated.random(24),
     );
-    await ensureDatabase(host, database, database, password.value);
+    await ensureDatabase(host, database, database, password.value, roleLimit(appPool(suite, name)));
     await generated.write(
       `app-${name}-postgres-url`,
       `postgres://${database}:${password.value}@${CONTAINER.database}:5432/${database}`,

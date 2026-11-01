@@ -95,6 +95,7 @@ marked secret is given in its `_FILE` form, so an app MUST read a secret either 
 | `<PREFIX>_CORE_CLIENT_SECRET` | Always          | yes    | Its client secret                              |
 | `<PREFIX>_DB_DIALECT`         | With `database` |        | `postgres`                                     |
 | `<PREFIX>_POSTGRES_URL`       | With `database` | yes    | Its own database, as its own role              |
+| `<PREFIX>_POSTGRES_POOL_MAX`  | With `database` |        | The most connections its pool may hold         |
 | What `generate` names         | When listed     | yes    | 48 random bytes, in base64, made once and kept |
 
 Anything else comes from the operator: `env` in `suite.yml`, or `secrets.age.yml`. Neither may set a variable in this table.

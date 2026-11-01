@@ -967,3 +967,132 @@ describe('what core is told the instance is for', () => {
     );
   });
 });
+
+describe('connection limits', () => {
+  const NOTES = { image: 'ghcr.io/example/notes:1' };
+  const registry = () =>
+    fakeRegistry({ 'ghcr.io/example/notes:1': { manifest: manifestOf() } }).registry;
+  const appCompose = (made: Source, commit = 'a'.repeat(40)) =>
+    parse(
+      readFileSync(
+        path.join(made.stateDir, 'releases', commit, 'apps', 'notes', 'compose.yml'),
+        'utf8',
+      ),
+    ) as { services: Record<string, { environment?: Record<string, string> }> };
+  const appEnvironment = (made: Source) =>
+    Object.values(appCompose(made).services)[0]?.environment ?? {};
+  const roleSql = (docker: FakeDocker) => docker.psql.join('\n');
+
+  it('limits each role to its pool and two more, and gives each pool its size, at the defaults', async () => {
+    const made = await source({ suite: { apps: { notes: NOTES } } });
+    const { host, docker } = fakeHost({ registry: registry() });
+    await apply(host, options(made));
+    expect(roleSql(docker)).toContain('ALTER ROLE "core" CONNECTION LIMIT 12;');
+    expect(roleSql(docker)).toContain('ALTER ROLE "app_notes" CONNECTION LIMIT 12;');
+    expect(compose(made, 'core').services.core?.environment?.SV_POSTGRES_POOL_MAX).toBe('10');
+    expect(appEnvironment(made).NOTES_POSTGRES_POOL_MAX).toBe('10');
+  });
+
+  it('uses what the operator set: core’s number, every app’s, and one app’s own', async () => {
+    const made = await source({
+      suite: {
+        database: { version: '18', connections: { core: 20, app: 6 } },
+        apps: { notes: { ...NOTES, connections: 3 } },
+      },
+    });
+    const { host, docker } = fakeHost({ registry: registry() });
+    await apply(host, options(made));
+    expect(roleSql(docker)).toContain('ALTER ROLE "core" CONNECTION LIMIT 22;');
+    expect(roleSql(docker)).toContain('ALTER ROLE "app_notes" CONNECTION LIMIT 5;');
+    expect(compose(made, 'core').services.core?.environment?.SV_POSTGRES_POOL_MAX).toBe('20');
+    expect(appEnvironment(made).NOTES_POSTGRES_POOL_MAX).toBe('3');
+  });
+
+  it('does not touch the database server when max_connections is PostgreSQL’s own, so a file that says nothing restarts nothing', async () => {
+    const made = await source();
+    await apply(fakeHost().host, options(made));
+    expect(compose(made, 'database').services.database).not.toHaveProperty('command');
+    const same = await source({ suite: { database: { version: '18', maxConnections: 100 } } });
+    await apply(fakeHost().host, options(same));
+    expect(compose(same, 'database').services.database).not.toHaveProperty('command');
+  });
+
+  it('gives the database server max_connections when it is another number', async () => {
+    const made = await source({ suite: { database: { version: '18', maxConnections: 300 } } });
+    await apply(fakeHost().host, options(made));
+    expect(compose(made, 'database').services.database).toMatchObject({
+      command: ['postgres', '-c', 'max_connections=300'],
+    });
+  });
+
+  it('records the max_connections it applied, and says before the server starts that a change restarts it', async () => {
+    const first = await source();
+    const { host, logs } = fakeHost();
+    await apply(host, options(first));
+    expect(state(first).database).toEqual({ version: '18', maxConnections: 100 });
+    expect(logs.join('\n')).not.toContain('max_connections changes');
+    const second = await source({ suite: { database: { version: '18', maxConnections: 300 } } });
+    await apply(host, { ...options(second), stateDir: first.stateDir, commit: 'b'.repeat(40) });
+    expect(state(first).database.maxConnections).toBe(300);
+    const said = logs.filter((line) => line.includes('max_connections changes'));
+    expect(said).toEqual([
+      'max_connections changes from 100 to 300: the database server restarts, and core and the apps reconnect.',
+    ]);
+    // Said before the database server is started again, not after.
+    expect(logs.indexOf(said[0] as string)).toBeLessThan(
+      logs.map((line) => line.startsWith('The database server is up')).lastIndexOf(true),
+    );
+  });
+
+  it('says nothing about a restart when the number is the same', async () => {
+    const first = await source({ suite: { database: { version: '18', maxConnections: 300 } } });
+    const { host, logs } = fakeHost();
+    await apply(host, options(first));
+    await apply(host, { ...options(first), commit: 'b'.repeat(40) });
+    expect(logs.filter((line) => line.includes('max_connections changes'))).toEqual([]);
+  });
+
+  it('deploys with a warning when there are more apps than the defaults hold and the operator set nothing', async () => {
+    const images: Record<string, { manifest: unknown }> = {};
+    const apps: Record<string, { image: string }> = {};
+    for (let i = 0; i < 8; i += 1) {
+      images[`ghcr.io/example/a${i}:1`] = {
+        manifest: manifestOf({ name: `App ${i}`, prefix: `APP${i}` }),
+      };
+      apps[`a${i}`] = { image: `ghcr.io/example/a${i}:1` };
+    }
+    const made = await source({ suite: { apps } });
+    const { host, logs } = fakeHost({ registry: fakeRegistry(images).registry });
+    await apply(host, options(made));
+    const warning = logs.find((line) => line.startsWith('Warning: The connection limits add up'));
+    expect(warning).toContain('add up to 108');
+    expect(warning).toContain('the server allows 97');
+    expect(warning).toContain('Raise database.maxConnections or lower connections.');
+    expect(state(made).core.healthy).toBe(true);
+  });
+
+  it('refuses, changing nothing, when the operator set numbers that do not fit, saying where the connections go', async () => {
+    const made = await source({
+      suite: { database: { version: '18', maxConnections: 20 }, apps: { notes: NOTES } },
+    });
+    const { host, docker } = fakeHost({ registry: registry() });
+    await expect(apply(host, options(made))).rejects.toThrow(
+      'The connection limits add up to 24 (core 12, notes 12), and the server allows 17 (max_connections 20',
+    );
+    expect(docker.psql).toEqual([]);
+    expect(docker.containers.size).toBe(0);
+  });
+
+  it('counts only the apps that have a database', async () => {
+    const made = await source({
+      suite: { database: { version: '18', maxConnections: 20 }, apps: { notes: NOTES } },
+    });
+    const { host } = fakeHost({
+      registry: fakeRegistry({
+        'ghcr.io/example/notes:1': { manifest: manifestOf({ database: false, generate: [] }) },
+      }).registry,
+    });
+    await apply(host, options(made));
+    expect(state(made).apps.notes?.kind).toBe('hosted');
+  });
+});

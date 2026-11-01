@@ -375,6 +375,25 @@ digest in `suite.lock`, with the Docker socket and the state directory, as `sv-a
 it to the destination (§10.2.2). It publishes no port and joins no network but the default. When the schedule is removed, the next
 deployment removes the container. A scheduled backup that fails is recorded in `state.json`, and `sv status` and `sv doctor` report it.
 
+### 6.4.4 Connection limits
+
+Core and every hosted app that has a database share one PostgreSQL server, so `sv apply` bounds what each may take (`contracts/suite.md` §1.3,
+[research 0003](../research/0003-database-connections.md)).
+
+- **Each role is limited.** On every deployment, after the role is made or its password set, `sv apply` sets its `CONNECTION LIMIT` to the
+  pool size of the service it belongs to plus 2: core's from `database.connections.core`, an app's from `apps.<name>.connections` or
+  `database.connections.app`.
+- **Each pool is sized.** Core is given `SV_POSTGRES_POOL_MAX` and an app `<PREFIX>_POSTGRES_POOL_MAX` with the same number. An app that
+  does not read it keeps the pool it has, and its role's limit is what holds it.
+- **The server is sized.** `max_connections` is passed to the database server only when `database.maxConnections` is not 100, so an
+  instance that sets nothing is not restarted. `sv apply` records the value it applied in `state.json`, and when it changes says before
+  the database server is started that it restarts.
+- **The budget is checked.** The limits of core and of each hosted app whose manifest has `database` MUST add up to no more than
+  `maxConnections` less 3. When the operator has set `maxConnections` or `connections`, a deployment that exceeds it is refused at step 1,
+  with each role's share; when they have set none it deploys with a warning that names `sv database set`, which arrives with the
+  commands that set them (task 13.23).
+- **Nothing is cut.** A lower limit applies to the next connection and ends none.
+
 ### 6.5 What it refuses
 
 `sv apply` MUST refuse to run, changing nothing, when:
@@ -383,6 +402,7 @@ deployment removes the container. A scheduled backup that fails is recorded in `
   and any app could then act as the person on core ([core-app §3.5](core-app.md));
 - `SV_AUTH_WEBAUTHN_RP_ID` is set, since apps never run a passkey ceremony and changing it later breaks passkeys;
 - `suite.yml` names a value `sv apply` itself provides (`contracts/suite.md`);
+- the connection limits add up to more than the server allows, when the operator set `maxConnections` or `connections` (§6.4.4);
 - the toolkit does not support the instance's core version or `schema`;
 - core's version would go backward, unless the run is a restore;
 - `database.version` differs from the running server's major version;

@@ -16,6 +16,14 @@ import { parse } from 'yaml';
 import { Failed, Refused, SvError } from '../errors.js';
 import { SecretsFile, decryptValue } from '../secrets/store.js';
 import { SuiteFile, readLock, writeAtomically } from '../suite/files.js';
+import {
+  DEFAULT_MAX_CONNECTIONS,
+  connectionBudget,
+  corePool,
+  describeBudget,
+  maxConnectionsOf,
+  roleLimit,
+} from '../suite/connections.js';
 import { lockProblems } from '../suite/lock.js';
 import type { Problem } from '../suite/schema.js';
 import { isExternal, type Manifest, type Suite } from '../suite/types.js';
@@ -121,6 +129,14 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
   const overrides = await readOverrides(options.from, Object.keys(suite.apps ?? {}));
   const state = await readState(options.stateDir);
   const read = await readManifests(host, suite, lock);
+  // The connections the limits allow (operator-cli §6.4.4): a refusal when the operator set them, a warning when they left them be.
+  const budget = connectionBudget(suite, (name) => read.manifests[name]?.database === true);
+  const budgetProblems: Problem[] = [];
+  if (budget.exceeded) {
+    const said = `${describeBudget(budget, maxConnectionsOf(suite))} Raise database.maxConnections or lower connections.`;
+    if (budget.explicit) budgetProblems.push({ at: 'database', message: said });
+    else host.log(`Warning: ${said}`);
+  }
   refuseIfAny('sv apply will not run:', [
     ...refusals({
       suite,
@@ -131,6 +147,7 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
     }),
     ...overrides.problems,
     ...read.problems,
+    ...budgetProblems,
   ]);
   const manifests = read.manifests;
   say('Checked suite.yml, suite.lock, the manifests and the overrides.');
@@ -250,6 +267,12 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
     await generated.write(name, value);
   await forgetRemovedOperatorSecrets(generated, state, operatorSecrets);
 
+  // A different max_connections is a restart of the database server, which core and the apps reconnect from.
+  const appliedMax = state?.database.maxConnections ?? DEFAULT_MAX_CONNECTIONS;
+  if (state && appliedMax !== maxConnectionsOf(suite))
+    say(
+      `max_connections changes from ${appliedMax} to ${maxConnectionsOf(suite)}: the database server restarts, and core and the apps reconnect.`,
+    );
   await composeUp(host, {
     project: PROJECT.database,
     files: [path.join(release, 'database', 'compose.yml'), ...(overrides.files.database ?? [])],
@@ -259,7 +282,13 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
     const volumes = await restoreVolumes(host, options.restoreFrom, options.toolkitImage);
     say(`The databases and ${volumes} data volume${volumes === 1 ? '' : 's'} are back.`);
   }
-  await ensureDatabase(host, CORE_DATABASE, CORE_ROLE, rolePassword.value);
+  await ensureDatabase(
+    host,
+    CORE_DATABASE,
+    CORE_ROLE,
+    rolePassword.value,
+    roleLimit(corePool(suite)),
+  );
   say('The database server is up, with core’s database.');
   if (options.restoreFrom) {
     await markRestored(host, path.join(release, 'core', 'compose.yml'), deletions);
@@ -439,7 +468,7 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
         : {}),
     appliedAt: new Date(host.now()).toISOString(),
     core: { version: suite.core.version, image: lock.images.core.digest, healthy: true },
-    database: { version: suite.database.version },
+    database: { version: suite.database.version, maxConnections: maxConnectionsOf(suite) },
     tls: suite.tls?.mode ?? 'per-host',
     apps,
     operatorSecrets: Object.fromEntries(

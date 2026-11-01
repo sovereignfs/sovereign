@@ -9,6 +9,8 @@ export type Launcher = {
 export type HostedApp = {
   image: string;
   manifest?: string;
+  /** Its connection pool size, instead of `database.connections.app` (contracts/suite.md §1.3). */
+  connections?: number;
   env?: Record<string, string>;
   launcher?: Launcher;
 };
@@ -36,7 +38,11 @@ export type Suite = {
   domain: string;
   environment?: Environment;
   core: { version: string; env?: Record<string, string> };
-  database: { version: string };
+  database: {
+    version: string;
+    maxConnections?: number;
+    connections?: { core?: number; app?: number };
+  };
   server: {
     host: string;
     port?: number;

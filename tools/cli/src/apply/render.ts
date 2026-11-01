@@ -1,5 +1,11 @@
 import { stringify } from 'yaml';
 import {
+  DEFAULT_MAX_CONNECTIONS,
+  appPool,
+  corePool,
+  maxConnectionsOf,
+} from '../suite/connections.js';
+import {
   MAIL_HOST,
   MAIL_SMTP_PORT,
   MAIL_UI_PORT,
@@ -79,6 +85,8 @@ export function coreEnvironment(input: BaseInput): Record<string, string> {
     SV_URL: `https://${suite.domain}`,
     // What the instance is for, from suite.yml and from nowhere else: core refuses its seed on anything but development and staging.
     SV_ENVIRONMENT: environmentOf(suite),
+    // How many connections core's pool may hold, which its role's limit is set from (operator-cli §6.4.4).
+    SV_POSTGRES_POOL_MAX: String(corePool(suite)),
     SV_DB_DIALECT: 'postgres',
     SV_POSTGRES_URL_FILE: `${SECRETS_IN_CONTAINER}/SV_POSTGRES_URL`,
     SV_AUTH_SECRET_FILE: `${SECRETS_IN_CONTAINER}/SV_AUTH_SECRET`,
@@ -141,6 +149,10 @@ export function databaseCompose(input: BaseInput): string {
         image: input.imageOverrides?.database ?? byDigest(lock.images.database),
         container_name: CONTAINER.database,
         restart: 'unless-stopped',
+        // Only when it is not PostgreSQL's own default, so a file that says nothing does not restart the server on the deployment that brings this.
+        ...(maxConnectionsOf(input.suite) === DEFAULT_MAX_CONNECTIONS
+          ? {}
+          : { command: ['postgres', '-c', `max_connections=${maxConnectionsOf(input.suite)}`] }),
         environment: {
           POSTGRES_USER: 'sovereign',
           POSTGRES_DB: 'postgres',
@@ -305,7 +317,10 @@ export function appEnvironment(input: AppInput): Record<string, string> {
     [`${prefix}_CORE_URL`]: `https://${suite.domain}`,
     [`${prefix}_CORE_CLIENT_ID`]: clientId,
   });
-  if (manifest.database) env[`${prefix}_DB_DIALECT`] = 'postgres';
+  if (manifest.database) {
+    env[`${prefix}_DB_DIALECT`] = 'postgres';
+    env[`${prefix}_POSTGRES_POOL_MAX`] = String(appPool(suite, name));
+  }
   for (const variable of Object.keys(secrets))
     env[`${variable}_FILE`] = `${SECRETS_IN_CONTAINER}/${variable}`;
   if (internalCa) env.NODE_EXTRA_CA_CERTS = CA_IN_CONTAINER;

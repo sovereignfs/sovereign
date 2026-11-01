@@ -67,6 +67,9 @@ describe('the files of an app', () => {
       expect(read(target, file), file).not.toMatch(/__(PREFIX|NAME|TITLE|MANIFEST_LABEL)__/);
     }
     expect(read(target, 'lib/db.ts')).toContain("required('MYNOTES_POSTGRES_URL')");
+    // The pool is the size the instance gives it, whose role's limit is set from the same number (operator-cli §6.4.4).
+    expect(read(target, 'lib/db.ts')).toContain('MYNOTES_POSTGRES_POOL_MAX');
+    expect(read(target, 'lib/db.ts')).not.toContain('max: 10 }');
     expect(read(target, 'app/page.tsx')).toContain('title="My Notes"');
   });
 

@@ -138,3 +138,46 @@ describe('mail settings on a development or staging instance', () => {
     expect(schemaProblems('suite', { ...suite(), environment: 'testing' })).not.toEqual([]);
   });
 });
+
+describe('connection settings in the schema', () => {
+  const withDatabase = (database: Record<string, unknown>) =>
+    schemaProblems('suite', { ...suite(), database: { version: '18', ...database } });
+  const withApp = (app: Record<string, unknown>) =>
+    schemaProblems('suite', { ...suite(), apps: { notes: app } });
+
+  it('accepts a server size, a size for core and for every app, and one for an app', () => {
+    expect(withDatabase({ maxConnections: 300, connections: { core: 20, app: 6 } })).toEqual([]);
+    expect(withApp({ image: 'x/notes:1', connections: 3 })).toEqual([]);
+  });
+
+  it.each([19, 1001, 100.5, '100'])('refuses maxConnections %j', (value) => {
+    expect(withDatabase({ maxConnections: value })).not.toEqual([]);
+  });
+
+  it.each([1, 101, 10.5, '10'])('refuses a pool size of %j', (value) => {
+    expect(withDatabase({ connections: { core: value } })).not.toEqual([]);
+    expect(withDatabase({ connections: { app: value } })).not.toEqual([]);
+    expect(withApp({ image: 'x/notes:1', connections: value })).not.toEqual([]);
+  });
+
+  it('refuses a setting it does not know, and a number on an app that runs nothing', () => {
+    expect(withDatabase({ connections: { other: 5 } })).not.toEqual([]);
+    expect(
+      withApp({
+        external: true,
+        name: 'Wiki',
+        redirect: ['https://w.sovereign.local/cb'],
+        connections: 5,
+      }),
+    ).not.toEqual([]);
+  });
+
+  it('keeps an app from being called what the deployment uses, mailpit included', () => {
+    for (const name of ['core', 'proxy', 'database', 'mailpit', 'www', 'api', 'auth']) {
+      expect(
+        schemaProblems('suite', { ...suite(), apps: { [name]: { image: 'x/a:1' } } }),
+        name,
+      ).not.toEqual([]);
+    }
+  });
+});

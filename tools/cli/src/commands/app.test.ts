@@ -83,9 +83,11 @@ describe('sv app add', () => {
       '--env',
       'OTHER_X=1',
       'NOTES_URL=x',
+      'NOTES_POSTGRES_POOL_MAX=50',
       '--yes',
     );
     expect(bad.code).toBe(2);
+    expect(bad.text).toContain('NOTES_POSTGRES_POOL_MAX');
     expect(bad.text).toContain('must begin with NOTES_');
     expect(bad.text).toContain('is given to the app by the deployment');
     expect(suite().apps).toBeUndefined();

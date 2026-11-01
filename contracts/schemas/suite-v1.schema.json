@@ -24,7 +24,7 @@
               { "$ref": "#/$defs/notSecretName" },
               {
                 "not": {
-                  "pattern": "^SV_(URL|AUTH_SECRET|FIELD_ENCRYPTION_KEYS|DB_DIALECT|POSTGRES_URL|SQLD_URL|SQLD_ADMIN_URL|SQLD_NAMESPACE|SQLITE_URL|AUTH_COOKIE_DOMAIN|AUTH_WEBAUTHN_RP_ID|ENVIRONMENT)(_FILE)?$"
+                  "pattern": "^SV_(URL|AUTH_SECRET|FIELD_ENCRYPTION_KEYS|DB_DIALECT|POSTGRES_URL|SQLD_URL|SQLD_ADMIN_URL|SQLD_NAMESPACE|SQLITE_URL|AUTH_COOKIE_DOMAIN|AUTH_WEBAUTHN_RP_ID|ENVIRONMENT|POSTGRES_POOL_MAX)(_FILE)?$"
                 }
               }
             ]
@@ -38,7 +38,16 @@
       "additionalProperties": false,
       "required": ["version"],
       "properties": {
-        "version": { "type": "string", "pattern": "^[0-9]+$" }
+        "version": { "type": "string", "pattern": "^[0-9]+$" },
+        "maxConnections": { "type": "integer", "minimum": 20, "maximum": 1000 },
+        "connections": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "core": { "type": "integer", "minimum": 2, "maximum": 100 },
+            "app": { "type": "integer", "minimum": 2, "maximum": 100 }
+          }
+        }
       }
     },
     "server": {
@@ -99,7 +108,7 @@
     "appName": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9-]{0,30}[a-z0-9]$",
-      "not": { "enum": ["core", "proxy", "database", "www", "api", "auth"] }
+      "not": { "enum": ["core", "proxy", "database", "mailpit", "www", "api", "auth"] }
     },
     "httpsUrl": { "type": "string", "pattern": "^https://[^\\s#*]+$" },
     "launcher": {
@@ -123,6 +132,7 @@
           "not": { "pattern": ":latest$" }
         },
         "manifest": { "$ref": "#/$defs/httpsUrl" },
+        "connections": { "type": "integer", "minimum": 2, "maximum": 100 },
         "env": {
           "type": "object",
           "propertyNames": {

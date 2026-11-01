@@ -148,6 +148,37 @@ To take an app away, `./sv app remove notes`. That stops it and removes its sign
 up where it was. To delete its database, files and secrets for good, `./sv app remove notes --purge`, which asks you to type its name
 and takes a backup first.
 
+## How many connections the database gets
+
+Core and every hosted app share one PostgreSQL server, which allows 100 connections. So that one app cannot take them all and leave core
+waiting, `./sv deploy` limits each one's database role, and sizes each one's connection pool to match. You do nothing for the defaults,
+which are what core and the app template already use: 10 each.
+
+To change them, add to `suite.yml` (these do not touch `suite.lock`, so editing them by hand is safe):
+
+```yaml
+database:
+  version: '18'
+  maxConnections: 200 # the server's total; 100 if you leave it out
+  connections:
+    core: 10 # core's pool; 10 if you leave it out
+    app: 6 # each hosted app's pool; 10 if you leave it out
+apps:
+  notes:
+    image: ghcr.io/you/notes:1.0.0
+    connections: 3 # this app's own, instead of the one above
+```
+
+- A role may hold its pool's size **plus 2**, so a connection that a killed container has not yet closed does not keep its replacement
+  out. Eight apps at the defaults need more than 97 connections, which the server leaves for them (3 are kept for the superuser).
+- When what you set adds up to more than the server allows, `./sv deploy` stops before it changes anything and says where the
+  connections go. When you set nothing and the apps outgrow the defaults, it deploys and warns you; raise `maxConnections` or lower the
+  pools.
+- A new `maxConnections` **restarts the database server**, and the deployment says so before it does. Core and the apps reconnect. A
+  lower limit on a role never ends a connection that is open: it applies to the next one.
+- An app reads its pool size from `<PREFIX>_POSTGRES_POOL_MAX`, which the app template does. An app made before this keeps its own pool,
+  and its role's limit is what holds it.
+
 ## Updating
 
 ```bash

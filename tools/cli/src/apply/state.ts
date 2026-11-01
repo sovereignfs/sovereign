@@ -12,7 +12,8 @@ export type State = {
   previous?: string;
   appliedAt: string;
   core: { version: string; image: string; healthy: boolean };
-  database: { version: string };
+  /** The `max_connections` it applied, so a change can be said before the server restarts. Absent in a file from before it was recorded. */
+  database: { version: string; maxConnections?: number };
   tls: 'per-host' | 'internal';
   /** The names of the operator's secrets written for each owner, so one removed from secrets.age.yml is removed from the server. */
   operatorSecrets?: Record<string, string[]>;

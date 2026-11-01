@@ -536,7 +536,7 @@ the runner still holding nothing that decrypts.
 - A staging password cannot be read back from anywhere after it is shown
 - The sample app's redirect is settled against core-app §3.7.3 and holds on a development machine and on a server
 
-#### 📋 13.22 — Connection guardrails
+#### ✅ 13.22 — Connection guardrails
 
 **Goal:** No app can take every connection the database server has, and core, which everyone signs in through, always has its own.
 
@@ -546,12 +546,19 @@ the runner still holding nothing that decrypts.
 
 - `suite.yml`: `database.maxConnections` (default 100), `database.connections.core` (default 20) and `.app` (default 10), and
   `apps.<name>.connections`, in the spec and the schema
-- `sv apply` sets `max_connections` on the database server, saying before it does that a change restarts it; sets each role's
-  `CONNECTION LIMIT` on every deployment; and gives each pool the same number (`SV_POSTGRES_POOL_MAX`, `<PREFIX>_POSTGRES_POOL_MAX`)
+- `sv apply` sets `max_connections` on the database server only when it is not 100, saying before it does that a change restarts it;
+  sets each role's `CONNECTION LIMIT` on every deployment, to its pool size plus 2; and gives each pool its size
+  (`SV_POSTGRES_POOL_MAX`, `<PREFIX>_POSTGRES_POOL_MAX`)
 - The app template reads `<PREFIX>_POSTGRES_POOL_MAX` instead of its fixed 10
-- A budget check: limits that add up to more than the server allows, less the superuser's reserve and a margin for `sv apply` and
-  backups, are refused, by the schema rules and again by `sv apply`
-- The default numbers settled by measuring what an app holds under load (research 0003, "To settle")
+- A budget check: limits that add up to more than the server allows, less the superuser's reserve, are refused by `sv apply` when the
+  operator set them, and warned about when they did not (the manifests, which say which apps have a database, are read there)
+
+**Verified here:** the limits, the pool variables, the server's setting, the restart notice and the budget are tested against a fake Docker, and the
+new tests were seen to fail without the change. A real PostgreSQL 18 was run with `max_connections` given by command, a role limited
+to 3, and three connections held: the fourth was refused ("too many connections for role"), and lowering the limit ended none of the three.
+
+**Not verified here:** a deployment of this to a real server, and the default numbers: what an app holds under load was not measured,
+so 10 and 10 stay what core's and the template's pools already are.
 
 **Dependencies:** 13.20
 

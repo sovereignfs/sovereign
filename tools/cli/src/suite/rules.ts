@@ -1,5 +1,6 @@
 import { satisfies } from 'semver';
 import { RELEASE } from '../release.js';
+import { environmentOf } from './environment.js';
 import { isExternal, type Suite } from './types.js';
 import type { Problem } from './schema.js';
 
@@ -32,6 +33,16 @@ export function suiteProblems(suite: Suite): Problem[] {
     add(
       'core.version',
       `${suite.core.version} is outside what this toolkit deploys (${RELEASE.core}); run sv upgrade, or use a toolkit that supports it`,
+    );
+  }
+  if (
+    environmentOf(suite) !== 'production' &&
+    suite.core.env?.SV_SMTP_HOST === undefined &&
+    suite.core.env?.SV_SMTP_USER !== undefined
+  ) {
+    add(
+      'core.env.SV_SMTP_USER',
+      `is set with no SV_SMTP_HOST, and in ${environmentOf(suite)} mail goes to Mailpit, which takes no login; set SV_SMTP_HOST too, or remove it`,
     );
   }
   for (const name of suite.purge ?? []) {

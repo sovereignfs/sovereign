@@ -11,6 +11,7 @@ export const CONTAINER = {
   proxy: 'sv-proxy',
   database: 'sv-database',
   core: 'sv-core',
+  mail: 'sv-mailpit',
   app: (name: string) => `sv-app-${name}`,
 } as const;
 
@@ -18,6 +19,7 @@ export const PROJECT = {
   proxy: 'sovereign-proxy',
   database: 'sovereign-database',
   core: 'sovereign-core',
+  mail: 'sovereign-mailpit',
   app: (name: string) => `sovereign-app-${name}`,
 } as const;
 

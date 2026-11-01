@@ -2,6 +2,7 @@ import { app } from './commands/app.js';
 import { applyCommand } from './commands/apply.js';
 import { backup, restore, rollback } from './commands/backup.js';
 import { deploy } from './commands/deploy.js';
+import { mail } from './commands/mail.js';
 import { push } from './commands/push.js';
 import { doctor, logs, status } from './commands/remote.js';
 import { server } from './commands/server.js';
@@ -29,6 +30,7 @@ Deploying
   server bootstrap              prepare a new machine: Docker, folders, keys
   deploy                        put the pushed commit on the server
   status | logs | doctor        what is running, what it printed, what to fix
+  mail                          open the inbox that catches mail on a development or staging instance
 Recovering
   upgrade [--to vX.Y.Z]         move the repository to a newer release, for you to review
   backup | restore PATH         a backup encrypted to your key alone, and bringing one back
@@ -53,6 +55,7 @@ const COMMANDS: Record<string, Command> = {
   status,
   logs,
   doctor,
+  mail,
 };
 
 /**

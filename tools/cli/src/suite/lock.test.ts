@@ -112,3 +112,37 @@ describe('what the lock must match', () => {
     ]);
   });
 });
+
+describe('Mailpit in the lock', () => {
+  const lockFor = (s: Suite): Promise<Lock> =>
+    refreshedLock(s, undefined, async (ref) => digestOf(ref));
+
+  it('is wanted on a development or staging instance, and not on production or when the operator names a mail server', () => {
+    expect(wantedImages({ ...suite(), environment: 'development' }).mail).toBe(RELEASE.images.mail);
+    expect(wantedImages({ ...suite(), environment: 'staging' }).mail).toBe(RELEASE.images.mail);
+    expect(wantedImages({ ...suite(), environment: 'production' }).mail).toBeUndefined();
+    expect(wantedImages(suite()).mail).toBeUndefined();
+    const own: Suite = {
+      ...suite(),
+      environment: 'staging',
+      core: { version: '0.71.0', env: { SV_SMTP_HOST: 'smtp.example.com' } },
+    };
+    expect(wantedImages(own).mail).toBeUndefined();
+  });
+
+  it('is pinned when wanted, and the lock is refused when it is missing or no longer wanted', async () => {
+    const dev: Suite = { ...suite(), environment: 'development' };
+    const lock = await lockFor(dev);
+    expect(lock.images.mail?.ref).toBe(RELEASE.images.mail);
+    expect(lockProblems(dev, lock)).toEqual([]);
+
+    const { mail: _mail, ...without } = lock.images;
+    expect(lockProblems(dev, { ...lock, images: without as Lock['images'] })).toEqual([
+      { at: 'images.mail', message: 'is not in suite.lock' },
+    ]);
+    expect(lockProblems(suite(), lock)).toEqual([
+      { at: 'images.mail', message: 'is in suite.lock and suite.yml does not use it' },
+    ]);
+    expect((await lockFor(suite())).images.mail).toBeUndefined();
+  });
+});

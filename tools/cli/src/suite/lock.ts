@@ -1,5 +1,6 @@
 import { RELEASE } from '../release.js';
 import type { Problem } from './schema.js';
+import { usesMailpit } from './environment.js';
 import { isExternal, type Digest, type Lock, type Suite } from './types.js';
 
 /** The image each thing runs, as `suite.yml` and this release say (spec/suite.md §2). External apps run nothing. */
@@ -8,6 +9,8 @@ export function wantedImages(suite: Suite): {
   core: string;
   database: string;
   proxy: string;
+  /** Only when the instance runs Mailpit (spec/suite.md §1.1). */
+  mail?: string;
   apps: Record<string, string>;
 } {
   const apps: Record<string, string> = {};
@@ -19,6 +22,7 @@ export function wantedImages(suite: Suite): {
     core: `${RELEASE.images.core}:${suite.core.version}`,
     database: `${RELEASE.images.database}:${suite.database.version}`,
     proxy: RELEASE.images.proxy,
+    ...(usesMailpit(suite) ? { mail: RELEASE.images.mail } : {}),
     apps,
   };
 }
@@ -44,6 +48,18 @@ export function lockProblems(suite: Suite, lock: Lock): Problem[] {
         message: `is ${locked.ref}, and suite.yml wants ${ref}`,
       });
     }
+  }
+  if (wanted.mail !== undefined) {
+    const locked = lock.images.mail;
+    if (!locked) problems.push({ at: 'images.mail', message: 'is not in suite.lock' });
+    else if (locked.ref !== wanted.mail) {
+      problems.push({
+        at: 'images.mail',
+        message: `is ${locked.ref}, and suite.yml wants ${wanted.mail}`,
+      });
+    }
+  } else if (lock.images.mail) {
+    problems.push({ at: 'images.mail', message: 'is in suite.lock and suite.yml does not use it' });
   }
   for (const name of Object.keys(lock.apps ?? {})) {
     if (!(name in wanted.apps))
@@ -75,6 +91,7 @@ export async function refreshedLock(
       core: await pin(wanted.core, current?.images.core),
       database: await pin(wanted.database, current?.images.database),
       proxy: await pin(wanted.proxy, current?.images.proxy),
+      ...(wanted.mail !== undefined ? { mail: await pin(wanted.mail, current?.images.mail) } : {}),
     },
     ...(Object.keys(apps).length > 0 ? { apps } : {}),
   };

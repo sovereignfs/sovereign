@@ -7,7 +7,7 @@ import path from 'node:path';
 import { keyFile } from './secrets/keys.js';
 import { type Io } from './io.js';
 import { Registry, type RegistryAuths } from './registry.js';
-import { sshRemote, type Remote } from './server/remote.js';
+import { sshRemote, sshTunnel, type Remote, type Tunnel } from './server/remote.js';
 
 /** Runs a program with an argument list, never through a shell, so nothing in an argument is read as a command. */
 export type Exec = (
@@ -37,6 +37,8 @@ export type Context = {
   };
   /** The server, over the operator’s own SSH access. */
   remote: Remote;
+  /** A port on this machine held open to one on the server, for as long as the command runs. */
+  tunnel: Tunnel;
   /** The files of one commit as a tar archive, as `git archive` writes it. */
   archive: (root: string, commit: string, paths: readonly string[]) => Promise<Buffer>;
 };
@@ -111,6 +113,7 @@ export function makeContext(root: string, io: Io, env: NodeJS.ProcessEnv): Conte
     now: Date.now,
     network: realNetwork,
     remote: sshRemote,
+    tunnel: sshTunnel,
     archive: gitArchive,
   };
 }

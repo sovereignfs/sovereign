@@ -126,11 +126,11 @@ Each command MUST state what it changed, and MUST exit as §11 says.
 
 ### 4.1 Setting up
 
-| Command               | What it does                                                                                                                                                             | Reaches the server |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------ |
-| `sv setup`            | Asks for the domain, the server and how to deploy, and writes `suite.yml` on the newest core the toolkit supports (§5). Makes the operator's key if there is none (§9.1) | no                 |
-| `sv server bootstrap` | Prepares a fresh machine (§8.3) and records its public key in `suite.yml`                                                                                                | yes                |
-| `sv doctor`           | Checks DNS, ports, certificates, the toolkit's versions and the server's Docker, and says what to fix. Changes nothing                                                   | yes, read only     |
+| Command               | What it does                                                                                                                                                                                                         | Reaches the server |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| `sv setup`            | Asks for the domain, the server, how to deploy and what the instance is for (`--environment`), and writes `suite.yml` on the newest core the toolkit supports (§5). Makes the operator's key if there is none (§9.1) | no                 |
+| `sv server bootstrap` | Prepares a fresh machine (§8.3) and records its public key in `suite.yml`                                                                                                                                            | yes                |
+| `sv doctor`           | Checks DNS, ports, certificates, the toolkit's versions and the server's Docker, and says what to fix. Changes nothing                                                                                               | yes, read only     |
 
 ### 4.2 Apps
 
@@ -172,9 +172,15 @@ Each command MUST state what it changed, and MUST exit as §11 says.
 | `sv push`                     | Checks the repository (§4.5), commits its known files, and pushes | no                 |
 | `sv deploy [--ssh\|--github]` | Runs `sv apply` on the server for the pushed commit (§8)          | yes                |
 | `sv status`                   | What is running, against what the repository says                 | yes, read only     |
+| `sv mail [--port N]`          | Opens Mailpit's inbox on this machine, over SSH (below)           | yes, read only     |
 | `sv logs [NAME]`              | What core, an app or the last deployment printed                  | yes, read only     |
 
 `sv deploy` with neither flag uses `server.deploy` in `suite.yml`.
+
+`sv mail` is for an instance whose `environment` is `development` or `staging` and that has not named its own mail server
+(`spec/suite.md` §1.1.1), and refuses any other. It MUST listen on this machine's loopback address only, reach the server's loopback
+address only, run no command on the server, and stay open until the operator ends it. The inbox holds the links that verify and reset
+accounts, so there MUST be no other way to it: it has no public name, and the server publishes it nowhere but its own loopback address.
 
 ### 4.5 What `sv push` checks
 
@@ -312,6 +318,19 @@ apply` itself after Compose, since an alias set that changes would otherwise rec
   `pg_dumpall` of every database, `state.json` and `secrets/`, in one archive encrypted to every recipient but the server's own.
 - **The state directory** is `/var/lib/sovereign`, or `--state-dir` / `SV_STATE_DIR`. `--no-publish-ports` leaves the proxy's ports
   unpublished, for a test on a machine that has something on 80 or 443.
+
+### 6.4.2 Mailpit
+
+On a `development` or `staging` instance (`spec/suite.md` §1.1.1), after the proxy and before core, `sv apply` starts Mailpit as a
+Compose project of its own, `sovereign-mailpit`, container `sv-mailpit`, from the image `suite.lock` pins.
+
+- It is on core's network. Its SMTP port is on that network and nowhere else, and takes mail without a login, since nothing outside the
+  network can reach it.
+- Its inbox is published on the server's loopback address, `127.0.0.1:8025`, and on no other address. It is the one port besides the
+  proxy's that a container publishes, and `--no-publish-ports` leaves it unpublished too.
+- Its mail is kept in a volume, so it survives a deployment, and is not part of a backup.
+- When the instance becomes `production`, or the operator names a mail server, the next deployment removes the container and leaves the
+  volume. `sv logs mailpit` shows what it printed.
 
 ### 6.5 What it refuses
 

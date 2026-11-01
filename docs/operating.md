@@ -38,6 +38,25 @@ launcher runs the version this repository pins, and installs it from the lockfil
 from a workflow). It writes `suite.yml` and `suite.lock`, and makes **your key** at `~/.config/sovereign/age.key`. That key is the only
 thing that opens your secrets and your backups. Keep a copy somewhere safe, and never in the repository.
 
+## Trying it out: development and staging
+
+An instance is `production` unless you say otherwise. `./sv setup --environment development` (or `staging`) makes one that catches its own
+mail, so you can sign up and reset a password with no mail server:
+
+```bash
+./sv setup --environment development --domain sovereign.test --host 127.0.0.1 --tls internal
+./sv mail                  # after the first deployment: the inbox, at http://localhost:8025
+```
+
+On these two, `sv apply` runs [Mailpit](https://mailpit.axllent.org) beside core and points core at it. It takes every message core sends and
+keeps them for you to read. `./sv mail` opens its inbox on your computer, through SSH, and keeps it open until Ctrl-C. The inbox holds the
+links that verify and reset accounts, so it has no public address: the server publishes it on its own loopback address only, and SSH is the
+one way in.
+
+Mailpit is only the default. To send mail somewhere real from a staging instance, set `SV_SMTP_HOST` (and the rest of the `SV_SMTP_*` settings)
+under `core.env` in `suite.yml`; the next deployment stops running Mailpit. Set `SV_SMTP_FROM` alone to keep Mailpit and change the sender.
+`production` runs no Mailpit and gives core no mail settings: they are yours, from `core.env`, `./sv secret set SV_SMTP_PASSWORD`, or the Console.
+
 ## Prepare the machine
 
 Point the DNS name at the machine first, then:

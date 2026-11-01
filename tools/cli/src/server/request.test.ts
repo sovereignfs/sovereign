@@ -10,6 +10,7 @@ describe('what the server is asked', () => {
     expect(parseRequest('status')).toEqual({ verb: 'status' });
     expect(parseRequest('logs notes 50')).toEqual({ verb: 'logs', target: 'notes', lines: 50 });
     expect(parseRequest('logs deploy')).toEqual({ verb: 'logs', target: 'deploy', lines: 200 });
+    expect(parseRequest('logs mailpit 20')).toEqual({ verb: 'logs', target: 'mailpit', lines: 20 });
     expect(parseRequest('app notes --secret')).toEqual({
       verb: 'app',
       name: 'notes',

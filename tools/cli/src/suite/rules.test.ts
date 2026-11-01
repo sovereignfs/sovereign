@@ -111,3 +111,30 @@ describe('the schema', () => {
     ).toEqual([]);
   });
 });
+
+describe('mail settings on a development or staging instance', () => {
+  const withEnv = (environment: Suite['environment'], env: Record<string, string>) =>
+    suite({ environment, core: { version: '0.71.0', env } });
+
+  it('refuse a mail user with no mail server, since Mailpit takes no login', () => {
+    const problems = suiteProblems(withEnv('staging', { SV_SMTP_USER: 'someone' }));
+    expect(problems).toHaveLength(1);
+    expect(problems[0]?.at).toBe('core.env.SV_SMTP_USER');
+    expect(problems[0]?.message).toContain('Mailpit');
+  });
+
+  it('accept a user with a server, and anything on production, where Mailpit is not used', () => {
+    expect(
+      suiteProblems(
+        withEnv('staging', { SV_SMTP_USER: 'someone', SV_SMTP_HOST: 'smtp.example.com' }),
+      ),
+    ).toEqual([]);
+    expect(suiteProblems(withEnv('production', { SV_SMTP_USER: 'someone' }))).toEqual([]);
+  });
+
+  it('allow the environment names and no other, in the schema', () => {
+    for (const ok of ['development', 'staging', 'production'] as const)
+      expect(schemaProblems('suite', { ...suite(), environment: ok })).toEqual([]);
+    expect(schemaProblems('suite', { ...suite(), environment: 'testing' })).not.toEqual([]);
+  });
+});

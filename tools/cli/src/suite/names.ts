@@ -50,4 +50,12 @@ export function isReservedForApp(
 export const SECRET_NAME = /_(PASSWORD|SECRET|KEY|KEYS|TOKEN)(_FILE)?$/;
 
 /** Names an app may not be called (spec/suite.md §1.7). */
-export const RESERVED_APP_NAMES = ['core', 'proxy', 'database', 'www', 'api', 'auth'] as const;
+export const RESERVED_APP_NAMES = [
+  'core',
+  'proxy',
+  'database',
+  'mailpit',
+  'www',
+  'api',
+  'auth',
+] as const;

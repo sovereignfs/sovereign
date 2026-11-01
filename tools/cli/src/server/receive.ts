@@ -348,9 +348,11 @@ async function logs(
   const container =
     request.target === 'deploy'
       ? APPLY_CONTAINER
-      : ['core', 'proxy', 'database'].includes(request.target)
-        ? `sv-${request.target}`
-        : CONTAINER.app(request.target);
+      : request.target === 'mailpit'
+        ? CONTAINER.mail
+        : ['core', 'proxy', 'database'].includes(request.target)
+          ? `sv-${request.target}`
+          : CONTAINER.app(request.target);
   const done = await host.docker(['logs', '--tail', String(request.lines), container]);
   if (done.code !== 0) {
     throw new Refused(

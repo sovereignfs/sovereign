@@ -15,7 +15,7 @@ export type Request =
 
 const COMMIT = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
 const NAME = /^[a-z][a-z0-9-]{0,30}[a-z0-9]$/;
-const TARGETS = ['core', 'proxy', 'database', 'deploy'];
+const TARGETS = ['core', 'proxy', 'database', 'mailpit', 'deploy'];
 
 /** Reads one request. Anything not exactly of these shapes is refused: the words reach `docker` as arguments and are never given to a shell. */
 export function parseRequest(line: string): Request {

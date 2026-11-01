@@ -2,6 +2,7 @@ import { existsSync, readlinkSync } from 'node:fs';
 import { cp, mkdir, readFile, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { byDigest } from '../apply/render.js';
+import { readConnections } from '../apply/database-use.js';
 import { docker, dockerVersions } from '../apply/docker.js';
 import type { Host } from '../apply/host.js';
 import { layout, readState } from '../apply/state.js';
@@ -311,6 +312,7 @@ async function status(host: Host, options: ReceiveOptions): Promise<number> {
       current: existsSync(paths.current) ? path.basename(readlinkSync(paths.current)) : null,
       containers,
       deploying: await running(host, APPLY_CONTAINER),
+      connections: await readConnections(host),
     })}\n`,
   );
   return 0;
@@ -334,6 +336,7 @@ async function doctor(host: Host, options: ReceiveOptions): Promise<number> {
       stateDir: existsSync(options.stateDir),
       proxyPorts: proxy.code === 0 ? (JSON.parse(proxy.stdout || 'null') as unknown) : null,
       incoming,
+      connections: await readConnections(host),
       toolkitImage: existsSync(path.join(options.stateDir, 'toolkit-image'))
         ? (await readFile(path.join(options.stateDir, 'toolkit-image'), 'utf8')).trim()
         : null,

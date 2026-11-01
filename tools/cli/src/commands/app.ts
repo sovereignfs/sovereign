@@ -3,6 +3,7 @@ import type { Context } from '../context.js';
 import { Refused } from '../errors.js';
 import { askOrRefuse, confirm } from '../io.js';
 import { appShow } from './remote.js';
+import { refuseOverBudget } from './budget.js';
 import { readManifest } from '../manifest.js';
 import { SuiteFile, readLock, writeLock } from '../suite/files.js';
 import { refreshedLock } from '../suite/lock.js';
@@ -66,7 +67,7 @@ function envOf(items: string[] | undefined): Record<string, string> {
 }
 
 /** Writes `suite.yml` and a refreshed `suite.lock` together: the lock is resolved first, so a failed lookup writes nothing. */
-async function commit(
+export async function commit(
   ctx: Context,
   file: SuiteFile,
   change: (doc: Document) => void,
@@ -183,6 +184,7 @@ const UPDATE = {
   show: 'switch',
   hide: 'switch',
   yes: 'switch',
+  connections: 'value',
 } as const;
 
 async function update(ctx: Context, argv: string[]): Promise<void> {
@@ -203,7 +205,7 @@ async function update(ctx: Context, argv: string[]): Promise<void> {
   };
   const ext = isExternal(current);
   const changed: string[] = [];
-  for (const flag of ['image', 'manifest', 'env', 'unset-env'] as const) {
+  for (const flag of ['image', 'manifest', 'env', 'unset-env', 'connections'] as const) {
     if (args.values.has(flag) || args.lists.has(flag)) only(!ext, flag, 'hosted');
   }
   for (const flag of ['name', 'redirect', 'post-logout', 'back-channel', 'scope'] as const) {
@@ -219,6 +221,14 @@ async function update(ctx: Context, argv: string[]): Promise<void> {
   if (args.values.has('manifest')) {
     next.manifest = args.values.get('manifest');
     changed.push('manifest');
+  }
+  if (args.values.has('connections')) {
+    const value = args.values.get('connections') as string;
+    if (value === 'default') Reflect.deleteProperty(next, 'connections');
+    else if (/^[0-9]+$/.test(value) && Number(value) >= 2 && Number(value) <= 100)
+      next.connections = Number(value);
+    else throw new Refused('--connections takes a whole number from 2 to 100, or default.');
+    changed.push('connections');
   }
   if (args.lists.has('env') || args.lists.has('unset-env')) {
     const env = {
@@ -301,7 +311,10 @@ async function update(ctx: Context, argv: string[]): Promise<void> {
       );
     }
   }
-  await commit(ctx, file, setApp(file, name as string, next as unknown as App));
+  const change = setApp(file, name as string, next as unknown as App);
+  // The limits must still fit: checked against the file as it would be, before anything is written.
+  if (changed.includes('connections')) await refuseOverBudget(ctx, file.preview(change));
+  await commit(ctx, file, change);
   ctx.io.err(`Changed ${name}: ${changed.join(', ')}. Run sv push and sv deploy to apply it.`);
 }
 

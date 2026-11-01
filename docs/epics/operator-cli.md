@@ -570,7 +570,7 @@ so 10 and 10 stay what core's and the template's pools already are.
 - A changed limit takes effect on the next deployment, and a lower one does not cut connections in use
 - The budget is refused before anything is written
 
-#### 📋 13.23 — Configuring and seeing the database from sv
+#### ✅ 13.23 — Configuring and seeing the database from sv
 
 **Goal:** An operator sets the database's limits with `sv`, never by editing a file, and can see how close the instance is to them.
 
@@ -584,6 +584,12 @@ so 10 and 10 stay what core's and the template's pools already are.
 - `sv doctor` and `sv status`: the connections each role holds against its limit, and the server's total against `max_connections`,
   answered by a request the server already takes
 - `docs/operating.md`: when and how to change them
+
+**Verified here:** the commands, the refusals and the displays are tested with a fake server, and the new tests were seen to fail against the
+old code. The query that counts the connections was run against a real PostgreSQL 18 with two limited roles holding three connections:
+it returned `max_connections`, the three open (not counting itself), and each role's use against its limit, and left the superuser out.
+
+**Not verified here:** `sv status` and `sv doctor` against a real server over SSH, which needs a published toolkit that has this.
 
 **Dependencies:** 13.22
 

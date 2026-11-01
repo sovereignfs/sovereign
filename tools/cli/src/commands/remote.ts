@@ -9,6 +9,8 @@ import { SuiteFile, readLock } from '../suite/files.js';
 import { isExternal, type Suite } from '../suite/types.js';
 import { publicNames } from '../apply/render.js';
 import { remoteFailure, sayingOf } from './server.js';
+import type { Connections } from '../apply/database-use.js';
+import { describeUse } from './budget.js';
 
 /** Whether the server has no wrapper to run: bootstrap has not been run. Any other failure is the server's own, and is said as it is. */
 const notPrepared = (result: RemoteResult) =>
@@ -51,6 +53,8 @@ type ServerState = {
   current: string | null;
   containers: { name: string; state: string; status: string }[];
   deploying: boolean;
+  /** Absent from a server whose toolkit is older, and null when the database server could not be asked. */
+  connections?: Connections | null;
 };
 
 async function localHead(ctx: Context): Promise<string | undefined> {
@@ -93,6 +97,7 @@ export async function status(ctx: Context, argv: string[]): Promise<void> {
     apps,
     notInSuite: extra,
     containers: server.containers,
+    connections: server.connections ?? null,
   };
   if (args.switches.has('json')) {
     ctx.io.out(JSON.stringify(document, null, 2));
@@ -123,6 +128,11 @@ export async function status(ctx: Context, argv: string[]): Promise<void> {
   }
   for (const name of extra)
     ctx.io.out(`${name}: on the server and not in suite.yml (the next deployment stops it)`);
+  if (server.connections) {
+    const use = describeUse(suite, server.connections);
+    ctx.io.out(`Connections: ${use.summary}`);
+    for (const near of use.pressure) ctx.io.out(`  near its limit: ${near}`);
+  }
 }
 
 /** `sv logs [NAME]` (operator-cli §4.4): core, the proxy, the database, an app, or the last deployment (the default). */
@@ -183,6 +193,7 @@ export async function doctor(ctx: Context, argv: string[]): Promise<void> {
       docker: { engine?: string; compose?: string };
       freeBytes: number | null;
       toolkitImage: string | null;
+      connections?: Connections | null;
     }>(reached.stdout);
     checks.push({
       name: 'The server',
@@ -218,6 +229,19 @@ export async function doctor(ctx: Context, argv: string[]): Promise<void> {
             detail: free === null ? 'not prepared yet' : `${(free / 1024 ** 3).toFixed(1)} GB free`,
           },
     );
+    if (server.connections) {
+      const use = describeUse(suite, server.connections);
+      checks.push(
+        use.pressure.length === 0
+          ? { name: 'Connections', status: 'ok', detail: use.summary }
+          : {
+              name: 'Connections',
+              status: 'warn',
+              detail: `${use.summary}; ${use.pressure.join('; ')}`,
+              fix: 'sv database shows how they are shared out, and sv database set changes it.',
+            },
+      );
+    }
     if (lock && server.toolkitImage && server.toolkitImage !== byDigest(lock.images.cli)) {
       checks.push({
         name: 'The toolkit on the server',

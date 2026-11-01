@@ -566,3 +566,58 @@ describe('seeding, which core decides', () => {
     await expect(partway.run()).rejects.toThrow('redirect: must be https');
   });
 });
+
+describe('the connections the server reports', () => {
+  const REPORT = {
+    max: 100,
+    reserved: 3,
+    total: 4,
+    roles: [
+      { role: 'app_notes', used: 2, limit: 12 },
+      { role: 'core', used: 1, limit: 12 },
+    ],
+  };
+  const answering = (psql: { code?: number; stdout?: string }) =>
+    receiver((args) =>
+      args.includes('psql')
+        ? psql
+        : args[0] === 'inspect'
+          ? { stdout: 'false\n' }
+          : args[0] === 'ps'
+            ? { stdout: '' }
+            : {},
+    );
+
+  it.each(['status', 'doctor'])('is in the answer to %s', async (line) => {
+    const { host, calls } = answering({ stdout: JSON.stringify(REPORT) });
+    const { options: o, out } = options(stateDir(), line);
+    expect(await receive(host, o)).toBe(0);
+    expect(JSON.parse(out.join('')).connections).toEqual(REPORT);
+    // Asked of the database container as the administrator, with no password in an argument.
+    const asked = calls.find((c) => c.includes('psql')) as string[];
+    expect(asked.slice(0, 7)).toEqual([
+      'exec',
+      '-i',
+      'sv-database',
+      'psql',
+      '-U',
+      'sovereign',
+      '-d',
+    ]);
+    expect(asked.join(' ')).not.toMatch(/password|PGPASSWORD/i);
+  });
+
+  it.each(['status', 'doctor'])(
+    'is null in the answer to %s when the database server cannot be asked, and the answer is still made',
+    async (line) => {
+      const down = answering({ code: 1 });
+      const a = options(stateDir(), line);
+      expect(await receive(down.host, a.options)).toBe(0);
+      expect(JSON.parse(a.out.join('')).connections).toBeNull();
+      const odd = answering({ stdout: 'not json' });
+      const b = options(stateDir(), line);
+      expect(await receive(odd.host, b.options)).toBe(0);
+      expect(JSON.parse(b.out.join('')).connections).toBeNull();
+    },
+  );
+});

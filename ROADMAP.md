@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.84.0 · **Last updated:** 2026-11-02
+**Version:** 0.85.0 · **Last updated:** 2026-11-02
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -215,7 +215,7 @@ Epic [15](docs/epics/core-services.md)
 | Version | Priority | Task                                        | Status | Epic task                           |
 | ------- | -------- | ------------------------------------------- | ------ | ----------------------------------- |
 | 0.84.0  | 1        | Connection guardrails                       | ✅     | [13.22](docs/epics/operator-cli.md) |
-| —       | 2        | Configuring and seeing the database from sv | 📋     | [13.23](docs/epics/operator-cli.md) |
+| 0.85.0  | 2        | Configuring and seeing the database from sv | ✅     | [13.23](docs/epics/operator-cli.md) |
 | —       | 3        | A new lock on an older server `[parallel]`  | 📋     | [13.24](docs/epics/operator-cli.md) |
 | —       | 4        | Apps that can be pooled `[parallel]`        | 📋     | [13.25](docs/epics/operator-cli.md) |
 | —       | 5        | An optional PgBouncer                       | 📋     | [13.26](docs/epics/operator-cli.md) |

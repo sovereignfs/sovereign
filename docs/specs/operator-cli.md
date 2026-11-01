@@ -129,11 +129,13 @@ Each command MUST state what it changed, and MUST exit as §11 says.
 
 ### 4.1 Setting up
 
-| Command               | What it does                                                                                                                                                                                                         | Reaches the server |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| `sv setup`            | Asks for the domain, the server, how to deploy and what the instance is for (`--environment`), and writes `suite.yml` on the newest core the toolkit supports (§5). Makes the operator's key if there is none (§9.1) | no                 |
-| `sv server bootstrap` | Prepares a fresh machine (§8.3) and records its public key in `suite.yml`                                                                                                                                            | yes                |
-| `sv doctor`           | Checks DNS, ports, certificates, the toolkit's versions and the server's Docker, and says what to fix. Changes nothing                                                                                               | yes, read only     |
+| Command                                                      | What it does                                                                                                                                                                                                         | Reaches the server |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| `sv setup`                                                   | Asks for the domain, the server, how to deploy and what the instance is for (`--environment`), and writes `suite.yml` on the newest core the toolkit supports (§5). Makes the operator's key if there is none (§9.1) | no                 |
+| `sv server bootstrap`                                        | Prepares a fresh machine (§8.3) and records its public key in `suite.yml`                                                                                                                                            | yes                |
+| `sv doctor`                                                  | Checks DNS, ports, certificates, the toolkit's versions, the server's Docker and its database connections, and says what to fix. Changes nothing                                                                     | yes, read only     |
+| `sv database [--json]`                                       | Shows the database server's settings and how its connections are shared out: each role's pool and limit, and what is left (below)                                                                                    | no                 |
+| `sv database set [--max-connections N] [--core N] [--app N]` | Changes the limits, checks they fit, and writes `suite.yml` (below)                                                                                                                                                  | no                 |
 
 ### 4.2 Apps
 
@@ -143,7 +145,7 @@ Each command MUST state what it changed, and MUST exit as §11 says.
 | `sv app add NAME --external ...` | Adds an external app, with its sign-in addresses                                                                | no                 |
 | `sv app add NAME --git URL`      | Adds a hosted app from the image its repository publishes (§4.2.1)                                              | no                 |
 | `sv app upgrade [NAME \| --all]` | Moves hosted apps to a newer release of their image, for review (§4.2.1)                                        | no                 |
-| `sv app update NAME [...]`       | Changes what an app runs, or its settings                                                                       | no                 |
+| `sv app update NAME [...]`       | Changes what an app runs, or its settings, including its connection pool (`--connections N`)                    | no                 |
 | `sv app remove NAME [--purge]`   | Takes an app out of `suite.yml`. With `--purge`, also records that its data goes (§6.2)                         | no                 |
 | `sv app list`                    | Lists the apps in `suite.yml`                                                                                   | no                 |
 | `sv app show NAME [--secret]`    | Shows what the server recorded for an app: its address, client ID and state. `--secret` shows its client secret | yes                |
@@ -177,6 +179,22 @@ name that image, and only an app that carries a manifest (`contracts/app-manifes
 - An app added with `--image` is upgraded from its image's repository, and one with a `source` from that. An external app runs
   nothing, and is not upgraded by `sv`.
 
+#### 4.2.2 Connection limits from `sv`
+
+The limits of §6.4.4 are set with commands and never by editing `suite.yml`, so what is written is checked and cannot be left half-done.
+
+- `sv database` MUST show the PostgreSQL version, `max_connections` (saying when it is the default), each role's pool size and limit
+  (marking an app's own), the hosted apps that have no database, and how much of what the server allows is shared out. It reads the
+  files and the manifests, and does not reach the server. An app whose manifest cannot be read counts as having a database, so the
+  figure is never lower than it is, and the command says which.
+- `sv database set [--max-connections N] [--core N] [--app N]` takes each as a whole number in its range (`maxConnections` 20 to
+  1000, a pool 2 to 100) or the word `default`, which removes the setting. It MUST refuse a value out of range, and a set of numbers whose
+  limits do not fit the server, saying where the connections go, and MUST change nothing when it refuses. It writes `suite.yml` and
+  refreshes `suite.lock` (which these settings do not change), changes nothing on the server, and says that a new `max_connections`
+  restarts the database server when it is deployed.
+- `sv app update NAME --connections N` does the same for one hosted app, with the same refusals, and is refused for an external app.
+- The budget is read against the file as it would be after the change, not as it is.
+
 ### 4.3 Secrets
 
 | Command                             | What it does                                                                                 | Reaches the server |
@@ -191,14 +209,14 @@ name that image, and only an app that carries a manifest (`contracts/app-manifes
 
 ### 4.4 Deploying
 
-| Command                       | What it does                                                                      | Reaches the server |
-| ----------------------------- | --------------------------------------------------------------------------------- | ------------------ |
-| `sv push`                     | Checks the repository (§4.5), commits its known files, and pushes                 | no                 |
-| `sv deploy [--ssh\|--github]` | Runs `sv apply` on the server for the pushed commit (§8)                          | yes                |
-| `sv status`                   | What is running, against what the repository says                                 | yes, read only     |
-| `sv mail [--port N]`          | Opens Mailpit's inbox on this machine, over SSH (below)                           | yes, read only     |
-| `sv logs [NAME]`              | What core, an app or the last deployment printed                                  | yes, read only     |
-| `sv seed [--json]`            | Makes test accounts and a sample app on a development or staging instance (below) | yes                |
+| Command                       | What it does                                                                           | Reaches the server |
+| ----------------------------- | -------------------------------------------------------------------------------------- | ------------------ |
+| `sv push`                     | Checks the repository (§4.5), commits its known files, and pushes                      | no                 |
+| `sv deploy [--ssh\|--github]` | Runs `sv apply` on the server for the pushed commit (§8)                               | yes                |
+| `sv status`                   | What is running, against what the repository says, and the database connections in use | yes, read only     |
+| `sv mail [--port N]`          | Opens Mailpit's inbox on this machine, over SSH (below)                                | yes, read only     |
+| `sv logs [NAME]`              | What core, an app or the last deployment printed                                       | yes, read only     |
+| `sv seed [--json]`            | Makes test accounts and a sample app on a development or staging instance (below)      | yes                |
 
 `sv deploy` with neither flag uses `server.deploy` in `suite.yml`.
 
@@ -390,8 +408,7 @@ Core and every hosted app that has a database share one PostgreSQL server, so `s
   the database server is started that it restarts.
 - **The budget is checked.** The limits of core and of each hosted app whose manifest has `database` MUST add up to no more than
   `maxConnections` less 3. When the operator has set `maxConnections` or `connections`, a deployment that exceeds it is refused at step 1,
-  with each role's share; when they have set none it deploys with a warning that names `sv database set`, which arrives with the
-  commands that set them (task 13.23).
+  with each role's share; when they have set none it deploys with a warning that names `sv database set`.
 - **Nothing is cut.** A lower limit applies to the next connection and ends none.
 
 ### 6.5 What it refuses
@@ -500,6 +517,12 @@ Runs over the operator's SSH access, once, and is safe to run again. It MUST:
   few words it takes, each matched against a pattern (`version`, `deploy COMMIT`, `status`, `doctor`, `logs TARGET [LINES]`,
   `app NAME [--secret]`, `rotate NAME`), and anything else is refused. The deployment key runs the wrapper as `restrict,command="…
 --deploy-only"`, and the toolkit then answers `deploy` and `version` and nothing else.
+- **The connections** are in the answers to `status` and `doctor` as `connections`: `max_connections`, what PostgreSQL keeps for the
+  superuser, how many are open (not counting the question), and for each role that has a limit, what it holds and may hold. The
+  toolkit asks the database container with one `psql` query as the superuser, over the container's own socket, so no password is used
+  or leaves the server; it answers `null` when the database server cannot be asked. A server whose toolkit is older leaves the field out,
+  and `sv status` and `sv doctor` then say nothing of connections. `sv doctor` warns when a role holds four fifths of its limit or more,
+  or the server four fifths of what it leaves for the roles.
 - **The archive** is what `git archive` writes for the pushed commit's `suite.yml`, `suite.lock`, `secrets.age.yml` and `overrides/`. The
   toolkit reads it with its own reader and writes nothing until the whole archive is accepted: a link, a device, a name that climbs out of
   the folder or is not an instance file, an archive over 32 MB or one that is cut short is refused. It is written to `incoming/<commit>/`.

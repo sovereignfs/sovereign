@@ -233,3 +233,84 @@ describe('sv doctor', () => {
     expect(done.text).toContain('warn  DNS');
   });
 });
+
+describe('the connections in sv status and sv doctor', () => {
+  const CONNECTIONS = {
+    max: 100,
+    reserved: 3,
+    total: 4,
+    roles: [
+      { role: 'app_notes', used: 2, limit: 12 },
+      { role: 'core', used: 1, limit: 12 },
+    ],
+  };
+  const stateOf = (connections: unknown) => ({
+    state: { commit: head(), core: { version: CORE, healthy: true }, apps: {} },
+    current: head(),
+    containers: [],
+    deploying: false,
+    ...(connections === undefined ? {} : { connections }),
+  });
+  const doctorServer = (connections: unknown) =>
+    JSON.stringify({
+      protocol: 1,
+      docker: { engine: '27.0.1', compose: '2.29.1' },
+      freeBytes: 20 * 1024 ** 3,
+      toolkitImage: null,
+      ...(connections === undefined ? {} : { connections }),
+    });
+  const network = { resolve: async () => ['203.0.113.7'], reachable: async () => true };
+
+  it('shows what each service holds against its limit in sv status, and in its JSON', async () => {
+    await ready();
+    await sv(world, 'push');
+    world.ctx.remote = answering({
+      status: { stdout: JSON.stringify(stateOf(CONNECTIONS)) },
+    }).remote;
+    const done = await sv(world, 'status');
+    expect(done.text).toContain('Connections: 4 open of 100 (notes 2/12, core 1/12)');
+    expect(done.text).not.toContain('near its limit');
+    const asJson = JSON.parse((await sv(world, 'status', '--json')).out.join('\n'));
+    expect(asJson.connections).toEqual(CONNECTIONS);
+  });
+
+  it('says in sv status which are near their limit', async () => {
+    await ready();
+    await sv(world, 'push');
+    const busy = { ...CONNECTIONS, roles: [{ role: 'app_notes', used: 11, limit: 12 }] };
+    world.ctx.remote = answering({ status: { stdout: JSON.stringify(stateOf(busy)) } }).remote;
+    expect((await sv(world, 'status')).text).toContain('near its limit: notes holds 11 of 12');
+  });
+
+  it.each([undefined, null])(
+    'says nothing when the server did not report them (%s)',
+    async (value) => {
+      await ready();
+      await sv(world, 'push');
+      world.ctx.remote = answering({ status: { stdout: JSON.stringify(stateOf(value)) } }).remote;
+      expect((await sv(world, 'status')).text).not.toContain('Connections');
+    },
+  );
+
+  it('is an ok check in sv doctor, and a warning with what to run when one is near its limit', async () => {
+    await ready();
+    world.ctx.network = network;
+    world.ctx.remote = answering({ doctor: { stdout: doctorServer(CONNECTIONS) } }).remote;
+    const calm = await sv(world, 'doctor');
+    expect(calm.text).toContain('ok    Connections: 4 open of 100 (notes 2/12, core 1/12)');
+    const busy = { ...CONNECTIONS, total: 90 };
+    world.ctx.remote = answering({ doctor: { stdout: doctorServer(busy) } }).remote;
+    const warned = await sv(world, 'doctor');
+    expect(warned.text).toContain('warn  Connections');
+    expect(warned.text).toContain('90 are open of the 97 the server leaves for them');
+    expect(warned.text).toContain('sv database');
+    expect(warned.code).toBe(0);
+  });
+
+  it('adds no check when an older server does not report them', async () => {
+    await ready();
+    world.ctx.network = network;
+    world.ctx.remote = answering({ doctor: { stdout: doctorServer(undefined) } }).remote;
+    expect((await sv(world, 'doctor')).text).not.toContain('Connections');
+  });
+});

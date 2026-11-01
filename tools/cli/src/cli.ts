@@ -1,6 +1,7 @@
 import { app } from './commands/app.js';
 import { applyCommand } from './commands/apply.js';
 import { backup, restore, rollback } from './commands/backup.js';
+import { database } from './commands/database.js';
 import { deploy } from './commands/deploy.js';
 import { mail } from './commands/mail.js';
 import { push } from './commands/push.js';
@@ -31,6 +32,7 @@ Deploying
   server bootstrap              prepare a new machine: Docker, folders, keys
   deploy                        put the pushed commit on the server
   status | logs | doctor        what is running, what it printed, what to fix
+  database [set]                show or change the database's connection limits
   mail                          open the inbox that catches mail on a development or staging instance
   seed                          make test accounts and a sample app on a development or staging instance
 Recovering
@@ -59,6 +61,7 @@ const COMMANDS: Record<string, Command> = {
   doctor,
   mail,
   seed,
+  database,
 };
 
 /**

@@ -23,6 +23,8 @@ export class FakeDocker {
   networks = new Set<string>();
   containers = new Map<string, Container>();
   psql: string[] = [];
+  /** What the question about connections is answered with (apply/database-use.ts), as JSON text; empty is an answer that cannot be read. */
+  connectionsReport = '';
   caddyReloads = 0;
   /** What was run once with `compose run`, after the word run. */
   composeRuns: string[][] = [];
@@ -271,6 +273,7 @@ export class FakeDocker {
     if (!this.containers.has(container as string))
       return { code: 1, stdout: '', stderr: `No such container: ${container}` };
     if (program === 'psql') {
+      if ((options.input ?? '').includes('json_build_object')) return ok(this.connectionsReport);
       this.psql.push(options.input ?? '');
       return ok('');
     }

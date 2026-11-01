@@ -154,20 +154,21 @@ Core and every hosted app share one PostgreSQL server, which allows 100 connecti
 waiting, `./sv deploy` limits each one's database role, and sizes each one's connection pool to match. You do nothing for the defaults,
 which are what core and the app template already use: 10 each.
 
-To change them, add to `suite.yml` (these do not touch `suite.lock`, so editing them by hand is safe):
+`./sv database` shows how they are shared out now: the server's total, each role's pool and limit, and how many are left. To change
+them:
 
-```yaml
-database:
-  version: '18'
-  maxConnections: 200 # the server's total; 100 if you leave it out
-  connections:
-    core: 10 # core's pool; 10 if you leave it out
-    app: 6 # each hosted app's pool; 10 if you leave it out
-apps:
-  notes:
-    image: ghcr.io/you/notes:1.0.0
-    connections: 3 # this app's own, instead of the one above
+```bash
+./sv database set --max-connections 200   # the server's total; 100 if you leave it out, or say `default`
+./sv database set --core 10 --app 6       # core's pool, and every hosted app's; 10 each if you leave them out
+./sv app update notes --connections 3     # this app's own, instead of the one above
 ```
+
+Each takes a whole number, or the word `default` to go back. `./sv` refuses numbers that add up to more than the server allows, and says
+where the connections go. Then `./sv push` and `./sv deploy`. (These settings are in `suite.yml` under `database` and under the app,
+and do not touch `suite.lock`.)
+
+`./sv status` shows what is open now against each limit, and `./sv doctor` warns when a role, or the whole server, is close to its
+limit (four fifths or more), which is the time to raise it.
 
 - A role may hold its pool's size **plus 2**, so a connection that a killed container has not yet closed does not keep its replacement
   out. Eight apps at the defaults need more than 97 connections, which the server leaves for them (3 are kept for the superuser).

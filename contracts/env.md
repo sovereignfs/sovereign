@@ -31,23 +31,24 @@ Every app has one prefix, and every variable it reads is `<PREFIX>_<NAME>`.
 The same setting has the same name in every app, so an operator learns it once. Only
 the prefix differs: `SV_URL` in core, `TASKS_URL` in an app that uses the `TASKS` prefix.
 
-| Name                                               | Meaning                                                                            | Secret |
-| -------------------------------------------------- | ---------------------------------------------------------------------------------- | ------ |
-| `URL`                                              | The app's public address, with no path. It builds links, cookies and redirects     |        |
-| `AUTH_SECRET`                                      | Signs sessions and tokens. At least 32 characters                                  | yes    |
-| `CORE_URL`                                         | In an app that runs in a suite: the address of core, the app's sign-in server      |        |
-| `CORE_CLIENT_ID`                                   | In an app that runs in a suite: its client ID at core                              |        |
-| `CORE_CLIENT_SECRET`                               | Its client secret at core                                                          | yes    |
-| `DB_DIALECT`                                       | Which database: `sqld`, `sqlite` or `postgres`                                     |        |
-| `SQLD_URL`                                         | An sqld server's address (when `DB_DIALECT` is `sqld`)                             |        |
-| `SQLD_ADMIN_URL`                                   | Its admin address, used to create namespaces                                       |        |
-| `SQLD_NAMESPACE`                                   | The sqld namespace the app uses, so apps can share a server. Default `default`     |        |
-| `SQLITE_URL`                                       | A SQLite database file, as a `file:` URL (when `DB_DIALECT` is `sqlite`)           |        |
-| `POSTGRES_URL`                                     | A PostgreSQL address, which can carry a password (when `DB_DIALECT` is `postgres`) | yes    |
-| `POSTGRES_POOL_MAX`                                | Connections in the PostgreSQL pool, at least 2. Default 10                         |        |
-| `FIELD_ENCRYPTION_KEYS`                            | The keys that encrypt stored secrets: `id:key` entries, newest first (§3)          | yes    |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_FROM` | Outgoing mail                                                                      |        |
-| `SMTP_PASSWORD`                                    | Its password                                                                       | yes    |
+| Name                                               | Meaning                                                                                  | Secret |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------ |
+| `URL`                                              | The app's public address, with no path. It builds links, cookies and redirects           |        |
+| `AUTH_SECRET`                                      | Signs sessions and tokens. At least 32 characters                                        | yes    |
+| `CORE_URL`                                         | In an app that runs in a suite: the address of core, the app's sign-in server            |        |
+| `CORE_CLIENT_ID`                                   | In an app that runs in a suite: its client ID at core                                    |        |
+| `CORE_CLIENT_SECRET`                               | Its client secret at core                                                                | yes    |
+| `DB_DIALECT`                                       | Which database: `sqld`, `sqlite` or `postgres`                                           |        |
+| `SQLD_URL`                                         | An sqld server's address (when `DB_DIALECT` is `sqld`)                                   |        |
+| `SQLD_ADMIN_URL`                                   | Its admin address, used to create namespaces                                             |        |
+| `SQLD_NAMESPACE`                                   | The sqld namespace the app uses, so apps can share a server. Default `default`           |        |
+| `SQLITE_URL`                                       | A SQLite database file, as a `file:` URL (when `DB_DIALECT` is `sqlite`)                 |        |
+| `POSTGRES_URL`                                     | A PostgreSQL address, which can carry a password (when `DB_DIALECT` is `postgres`)       | yes    |
+| `POSTGRES_POOL_MAX`                                | Connections in the PostgreSQL pool, at least 2. Default 10                               |        |
+| `POSTGRES_DIRECT_URL`                              | The same database on the server itself, never through a pooler (an app, with `database`) | yes    |
+| `FIELD_ENCRYPTION_KEYS`                            | The keys that encrypt stored secrets: `id:key` entries, newest first (§3)                | yes    |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_FROM` | Outgoing mail                                                                            |        |
+| `SMTP_PASSWORD`                                    | Its password                                                                             | yes    |
 
 Database variables name the **engine**, not the component: `SV_POSTGRES_URL`, never
 `SV_DB_URL`. `DB_DIALECT` says which engine is in use; nothing infers it from a URL,

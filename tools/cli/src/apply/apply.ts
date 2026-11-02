@@ -26,7 +26,7 @@ import {
 } from '../suite/connections.js';
 import { lockProblems } from '../suite/lock.js';
 import type { Problem } from '../suite/schema.js';
-import { isExternal, type Manifest, type Suite } from '../suite/types.js';
+import { hasDatabase, isExternal, type Manifest, type Suite } from '../suite/types.js';
 import {
   applyExternalApp,
   applyHostedApp,
@@ -130,7 +130,10 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
   const state = await readState(options.stateDir);
   const read = await readManifests(host, suite, lock);
   // The connections the limits allow (operator-cli §6.4.4): a refusal when the operator set them, a warning when they left them be.
-  const budget = connectionBudget(suite, (name) => read.manifests[name]?.database === true);
+  const budget = connectionBudget(
+    suite,
+    (name) => read.manifests[name] !== undefined && hasDatabase(read.manifests[name]),
+  );
   const budgetProblems: Problem[] = [];
   if (budget.exceeded) {
     const said = `${describeBudget(budget, maxConnectionsOf(suite))} Raise database.maxConnections or lower connections.`;

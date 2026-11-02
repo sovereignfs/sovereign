@@ -177,7 +177,10 @@ limit (four fifths or more), which is the time to raise it.
   pools.
 - A new `maxConnections` **restarts the database server**, and the deployment says so before it does. Core and the apps reconnect. A
   lower limit on a role never ends a connection that is open: it applies to the next one.
-- An app reads its pool size from `<PREFIX>_POSTGRES_POOL_MAX`, which the app template does. An app made before this keeps its own pool,
+- An app is given two addresses for its database, `<PREFIX>_POSTGRES_URL` and `<PREFIX>_POSTGRES_DIRECT_URL`, both the database server for
+  now. When a pooler is offered, only an app whose manifest says `database.pooling: transaction` (`./sv app add` tells you) goes through
+  it, and the direct address stays the server itself, so an app that needs a session is never moved by what you turn on.
+- An app reads its pool size from `<PREFIX>_POSTGRES_POOL_MAX`, which the app template does (two of those connections go to the direct address). An app made before this keeps its own pool,
   and its role's limit is what holds it.
 
 ## Updating

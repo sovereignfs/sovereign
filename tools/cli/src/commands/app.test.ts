@@ -25,7 +25,7 @@ describe('sv app add', () => {
     expect(lock().apps?.notes).toEqual({ ref: NOTES_IMAGE, digest: `sha256:${'a'.repeat(64)}` });
     expect(done.text).toContain('Notes (notes) at https://notes.sovereign.local');
     expect(done.text).toContain('openid, profile, email');
-    expect(done.text).toContain('It gets its own database.');
+    expect(done.text).toContain('It gets its own database');
   });
 
   it('says plainly that an app which asks for roles is trusted', async () => {
@@ -91,6 +91,48 @@ describe('sv app add', () => {
     expect(bad.text).toContain('must begin with NOTES_');
     expect(bad.text).toContain('is given to the app by the deployment');
     expect(suite().apps).toBeUndefined();
+  });
+
+  it('says whether the app can be pooled: only what its manifest declares, never a guess', async () => {
+    await withNotes({
+      images: { [NOTES_IMAGE]: { manifest: manifestOf({ database: { pooling: 'transaction' } }) } },
+    });
+    const pooled = await sv(world, 'app', 'add', 'notes', '--image', NOTES_IMAGE, '--yes');
+    expect(pooled.text).toContain(
+      'It gets its own database, and can work through a transaction pooler.',
+    );
+    world.cleanup();
+
+    await withNotes();
+    const session = await sv(world, 'app', 'add', 'notes', '--image', NOTES_IMAGE, '--yes');
+    expect(session.text).toContain(
+      'It gets its own database, and needs a session, so it connects to the server itself.',
+    );
+    world.cleanup();
+
+    await withNotes({
+      images: { [NOTES_IMAGE]: { manifest: manifestOf({ database: false, generate: [] }) } },
+    });
+    const none = await sv(world, 'app', 'add', 'notes', '--image', NOTES_IMAGE, '--yes');
+    expect(none.text).toContain('It needs no database.');
+    expect(none.text).not.toContain('pooler');
+  });
+
+  it('refuses env that names the direct address, which the deployment gives', async () => {
+    await withNotes();
+    const bad = await sv(
+      world,
+      'app',
+      'add',
+      'notes',
+      '--image',
+      NOTES_IMAGE,
+      '--env',
+      'NOTES_POSTGRES_DIRECT_URL=x',
+      '--yes',
+    );
+    expect(bad.code).toBe(2);
+    expect(bad.text).toContain('is given to the app by the deployment');
   });
 
   it('refuses a name that is taken, reserved or not a name, and a name waiting to be purged', async () => {

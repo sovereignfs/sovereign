@@ -141,6 +141,29 @@ describe('the files of an app', () => {
     expect(read(target, 'lib/auth.ts')).toContain('onAccountDeleted');
   });
 
+  it('keep what needs a session on the direct address, in a small pool, and say they can be pooled', async () => {
+    const target = path.join(temp(), 'my-notes');
+    await writeApp(target, namesOf(target));
+    const manifest = JSON.parse(read(target, 'sovereign.manifest.json')) as {
+      database: { pooling?: string };
+    };
+    expect(manifest.database).toEqual({ pooling: 'transaction' });
+    const db = read(target, 'lib/db.ts');
+    expect(db).toContain("setting('MYNOTES_POSTGRES_DIRECT_URL')");
+    expect(db).toContain('export function directDb()');
+    expect(read(target, 'lib/migrate.ts')).toContain('directDb()');
+    expect(read(target, 'lib/stores.ts')).toContain('directDb()');
+    // Nothing that holds a session is left on the pooled address.
+    for (const file of ['lib/migrate.ts', 'lib/stores.ts']) {
+      const text = read(target, file);
+      const lockLines = text.split('\n').filter((line) => line.includes('pg_advisory'));
+      expect(lockLines.length, file).toBeGreaterThan(0);
+    }
+    expect(read(target, 'lib/migrate.ts')).not.toMatch(/\bdb\(\)\.connect/);
+    expect(read(target, 'lib/stores.ts')).not.toMatch(/\bdb\(\)\.connect/);
+    expect(read(target, '.env.example')).toContain('MYNOTES_POSTGRES_DIRECT_URL');
+  });
+
   it('are refused in a folder that is not empty, writing nothing', async () => {
     const target = temp();
     (await import('node:fs')).writeFileSync(path.join(target, 'x'), '');

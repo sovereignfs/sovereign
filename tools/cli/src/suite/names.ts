@@ -35,6 +35,7 @@ export function reservedForApp(prefix: string, generate: readonly string[] = [])
     `${prefix}_CORE_CLIENT_SECRET`,
     `${prefix}_DB_DIALECT`,
     `${prefix}_POSTGRES_URL`,
+    `${prefix}_POSTGRES_DIRECT_URL`,
     `${prefix}_POSTGRES_POOL_MAX`,
     ...generate,
   ];

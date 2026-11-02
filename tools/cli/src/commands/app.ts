@@ -10,6 +10,8 @@ import { refreshedLock } from '../suite/lock.js';
 import { RESERVED_APP_NAMES } from '../suite/names.js';
 import { appEnvProblems } from '../suite/apps.js';
 import {
+  canPool,
+  hasDatabase,
   isExternal,
   type App,
   type ExternalApp,
@@ -160,7 +162,15 @@ async function add(ctx: Context, argv: string[]): Promise<void> {
       '  It will be told whether each person is an admin or the owner, and it is trusted: people are not asked about it.',
     );
   }
-  ctx.io.err(`  ${manifest.database ? 'It gets its own database.' : 'It needs no database.'}`);
+  ctx.io.err(
+    `  ${
+      !hasDatabase(manifest)
+        ? 'It needs no database.'
+        : canPool(manifest)
+          ? 'It gets its own database, and can work through a transaction pooler.'
+          : 'It gets its own database, and needs a session, so it connects to the server itself.'
+    }`,
+  );
   await confirm(ctx.io, `Add ${name}?`, args.switches.has('yes'));
   await commit(ctx, file, setApp(file, name as string, app));
   ctx.io.err(`Added ${name}. Run sv push and sv deploy to start it.`);

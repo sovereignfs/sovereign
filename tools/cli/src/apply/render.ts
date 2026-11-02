@@ -12,7 +12,7 @@ import {
   environmentOf,
   usesMailpit,
 } from '../suite/environment.js';
-import type { Digest, Lock, Manifest, Suite } from '../suite/types.js';
+import { hasDatabase, type Digest, type Lock, type Manifest, type Suite } from '../suite/types.js';
 import {
   CA_DIR_IN_CONTAINER,
   CA_IN_CONTAINER,
@@ -317,7 +317,7 @@ export function appEnvironment(input: AppInput): Record<string, string> {
     [`${prefix}_CORE_URL`]: `https://${suite.domain}`,
     [`${prefix}_CORE_CLIENT_ID`]: clientId,
   });
-  if (manifest.database) {
+  if (hasDatabase(manifest)) {
     env[`${prefix}_DB_DIALECT`] = 'postgres';
     env[`${prefix}_POSTGRES_POOL_MAX`] = String(appPool(suite, name));
   }

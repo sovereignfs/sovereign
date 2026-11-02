@@ -635,7 +635,7 @@ older, which needs a published toolkit and a machine.
 - A lock with an image the server's toolkit does not know deploys without running bootstrap by hand
 - Nothing the deployment key may do widens
 
-#### 📋 13.25 — Apps that can be pooled `[parallel]`
+#### ✅ 13.25 — Apps that can be pooled `[parallel]`
 
 **Goal:** An app can say it works through a transaction pooler, and the app template does, so that turning a pooler on changes nothing
 for an app that has not said so.
@@ -648,7 +648,17 @@ for an app that has not said so.
 - Every app with a database is also given `<PREFIX>_POSTGRES_DIRECT_URL`, the server itself, in the contract and `contracts/env.md`
 - The template uses a small direct pool for its migrations and its token-refresh lock, everything else through
   `<PREFIX>_POSTGRES_URL`, and declares `transaction`
-- `sv app add` and `sv app upgrade` show whether an app can be pooled
+- `sv app add` and `sv app upgrade` show whether an app can be pooled (`sv app upgrade` is task 13.14, not built yet: it shows it when it is)
+
+**Verified here:** the tests were seen to fail against the old code. The schema takes `database` as a boolean or `{ pooling: transaction }` and
+refuses anything else; `hasDatabase` and `canPool` are the only readers of it, so an app whose database is an object is budgeted and given its
+role like any other. `sv apply` gives every app with a database both addresses as secret files, the same address while no pooler runs, and
+neither to an app with none. `sv app add` says whether an app can be pooled from its manifest alone. The template's migrations and token lock take
+their connections from a direct pool of two, which comes out of the app's own pool size so its role's limit still holds, and the template falls
+back to the pooled address when an older instance gives no direct one.
+
+**Not verified here:** the template built into an image and hosted by `sv apply` against real Docker (`pnpm test:docker`), and a real
+PostgreSQL behind a pooler, which is the next task.
 
 **Dependencies:** 13.22
 

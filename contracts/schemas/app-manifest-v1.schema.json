@@ -52,7 +52,16 @@
         }
       }
     },
-    "database": { "type": "boolean" },
+    "database": {
+      "oneOf": [
+        { "type": "boolean" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "pooling": { "const": "transaction" } }
+        }
+      ]
+    },
     "generate": {
       "type": "array",
       "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9]*_[A-Z0-9_]+$" },

@@ -7,6 +7,7 @@ import { appPool, roleLimit } from '../suite/connections.js';
 import { appEnvProblems } from '../suite/apps.js';
 import type { Problem } from '../suite/schema.js';
 import {
+  hasDatabase,
   isExternal,
   type ExternalApp,
   type HostedApp,
@@ -220,7 +221,7 @@ export async function applyHostedApp(
   const database = databaseOf(name);
   const secrets: Record<string, string> = {};
   let postgres = false;
-  if (manifest.database) {
+  if (hasDatabase(manifest)) {
     const password = await generated.ensure(`role-app-${name}-password`, () =>
       generated.random(24),
     );
@@ -230,6 +231,12 @@ export async function applyHostedApp(
       `postgres://${database}:${password.value}@${CONTAINER.database}:5432/${database}`,
     );
     secrets[`${manifest.prefix}_POSTGRES_URL`] = `app-${name}-postgres-url`;
+    // The server itself, for what needs a session. No pooler runs yet, so it is the same address (operator-cli §6.4.4).
+    await generated.write(
+      `app-${name}-postgres-direct-url`,
+      `postgres://${database}:${password.value}@${CONTAINER.database}:5432/${database}`,
+    );
+    secrets[`${manifest.prefix}_POSTGRES_DIRECT_URL`] = `app-${name}-postgres-direct-url`;
     postgres = true;
   }
 

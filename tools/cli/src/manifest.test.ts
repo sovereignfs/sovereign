@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Refused } from './errors.js';
+import { canPool, hasDatabase } from './suite/types.js';
 import { readManifest } from './manifest.js';
 import { fakeRegistry, manifestOf } from './testing/world.js';
 
@@ -10,6 +11,30 @@ const read = (
   app: { image: string; manifest?: string } = { image: IMAGE },
   fetchImpl?: typeof fetch,
 ) => readManifest('notes', app, fakeRegistry({ [IMAGE]: { manifest } }).registry, core, fetchImpl);
+
+describe('an app’s database in its manifest', () => {
+  it.each([[true], [false], [{}], [{ pooling: 'transaction' }]])('accepts %j', async (database) => {
+    expect((await read(manifestOf({ database }))).database).toEqual(database);
+  });
+
+  it.each([
+    ['a pooling it does not know', { pooling: 'session' }],
+    ['a field it does not know', { pooling: 'transaction', size: 5 }],
+    ['a string', 'yes'],
+  ])('refuses %s', async (_name, database) => {
+    await expect(read(manifestOf({ database }))).rejects.toThrow(/database/);
+  });
+
+  it('says whether it has a database and whether it can be pooled, and only an app that says so can', () => {
+    expect(hasDatabase({ database: true })).toBe(true);
+    expect(hasDatabase({ database: {} })).toBe(true);
+    expect(hasDatabase({ database: { pooling: 'transaction' } })).toBe(true);
+    expect(hasDatabase({ database: false })).toBe(false);
+    expect(hasDatabase({})).toBe(false);
+    expect(canPool({ database: { pooling: 'transaction' } })).toBe(true);
+    for (const database of [true, false, {}, undefined]) expect(canPool({ database })).toBe(false);
+  });
+});
 
 describe('reading an app’s manifest', () => {
   it('reads the label of the image, and returns the manifest', async () => {

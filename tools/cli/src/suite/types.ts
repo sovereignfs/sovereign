@@ -82,8 +82,19 @@ export type Manifest = {
     accountDeleted?: string;
     scopes: string[];
   };
-  database?: boolean;
+  database?: boolean | { pooling?: 'transaction' };
   generate?: string[];
   data?: string[];
   core: string;
 };
+
+/** Whether the app has a database: `true`, or the object that says more about it (contracts/app-manifest.md §2.2). */
+export const hasDatabase = (manifest: Pick<Manifest, 'database'>): boolean =>
+  manifest.database === true ||
+  (typeof manifest.database === 'object' && manifest.database !== null);
+
+/** Whether the app declares that it works through a transaction pooler. Only the manifest says so, never a guess. */
+export const canPool = (manifest: Pick<Manifest, 'database'>): boolean =>
+  typeof manifest.database === 'object' &&
+  manifest.database !== null &&
+  manifest.database.pooling === 'transaction';

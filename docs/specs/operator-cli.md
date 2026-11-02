@@ -81,7 +81,9 @@ It MUST meet [`contracts/app-manifest.md`](../../contracts/app-manifest.md), and
   sign-in, the callback, sign-out, core's back-channel logout and core's account-deleted notice at the paths the manifest names;
 - a page behind sign-in using `@sovereignfs/ui`, whose every server action asks who is calling and whose every delete names the owner;
 - a health route that answers 200 when its database does;
-- its own migrations, applied once each when it starts, behind a lock;
+- its own migrations, applied once each when it starts, behind a lock, and that lock and any other held across a request taken on
+  `<PREFIX>_POSTGRES_DIRECT_URL` in a small pool of its own, with everything else on `<PREFIX>_POSTGRES_URL`, so the manifest declares
+  `database.pooling: transaction`;
 - an image that does not run as root, listens on 3000 and is configured by its environment alone;
 - a workflow, `.github/workflows/publish.yml`, that on a `vX.Y.Z` tag builds that image for linux/amd64 and linux/arm64, with the
   manifest label, and publishes it to `ghcr.io/<owner>/<repository>` tagged `X.Y.Z`, which is where `sv app add --git` looks for it
@@ -154,6 +156,9 @@ Each command MUST state what it changed, and MUST exit as §11 says.
   with neither is refused, as is a manifest this toolkit cannot read or whose `core` range excludes the instance's version.
 - `sv app add NAME --external` MUST take `--name`, at least one `--redirect`, and MAY take `--post-logout`, `--back-channel`,
   `--scope`, `--public` and `--trusted`. An external app is untrusted unless `--trusted` is given.
+- `sv app add` and `sv app upgrade` MUST say whether an app can be pooled: what its manifest says in `database.pooling`
+  (`contracts/app-manifest.md` §2.2), or that it needs a session, and that an app with no database has nothing to pool. They never decide it
+  from anything but the manifest.
 - A hosted app's scopes come from its manifest and MUST be shown to the operator when it is added. A scope outside the
   manifest cannot be given to it.
 - `--purge` MUST ask for the app's name to be typed, and with no terminal MUST need `--yes-delete-data NAME`.
@@ -408,6 +413,11 @@ Core and every hosted app that has a database share one PostgreSQL server, so `s
   `database.connections.app`.
 - **Each pool is sized.** Core is given `SV_POSTGRES_POOL_MAX` and an app `<PREFIX>_POSTGRES_POOL_MAX` with the same number. An app that
   does not read it keeps the pool it has, and its role's limit is what holds it.
+- **An app is given two addresses.** `<PREFIX>_POSTGRES_URL` and `<PREFIX>_POSTGRES_DIRECT_URL`, each as a secret file in its `_FILE`
+  form, for its own database as its own role. While no pooler runs they are the same address, the database server's. When one runs
+  (an optional pooler, not built yet), `<PREFIX>_POSTGRES_URL` goes to it only for an app whose manifest declares `database.pooling: transaction`, and the direct
+  address is always the server itself, so an app made before this, or one that needs a session, is connected as it was whatever the
+  operator turns on.
 - **The server is sized.** `max_connections` is passed to the database server only when `database.maxConnections` is not 100, so an
   instance that sets nothing is not restarted. `sv apply` records the value it applied in `state.json`, and when it changes says before
   the database server is started that it restarts.
@@ -766,3 +776,4 @@ with a DNS provider's module, which the stock image does not carry.
 | 2026-11-01 | Apps from git and app upgrades (§4.2.1), backups before an app changes version, scheduled backups to S3, git or SFTP and per-app backups (§6.4.3, §10.2.2), rollback to a named release (§10.3), and more commands from GitHub (§8.2): [workstream 0001](../workstreams/0001-operator-workflow.md). |
 | 2026-11-01 | `sv seed` and core's `SV_ENVIRONMENT` (§4.4, §6.4, §13): test accounts and a sample app on development and staging instances, refused on production: [workstream 0002](../workstreams/0002-test-instances.md).                                                                                      |
 | 2026-11-02 | `sv push` refreshes a lock that no longer matches `suite.yml`, and `sv deploy --ssh` brings the server's toolkit to the pinned one before it sends the commit (§4.5, §8.1, §8.4, §10.1.1): [research 0003](../research/0003-database-connections.md).                                               |
+| 2026-11-02 | An app's manifest may declare `database.pooling: transaction`, and every app with a database is given `<PREFIX>_POSTGRES_DIRECT_URL` (§2.2, §4.2, §4.2.1, §6.4.4): [research 0003](../research/0003-database-connections.md).                                                                       |

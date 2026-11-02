@@ -10,7 +10,7 @@ import {
   type Budget,
 } from '../suite/connections.js';
 import { readLock } from '../suite/files.js';
-import { isExternal, type Suite } from '../suite/types.js';
+import { hasDatabase, isExternal, type Suite } from '../suite/types.js';
 
 /**
  * Which hosted apps have a database, read from their manifests as `sv app add` reads them. An app whose manifest cannot be read counts as
@@ -34,7 +34,7 @@ export async function appsWithDatabase(
         ctx.fetch,
         lock?.apps?.[name]?.digest,
       );
-      answers.set(name, manifest.database === true);
+      answers.set(name, hasDatabase(manifest));
     } catch {
       unread.push(name);
     }

@@ -1,13 +1,14 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { db } from './db';
+import { directDb } from './db';
 
 /**
  * Applies the files in `migrations/`, in name order, each once (contracts/app-manifest.md §4: an app applies its own migrations when it
- * starts, and is safe to start again). One advisory lock holds a second copy of the app back until the first has finished.
+ * starts, and is safe to start again). One advisory lock holds a second copy of the app back until the first has finished. It is a session
+ * lock, and a session is one connection, so all of it runs on the direct address, never behind a pooler.
  */
 export async function migrate(): Promise<void> {
-  const client = await db().connect();
+  const client = await directDb().connect();
   try {
     await client.query('SELECT pg_advisory_lock(hashtext($1))', ['__NAME__-migrations']);
     await client.query(

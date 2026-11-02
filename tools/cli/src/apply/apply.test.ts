@@ -1096,3 +1096,75 @@ describe('connection limits', () => {
     expect(state(made).apps.notes?.kind).toBe('hosted');
   });
 });
+
+describe('an app’s two database addresses', () => {
+  const NOTES = { image: 'ghcr.io/example/notes:1' };
+  const registryOf = (manifest: unknown) =>
+    fakeRegistry({ 'ghcr.io/example/notes:1': { manifest } }).registry;
+  const appFiles = (made: Source) => {
+    const dir = path.join(made.stateDir, 'releases', 'a'.repeat(40), 'apps', 'notes');
+    return parse(readFileSync(path.join(dir, 'compose.yml'), 'utf8')) as {
+      services: Record<
+        string,
+        { environment?: Record<string, string>; volumes?: { source: string; target: string }[] }
+      >;
+    };
+  };
+  const secret = (made: Source, name: string) =>
+    readFileSync(path.join(made.stateDir, 'secrets', name), 'utf8');
+
+  it('gives an app with a database both, as secret files, and both are the database server for now', async () => {
+    const made = await source({ suite: { apps: { notes: NOTES } } });
+    const { host } = fakeHost({ registry: registryOf(manifestOf()) });
+    await apply(host, options(made));
+    const service = Object.values(appFiles(made).services)[0];
+    expect(service?.environment).toMatchObject({
+      NOTES_POSTGRES_URL_FILE: '/run/secrets/NOTES_POSTGRES_URL',
+      NOTES_POSTGRES_DIRECT_URL_FILE: '/run/secrets/NOTES_POSTGRES_DIRECT_URL',
+    });
+    expect(service?.volumes?.map((v) => v.target)).toContain(
+      '/run/secrets/NOTES_POSTGRES_DIRECT_URL',
+    );
+    const direct = secret(made, 'app-notes-postgres-direct-url');
+    expect(direct).toMatch(/^postgres:\/\/app_notes:[^@]+@sv-database:5432\/app_notes$/);
+    expect(direct).toBe(secret(made, 'app-notes-postgres-url'));
+    expect(JSON.stringify(service?.environment)).not.toContain('postgres://');
+  });
+
+  it('gives an app that says it can be pooled the same, since nothing pools yet', async () => {
+    const made = await source({ suite: { apps: { notes: NOTES } } });
+    const { host } = fakeHost({
+      registry: registryOf(manifestOf({ database: { pooling: 'transaction' } })),
+    });
+    await apply(host, options(made));
+    const service = Object.values(appFiles(made).services)[0];
+    expect(service?.environment?.NOTES_POSTGRES_DIRECT_URL_FILE).toBeDefined();
+    expect(service?.environment?.NOTES_POSTGRES_POOL_MAX).toBe('10');
+    expect(secret(made, 'app-notes-postgres-direct-url')).toBe(
+      secret(made, 'app-notes-postgres-url'),
+    );
+  });
+
+  it('gives an app with no database neither', async () => {
+    const made = await source({ suite: { apps: { notes: NOTES } } });
+    const { host } = fakeHost({
+      registry: registryOf(manifestOf({ database: false, generate: [] })),
+    });
+    await apply(host, options(made));
+    const service = Object.values(appFiles(made).services)[0];
+    expect(Object.keys(service?.environment ?? {}).filter((n) => n.includes('POSTGRES'))).toEqual(
+      [],
+    );
+  });
+
+  it('counts an app whose database is an object as having one, so its connections are budgeted', async () => {
+    const made = await source({
+      suite: { database: { version: '18', maxConnections: 20 }, apps: { notes: NOTES } },
+    });
+    const { host } = fakeHost({
+      registry: registryOf(manifestOf({ database: { pooling: 'transaction' } })),
+    });
+    // core 12 and the app 12 do not fit in 20 less 3.
+    await expect(apply(host, options(made))).rejects.toThrow(/connections/);
+  });
+});

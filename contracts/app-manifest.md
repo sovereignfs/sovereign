@@ -46,21 +46,21 @@ an image that has no label. When an image has both, the address is used.
 }
 ```
 
-| Field         | Required | Meaning                                                                               |
-| ------------- | -------- | ------------------------------------------------------------------------------------- |
-| `manifest`    | yes      | This document's format version. `1` here                                              |
-| `prefix`      | yes      | The app's variable prefix ([`env.md`](env.md) §1). It MUST NOT be `SV`                |
-| `name`        | yes      | The name people see, on the consent page and the launcher                             |
-| `description` | no       | A short line for the launcher, at most 280 characters                                 |
-| `icon`        | no       | A path on the app, or an `https` address, for its launcher icon                       |
-| `port`        | yes      | The one port it listens on, on all interfaces                                         |
-| `health`      | yes      | A path that answers `200` once it is ready to take requests                           |
-| `launch`      | no       | The path the launcher sends people to. Default `/`                                    |
-| `signIn`      | yes      | §2.1                                                                                  |
-| `database`    | no       | Whether it needs a PostgreSQL database. Default `false`                               |
-| `generate`    | no       | Variables, with the app's prefix, for which the server generates a random secret once |
-| `data`        | no       | Absolute paths in the container to keep across upgrades                               |
-| `core`        | yes      | The core versions it works with, as an npm-style semver range                         |
+| Field         | Required | Meaning                                                                                   |
+| ------------- | -------- | ----------------------------------------------------------------------------------------- |
+| `manifest`    | yes      | This document's format version. `1` here                                                  |
+| `prefix`      | yes      | The app's variable prefix ([`env.md`](env.md) §1). It MUST NOT be `SV`                    |
+| `name`        | yes      | The name people see, on the consent page and the launcher                                 |
+| `description` | no       | A short line for the launcher, at most 280 characters                                     |
+| `icon`        | no       | A path on the app, or an `https` address, for its launcher icon                           |
+| `port`        | yes      | The one port it listens on, on all interfaces                                             |
+| `health`      | yes      | A path that answers `200` once it is ready to take requests                               |
+| `launch`      | no       | The path the launcher sends people to. Default `/`                                        |
+| `signIn`      | yes      | §2.1                                                                                      |
+| `database`    | no       | Whether it needs a PostgreSQL database, and how it may be reached (§2.2). Default `false` |
+| `generate`    | no       | Variables, with the app's prefix, for which the server generates a random secret once     |
+| `data`        | no       | Absolute paths in the container to keep across upgrades                                   |
+| `core`        | yes      | The core versions it works with, as an npm-style semver range                             |
 
 A manifest MUST NOT be extended with fields of its own. An unknown field is refused, so that a future field is never ignored.
 
@@ -80,6 +80,24 @@ a manifest holds no host. A path MUST begin with `/`, and MUST NOT hold `..`, a 
 The operator is shown `scopes` when the app is added. A hosted app is registered as trusted, so people are not asked about each
 one, and it may ask for `roles`.
 
+### 2.2 `database`
+
+`database` is `true`, `false`, or an object, which means the app has a database and says more about it:
+
+```json
+"database": { "pooling": "transaction" }
+```
+
+| Field     | Required | Meaning                                                                                                                                                                       |
+| --------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pooling` | no       | `transaction`: the app works through a transaction pooler. Absent: it needs a session, and is always connected to the database server itself (§3), whatever the instance runs |
+
+An app MAY declare `transaction` only if everything it sends through `<PREFIX>_POSTGRES_URL` is safe when each statement may run on a
+different server connection: no session advisory lock, no `SET`, `LISTEN`, temporary table or named prepared statement, and no
+transaction left open across a request. What needs a session (its migrations, a lock held across a call) MUST use
+`<PREFIX>_POSTGRES_DIRECT_URL`. `{}` and `true` mean the same, and an app that declares nothing is never pooled. A toolkit older than
+the one that reads `pooling` refuses a manifest that has it, as it does for any field it does not know.
+
 ---
 
 ## 3. What an app is given
@@ -87,16 +105,17 @@ one, and it may ask for `roles`.
 A hosted app receives these in its environment, under its `prefix`, using the shared names of [`env.md`](env.md) §2. A name
 marked secret is given in its `_FILE` form, so an app MUST read a secret either way, as `env.md` §3 says.
 
-| Variable                      | When            | Secret | Value                                          |
-| ----------------------------- | --------------- | ------ | ---------------------------------------------- |
-| `<PREFIX>_URL`                | Always          |        | Its public address, `https://<name>.<domain>`  |
-| `<PREFIX>_CORE_URL`           | Always          |        | Core's address, which is the issuer            |
-| `<PREFIX>_CORE_CLIENT_ID`     | Always          |        | Its client ID                                  |
-| `<PREFIX>_CORE_CLIENT_SECRET` | Always          | yes    | Its client secret                              |
-| `<PREFIX>_DB_DIALECT`         | With `database` |        | `postgres`                                     |
-| `<PREFIX>_POSTGRES_URL`       | With `database` | yes    | Its own database, as its own role              |
-| `<PREFIX>_POSTGRES_POOL_MAX`  | With `database` |        | The most connections its pool may hold         |
-| What `generate` names         | When listed     | yes    | 48 random bytes, in base64, made once and kept |
+| Variable                       | When            | Secret | Value                                                                                                                                                              |
+| ------------------------------ | --------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `<PREFIX>_URL`                 | Always          |        | Its public address, `https://<name>.<domain>`                                                                                                                      |
+| `<PREFIX>_CORE_URL`            | Always          |        | Core's address, which is the issuer                                                                                                                                |
+| `<PREFIX>_CORE_CLIENT_ID`      | Always          |        | Its client ID                                                                                                                                                      |
+| `<PREFIX>_CORE_CLIENT_SECRET`  | Always          | yes    | Its client secret                                                                                                                                                  |
+| `<PREFIX>_DB_DIALECT`          | With `database` |        | `postgres`                                                                                                                                                         |
+| `<PREFIX>_POSTGRES_URL`        | With `database` | yes    | Its own database, as its own role. Through a transaction pooler only when the app declares `pooling` (§2.2) and the instance runs one; otherwise the server itself |
+| `<PREFIX>_POSTGRES_DIRECT_URL` | With `database` | yes    | Its own database, as its own role, on the database server itself, never through a pooler. For what needs a session                                                 |
+| `<PREFIX>_POSTGRES_POOL_MAX`   | With `database` |        | The most connections its pool may hold                                                                                                                             |
+| What `generate` names          | When listed     | yes    | 48 random bytes, in base64, made once and kept                                                                                                                     |
 
 Anything else comes from the operator: `env` in `suite.yml`, or `secrets.age.yml`. Neither may set a variable in this table.
 

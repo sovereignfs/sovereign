@@ -1,5 +1,5 @@
 import type { SessionStore, StoredRecord, TokenStore } from '@sovereignfs/sdk';
-import { db } from './db';
+import { db, directDb } from './db';
 import { fingerprint, open, seal } from './crypto';
 
 /** The SDK's sessions, in the app's database (sdk §9.1). Nothing is returned after its expiry. */
@@ -83,7 +83,8 @@ export const tokenStore: TokenStore = {
   },
 
   async lock(sub, work) {
-    const client = await db().connect();
+    // A session lock, held across a call to core: on the direct address, which a pooler is never in front of.
+    const client = await directDb().connect();
     try {
       await client.query('SELECT pg_advisory_lock(hashtext($1))', [`__NAME__-token:${sub}`]);
       return await work();

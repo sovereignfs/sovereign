@@ -42,6 +42,7 @@ export function layout(stateDir: string) {
     backups: path.join(stateDir, 'backups'),
     pki: path.join(stateDir, 'pki'),
     proxy: path.join(stateDir, 'proxy'),
+    pooler: path.join(stateDir, 'pooler'),
     state: path.join(stateDir, STATE_FILE),
     ageKey: path.join(stateDir, 'age.key'),
     lock: path.join(stateDir, 'lock'),

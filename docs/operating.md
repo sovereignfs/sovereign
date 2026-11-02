@@ -177,11 +177,36 @@ limit (four fifths or more), which is the time to raise it.
   pools.
 - A new `maxConnections` **restarts the database server**, and the deployment says so before it does. Core and the apps reconnect. A
   lower limit on a role never ends a connection that is open: it applies to the next one.
-- An app is given two addresses for its database, `<PREFIX>_POSTGRES_URL` and `<PREFIX>_POSTGRES_DIRECT_URL`, both the database server for
-  now. When a pooler is offered, only an app whose manifest says `database.pooling: transaction` (`./sv app add` tells you) goes through
-  it, and the direct address stays the server itself, so an app that needs a session is never moved by what you turn on.
+- An app is given two addresses for its database, `<PREFIX>_POSTGRES_URL` and `<PREFIX>_POSTGRES_DIRECT_URL`. They are the database
+  server, until you turn the pooler on (below), and then only an app whose manifest says `database.pooling: transaction` (`./sv app add`
+  tells you) has the first go through it. The direct address stays the server itself, so an app that needs a session is never moved by
+  what you turn on.
 - An app reads its pool size from `<PREFIX>_POSTGRES_POOL_MAX`, which the app template does (two of those connections go to the direct address). An app made before this keeps its own pool,
   and its role's limit is what holds it.
+
+### The connection pooler
+
+You do not need one until your apps' connections do not fit the server: `./sv database` shows the budget, and `./sv status` and `./sv doctor`
+warn when a role or the server is near its limit. A pooler lets apps share server connections instead of holding their own, so more apps fit.
+
+```bash
+./sv database pooler enable [--pool-size N] [--max-clients N]
+./sv push && ./sv deploy
+./sv database pooler disable    # and the same two commands, to go back
+```
+
+- It is PgBouncer in transaction mode, in this project's own image, started by the next deployment as `sv-pooler`. It publishes no port.
+- **Only an app that says it can use it goes through it:** its manifest declares `database.pooling: transaction`, which the app template
+  does. Every other app, and core always, connects to the database server as before, so turning it on cannot break an app that needs a
+  session. `./sv database pooler enable` lists which apps go through it.
+- `--pool-size` is how many server connections the pooler may open for each app that goes through it (default 5), and `--max-clients` how many
+  connections those apps may open to the pooler between them (default 200). A pooled app's role is then limited to its `--pool-size`,
+  plus 2 for its direct address and 2 of headroom, which is what counts against `maxConnections`: with a pool size of 2 each pooled app costs 6
+  of the server's connections instead of 12.
+- An app that goes through it is restarted by the deployment that turns it on or off, so it reads its new address.
+- `./sv status` shows each app's pool: clients active and waiting, and server connections active and idle.
+- It keeps no data, and holds no password that the server did not generate. Turning it off and on again changes nothing else.
+- It needs a toolkit release that publishes it: if `enable` says the image cannot be found, `./sv upgrade` first.
 
 ## Updating
 

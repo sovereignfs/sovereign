@@ -21,6 +21,8 @@ export const RELEASE = {
     proxy: 'caddy:2.10',
     /** The inbox that catches mail on a development or staging instance (operator-cli §6.4.2). */
     mail: 'axllent/mailpit:v1.33.0',
+    /** The connection pooler, this repository's own image at the toolkit's version (operator-cli §6.4.5). */
+    pooler: 'ghcr.io/sovereignfs/pgbouncer',
   },
   /** The PostgreSQL major version `sv setup` writes. */
   database: '18',

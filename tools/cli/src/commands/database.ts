@@ -8,9 +8,12 @@ import {
   ROLE_HEADROOM,
   SUPERUSER_RESERVE,
   appPool,
+  appRoleLimit,
   connectionBudget,
   corePool,
   maxConnectionsOf,
+  poolerClients,
+  poolerPool,
   roleLimit,
 } from '../suite/connections.js';
 import { SuiteFile } from '../suite/files.js';
@@ -24,12 +27,13 @@ async function show(ctx: Context, argv: string[]): Promise<void> {
   positionals(
     args,
     0,
-    'sv database [--json]  |  sv database set [--max-connections N] [--core N] [--app N]',
+    'sv database [--json]  |  sv database set ...  |  sv database pooler enable|disable',
   );
   const suite = (await SuiteFile.load(ctx.root)).value;
-  const { has, unread } = await appsWithDatabase(ctx, suite);
-  const budget = connectionBudget(suite, has);
+  const { has, pooled, unread } = await appsWithDatabase(ctx, suite);
+  const budget = connectionBudget(suite, has, pooled);
   const max = maxConnectionsOf(suite);
+  const through = (name: string) => suite.database.pooler !== undefined && pooled(name);
   const hosted = Object.entries(suite.apps ?? {}).filter(([, app]) => !isExternal(app));
   const document = {
     postgres: suite.database.version,
@@ -42,9 +46,19 @@ async function show(ctx: Context, argv: string[]): Promise<void> {
         .map(([name]) => ({
           name,
           pool: appPool(suite, name),
-          limit: roleLimit(appPool(suite, name)),
+          limit: appRoleLimit(suite, name, through(name)),
+          pooled: through(name),
         })),
     ],
+    pooler: suite.database.pooler
+      ? {
+          poolSize: poolerPool(suite),
+          maxClients: poolerClients(suite),
+          clients: budget.clients?.used ?? 0,
+          apps: hosted.map(([name]) => name).filter((name) => has(name) && through(name)),
+          direct: hosted.map(([name]) => name).filter((name) => has(name) && !through(name)),
+        }
+      : null,
     withoutDatabase: hosted.filter(([name]) => !has(name)).map(([name]) => name),
     used: budget.used,
     available: budget.available,
@@ -64,7 +78,7 @@ async function show(ctx: Context, argv: string[]): Promise<void> {
   );
   for (const role of document.roles) {
     ctx.io.out(
-      `  ${role.name.padEnd(14)} pool ${String(role.pool).padEnd(4)} role limit ${role.limit}${role.name === 'core' ? '' : own(role.name)}`,
+      `  ${role.name.padEnd(14)} pool ${String(role.pool).padEnd(4)} role limit ${role.limit}${role.name === 'core' ? '' : own(role.name)}${'pooled' in role && role.pooled ? ' (through the pooler)' : ''}`,
     );
   }
   for (const name of document.withoutDatabase) ctx.io.out(`  ${name.padEnd(14)} has no database`);
@@ -75,9 +89,17 @@ async function show(ctx: Context, argv: string[]): Promise<void> {
         : `${budget.available - budget.used} left`
     }.`,
   );
+  if (document.pooler) {
+    const { poolSize, maxClients, clients, apps, direct } = document.pooler;
+    ctx.io.out(
+      `Pooler: on, ${poolSize} server connections for each app that goes through it, taking ${maxClients} clients (${clients} asked for). ${
+        apps.length > 0 ? `Through it: ${apps.join(', ')}.` : 'No app goes through it.'
+      }${direct.length > 0 ? ` Direct, since they do not declare transaction pooling or have none: ${direct.join(', ')}.` : ''}`,
+    );
+  } else ctx.io.out('Pooler: off (sv database pooler enable turns it on).');
   if (unread.length > 0)
     ctx.io.err(
-      `Could not read the manifest of ${unread.join(', ')}, so ${unread.length === 1 ? 'it is' : 'they are'} counted as having a database.`,
+      `Could not read the manifest of ${unread.join(', ')}, so ${unread.length === 1 ? 'it is' : 'they are'} counted as having a database and as not pooled.`,
     );
   if (budget.exceeded && !budget.explicit)
     ctx.io.err(
@@ -154,8 +176,77 @@ async function set(ctx: Context, argv: string[]): Promise<void> {
     );
 }
 
+/** `sv database pooler enable|disable` (operator-cli §4.2.2): writes `database.pooler` and the pooler's image in the lock. Nothing on the server. */
+async function pooler(ctx: Context, argv: string[]): Promise<void> {
+  const [verb, ...rest] = argv;
+  const usage =
+    'sv database pooler enable [--pool-size N] [--max-clients N]  |  sv database pooler disable';
+  if (verb !== 'enable' && verb !== 'disable') throw new Refused(`Usage: ${usage}`);
+  const args = parseArgs(
+    rest,
+    verb === 'enable' ? { 'pool-size': 'value', 'max-clients': 'value' } : {},
+  );
+  positionals(args, 0, usage);
+  const file = await SuiteFile.load(ctx.root);
+  const before = file.value.database.pooler;
+
+  if (verb === 'disable') {
+    if (before === undefined) {
+      ctx.io.err('The pooler is already off. Nothing to change.');
+      return;
+    }
+    await commit(ctx, file, (doc) => doc.deleteIn(['database', 'pooler']));
+    ctx.io.err(
+      'The pooler is off. Run sv push and sv deploy: every app goes back to the database server, and sv-pooler is removed. It kept no data.',
+    );
+    return;
+  }
+
+  const size = args.values.has('pool-size')
+    ? count(args.values.get('pool-size') as string, 'pool-size', 2, 100)
+    : undefined;
+  const clients = args.values.has('max-clients')
+    ? count(args.values.get('max-clients') as string, 'max-clients', 20, 5000)
+    : undefined;
+  if (before !== undefined && size === undefined && clients === undefined) {
+    ctx.io.err(
+      'The pooler is already on. Pass --pool-size or --max-clients to change it, or sv database to see it.',
+    );
+    return;
+  }
+  const change = (doc: Document) => {
+    if (before === undefined) doc.setIn(['database', 'pooler'], doc.createNode({}));
+    setOrRemove(doc, ['database', 'pooler', 'poolSize'], size);
+    setOrRemove(doc, ['database', 'pooler', 'maxClients'], clients);
+  };
+  const next = file.preview(change);
+  const { budget, pooled, unread } = await refuseOverBudget(ctx, next);
+  try {
+    await commit(ctx, file, change);
+  } catch (error) {
+    if (error instanceof Refused) throw error;
+    throw new Refused(
+      `The pooler's image could not be found: ${error instanceof Error ? error.message : String(error)}`,
+      'This release of the toolkit publishes it at its own version: sv upgrade moves to the newest. Nothing was changed.',
+    );
+  }
+  const hosted = Object.keys(next.apps ?? {}).filter((name) => pooled(name));
+  ctx.io.err(
+    `The pooler is on: ${poolerPool(next)} server connections for each app that goes through it, taking ${poolerClients(next)} clients. ${budget.used} of ${budget.available} connections are shared out.`,
+  );
+  ctx.io.err(
+    hosted.length > 0
+      ? `Through it: ${hosted.join(', ')}. Every other app, and core, connects to the database server itself, as before.`
+      : 'No app goes through it yet: only an app whose manifest declares database.pooling: transaction does. Every app connects to the database server itself, as before.',
+  );
+  if (unread.length > 0)
+    ctx.io.err(`Could not read the manifest of ${unread.join(', ')}; counted as not pooled.`);
+  ctx.io.err('Run sv push and sv deploy to start it.');
+}
+
 export async function database(ctx: Context, argv: string[]): Promise<void> {
   const [verb, ...rest] = argv;
   if (verb === 'set') return set(ctx, rest);
+  if (verb === 'pooler') return pooler(ctx, rest);
   return show(ctx, argv);
 }

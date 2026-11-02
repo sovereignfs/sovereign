@@ -146,3 +146,38 @@ describe('Mailpit in the lock', () => {
     expect((await lockFor(suite())).images.mail).toBeUndefined();
   });
 });
+
+describe('the pooler in the lock', () => {
+  const pooled = (): Suite => ({ ...suite(), database: { version: '18', pooler: {} } });
+  const lockOf = (s: Suite) => refreshedLock(s, undefined, async (ref) => digestOf(ref));
+
+  it('is an image only when suite.yml turns it on, at the toolkit’s own version', () => {
+    expect(wantedImages(suite()).pooler).toBeUndefined();
+    expect(wantedImages(pooled()).pooler).toBe(`${RELEASE.images.pooler}:${RELEASE.version}`);
+  });
+
+  it('is pinned when it is on and left out when it is off', async () => {
+    expect((await lockOf(pooled())).images.pooler?.ref).toBe(
+      `${RELEASE.images.pooler}:${RELEASE.version}`,
+    );
+    expect((await lockOf(suite())).images.pooler).toBeUndefined();
+  });
+
+  it('is a problem when it is wanted and missing, and when it is held and not wanted', async () => {
+    const without = await lockOf(suite());
+    expect(lockProblems(pooled(), without)).toEqual([
+      { at: 'images.pooler', message: 'is not in suite.lock' },
+    ]);
+    const held = await lockOf(pooled());
+    expect(lockProblems(suite(), held)).toEqual([
+      { at: 'images.pooler', message: 'is in suite.lock and suite.yml does not use it' },
+    ]);
+    expect(lockProblems(pooled(), held)).toEqual([]);
+  });
+
+  it('keeps its digest when it is refreshed, so a moved tag changes nothing', async () => {
+    const held = await lockOf(pooled());
+    const again = await refreshedLock(pooled(), held, async () => digestOf('moved'));
+    expect(again.images.pooler).toEqual(held.images.pooler);
+  });
+});

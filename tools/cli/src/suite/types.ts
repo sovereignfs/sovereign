@@ -42,6 +42,7 @@ export type Suite = {
     version: string;
     maxConnections?: number;
     connections?: { core?: number; app?: number };
+    pooler?: { poolSize?: number; maxClients?: number };
   };
   server: {
     host: string;
@@ -61,7 +62,14 @@ export type Digest = { ref: string; digest: string };
 /** `suite.lock` (contracts/suite.md §2). */
 export type Lock = {
   schema: 1;
-  images: { cli: Digest; core: Digest; database: Digest; proxy: Digest; mail?: Digest };
+  images: {
+    cli: Digest;
+    core: Digest;
+    database: Digest;
+    proxy: Digest;
+    mail?: Digest;
+    pooler?: Digest;
+  };
   apps?: Record<string, Digest>;
 };
 

@@ -133,7 +133,8 @@ organization's Packages settings: it must be public for the `docker pull` above 
 ## Releasing the toolkit
 
 The operator's toolkit is `@sovereignfs/cli` (`sv`), `@sovereignfs/create` (`npm create @sovereignfs`) and `ghcr.io/sovereignfs/cli`,
-the image the server runs `sv apply` from. They are one release at one version, on the tag `cli-vX.Y.Z`, and
+the image the server runs `sv apply` from, with `ghcr.io/sovereignfs/pgbouncer` (`tools/pgbouncer`), the optional connection pooler,
+published at the same version in the same job because `suite.lock` pins it by the toolkit's tag. They are one release at one version, on the tag `cli-vX.Y.Z`, and
 `.github/workflows/publish-cli.yml` does the rest. They are AGPL-3.0-or-later and are run, not imported, which is why the package
 check treats them apart from the libraries above (a `bin` and not an exports map).
 

@@ -115,7 +115,23 @@ A secret MUST NOT be in `env`. A name ending in `_PASSWORD`, `_SECRET`, `_KEY`, 
 | `maxConnections` | no       | The server's `max_connections`, 20 to 1000. Default 100, which is PostgreSQL's own                                                                       |
 | `connections`    | no       | How many connections each may hold: `core` and `app` (each hosted app), 2 to 100. Default 10 for both, which is what core's and the template's pools are |
 
+| `pooler` | no | Runs a connection pooler for the apps that can use one (below). Absent: none runs. Present, even as `{}`: it does |
+
 PostgreSQL is the only engine in this version, so there is no field for it.
+
+**The pooler** ([operator-cli §6.4.5](../docs/specs/operator-cli.md)) is PgBouncer in transaction mode, in this repository's own image. It is for
+an instance with many apps, which would otherwise share the server's connections one for one.
+
+| Field        | Required | Meaning                                                                                           |
+| ------------ | -------- | ------------------------------------------------------------------------------------------------- |
+| `poolSize`   | no       | The server connections the pooler may open for each app that goes through it, 2 to 100. Default 5 |
+| `maxClients` | no       | The connections all the apps together may open to the pooler, 20 to 5000. Default 200             |
+
+- Only an app whose manifest declares `database.pooling: transaction` goes through it ([`app-manifest.md`](app-manifest.md) §2.2). Any other app, and core
+  always, connect to the database server itself, so turning it on or off changes nothing for them.
+- A pooled app's role holds at most its `poolSize` (or its own `connections`, if smaller) for the pooler, plus 2 for the direct address
+  and the **2** of headroom of every role. It is that sum that counts against `maxConnections` for such an app.
+- The connections the pooled apps' own pools may open MUST add up to no more than `maxClients`.
 
 **Connection limits** ([operator-cli §6.4.4](../docs/specs/operator-cli.md)). A service's `connections` is the size of its connection
 pool, given to it as `SV_POSTGRES_POOL_MAX` or `<PREFIX>_POSTGRES_POOL_MAX`. Its role's `CONNECTION LIMIT` is that number plus **2**, so
@@ -242,13 +258,16 @@ images:
   mail: # only when the instance runs Mailpit (§1.1.1)
     ref: axllent/mailpit:v1.33.0
     digest: sha256:6666666666666666666666666666666666666666666666666666666666666666
+  pooler: # only when the instance runs the pooler (§1.3)
+    ref: ghcr.io/sovereignfs/pgbouncer:1.4.0
+    digest: sha256:7777777777777777777777777777777777777777777777777777777777777777
 apps:
   notes:
     ref: ghcr.io/example/notes:1.2.0
     digest: sha256:5555555555555555555555555555555555555555555555555555555555555555
 ```
 
-A digest is the image's multi-architecture one, so a lockfile written on one machine runs on another. `images.mail` MUST be here when the instance runs Mailpit, and MUST NOT be otherwise. Every hosted app in
+A digest is the image's multi-architecture one, so a lockfile written on one machine runs on another. `images.mail` MUST be here when the instance runs Mailpit, and MUST NOT be otherwise; the same holds for `images.pooler` and `database.pooler`. Every hosted app in
 `suite.yml` MUST be here, and nothing else may be. An external app runs nothing, and is not.
 
 ---

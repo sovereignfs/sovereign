@@ -3,6 +3,7 @@ import { cp, mkdir, readFile, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { byDigest } from '../apply/render.js';
 import { readConnections } from '../apply/database-use.js';
+import { readPools } from '../apply/pooler.js';
 import { docker, dockerVersions } from '../apply/docker.js';
 import type { Host } from '../apply/host.js';
 import { layout, readState } from '../apply/state.js';
@@ -313,6 +314,7 @@ async function status(host: Host, options: ReceiveOptions): Promise<number> {
       containers,
       deploying: await running(host, APPLY_CONTAINER),
       connections: await readConnections(host),
+      pools: await readPools(host),
     })}\n`,
   );
   return 0;

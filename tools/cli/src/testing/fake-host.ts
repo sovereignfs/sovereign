@@ -26,6 +26,10 @@ export class FakeDocker {
   /** What the question about connections is answered with (apply/database-use.ts), as JSON text; empty is an answer that cannot be read. */
   connectionsReport = '';
   caddyReloads = 0;
+  /** What the pooler's console answers to `SHOW POOLS`, as CSV with its header; empty is an answer that cannot be read. */
+  poolsReport = '';
+  /** The containers told to reload with a signal, in order, as `name SIGNAL`. */
+  signals: string[] = [];
   /** What was run once with `compose run`, after the word run. */
   composeRuns: string[][] = [];
   /** What `sovereign-admin instance deletions export` prints. */
@@ -56,6 +60,7 @@ export class FakeDocker {
     'sovereign-proxy': 'sv-proxy',
     'sovereign-core': 'sv-core',
     'sovereign-mailpit': 'sv-mailpit',
+    'sovereign-pooler': 'sv-pooler',
   };
 
   async run(
@@ -97,6 +102,13 @@ export class FakeDocker {
     }
     if (command === 'stop') {
       for (const name of rest) this.containers.delete(name);
+      return ok('');
+    }
+    if (command === 'kill') {
+      const signal = rest[rest.indexOf('--signal') + 1] ?? '';
+      const name = rest[rest.length - 1] as string;
+      if (!this.containers.has(name)) return { code: 1, stdout: '', stderr: 'No such container' };
+      this.signals.push(`${name} ${signal}`);
       return ok('');
     }
     if (command === 'rm') {
@@ -272,6 +284,11 @@ export class FakeDocker {
     const [container, program, ...more] = words;
     if (!this.containers.has(container as string))
       return { code: 1, stdout: '', stderr: `No such container: ${container}` };
+    if (program === 'psql' && more.includes('SHOW POOLS')) {
+      return this.poolsReport === ''
+        ? { code: 1, stdout: '', stderr: 'could not connect' }
+        : ok(this.poolsReport);
+    }
     if (program === 'psql') {
       if ((options.input ?? '').includes('json_build_object')) return ok(this.connectionsReport);
       this.psql.push(options.input ?? '');

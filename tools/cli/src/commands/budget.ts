@@ -6,11 +6,12 @@ import { readManifest } from '../manifest.js';
 import {
   connectionBudget,
   describeBudget,
+  describeClients,
   maxConnectionsOf,
   type Budget,
 } from '../suite/connections.js';
 import { readLock } from '../suite/files.js';
-import { hasDatabase, isExternal, type Suite } from '../suite/types.js';
+import { canPool, hasDatabase, isExternal, type Suite } from '../suite/types.js';
 
 /**
  * Which hosted apps have a database, read from their manifests as `sv app add` reads them. An app whose manifest cannot be read counts as
@@ -19,9 +20,14 @@ import { hasDatabase, isExternal, type Suite } from '../suite/types.js';
 export async function appsWithDatabase(
   ctx: Context,
   suite: Suite,
-): Promise<{ has: (name: string) => boolean; unread: string[] }> {
+): Promise<{
+  has: (name: string) => boolean;
+  pooled: (name: string) => boolean;
+  unread: string[];
+}> {
   const lock = await readLock(ctx.root);
   const answers = new Map<string, boolean>();
+  const poolable = new Map<string, boolean>();
   const unread: string[] = [];
   for (const [name, app] of Object.entries(suite.apps ?? {})) {
     if (isExternal(app)) continue;
@@ -35,27 +41,39 @@ export async function appsWithDatabase(
         lock?.apps?.[name]?.digest,
       );
       answers.set(name, hasDatabase(manifest));
+      poolable.set(name, canPool(manifest));
     } catch {
       unread.push(name);
     }
   }
-  return { has: (name) => answers.get(name) ?? true, unread };
+  // An app whose manifest cannot be read is counted as having a database and as not pooled, so the budget is never too low.
+  return {
+    has: (name) => answers.get(name) ?? true,
+    pooled: (name) => poolable.get(name) ?? false,
+    unread,
+  };
 }
 
 /** The budget for `suite`, refused when the limits do not fit: what `sv database set` and `sv app update --connections` write must. */
 export async function refuseOverBudget(
   ctx: Context,
   suite: Suite,
-): Promise<{ budget: Budget; unread: string[] }> {
-  const { has, unread } = await appsWithDatabase(ctx, suite);
-  const budget = connectionBudget(suite, has);
+): Promise<{ budget: Budget; pooled: (name: string) => boolean; unread: string[] }> {
+  const { has, pooled, unread } = await appsWithDatabase(ctx, suite);
+  const budget = connectionBudget(suite, has, pooled);
+  if (budget.clientsExceeded) {
+    throw new Refused(
+      describeClients(budget),
+      'Raise it with sv database pooler enable --max-clients N, or lower the pools of the apps. Nothing was changed.',
+    );
+  }
   if (budget.exceeded) {
     throw new Refused(
       describeBudget(budget, maxConnectionsOf(suite)),
       'Lower the pools with sv database set --core N --app N, or raise the server with --max-connections N. Nothing was changed.',
     );
   }
-  return { budget, unread };
+  return { budget, pooled, unread };
 }
 
 /** What a role is called to an operator: core, or the app it was made for. */

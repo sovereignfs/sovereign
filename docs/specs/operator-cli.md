@@ -199,6 +199,10 @@ The limits of §6.4.4 are set with commands and never by editing `suite.yml`, so
   restarts the database server when it is deployed.
 - `sv app update NAME --connections N` does the same for one hosted app, with the same refusals, and is refused for an external app.
 - The budget is read against the file as it would be after the change, not as it is.
+- `sv database pooler enable [--pool-size N] [--max-clients N]` writes `database.pooler` and pins the pooler's image in `suite.lock`
+  (`images.pooler`); `sv database pooler disable` removes both. Run again, `enable` changes the numbers it is given and keeps the rest. Both
+  check the budget as it would be after the change (§6.4.5), change nothing when they refuse, change nothing on the server, and say which
+  apps would go through the pooler and which would not, and why (§4.2: only what the manifest declares). `sv database` shows the pooler.
 
 ### 4.3 Secrets
 
@@ -426,6 +430,31 @@ Core and every hosted app that has a database share one PostgreSQL server, so `s
   with each role's share; when they have set none it deploys with a warning that names `sv database set`.
 - **Nothing is cut.** A lower limit applies to the next connection and ends none.
 
+### 6.4.5 The pooler
+
+When `database.pooler` is set, `sv apply` runs `sv-pooler`, PgBouncer in transaction mode (`contracts/suite.md` §1.3, [research
+0003](../research/0003-database-connections.md)), and routes an app through it only when that app declares `database.pooling: transaction`.
+
+- **The image is this repository's own,** `ghcr.io/sovereignfs/pgbouncer`, built from Alpine's package for linux/amd64 and linux/arm64,
+  released with the toolkit at its version and pinned by digest in `suite.lock` (`images.pooler`).
+- **It runs where it is needed, and publishes nothing.** `sv-pooler` is on core's network, to reach the database server, and on the network of
+  each app that goes through it, where its name is `sv-pooler`. It publishes no port and is on no other network.
+- **Core is never routed through it.** Nor is an app that has not declared `transaction`: its `<PREFIX>_POSTGRES_URL` is the database server, as
+  before. `<PREFIX>_POSTGRES_DIRECT_URL` is the database server for every app.
+- **What it knows is what the server made.** Its user list is written to `secrets/` on each deployment from the role passwords `sv apply`
+  generated, and holds no other credential; clients are checked with SCRAM. It also has the one console user `sv status` reads its pools with,
+  which only the container's own account can use. Nothing it is given is on a command line.
+- **Each app's pool is bounded by its role.** An app's database in the pooler is limited to its pool size; with the 2 connections of the
+  direct address and the headroom, that sum is the role's `CONNECTION LIMIT` (§6.4.4), and it is the sum that the budget checks. The connections
+  the pooled apps may open to the pooler MUST add up to no more than `maxClients`, or `sv apply` refuses.
+- **An app is moved when its route changes.** An app that goes through the pooler carries the label `io.github.sovereignfs.database-route:
+pooler`, so turning the pooler on or off recreates it and it reads its new address, which a running process would not; an app not
+  routed carries no label, so an instance that never turns the pooler on is not touched.
+- **Changing it loses nothing.** It keeps no data. A change of its numbers or of which apps use it is read by the running container, which is
+  told to reload; turning it off removes the container and the files, and every app is back on the server itself.
+- **`sv status` shows its pools** (`pools` in the answer: for each app, the clients active and waiting and the server connections active and
+  idle), from the pooler's own console, and says nothing when the pooler is not running.
+
 ### 6.5 What it refuses
 
 `sv apply` MUST refuse to run, changing nothing, when:
@@ -434,7 +463,8 @@ Core and every hosted app that has a database share one PostgreSQL server, so `s
   and any app could then act as the person on core ([core-app §3.5](core-app.md));
 - `SV_AUTH_WEBAUTHN_RP_ID` is set, since apps never run a passkey ceremony and changing it later breaks passkeys;
 - `suite.yml` names a value `sv apply` itself provides (`contracts/suite.md`);
-- the connection limits add up to more than the server allows, when the operator set `maxConnections` or `connections` (§6.4.4);
+- the connection limits add up to more than the server allows, when the operator set `maxConnections` or `connections` (§6.4.4), or the pooled apps
+  may open more connections than the pooler takes (§6.4.5);
 - the toolkit does not support the instance's core version or `schema`;
 - core's version would go backward, unless the run is a restore;
 - `database.version` differs from the running server's major version;
@@ -777,3 +807,4 @@ with a DNS provider's module, which the stock image does not carry.
 | 2026-11-01 | `sv seed` and core's `SV_ENVIRONMENT` (§4.4, §6.4, §13): test accounts and a sample app on development and staging instances, refused on production: [workstream 0002](../workstreams/0002-test-instances.md).                                                                                      |
 | 2026-11-02 | `sv push` refreshes a lock that no longer matches `suite.yml`, and `sv deploy --ssh` brings the server's toolkit to the pinned one before it sends the commit (§4.5, §8.1, §8.4, §10.1.1): [research 0003](../research/0003-database-connections.md).                                               |
 | 2026-11-02 | An app's manifest may declare `database.pooling: transaction`, and every app with a database is given `<PREFIX>_POSTGRES_DIRECT_URL` (§2.2, §4.2, §4.2.1, §6.4.4): [research 0003](../research/0003-database-connections.md).                                                                       |
+| 2026-11-02 | The optional pooler: `database.pooler`, `images.pooler`, `sv database pooler enable                                                                                                                                                                                                                 | disable`, `sv-pooler`in`sv apply`and its pools in`sv status` (§4.2.2, §6.4.5): [research 0003](../research/0003-database-connections.md). |

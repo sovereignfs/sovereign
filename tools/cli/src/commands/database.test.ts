@@ -62,7 +62,7 @@ describe('sv database', () => {
     expect(out.maxConnections).toBe(100);
     expect(out.roles).toEqual([
       { name: 'core', pool: 10, limit: 12 },
-      { name: 'notes', pool: 10, limit: 12 },
+      { name: 'notes', pool: 10, limit: 12, pooled: false },
     ]);
     expect(out.withoutDatabase).toEqual(['static']);
     expect(out.left).toBe(73);
@@ -206,5 +206,133 @@ describe('sv app update --connections', () => {
     const done = await sv(world, 'app', 'update', 'wiki', '--connections', '4');
     expect(done.code).toBe(2);
     expect(done.text).toContain('--connections is for hosted apps');
+  });
+});
+
+describe('sv database pooler', () => {
+  const POOLED = manifestOf({ database: { pooling: 'transaction' } });
+  const poolerInstance = async () => {
+    world = makeWorld({
+      images: {
+        [NOTES_IMAGE]: { manifest: POOLED },
+        [STATIC_IMAGE]: {
+          manifest: manifestOf({ name: 'Static', prefix: 'STATIC', database: false, generate: [] }),
+        },
+      },
+    });
+    await setUpWorld(world, '--deploy', 'ssh');
+    await sv(world, 'app', 'add', 'notes', '--image', NOTES_IMAGE, '--yes');
+    await sv(world, 'app', 'add', 'static', '--image', STATIC_IMAGE, '--yes');
+  };
+  const lockedImages = () =>
+    (parse(lock()) as { images: Record<string, { ref: string } | undefined> }).images;
+
+  it('turns it on: writes database.pooler, pins its image, and says which apps go through it and which do not', async () => {
+    await poolerInstance();
+    const done = await sv(world, 'database', 'pooler', 'enable');
+    expect(done.code).toBe(0);
+    expect(suite().database.pooler).toEqual({});
+    expect(lockedImages().pooler?.ref).toMatch(/^ghcr\.io\/sovereignfs\/pgbouncer:/);
+    expect(done.text).toContain('Through it: notes.');
+    expect(done.text).toContain('core, connects to the database server itself');
+    expect(done.text).toContain('sv push and sv deploy');
+  });
+
+  it('takes the numbers it is given, keeps the rest when run again, and says it is already on when given none', async () => {
+    await poolerInstance();
+    await sv(world, 'database', 'pooler', 'enable', '--pool-size', '4', '--max-clients', '100');
+    expect(suite().database.pooler).toEqual({ poolSize: 4, maxClients: 100 });
+    await sv(world, 'database', 'pooler', 'enable', '--pool-size', '6');
+    expect(suite().database.pooler).toEqual({ poolSize: 6, maxClients: 100 });
+    const same = await sv(world, 'database', 'pooler', 'enable');
+    expect(same.code).toBe(0);
+    expect(same.text).toContain('already on');
+    await sv(world, 'database', 'pooler', 'enable', '--pool-size', 'default');
+    expect(suite().database.pooler).toEqual({ maxClients: 100 });
+  });
+
+  it('refuses a number out of range, and numbers that do not fit, changing nothing', async () => {
+    await poolerInstance();
+    const before = raw();
+    for (const bad of [
+      ['--pool-size', '1'],
+      ['--pool-size', '101'],
+      ['--max-clients', '19'],
+      ['--max-clients', '5001'],
+      ['--pool-size', 'x'],
+    ]) {
+      const done = await sv(world, 'database', 'pooler', 'enable', ...bad);
+      expect(done.code, bad.join(' ')).toBe(2);
+    }
+    // Ten apps' pools may not open more than the pooler takes.
+    await sv(world, 'app', 'update', 'notes', '--connections', '50');
+    const kept = raw();
+    const clients = await sv(world, 'database', 'pooler', 'enable', '--max-clients', '20');
+    expect(clients.code).toBe(2);
+    expect(clients.text).toContain('50 connections to it, and it takes 20');
+    expect(raw()).toBe(kept);
+    expect(before).not.toBe(kept);
+    expect(suite().database.pooler).toBeUndefined();
+    expect(lockedImages().pooler).toBeUndefined();
+  });
+
+  it('turns it off: removes database.pooler and its image from the lock, and says so when it is already off', async () => {
+    await poolerInstance();
+    const off = await sv(world, 'database', 'pooler', 'disable');
+    expect(off.code).toBe(0);
+    expect(off.text).toContain('already off');
+    await sv(world, 'database', 'pooler', 'enable');
+    const done = await sv(world, 'database', 'pooler', 'disable');
+    expect(done.code).toBe(0);
+    expect(suite().database.pooler).toBeUndefined();
+    expect(lockedImages().pooler).toBeUndefined();
+    expect(done.text).toContain('every app goes back to the database server');
+  });
+
+  it('turned off and on again, leaves suite.yml and suite.lock as they were', async () => {
+    await poolerInstance();
+    await sv(world, 'database', 'pooler', 'enable');
+    const first = [raw(), lock()];
+    await sv(world, 'database', 'pooler', 'disable');
+    await sv(world, 'database', 'pooler', 'enable');
+    expect([raw(), lock()]).toEqual(first);
+  });
+
+  it('says a pooled app costs less of the server, so more apps fit, and shows the pooler', async () => {
+    await poolerInstance();
+    await sv(world, 'database', 'pooler', 'enable', '--pool-size', '2');
+    const done = await sv(world, 'database');
+    expect(done.text).toMatch(/notes\s+pool 10\s+role limit 6 \(through the pooler\)/);
+    expect(done.text).toContain('Pooler: on, 2 server connections for each app');
+    expect(done.text).toContain('Through it: notes.');
+    const json = JSON.parse((await sv(world, 'database', '--json')).out.join('\n')) as {
+      pooler: { apps: string[]; poolSize: number };
+    };
+    expect(json.pooler).toMatchObject({ apps: ['notes'], poolSize: 2 });
+    await sv(world, 'database', 'pooler', 'disable');
+    expect((await sv(world, 'database')).text).toContain('Pooler: off');
+  });
+
+  it('says what to do when the pooler’s image is not published, and changes nothing', async () => {
+    await poolerInstance();
+    const before = [raw(), lock()];
+    world.ctx.registry = {
+      ...world.ctx.registry,
+      digest: async (ref: string) => {
+        if (ref.includes('pgbouncer')) throw new Error('manifest unknown');
+        return `sha256:${'a'.repeat(64)}`;
+      },
+    } as typeof world.ctx.registry;
+    const done = await sv(world, 'database', 'pooler', 'enable');
+    expect(done.code).toBe(2);
+    expect(done.text).toContain("The pooler's image could not be found");
+    expect(done.text).toContain('sv upgrade');
+    expect([raw(), lock()]).toEqual(before);
+  });
+
+  it('refuses a verb it does not know', async () => {
+    await poolerInstance();
+    expect((await sv(world, 'database', 'pooler', 'start')).code).toBe(2);
+    expect((await sv(world, 'database', 'pooler')).code).toBe(2);
   });
 });

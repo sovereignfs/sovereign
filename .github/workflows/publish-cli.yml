@@ -2,6 +2,7 @@ name: Publish toolkit
 
 # Releases the operator toolkit when its tag is pushed:
 #   cli-vX.Y.Z  -> ghcr.io/sovereignfs/cli:X.Y.Z, :X.Y and :latest (linux/amd64 and linux/arm64),
+#                  and ghcr.io/sovereignfs/pgbouncer:X.Y.Z and :X.Y, the optional pooler the toolkit pins at its own version,
 #                  then @sovereignfs/cli and @sovereignfs/create on npm.
 # The image comes first and `create` last, because a repository made by `create@X` pins the image of toolkit X and cannot be set up
 # until it exists. The toolkit and `create` are released together at one version. docs/releasing.md has the whole process.
@@ -37,6 +38,7 @@ jobs:
       packages: write
     env:
       IMAGE: ghcr.io/${{ github.repository_owner }}/cli
+      POOLER_IMAGE: ghcr.io/${{ github.repository_owner }}/pgbouncer
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -104,6 +106,25 @@ jobs:
             ${{ env.IMAGE }}:latest
           labels: |
             org.opencontainers.image.title=Sovereign operator toolkit
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.licenses=AGPL-3.0-or-later
+
+      # The pooler an instance may turn on (operator-cli §6.4.5), at the toolkit's own version, since `suite.lock` pins it by that tag.
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: tools/pgbouncer
+          platforms: linux/amd64,linux/arm64
+          push: true
+          no-cache: true
+          provenance: mode=max
+          sbom: true
+          tags: |
+            ${{ env.POOLER_IMAGE }}:${{ steps.version.outputs.version }}
+            ${{ env.POOLER_IMAGE }}:${{ steps.version.outputs.minor }}
+          labels: |
+            org.opencontainers.image.title=Sovereign connection pooler (PgBouncer)
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.version=${{ steps.version.outputs.version }}
             org.opencontainers.image.revision=${{ github.sha }}

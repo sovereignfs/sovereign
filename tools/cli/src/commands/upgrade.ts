@@ -145,7 +145,7 @@ async function finish(ctx: Context): Promise<void> {
 
   const was = lock?.images.cli.ref.split(':').pop();
   if (was !== RELEASE.version) changes.unshift(`toolkit: ${was ?? 'none'} → ${RELEASE.version}`);
-  for (const key of ['cli', 'core', 'database', 'proxy', 'mail'] as const) {
+  for (const key of ['cli', 'core', 'database', 'proxy', 'mail', 'pooler'] as const) {
     const old = lock?.images[key];
     const now = refreshed.images[key];
     if (old && now && (old.ref !== now.ref || old.digest !== now.digest)) {

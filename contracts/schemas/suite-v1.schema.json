@@ -47,6 +47,14 @@
             "core": { "type": "integer", "minimum": 2, "maximum": 100 },
             "app": { "type": "integer", "minimum": 2, "maximum": 100 }
           }
+        },
+        "pooler": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "poolSize": { "type": "integer", "minimum": 2, "maximum": 100 },
+            "maxClients": { "type": "integer", "minimum": 20, "maximum": 5000 }
+          }
         }
       }
     },

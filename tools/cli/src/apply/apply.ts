@@ -21,12 +21,13 @@ import {
   connectionBudget,
   corePool,
   describeBudget,
+  describeClients,
   maxConnectionsOf,
   roleLimit,
 } from '../suite/connections.js';
 import { lockProblems } from '../suite/lock.js';
 import type { Problem } from '../suite/schema.js';
-import { hasDatabase, isExternal, type Manifest, type Suite } from '../suite/types.js';
+import { canPool, hasDatabase, isExternal, type Manifest, type Suite } from '../suite/types.js';
 import {
   applyExternalApp,
   applyHostedApp,
@@ -48,6 +49,7 @@ import {
 } from './restore.js';
 import { look, refusals, refuseIfAny } from './checks.js';
 import { composeUp, docker, ensureDatabase, ensureNetwork, ensureOnNetwork } from './docker.js';
+import { applyPooler, removePooler } from './pooler.js';
 import type { Host } from './host.js';
 import { withLock } from './lock.js';
 import { CONTAINER, CORE_DATABASE, CORE_ROLE, NETWORK, PROJECT } from './names.js';
@@ -58,6 +60,7 @@ import {
   coreCompose,
   databaseCompose,
   mailCompose,
+  poolerCompose,
   proxyCompose,
   publicNames,
   type BaseInput,
@@ -130,11 +133,14 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
   const state = await readState(options.stateDir);
   const read = await readManifests(host, suite, lock);
   // The connections the limits allow (operator-cli §6.4.4): a refusal when the operator set them, a warning when they left them be.
-  const budget = connectionBudget(
-    suite,
-    (name) => read.manifests[name] !== undefined && hasDatabase(read.manifests[name]),
-  );
+  const hasDb = (name: string) =>
+    read.manifests[name] !== undefined && hasDatabase(read.manifests[name]);
+  const canPoolApp = (name: string) =>
+    read.manifests[name] !== undefined && canPool(read.manifests[name]);
+  const budget = connectionBudget(suite, hasDb, canPoolApp);
   const budgetProblems: Problem[] = [];
+  if (budget.clientsExceeded)
+    budgetProblems.push({ at: 'database.pooler', message: describeClients(budget) });
   if (budget.exceeded) {
     const said = `${describeBudget(budget, maxConnectionsOf(suite))} Raise database.maxConnections or lower connections.`;
     if (budget.explicit) budgetProblems.push({ at: 'database', message: said });
@@ -360,7 +366,32 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
   say(`Core ${suite.core.version} is up and healthy.`);
 
   // 6. Each app, in the order of suite.yml. One that fails does not stop the others (operator-cli §6.3).
+  // The pooler comes up before the apps that go through it, so each starts with somewhere to connect (operator-cli §6.4.5).
+  const pooled = new Set(
+    suite.database.pooler
+      ? Object.entries(suite.apps ?? {})
+          .filter(([name, app]) => !isExternal(app) && hasDb(name) && canPoolApp(name))
+          .map(([name]) => name)
+      : [],
+  );
+  if (suite.database.pooler) {
+    await applyPooler({
+      host,
+      suite,
+      release,
+      stateDir: options.stateDir,
+      generated,
+      pooled: [...pooled],
+    });
+    say(
+      pooled.size > 0
+        ? `The pooler is up, for ${[...pooled].join(', ')}.`
+        : 'The pooler is up. No app declares that it can use it, so none goes through it.',
+    );
+  }
+
   const appRun: AppRun = {
+    pooled,
     host,
     suite,
     lock,
@@ -390,6 +421,10 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
       failures.push({ name, message: error.message });
       host.log(`${name} failed: ${error.message}`);
     }
+  }
+  // Turned off, the pooler goes once every app is back on the server itself, so none is left holding a connection to it.
+  if (!suite.database.pooler && (await removePooler(host, options.stateDir))) {
+    say('The pooler is removed, and every app connects to the database server itself.');
   }
   // The proxy answers for an app only once it is up.
   const upstreams = Object.values(results).flatMap((result) =>
@@ -625,6 +660,7 @@ async function renderRelease(
     proxy: proxyCompose(input),
     database: databaseCompose(input),
     ...(usesMailpit(input.suite) ? { mail: mailCompose(input) } : {}),
+    ...(input.suite.database.pooler ? { pooler: poolerCompose(input) } : {}),
   };
   for (const [name, text] of Object.entries(projects)) {
     await mkdir(path.join(release, name), { recursive: true });

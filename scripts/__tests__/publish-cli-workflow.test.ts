@@ -45,6 +45,17 @@ describe('the toolkit release workflow', () => {
     );
   });
 
+  it('publishes the pooler at the toolkit’s version, before the packages, under the name the toolkit pins', () => {
+    expect(read('tools/pgbouncer/Dockerfile')).toContain('apk add --no-cache pgbouncer');
+    expect(workflow).toContain('context: tools/pgbouncer');
+    expect(workflow).toContain('POOLER_IMAGE: ghcr.io/${{ github.repository_owner }}/pgbouncer');
+    expect(workflow).toContain('${{ env.POOLER_IMAGE }}:${{ steps.version.outputs.version }}');
+    expect(workflow.indexOf('context: tools/pgbouncer')).toBeLessThan(
+      workflow.indexOf('npm:\n    name: npm'),
+    );
+    expect(read('tools/cli/src/release.ts')).toContain("pooler: 'ghcr.io/sovereignfs/pgbouncer'");
+  });
+
   it('runs the whole CI on the tagged commit before anything is published', () => {
     expect(workflow).toMatch(/validate:[\s\S]*uses: \.\/\.github\/workflows\/ci\.yml/);
     expect(workflow).toMatch(/image:[\s\S]*needs: validate/);

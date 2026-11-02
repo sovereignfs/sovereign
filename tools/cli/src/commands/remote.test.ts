@@ -333,3 +333,53 @@ describe('the connections in sv status and sv doctor', () => {
     expect((await sv(world, 'doctor')).text).not.toContain('Connections');
   });
 });
+
+describe('the pooler in sv status', () => {
+  const stateOf = (pools: unknown) => ({
+    state: { commit: head(), core: { version: CORE, healthy: true }, apps: {} },
+    current: head(),
+    containers: [],
+    deploying: false,
+    ...(pools === undefined ? {} : { pools }),
+  });
+
+  it('shows each app’s pool, and its JSON', async () => {
+    await ready();
+    await sv(world, 'push');
+    const pools = [
+      {
+        database: 'app_notes',
+        clientsActive: 3,
+        clientsWaiting: 1,
+        serversActive: 2,
+        serversIdle: 4,
+      },
+    ];
+    world.ctx.remote = answering({ status: { stdout: JSON.stringify(stateOf(pools)) } }).remote;
+    const done = await sv(world, 'status');
+    expect(done.text).toContain('Pooler:');
+    expect(done.text).toContain(
+      'notes: 3 clients active, 1 waiting; 2 server connections active, 4 idle',
+    );
+    expect(JSON.parse((await sv(world, 'status', '--json')).out.join('\n')).pools).toEqual(pools);
+  });
+
+  it('says so when no app has connected, and says nothing about a pooler that is off', async () => {
+    await ready();
+    await sv(world, 'push');
+    world.ctx.remote = answering({ status: { stdout: JSON.stringify(stateOf([])) } }).remote;
+    expect((await sv(world, 'status')).text).toContain('no app has connected yet');
+    world.ctx.remote = answering({ status: { stdout: JSON.stringify(stateOf(null)) } }).remote;
+    expect((await sv(world, 'status')).text).not.toContain('Pooler');
+    world.ctx.remote = answering({ status: { stdout: JSON.stringify(stateOf(undefined)) } }).remote;
+    expect((await sv(world, 'status')).text).not.toContain('Pooler');
+  });
+
+  it('says it is on in suite.yml and not running when the server has none', async () => {
+    await ready();
+    await sv(world, 'database', 'pooler', 'enable');
+    await sv(world, 'push');
+    world.ctx.remote = answering({ status: { stdout: JSON.stringify(stateOf(null)) } }).remote;
+    expect((await sv(world, 'status')).text).toContain('not running (sv deploy starts it)');
+  });
+});

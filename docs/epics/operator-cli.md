@@ -669,7 +669,7 @@ PostgreSQL behind a pooler, which is the next task.
 - An app made before this keeps working, with no change to it
 - No session-scoped statement in the template is left on the pooled address
 
-#### 📋 13.26 — An optional PgBouncer
+#### ✅ 13.26 — An optional PgBouncer
 
 **Goal:** An operator with many apps turns on a connection pooler with one command, and off again, and the guardrails still hold.
 
@@ -684,6 +684,22 @@ PostgreSQL behind a pooler, which is the next task.
   made from the role passwords it generated (SCRAM); points an app's `<PREFIX>_POSTGRES_URL` at it only when the app's manifest says
   `transaction`; never routes core through it; keeps each app's pool within its role's limit; and removes it when it is turned off
 - `sv status` shows the pooler's pools; `docs/operating.md` says when to turn it on
+
+**Built as:** the image is `tools/pgbouncer`, published by the toolkit's own release job at the toolkit's version; the budget counts a pooled app
+at what the pooler may open for it plus the direct address and the headroom, so more apps fit, and refuses pooled apps that may open more
+connections than `maxClients`; an app's container carries a label only while it is pooled, so a change of route recreates it and an
+instance that never turns the pooler on is not touched.
+
+**Verified here:** the tests were seen to fail against the old code. `sv apply` against the fake Docker: the pooler's files from the generated
+role passwords, its networks (core's and each pooled app's, no other), no published port, a reload when its files change and none when they do not,
+removal with its files when it is turned off, and the same password back when it is turned on again; core and unpooled apps never routed through
+it; role limits; the refusal for too many clients. `sv database pooler`, `sv database` and `sv status` with a fake server. The image was built
+and run against a real PostgreSQL 18 with the files `sv apply` writes: SCRAM through the pooler worked, a wrong password, another app's role and the
+console over the network were refused, twelve clients at once held three server connections, `SHOW POOLS` read as `sv status` parses it, the
+healthcheck passed, a reload after an in-place edit took the new pool size, and a role limited to nine refused the tenth connection. The build
+found that Alpine's package makes no `pgbouncer` account, which the Dockerfile now makes.
+
+**Not verified here:** the published image on both architectures, and a deployment over SSH to a real server.
 
 **Dependencies:** 13.23, 13.24, 13.25
 

@@ -10,7 +10,8 @@ import { isExternal, type Suite } from '../suite/types.js';
 import { publicNames } from '../apply/render.js';
 import { remoteFailure, sayingOf } from './server.js';
 import type { Connections } from '../apply/database-use.js';
-import { describeUse } from './budget.js';
+import type { Pool } from '../apply/pooler.js';
+import { describeUse, serviceOfRole } from './budget.js';
 
 /** Whether the server has no wrapper to run: bootstrap has not been run. Any other failure is the server's own, and is said as it is. */
 const notPrepared = (result: RemoteResult) =>
@@ -55,6 +56,8 @@ type ServerState = {
   deploying: boolean;
   /** Absent from a server whose toolkit is older, and null when the database server could not be asked. */
   connections?: Connections | null;
+  /** The pooler's pools, absent from a server whose toolkit is older and null when it is not running (operator-cli §6.4.5). */
+  pools?: Pool[] | null;
 };
 
 async function localHead(ctx: Context): Promise<string | undefined> {
@@ -98,6 +101,7 @@ export async function status(ctx: Context, argv: string[]): Promise<void> {
     notInSuite: extra,
     containers: server.containers,
     connections: server.connections ?? null,
+    pools: server.pools ?? null,
   };
   if (args.switches.has('json')) {
     ctx.io.out(JSON.stringify(document, null, 2));
@@ -132,6 +136,17 @@ export async function status(ctx: Context, argv: string[]): Promise<void> {
     const use = describeUse(suite, server.connections);
     ctx.io.out(`Connections: ${use.summary}`);
     for (const near of use.pressure) ctx.io.out(`  near its limit: ${near}`);
+  }
+  if (server.pools) {
+    ctx.io.out('Pooler:');
+    for (const pool of server.pools) {
+      ctx.io.out(
+        `  ${serviceOfRole(suite, pool.database)}: ${pool.clientsActive} clients active, ${pool.clientsWaiting} waiting; ${pool.serversActive} server connections active, ${pool.serversIdle} idle`,
+      );
+    }
+    if (server.pools.length === 0) ctx.io.out('  no app has connected yet');
+  } else if (suite.database.pooler && server.pools === null) {
+    ctx.io.out('Pooler: on in suite.yml, and not running (sv deploy starts it)');
   }
 }
 

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { Failed, Refused } from '../errors.js';
 import { readManifest } from '../manifest.js';
 import { Registry } from '../registry.js';
-import { appPool, roleLimit } from '../suite/connections.js';
+import { appRoleLimit } from '../suite/connections.js';
 import { appEnvProblems } from '../suite/apps.js';
 import type { Problem } from '../suite/schema.js';
 import {
@@ -24,7 +24,7 @@ import {
   psql,
 } from './docker.js';
 import type { Host } from './host.js';
-import { CONTAINER, NETWORK, PROJECT } from './names.js';
+import { CONTAINER, NETWORK, POOLER_PORT, PROJECT } from './names.js';
 import { appCompose, appOrigin, byDigest, type ImageOverrides } from './render.js';
 import type { GeneratedSecrets } from './secrets.js';
 import type { State } from './state.js';
@@ -192,6 +192,8 @@ export type AppRun = {
   /** Compose overrides for this app, if the operator wrote any. */
   overrideFiles: (name: string) => string[];
   operatorSecrets: Record<string, Record<string, string>>;
+  /** The apps that go through the pooler this run: those that declare it, when it is on (operator-cli §6.4.5). */
+  pooled: ReadonlySet<string>;
 };
 
 export type AppResult = State['apps'][string] & {
@@ -219,23 +221,31 @@ export async function applyHostedApp(
   await ensureOnNetwork(host, CONTAINER.proxy, network, run.names);
 
   const database = databaseOf(name);
+  const pooled = run.pooled.has(name);
   const secrets: Record<string, string> = {};
   let postgres = false;
   if (hasDatabase(manifest)) {
     const password = await generated.ensure(`role-app-${name}-password`, () =>
       generated.random(24),
     );
-    await ensureDatabase(host, database, database, password.value, roleLimit(appPool(suite, name)));
+    await ensureDatabase(
+      host,
+      database,
+      database,
+      password.value,
+      appRoleLimit(suite, name, pooled),
+    );
+    const server = `postgres://${database}:${password.value}@${CONTAINER.database}:5432/${database}`;
+    // Through the pooler only for an app that declared it can be, and only while it is on; otherwise the server itself.
     await generated.write(
       `app-${name}-postgres-url`,
-      `postgres://${database}:${password.value}@${CONTAINER.database}:5432/${database}`,
+      pooled
+        ? `postgres://${database}:${password.value}@${CONTAINER.pooler}:${POOLER_PORT}/${database}`
+        : server,
     );
     secrets[`${manifest.prefix}_POSTGRES_URL`] = `app-${name}-postgres-url`;
     // The server itself, for what needs a session. No pooler runs yet, so it is the same address (operator-cli §6.4.4).
-    await generated.write(
-      `app-${name}-postgres-direct-url`,
-      `postgres://${database}:${password.value}@${CONTAINER.database}:5432/${database}`,
-    );
+    await generated.write(`app-${name}-postgres-direct-url`, server);
     secrets[`${manifest.prefix}_POSTGRES_DIRECT_URL`] = `app-${name}-postgres-direct-url`;
     postgres = true;
   }
@@ -275,6 +285,7 @@ export async function applyHostedApp(
       stateDir: run.stateDir,
       secrets,
       internalCa: run.internalCa,
+      pooled,
     }),
   );
   await composeUp(host, {

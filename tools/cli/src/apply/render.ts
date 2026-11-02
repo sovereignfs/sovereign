@@ -29,7 +29,7 @@ export function byDigest(image: Digest): string {
 
 /** The images to run, by the digest the lock pins unless a test says otherwise. */
 export type ImageOverrides = Partial<
-  Record<'core' | 'proxy' | 'database' | 'cli' | 'mail', string>
+  Record<'core' | 'proxy' | 'database' | 'cli' | 'mail' | 'pooler', string>
 > & {
   /** Images for hosted apps, by name. */
   apps?: Record<string, string>;
@@ -221,6 +221,45 @@ export function mailCompose(input: BaseInput): string {
   });
 }
 
+/**
+ * The pooler (operator-cli §6.4.5): PgBouncer from this repository's own image. It publishes no port. It is on core's network, to reach the
+ * database server; the networks of the apps that go through it are added by `sv apply`, which knows which they are. Its three files are
+ * mounted one by one from the state directory, where they are written in place so that a reload sees them.
+ */
+export function poolerCompose(input: BaseInput): string {
+  const { lock, stateDir } = input;
+  const image =
+    input.imageOverrides?.pooler ?? (lock.images.pooler && byDigest(lock.images.pooler));
+  if (!image) throw new Error('suite.lock has no image for the pooler');
+  return yaml({
+    name: PROJECT.pooler,
+    services: {
+      pooler: {
+        image,
+        container_name: CONTAINER.pooler,
+        restart: 'unless-stopped',
+        volumes: ['pgbouncer.ini', 'pg_hba.conf', 'userlist.txt'].map((file) => ({
+          type: 'bind',
+          source: `${stateDir}/pooler/${file}`,
+          target: `/etc/pgbouncer/${file}`,
+          read_only: true,
+        })),
+        cap_drop: ['ALL'],
+        security_opt: ['no-new-privileges:true'],
+        healthcheck: {
+          test: ['CMD', 'pg_isready', '-h', '/var/run/pgbouncer', '-p', '6432'],
+          interval: '5s',
+          timeout: '5s',
+          retries: 12,
+          start_period: '2s',
+        },
+        networks: [NETWORK.core],
+      },
+    },
+    networks: { [NETWORK.core]: { external: true } },
+  });
+}
+
 /** The proxy: the only container that publishes a port, and the one every public name leads to. */
 export function proxyCompose(input: BaseInput): string {
   const { lock, stateDir, publishPorts } = input;
@@ -297,7 +336,12 @@ export type AppInput = {
   /** Names of the secret files in `secrets/`, by the variable each is given as, for this app. */
   secrets: Record<string, string>;
   internalCa: boolean;
+  /** Whether it goes through the pooler: its container is then labelled, so a change of route recreates it (operator-cli §6.4.5). */
+  pooled?: boolean;
 };
+
+/** The label an app routed through the pooler carries. An app that is not routed carries none, so one that never meets it is not changed. */
+export const DATABASE_ROUTE_LABEL = 'io.github.sovereignfs.database-route';
 
 /** The public address of an app: a subdomain of the instance's domain. */
 export const appOrigin = (suite: Suite, name: string) => `https://${name}.${suite.domain}`;
@@ -356,6 +400,7 @@ export function appCompose(input: AppInput): string {
         container_name: CONTAINER.app(name),
         restart: 'unless-stopped',
         environment: appEnvironment(input),
+        ...(input.pooled ? { labels: { [DATABASE_ROUTE_LABEL]: 'pooler' } } : {}),
         volumes,
         networks: [NETWORK.app(name)],
         stop_grace_period: '30s',

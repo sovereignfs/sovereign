@@ -12,6 +12,7 @@ export const CONTAINER = {
   database: 'sv-database',
   core: 'sv-core',
   mail: 'sv-mailpit',
+  pooler: 'sv-pooler',
   app: (name: string) => `sv-app-${name}`,
 } as const;
 
@@ -20,8 +21,12 @@ export const PROJECT = {
   database: 'sovereign-database',
   core: 'sovereign-core',
   mail: 'sovereign-mailpit',
+  pooler: 'sovereign-pooler',
   app: (name: string) => `sovereign-app-${name}`,
 } as const;
+
+/** The port the pooler listens on, on the networks of the apps that go through it and nowhere else. */
+export const POOLER_PORT = 6432;
 
 /** Where a container finds the secrets it is given, one file each (contracts/env.md §3). */
 export const SECRETS_IN_CONTAINER = '/run/secrets';

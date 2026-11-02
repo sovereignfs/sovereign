@@ -11,6 +11,8 @@ export function wantedImages(suite: Suite): {
   proxy: string;
   /** Only when the instance runs Mailpit (contracts/suite.md §1.1). */
   mail?: string;
+  /** Only when the instance runs the pooler (contracts/suite.md §1.3). */
+  pooler?: string;
   apps: Record<string, string>;
 } {
   const apps: Record<string, string> = {};
@@ -23,6 +25,7 @@ export function wantedImages(suite: Suite): {
     database: `${RELEASE.images.database}:${suite.database.version}`,
     proxy: RELEASE.images.proxy,
     ...(usesMailpit(suite) ? { mail: RELEASE.images.mail } : {}),
+    ...(suite.database.pooler ? { pooler: `${RELEASE.images.pooler}:${RELEASE.version}` } : {}),
     apps,
   };
 }
@@ -61,6 +64,21 @@ export function lockProblems(suite: Suite, lock: Lock): Problem[] {
   } else if (lock.images.mail) {
     problems.push({ at: 'images.mail', message: 'is in suite.lock and suite.yml does not use it' });
   }
+  if (wanted.pooler !== undefined) {
+    const locked = lock.images.pooler;
+    if (!locked) problems.push({ at: 'images.pooler', message: 'is not in suite.lock' });
+    else if (locked.ref !== wanted.pooler) {
+      problems.push({
+        at: 'images.pooler',
+        message: `is ${locked.ref}, and suite.yml wants ${wanted.pooler}`,
+      });
+    }
+  } else if (lock.images.pooler) {
+    problems.push({
+      at: 'images.pooler',
+      message: 'is in suite.lock and suite.yml does not use it',
+    });
+  }
   for (const name of Object.keys(lock.apps ?? {})) {
     if (!(name in wanted.apps))
       problems.push({ at: `apps.${name}`, message: 'is in suite.lock and not in suite.yml' });
@@ -92,6 +110,9 @@ export async function refreshedLock(
       database: await pin(wanted.database, current?.images.database),
       proxy: await pin(wanted.proxy, current?.images.proxy),
       ...(wanted.mail !== undefined ? { mail: await pin(wanted.mail, current?.images.mail) } : {}),
+      ...(wanted.pooler !== undefined
+        ? { pooler: await pin(wanted.pooler, current?.images.pooler) }
+        : {}),
     },
     ...(Object.keys(apps).length > 0 ? { apps } : {}),
   };

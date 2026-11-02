@@ -95,7 +95,7 @@ one, and it may ask for `roles`.
 An app MAY declare `transaction` only if everything it sends through `<PREFIX>_POSTGRES_URL` is safe when each statement may run on a
 different server connection: no session advisory lock, no `SET`, `LISTEN`, temporary table or named prepared statement, and no
 transaction left open across a request. What needs a session (its migrations, a lock held across a call) MUST use
-`<PREFIX>_POSTGRES_DIRECT_URL`. `{}` and `true` mean the same, and an app that declares nothing is never pooled. A toolkit older than
+`<PREFIX>_POSTGRES_DIRECT_URL`, and MUST hold no more than **2** connections to it at a time, which is what the instance leaves for it. `{}` and `true` mean the same, and an app that declares nothing is never pooled. A toolkit older than
 the one that reads `pooling` refuses a manifest that has it, as it does for any field it does not know.
 
 ---

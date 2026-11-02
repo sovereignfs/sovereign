@@ -621,3 +621,51 @@ describe('the connections the server reports', () => {
     },
   );
 });
+
+describe('the pooler’s pools in the answer to status', () => {
+  const CSV = [
+    'database,user,cl_active,cl_waiting,cl_active_cancel_req,cl_waiting_cancel_req,sv_active,sv_active_cancel,sv_being_canceled,sv_idle,sv_used,sv_tested,sv_login,maxwait,maxwait_us,pool_mode',
+    'app_notes,app_notes,3,1,0,0,2,0,0,4,0,0,0,0,0,transaction',
+    'pgbouncer,pgbouncer,1,0,0,0,0,0,0,0,0,0,0,0,0,statement',
+  ].join('\n');
+  const answering = (pools: { code?: number; stdout?: string }) =>
+    receiver((args) =>
+      args.includes('SHOW POOLS')
+        ? pools
+        : args.includes('psql')
+          ? { stdout: 'null' }
+          : args[0] === 'inspect'
+            ? { stdout: 'false\n' }
+            : args[0] === 'ps'
+              ? { stdout: '' }
+              : {},
+    );
+
+  it('are asked of the pooler’s own console over its socket, by its own account, with no password, and each app’s are named', async () => {
+    const { host, calls } = answering({ stdout: CSV });
+    const { options: o, out } = options(stateDir(), 'status');
+    expect(await receive(host, o)).toBe(0);
+    expect(JSON.parse(out.join('')).pools).toEqual([
+      {
+        database: 'app_notes',
+        clientsActive: 3,
+        clientsWaiting: 1,
+        serversActive: 2,
+        serversIdle: 4,
+      },
+    ]);
+    const asked = calls.find((c) => c.includes('SHOW POOLS')) as string[];
+    expect(asked.slice(0, 3)).toEqual(['exec', 'sv-pooler', 'psql']);
+    expect(asked).toContain('/var/run/pgbouncer');
+    expect(asked.join(' ')).not.toMatch(/password|PGPASSWORD/i);
+  });
+
+  it('are null when the pooler is not running or cannot be read', async () => {
+    for (const reply of [{ code: 1, stdout: '' }, { stdout: 'unexpected' }]) {
+      const { host } = answering(reply);
+      const { options: o, out } = options(stateDir(), 'status');
+      await receive(host, o);
+      expect(JSON.parse(out.join('')).pools).toBeNull();
+    }
+  });
+});

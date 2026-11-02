@@ -17,6 +17,7 @@ import { Failed, Locked, Refused } from '../errors.js';
 import { FakeDocker, fakeHost } from '../testing/fake-host.js';
 import { fakeRegistry, manifestOf } from '../testing/world.js';
 import { makeSource, type Source } from '../testing/source.js';
+import type { Suite } from '../suite/types.js';
 import { apply, type ApplyOptions } from './apply.js';
 import type { State } from './state.js';
 
@@ -1166,5 +1167,173 @@ describe('an app’s two database addresses', () => {
     });
     // core 12 and the app 12 do not fit in 20 less 3.
     await expect(apply(host, options(made))).rejects.toThrow(/connections/);
+  });
+});
+
+describe('the pooler', () => {
+  const NOTES = { image: 'ghcr.io/example/notes:1' };
+  const POOLED = manifestOf({ database: { pooling: 'transaction' } });
+  const registryOf = (manifest: unknown) =>
+    fakeRegistry({ 'ghcr.io/example/notes:1': { manifest } }).registry;
+  const withPooler = (
+    extra: Record<string, unknown> = {},
+    apps: Record<string, unknown> = { notes: NOTES },
+  ) =>
+    source({
+      suite: { database: { version: '18', pooler: { ...extra } }, apps } as Partial<Suite>,
+    });
+  const read = (made: Source, ...parts: string[]) =>
+    readFileSync(path.join(made.stateDir, ...parts), 'utf8');
+  const appCompose = (made: Source, commit = 'a'.repeat(40)) =>
+    parse(read(made, 'releases', commit, 'apps', 'notes', 'compose.yml')) as {
+      services: Record<string, { labels?: Record<string, string> }>;
+    };
+  const label = (made: Source, commit?: string) =>
+    Object.values(appCompose(made, commit).services)[0]?.labels?.[
+      'io.github.sovereignfs.database-route'
+    ];
+  const roleSql = (docker: FakeDocker) => docker.psql.join('\n');
+
+  it('is not there when suite.yml does not turn it on, and no app is touched: no container, no folder, no label', async () => {
+    const made = await source({ suite: { apps: { notes: NOTES } } });
+    const { host, docker } = fakeHost({ registry: registryOf(POOLED) });
+    await apply(host, options(made));
+    expect(docker.containers.has('sv-pooler')).toBe(false);
+    expect(existsSync(path.join(made.stateDir, 'pooler'))).toBe(false);
+    expect(label(made)).toBeUndefined();
+    expect(read(made, 'secrets', 'app-notes-postgres-url')).toContain('@sv-database:5432/');
+  });
+
+  it('routes an app that declares transaction through it, and leaves core and the direct address on the server', async () => {
+    const made = await withPooler();
+    const { host, docker } = fakeHost({ registry: registryOf(POOLED) });
+    await apply(host, options(made));
+    expect(docker.containers.has('sv-pooler')).toBe(true);
+    expect(docker.containers.get('sv-pooler')?.networks).toHaveProperty('sv-net-app-notes');
+    expect(read(made, 'secrets', 'app-notes-postgres-url')).toMatch(
+      /^postgres:\/\/app_notes:[^@]+@sv-pooler:6432\/app_notes$/,
+    );
+    expect(read(made, 'secrets', 'app-notes-postgres-direct-url')).toContain('@sv-database:5432/');
+    expect(read(made, 'secrets', 'SV_POSTGRES_URL')).toContain('@sv-database:5432/');
+    expect(label(made)).toBe('pooler');
+  });
+
+  it('leaves an app that has not declared transaction on the server, and off the pooler’s networks', async () => {
+    const made = await withPooler();
+    const { host, docker } = fakeHost({ registry: registryOf(manifestOf()) });
+    await apply(host, options(made));
+    expect(docker.containers.has('sv-pooler')).toBe(true);
+    expect(docker.containers.get('sv-pooler')?.networks).not.toHaveProperty('sv-net-app-notes');
+    expect(read(made, 'secrets', 'app-notes-postgres-url')).toContain('@sv-database:5432/');
+    expect(label(made)).toBeUndefined();
+    expect(read(made, 'pooler', 'pgbouncer.ini')).not.toContain('app_notes');
+  });
+
+  it('writes its three files from what the server generated: transaction mode, each app’s pool, and no other credential', async () => {
+    const made = await withPooler({ poolSize: 4, maxClients: 150 });
+    const { host } = fakeHost({ registry: registryOf(POOLED) });
+    await apply(host, options(made));
+    const ini = read(made, 'pooler', 'pgbouncer.ini');
+    expect(ini).toContain('pool_mode = transaction');
+    expect(ini).toContain('max_client_conn = 150');
+    expect(ini).toContain('app_notes = host=sv-database port=5432 dbname=app_notes pool_size=4');
+    expect(ini).not.toContain('core');
+    expect(read(made, 'pooler', 'pg_hba.conf')).toContain('scram-sha-256');
+    const password = read(made, 'secrets', 'role-app-notes-password');
+    expect(read(made, 'pooler', 'userlist.txt')).toBe(`"app_notes" "${password}"\n`);
+    expect(statSync(path.join(made.stateDir, 'pooler')).mode & 0o777).toBe(0o700);
+  });
+
+  it('publishes no port, and is on core’s network and the networks of the apps it serves only', async () => {
+    const made = await withPooler();
+    const { host } = fakeHost({ registry: registryOf(POOLED) });
+    await apply(host, options(made));
+    const pooler = parse(read(made, 'releases', 'a'.repeat(40), 'pooler', 'compose.yml')) as {
+      services: Record<
+        string,
+        { image: string; ports?: unknown; networks: string[]; cap_drop: string[] }
+      >;
+    };
+    const service = pooler.services.pooler;
+    expect(service?.ports).toBeUndefined();
+    expect(service?.networks).toEqual(['sv-net-core']);
+    expect(service?.image).toMatch(/^ghcr\.io\/sovereignfs\/pgbouncer:.+@sha256:[0-9a-f]{64}$/);
+    expect(service?.cap_drop).toEqual(['ALL']);
+  });
+
+  it('limits the role of a pooled app to what the pooler may open for it, the direct address and the headroom', async () => {
+    const made = await withPooler({ poolSize: 5 });
+    const { host, docker } = fakeHost({ registry: registryOf(POOLED) });
+    await apply(host, options(made));
+    expect(roleSql(docker)).toContain('ALTER ROLE "app_notes" CONNECTION LIMIT 9;');
+    expect(roleSql(docker)).toContain('ALTER ROLE "core" CONNECTION LIMIT 12;');
+  });
+
+  it('never gives the pooler more of an app than its own pool', async () => {
+    const made = await withPooler({ poolSize: 50 }, { notes: { ...NOTES, connections: 3 } });
+    const { host, docker } = fakeHost({ registry: registryOf(POOLED) });
+    await apply(host, options(made));
+    expect(read(made, 'pooler', 'pgbouncer.ini')).toContain('pool_size=3');
+    expect(roleSql(docker)).toContain('ALTER ROLE "app_notes" CONNECTION LIMIT 7;');
+  });
+
+  it('changes nothing the second time, and tells the running pooler to read its files again when they change', async () => {
+    const made = await withPooler();
+    const { host, docker } = fakeHost({ registry: registryOf(POOLED) });
+    await apply(host, options(made));
+    const again = await apply(host, options(made, { commit: 'b'.repeat(40) }));
+    expect(again.changed).toBe(false);
+    expect(docker.signals).toEqual([]);
+    const changed = await withPooler({ poolSize: 3 });
+    await apply(host, { ...options(changed), stateDir: made.stateDir, commit: 'c'.repeat(40) });
+    expect(docker.signals).toEqual(['sv-pooler HUP']);
+    expect(read(made, 'pooler', 'pgbouncer.ini')).toContain('pool_size=3');
+  });
+
+  it('is removed with its files when it is turned off, and the app goes back to the server and loses its label', async () => {
+    const made = await withPooler();
+    const { host, docker } = fakeHost({ registry: registryOf(POOLED) });
+    await apply(host, options(made));
+    const off = await source({ suite: { apps: { notes: NOTES } } });
+    await apply(host, { ...options(off), stateDir: made.stateDir, commit: 'b'.repeat(40) });
+    expect(docker.containers.has('sv-pooler')).toBe(false);
+    expect(existsSync(path.join(made.stateDir, 'pooler'))).toBe(false);
+    expect(read(made, 'secrets', 'app-notes-postgres-url')).toContain('@sv-database:5432/');
+    expect(label(made, 'b'.repeat(40))).toBeUndefined();
+  });
+
+  it('turned on again, loses nothing: the same role password is in the user list', async () => {
+    const made = await withPooler();
+    const { host } = fakeHost({ registry: registryOf(POOLED) });
+    await apply(host, options(made));
+    const password = read(made, 'secrets', 'role-app-notes-password');
+    const off = await source({ suite: { apps: { notes: NOTES } } });
+    await apply(host, { ...options(off), stateDir: made.stateDir, commit: 'b'.repeat(40) });
+    const on = await withPooler();
+    await apply(host, { ...options(on), stateDir: made.stateDir, commit: 'c'.repeat(40) });
+    expect(read(made, 'pooler', 'userlist.txt')).toBe(`"app_notes" "${password}"\n`);
+    expect(label(made, 'c'.repeat(40))).toBe('pooler');
+  });
+
+  it('refuses, changing nothing, when the pooled apps may open more connections than it takes', async () => {
+    const made = await withPooler({ maxClients: 20 }, { notes: { ...NOTES, connections: 30 } });
+    const { host, docker } = fakeHost({ registry: registryOf(POOLED) });
+    await expect(apply(host, options(made))).rejects.toThrow(/take|takes/);
+    expect(docker.containers.size).toBe(0);
+  });
+
+  it('counts a pooled app at what it may hold with the pooler, so more apps fit', async () => {
+    // core 12 and the app 12 do not fit in 25 less 3, but core 12 and a pooled app 9 do.
+    const suiteOf = (pooler: boolean) =>
+      source({
+        suite: {
+          database: { version: '18', maxConnections: 24, ...(pooler ? { pooler: {} } : {}) },
+          apps: { notes: NOTES },
+        } as Partial<Suite>,
+      });
+    const { host } = fakeHost({ registry: registryOf(POOLED) });
+    await expect(apply(host, options(await suiteOf(false)))).rejects.toThrow(/connections/);
+    const { host: second } = fakeHost({ registry: registryOf(POOLED) });
+    await apply(second, options(await suiteOf(true)));
   });
 });

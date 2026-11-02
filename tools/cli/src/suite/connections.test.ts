@@ -1,13 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_MAX_CONNECTIONS,
+  DIRECT_POOL,
   ROLE_HEADROOM,
   SUPERUSER_RESERVE,
   appPool,
+  appRoleLimit,
   connectionBudget,
   corePool,
   describeBudget,
+  describeClients,
   maxConnectionsOf,
+  poolerClients,
+  poolerPool,
   roleLimit,
   setsConnections,
 } from './connections.js';
@@ -117,5 +122,83 @@ describe('the budget', () => {
     expect(describeBudget(budget, 20)).toBe(
       'The connection limits add up to 24 (core 12, app0 12), and the server allows 17 (max_connections 20, less 3 kept for the superuser).',
     );
+  });
+});
+
+describe('the pooler', () => {
+  const pooled = suite({ database: { version: '18', pooler: {} }, apps: apps(3) });
+
+  it('has the numbers it has when the operator says nothing, and the ones they set', () => {
+    expect([poolerPool(pooled), poolerClients(pooled)]).toEqual([5, 200]);
+    const set = suite({ database: { version: '18', pooler: { poolSize: 3, maxClients: 50 } } });
+    expect([poolerPool(set), poolerClients(set)]).toEqual([3, 50]);
+  });
+
+  it('limits a pooled app’s role to what the pooler may open for it, the direct address and the headroom', () => {
+    expect(appRoleLimit(pooled, 'app0', true)).toBe(5 + DIRECT_POOL + ROLE_HEADROOM);
+    expect(appRoleLimit(pooled, 'app0', false)).toBe(roleLimit(10));
+  });
+
+  it('never gives the pooler more of an app than the app’s own pool', () => {
+    const small = suite({
+      database: { version: '18', pooler: { poolSize: 50 } },
+      apps: { app0: { image: 'x/a:1', connections: 3 } },
+    });
+    expect(appRoleLimit(small, 'app0', true)).toBe(3 + DIRECT_POOL + ROLE_HEADROOM);
+  });
+
+  it('counts pooled apps at that, and the rest as before, and only while the pooler is on', () => {
+    const always = () => true;
+    const on = connectionBudget(pooled, always, always);
+    expect(on.roles.map((r) => r.limit)).toEqual([12, 9, 9, 9]);
+    const off = connectionBudget(suite({ apps: apps(3) }), always, always);
+    expect(off.roles.map((r) => r.limit)).toEqual([12, 12, 12, 12]);
+    expect(off.clients).toBeUndefined();
+    const some = connectionBudget(pooled, always, (name) => name === 'app1');
+    expect(some.roles.map((r) => r.limit)).toEqual([12, 12, 9, 12]);
+  });
+
+  it('is explicit as soon as it is on, since the operator turned it on', () => {
+    expect(
+      connectionBudget(suite({ database: { version: '18', pooler: {} } }), () => true).explicit,
+    ).toBe(true);
+  });
+
+  it('is exceeded when the pooled apps’ own pools may open more than it takes, and not otherwise', () => {
+    const tight = suite({
+      database: { version: '18', pooler: { maxClients: 20 }, connections: { app: 10 } },
+      apps: apps(3),
+    });
+    const budget = connectionBudget(
+      tight,
+      () => true,
+      () => true,
+    );
+    expect(budget.clients).toEqual({ used: 30, available: 20 });
+    expect(budget.clientsExceeded).toBe(true);
+    expect(describeClients(budget)).toBe(
+      'The apps that go through the pooler may open 30 connections to it, and it takes 20.',
+    );
+    const unpooled = connectionBudget(
+      tight,
+      () => true,
+      () => false,
+    );
+    expect(unpooled.clients?.used).toBe(0);
+    expect(unpooled.clientsExceeded).toBe(false);
+  });
+
+  it('lets more apps fit the server than without it', () => {
+    const many = (pooler: boolean) =>
+      connectionBudget(
+        suite({
+          database: { version: '18', ...(pooler ? { pooler: { poolSize: 2 } } : {}) },
+          apps: apps(12),
+        }),
+        () => true,
+        () => true,
+      );
+    expect(many(false).exceeded).toBe(true);
+    expect(many(true).exceeded).toBe(false);
   });
 });

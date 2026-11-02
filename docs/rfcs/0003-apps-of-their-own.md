@@ -2,7 +2,7 @@
 
 |                |                                                                                                                                                                                                 |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**     | Proposed                                                                                                                                                                                        |
+| **Status**     | Accepted                                                                                                                                                                                        |
 | **Date**       | November 2026                                                                                                                                                                                   |
 | **Author**     | Claude Code, for review                                                                                                                                                                         |
 | **Scope**      | `contracts/app-manifest.md` and its schemas; `contracts/env.md` §1; `docs/specs/operator-cli.md` §2.2, §4.2; `docs/specs/sdk.md` §9; `tools/cli`, `tools/create`, `packages/sdk`; a new package |
@@ -250,4 +250,12 @@ into the contracts and specs before any code.
 
 ## Outcome
 
-Not decided.
+Accepted as proposed, with the open questions answered as leaned. The owner confirmed it on 2026-11-02.
+
+1. **A new package:** `@sovereignfs/manifest`, not the SDK, which sdk §1.1 keeps to what talks to core.
+2. **`PORT` for manifest 1 apps too:** yes. `sv` gives it to every hosted app, of either version.
+3. **The prefix starts with a letter:** yes, as now (`^[a-z][a-z0-9]*$`).
+4. **No core version for manifest 2:** it is the toolkit that reads a manifest, so only the toolkit release that reads 2 is stated.
+
+The outcome goes into the contracts and specs first (step 1 of the rollout): `contracts/app-manifest.md`, a manifest 2 schema,
+`contracts/env.md` §1, operator-cli §2.2 and §4.2, and sdk §9, which will then win over this document. No code changes before that.

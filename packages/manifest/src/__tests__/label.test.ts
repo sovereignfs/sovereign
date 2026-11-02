@@ -35,8 +35,18 @@ describe('dockerArgs', () => {
 
   it('gives the two lines of $GITHUB_OUTPUT for the build action', () => {
     const manifest = manifestOf({ port: 8080 });
-    expect(dockerArgs(manifest, 'github')).toBe(
-      `labels=${MANIFEST_LABEL}=${labelValue(manifest)}\nbuild-args=PORT=8080`,
-    );
+    const [labels, buildArgs] = dockerArgs(manifest, 'github').split('\n');
+    expect(buildArgs).toBe('build-args=PORT=8080');
+    expect(labels).toMatch(/^labels="/);
+  });
+
+  it('gives a label that the build action reads back as the manifest, commas and quotes in it', () => {
+    // The action reads a list input as CSV (relaxed quotes): a field that opens with a quote ends at its closing one.
+    const manifest = manifestOf({ port: 8080, description: 'Notes, "quoted", and more' });
+    const labels = (dockerArgs(manifest, 'github').split('\n')[0] ?? '').slice('labels='.length);
+    expect(labels.startsWith('"') && labels.endsWith('"')).toBe(true);
+    const field = labels.slice(1, -1);
+    expect(field.replace(/""/g, '"')).toBe(`${MANIFEST_LABEL}=${labelValue(manifest)}`);
+    expect(field.replace(/""/g, '')).not.toContain('"');
   });
 });

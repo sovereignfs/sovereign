@@ -18,13 +18,14 @@ export type DockerArgsFormat = 'shell' | 'github';
  * exposes, so that the number is written in one place.
  *
  * `shell` is one line of quoted words for `eval "docker build $(sovereign-manifest docker-args) ."`. `github` is two lines in the form of
- * `$GITHUB_OUTPUT`, `labels` and `build-args`, for `docker/build-push-action`.
+ * `$GITHUB_OUTPUT`, `labels` and `build-args`, for `docker/build-push-action`. That action reads a list input as CSV, where a bare label
+ * would lose the quotes of every string that follows a comma, so the label is one quoted field with its own quotes doubled.
  */
 export function dockerArgs(manifest: Manifest, format: DockerArgsFormat = 'shell'): string {
   const label = `${MANIFEST_LABEL}=${labelValue(manifest)}`;
   const port = `PORT=${manifest.port}`;
   return format === 'github'
-    ? `labels=${label}\nbuild-args=${port}`
+    ? `labels="${label.replace(/"/g, '""')}"\nbuild-args=${port}`
     : `--label ${quote(label)} --build-arg ${quote(port)}`;
 }
 

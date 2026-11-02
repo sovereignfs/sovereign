@@ -2,7 +2,7 @@
 
 |                |                                                                                                                                                                                                 |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**     | Accepted; partially implemented (the specifications, the manifest package, `PORT`, manifest 2 and the SDK's verifiers; the plugin template is not)                                              |
+| **Status**     | Implemented                                                                                                                                                                                     |
 | **Date**       | November 2026                                                                                                                                                                                   |
 | **Author**     | Claude Code, for review                                                                                                                                                                         |
 | **Scope**      | `contracts/app-manifest.md` and its schemas; `contracts/env.md` §1; `docs/specs/operator-cli.md` §2.2, §4.2; `docs/specs/sdk.md` §9; `tools/cli`, `tools/create`, `packages/sdk`; a new package |

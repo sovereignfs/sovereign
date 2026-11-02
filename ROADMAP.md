@@ -222,7 +222,7 @@ Epic [15](docs/epics/core-services.md)
 
 ### M13 — Apps are programs of their own
 
-[RFC 0003](docs/rfcs/0003-apps-of-their-own.md) (Accepted) · epics [13](docs/epics/operator-cli.md) and [14](docs/epics/sdk.md)
+[RFC 0003](docs/rfcs/0003-apps-of-their-own.md) (Implemented) · epics [13](docs/epics/operator-cli.md) and [14](docs/epics/sdk.md)
 
 | Version | Priority | Task                                       | Status | Epic task                           |
 | ------- | -------- | ------------------------------------------ | ------ | ----------------------------------- |
@@ -230,4 +230,4 @@ Epic [15](docs/epics/core-services.md)
 | 0.89.0  | 2        | `@sovereignfs/manifest`, and `PORT`        | ✅     | [13.28](docs/epics/operator-cli.md) |
 | 0.90.0  | 3        | Manifest 2                                 | ✅     | [13.29](docs/epics/operator-cli.md) |
 | 0.91.0  | 4        | Verifying a notice on its own `[parallel]` | ✅     | [14.11](docs/epics/sdk.md)          |
-| —       | 5        | Retire the plugin template `[parallel]`    | 📋     | [13.30](docs/epics/operator-cli.md) |
+| —       | 5        | Retire the plugin template `[parallel]`    | ✅     | [13.30](docs/epics/operator-cli.md) |

@@ -820,7 +820,7 @@ with a real core, registry stand-in and database), and the packaging check.
 - An app without `signIn` has no client at core after `sv apply`, and a removed one leaves none behind
 - A secret of 32 bytes decodes to 32 bytes
 
-#### 📋 13.30 — Retire the plugin template `[parallel]`
+#### ✅ 13.30 — Retire the plugin template `[parallel]`
 
 **Goal:** Nobody starts from `sovereign-plugin-template`, which describes a model this repository no longer has.
 
@@ -834,6 +834,13 @@ with a real core, registry stand-in and database), and the packaging check.
 **Dependencies:** 13.27
 
 **Spec reference:** RFC 0003
+
+**Built as:** the repository's README now says the plugin model is gone, what replaced it (apps with a manifest of their own, `npm create @sovereignfs app`,
+`contracts/app-manifest.md`, `docs/using-the-sdk.md`, `docs/connecting-an-app.md` and RFC 0003) and where the old guide can still be read (its last commit
+before the change). It is no longer a GitHub template, its description says it is retired, and it is archived.
+
+**Released as:** `@sovereignfs/sdk` 2.1.0 and `@sovereignfs/manifest` 0.1.0 (the first release of that package), then the toolkit, `@sovereignfs/cli` and
+`@sovereignfs/create` 0.5.0, which read manifests 1 and 2. A scaffold from the published `create` is a valid manifest 2 under the published package's `check`.
 
 **Review checklist:**
 

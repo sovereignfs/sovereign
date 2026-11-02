@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/manifest",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "The Sovereign app manifest: its schemas, a validator, and the command that turns sovereign.manifest.json into an image's label and port.",
   "license": "MPL-2.0",

@@ -37,6 +37,10 @@ const branding = await sv.instance.getBranding(); // public, so no actor
   `state`, `nonce`), keeps the sessions in a **session store** the app gives, and ends them on sign-out and on core's back-channel
   logout notice, which it verifies (signature, issuer, audience, age, event, `jti`, and no `nonce`). The session cookie is host-only
   (`__Host-`, `Secure`, `HttpOnly`) over https. `getSession` makes no call to core.
+- **Notices without the SDK's sessions.** An app whose sessions are its own (it has other ways in, or uses another auth library) verifies
+  core's logout and account-deleted notices with `verifyLogoutToken` and `verifyAccountDeletedToken`, which apply every check and end
+  and delete nothing. They need a `seen` that records each `jti`; see
+  [Using the SDK](https://github.com/sovereignfs/sovereign/blob/main/docs/using-the-sdk.md).
 - **Server only.** Importing it in a browser throws.
 
 ## In Next.js
@@ -79,7 +83,7 @@ const back = core.authorize((await sv.auth.beginSignIn()).url, 'u1');
 const notice = await core.logoutToken({ sub: 'u1' }, { wrong: 'expired' });
 ```
 
-`memorySessionStore()` is a session store for tests.
+`memorySessionStore()` is a session store for tests, and `memorySeen()` a `seen` for `verifyLogoutToken` and `verifyAccountDeletedToken`.
 
 ## Core versions
 

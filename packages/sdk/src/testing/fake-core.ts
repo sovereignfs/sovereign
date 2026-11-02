@@ -877,3 +877,20 @@ export function memorySessionStore(now: () => number = () => Date.now()): Sessio
     },
   };
 }
+
+/**
+ * A `seen` for `verifyLogoutToken` and `verifyAccountDeletedToken` in an app's tests (sdk §9.2): it remembers each `jti` until it
+ * expires, and answers `true` for one it was given before. An app's own is a table, since it must survive a restart and be shared by its
+ * processes; this is only for tests.
+ */
+export function memorySeen(
+  now: () => number = () => Date.now(),
+): (jti: string, expiresAt: number) => Promise<boolean> {
+  const remembered = new Map<string, number>();
+  return async (jti, expiresAt) => {
+    for (const [other, until] of remembered) if (until <= now()) remembered.delete(other);
+    if (remembered.has(jti)) return true;
+    remembered.set(jti, expiresAt);
+    return false;
+  };
+}

@@ -91,6 +91,36 @@ core `200` **only after your function has finished**, and `500` if it throws, so
 must be safe to run twice, and must not finish before the data is gone. An app that holds nothing of people does not need it, and leaves
 the address empty. Elsewhere, `sv.auth.handleAccountDeleted(request, handler)` does the same for a web `Request`.
 
+### When your sessions are not the SDK's
+
+An app that signs people in some other way as well (its own accounts, say, with core as one choice) keeps its own sessions, and has no
+SDK session to end. It still has to act on core's two notices, and it does not write the checks itself. `verifyLogoutToken` and
+`verifyAccountDeletedToken` do every check and return who the notice names, and end and delete nothing:
+
+```ts
+import { InvalidNoticeError, verifyLogoutToken } from '@sovereignfs/sdk';
+
+export async function POST(request: Request) {
+  try {
+    const { sub, sid } = await verifyLogoutToken(request, {
+      coreUrl: process.env.NOTES_CORE_URL!,
+      clientId: process.env.NOTES_CORE_CLIENT_ID!,
+      // Record the jti until it is past; say true if it was recorded already. A table, since it must outlive a restart.
+      seen: async (jti, expiresAt) => !(await notices.insertIfNew(jti, expiresAt)),
+    });
+    await endSessionsOf({ sub, sid }); // your sessions: all of the person's, or the ones of that core session
+    return new Response(null, { status: 200 });
+  } catch (error) {
+    if (error instanceof InvalidNoticeError)
+      return Response.json({ error: 'invalid_request' }, { status: 400 });
+    return new Response(null, { status: 503 }); // core could not be asked: it tries again
+  }
+}
+```
+
+`verifyAccountDeletedToken` is the same for the account-deleted address and returns `{ sub }`: delete what the app holds of that person,
+and answer `200` only after it is gone. `seen` is required, and `memorySeen()` from `@sovereignfs/sdk/testing` is one for your tests.
+
 ## 4. Call core
 
 Every call names who it is made as:

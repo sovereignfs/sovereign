@@ -80,3 +80,13 @@ export class NotAuthenticatedError extends SovereignError {
 export class SignInError extends SovereignError {
   override name = 'SignInError';
 }
+
+/** A notice from core (a logout token or an account-deleted token) is not one core sent to this app, or was seen before (sdk §9.2). Answer `400`. */
+export class InvalidNoticeError extends SovereignError {
+  override name = 'InvalidNoticeError';
+
+  constructor() {
+    // It says nothing of why: an answer that tells a sender which rule failed helps whoever is forging one.
+    super('This is not a notice core sent to this app.');
+  }
+}

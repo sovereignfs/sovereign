@@ -19,12 +19,15 @@ export {
   ConfigurationError,
   CoreApiError,
   CoreUnavailableError,
+  InvalidNoticeError,
   NotAuthenticatedError,
   NotSupportedError,
   SignInError,
   SessionEndedError,
   SovereignError,
 } from './errors';
+export { verifyAccountDeletedToken, verifyLogoutToken } from './notices';
+export type { NoticeOptions } from './notices';
 export type { TokenStore } from './tokens';
 export type { Logger, LogEvent } from './transport';
 export type { SettingsSource } from './settings';

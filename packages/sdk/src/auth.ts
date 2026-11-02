@@ -1,11 +1,7 @@
 import * as client from 'openid-client';
-import {
-  createRemoteJWKSet,
-  customFetch as joseFetch,
-  jwtVerify,
-  errors as joseErrors,
-} from 'jose';
+import { createRemoteJWKSet, customFetch as joseFetch } from 'jose';
 import { CoreUnavailableError, NotAuthenticatedError, SignInError } from './errors';
+import { ACCOUNT_DELETED_EVENT, BACK_CHANNEL_EVENT, checkNotice } from './notices';
 import {
   clearCookie,
   cookieName,
@@ -22,10 +18,6 @@ import type { Transport } from './transport';
 
 const PENDING_SECONDS = 10 * 60;
 const DEFAULT_SESSION_SECONDS = 30 * 24 * 60 * 60;
-const BACK_CHANNEL_EVENT = 'http://schemas.openid.net/event/backchannel-logout';
-const ACCOUNT_DELETED_EVENT = 'urn:sovereignfs:event:account-deleted';
-/** How far an `iat` may be ahead of this clock before a logout token is refused. */
-const SKEW_SECONDS = 60;
 
 export type AuthOptions = {
   appUrl: string;
@@ -303,7 +295,7 @@ export class Auth {
     return this.#verifyNotice(token, 'logout+jwt', BACK_CHANNEL_EVENT);
   }
 
-  /** Checks a notice core signed (a logout token or an account-deleted token): the same rules, for its own type and event. */
+  /** Checks a notice core signed (a logout token or an account-deleted token): the rules of `checkNotice`, then that it was not seen before. */
   async #verifyNotice(token: string, typ: string, event: string) {
     const config = await this.#configuration();
     const jwksUri = config.serverMetadata().jwks_uri;
@@ -316,36 +308,17 @@ export class Auth {
           deadline: this.#o.transport.deadline(),
         }),
     });
-    let payload;
-    try {
-      ({ payload } = await jwtVerify(token, keys, {
-        issuer: this.#o.coreUrl,
-        audience: this.#o.clientId,
-        typ,
-        currentDate: new Date(this.#now()),
-        requiredClaims: ['iat', 'exp', 'jti'],
-      }));
-    } catch (error) {
-      if (error instanceof CoreUnavailableError) throw error;
-      if (error instanceof joseErrors.JOSEError) return undefined;
-      // The key set could not be fetched.
-      if (error instanceof Error && error.name === 'JWKSTimeout') {
-        throw new CoreUnavailableError('Core’s keys could not be fetched.');
-      }
-      return undefined;
-    }
-    const now = Math.floor(this.#now() / 1000);
-    if (typeof payload.iat !== 'number' || payload.iat > now + SKEW_SECONDS) return undefined;
-    const events = payload.events as Record<string, unknown> | undefined;
-    if (!events || typeof events !== 'object' || !(event in events)) return undefined;
-    if ('nonce' in payload) return undefined;
-    const sub = typeof payload.sub === 'string' && payload.sub !== '' ? payload.sub : undefined;
-    const sid = typeof payload.sid === 'string' && payload.sid !== '' ? payload.sid : undefined;
-    if (!sub && !sid) return undefined;
-    const jti = payload.jti as string;
+    const verified = await checkNotice(token, {
+      typ,
+      event,
+      issuer: this.#o.coreUrl,
+      audience: this.#o.clientId,
+      keys,
+      now: this.#now(),
+    });
     // A notice seen before is a replay.
-    if (await this.#o.sessionStore.get(`seen:${jti}`)) return undefined;
-    return { sub, sid, jti, exp: payload.exp as number };
+    if (!verified || (await this.#o.sessionStore.get(`seen:${verified.jti}`))) return undefined;
+    return verified;
   }
 
   // ---- inside ------------------------------------------------------------------------

@@ -249,7 +249,7 @@ are added when core's Phase 2 specifies them.
 - The file holds `sub`s and nothing else about a person
 - The security check is run
 
-#### 📋 14.11 — Verifying a notice on its own `[parallel]`
+#### ✅ 14.11 — Verifying a notice on its own `[parallel]`
 
 **Goal:** An app whose sessions are not the SDK's can act on core's logout and account-deletion notices without writing sdk §9.1's rules again.
 
@@ -258,8 +258,19 @@ are added when core's Phase 2 specifies them.
 **Deliverables:**
 
 - `verifyLogoutToken` and `verifyAccountDeletedToken` (sdk §9.2): experimental, taking a `Request` or a token and `coreUrl`, `clientId` and a required `seen`
-- `handleBackChannelLogout` and `handleAccountDeleted` rebuilt on them, with no change to what they answer
-- The fake core in `@sovereignfs/sdk/testing` makes both tokens for an app's own tests
+- `handleBackChannelLogout` and `handleAccountDeleted` rebuilt on the same rules, with no change to what they answer
+- `memorySeen()` in `@sovereignfs/sdk/testing`, beside the fake core, which already made both tokens (and every way for one to be wrong) and served its keys
+
+**Built as:** the rules of §9.1 moved out of `Auth` into one function, `checkNotice` (`packages/sdk/src/notices.ts`), which `Auth` and both verifiers
+call, so there is one implementation and `handle*` answer exactly as before; each keeps its own way of getting core's keys, the client's transport and its cached
+discovery for `Auth`, and a fetch the app may give for the verifiers. The verifiers read core's discovery document and keys on every call (notices
+are rare, and a key that rotated must not be remembered), with ten seconds and no redirect, and turn a failed connection, a timeout and any answer but a success into
+`CoreUnavailableError`, so the app answers `503` and core tries again with a new `jti`. They refuse keys named at another address than core's, and a `coreUrl` that
+is not the issuer core's document names. `seen` is asked last. `InvalidNoticeError` says nothing of which rule failed. The shared check now tests for `jose`'s key-fetch timeout before its other errors; before, that branch could never run (a timeout is itself a `JOSEError`), though `Auth`'s transport reports a timeout as `CoreUnavailableError` itself, so nothing changed for it. The package is `2.1.0`.
+
+**Verified here:** the new tests were seen to fail when each rule was removed in turn (type, issuer, audience, expiry, `jti`, a future `iat`, event, `nonce`, a
+subject or session, a deletion with no person, the replay check, the form field, POST only, and the key address), and the existing notice tests
+pass unchanged. The security check is run.
 
 **Dependencies:** 14.9, 13.27
 

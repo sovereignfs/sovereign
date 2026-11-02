@@ -21,7 +21,14 @@ export const STABLE = {
 } as const;
 
 export const EXPERIMENTAL = {
-  '.': ['hasRole', 'NotAuthenticatedError', 'SignInError'],
+  '.': [
+    'hasRole',
+    'NotAuthenticatedError',
+    'SignInError',
+    'InvalidNoticeError',
+    'verifyLogoutToken',
+    'verifyAccountDeletedToken',
+  ],
   './next': ['nextAuth'],
-  './testing': ['createFakeCore', 'memorySessionStore'],
+  './testing': ['createFakeCore', 'memorySeen', 'memorySessionStore'],
 } as const;

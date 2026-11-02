@@ -1,4 +1,4 @@
-export { createFakeCore, memorySessionStore } from './fake-core';
+export { createFakeCore, memorySeen, memorySessionStore } from './fake-core';
 export type {
   FakeActivity,
   FakeCore,

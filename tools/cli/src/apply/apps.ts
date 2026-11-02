@@ -1,3 +1,4 @@
+import { secretsOf, variablePrefix, type SignIn } from '@sovereignfs/manifest';
 import { mkdir, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Failed, Refused } from '../errors.js';
@@ -73,6 +74,9 @@ export function hostedClient(
   app: HostedApp,
   manifest: Manifest,
 ): string[] {
+  const signIn: SignIn | undefined = manifest.signIn;
+  // Only an app that signs people in through core has a client to register (contracts/app-manifest.md §2.3).
+  if (!signIn) throw new Error(`${name} has no signIn, so it has no client.`);
   const launcher = app.launcher ?? {};
   const launchUrl = launcher.launchUrl ?? absolute(suite, name, manifest.launch ?? '/');
   const description = launcher.description ?? manifest.description;
@@ -81,18 +85,16 @@ export function hostedClient(
     '--name',
     manifest.name,
     '--redirect',
-    ...manifest.signIn.redirect.map((p) => absolute(suite, name, p)),
-    ...(manifest.signIn.postLogout?.length
-      ? ['--post-logout', ...manifest.signIn.postLogout.map((p) => absolute(suite, name, p))]
+    ...signIn.redirect.map((p) => absolute(suite, name, p)),
+    ...(signIn.postLogout?.length
+      ? ['--post-logout', ...signIn.postLogout.map((p) => absolute(suite, name, p))]
       : []),
-    ...(manifest.signIn.backChannel
-      ? ['--back-channel', absolute(suite, name, manifest.signIn.backChannel)]
-      : []),
-    ...(manifest.signIn.accountDeleted
-      ? ['--account-deleted', absolute(suite, name, manifest.signIn.accountDeleted)]
+    ...(signIn.backChannel ? ['--back-channel', absolute(suite, name, signIn.backChannel)] : []),
+    ...(signIn.accountDeleted
+      ? ['--account-deleted', absolute(suite, name, signIn.accountDeleted)]
       : []),
     '--scope',
-    ...manifest.signIn.scopes,
+    ...signIn.scopes,
     // A hosted app is the operator's own: people are not asked about it, and it may ask for roles (contracts/app-manifest.md §2.1).
     '--trusted',
     '--launch-url',
@@ -192,6 +194,8 @@ export type AppRun = {
   /** Compose overrides for this app, if the operator wrote any. */
   overrideFiles: (name: string) => string[];
   operatorSecrets: Record<string, Record<string, string>>;
+  /** Whether the app had a client at core when the last run ended, so one that no longer signs people in through core can have it removed. */
+  hadClient: (name: string) => boolean;
   /** The apps that go through the pooler this run: those that declare it, when it is on (operator-cli §6.4.5). */
   pooled: ReadonlySet<string>;
 };
@@ -220,6 +224,7 @@ export async function applyHostedApp(
   await ensureOnNetwork(host, CONTAINER.database, network, []);
   await ensureOnNetwork(host, CONTAINER.proxy, network, run.names);
 
+  const prefix = variablePrefix(manifest);
   const database = databaseOf(name);
   const pooled = run.pooled.has(name);
   const secrets: Record<string, string> = {};
@@ -243,25 +248,32 @@ export async function applyHostedApp(
         ? `postgres://${database}:${password.value}@${CONTAINER.pooler}:${POOLER_PORT}/${database}`
         : server,
     );
-    secrets[`${manifest.prefix}_POSTGRES_URL`] = `app-${name}-postgres-url`;
+    secrets[`${prefix}_POSTGRES_URL`] = `app-${name}-postgres-url`;
     // The server itself, for what needs a session. No pooler runs yet, so it is the same address (operator-cli §6.4.4).
     await generated.write(`app-${name}-postgres-direct-url`, server);
-    secrets[`${manifest.prefix}_POSTGRES_DIRECT_URL`] = `app-${name}-postgres-direct-url`;
+    secrets[`${prefix}_POSTGRES_DIRECT_URL`] = `app-${name}-postgres-direct-url`;
     postgres = true;
   }
 
-  const client = await ensureClient(
-    host,
-    generated,
-    name,
-    hostedClient(suite, name, app, manifest),
-    true,
-  );
-  const clientId = client.clientId;
-  secrets[`${manifest.prefix}_CORE_CLIENT_SECRET`] = clientSecretFile(name);
+  // Only an app that signs people in through core is a client there (contracts/app-manifest.md §2.3). One that has stopped is no longer.
+  let clientId: string | undefined;
+  let client: { clientId: string; created: boolean } | undefined;
+  if (manifest.signIn) {
+    client = await ensureClient(
+      host,
+      generated,
+      name,
+      hostedClient(suite, name, app, manifest),
+      true,
+    );
+    clientId = client.clientId;
+    secrets[`${prefix}_CORE_CLIENT_SECRET`] = clientSecretFile(name);
+  } else if (run.hadClient(name)) {
+    await removeClient(host, name);
+  }
 
-  for (const variable of manifest.generate ?? []) {
-    await generated.ensure(`app-${name}-${variable}`, () => generated.random(48));
+  for (const { name: variable, bytes } of secretsOf(manifest)) {
+    await generated.ensure(`app-${name}-${variable}`, () => generated.random(bytes));
     secrets[variable] = `app-${name}-${variable}`;
   }
   for (const [variable, value] of Object.entries(run.operatorSecrets[name] ?? {})) {
@@ -297,8 +309,8 @@ export async function applyHostedApp(
   await waitHealthy(host, name, manifest);
   return {
     kind: 'hosted',
-    clientId,
-    created: client.created,
+    ...(clientId === undefined ? {} : { clientId }),
+    ...(client ? { created: client.created } : {}),
     ...(postgres ? { database, role: database } : {}),
     version: app.image,
     healthy: true,
@@ -350,12 +362,8 @@ async function waitHealthy(host: Host, name: string, manifest: Manifest): Promis
   );
 }
 
-/**
- * An app in `state.json` that is no longer in `suite.yml` (operator-cli §6.1 step 7): its container is stopped and removed and its client
- * is removed at core. Its database, role, data and generated secrets stay, so adding it again picks up where it was.
- */
-export async function removeApp(host: Host, name: string): Promise<void> {
-  await host.docker(['rm', '--force', CONTAINER.app(name)]);
+/** Removes an app's client at core, and its launcher entry with it. An app that has none is not an error. */
+async function removeClient(host: Host, name: string): Promise<void> {
   const removed = await host.docker([
     'exec',
     CONTAINER.core,
@@ -369,6 +377,15 @@ export async function removeApp(host: Host, name: string): Promise<void> {
       `Removing ${name}’s client failed: ${(removed.stderr || removed.stdout).trim().split('\n').pop()}`,
     );
   }
+}
+
+/**
+ * An app in `state.json` that is no longer in `suite.yml` (operator-cli §6.1 step 7): its container is stopped and removed and its client
+ * is removed at core. Its database, role, data and generated secrets stay, so adding it again picks up where it was.
+ */
+export async function removeApp(host: Host, name: string): Promise<void> {
+  await host.docker(['rm', '--force', CONTAINER.app(name)]);
+  await removeClient(host, name);
   for (const container of [CONTAINER.proxy, CONTAINER.database]) {
     await host.docker(['network', 'disconnect', NETWORK.app(name), container]);
   }

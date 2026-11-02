@@ -1,7 +1,13 @@
 export { schemas, supportedVersions, versionOf, type ManifestVersion } from './schemas';
-export type { Manifest, Manifest1, Problem } from './types';
+export type { GenerateEntry, Manifest, Manifest1, Manifest2, Problem, SignIn } from './types';
 export { validate, type Validated } from './validate';
-export { DEFAULT_SECRET_BYTES, normalise, type Normalised } from './normalise';
+export {
+  DEFAULT_SECRET_BYTES,
+  normalise,
+  secretsOf,
+  variablePrefix,
+  type Normalised,
+} from './normalise';
 export {
   dockerArgs,
   labelValue,

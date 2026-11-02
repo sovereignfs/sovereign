@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { run, type Io } from '../command';
 import { dockerArgs, labelValue } from '../label';
-import { manifestOf } from './helpers';
+import { manifest2Of, manifestOf } from './helpers';
 
 /** The command with a folder of files, and what it printed. */
 function command(files: Record<string, string>, argv: string[]) {
@@ -27,6 +27,16 @@ describe('sovereign-manifest', () => {
       out: '/app/sovereign.manifest.json is a valid manifest 1.\n',
       err: '',
     });
+  });
+
+  it('checks a manifest 2, and prints its label and its port for a build', () => {
+    const manifest = manifest2Of({ port: 8080 });
+    expect(command(file(manifest), ['check']).out).toBe(
+      '/app/sovereign.manifest.json is a valid manifest 2.\n',
+    );
+    expect(command(file(manifest), ['docker-args', '--format', 'github']).out).toContain(
+      'build-args=PORT=8080',
+    );
   });
 
   it('reads the folder it is given', () => {

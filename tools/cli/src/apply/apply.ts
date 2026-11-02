@@ -403,6 +403,7 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
     ...(options.imageOverrides ? { imageOverrides: options.imageOverrides } : {}),
     overrideFiles: (name) => overrides.files[name] ?? [],
     operatorSecrets,
+    hadClient: (name) => Boolean(state?.apps?.[name]?.clientId),
   };
   const results: Record<string, AppResult> = {};
   const failures: { name: string; message: string }[] = [];

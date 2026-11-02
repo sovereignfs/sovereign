@@ -78,7 +78,8 @@ package's `bin`, and `packages:check` holds it to a tool's rules (in `dist/`, in
   The first release is `manifest-v0.1.0`.
 - **The toolkit bundles it.** `sv` validates a manifest with the same code (`tools/cli` builds it in), so a toolkit release carries the
   manifest versions the package had when it was built (`RELEASE.manifests` is `supportedVersions`).
-- **A new manifest version** is a minor release of the package, with its schema added to `contracts/schemas/`.
+- **A new manifest version** is a minor release of the package, with its schema added to `contracts/schemas/`; a test fails if a schema file is not
+  one the package reads. `manifest-v0.1.0` carries manifests 1 and 2.
 
 ### Releasing a package
 

@@ -64,7 +64,7 @@ describe('the files of an app', () => {
       ]),
     );
     for (const file of all(target)) {
-      expect(read(target, file), file).not.toMatch(/__(PREFIX|NAME|TITLE)__/);
+      expect(read(target, file), file).not.toMatch(/__(PREFIX|PREFIX_LOWER|NAME|TITLE)__/);
     }
     expect(read(target, 'lib/db.ts')).toContain("required('MYNOTES_POSTGRES_URL')");
     // The pool is the size the instance gives it, whose role's limit is set from the same number (operator-cli §6.4.4).
@@ -79,6 +79,7 @@ describe('the files of an app', () => {
     const target = path.join(temp(), 'my-notes');
     await writeApp(target, namesOf(target));
     const manifest = JSON.parse(read(target, 'sovereign.manifest.json')) as {
+      manifest: number;
       generate: string[];
       prefix: string;
     };
@@ -86,18 +87,22 @@ describe('the files of an app', () => {
     addFormats(ajv);
     const validate = ajv.compile(
       JSON.parse(
-        readFileSync(path.join(root, 'contracts/schemas/app-manifest-v1.schema.json'), 'utf8'),
+        readFileSync(path.join(root, 'contracts/schemas/app-manifest-v2.schema.json'), 'utf8'),
       ),
     );
     expect(validate(manifest), JSON.stringify(validate.errors)).toBe(true);
+    // The manifest names the app in lower case, and the variables are its upper case (app-manifest §2.4).
+    expect(manifest.manifest).toBe(2);
+    expect(manifest.prefix).toBe('mynotes');
     // What the code reads is what the manifest gives it (contracts/app-manifest.md §3).
     const code = all(target)
       .filter((file) => /\.(ts|tsx)$/.test(file))
       .map((file) => read(target, file))
       .join('\n');
+    const variables = manifest.prefix.toUpperCase();
     for (const name of ['POSTGRES_URL', 'AUTH_SECRET'])
-      expect(code).toContain(`${manifest.prefix}_${name}`);
-    expect(manifest.generate).toEqual([`${manifest.prefix}_AUTH_SECRET`]);
+      expect(code).toContain(`${variables}_${name}`);
+    expect(manifest.generate).toEqual([`${variables}_AUTH_SECRET`]);
     expect(code).toContain("prefix: 'MYNOTES'");
   });
 

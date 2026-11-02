@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import type { Lock, Suite } from '../suite/types.js';
 import { NOTES_IMAGE, setUpWorld, sv } from '../testing/commands.js';
-import { makeWorld, manifestOf, type World } from '../testing/world.js';
+import { kioskOf, makeWorld, manifest2Of, manifestOf, type World } from '../testing/world.js';
 
 let world: World;
 afterEach(() => world.cleanup());
@@ -26,6 +26,69 @@ describe('sv app add', () => {
     expect(done.text).toContain('Notes (notes) at https://notes.sovereign.local');
     expect(done.text).toContain('openid, profile, email');
     expect(done.text).toContain('It gets its own database');
+  });
+
+  it('names a hosted app after its manifest 2, when it is given no name', async () => {
+    await withNotes({ images: { [NOTES_IMAGE]: { manifest: manifest2Of() } } });
+    const done = await sv(world, 'app', 'add', '--image', NOTES_IMAGE, '--yes');
+    expect(done.code).toBe(0);
+    expect(suite().apps).toEqual({ notes: { image: NOTES_IMAGE } });
+    expect(done.text).toContain('Notes (notes) at https://notes.sovereign.local');
+  });
+
+  it('prefers the name it is given to the manifest’s', async () => {
+    await withNotes({ images: { [NOTES_IMAGE]: { manifest: manifest2Of() } } });
+    const done = await sv(world, 'app', 'add', 'second-notes', '--image', NOTES_IMAGE, '--yes');
+    expect(done.code).toBe(0);
+    expect(Object.keys(suite().apps ?? {})).toEqual(['second-notes']);
+  });
+
+  it('wants a name for a manifest 1, which does not name the app', async () => {
+    await withNotes();
+    const one = await sv(world, 'app', 'add', '--image', NOTES_IMAGE, '--yes');
+    expect(one.code).toBe(2);
+    expect(one.text).toContain('has a manifest 1, which does not name the app');
+    expect(one.text).toContain('sv app add NAME --image REF');
+    expect(suite().apps).toBeUndefined();
+  });
+
+  it.each(['core', 'a', 'x'.repeat(40)])(
+    'wants a name when the manifest’s prefix %s is not one an instance accepts',
+    async (prefix) => {
+      await withNotes({
+        images: { [NOTES_IMAGE]: { manifest: manifest2Of({ prefix, generate: [] }) } },
+      });
+      const done = await sv(world, 'app', 'add', '--image', NOTES_IMAGE, '--yes');
+      expect(done.code).toBe(2);
+      expect(done.text).toContain('the name the manifest gives, cannot be used');
+      expect(suite().apps).toBeUndefined();
+    },
+  );
+
+  it('does not add a second app under the name the manifest gives', async () => {
+    await withNotes({ images: { [NOTES_IMAGE]: { manifest: manifest2Of() } } });
+    await sv(world, 'app', 'add', '--image', NOTES_IMAGE, '--yes');
+    const again = await sv(world, 'app', 'add', '--image', NOTES_IMAGE, '--yes');
+    expect(again.code).toBe(2);
+    expect(again.text).toContain('already an app');
+  });
+
+  it('says it is not registered with core when the app signs nobody in through it', async () => {
+    await withNotes({ images: { [NOTES_IMAGE]: { manifest: kioskOf() } } });
+    const done = await sv(world, 'app', 'add', '--image', NOTES_IMAGE, '--yes');
+    expect(done.code).toBe(0);
+    expect(done.text).toContain('does not sign people in through core');
+    expect(done.text).toContain('no launcher entry');
+    expect(done.text).not.toContain('asks to sign people in with');
+  });
+
+  it('refuses launcher settings for an app that has no launcher entry', async () => {
+    await withNotes({ images: { [NOTES_IMAGE]: { manifest: kioskOf() } } });
+    await sv(world, 'app', 'add', '--image', NOTES_IMAGE, '--yes');
+    const done = await sv(world, 'app', 'update', 'notes', '--description', 'A kiosk');
+    expect(done.code).toBe(2);
+    expect(done.text).toContain('no launcher entry');
+    expect(suite().apps?.notes).toEqual({ image: NOTES_IMAGE });
   });
 
   it('says plainly that an app which asks for roles is trusted', async () => {

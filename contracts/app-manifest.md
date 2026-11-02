@@ -137,7 +137,7 @@ no hyphen because it becomes part of a variable name.
 ### 2.5 `generate`
 
 Each entry is a variable name, or an object `{ "name": "...", "bytes": N }`. A name begins with the variable prefix and `_`, and appears
-once. The server makes `N` random bytes, in base64, once, and keeps them. `bytes` is from 16 to 64, and a name alone is 48.
+once. The server makes `N` random bytes, in URL-safe base64 (`-` and `_`, no padding: what `openssl rand -base64 N` makes with its `+`, `/` and `=` changed), once, and keeps them. `bytes` is from 16 to 64, and a name alone is 48.
 
 ---
 
@@ -157,7 +157,7 @@ marked secret is given in its `_FILE` form, so an app MUST read a secret either 
 | `<PREFIX>_POSTGRES_URL`        | With `database` | yes    | Its own database, as its own role. Through a transaction pooler only when the app declares `pooling` (§2.2) and the instance runs one; otherwise the server itself |
 | `<PREFIX>_POSTGRES_DIRECT_URL` | With `database` | yes    | Its own database, as its own role, on the database server itself, never through a pooler. For what needs a session                                                 |
 | `<PREFIX>_POSTGRES_POOL_MAX`   | With `database` |        | The most connections its pool may hold                                                                                                                             |
-| What `generate` names          | When listed     | yes    | Random bytes, in base64, made once and kept: 48, or the entry's `bytes` (§2.5)                                                                                     |
+| What `generate` names          | When listed     | yes    | Random bytes, in URL-safe base64, made once and kept: 48, or the entry's `bytes` (§2.5)                                                                            |
 
 Anything else comes from the operator: `env` in `suite.yml`, or `secrets.age.yml`. Neither may set a variable in this table.
 

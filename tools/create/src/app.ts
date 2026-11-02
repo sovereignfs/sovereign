@@ -89,6 +89,8 @@ export async function writeApp(target: string, names: AppNames): Promise<string[
   const written: string[] = [];
   const replace = (text: string) =>
     text
+      // The variables are upper case (`MYNOTES_URL`); the manifest names the app in lower case (contracts/app-manifest.md §2.4).
+      .replaceAll('__PREFIX_LOWER__', names.prefix.toLowerCase())
       .replaceAll('__PREFIX__', names.prefix)
       .replaceAll('__NAME__', names.name)
       .replaceAll('__TITLE__', names.title);

@@ -1,3 +1,4 @@
+import { secretsOf, variablePrefix } from '@sovereignfs/manifest';
 import { parseArgs, positionals } from '../args.js';
 import type { Context } from '../context.js';
 import { Refused } from '../errors.js';
@@ -41,10 +42,17 @@ async function owner(ctx: Context, app: string | undefined, name: string) {
     throw new Refused(`${app} is an external app: it runs elsewhere and has no environment here.`);
   }
   const manifest = await manifestOf(ctx, suite, await readLock(ctx.root), app);
-  if (!name.startsWith(`${manifest.prefix}_`)) {
-    throw new Refused(`A secret for ${app} begins with ${manifest.prefix}_, and ${name} does not.`);
+  const prefix = variablePrefix(manifest);
+  if (!name.startsWith(`${prefix}_`)) {
+    throw new Refused(`A secret for ${app} begins with ${prefix}_, and ${name} does not.`);
   }
-  if (isReservedForApp(name, manifest.prefix, manifest.generate)) {
+  if (
+    isReservedForApp(
+      name,
+      prefix,
+      secretsOf(manifest).map((secret) => secret.name),
+    )
+  ) {
     throw new Refused(`${name} is given to ${app} by the deployment, and cannot be set.`);
   }
   return { owner: app, suite, file };

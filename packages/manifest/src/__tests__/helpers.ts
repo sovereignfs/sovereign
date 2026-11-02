@@ -23,3 +23,19 @@ export function manifestOf(change: Record<string, unknown> = {}): Manifest {
     ...change,
   } as Manifest;
 }
+
+/** A valid manifest 2, as Fjord Web would write it: a lower-case prefix, signed in through core, one secret larger than the rest. */
+export function manifest2Of(change: Record<string, unknown> = {}): Manifest {
+  return {
+    manifest: 2,
+    prefix: 'fjord',
+    name: 'Fjord',
+    port: 3000,
+    health: '/api/health',
+    signIn: { redirect: ['/api/auth/callback/sovereign'], scopes: ['openid', 'profile', 'email'] },
+    database: true,
+    generate: ['FJORD_AUTH_SECRET', { name: 'FJORD_ENCRYPTION_KEY', bytes: 32 }],
+    core: '>=0.57.0 <1.0.0',
+    ...change,
+  } as Manifest;
+}

@@ -37,7 +37,7 @@ git tag v0.1.0 && git push origin v0.1.0
 then, in your instance repository:
 
 ```bash
-./sv app add __NAME__ --image ghcr.io/you/__NAME__:0.1.0     # or: --git https://github.com/you/__NAME__
+./sv app add __NAME__ --image ghcr.io/you/__NAME__:0.1.0     # the name is the app's address; it may be left out, and is then the manifest's prefix
 ./sv push && ./sv deploy
 ```
 

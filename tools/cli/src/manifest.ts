@@ -10,7 +10,7 @@ const MAX_BYTES = 64 * 1024;
 /**
  * Reads an app's manifest (contracts/app-manifest.md §1): from the `https` address the operator gave, which wins when an image has
  * both, or from the label on the image, read from the registry without pulling it. Refuses one that does not meet the schema, one
- * whose version this toolkit does not read, and one whose `core` range leaves out the instance's core.
+ * whose version this toolkit does not read, and one whose `core` range, when it has one, leaves out the instance's core.
  */
 export async function readManifest(
   name: string,
@@ -54,16 +54,19 @@ export async function readManifest(
     );
   }
   const manifest: Manifest = checked.manifest;
-  if (validRange(manifest.core) === null) {
-    throw new Refused(
-      `The manifest for ${name} has a core range that is not a version range: ${manifest.core}.`,
-    );
-  }
-  if (!satisfies(coreVersion, manifest.core)) {
-    throw new Refused(
-      `${name} works with core ${manifest.core}, and this instance runs ${coreVersion}.`,
-      'Use a version of the app that supports it, or move the instance to a core it supports.',
-    );
+  // An app that signs nobody in through core may leave the range out: it has nothing to be incompatible with (app-manifest §2).
+  if (manifest.core !== undefined) {
+    if (validRange(manifest.core) === null) {
+      throw new Refused(
+        `The manifest for ${name} has a core range that is not a version range: ${manifest.core}.`,
+      );
+    }
+    if (!satisfies(coreVersion, manifest.core)) {
+      throw new Refused(
+        `${name} works with core ${manifest.core}, and this instance runs ${coreVersion}.`,
+        'Use a version of the app that supports it, or move the instance to a core it supports.',
+      );
+    }
   }
   return manifest;
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Refused } from './errors.js';
 import { canPool, hasDatabase } from './suite/types.js';
 import { readManifest } from './manifest.js';
-import { fakeRegistry, manifestOf } from './testing/world.js';
+import { fakeRegistry, kioskOf, manifest2Of, manifestOf } from './testing/world.js';
 
 const IMAGE = 'ghcr.io/example/notes:1.2.0';
 const read = (
@@ -78,8 +78,8 @@ describe('reading an app’s manifest', () => {
     ['not json', 'nope', 'is not JSON'],
     [
       'a version it does not read',
-      manifestOf({ manifest: 2 }),
-      'version 2, which this toolkit does not read',
+      manifestOf({ manifest: 3 }),
+      'version 3, which this toolkit does not read',
     ],
     ['an unknown field', manifestOf({ extra: true }), 'extra is not allowed'],
     [
@@ -100,5 +100,42 @@ describe('reading an app’s manifest', () => {
     const error = await read(manifestOf({ core: '>=0.80.0' }), '0.71.0').catch((e: unknown) => e);
     expect((error as Refused).message).toContain('>=0.80.0');
     expect((error as Refused).message).toContain('0.71.0');
+  });
+});
+
+describe('reading a manifest 2', () => {
+  it('reads it, with its lower-case prefix and sized secrets as they are', async () => {
+    const manifest = await read(manifest2Of());
+    expect(manifest).toMatchObject({ manifest: 2, prefix: 'notes' });
+    expect(manifest.generate).toEqual([
+      'NOTES_AUTH_SECRET',
+      { name: 'NOTES_ENCRYPTION_KEY', bytes: 32 },
+    ]);
+  });
+
+  it('reads an app that signs nobody in through core, which has no core range to leave out an instance', async () => {
+    const manifest = await read(kioskOf(), '0.1.0');
+    expect(manifest.signIn).toBeUndefined();
+    expect(manifest.core).toBeUndefined();
+  });
+
+  it('holds a core range it has to the instance, as manifest 1 does', async () => {
+    const error = await read(manifest2Of({ core: '>=0.80.0' }), '0.71.0').catch((e: unknown) => e);
+    expect((error as Refused).message).toContain('>=0.80.0');
+    await expect(read(manifest2Of({ core: 'not a range' }))).rejects.toThrow('not a version range');
+    await expect(read(kioskOf({ core: '>=0.80.0' }), '0.71.0')).rejects.toThrow('>=0.80.0');
+  });
+
+  it.each([
+    ['an upper-case prefix', manifest2Of({ prefix: 'NOTES' }), 'prefix'],
+    ['no core range, with a sign-in', (({ core: _core, ...rest }) => rest)(manifest2Of()), 'core'],
+    ['a launcher entry and no sign-in', kioskOf({ launch: '/' }), 'launch'],
+    [
+      'a secret outside its prefix',
+      manifest2Of({ generate: ['OTHER_KEY'] }),
+      'must begin with NOTES_',
+    ],
+  ])('refuses a manifest with %s', async (_name, manifest, message) => {
+    await expect(read(manifest)).rejects.toThrow(message);
   });
 });

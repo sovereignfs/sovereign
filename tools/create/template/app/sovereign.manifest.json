@@ -1,6 +1,6 @@
 {
-  "manifest": 1,
-  "prefix": "__PREFIX__",
+  "manifest": 2,
+  "prefix": "__PREFIX_LOWER__",
   "name": "__TITLE__",
   "description": "Notes, as a starting point for an app on a Sovereign instance",
   "port": 3000,

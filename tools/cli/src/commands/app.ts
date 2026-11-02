@@ -91,19 +91,24 @@ const setApp = (file: SuiteFile, name: string, app: App) => (doc: Document) => {
 async function add(ctx: Context, argv: string[]): Promise<void> {
   const external = argv.includes('--external');
   const args = parseArgs(argv, external ? KIND['add-external'] : KIND['add-hosted']);
-  const [name] = positionals(
-    args,
-    1,
-    'sv app add NAME --image REF   |   sv app add NAME --external --name N --redirect URL',
-  );
+  const usage =
+    'sv app add [NAME] --image REF   |   sv app add NAME --external --name N --redirect URL';
+  // A hosted app whose manifest is version 2 names itself, so it may be added without a name (contracts/suite.md §1.7).
+  if (args.positionals.length > 1 || (external && args.positionals.length === 0))
+    throw new Refused(`Usage: ${usage}`);
+  let name = args.positionals[0];
   const file = await SuiteFile.load(ctx.root);
   const suite = file.value;
-  checkName(name as string, suite);
-  if (suite.apps && (name as string) in suite.apps) {
-    throw new Refused(`${name} is already an app.`, 'Use sv app update to change it.');
-  }
+  const accept = (candidate: string) => {
+    checkName(candidate, suite);
+    if (suite.apps && candidate in suite.apps) {
+      throw new Refused(`${candidate} is already an app.`, 'Use sv app update to change it.');
+    }
+  };
+  if (name !== undefined) accept(name);
 
   if (external) {
+    name = name as string;
     const display = args.values.get('name');
     const redirect = args.lists.get('redirect');
     if (!display || !redirect)
@@ -122,7 +127,7 @@ async function add(ctx: Context, argv: string[]): Promise<void> {
       ...(args.switches.has('public') ? { type: 'public' as const } : {}),
       ...(args.switches.has('trusted') ? { trusted: true } : {}),
     };
-    await commit(ctx, file, setApp(file, name as string, app));
+    await commit(ctx, file, setApp(file, name, app));
     ctx.io.err(`Added ${name} as an external app: it gets a sign-in and nothing else.`);
     ctx.io.err(
       'Its client ID and secret are made on the server when you deploy; sv app show NAME --secret then gives you the secret.',
@@ -142,24 +147,49 @@ async function add(ctx: Context, argv: string[]): Promise<void> {
     ...(args.lists.has('env') ? { env: envOf(args.lists.get('env')) } : {}),
   };
   const manifest = await readManifest(
-    name as string,
+    name ?? image,
     app,
     ctx.registry,
     suite.core.version,
     ctx.fetch,
     digest,
   );
-  const problems = appEnvProblems(name as string, app, manifest);
+  if (name === undefined) {
+    if (manifest.manifest < 2) {
+      throw new Refused(
+        `${image} has a manifest 1, which does not name the app.`,
+        'Give it a name: sv app add NAME --image REF.',
+      );
+    }
+    // The manifest names the app (contracts/suite.md §1.7); if that is not a name an instance accepts, the operator chooses one.
+    try {
+      accept(manifest.prefix);
+    } catch (error) {
+      if (!(error instanceof Refused)) throw error;
+      throw new Refused(
+        `${manifest.prefix}, the name the manifest gives, cannot be used: ${error.message}`,
+        'Give it a name: sv app add NAME --image REF.',
+      );
+    }
+    name = manifest.prefix;
+  }
+  const problems = appEnvProblems(name, app, manifest);
   if (problems.length > 0) {
     throw new Refused(
       `That cannot be set:\n${problems.map((p) => `  ${p.at}: ${p.message}`).join('\n')}`,
     );
   }
   ctx.io.err(`${manifest.name} (${name}) at https://${name}.${suite.domain}`);
-  ctx.io.err(`  asks to sign people in with: ${manifest.signIn.scopes.join(', ')}`);
-  if (manifest.signIn.scopes.includes('roles')) {
+  if (manifest.signIn) {
+    ctx.io.err(`  asks to sign people in with: ${manifest.signIn.scopes.join(', ')}`);
+    if (manifest.signIn.scopes.includes('roles')) {
+      ctx.io.err(
+        '  It will be told whether each person is an admin or the owner, and it is trusted: people are not asked about it.',
+      );
+    }
+  } else {
     ctx.io.err(
-      '  It will be told whether each person is an admin or the owner, and it is trusted: people are not asked about it.',
+      '  It does not sign people in through core: it is not registered there and has no launcher entry.',
     );
   }
   ctx.io.err(
@@ -172,7 +202,7 @@ async function add(ctx: Context, argv: string[]): Promise<void> {
     }`,
   );
   await confirm(ctx.io, `Add ${name}?`, args.switches.has('yes'));
-  await commit(ctx, file, setApp(file, name as string, app));
+  await commit(ctx, file, setApp(file, name, app));
   ctx.io.err(`Added ${name}. Run sv push and sv deploy to start it.`);
 }
 

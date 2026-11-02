@@ -1,10 +1,12 @@
 import Ajv2020 from 'ajv/dist/2020';
 import { schemas, supportedVersions, versionOf, type ManifestVersion } from './schemas';
+import { secretsOf, variablePrefix } from './normalise';
 import type { Manifest, Problem } from './types';
 
 const ajv = new Ajv2020({ strict: false, allErrors: true });
 const validators = {
   1: ajv.compile(schemas[1]),
+  2: ajv.compile(schemas[2]),
 } satisfies Record<ManifestVersion, unknown>;
 
 export type Validated = { ok: true; manifest: Manifest } | { ok: false; problems: Problem[] };
@@ -64,17 +66,23 @@ function schemaProblems(errors: readonly SchemaError[]): Problem[] {
   return problems;
 }
 
-/** What a schema cannot say: each name a secret is made for begins with the app’s variable prefix (§2.5). */
+/**
+ * What a schema cannot say (§2.5): each name a secret is made for begins with the app’s variable prefix, and none is named twice (in
+ * manifest 2 an entry may be a name or an object, which `uniqueItems` cannot compare by name).
+ */
 function ruleProblems(manifest: Manifest): Problem[] {
-  const variablePrefix = manifest.prefix.toUpperCase();
+  const prefix = variablePrefix(manifest);
   const problems: Problem[] = [];
-  (manifest.generate ?? []).forEach((name, index) => {
-    if (!name.startsWith(`${variablePrefix}_`)) {
+  const seen = new Set<string>();
+  secretsOf(manifest).forEach(({ name }, index) => {
+    if (!name.startsWith(`${prefix}_`)) {
       problems.push({
         at: `generate.${index}`,
-        message: `must begin with ${variablePrefix}_, the app’s prefix`,
+        message: `must begin with ${prefix}_, the app’s prefix`,
       });
     }
+    if (seen.has(name)) problems.push({ at: `generate.${index}`, message: 'is named twice' });
+    seen.add(name);
   });
   return problems;
 }

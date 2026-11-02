@@ -72,6 +72,34 @@ export function manifestOf(extra: Record<string, unknown> = {}) {
   };
 }
 
+/** A manifest 2: the app names itself in lower case (app-manifest §2.4), and a secret may say its size (§2.5). */
+export function manifest2Of(extra: Record<string, unknown> = {}) {
+  return {
+    manifest: 2,
+    prefix: 'notes',
+    name: 'Notes',
+    port: 3000,
+    health: '/api/health',
+    signIn: {
+      redirect: ['/api/auth/callback/sovereign'],
+      postLogout: ['/'],
+      backChannel: '/api/auth/back-channel-logout',
+      scopes: ['openid', 'profile', 'email'],
+    },
+    database: true,
+    generate: ['NOTES_AUTH_SECRET', { name: 'NOTES_ENCRYPTION_KEY', bytes: 32 }],
+    data: ['/data'],
+    core: '>=0.49.0 <1.0.0',
+    ...extra,
+  };
+}
+
+/** The same app, signing nobody in through core: no client, no core settings, no launcher entry (§2.3). */
+export function kioskOf(extra: Record<string, unknown> = {}) {
+  const { signIn: _signIn, core: _core, ...rest } = manifest2Of();
+  return { ...rest, prefix: 'notes', name: 'Kiosk', ...extra };
+}
+
 /** A registry that knows a few images: what they resolve to, and the manifest each carries. */
 export function fakeRegistry(
   images: Record<string, { digest?: string; manifest?: unknown }> = {},

@@ -1,7 +1,22 @@
-import type { Manifest } from './types';
+import type { Manifest, SignIn } from './types';
 
 /** The size of a secret `generate` makes when it does not say (§2.5). */
 export const DEFAULT_SECRET_BYTES = 48;
+
+/** The prefix of every variable an app reads: the manifest’s `prefix` in upper case (`contracts/env.md` §1, `app-manifest.md` §2.4). */
+export function variablePrefix(manifest: Pick<Manifest, 'prefix'>): string {
+  return manifest.prefix.toUpperCase();
+}
+
+/** The secrets the server makes for an app, each with its size in bytes, whichever form a `generate` entry is written in. */
+export function secretsOf(manifest: Pick<Manifest, 'generate'>): { name: string; bytes: number }[] {
+  return ((manifest.generate ?? []) as (string | { name: string; bytes?: number })[]).map(
+    (entry) =>
+      typeof entry === 'string'
+        ? { name: entry, bytes: DEFAULT_SECRET_BYTES }
+        : { name: entry.name, bytes: entry.bytes ?? DEFAULT_SECRET_BYTES },
+  );
+}
 
 /**
  * What a manifest means, whatever its version: the form the toolkit and an app's build read, so that a later version is one more way to
@@ -14,6 +29,8 @@ export type Normalised = {
   prefix: string;
   /** The prefix of every variable it reads: `prefix` in upper case (`contracts/env.md` §1). */
   variablePrefix: string;
+  /** The name `sv app add` uses when it is given none. Only a manifest 2 has one (§2.4). */
+  defaultName?: string;
   name: string;
   description?: string;
   icon?: string;
@@ -22,7 +39,7 @@ export type Normalised = {
   /** Where the launcher sends people. */
   launch: string;
   /** Present when people sign in through core. */
-  signIn?: Manifest['signIn'];
+  signIn?: SignIn;
   database: { enabled: boolean; pooling?: 'transaction' };
   /** The secrets the server makes, each with its size in bytes. */
   generate: { name: string; bytes: number }[];
@@ -36,20 +53,21 @@ export function normalise(manifest: Manifest): Normalised {
   return {
     version: manifest.manifest,
     prefix: manifest.prefix.toLowerCase(),
-    variablePrefix: manifest.prefix.toUpperCase(),
+    variablePrefix: variablePrefix(manifest),
+    ...(manifest.manifest === 2 ? { defaultName: manifest.prefix } : {}),
     name: manifest.name,
     ...(manifest.description === undefined ? {} : { description: manifest.description }),
     ...(manifest.icon === undefined ? {} : { icon: manifest.icon }),
     port: manifest.port,
     health: manifest.health,
     launch: manifest.launch ?? '/',
-    signIn: manifest.signIn,
+    ...(manifest.signIn === undefined ? {} : { signIn: manifest.signIn }),
     database: {
       enabled: database !== undefined && database !== false,
       ...(typeof database === 'object' && database.pooling ? { pooling: database.pooling } : {}),
     },
-    generate: (manifest.generate ?? []).map((name) => ({ name, bytes: DEFAULT_SECRET_BYTES })),
+    generate: secretsOf(manifest),
     data: manifest.data ?? [],
-    core: manifest.core,
+    ...(manifest.core === undefined ? {} : { core: manifest.core }),
   };
 }

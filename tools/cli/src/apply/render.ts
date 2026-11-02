@@ -1,3 +1,4 @@
+import { variablePrefix } from '@sovereignfs/manifest';
 import { stringify } from 'yaml';
 import {
   DEFAULT_MAX_CONNECTIONS,
@@ -331,7 +332,8 @@ export type AppInput = {
   /** The image, by the digest the lock pins unless a test says otherwise. */
   image: string;
   manifest: Manifest;
-  clientId: string;
+  /** Its client at core. Only an app that signs people in through core has one (contracts/app-manifest.md §2.3). */
+  clientId?: string;
   stateDir: string;
   /** Names of the secret files in `secrets/`, by the variable each is given as, for this app. */
   secrets: Record<string, string>;
@@ -347,12 +349,12 @@ export const DATABASE_ROUTE_LABEL = 'io.github.sovereignfs.database-route';
 export const appOrigin = (suite: Suite, name: string) => `https://${name}.${suite.domain}`;
 
 /**
- * An app's environment (contracts/app-manifest.md §3): its port, its address, core's, its client ID, and its secrets by their `_FILE` form,
- * then the operator's own settings, which may not set what the deployment provides.
+ * An app's environment (contracts/app-manifest.md §3): its port, its address, and with `signIn` core's address and its client ID, and its
+ * secrets by their `_FILE` form, then the operator's own settings, which may not set what the deployment provides.
  */
 export function appEnvironment(input: AppInput): Record<string, string> {
   const { suite, name, manifest, clientId, secrets, internalCa } = input;
-  const prefix = manifest.prefix;
+  const prefix = variablePrefix(manifest);
   const env: Record<string, string> = {};
   const app = suite.apps?.[name];
   if (app && !('external' in app)) Object.assign(env, app.env ?? {});
@@ -360,9 +362,12 @@ export function appEnvironment(input: AppInput): Record<string, string> {
     // The port the manifest says, so the app listens where the proxy and the health check look (contracts/app-manifest.md §3, §4).
     PORT: String(manifest.port),
     [`${prefix}_URL`]: appOrigin(suite, name),
-    [`${prefix}_CORE_URL`]: `https://${suite.domain}`,
-    [`${prefix}_CORE_CLIENT_ID`]: clientId,
   });
+  // Core's address and the app's client are given to an app that signs people in through core, and to no other.
+  if (clientId !== undefined) {
+    env[`${prefix}_CORE_URL`] = `https://${suite.domain}`;
+    env[`${prefix}_CORE_CLIENT_ID`] = clientId;
+  }
   if (hasDatabase(manifest)) {
     env[`${prefix}_DB_DIALECT`] = 'postgres';
     env[`${prefix}_POSTGRES_POOL_MAX`] = String(appPool(suite, name));

@@ -7,7 +7,7 @@ import { readOperatorKey } from '../secrets/keys.js';
 import { decryptValue, encryptValue, type SecretsDocument } from '../secrets/store.js';
 import type { Suite } from '../suite/types.js';
 import { NOTES_IMAGE, setUpWorld, sv } from '../testing/commands.js';
-import { makeWorld, manifestOf, type World } from '../testing/world.js';
+import { makeWorld, manifest2Of, manifestOf, type World } from '../testing/world.js';
 
 let world: World;
 afterEach(() => world.cleanup());
@@ -181,5 +181,28 @@ describe('sv secret rekey', () => {
   it('says rotate needs the server', async () => {
     await setup();
     expect((await sv(world, 'secret', 'rotate', 'notes')).code).toBe(2);
+  });
+});
+
+describe('sv secret set for an app of manifest 2', () => {
+  it('names the app’s secrets with the variable prefix in upper case, though the manifest writes the prefix in lower case', async () => {
+    await setup({
+      stdin: 'value',
+      images: { [NOTES_IMAGE]: { manifest: manifest2Of() } },
+    });
+    const done = await sv(world, 'secret', 'set', 'NOTES_SMTP_PASSWORD', '--app', 'notes');
+    expect(done.code).toBe(0);
+    const wrong = await sv(world, 'secret', 'set', 'OTHER_SMTP_PASSWORD', '--app', 'notes');
+    expect(wrong.code).toBe(2);
+    expect(wrong.text).toContain('begins with NOTES_');
+  });
+
+  it('refuses a secret the deployment makes, whether it is written as a name or with a size', async () => {
+    await setup({ stdin: 'value', images: { [NOTES_IMAGE]: { manifest: manifest2Of() } } });
+    for (const name of ['NOTES_AUTH_SECRET', 'NOTES_ENCRYPTION_KEY']) {
+      const done = await sv(world, 'secret', 'set', name, '--app', 'notes');
+      expect(done.code, name).toBe(2);
+      expect(done.text).toContain('is given to notes by the deployment');
+    }
   });
 });

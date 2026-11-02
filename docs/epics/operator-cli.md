@@ -782,7 +782,7 @@ command and checks the label, the exposed port and the refusal of a build with n
 - A manifest 1 image is still hosted, and now given `PORT`
 - Nothing in `tools/cli` knows the schema but through the package
 
-#### 📋 13.29 — Manifest 2
+#### ✅ 13.29 — Manifest 2
 
 **Goal:** An app can name itself in lower case, be hosted without signing people in through core, and ask for a secret of the size it needs.
 
@@ -793,6 +793,22 @@ command and checks the label, the exposed port and the refusal of a build with n
 - `@sovereignfs/manifest` and the toolkit read manifest 2 beside manifest 1; `sv app add [NAME]` takes the prefix as the name; an app with no `signIn` gets
   no client, no `CORE_*` variables and no launcher entry, and `sv apply` makes secrets of the size `generate` says
 - The app template moves to manifest 2
+
+**Built as:** `@sovereignfs/manifest` has both schemas, and a test holds `supportedVersions` to the schema files under `contracts/schemas`, so a
+version cannot be added without being read. `validate` takes a `generate` entry as a name or an object, and refuses a name that does not begin with the
+app's variable prefix or is named twice in either form. `variablePrefix` and `secretsOf` are the two things the toolkit needs of a manifest whatever
+its version, so it keeps the manifest as written and asks them. `sv apply` registers a client only for an app with `signIn`, gives it no
+`CORE_*` variables otherwise, removes the client of an app whose newer release no longer signs people in (and asks core nothing on later runs), makes each secret the size
+it asks for, and refuses a `launcher` for an app that has no launcher entry. `sv app add [NAME]` takes the manifest's `prefix` as the name, and asks for
+one when the manifest is version 1 or the prefix is not a name an instance accepts. A secret's size applies when it is first made: one that
+exists is kept, as every generated secret is. The template's manifest is `"manifest": 2` with `"prefix": "<name without hyphens>"`.
+
+**Not as planned:** the contract said a secret was base64 and the toolkit has always made URL-safe base64, so the contract now says that. Neither
+form is wrong to an app that reads both, as Fjord Web's key reader does.
+
+**Verified here:** the new tests were seen to fail when the code that removes a dropped client, and the code that withholds core's settings from an app without
+a client, were broken. The package's and the toolkit's tests, `create`'s, the template's image test (`pnpm test:docker`, which hosts the template's manifest 2 app
+with a real core, registry stand-in and database), and the packaging check.
 
 **Dependencies:** 13.28
 

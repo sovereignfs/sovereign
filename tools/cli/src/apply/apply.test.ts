@@ -15,7 +15,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import { Failed, Locked, Refused } from '../errors.js';
 import { FakeDocker, fakeHost } from '../testing/fake-host.js';
-import { fakeRegistry, manifestOf } from '../testing/world.js';
+import { fakeRegistry, kioskOf, manifest2Of, manifestOf } from '../testing/world.js';
 import { makeSource, type Source } from '../testing/source.js';
 import type { Suite } from '../suite/types.js';
 import { apply, type ApplyOptions } from './apply.js';
@@ -839,6 +839,99 @@ describe('apps', () => {
     );
     expect(failure).toBeInstanceOf(Refused);
     expect((failure as Refused).message).toContain('notes');
+  });
+});
+
+describe('apps of manifest 2', () => {
+  const NOTES = { image: 'ghcr.io/example/notes:1' };
+  const IMAGE = 'ghcr.io/example/notes:1';
+  const registryOf = (manifest: unknown) => fakeRegistry({ [IMAGE]: { manifest } }).registry;
+  const withNotes = (extra: Partial<Parameters<typeof makeSource>[0]> = {}) =>
+    source({ suite: { apps: { notes: NOTES } }, ...extra });
+  const environment = (made: Source) => {
+    const rendered = parse(
+      readFileSync(
+        path.join(made.stateDir, 'releases', 'a'.repeat(40), 'apps', 'notes', 'compose.yml'),
+        'utf8',
+      ),
+    ) as { services: Record<string, { environment?: Record<string, string> }> };
+    return Object.values(rendered.services)[0]?.environment ?? {};
+  };
+  const secret = (made: Source, file: string) =>
+    readFileSync(path.join(made.stateDir, 'secrets', file), 'utf8');
+
+  it('is given the variables of its upper-case prefix, a client at core, and secrets of the size it asked for', async () => {
+    const made = await withNotes();
+    const { host, docker } = fakeHost({ registry: registryOf(manifest2Of()) });
+    await apply(host, options(made));
+    expect(environment(made)).toMatchObject({
+      PORT: '3000',
+      NOTES_URL: 'https://notes.sovereign.local',
+      NOTES_CORE_URL: 'https://sovereign.local',
+      NOTES_CORE_CLIENT_ID: 'client-notes',
+      NOTES_CORE_CLIENT_SECRET_FILE: '/run/secrets/NOTES_CORE_CLIENT_SECRET',
+      NOTES_AUTH_SECRET_FILE: '/run/secrets/NOTES_AUTH_SECRET',
+      NOTES_ENCRYPTION_KEY_FILE: '/run/secrets/NOTES_ENCRYPTION_KEY',
+    });
+    expect(docker.clients.get('notes')?.clientId).toBe('client-notes');
+    expect(docker.calls.some((call) => call.args.includes('ensure'))).toBe(true);
+    // A name alone is 48 bytes; an entry that says 32 is 32. Base64url, since the key ring and the SDK read both.
+    expect(Buffer.from(secret(made, 'app-notes-NOTES_AUTH_SECRET'), 'base64url')).toHaveLength(48);
+    expect(Buffer.from(secret(made, 'app-notes-NOTES_ENCRYPTION_KEY'), 'base64url')).toHaveLength(
+      32,
+    );
+  });
+
+  it('is hosted without a client when it signs nobody in through core: no core settings, no launcher entry, still up', async () => {
+    const made = await withNotes();
+    const { host, docker } = fakeHost({ registry: registryOf(kioskOf()) });
+    await apply(host, options(made));
+    expect(docker.clients.has('notes')).toBe(false);
+    expect(docker.calls.some((call) => call.args.includes('ensure'))).toBe(false);
+    const env = environment(made);
+    expect(env.PORT).toBe('3000');
+    expect(env.NOTES_URL).toBe('https://notes.sovereign.local');
+    expect(Object.keys(env).filter((name) => name.includes('CORE'))).toEqual([]);
+    expect(secretFiles(made)).not.toContain('app-notes-client-secret');
+    expect(state(made).apps.notes).toMatchObject({ kind: 'hosted', healthy: true });
+    expect(state(made).apps.notes).not.toHaveProperty('clientId');
+    expect(docker.containers.has('sv-app-notes')).toBe(true);
+  });
+
+  it('has its client removed when a newer release of it signs nobody in, and not asked for one on later runs', async () => {
+    const made = await withNotes();
+    const first = fakeHost({ registry: registryOf(manifest2Of()) });
+    await apply(first.host, options(made));
+    expect(first.docker.clients.has('notes')).toBe(true);
+    expect(state(made).apps.notes).toHaveProperty('clientId');
+
+    const second = fakeHost({ registry: registryOf(kioskOf()) });
+    second.docker.clients.set('notes', { clientId: 'client-notes', confidential: true });
+    await apply(second.host, options(made));
+    expect(second.docker.clients.has('notes')).toBe(false);
+    expect(state(made).apps.notes).not.toHaveProperty('clientId');
+
+    // The next run has nothing to remove, and asks core nothing about it.
+    const third = fakeHost({ registry: registryOf(kioskOf()) });
+    await apply(third.host, options(made));
+    expect(third.docker.calls.some((call) => call.args.includes('sovereign-admin'))).toBe(false);
+  });
+
+  it('refuses a launcher setting for an app that has no launcher entry, before anything is changed', async () => {
+    const made = await source({
+      suite: { apps: { notes: { ...NOTES, launcher: { description: 'A kiosk' } } } },
+    });
+    const { host, docker } = fakeHost({ registry: registryOf(kioskOf()) });
+    await expect(apply(host, options(made))).rejects.toThrow(/launcher entry/);
+    expect(docker.containers.size).toBe(0);
+  });
+
+  it('is still refused a secret outside its prefix, and its settings must begin with it', async () => {
+    const made = await source({
+      suite: { apps: { notes: { ...NOTES, env: { OTHER_SETTING: 'x' } } } },
+    });
+    const { host } = fakeHost({ registry: registryOf(manifest2Of()) });
+    await expect(apply(host, options(made))).rejects.toThrow(/must begin with NOTES_/);
   });
 });
 

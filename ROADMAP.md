@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.89.0 · **Last updated:** 2026-11-02
+**Version:** 0.90.0 · **Last updated:** 2026-11-02
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -228,6 +228,6 @@ Epic [15](docs/epics/core-services.md)
 | ------- | -------- | ------------------------------------------ | ------ | ----------------------------------- |
 | —       | 1        | The specifications                         | ✅     | [13.27](docs/epics/operator-cli.md) |
 | 0.89.0  | 2        | `@sovereignfs/manifest`, and `PORT`        | ✅     | [13.28](docs/epics/operator-cli.md) |
-| —       | 3        | Manifest 2                                 | 📋     | [13.29](docs/epics/operator-cli.md) |
+| 0.90.0  | 3        | Manifest 2                                 | ✅     | [13.29](docs/epics/operator-cli.md) |
 | —       | 4        | Verifying a notice on its own `[parallel]` | 📋     | [14.11](docs/epics/sdk.md)          |
 | —       | 5        | Retire the plugin template `[parallel]`    | 📋     | [13.30](docs/epics/operator-cli.md) |

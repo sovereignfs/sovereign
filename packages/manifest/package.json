@@ -1,0 +1,51 @@
+{
+  "name": "@sovereignfs/manifest",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "The Sovereign app manifest: its schemas, a validator, and the command that turns sovereign.manifest.json into an image's label and port.",
+  "license": "MPL-2.0",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sovereignfs/sovereign.git",
+    "directory": "packages/manifest"
+  },
+  "homepage": "https://github.com/sovereignfs/sovereign/tree/main/packages/manifest#readme",
+  "bugs": {
+    "url": "https://github.com/sovereignfs/sovereign/issues"
+  },
+  "bin": {
+    "sovereign-manifest": "./dist/cli.js"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@sovereignfs/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "ajv": "^8.20.0",
+    "tsup": "catalog:",
+    "typescript": "catalog:"
+  }
+}

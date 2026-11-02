@@ -51,6 +51,7 @@ and more. The spec lists what is in and out of each phase.
 | `packages/crypto`     | Field encryption with a key ring (end-to-end later)             | In the workspace                            |
 | `packages/api-client` | The typed Core API client, generated from the contract          | In the workspace                            |
 | `packages/sdk`        | The SDK: sign-in, tokens, failure and version support for apps  | In the workspace, not published yet         |
+| `packages/manifest`   | The app manifest: schemas, a validator, and the image label     | In the workspace, not published yet         |
 | `packages/*` (later)  | `auth`, …                                                       | Planned                                     |
 | `contracts/`          | The Core API, the file formats and the environment convention   | Written                                     |
 | `docs/`               | The spec, epics, research, RFCs and decisions                   | [Index below](#documentation)               |

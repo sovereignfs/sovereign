@@ -22,6 +22,7 @@ export default defineConfig({
       source('crypto', './packages/crypto/src/index.ts'),
       source('database', './packages/database/src/index.ts'),
       source('mailer', './packages/mailer/src/index.ts'),
+      source('manifest', './packages/manifest/src/index.ts'),
       source('sdk', './packages/sdk/src/index.ts'),
       {
         find: /^@sovereignfs\/database\/testing$/,

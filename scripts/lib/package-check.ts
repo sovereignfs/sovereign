@@ -106,21 +106,24 @@ export function tarballProblems(
     }
   }
 
+  // A tool is run, so its `bin` is its entry. A library is imported, but may also carry a command (`sovereign-manifest`), which is held to
+  // the same rules as a tool's.
+  const bins = targets(manifest.bin);
   const entryPoints = tool
-    ? targets(manifest.bin)
-    : [...targets(manifest.exports), ...(manifest.types ? [manifest.types] : [])];
+    ? bins
+    : [...targets(manifest.exports), ...(manifest.types ? [manifest.types] : []), ...bins];
   if (entryPoints.length === 0) problems.push(tool ? 'there is no bin' : 'there is no exports map');
+  else if (!tool && targets(manifest.exports).length === 0 && !manifest.types)
+    problems.push('there is no exports map');
   for (const target of entryPoints) {
     if (!target.startsWith('./dist/')) problems.push(`${target} points outside dist/`);
     else if (!inTarball.has(target.slice(2))) problems.push(`${target} is not in the tarball`);
   }
   // npm links a bin so that the shell runs it. Without a shebang that is `sh`, which cannot read JavaScript.
-  if (tool) {
-    for (const target of entryPoints) {
-      const head = facts.binHeads?.[target.slice(2)];
-      if (head !== undefined && !head.startsWith('#!'))
-        problems.push(`${target} does not start with a #! line, so npm would run it with sh`);
-    }
+  for (const target of bins) {
+    const head = facts.binHeads?.[target.slice(2)];
+    if (head !== undefined && !head.startsWith('#!'))
+      problems.push(`${target} does not start with a #! line, so npm would run it with sh`);
   }
 
   for (const file of inTarball) {

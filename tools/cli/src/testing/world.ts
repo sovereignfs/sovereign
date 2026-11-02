@@ -50,6 +50,7 @@ export function fakeIo(
 
 /** A manifest as an app maker would publish it, with the parts a test varies. */
 export function manifestOf(extra: Record<string, unknown> = {}) {
+  const prefix = typeof extra.prefix === 'string' ? extra.prefix : 'NOTES';
   return {
     manifest: 1,
     prefix: 'NOTES',
@@ -63,7 +64,8 @@ export function manifestOf(extra: Record<string, unknown> = {}) {
       scopes: ['openid', 'profile', 'email'],
     },
     database: true,
-    generate: ['NOTES_AUTH_SECRET'],
+    // A secret is named for the app’s prefix (contracts/app-manifest.md §2.5).
+    generate: [`${prefix}_AUTH_SECRET`],
     data: ['/data'],
     core: '>=0.49.0 <1.0.0',
     ...extra,

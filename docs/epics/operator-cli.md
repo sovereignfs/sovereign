@@ -741,7 +741,7 @@ schema says so with `if`/`then`/`else`. `generate` names are checked once each b
 - Manifest 1 still means what it did, and its schema is unchanged
 - Every rule the prose states is refused by the schema, and a test says so
 
-#### 📋 13.28 — `@sovereignfs/manifest`, and `PORT`
+#### ✅ 13.28 — `@sovereignfs/manifest`, and `PORT`
 
 **Goal:** One package says what a valid manifest is for the toolkit and for an app's build, and every hosted app listens where the proxy looks.
 
@@ -754,7 +754,23 @@ docker-args`
 - `tools/cli` validates through it, replacing its own copy of the schema; `sv` gives every hosted app `PORT` from the manifest's `port`
 - The app template: `ARG PORT` in the Dockerfile, no copy of the manifest and no `scripts/manifest.mjs`, `sovereign-manifest check` as its check, and
   `.github/workflows/publish.yml` building with `docker-args` (operator-cli §2.2)
-- Published with the toolkit (`docs/releasing.md`)
+- Published on its own tag, `manifest-vX.Y.Z`, like the other libraries, and checked by `pnpm packages:check` (`docs/releasing.md`)
+
+**Built as:** the package reads manifest 1 only, and holds the structure for more (`schemas`, `supportedVersions`, `normalise`), so 13.29 adds a
+version and not a mechanism. `RELEASE.manifests` is its `supportedVersions`, so the toolkit reads what the package does. The toolkit's one
+copy of the manifest schema went with it; `Manifest` in `tools/cli` is the package's type. `validate` also holds a rule the toolkit never
+checked, that a `generate` name begins with the app's prefix (§2.5), which `contracts/env.md` §1 always said. The command's `docker-args` is
+one quoted line for `eval`, or with `--format github` the two lines `docker/build-push-action` takes as `labels` and `build-args`. The
+Dockerfile stops a build without the port, saying how to build, so an image cannot listen where the instance does not look. The template stays on
+manifest 1, with its upper-case prefix, until 13.29. `scripts/lib/package-check.ts` now holds a library's `bin` to a tool's rules.
+
+**Verified here:** the package's tests and the toolkit's, `create`'s, and the packaging check (`pnpm packages:check` packs and dry-run publishes
+the package). `sovereign-manifest` was run from its build on a good and a bad manifest, and its `eval` output was passed to a stand-in for
+`docker` with a name holding `'`, `"` and `$HOME`, which arrived as single arguments. The template's image test (`pnpm test:docker`) builds the app with the
+command and checks the label, the exposed port and the refusal of a build with no port.
+
+**Not verified here:** the publish workflow the template carries (it runs only on a pushed tag), and a published `@sovereignfs/manifest`: until
+`manifest-v0.1.0` is tagged, `npm create @sovereignfs app` cannot resolve the app's lockfile.
 
 **Dependencies:** 13.27
 

@@ -1,3 +1,5 @@
+import { supportedVersions } from '@sovereignfs/manifest';
+
 /**
  * What this release of the toolkit supports and uses (operator-cli §5). A toolkit that does not support the instance's core version
  * or `schema` refuses, and names the version that does.
@@ -11,8 +13,8 @@ export const RELEASE = {
   core: '>=0.49.0 <1.0.0',
   /** The newest core it was made for, which `sv setup` writes. */
   newestCore: '0.83.0',
-  /** The oldest app manifest version it reads, and the newest. */
-  manifests: [1],
+  /** The app manifest versions it reads: every one `@sovereignfs/manifest` does, since old images stay published. */
+  manifests: [...supportedVersions],
   images: {
     /** The toolkit's own image, which runs `sv apply` on the server (operator-cli §6). */
     cli: 'ghcr.io/sovereignfs/cli',

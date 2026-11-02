@@ -1,8 +1,8 @@
+import { validate } from '@sovereignfs/manifest';
 import { satisfies, validRange } from 'semver';
 import { Failed, Refused } from './errors.js';
 import { MANIFEST_LABEL, RELEASE } from './release.js';
 import type { Registry } from './registry.js';
-import { schemaProblems } from './suite/schema.js';
 import type { HostedApp, Manifest } from './suite/types.js';
 
 const MAX_BYTES = 64 * 1024;
@@ -47,15 +47,13 @@ export async function readManifest(
       'Use a newer toolkit: sv upgrade.',
     );
   }
-  const problems = schemaProblems('manifest', document);
-  if (problems.length > 0) {
+  const checked = validate(document);
+  if (!checked.ok) {
     throw new Refused(
-      `The manifest for ${name} is not valid:\n${problems.map((p) => `  ${p.at}: ${p.message}`).join('\n')}`,
+      `The manifest for ${name} is not valid:\n${checked.problems.map((p) => `  ${p.at}: ${p.message}`).join('\n')}`,
     );
   }
-  const manifest = document as Manifest;
-  if (manifest.prefix === 'SV')
-    throw new Refused(`The manifest for ${name} uses the prefix SV, which is core's.`);
+  const manifest: Manifest = checked.manifest;
   if (validRange(manifest.core) === null) {
     throw new Refused(
       `The manifest for ${name} has a core range that is not a version range: ${manifest.core}.`,

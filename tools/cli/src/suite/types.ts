@@ -1,3 +1,5 @@
+import type { Manifest } from '@sovereignfs/manifest';
+
 /** `suite.yml`, as the schema allows it (contracts/suite.md §1). Read from a file that has passed the schema. */
 export type Launcher = {
   description?: string;
@@ -73,28 +75,8 @@ export type Lock = {
   apps?: Record<string, Digest>;
 };
 
-/** An app's manifest (contracts/app-manifest.md §2). */
-export type Manifest = {
-  manifest: 1;
-  prefix: string;
-  name: string;
-  description?: string;
-  icon?: string;
-  port: number;
-  health: string;
-  launch?: string;
-  signIn: {
-    redirect: string[];
-    postLogout?: string[];
-    backChannel?: string;
-    accountDeleted?: string;
-    scopes: string[];
-  };
-  database?: boolean | { pooling?: 'transaction' };
-  generate?: string[];
-  data?: string[];
-  core: string;
-};
+/** An app's manifest (contracts/app-manifest.md §2), as `@sovereignfs/manifest` validates it. */
+export type { Manifest };
 
 /** Whether the app has a database: `true`, or the object that says more about it (contracts/app-manifest.md §2.2). */
 export const hasDatabase = (manifest: Pick<Manifest, 'database'>): boolean =>

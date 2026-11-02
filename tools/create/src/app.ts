@@ -10,13 +10,14 @@ const TEMPLATE = fileURLToPath(new URL('../template/app', import.meta.url));
 /** A name an app can have: what `sv app add` accepts, since it is also the app's subdomain and its database. */
 const NAME = /^[a-z][a-z0-9-]{0,30}[a-z0-9]$/;
 
-/** The files npm would not keep under their own names, and the names they are made with. */
+/** The files and folders npm would not keep under their own names, and the names they are made with. */
 const RENAMED: Record<string, string> = {
   _gitignore: '.gitignore',
   _dockerignore: '.dockerignore',
   '_env.example': '.env.example',
   // A published package may not carry a file called tsconfig.json.
   '_tsconfig.json': 'tsconfig.json',
+  _github: '.github',
 };
 
 export type AppNames = { name: string; prefix: string; title: string };
@@ -72,8 +73,7 @@ export function appPackageJson(names: AppNames): string {
         build: 'next build',
         start: 'node .next/standalone/server.js',
         typecheck: 'tsc --noEmit',
-        'manifest:check': 'node scripts/manifest.mjs',
-        'manifest:write': 'node scripts/manifest.mjs --write',
+        'manifest:check': 'sovereign-manifest check',
       },
       dependencies: APP_DEPENDENCIES,
       devDependencies: APP_DEV_DEPENDENCIES,
@@ -87,25 +87,17 @@ export function appPackageJson(names: AppNames): string {
 export async function writeApp(target: string, names: AppNames): Promise<string[]> {
   await checkEmpty(target);
   const written: string[] = [];
-  const replace = (text: string, label?: string) =>
+  const replace = (text: string) =>
     text
       .replaceAll('__PREFIX__', names.prefix)
       .replaceAll('__NAME__', names.name)
-      .replaceAll('__TITLE__', names.title)
-      .replaceAll('__MANIFEST_LABEL__', label ?? '');
+      .replaceAll('__TITLE__', names.title);
 
-  const manifestText = replace(
-    await readFile(path.join(TEMPLATE, 'sovereign.manifest.json'), 'utf8'),
-  );
-  // A Dockerfile quotes a value as JSON quotes a string: the label is the manifest, compact, as a string.
-  const label = JSON.stringify(JSON.stringify(JSON.parse(manifestText)));
   for await (const file of walk(TEMPLATE)) {
-    const parts = file.split(path.sep);
-    const last = parts.pop() as string;
-    const out = path.join(...parts, RENAMED[last] ?? last);
+    const out = path.join(...file.split(path.sep).map((part) => RENAMED[part] ?? part));
     const target_ = path.join(target, out);
     await mkdir(path.dirname(target_), { recursive: true });
-    await writeFile(target_, replace(await readFile(path.join(TEMPLATE, file), 'utf8'), label));
+    await writeFile(target_, replace(await readFile(path.join(TEMPLATE, file), 'utf8')));
     written.push(out);
   }
   await writeFile(path.join(target, 'package.json'), appPackageJson(names));

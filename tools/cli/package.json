@@ -27,6 +27,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@sovereignfs/manifest": "workspace:*",
     "@sovereignfs/tsconfig": "workspace:*",
     "@types/node": "catalog:",
     "@types/semver": "^7.7.1",

@@ -984,6 +984,20 @@ describe('connection limits', () => {
     Object.values(appCompose(made).services)[0]?.environment ?? {};
   const roleSql = (docker: FakeDocker) => docker.psql.join('\n');
 
+  it('gives every app the port its manifest names, as PORT, whatever version of the manifest', async () => {
+    const made = await source({ suite: { apps: { notes: NOTES } } });
+    const { host } = fakeHost({ registry: registry() });
+    await apply(host, options(made));
+    expect(appEnvironment(made).PORT).toBe('3000');
+
+    const other = await source({ suite: { apps: { notes: NOTES } } });
+    const odd = fakeRegistry({
+      'ghcr.io/example/notes:1': { manifest: manifestOf({ port: 8080 }) },
+    }).registry;
+    await apply(fakeHost({ registry: odd }).host, options(other));
+    expect(appEnvironment(other).PORT).toBe('8080');
+  });
+
   it('limits each role to its pool and two more, and gives each pool its size, at the defaults', async () => {
     const made = await source({ suite: { apps: { notes: NOTES } } });
     const { host, docker } = fakeHost({ registry: registry() });

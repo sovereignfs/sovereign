@@ -45,6 +45,29 @@ describe('tarballProblems', () => {
     expect(tarballProblems(manifest(), list)).toContain(expected);
   });
 
+  it('holds a library’s command to the rules of a tool’s bin: in dist, in the tarball, and starting with #!', () => {
+    const command = manifest({ bin: { 'sovereign-thing': './dist/cli.js' } });
+    const withCli = [...files, 'package/dist/cli.js'];
+    const head = { 'dist/cli.js': '#!/usr/bin/env node\nimport x' };
+    expect(tarballProblems(command, withCli, { binHeads: head })).toEqual([]);
+    expect(tarballProblems(command, files)).toContain('./dist/cli.js is not in the tarball');
+    expect(
+      tarballProblems(command, withCli, { binHeads: { 'dist/cli.js': 'import x' } }),
+    ).toContain('./dist/cli.js does not start with a #! line, so npm would run it with sh');
+    expect(tarballProblems(manifest({ bin: { x: './src/cli.ts' } }), files)).toContain(
+      './src/cli.ts points outside dist/',
+    );
+  });
+
+  it('still wants a library to have an exports map, whatever commands it has', () => {
+    const noExports = manifest({
+      exports: undefined,
+      types: undefined,
+      bin: { x: './dist/index.js' },
+    });
+    expect(tarballProblems(noExports, files)).toContain('there is no exports map');
+  });
+
   it('flags a licence that is not MPL-2.0', () => {
     expect(tarballProblems(manifest({ license: 'AGPL-3.0-or-later' }), files)).toContain(
       'the licence is AGPL-3.0-or-later, not MPL-2.0',

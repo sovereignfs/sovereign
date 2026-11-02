@@ -347,8 +347,8 @@ export const DATABASE_ROUTE_LABEL = 'io.github.sovereignfs.database-route';
 export const appOrigin = (suite: Suite, name: string) => `https://${name}.${suite.domain}`;
 
 /**
- * An app's environment (contracts/app-manifest.md §3): its address, core's, its client ID, and its secrets by their `_FILE` form, then the
- * operator's own settings, which may not set what the deployment provides.
+ * An app's environment (contracts/app-manifest.md §3): its port, its address, core's, its client ID, and its secrets by their `_FILE` form,
+ * then the operator's own settings, which may not set what the deployment provides.
  */
 export function appEnvironment(input: AppInput): Record<string, string> {
   const { suite, name, manifest, clientId, secrets, internalCa } = input;
@@ -357,6 +357,8 @@ export function appEnvironment(input: AppInput): Record<string, string> {
   const app = suite.apps?.[name];
   if (app && !('external' in app)) Object.assign(env, app.env ?? {});
   Object.assign(env, {
+    // The port the manifest says, so the app listens where the proxy and the health check look (contracts/app-manifest.md §3, §4).
+    PORT: String(manifest.port),
     [`${prefix}_URL`]: appOrigin(suite, name),
     [`${prefix}_CORE_URL`]: `https://${suite.domain}`,
     [`${prefix}_CORE_CLIENT_ID`]: clientId,

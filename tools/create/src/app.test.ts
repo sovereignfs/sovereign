@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -9,7 +8,7 @@ import { satisfies } from 'semver';
 import { afterEach, describe, expect, it } from 'vitest';
 import { appPackageJson, createApp, namesOf, writeApp } from './app.js';
 import { CreateError, type CreateIo, type Exec } from './create.js';
-import { APP_DEPENDENCIES } from './versions.js';
+import { APP_DEPENDENCIES, APP_DEV_DEPENDENCIES } from './versions.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const dirs: string[] = [];
@@ -51,6 +50,7 @@ describe('the files of an app', () => {
     expect(written).toEqual(
       expect.arrayContaining([
         'Dockerfile',
+        '.github/workflows/publish.yml',
         'sovereign.manifest.json',
         'app/auth/[action]/route.ts',
         'app/api/health/route.ts',
@@ -64,13 +64,15 @@ describe('the files of an app', () => {
       ]),
     );
     for (const file of all(target)) {
-      expect(read(target, file), file).not.toMatch(/__(PREFIX|NAME|TITLE|MANIFEST_LABEL)__/);
+      expect(read(target, file), file).not.toMatch(/__(PREFIX|NAME|TITLE)__/);
     }
     expect(read(target, 'lib/db.ts')).toContain("required('MYNOTES_POSTGRES_URL')");
     // The pool is the size the instance gives it, whose role's limit is set from the same number (operator-cli §6.4.4).
     expect(read(target, 'lib/db.ts')).toContain('MYNOTES_POSTGRES_POOL_MAX');
     expect(read(target, 'lib/db.ts')).not.toContain('max: 10 }');
     expect(read(target, 'app/page.tsx')).toContain('title="My Notes"');
+    // The manifest is the one copy: nothing in the app repeats it, or the sync script that kept a second one.
+    expect(written).not.toContain('scripts/manifest.mjs');
   });
 
   it('meet the app manifest schema, and ask for the variables the manifest says the instance gives', async () => {
@@ -109,25 +111,40 @@ describe('the files of an app', () => {
     expect(manifest.signIn.scopes).toEqual(expect.arrayContaining(['openid', 'offline_access']));
   });
 
-  it('carry the manifest as the label of the image, equal to the manifest file', async () => {
+  it('hold the manifest once, and make the image’s label and port from it', async () => {
     const target = path.join(temp(), 'my-notes');
     await writeApp(target, namesOf(target));
-    const run = (...args: string[]) =>
-      execFileSync('node', ['scripts/manifest.mjs', ...args], { cwd: target, encoding: 'utf8' });
-    expect(run()).toContain('matches');
-    const label = read(target, 'Dockerfile')
-      .split('\n')
-      .find((line) => line.startsWith('LABEL io.github.sovereignfs.app-manifest=')) as string;
-    expect(JSON.parse(JSON.parse(label.slice(label.indexOf('=') + 1)))).toEqual(
-      JSON.parse(read(target, 'sovereign.manifest.json')),
+    const dockerfile = read(target, 'Dockerfile');
+    // No copy of the manifest, and no number: the port is the build argument that `sovereign-manifest docker-args` gives.
+    expect(dockerfile).not.toContain('io.github.sovereignfs.app-manifest');
+    expect(dockerfile).not.toMatch(/\b3000\b/);
+    expect(dockerfile).toContain('ARG PORT');
+    expect(dockerfile).toContain('ENV NODE_ENV=production');
+    expect(dockerfile).toContain('PORT=${PORT}');
+    expect(dockerfile).toContain('EXPOSE ${PORT}');
+    // A build without the port stops, saying how to build.
+    expect(dockerfile).toContain('sovereign-manifest docker-args');
+    const manifest = JSON.parse(read(target, 'sovereign.manifest.json')) as { port: number };
+    expect(manifest.port).toBe(3000);
+    expect(read(target, 'package.json')).toContain('"manifest:check": "sovereign-manifest check"');
+  });
+
+  it('publish on a version tag, with the label and port from the manifest, the image tagged X.Y.Z, every action pinned to a commit', async () => {
+    const target = path.join(temp(), 'my-notes');
+    await writeApp(target, namesOf(target));
+    const workflow = read(target, '.github/workflows/publish.yml');
+    expect(workflow).toContain("- 'v*.*.*'");
+    expect(workflow).toContain('sovereign-manifest check');
+    expect(workflow).toContain('sovereign-manifest docker-args --format github');
+    expect(workflow).toContain('labels: ${{ steps.manifest.outputs.labels }}');
+    expect(workflow).toContain('build-args: ${{ steps.manifest.outputs.build-args }}');
+    expect(workflow).toContain('platforms: linux/amd64,linux/arm64');
+    expect(workflow).toContain(
+      '${{ steps.image.outputs.name }}:${{ steps.version.outputs.version }}',
     );
-    // Changing the manifest makes the check fail until the label follows it.
-    const manifest = path.join(target, 'sovereign.manifest.json');
-    const changed = read(target, 'sovereign.manifest.json').replace('"port": 3000', '"port": 3001');
-    (await import('node:fs')).writeFileSync(manifest, changed);
-    expect(() => run()).toThrow();
-    run('--write');
-    expect(run()).toContain('matches');
+    expect(workflow).toContain('ghcr.io/${GITHUB_REPOSITORY,,}');
+    for (const action of workflow.matchAll(/uses: (\S+)/g))
+      expect(action[1], 'an action').toMatch(/@[0-9a-f]{40}$/);
   });
 
   it('keep what a sign-in needs: a conditional token write, encrypted tokens, and an owner in every delete', async () => {
@@ -191,6 +208,15 @@ describe('what the app depends on', () => {
     }
   });
 
+  it('include the manifest package of this repository, which makes the image’s label and port', () => {
+    const version = (
+      JSON.parse(readFileSync(path.join(root, 'packages/manifest/package.json'), 'utf8')) as {
+        version: string;
+      }
+    ).version;
+    expect(satisfies(version, APP_DEV_DEPENDENCIES['@sovereignfs/manifest'])).toBe(true);
+  });
+
   it('are the ones this repository uses for Next.js and React', () => {
     const catalog = readFileSync(path.join(root, 'pnpm-workspace.yaml'), 'utf8');
     for (const name of ['next', 'react', 'react-dom', 'pg']) {
@@ -206,10 +232,12 @@ describe('what the app depends on', () => {
     ) as {
       scripts: Record<string, string>;
       dependencies: Record<string, string>;
+      devDependencies: Record<string, string>;
     };
     expect(pkg.dependencies['@sovereignfs/sdk']).toBeDefined();
     expect(pkg.scripts.build).toBe('next build');
-    expect(pkg.scripts['manifest:write']).toBeDefined();
+    expect(pkg.scripts['manifest:check']).toBe('sovereign-manifest check');
+    expect(pkg.devDependencies['@sovereignfs/manifest']).toBeDefined();
   });
 });
 
@@ -241,7 +269,9 @@ describe('npm create @sovereignfs app', () => {
     expect(ran[1]).toContain('--package-lock-only');
     expect(ran[1]).toContain('--ignore-scripts');
     expect(io.said.join('\n')).toContain('./sv app add my-notes');
-    expect(statSync(path.join(cwd, 'my-notes', 'scripts', 'manifest.mjs')).isFile()).toBe(true);
+    expect(
+      statSync(path.join(cwd, 'my-notes', '.github', 'workflows', 'publish.yml')).isFile(),
+    ).toBe(true);
   });
 
   it('says what to do when a step fails, and what it wrote stays', async () => {

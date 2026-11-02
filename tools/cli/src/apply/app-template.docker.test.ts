@@ -48,6 +48,7 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
   let coreImage: string;
   let cliImage: string;
   let appImage: string;
+  let appDir: string;
   let work: string;
   let source: Source;
   let state: string;
@@ -102,9 +103,14 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
       ['--filter', '@sovereignfs/sdk...', '--filter', '@sovereignfs/ui...', 'build'],
       { cwd: root, stdio: 'ignore' },
     );
+    // The command that makes the image's label and port from the manifest, built the way an author gets it from npm.
+    execFileSync('pnpm', ['--filter', '@sovereignfs/manifest', 'build'], {
+      cwd: root,
+      stdio: 'ignore',
+    });
     const vendor = path.join(app, 'vendor');
     mkdirSync(vendor);
-    for (const name of ['sdk', 'ui']) {
+    for (const name of ['sdk', 'ui', 'manifest']) {
       execFileSync(
         'pnpm',
         ['--filter', `@sovereignfs/${name}`, 'pack', '--pack-destination', vendor],
@@ -114,9 +120,14 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
     const tarballs = readdirSync(vendor);
     const pkg = JSON.parse(readFileSync(path.join(app, 'package.json'), 'utf8')) as {
       dependencies: Record<string, string>;
+      devDependencies: Record<string, string>;
     };
-    for (const name of ['sdk', 'ui']) {
-      pkg.dependencies[`@sovereignfs/${name}`] =
+    for (const [name, field] of [
+      ['sdk', 'dependencies'],
+      ['ui', 'dependencies'],
+      ['manifest', 'devDependencies'],
+    ] as const) {
+      pkg[field][`@sovereignfs/${name}`] =
         `file:./vendor/${tarballs.find((file) => file.startsWith(`sovereignfs-${name}-`)) as string}`;
     }
     writeFileSync(path.join(app, 'package.json'), `${JSON.stringify(pkg, null, 2)}\n`);
@@ -132,7 +143,17 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
     writeFileSync(path.join(app, 'Dockerfile'), dockerfile);
 
     appImage = 'sv-test-tpl:local';
-    execFileSync('docker', ['build', '--quiet', '--tag', appImage, app], { stdio: 'inherit' });
+    // Built as the template's own instructions say: the label and the port come from the manifest, through `sovereign-manifest docker-args`.
+    const cli = path.join(root, 'packages/manifest/dist/cli.js');
+    execFileSync(
+      'sh',
+      [
+        '-c',
+        `eval "docker build --quiet --tag ${appImage} $(node '${cli}' docker-args '${app}') '${app}'"`,
+      ],
+      { stdio: 'inherit' },
+    );
+    appDir = app;
     manifest = JSON.parse(readFileSync(path.join(app, 'sovereign.manifest.json'), 'utf8'));
 
     state = mkdtempSync(path.join(os.tmpdir(), 'sv-template-state-'));
@@ -163,6 +184,21 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
       appImage,
     ).stdout.trim();
     expect(JSON.parse(label)).toEqual(manifest);
+  });
+
+  it('listens on the port the manifest names, which it was built with and does not write itself', () => {
+    const inspected = JSON.parse(docker('inspect', appImage).stdout) as {
+      Config: { Env: string[]; ExposedPorts: Record<string, unknown> };
+    }[];
+    const port = String((manifest as { port: number }).port);
+    expect(inspected[0]?.Config.Env).toContain(`PORT=${port}`);
+    expect(Object.keys(inspected[0]?.Config.ExposedPorts ?? {})).toEqual([`${port}/tcp`]);
+  });
+
+  it('refuses to be built without the port, and says how to build', () => {
+    const built = docker('build', '--tag', 'sv-test-tpl:no-port', appDir);
+    expect(built.status).not.toBe(0);
+    expect(built.stderr).toContain('sovereign-manifest docker-args');
   });
 
   it('is hosted as it stands: it starts, applies its migrations, answers its health path, and registers with core', async () => {

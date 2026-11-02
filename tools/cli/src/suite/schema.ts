@@ -1,6 +1,5 @@
 import Ajv2020 from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
-import manifestSchema from '../../../../contracts/schemas/app-manifest-v1.schema.json' with { type: 'json' };
 import lockSchema from '../../../../contracts/schemas/suite-lock-v1.schema.json' with { type: 'json' };
 import suiteSchema from '../../../../contracts/schemas/suite-v1.schema.json' with { type: 'json' };
 
@@ -12,7 +11,6 @@ addFormats(ajv);
 const validators = {
   suite: ajv.compile(suiteSchema),
   lock: ajv.compile(lockSchema),
-  manifest: ajv.compile(manifestSchema),
 };
 
 export type SchemaName = keyof typeof validators;

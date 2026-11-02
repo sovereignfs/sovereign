@@ -5,12 +5,13 @@ Three things are released from this repository: a package to npm, core's image t
 
 ## Packages
 
-Two packages are published to npm:
+Three packages are published to npm:
 
-| Package            | What it is                                                                   | Licence                                  |
-| ------------------ | ---------------------------------------------------------------------------- | ---------------------------------------- |
-| `@sovereignfs/ui`  | The design system: tokens and React components                               | MPL-2.0 (icons derived from Lucide: ISC) |
-| `@sovereignfs/sdk` | How an app's server calls core: tokens, failure, version support and sign-in | MPL-2.0                                  |
+| Package                 | What it is                                                                                                 | Licence                                  |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `@sovereignfs/ui`       | The design system: tokens and React components                                                             | MPL-2.0 (icons derived from Lucide: ISC) |
+| `@sovereignfs/sdk`      | How an app's server calls core: tokens, failure, version support and sign-in                               | MPL-2.0                                  |
+| `@sovereignfs/manifest` | The app manifest: its schemas, a validator, and `sovereign-manifest`, which makes the image label and port | MPL-2.0                                  |
 
 Every other package is `private` for now and is not published, **`@sovereignfs/bridge`
 included**: it is release-ready (licence, files, README) but marked `private`, so nothing can
@@ -65,10 +66,24 @@ them on their own is a later decision.
 - A new app that uses only the published package should meet [sdk §14](specs/sdk.md); [Using the SDK](using-the-sdk.md) is the
   guide for it.
 
+### The manifest package
+
+`@sovereignfs/manifest` is published with nothing bundled in that npm lacks: its one runtime dependency (`ajv`) is bundled, and the
+JSON Schemas are read from `contracts/schemas` at build time, where they are the one copy. Its `sovereign-manifest` command is the
+package's `bin`, and `packages:check` holds it to a tool's rules (in `dist/`, in the tarball, starting with `#!`).
+
+- **It is a dependency of the app template.** An app made by `npm create @sovereignfs app` has it as a development dependency
+  (`tools/create/src/versions.ts`, held by a test to this package's version), so **release it before a toolkit release that
+  makes new apps**: `npm create @sovereignfs` resolves the app's lockfile from npm, and fails while the package is not there.
+  The first release is `manifest-v0.1.0`.
+- **The toolkit bundles it.** `sv` validates a manifest with the same code (`tools/cli` builds it in), so a toolkit release carries the
+  manifest versions the package had when it was built (`RELEASE.manifests` is `supportedVersions`).
+- **A new manifest version** is a minor release of the package, with its schema added to `contracts/schemas/`.
+
 ### Releasing a package
 
-Pushing a tag releases the package: `ui-vX.Y.Z` releases `@sovereignfs/ui`, and `sdk-vX.Y.Z` releases
-`@sovereignfs/sdk`.
+Pushing a tag releases the package: `ui-vX.Y.Z` releases `@sovereignfs/ui`, `sdk-vX.Y.Z` releases
+`@sovereignfs/sdk`, and `manifest-vX.Y.Z` releases `@sovereignfs/manifest`.
 `.github/workflows/publish.yml` does the rest, and **publishes
 nothing unless every one of these holds**:
 

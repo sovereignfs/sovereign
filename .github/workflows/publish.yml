@@ -4,6 +4,7 @@ name: Publish
 # cycle and its own tag:
 #   ui-vX.Y.Z      -> @sovereignfs/ui
 #   sdk-vX.Y.Z     -> @sovereignfs/sdk
+#   manifest-vX.Y.Z -> @sovereignfs/manifest
 # Every other package is private and never published (@sovereignfs/bridge is private for now;
 # publishing it later means removing "private" and adding its tag and case here).
 # docs/releasing.md has the whole process.
@@ -16,6 +17,7 @@ on:
     tags:
       - 'ui-v*.*.*'
       - 'sdk-v*.*.*'
+      - 'manifest-v*.*.*'
 
 permissions:
   contents: read
@@ -55,6 +57,7 @@ jobs:
           case "$TAG" in
             ui-v*) dir=ui; prefix=ui-v ;;
             sdk-v*) dir=sdk; prefix=sdk-v ;;
+            manifest-v*) dir=manifest; prefix=manifest-v ;;
             *) echo "The tag $TAG is not a package release tag." >&2; exit 1 ;;
           esac
           expected="${TAG#"$prefix"}"

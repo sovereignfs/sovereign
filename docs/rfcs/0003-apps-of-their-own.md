@@ -2,11 +2,11 @@
 
 |                |                                                                                                                                                                                                 |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**     | Accepted                                                                                                                                                                                        |
+| **Status**     | Accepted; partially implemented (the specifications)                                                                                                                                            |
 | **Date**       | November 2026                                                                                                                                                                                   |
 | **Author**     | Claude Code, for review                                                                                                                                                                         |
 | **Scope**      | `contracts/app-manifest.md` and its schemas; `contracts/env.md` §1; `docs/specs/operator-cli.md` §2.2, §4.2; `docs/specs/sdk.md` §9; `tools/cli`, `tools/create`, `packages/sdk`; a new package |
-| **Tasks**      | Numbered when accepted                                                                                                                                                                          |
+| **Tasks**      | [13.27–13.30](../epics/operator-cli.md) and [14.11](../epics/sdk.md)                                                                                                                            |
 | **Supersedes** | The `sovereign-plugin-template` repository, which describes the plugin model this repository no longer has                                                                                      |
 
 ## Summary

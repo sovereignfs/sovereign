@@ -278,6 +278,35 @@ after its `expiresAt`.
   `deleteAccount`.
 - `hasRole(session, role)` is true when the `roles` claim has `role`. An app that was not given `roles` has none.
 
+### 9.2 Verifying a notice without the SDK's sessions
+
+An app whose sessions are not the SDK's (it signs people in by other means as well, or only has its own sessions after a sign-in it
+handled itself) still has to act on core's notices, and MUST NOT write the rules of §9.1 again. The SDK offers the verification alone:
+
+```ts
+import { verifyAccountDeletedToken, verifyLogoutToken } from '@sovereignfs/sdk';
+
+const notice = await verifyLogoutToken(request, { coreUrl, clientId, seen });
+// { sub?: string; sid?: string }
+```
+
+- `verifyLogoutToken` and `verifyAccountDeletedToken` take a web-standard `Request`, a `POST` whose form holds `logout_token` or
+  `account_deleted_token`, or the token itself, and the options `coreUrl` (the issuer), `clientId` (the audience) and `seen`. They make no
+  call to core but for its published keys, which they fetch as `handleBackChannelLogout` does.
+- They apply **every rule of §9.1** for their notice: the header `typ` (`logout+jwt` or `account-deleted+jwt`), the signature against
+  core's keys, `iss`, `aud`, an `iat` not in the future, `exp`, the event, a `jti`, a `sub` or `sid` (a logout token) or a `sub` (a deletion
+  notice), and no `nonce`. A logout token for `sub` or `sid` returns the one it names (or both); a deletion notice returns `{ sub }`.
+- **`seen` is required.** It is `(jti: string, expiresAt: number) => Promise<boolean>`: it MUST record the `jti` until `expiresAt` and
+  answer `true` when it had been recorded already, and a notice whose `jti` it has seen is refused. A verifier without replay
+  protection is a mistake this export does not make easy, so there is no default.
+- A notice they refuse throws `InvalidNoticeError`, which an app answers with `400` and `invalid_request`, saying nothing of why. Core's keys
+  being unreachable throws `CoreUnavailableError`, which an app answers with `503` so that core sends the notice again.
+- They end and delete nothing. What an app does with `{ sub, sid }` is its own: for a logout token it ends the sessions of that person or of
+  that core session, and for a deletion notice it deletes what it holds of the person and answers `200` only after it has (core-app §4.5).
+- `handleBackChannelLogout` and `handleAccountDeleted` are these functions followed by `deleteMatching` and the handler, with the session
+  store's `seen` records as their `seen`, and behave as §9.1 says.
+- Both are **experimental**, like the rest of §9.
+
 ---
 
 ## 10. From the legacy SDK
@@ -358,10 +387,11 @@ of its own; an app catalogue.
 
 ## Changelog
 
-| Date       | Change                                                                                                                                                                                      |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-10-30 | First draft. Scope, app tokens and explicit actors were decided in discussion.                                                                                                              |
-| 2026-10-30 | §5.1: the token store's `write` says whether it stored, and an optional `lock` closes the window between processes, which a conditional update cannot. §14: what two processes can promise. |
-| 2026-10-30 | §9.1: the session store the app provides, what each function does with it, how a logout token is refused, the cookie, `sv.links`.                                                           |
-| 2026-10-31 | §9, §8, §10: `handleAccountDeleted`, the app's part of account-deletion fan-out (core-app §4.5); legacy `portability` waits for export. Not built.                                          |
-| 2026-10-31 | §5.1, §9.1: built. A token store MAY have `delete(sub)`; `nextAuth` takes `onAccountDeleted` and mounts `/auth/account-deleted`; the fake core makes `accountDeletedToken`.                 |
+| Date       | Change                                                                                                                                                                                                    |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-30 | First draft. Scope, app tokens and explicit actors were decided in discussion.                                                                                                                            |
+| 2026-10-30 | §5.1: the token store's `write` says whether it stored, and an optional `lock` closes the window between processes, which a conditional update cannot. §14: what two processes can promise.               |
+| 2026-10-30 | §9.1: the session store the app provides, what each function does with it, how a logout token is refused, the cookie, `sv.links`.                                                                         |
+| 2026-10-31 | §9, §8, §10: `handleAccountDeleted`, the app's part of account-deletion fan-out (core-app §4.5); legacy `portability` waits for export. Not built.                                                        |
+| 2026-10-31 | §5.1, §9.1: built. A token store MAY have `delete(sub)`; `nextAuth` takes `onAccountDeleted` and mounts `/auth/account-deleted`; the fake core makes `accountDeletedToken`.                               |
+| 2026-11-02 | §9.2: `verifyLogoutToken` and `verifyAccountDeletedToken`, the rules of §9.1 for an app whose sessions are not the SDK's, with `seen` required: [RFC 0003](../rfcs/0003-apps-of-their-own.md). Not built. |

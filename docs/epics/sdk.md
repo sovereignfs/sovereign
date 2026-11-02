@@ -20,6 +20,7 @@ are added when core's Phase 2 specifies them.
 - [docs/specs/core-app.md](../specs/core-app.md): §3.6.1, §3.6.6, §3.9, §3.13
 - [contracts/core-api/](../../contracts/core-api/): the contract
 - [contracts/env.md](../../contracts/env.md) and [contracts/app-manifest.md](../../contracts/app-manifest.md): how an app is configured
+- [docs/rfcs/0003-apps-of-their-own.md](../rfcs/0003-apps-of-their-own.md): 14.11
 
 ## Tasks
 
@@ -246,4 +247,27 @@ are added when core's Phase 2 specifies them.
 - An account the restored database brought back is deleted again, and one it does not have is not made
 - Applying the same file twice changes nothing the second time
 - The file holds `sub`s and nothing else about a person
+- The security check is run
+
+#### 📋 14.11 — Verifying a notice on its own `[parallel]`
+
+**Goal:** An app whose sessions are not the SDK's can act on core's logout and account-deletion notices without writing sdk §9.1's rules again.
+
+**Priority:** 11.
+
+**Deliverables:**
+
+- `verifyLogoutToken` and `verifyAccountDeletedToken` (sdk §9.2): experimental, taking a `Request` or a token and `coreUrl`, `clientId` and a required `seen`
+- `handleBackChannelLogout` and `handleAccountDeleted` rebuilt on them, with no change to what they answer
+- The fake core in `@sovereignfs/sdk/testing` makes both tokens for an app's own tests
+
+**Dependencies:** 14.9, 13.27
+
+**Spec reference:** sdk §9.1, §9.2; core-app §3.6.5, §4.5
+
+**Review checklist:**
+
+- Each refusal of §9.1 is refused here, with a test that was seen to fail without the rule
+- `seen` cannot be left out, and a replayed `jti` is refused
+- `handle*` behave exactly as before
 - The security check is run

@@ -70,13 +70,15 @@ npm create @sovereignfs instance my-instance
 ### 2.2 An app
 
 `npm create @sovereignfs app my-notes` makes a Next.js app in `my-notes` that an instance can host as it stands. The folder's name is the
-app's name (it MUST be one `sv app add` accepts, and not `sv`), its variable prefix is that name upper-cased without hyphens, and its title
-is the name in words.
+app's name (it MUST be one `sv app add` accepts, and not `sv`), its manifest `prefix` is that name in lower case without hyphens (its
+variable prefix is that in upper case), and its title is the name in words.
 
 It MUST meet [`contracts/app-manifest.md`](../../contracts/app-manifest.md), and so MUST hold:
 
-- `sovereign.manifest.json`, valid against the manifest schema, and a `Dockerfile` whose `io.github.sovereignfs.app-manifest` label is that
-  manifest, with a script that checks the two agree and one that copies the manifest over the label;
+- `sovereign.manifest.json`, a manifest 2 valid against its schema, which is the one copy of the manifest, with `@sovereignfs/manifest` as a
+  development dependency and a script that runs `sovereign-manifest check`; and a `Dockerfile` that holds no copy of it: it takes the port
+  as `ARG PORT` and sets `ENV PORT=${PORT}` and `EXPOSE ${PORT}`, and the image's label and `PORT` build argument come from
+  `sovereign-manifest docker-args` when the image is built (`contracts/app-manifest.md` §1);
 - sign-in through `@sovereignfs/sdk` with its sessions and refresh tokens in the app's own database, the tokens encrypted, and routes for
   sign-in, the callback, sign-out, core's back-channel logout and core's account-deleted notice at the paths the manifest names;
 - a page behind sign-in using `@sovereignfs/ui`, whose every server action asks who is calling and whose every delete names the owner;
@@ -84,9 +86,9 @@ It MUST meet [`contracts/app-manifest.md`](../../contracts/app-manifest.md), and
 - its own migrations, applied once each when it starts, behind a lock, and that lock and any other held across a request taken on
   `<PREFIX>_POSTGRES_DIRECT_URL` in a small pool of its own, with everything else on `<PREFIX>_POSTGRES_URL`, so the manifest declares
   `database.pooling: transaction`;
-- an image that does not run as root, listens on 3000 and is configured by its environment alone;
+- an image that does not run as root, listens on `PORT` and is configured by its environment alone;
 - a workflow, `.github/workflows/publish.yml`, that on a `vX.Y.Z` tag builds that image for linux/amd64 and linux/arm64, with the
-  manifest label, and publishes it to `ghcr.io/<owner>/<repository>` tagged `X.Y.Z`, which is where `sv app add --git` looks for it
+  arguments `sovereign-manifest docker-args` prints, and publishes it to `ghcr.io/<owner>/<repository>` tagged `X.Y.Z`, which is where `sv app add --git` looks for it
   (§4.2.1).
 
 `create` writes the files, runs `git init`, resolves the lockfile and makes the first commit. It MUST NOT install or build, and it
@@ -143,9 +145,9 @@ Each command MUST state what it changed, and MUST exit as §11 says.
 
 | Command                          | What it does                                                                                                    | Reaches the server |
 | -------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------ |
-| `sv app add NAME --image REF`    | Adds a hosted app: reads its manifest, shows the scopes it asks for, and writes it to `suite.yml`               | no                 |
+| `sv app add [NAME] --image REF`  | Adds a hosted app: reads its manifest, shows the scopes it asks for, and writes it to `suite.yml`               | no                 |
 | `sv app add NAME --external ...` | Adds an external app, with its sign-in addresses                                                                | no                 |
-| `sv app add NAME --git URL`      | Adds a hosted app from the image its repository publishes (§4.2.1)                                              | no                 |
+| `sv app add [NAME] --git URL`    | Adds a hosted app from the image its repository publishes (§4.2.1)                                              | no                 |
 | `sv app upgrade [NAME \| --all]` | Moves hosted apps to a newer release of their image, for review (§4.2.1)                                        | no                 |
 | `sv app update NAME [...]`       | Changes what an app runs, or its settings, including its connection pool (`--connections N`)                    | no                 |
 | `sv app remove NAME [--purge]`   | Takes an app out of `suite.yml`. With `--purge`, also records that its data goes (§6.2)                         | no                 |
@@ -153,7 +155,13 @@ Each command MUST state what it changed, and MUST exit as §11 says.
 | `sv app show NAME [--secret]`    | Shows what the server recorded for an app: its address, client ID and state. `--secret` shows its client secret | yes                |
 
 - `sv app add` MUST read the manifest from the image's label, without pulling the image, or from `--manifest URL`. An image
-  with neither is refused, as is a manifest this toolkit cannot read or whose `core` range excludes the instance's version.
+  with neither is refused, as is a manifest this toolkit cannot read or whose `core` range (when it has one) excludes the instance's
+  version. It MUST read every manifest version the toolkit has ever supported (`contracts/app-manifest.md` §5), through
+  `@sovereignfs/manifest`.
+- `NAME` MAY be left out for a manifest 2, when the name is its `prefix` (`contracts/suite.md` §1.7). A manifest 1 has no such default, and
+  `sv app add` without a name for it is a usage error.
+- A manifest with no `signIn` is added with no scopes to show and no client: `sv app add` MUST say that the app is hosted without sign-in
+  through core and has no launcher entry, and MUST refuse `launcher` settings for it (`sv app update`).
 - `sv app add NAME --external` MUST take `--name`, at least one `--redirect`, and MAY take `--post-logout`, `--back-channel`,
   `--scope`, `--public` and `--trusted`. An external app is untrusted unless `--trusted` is given.
 - `sv app add` and `sv app upgrade` MUST say whether an app can be pooled: what its manifest says in `database.pooling`
@@ -170,7 +178,7 @@ Each command MUST state what it changed, and MUST exit as §11 says.
 An app is deployed by its image and is never built on the server, which holds no credential for an app's repository. `--git` is a way to
 name that image, and only an app that carries a manifest (`contracts/app-manifest.md`) can be added either way.
 
-- `sv app add NAME --git URL [--tag X.Y.Z]` MUST take a GitHub repository address (`https://github.com/OWNER/REPO`, with or without
+- `sv app add [NAME] --git URL [--tag X.Y.Z]` MUST take a GitHub repository address (`https://github.com/OWNER/REPO`, with or without
   `.git`) and look for its image at `ghcr.io/OWNER/REPO`, lower-cased. It takes the newest tag of the form `X.Y.Z`, or the one `--tag`
   names. A repository with no such image is refused, and the refusal names the workflow the app template carries (§2.2).
 - From there it MUST do exactly what `--image` does: read the manifest from the label, show the scopes, refuse what `--image` refuses,
@@ -302,8 +310,8 @@ Every step MUST do nothing when its result is already true. In order:
 5. **Start the base.** Create the networks (§6.4), start the database server, generate any secret that does not exist yet,
    start core, and wait for its health check. Core applies its own migrations when it starts.
 6. **Each app,** in `suite.yml`'s order:
-   - hosted: ensure its database and role, ensure its client (`sovereign-admin apps ensure`), write its environment, start its
-     container, wait for its health check, and add its proxy entry;
+   - hosted: ensure its database and role, ensure its client (`sovereign-admin apps ensure`) when its manifest has `signIn`, write its
+     environment (including `PORT`), start its container, wait for its health check, and add its proxy entry;
    - external: ensure its client.
 
    Core returns a client secret once. So `sv apply` MUST write it to `secrets/` before anything else, and a confidential
@@ -311,7 +319,7 @@ Every step MUST do nothing when its result is already true. In order:
    one.
 
 7. **Removed apps.** For an app in `state.json` and no longer in `suite.yml`: remove its proxy entry, stop its container, and
-   remove its client. Its database, role, data and generated secrets stay unless the commit recorded a purge (§6.2).
+   remove its client, if it had one. Its database, role, data and generated secrets stay unless the commit recorded a purge (§6.2).
 8. **Verify.** From inside core and each hosted app, every peer's public name answers over https with a certificate that
    verifies, and core's discovery document names the instance's issuer.
 9. **Record.** Point `current` at this release, and write `state.json`.
@@ -372,7 +380,7 @@ apply` itself after Compose, since an alias set that changes would otherwise rec
   certificates, which cannot be issued without it, and a warning with `internal`. `--skip-dns` is for a server reached by another address.
 - **An app (step 6)** gets, in this order: a network of its own, which the database server and the proxy join (the proxy with every
   public name as an alias); a role and a database named for it (`app_<name>`, a hyphen made an underscore) that only that role may open;
-  its client at core, made by `sovereign-admin apps ensure` run inside core, whose secret is written to `secrets/` before anything else is
+  its client at core when its manifest has `signIn`, made by `sovereign-admin apps ensure` run inside core, whose secret is written to `secrets/` before anything else is
   done with it, and which is given a new secret if it exists with none on disk (a run stopped between the two); its environment and
   secrets by the `_FILE` form (`contracts/app-manifest.md` §3); its own Compose project; and a wait for its health path, asked from the proxy,
   which is on the app's network. The proxy answers for an app only once it is healthy, and keeps answering for those that were up while
@@ -800,11 +808,12 @@ with a DNS provider's module, which the stock image does not carry.
 
 ## Changelog
 
-| Date       | Change                                                                                                                                                                                                                                                                                              |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-10-30 | First draft, from the accepted RFC 0002.                                                                                                                                                                                                                                                            |
-| 2026-11-01 | Apps from git and app upgrades (§4.2.1), backups before an app changes version, scheduled backups to S3, git or SFTP and per-app backups (§6.4.3, §10.2.2), rollback to a named release (§10.3), and more commands from GitHub (§8.2): [workstream 0001](../workstreams/0001-operator-workflow.md). |
-| 2026-11-01 | `sv seed` and core's `SV_ENVIRONMENT` (§4.4, §6.4, §13): test accounts and a sample app on development and staging instances, refused on production: [workstream 0002](../workstreams/0002-test-instances.md).                                                                                      |
-| 2026-11-02 | `sv push` refreshes a lock that no longer matches `suite.yml`, and `sv deploy --ssh` brings the server's toolkit to the pinned one before it sends the commit (§4.5, §8.1, §8.4, §10.1.1): [research 0003](../research/0003-database-connections.md).                                               |
-| 2026-11-02 | An app's manifest may declare `database.pooling: transaction`, and every app with a database is given `<PREFIX>_POSTGRES_DIRECT_URL` (§2.2, §4.2, §4.2.1, §6.4.4): [research 0003](../research/0003-database-connections.md).                                                                       |
-| 2026-11-02 | The optional pooler: `database.pooler`, `images.pooler`, `sv database pooler enable                                                                                                                                                                                                                 | disable`, `sv-pooler`in`sv apply`and its pools in`sv status` (§4.2.2, §6.4.5): [research 0003](../research/0003-database-connections.md). |
+| Date       | Change                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-30 | First draft, from the accepted RFC 0002.                                                                                                                                                                                                                                                                                                                                                                                                |
+| 2026-11-01 | Apps from git and app upgrades (§4.2.1), backups before an app changes version, scheduled backups to S3, git or SFTP and per-app backups (§6.4.3, §10.2.2), rollback to a named release (§10.3), and more commands from GitHub (§8.2): [workstream 0001](../workstreams/0001-operator-workflow.md).                                                                                                                                     |
+| 2026-11-01 | `sv seed` and core's `SV_ENVIRONMENT` (§4.4, §6.4, §13): test accounts and a sample app on development and staging instances, refused on production: [workstream 0002](../workstreams/0002-test-instances.md).                                                                                                                                                                                                                          |
+| 2026-11-02 | `sv push` refreshes a lock that no longer matches `suite.yml`, and `sv deploy --ssh` brings the server's toolkit to the pinned one before it sends the commit (§4.5, §8.1, §8.4, §10.1.1): [research 0003](../research/0003-database-connections.md).                                                                                                                                                                                   |
+| 2026-11-02 | An app's manifest may declare `database.pooling: transaction`, and every app with a database is given `<PREFIX>_POSTGRES_DIRECT_URL` (§2.2, §4.2, §4.2.1, §6.4.4): [research 0003](../research/0003-database-connections.md).                                                                                                                                                                                                           |
+| 2026-11-02 | The optional pooler: `database.pooler`, `images.pooler`, `sv database pooler enable                                                                                                                                                                                                                                                                                                                                                     | disable`, `sv-pooler`in`sv apply`and its pools in`sv status` (§4.2.2, §6.4.5): [research 0003](../research/0003-database-connections.md). |
+| 2026-11-02 | An app's manifest is the file `sovereign.manifest.json` at its source root, made into the image label by `@sovereignfs/manifest`; `sv` gives every hosted app `PORT`; manifest 2 has a lower-case `prefix` that is the default app name, an optional `signIn` (an app with none has no client and no launcher entry) and sized `generate` entries (§2.2, §4.2, §6.1, §6.4.1): [RFC 0003](../rfcs/0003-apps-of-their-own.md). Not built. |

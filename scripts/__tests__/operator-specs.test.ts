@@ -1,7 +1,8 @@
 /**
  * The files an operator's repository holds, and the manifest an app provides, are defined twice: in prose, and by a JSON
  * Schema that the CLI will validate against. These keep the two in step: the documents' own examples must pass, and each
- * rule the prose states must be refused by the schema.
+ * rule the prose states must be refused by the schema. The manifest has a schema for each version; the document's example is
+ * the latest, and manifest 1 is held to the differences §5.1 states.
  */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -17,7 +18,8 @@ const schema = (name: string) =>
 const ajv = new Ajv2020({ allErrors: true });
 const validSuite = ajv.compile(schema('suite-v1'));
 const validLock = ajv.compile(schema('suite-lock-v1'));
-const validManifest = ajv.compile(schema('app-manifest-v1'));
+const validManifest = ajv.compile(schema('app-manifest-v2'));
+const validManifest1 = ajv.compile(schema('app-manifest-v1'));
 
 /** The fenced blocks of a language in a document, in order. */
 const blocks = (file: string, language: string) =>
@@ -35,6 +37,13 @@ type Suite = {
 };
 const suite = () => parse(suiteYaml) as Suite;
 const manifest = () => JSON.parse(manifestJson) as Record<string, unknown>;
+/** The example as manifest 1 wrote it (app-manifest §5.1): an upper-case prefix, a sign-in, a core range and names only. */
+const manifest1 = () => ({
+  ...manifest(),
+  manifest: 1,
+  prefix: 'NOTES',
+  generate: ['NOTES_AUTH_SECRET'],
+});
 const without = (value: object, field: string) =>
   Object.fromEntries(Object.entries(value).filter(([key]) => key !== field));
 
@@ -59,6 +68,10 @@ describe('the examples in the documents', () => {
 
   it('the manifest passes its schema', () => {
     expect(validManifest(manifest()), JSON.stringify(validManifest.errors)).toBe(true);
+  });
+
+  it('the same manifest, written as manifest 1 says, passes the first schema', () => {
+    expect(validManifest1(manifest1()), JSON.stringify(validManifest1.errors)).toBe(true);
   });
 });
 
@@ -173,11 +186,14 @@ describe('the manifest', () => {
     change(value);
     return !validManifest(value);
   };
+  const signIn = { redirect: ['/cb'], scopes: ['openid'] };
 
-  it('needs what hosting an app depends on', () => {
-    for (const field of ['manifest', 'prefix', 'name', 'port', 'health', 'signIn', 'core']) {
+  it('needs what hosting an app depends on, and no more', () => {
+    for (const field of ['manifest', 'prefix', 'name', 'port', 'health']) {
       expect(validManifest(without(manifest(), field)), field).toBe(false);
     }
+    const bare = { manifest: 2, prefix: 'notes', name: 'Notes', port: 3000, health: '/h' };
+    expect(validManifest(bare), JSON.stringify(validManifest.errors)).toBe(true);
   });
 
   it('refuses a field it does not know, so a new one is never silently ignored', () => {
@@ -185,9 +201,11 @@ describe('the manifest', () => {
   });
 
   it.each([
-    ['core’s own', 'SV'],
-    ['lower case', 'notes'],
-    ['a trailing underscore', 'NOTES_'],
+    ['core’s own', 'sv'],
+    ['upper case', 'NOTES'],
+    ['a hyphen', 'my-notes'],
+    ['a digit first', '2fa'],
+    ['a trailing underscore', 'notes_'],
   ])('refuses a prefix of %s', (_, prefix) => {
     expect(refused((value) => (value.prefix = prefix))).toBe(true);
   });
@@ -212,6 +230,72 @@ describe('the manifest', () => {
     expect(refused(scopes(['openid', 'files']))).toBe(true);
     expect(refused(scopes(['openid', 'roles']))).toBe(false);
   });
+
+  it('may have no sign-in, and then has no client, so nothing for a launcher entry', () => {
+    const hosted = { manifest: 2, prefix: 'kiosk', name: 'Kiosk', port: 3000, health: '/h' };
+    expect(validManifest(hosted)).toBe(true);
+    expect(validManifest({ ...hosted, database: true, data: ['/data'] })).toBe(true);
+    expect(validManifest({ ...hosted, core: '>=0.57.0' })).toBe(true);
+    expect(validManifest({ ...hosted, icon: '/icon.svg' })).toBe(false);
+    expect(validManifest({ ...hosted, launch: '/' })).toBe(false);
+  });
+
+  it('needs the core versions it works with when it signs people in through core', () => {
+    expect(refused((value) => (value.signIn = signIn))).toBe(false);
+    expect(validManifest(without(manifest(), 'core'))).toBe(false);
+  });
+
+  it('makes secrets of 16 to 64 bytes, 48 when it does not say, each named once in its own shape', () => {
+    const generate = (entries: unknown[]) => (value: Record<string, unknown>) => {
+      value.generate = entries;
+    };
+    expect(
+      refused(generate(['NOTES_A', { name: 'NOTES_B', bytes: 32 }, { name: 'NOTES_C' }])),
+    ).toBe(false);
+    expect(
+      refused(
+        generate([
+          { name: 'NOTES_A', bytes: 16 },
+          { name: 'NOTES_B', bytes: 64 },
+        ]),
+      ),
+    ).toBe(false);
+    for (const bytes of [8, 15, 65, 32.5, '32']) {
+      expect(refused(generate([{ name: 'NOTES_A', bytes }])), String(bytes)).toBe(true);
+    }
+    expect(refused(generate([{ name: 'NOTES_A', size: 32 }]))).toBe(true);
+    expect(refused(generate([{ bytes: 32 }]))).toBe(true);
+    expect(refused(generate(['notes_a']))).toBe(true);
+  });
+
+  it('is manifest 2, and refuses a manifest 1 document', () => {
+    expect(validManifest(manifest1())).toBe(false);
+    expect(refused((value) => (value.manifest = 1))).toBe(true);
+  });
+});
+
+describe('manifest 1, which stays readable', () => {
+  const refused = (change: (value: Record<string, unknown>) => void) => {
+    const value = manifest1();
+    change(value);
+    return !validManifest1(value);
+  };
+
+  it('differs from manifest 2 as app-manifest §5.1 says', () => {
+    for (const field of ['manifest', 'prefix', 'name', 'port', 'health', 'signIn', 'core']) {
+      expect(validManifest1(without(manifest1(), field)), field).toBe(false);
+    }
+    expect(refused((value) => (value.prefix = 'notes'))).toBe(true);
+    expect(refused((value) => (value.prefix = 'SV'))).toBe(true);
+    expect(refused((value) => (value.generate = [{ name: 'NOTES_A', bytes: 32 }]))).toBe(true);
+    expect(refused((value) => (value.manifest = 2))).toBe(true);
+  });
+
+  it('is described by the table of §5.1, field for field', () => {
+    const section = /### 5\.1 Manifest 1([\s\S]*)$/.exec(read('contracts/app-manifest.md'));
+    const fields = [...(section?.[1] ?? '').matchAll(/^\| `(\w+)`/gm)].map((match) => match[1]);
+    expect(fields).toEqual(['prefix', 'signIn', 'core', 'generate']);
+  });
 });
 
 describe('where the specifications meet', () => {
@@ -225,5 +309,14 @@ describe('where the specifications meet', () => {
     );
     expect(names.length).toBeGreaterThan(4);
     for (const name of names) expect(shared, name).toContain(`\`${String(name)}\``);
+  });
+
+  it('the port an app is given is the platform’s, which contracts/env.md leaves unprefixed', () => {
+    const given = /## 3\. What an app is given([\s\S]*?)\n## /.exec(
+      read('contracts/app-manifest.md'),
+    );
+    expect(given?.[1]).toMatch(/^\| `PORT`\s+\| Always/m);
+    expect(read('contracts/env.md')).toMatch(/not Sovereign's and are not prefixed/);
+    expect(read('contracts/env.md')).toMatch(/`PORT`/);
   });
 });

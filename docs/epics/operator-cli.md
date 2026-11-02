@@ -25,6 +25,7 @@ and the hardest part, `sv apply`, comes before the commands that drive it.
 - [docs/workstreams/0001-operator-workflow.md](../workstreams/0001-operator-workflow.md): the order 13.13–13.19 are built in, and the decisions behind them
 - [docs/workstreams/0002-test-instances.md](../workstreams/0002-test-instances.md): 13.20–13.21, and the decisions behind them
 - [docs/research/0003-database-connections.md](../research/0003-database-connections.md): why 13.22–13.26, and in that order
+- [docs/rfcs/0003-apps-of-their-own.md](../rfcs/0003-apps-of-their-own.md): 13.27–13.30, and the SDK's 14.11
 
 ## Tasks
 
@@ -710,3 +711,98 @@ found that Alpine's package makes no `pgbouncer` account, which the Dockerfile n
 - An app that has not declared `transaction` connects directly, pooler or not
 - The pooler holds no credential the server did not generate, and publishes no port
 - Turning it off and on again loses nothing
+
+#### ✅ 13.27 — Apps of their own: the specifications
+
+**Goal:** What an app is, how its manifest is kept, and what manifest 2 and the SDK's notice verifiers promise are written down, and the
+documents' tests hold them, before any of it is built.
+
+**Priority:** 1.
+
+**Deliverables:**
+
+- `contracts/app-manifest.md`: the manifest is the file `sovereign.manifest.json` at the app's source root and the image label is made from it; `PORT`
+  is given to every app and an app listens on it; manifest 2 (a lower-case `prefix` that is the default app name, an optional `signIn`, sized
+  `generate` entries); manifest 1 as a short list of differences (§5.1)
+- `contracts/schemas/app-manifest-v2.schema.json`
+- `contracts/env.md` §1, `contracts/suite.md` §1.7, operator-cli §2.2, §4.2, §6.1, §6.4.1 and sdk §9.2, as [RFC 0003](../rfcs/0003-apps-of-their-own.md) says
+- `scripts/__tests__/operator-specs.test.ts` holds the examples to the schemas, the rules to the schema, and §5.1 to manifest 1
+
+**Built as:** an app with no `signIn` has no client and no launcher entry, so `icon` and `launch` are refused for it rather than ignored; the
+schema says so with `if`/`then`/`else`. `generate` names are checked once each by the toolkit, since a schema cannot say it across two forms of an entry.
+
+**Dependencies:** RFC 0003 accepted, 13.26
+
+**Spec reference:** RFC 0003; `contracts/app-manifest.md` §1–§5; operator-cli §2.2, §4.2
+
+**Review checklist:**
+
+- No app is named
+- Manifest 1 still means what it did, and its schema is unchanged
+- Every rule the prose states is refused by the schema, and a test says so
+
+#### 📋 13.28 — `@sovereignfs/manifest`, and `PORT`
+
+**Goal:** One package says what a valid manifest is for the toolkit and for an app's build, and every hosted app listens where the proxy looks.
+
+**Priority:** 2.
+
+**Deliverables:**
+
+- `packages/manifest` (`@sovereignfs/manifest`, MPL-2.0): every schema version, `validate`, `normalise`, and `sovereign-manifest check | label |
+docker-args`
+- `tools/cli` validates through it, replacing its own copy of the schema; `sv` gives every hosted app `PORT` from the manifest's `port`
+- The app template: `ARG PORT` in the Dockerfile, no copy of the manifest and no `scripts/manifest.mjs`, `sovereign-manifest check` as its check, and
+  `.github/workflows/publish.yml` building with `docker-args` (operator-cli §2.2)
+- Published with the toolkit (`docs/releasing.md`)
+
+**Dependencies:** 13.27
+
+**Spec reference:** `contracts/app-manifest.md` §1, §3, §4; operator-cli §2.2, §6.4.1
+
+**Review checklist:**
+
+- The label of an image built the template's way equals the file, and the image listens on the manifest's port
+- A manifest 1 image is still hosted, and now given `PORT`
+- Nothing in `tools/cli` knows the schema but through the package
+
+#### 📋 13.29 — Manifest 2
+
+**Goal:** An app can name itself in lower case, be hosted without signing people in through core, and ask for a secret of the size it needs.
+
+**Priority:** 3.
+
+**Deliverables:**
+
+- `@sovereignfs/manifest` and the toolkit read manifest 2 beside manifest 1; `sv app add [NAME]` takes the prefix as the name; an app with no `signIn` gets
+  no client, no `CORE_*` variables and no launcher entry, and `sv apply` makes secrets of the size `generate` says
+- The app template moves to manifest 2
+
+**Dependencies:** 13.28
+
+**Spec reference:** `contracts/app-manifest.md` §2.3–§2.5, §5.1; `contracts/suite.md` §1.7; operator-cli §4.2, §6.1
+
+**Review checklist:**
+
+- A manifest 1 app is added, applied and upgraded as before
+- An app without `signIn` has no client at core after `sv apply`, and a removed one leaves none behind
+- A secret of 32 bytes decodes to 32 bytes
+
+#### 📋 13.30 — Retire the plugin template `[parallel]`
+
+**Goal:** Nobody starts from `sovereign-plugin-template`, which describes a model this repository no longer has.
+
+**Priority:** 5.
+
+**Deliverables:**
+
+- That repository's README says the plugin model is gone, and points to `npm create @sovereignfs app`, `contracts/app-manifest.md` and `docs/using-the-sdk.md`
+- The owner archives the repository on GitHub
+
+**Dependencies:** 13.27
+
+**Spec reference:** RFC 0003
+
+**Review checklist:**
+
+- No page in this repository sends a reader to it

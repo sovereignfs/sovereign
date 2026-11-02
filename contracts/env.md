@@ -20,6 +20,8 @@ Every app has one prefix, and every variable it reads is `<PREFIX>_<NAME>`.
 - Core's prefix is **`SV`**. Any other app picks its own (`TASKS`, `NOTES`, …).
 - A prefix is upper-case letters and digits and starts with a letter. It is written
   without a trailing underscore: `SV`, not `SV_`.
+- An app's manifest (version 2) names the app in lower case, and its prefix is that name in upper case: `notes` gives `NOTES`
+  ([`app-manifest.md`](app-manifest.md) §2.4). A variable is always upper case.
 - A name is upper-case letters, digits and underscores and starts with a letter.
 - An app reads only variables with its own prefix. Two apps in one suite therefore
   never read each other's settings, and a suite's shared `.env` can hold both.

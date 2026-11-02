@@ -183,16 +183,20 @@ A map from an app's name to what it is. A name:
 
 A **hosted app**:
 
-| Field         | Required | Meaning                                                                                                                                                                                             |
-| ------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `image`       | yes      | The image, with a tag or digest. Never `latest`, and never with no tag                                                                                                                              |
-| `connections` | no       | Its connection pool size (§1.3), instead of `database.connections.app`                                                                                                                              |
-| `manifest`    | no       | An `https` address of its manifest, for an image with no label                                                                                                                                      |
-| `source`      | no       | The GitHub repository the image was found from (`https://github.com/OWNER/REPO`), written by `sv app add --git`, which `sv app upgrade` follows. Not built yet                                      |
-| `env`         | no       | Other settings for the app. Names begin with the manifest's prefix, and values are strings. Holds to §1.2's rule on secrets, and MUST NOT set what [`app-manifest.md`](app-manifest.md) §3 provides |
-| `launcher`    | no       | Changes to its launcher entry (below)                                                                                                                                                               |
+| Field         | Required | Meaning                                                                                                                                                                                                      |
+| ------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `image`       | yes      | The image, with a tag or digest. Never `latest`, and never with no tag                                                                                                                                       |
+| `connections` | no       | Its connection pool size (§1.3), instead of `database.connections.app`                                                                                                                                       |
+| `manifest`    | no       | An `https` address of its manifest, for an image with no label                                                                                                                                               |
+| `source`      | no       | The GitHub repository the image was found from (`https://github.com/OWNER/REPO`), written by `sv app add --git`, which `sv app upgrade` follows. Not built yet                                               |
+| `env`         | no       | Other settings for the app. Names begin with the manifest's variable prefix, and values are strings. Holds to §1.2's rule on secrets, and MUST NOT set what [`app-manifest.md`](app-manifest.md) §3 provides |
+| `launcher`    | no       | Changes to its launcher entry (below)                                                                                                                                                                        |
 
-A hosted app's trust, addresses and scopes are not here: they come from the manifest and its name.
+A hosted app's trust, addresses and scopes are not here: they come from the manifest and its name. An app whose manifest has no `signIn`
+has none of them, no client at core and no launcher entry ([`app-manifest.md`](app-manifest.md) §2.3), and `launcher` is refused for it.
+
+When `sv app add` is given no name for a hosted app whose manifest is version 2, the name is the manifest's `prefix`
+([`app-manifest.md`](app-manifest.md) §2.4), if it is a name by the rules above, and a refusal that asks for one if it is not.
 
 A hosted app MAY also have `connections`: its pool size, 2 to 100, instead of `database.connections.app` (§1.3). It is used only by an app
 whose manifest has `database`.

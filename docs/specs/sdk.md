@@ -292,7 +292,7 @@ const notice = await verifyLogoutToken(request, { coreUrl, clientId, seen });
 
 - `verifyLogoutToken` and `verifyAccountDeletedToken` take a web-standard `Request`, a `POST` whose form holds `logout_token` or
   `account_deleted_token` (the body is read), or the token itself, and the options `coreUrl` (the issuer), `clientId` (the audience), `seen`
-  and optionally `fetch`. They make no call to core but for its discovery document and its published keys, which they read on every call,
+  and optionally `fetch`. They make no call to core but for its discovery document (the issuer's address with `/.well-known/openid-configuration` appended, so an issuer with a path keeps it) and its published keys, which they read on every call,
   since notices are rare and a key that rotated must not be remembered. Each request has ten seconds and follows no redirect, through
   `fetch` (default: the platform's). The keys are fetched only from core's own address: a discovery document that names them elsewhere is
   an answer core cannot be trusted to have meant, and a `CoreUnavailableError`. A `coreUrl` that is not the issuer core's discovery document names is a `ConfigurationError`, and so is

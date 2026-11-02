@@ -226,6 +226,28 @@ describe('the options', () => {
     expect(seen).not.toHaveBeenCalled();
   });
 
+  it('ask for the discovery document at the issuer’s own address, which keeps a path it has', async () => {
+    const { core, options } = world();
+    const asked: string[] = [];
+    const base = 'https://core.test/base';
+    const error = await verifyLogoutToken(await core.logoutToken({ sub: 'u1' }), {
+      ...options,
+      coreUrl: base,
+      fetch: (async (url: string, init?: RequestInit) => {
+        asked.push(String(url));
+        if (String(url) === `${base}/.well-known/openid-configuration`) {
+          return Response.json({ issuer: base, jwks_uri: `${base}/api/auth/jwks` });
+        }
+        if (String(url) === `${base}/api/auth/jwks`)
+          return core.fetch(`${core.url}/api/auth/jwks`, init);
+        return new Response('no', { status: 404 });
+      }) as typeof fetch,
+    }).catch((e: unknown) => e);
+    // The discovery document was found where an issuer with a path keeps it, and so were the keys. (The token is another core's, so it is refused.)
+    expect(asked).toEqual([`${base}/.well-known/openid-configuration`, `${base}/api/auth/jwks`]);
+    expect(error).toBeInstanceOf(InvalidNoticeError);
+  });
+
   it('refuse a core whose discovery document names another issuer', async () => {
     const { core, options } = world();
     const token = await core.logoutToken({ sub: 'u1' });

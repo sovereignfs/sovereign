@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.91.0 · **Last updated:** 2026-11-02
+**Version:** 0.91.1 · **Last updated:** 2026-11-02
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and

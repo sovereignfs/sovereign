@@ -15,6 +15,7 @@ export {
   AuthLink,
   AuthLinkButton,
 } from './components/Auth/AuthForm';
+export type { AuthFooterProps } from './components/Auth/AuthForm';
 export { AuthCodeInput } from './components/Auth/AuthCodeInput';
 export type { AuthCodeInputProps } from './components/Auth/AuthCodeInput';
 export type { LegalLinksProps } from './components/LegalLinks/LegalLinks';

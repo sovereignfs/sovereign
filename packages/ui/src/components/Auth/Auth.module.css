@@ -193,6 +193,10 @@
   text-align: center;
 }
 
+.footerStart {
+  text-align: start;
+}
+
 .link {
   color: var(--sv-color-text-primary);
   text-decoration: underline;

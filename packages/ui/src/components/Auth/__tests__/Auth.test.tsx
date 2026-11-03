@@ -7,7 +7,7 @@ import { AuthCard } from '../AuthCard';
 import { AuthCodeInput } from '../AuthCodeInput';
 import { AuthField } from '../AuthField';
 import { AuthError, AuthNotice } from '../AuthNotice';
-import { AuthButton, AuthDivider, AuthForm } from '../AuthForm';
+import { AuthButton, AuthDivider, AuthFooter, AuthForm } from '../AuthForm';
 import { BrandBadge } from '../BrandBadge';
 
 afterEach(cleanup);
@@ -133,6 +133,21 @@ describe('AuthForm, AuthButton and AuthDivider', () => {
     const { container } = render(<AuthDivider />);
     expect(container.firstElementChild?.getAttribute('aria-hidden')).toBe('true');
     expect(container.textContent).toBe('or');
+  });
+});
+
+describe('AuthFooter', () => {
+  it('is centred unless it is told to start', () => {
+    const { container } = render(
+      <>
+        <AuthFooter>centred</AuthFooter>
+        <AuthFooter align="start">at the start</AuthFooter>
+      </>,
+    );
+    const [centred, start] = Array.from(container.querySelectorAll('p'));
+    expect(centred?.className).not.toBe(start?.className);
+    expect(start?.className).toContain('footerStart');
+    expect(centred?.className).not.toContain('footerStart');
   });
 });
 

@@ -538,6 +538,31 @@ function ExampleForm() {
 }
 ```
 
+### Pages before sign-in
+
+An app that signs people in, or stands beside a sign-in, draws its pages with the
+auth components, so every Sovereign app's sign-in looks the same: `AuthCard` (a
+centred card with a mark, a title, an optional lead and the legal links),
+`AuthForm` of `AuthField`s (label above, optional hint, error and a link on the
+label's right such as "Forgot password?"), `AuthButton`, `AuthDivider`,
+`AuthFooter`, `AuthLink` and `AuthLinkButton`, `AuthNotice` and `AuthError` for
+what the person is told, and `AuthCodeInput` for a one-time code. The mark is a
+slot: `BrandBadge` (the first letter of the name) when there is no logo.
+`legal={false}` leaves out the privacy and terms links for an app that has no such
+pages.
+
+```tsx
+<AuthCard brand={<BrandBadge name="Fjord" />} title="Sign in to Fjord" legal={false}>
+  <AuthForm onSubmit={onSubmit}>
+    <AuthField label="Email">{(control) => <Input {...control} type="email" required />}</AuthField>
+    <AuthField label="Password" aside={<a href="/forgot-password">Forgot password?</a>}>
+      {(control) => <Input {...control} type="password" required />}
+    </AuthField>
+    <AuthButton type="submit">Sign in</AuthButton>
+  </AuthForm>
+</AuthCard>
+```
+
 ### Stability
 
 What is stable, what is experimental and what a version number promises are in
@@ -1800,6 +1825,7 @@ Stories live under two roots inside `packages/ui/src/`:
 | `Drawer.stories.tsx`              | Mobile viewport default; closed; `play` function opens and asserts panel visible                                                                                |
 | `EmptyState.stories.tsx`          | Heading only; with icon; with action                                                                                                                            |
 | `FormField.stories.tsx`           | Default; with hint; with error (role="alert"); render-prop `children` wires field props (`id`, `aria-describedby`, `aria-invalid`, `required`) onto the control |
+| `Auth.stories.tsx`                | Sign-in card; with a notice and a field error; the second step with `AuthCodeInput`. Mark is a slot (`BrandBadge`); `legal={false}` drops the legal links       |
 | `Icon.stories.tsx`                | Decorative vs meaningful a11y variants; all three sizes; `AllIcons` full grid                                                                                   |
 | `IconPicker.stories.tsx`          | Default; preselected value; disabled                                                                                                                            |
 | `Input.stories.tsx`               | Text/email/password; disabled; error state with `aria-invalid`                                                                                                  |

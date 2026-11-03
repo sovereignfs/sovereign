@@ -1,0 +1,249 @@
+/* The pages before sign-in: one card, centred on the screen, with a mark, a title, a form and the small
+   print. These are the Sovereign sign-in pages' own styles, moved here so every app's sign-in looks the same. */
+
+.page {
+  min-height: 100vh;
+  min-height: var(--page-height, 100dvh);
+  display: flex;
+  /* Centred when the card fits; from the top when a taller one (sign-up, consent) does not, so its top stays
+     reachable. */
+  align-items: safe center;
+  justify-content: center;
+  padding: var(--sv-space-4);
+  background: var(--sv-color-surface);
+  box-sizing: border-box;
+}
+
+.card {
+  width: 100%;
+  max-width: 360px;
+  background-color: var(--sv-color-surface);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-lg);
+  box-shadow: var(--sv-shadow-card, 0 1px 2px rgba(0, 0, 0, 0.04));
+  padding: var(--sv-space-8);
+  box-sizing: border-box;
+}
+
+.wide {
+  max-width: 40rem;
+}
+
+/* ── Brand mark ──────────────────────────────────────────────────────────── */
+
+.brand {
+  margin-bottom: var(--sv-space-5);
+}
+
+.badge {
+  --mark-size: 34px;
+  flex: none;
+  width: var(--mark-size);
+  height: var(--mark-size);
+  border-radius: var(--sv-radius-md);
+  background-color: var(--sv-color-accent);
+  color: var(--sv-color-text-on-accent);
+  font-size: calc(var(--mark-size) * 0.47);
+  font-weight: var(--sv-font-weight-semibold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badgeLg {
+  --mark-size: 40px;
+}
+
+/* ── Title and what it is for ────────────────────────────────────────────── */
+
+.title {
+  margin: 0;
+  font-size: 21px;
+  font-weight: var(--sv-font-weight-semibold);
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  color: var(--sv-color-text-primary);
+}
+
+.lead {
+  margin: var(--sv-space-2) 0 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+  line-height: 1.5;
+}
+
+/* ── Notices ─────────────────────────────────────────────────────────────── */
+
+.notice {
+  margin-top: var(--sv-space-3);
+  padding: var(--sv-space-3) var(--sv-space-4);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface-sunken);
+  border: 1px solid var(--sv-color-border);
+}
+
+.noticeText {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+  line-height: 1.5;
+}
+
+/* A notice that something is not as the person expects. */
+.warning {
+  background: var(--sv-color-warning-surface);
+  border-color: var(--sv-color-warning-border);
+}
+
+.warning .noticeText {
+  color: var(--sv-color-warning-text);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-error-text);
+}
+
+/* ── Form ────────────────────────────────────────────────────────────────── */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+  margin-top: var(--sv-space-6);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+.labelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--sv-space-2);
+}
+
+.label {
+  display: block;
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-text-muted);
+}
+
+.aside {
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+}
+
+.aside a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--sv-color-border);
+}
+
+.hint {
+  margin: var(--sv-space-1) 0 0;
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+}
+
+.fieldError {
+  margin: var(--sv-space-1) 0 0;
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-error-text);
+}
+
+/* ── Divider ─────────────────────────────────────────────────────────────── */
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+  margin: var(--sv-space-4) 0;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-sm);
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--sv-color-border);
+}
+
+/* ── Buttons, links ──────────────────────────────────────────────────────── */
+
+.submit {
+  width: 100%;
+  margin-top: var(--sv-space-2);
+}
+
+.wide {
+  width: 100%;
+}
+
+.footer {
+  margin: var(--sv-space-5) 0 0;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+  text-align: center;
+}
+
+.link {
+  color: var(--sv-color-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--sv-color-text-primary);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── Second step: one box for each digit of a code ───────────────────────── */
+
+.codeRow {
+  display: flex;
+  gap: var(--sv-space-2);
+}
+
+.codeCell {
+  width: 100%;
+  min-width: 0;
+  height: 52px;
+  text-align: center;
+  font-family: var(--sv-font-family-mono);
+  font-size: 21px;
+  font-weight: var(--sv-font-weight-semibold);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface);
+  color: var(--sv-color-text-primary);
+  outline: none;
+  caret-color: transparent;
+}
+
+.codeCell:focus {
+  border-color: var(--sv-color-accent);
+  box-shadow: 0 0 0 3px var(--sv-color-focus-ring);
+}
+
+.codeCellError {
+  border-color: var(--sv-color-error-text);
+}
+
+@media (max-width: 768px) {
+  .card {
+    padding: var(--sv-space-6);
+  }
+}

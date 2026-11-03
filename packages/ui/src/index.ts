@@ -1,4 +1,22 @@
 export { LegalLinks } from './components/LegalLinks/LegalLinks';
+export { AuthShell } from './components/Auth/AuthShell';
+export { AuthCard } from './components/Auth/AuthCard';
+export type { AuthCardProps } from './components/Auth/AuthCard';
+export { BrandBadge } from './components/Auth/BrandBadge';
+export type { BrandBadgeProps } from './components/Auth/BrandBadge';
+export { AuthField } from './components/Auth/AuthField';
+export type { AuthFieldProps, AuthFieldControl } from './components/Auth/AuthField';
+export { AuthNotice, AuthError } from './components/Auth/AuthNotice';
+export {
+  AuthForm,
+  AuthButton,
+  AuthDivider,
+  AuthFooter,
+  AuthLink,
+  AuthLinkButton,
+} from './components/Auth/AuthForm';
+export { AuthCodeInput } from './components/Auth/AuthCodeInput';
+export type { AuthCodeInputProps } from './components/Auth/AuthCodeInput';
 export type { LegalLinksProps } from './components/LegalLinks/LegalLinks';
 export { ConsentPrompt } from './components/ConsentPrompt/ConsentPrompt';
 export type { ConsentPromptProps } from './components/ConsentPrompt/ConsentPrompt';

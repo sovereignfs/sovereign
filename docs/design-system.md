@@ -547,12 +547,12 @@ centred card with a mark, a title, an optional lead and the legal links),
 label's right such as "Forgot password?"), `AuthButton`, `AuthDivider`,
 `AuthFooter`, `AuthLink` and `AuthLinkButton`, `AuthNotice` and `AuthError` for
 what the person is told, and `AuthCodeInput` for a one-time code. The mark is a
-slot: `BrandBadge` (the first letter of the name) when there is no logo.
+slot: `BrandBadge` (the first letter of the name, or the letters of `mark`) when there is no logo.
 `legal={false}` leaves out the privacy and terms links for an app that has no such
 pages.
 
 ```tsx
-<AuthCard brand={<BrandBadge name="Fjord" />} title="Sign in to Fjord" legal={false}>
+<AuthCard brand={<BrandBadge name="Fjord" mark="Fj" />} title="Sign in to Fjord" legal={false}>
   <AuthForm onSubmit={onSubmit}>
     <AuthField label="Email">{(control) => <Input {...control} type="email" required />}</AuthField>
     <AuthField label="Password" aside={<a href="/forgot-password">Forgot password?</a>}>

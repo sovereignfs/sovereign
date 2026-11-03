@@ -47,6 +47,18 @@ describe('BrandBadge', () => {
   });
 });
 
+describe('BrandBadge mark', () => {
+  it('shows the letters it is given, as they are, instead of the first letter of the name', () => {
+    const { container } = render(<BrandBadge name="Fjord" mark="Fj" />);
+    expect(container.textContent).toBe('Fj');
+  });
+
+  it('falls back to the first letter of the name when the mark is empty', () => {
+    const { container } = render(<BrandBadge name="Fjord" mark=" " />);
+    expect(container.textContent).toBe('F');
+  });
+});
+
 describe('AuthField', () => {
   it('ties the label, the hint and the control together, with no asterisk', () => {
     render(

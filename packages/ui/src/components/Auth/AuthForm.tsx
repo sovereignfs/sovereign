@@ -8,7 +8,7 @@ import type {
 import { Button, type ButtonProps } from '../Button/Button';
 import styles from './Auth.module.css';
 
-const join = (...names: (string | undefined)[]) => names.filter(Boolean).join(' ');
+const join = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(' ');
 
 /** The form of a page before sign-in: its boxes one under another. */
 export function AuthForm({ className, ...rest }: FormHTMLAttributes<HTMLFormElement>) {
@@ -35,9 +35,19 @@ export function AuthDivider({ children = 'or' }: { children?: ReactNode }) {
   );
 }
 
+export interface AuthFooterProps extends HTMLAttributes<HTMLParagraphElement> {
+  /** `start` for a page that is only a message and a link, where the link lines up with the text above it. */
+  align?: 'center' | 'start';
+}
+
 /** A line of small print under the form, centred: "New to Fjord? Create account". */
-export function AuthFooter({ className, ...rest }: HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={join(styles.footer, className)} {...rest} />;
+export function AuthFooter({ align = 'center', className, ...rest }: AuthFooterProps) {
+  return (
+    <p
+      className={join(styles.footer, align === 'start' && styles.footerStart, className)}
+      {...rest}
+    />
+  );
 }
 
 /** A link inside the card's text. */

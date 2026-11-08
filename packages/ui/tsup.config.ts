@@ -93,6 +93,25 @@ function checkBundleImports(): void {
   }
 }
 
+/**
+ * The bundle is one module, so the `'use client'` each component's file says is lost in it, and `createContext` runs when it is
+ * imported: a Server Component that imported the package directly failed to build ("createContext is not a function"), and every app
+ * outside this repository wrapped it in a `'use client'` re-export of its own. The whole bundle now says it, which is what those
+ * wrappers did: each component is a client reference that still renders on the server, and a Server Component passes it data and
+ * children, not functions. Core is not affected: it builds the package from `src/`, where each file says it for itself.
+ */
+const CLIENT_DIRECTIVE = "'use client';";
+
+/** The directive must be the bundle's first statement, or React ignores it. */
+function checkClientDirective(): void {
+  const first = readFileSync(join(DIST, 'index.js'), 'utf8').split('\n', 1)[0];
+  if (first?.trim() !== CLIENT_DIRECTIVE) {
+    throw new Error(
+      `[ui build] dist/index.js must begin with ${CLIENT_DIRECTIVE}, and begins with: ${first}`,
+    );
+  }
+}
+
 export default defineConfig({
   entry: ['src/index.ts'],
   format: ['esm'],
@@ -104,6 +123,7 @@ export default defineConfig({
   // dist/ so the published package's imports resolve; `publishConfig` (in
   // package.json) repoints exports at dist/ on publish.
   external: ['react', 'react-dom', 'react/jsx-runtime', /^@dnd-kit\//],
+  banner: { js: CLIENT_DIRECTIVE },
   esbuildPlugins: [flatCssModules],
   esbuildOptions(options) {
     options.jsx = 'automatic';
@@ -112,5 +132,6 @@ export default defineConfig({
     copyCssToDist();
     copyFontsToDist();
     checkBundleImports();
+    checkClientDirective();
   },
 });

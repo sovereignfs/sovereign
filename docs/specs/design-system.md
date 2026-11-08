@@ -98,6 +98,9 @@ Every token is covered by §4 as if stable, because an app can reference any of 
 - A component MUST be React, styled with CSS Modules. Tailwind, runtime CSS-in-JS and third-party component frameworks MUST NOT
   be used.
 - A component MUST work in a Server Component unless it needs state or a browser API, in which case it says `'use client'`.
+  The published bundle is one module, so it says `'use client'` as a whole (its first statement): a Server Component imports any
+  component from the package directly and passes it data and children, and each still renders on the server. In this repository,
+  where core builds from `src/`, each file says it for itself.
 - A client component MUST NOT read a browser global in a `useState` initializer or in render.
 - A component MUST NOT fetch anything, or depend on an asset at a path of the app's.
 - There is one mobile breakpoint, `768px`, `MOBILE_BREAKPOINT_PX`. A component MUST NOT use another.

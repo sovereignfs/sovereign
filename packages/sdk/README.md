@@ -87,7 +87,7 @@ const notice = await core.logoutToken({ sub: 'u1' }, { wrong: 'expired' });
 
 ## Core versions
 
-This release supports core `>=0.46.0` (`sovereign.core` in `package.json`). A core too old to say what it serves is treated as
+This release supports core `>=0.46.0` (`sovereign.core` in `package.json`; a core version is the platform version, the image tag, never `apps/core`'s own). A core too old to say what it serves is treated as
 serving the Directory and the instance document, and nothing else. The guide for an app's developer is
 [Using the SDK](https://github.com/sovereignfs/sovereign/blob/main/docs/using-the-sdk.md).
 

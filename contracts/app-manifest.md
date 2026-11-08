@@ -69,7 +69,7 @@ for one, for an image that has no label. When an image has both, the address is 
 | `database`    | no            | Whether it needs a PostgreSQL database, and how it may be reached (§2.2). Default `false`             |
 | `generate`    | no            | Variables, with the app's variable prefix, for which the server generates a random secret once (§2.5) |
 | `data`        | no            | Absolute paths in the container to keep across upgrades                                               |
-| `core`        | with `signIn` | The core versions it works with, as an npm-style semver range. Optional without `signIn`              |
+| `core`        | with `signIn` | The core versions it works with, as an npm-style semver range (§2.6). Optional without `signIn`       |
 
 A manifest MUST NOT be extended with fields of its own. An unknown field is refused, so that a future field is never ignored. A field that
 would have no effect is refused as well: `icon` and `launch` belong to a launcher entry, and an app with no `signIn` has none.
@@ -140,6 +140,14 @@ Each entry is a variable name, or an object `{ "name": "...", "bytes": N }`. A n
 once. The server makes `N` random bytes, in URL-safe base64 (`-` and `_`, no padding: what `openssl rand -base64 N` makes with its `+`, `/` and `=` changed), once, and keeps them. `bytes` is from 16 to 64, and a name alone is 48.
 
 ---
+
+### 2.6 `core`
+
+A core version is the **platform version**: the tag of `ghcr.io/sovereignfs/sovereign`, the root `package.json` of the Sovereign
+repository, and what `suite.yml`'s `core.version` names ([`suite.md`](suite.md) §1.2). It is never `apps/core/package.json`'s own
+version, which is internal and releases nothing ([`docs/releasing.md`](../docs/releasing.md)). The CLI checks `core.version`
+against this range when an app is added or the instance is upgraded. An app that needs a feature names, as the range's floor, the
+first platform release that shipped it.
 
 ## 3. What an app is given
 

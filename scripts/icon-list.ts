@@ -141,6 +141,27 @@ export const ICON_LIST = [
   'ban',
   'shield-off',
   'user-x',
+  // Apps of their own (Tusk, Fjord Web), which drew these themselves because the set lacked them:
+  // the sidebar toggle, the Desk, inviting a member, the Planner, boards, and Fjord's vaults, files and kinds of repository.
+  'panel-left-close',
+  'panel-left-open',
+  'list-todo',
+  'user-plus',
+  'calendar-days',
+  'folder-kanban',
+  'folder-lock',
+  'folder-plus',
+  'folder-input',
+  'file-image',
+  'square-text',
+  'file-code-corner',
+  'archive-x',
+  'settings-2',
+  'arrow-right-left',
+  'save',
+  'hard-drive',
+  'notebook-pen',
+  'fingerprint-pattern',
 ] as const;
 
 export type IconName = (typeof ICON_LIST)[number];

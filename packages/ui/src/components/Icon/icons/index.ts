@@ -103,6 +103,25 @@ import { CreditCardIcon } from './credit-card';
 import { BanIcon } from './ban';
 import { ShieldOffIcon } from './shield-off';
 import { UserXIcon } from './user-x';
+import { PanelLeftCloseIcon } from './panel-left-close';
+import { PanelLeftOpenIcon } from './panel-left-open';
+import { ListTodoIcon } from './list-todo';
+import { UserPlusIcon } from './user-plus';
+import { CalendarDaysIcon } from './calendar-days';
+import { FolderKanbanIcon } from './folder-kanban';
+import { FolderLockIcon } from './folder-lock';
+import { FolderPlusIcon } from './folder-plus';
+import { FolderInputIcon } from './folder-input';
+import { FileImageIcon } from './file-image';
+import { SquareTextIcon } from './square-text';
+import { FileCodeCornerIcon } from './file-code-corner';
+import { ArchiveXIcon } from './archive-x';
+import { Settings2Icon } from './settings-2';
+import { ArrowRightLeftIcon } from './arrow-right-left';
+import { SaveIcon } from './save';
+import { HardDriveIcon } from './hard-drive';
+import { NotebookPenIcon } from './notebook-pen';
+import { FingerprintPatternIcon } from './fingerprint-pattern';
 
 export type IconName =
   | 'house'
@@ -207,7 +226,26 @@ export type IconName =
   | 'credit-card'
   | 'ban'
   | 'shield-off'
-  | 'user-x';
+  | 'user-x'
+  | 'panel-left-close'
+  | 'panel-left-open'
+  | 'list-todo'
+  | 'user-plus'
+  | 'calendar-days'
+  | 'folder-kanban'
+  | 'folder-lock'
+  | 'folder-plus'
+  | 'folder-input'
+  | 'file-image'
+  | 'square-text'
+  | 'file-code-corner'
+  | 'archive-x'
+  | 'settings-2'
+  | 'arrow-right-left'
+  | 'save'
+  | 'hard-drive'
+  | 'notebook-pen'
+  | 'fingerprint-pattern';
 
 export type IconComponent = (props: SVGProps<SVGSVGElement>) => ReactElement;
 
@@ -315,6 +353,25 @@ export const ICONS: Record<IconName, IconComponent> = {
   ban: BanIcon,
   'shield-off': ShieldOffIcon,
   'user-x': UserXIcon,
+  'panel-left-close': PanelLeftCloseIcon,
+  'panel-left-open': PanelLeftOpenIcon,
+  'list-todo': ListTodoIcon,
+  'user-plus': UserPlusIcon,
+  'calendar-days': CalendarDaysIcon,
+  'folder-kanban': FolderKanbanIcon,
+  'folder-lock': FolderLockIcon,
+  'folder-plus': FolderPlusIcon,
+  'folder-input': FolderInputIcon,
+  'file-image': FileImageIcon,
+  'square-text': SquareTextIcon,
+  'file-code-corner': FileCodeCornerIcon,
+  'archive-x': ArchiveXIcon,
+  'settings-2': Settings2Icon,
+  'arrow-right-left': ArrowRightLeftIcon,
+  save: SaveIcon,
+  'hard-drive': HardDriveIcon,
+  'notebook-pen': NotebookPenIcon,
+  'fingerprint-pattern': FingerprintPatternIcon,
 };
 
 export { HouseIcon } from './house';
@@ -420,3 +477,22 @@ export { CreditCardIcon } from './credit-card';
 export { BanIcon } from './ban';
 export { ShieldOffIcon } from './shield-off';
 export { UserXIcon } from './user-x';
+export { PanelLeftCloseIcon } from './panel-left-close';
+export { PanelLeftOpenIcon } from './panel-left-open';
+export { ListTodoIcon } from './list-todo';
+export { UserPlusIcon } from './user-plus';
+export { CalendarDaysIcon } from './calendar-days';
+export { FolderKanbanIcon } from './folder-kanban';
+export { FolderLockIcon } from './folder-lock';
+export { FolderPlusIcon } from './folder-plus';
+export { FolderInputIcon } from './folder-input';
+export { FileImageIcon } from './file-image';
+export { SquareTextIcon } from './square-text';
+export { FileCodeCornerIcon } from './file-code-corner';
+export { ArchiveXIcon } from './archive-x';
+export { Settings2Icon } from './settings-2';
+export { ArrowRightLeftIcon } from './arrow-right-left';
+export { SaveIcon } from './save';
+export { HardDriveIcon } from './hard-drive';
+export { NotebookPenIcon } from './notebook-pen';
+export { FingerprintPatternIcon } from './fingerprint-pattern';

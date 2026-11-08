@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/config",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "The environment variable convention for Sovereign core and apps: declare, read and validate settings with a per-app prefix.",
   "license": "MPL-2.0",
   "repository": {

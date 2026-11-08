@@ -189,6 +189,10 @@ Anything else comes from the operator: `env` in `suite.yml`, or `secrets.age.yml
   by the user the app runs as, because Docker makes a new volume from the image's folder at that path and owns it as root otherwise.
 - It MUST stop cleanly on `SIGTERM`.
 - An app with `signIn` MUST read core's address from `<PREFIX>_CORE_URL` and not assume one.
+- An app with `signIn` SHOULD run as the instance needs with only what this section gives it and what its manifest generates.
+  In particular, when core is its only way in, it SHOULD give an account to anyone core signs in without being told to: core already
+  decides who may sign in, and an app that admits only the first person would make every operator set something to undo it. An app
+  that offers ways in of its own (a password, say) keeps those closed unless its operator opens them.
 
 ---
 

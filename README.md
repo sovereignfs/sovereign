@@ -89,6 +89,8 @@ rules; [`AGENTS.md`](AGENTS.md) has the same conventions written for AI agents.
 - [`docs/deploying.md`](docs/deploying.md) — running core alone: the image, the three
   databases, the address it must reach, backing up and upgrading.
 - [`docs/releasing.md`](docs/releasing.md) — what is published, and how a release is made.
+- [`docs/building-an-app.md`](docs/building-an-app.md) — planning and building a new app of
+  the suite: the pieces, how they relate, and the rules an app keeps.
 - [`docs/connecting-an-app.md`](docs/connecting-an-app.md) and
   [`docs/using-the-sdk.md`](docs/using-the-sdk.md) — connecting any app to core,
   and a JavaScript app's way to sign people in and call it.

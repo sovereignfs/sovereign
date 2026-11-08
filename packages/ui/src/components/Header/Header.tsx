@@ -27,16 +27,19 @@ export interface HeaderProps extends HTMLAttributes<HTMLElement> {
   /** The active plugin, rendered next to the brand badge. Omit for a page
    * with no single active plugin (e.g. the Launcher itself). */
   plugin?: HeaderPlugin;
+  /** Before the brand badge, at the far left: an app's own control, such as
+   * the button that opens and closes its sidebar. Omit for none. */
+  leading?: ReactNode;
   /** Apps launcher trigger — already wired by the consumer (icon button plus
-   * whatever popover/drawer it opens). Always rendered, matching
-   * `MobileHeader`'s bell/avatarMenu boundary: this component owns layout
-   * only, never launcher/notification/account interaction logic. */
-  launcher: ReactNode;
-  /** Notification bell trigger — always rendered; not overridable. Same
-   * "just an icon slot" boundary as `MobileHeader`'s own `bell` prop. */
-  notifications: ReactNode;
-  /** Avatar / account menu trigger — always rendered; not overridable. */
-  avatarMenu: ReactNode;
+   * whatever popover/drawer it opens). This component owns layout only,
+   * never launcher/notification/account interaction logic. Omit it for an
+   * app that runs on its own, with no instance's apps to switch to. */
+  launcher?: ReactNode;
+  /** Notification bell trigger. Same "just an icon slot" boundary as
+   * `MobileHeader`'s own `bell` prop. Omit until there is one to show. */
+  notifications?: ReactNode;
+  /** Avatar / account menu trigger. Omit until there is one to show. */
+  avatarMenu?: ReactNode;
 }
 
 /**
@@ -53,13 +56,15 @@ export interface HeaderProps extends HTMLAttributes<HTMLElement> {
  * fully built, exactly like `MobileHeader`'s `bell`/`avatarMenu`: this
  * component stays router-agnostic and interaction-agnostic, and never
  * duplicates a real `AccountMenu`/notification-panel/apps-switcher
- * implementation.
+ * implementation. Every slot on the right is optional, so an app that runs
+ * on its own (with no launcher, say) uses this header too.
  */
 export function Header({
   instanceName,
   instanceLogoUrl,
   homeHref,
   plugin,
+  leading,
   launcher,
   notifications,
   avatarMenu,
@@ -72,6 +77,7 @@ export function Header({
   return (
     <header className={cls} {...rest}>
       <div className={styles.left}>
+        {leading}
         <a href={homeHref} className={styles.brandBadge} aria-label={`${instanceName} home`}>
           {instanceLogoUrl ? (
             <img src={instanceLogoUrl} alt="" className={styles.brandLogoImg} />

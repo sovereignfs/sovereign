@@ -101,4 +101,23 @@ describe('Header', () => {
     expect(screen.getByText('Notes')).toBeDefined();
     expect(screen.queryByRole('link', { name: /Notes/ })).toBeNull();
   });
+
+  it('renders only the slots it is given, for an app with no launcher, and an app control before the badge', () => {
+    const { container } = render(
+      <Header
+        instanceName="Tusk"
+        homeHref="/"
+        leading={<button type="button">Sidebar</button>}
+        avatarMenu={<span data-testid="avatar">avatar</span>}
+      />,
+    );
+
+    expect(screen.queryByTestId('launcher')).toBeNull();
+    expect(screen.queryByTestId('bell')).toBeNull();
+    expect(screen.getByTestId('avatar')).toBeDefined();
+    // The app's control comes first, before the brand badge.
+    const left = container.querySelector('header > div');
+    expect(left?.firstElementChild?.textContent).toBe('Sidebar');
+    expect(screen.getByRole('link', { name: 'Tusk home' })).toBeDefined();
+  });
 });

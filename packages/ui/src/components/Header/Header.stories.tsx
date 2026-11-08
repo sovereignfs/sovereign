@@ -450,3 +450,32 @@ export const Playground: StoryDetail = {
     },
   },
 };
+
+/**
+ * An app that runs on its own (Tusk, Fjord Web outside an instance): no apps
+ * launcher, the sidebar's button before the badge, and only an avatar menu.
+ */
+export const StandaloneApp: StoryDetail = {
+  args: {
+    instanceName: 'Tusk',
+    homeHref: '/',
+    plugin: undefined,
+    leading: (
+      <button
+        type="button"
+        aria-label="Open the sidebar"
+        style={{
+          display: 'inline-flex',
+          border: 0,
+          background: 'none',
+          padding: 0,
+          cursor: 'pointer',
+        }}
+      >
+        <Icon name="panel-left-open" aria-hidden />
+      </button>
+    ),
+    launcher: undefined,
+    notifications: undefined,
+  },
+};

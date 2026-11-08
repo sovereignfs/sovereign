@@ -113,7 +113,7 @@ recorded as an ADR in `docs/adrs/`. A documented "not now" is a valid outcome.
     minor; patches are hotfixes between tasks; a single jump to `1.0.0` marks
     public release.
   - **Internal packages and `apps/core`** follow normal semver independently.
-  - **The published packages, `@sovereignfs/ui`, `@sovereignfs/sdk` and `@sovereignfs/manifest`**,
+  - **The published packages, `@sovereignfs/ui`, `@sovereignfs/sdk`, `@sovereignfs/manifest` and `@sovereignfs/config`**,
     and the release-ready `@sovereignfs/bridge`, are contracts (`docs/releasing.md`; the rest
     are `private`): a patch never contains a breaking change; breaking
     needs at least a minor bump plus a migration note (`docs/upgrade.md`), and

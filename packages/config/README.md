@@ -5,8 +5,13 @@ it: declare your settings once, read them in one place, and fail at start-up, na
 the variable, when one is wrong. The convention itself is
 [`contracts/env.md`](../../contracts/env.md); this package implements it.
 
-> Not yet published to npm. It is `private` until the first app outside this
-> repository needs it.
+```bash
+npm install @sovereignfs/config
+```
+
+Published for apps that run beside core (Tusk and Fjord read their `TUSK_*` and `FJORD_*`
+settings this way); `@sovereignfs/sdk` bundles its own copy, so an app that uses only the
+SDK needs nothing more.
 
 ```ts
 import { boolean, defineConfig, oneOf, secret, url } from '@sovereignfs/config';

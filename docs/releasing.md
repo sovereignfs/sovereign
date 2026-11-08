@@ -5,13 +5,14 @@ Three things are released from this repository: a package to npm, core's image t
 
 ## Packages
 
-Three packages are published to npm:
+Four packages are published to npm:
 
-| Package                 | What it is                                                                                                 | Licence                                  |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| `@sovereignfs/ui`       | The design system: tokens and React components                                                             | MPL-2.0 (icons derived from Lucide: ISC) |
-| `@sovereignfs/sdk`      | How an app's server calls core: tokens, failure, version support and sign-in                               | MPL-2.0                                  |
-| `@sovereignfs/manifest` | The app manifest: its schemas, a validator, and `sovereign-manifest`, which makes the image label and port | MPL-2.0                                  |
+| Package                 | What it is                                                                                                        | Licence                                  |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `@sovereignfs/ui`       | The design system: tokens and React components                                                                    | MPL-2.0 (icons derived from Lucide: ISC) |
+| `@sovereignfs/sdk`      | How an app's server calls core: tokens, failure, version support and sign-in                                      | MPL-2.0                                  |
+| `@sovereignfs/manifest` | The app manifest: its schemas, a validator, and `sovereign-manifest`, which makes the image label and port        | MPL-2.0                                  |
+| `@sovereignfs/config`   | The environment convention of `contracts/env.md`: settings declared once, read with a prefix, refused at start-up | MPL-2.0                                  |
 
 Every other package is `private` for now and is not published, **`@sovereignfs/bridge`
 included**: it is release-ready (licence, files, README) but marked `private`, so nothing can
@@ -53,8 +54,8 @@ package's `package.json` and `LICENSE` in agreement.
 
 `@sovereignfs/sdk` is published with the private packages it is built from (`@sovereignfs/api-client` and
 `@sovereignfs/config`) **bundled into it**, code and types alike, so a published tarball names no package npm lacks. They are
-`devDependencies` of the SDK for that reason; the check refuses a published package that depends on an unpublished one. Publishing
-them on their own is a later decision.
+`devDependencies` of the SDK for that reason; the check refuses a published package that depends on an unpublished one. `@sovereignfs/config` is
+also published on its own, for apps that read their settings with it; the SDK still bundles its own copy.
 
 - **Its versions start at `2.0.0`.** The legacy repository published the legacy SDK under this name up to `1.25.0`, and npm does
   not make a lower version `latest`, so the first release from here is `sdk-v2.0.0` ([sdk §12](specs/sdk.md)).
@@ -65,6 +66,12 @@ them on their own is a later decision.
 - **Its root entry throws in a browser** (`sideEffects` keeps a bundler from dropping that import).
 - A new app that uses only the published package should meet [sdk §14](specs/sdk.md); [Using the SDK](using-the-sdk.md) is the
   guide for it.
+
+### The config package
+
+`@sovereignfs/config` has no dependencies, so its tarball is its `dist/`, licence and README. It implements
+[`contracts/env.md`](../contracts/env.md), which wins where the two disagree: a change to the convention changes the contract
+first, then the package, and a behaviour an app could notice is at least a minor version.
 
 ### The manifest package
 

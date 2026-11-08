@@ -1,9 +1,17 @@
 {
   "name": "@sovereignfs/config",
   "version": "0.0.0",
-  "private": true,
   "description": "The environment variable convention for Sovereign core and apps: declare, read and validate settings with a per-app prefix.",
   "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sovereignfs/sovereign.git",
+    "directory": "packages/config"
+  },
+  "homepage": "https://github.com/sovereignfs/sovereign/tree/main/packages/config#readme",
+  "bugs": {
+    "url": "https://github.com/sovereignfs/sovereign/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "engines": {
@@ -20,6 +28,9 @@
     "LICENSE",
     "README.md"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit"

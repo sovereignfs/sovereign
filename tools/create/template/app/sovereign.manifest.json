@@ -3,7 +3,7 @@
   "prefix": "__PREFIX_LOWER__",
   "name": "__TITLE__",
   "description": "Notes, as a starting point for an app on a Sovereign instance",
-  "port": 3000,
+  "port": 3100,
   "health": "/api/health",
   "launch": "/",
   "signIn": {

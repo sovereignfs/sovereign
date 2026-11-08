@@ -52,8 +52,12 @@ Two things to know. A person is identified by `session.sub` and by nothing else.
 
 ```bash
 cp .env.example .env     # point it at a core you can reach and a PostgreSQL database
-npm run dev
+npm run dev              # http://localhost:__PORT__
 ```
+
+The port is `port` in `sovereign.manifest.json`, the one copy: the image listens on it, and `npm run dev`, `npm start` and
+`__PREFIX___URL` in `.env.example` were made with it. To change it, change the manifest, the `dev` and `start` scripts and
+`__PREFIX___URL` together.
 
 See [Using the SDK](https://github.com/sovereignfs/sovereign/blob/main/docs/using-the-sdk.md) for what `sv.as(person)` can call, and
 [the app manifest](https://github.com/sovereignfs/sovereign/blob/main/contracts/app-manifest.md) for what the instance gives and expects.

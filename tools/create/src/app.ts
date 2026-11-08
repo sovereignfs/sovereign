@@ -1,7 +1,7 @@
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CreateError, checkEmpty, type CreateIo, type Exec } from './create.js';
+import { CreateError, DEFAULT_APP_PORT, checkEmpty, type CreateIo, type Exec } from './create.js';
 import { APP_DEPENDENCIES, APP_DEV_DEPENDENCIES } from './versions.js';
 
 /** Where the template is, beside `dist/` once built and beside `src/` when tested. */
@@ -60,7 +60,7 @@ async function* walk(dir: string, base = dir): AsyncGenerator<string> {
 }
 
 /** The `package.json` of a new app. */
-export function appPackageJson(names: AppNames): string {
+export function appPackageJson(names: AppNames, port: number = DEFAULT_APP_PORT): string {
   return `${JSON.stringify(
     {
       name: names.name,
@@ -69,9 +69,10 @@ export function appPackageJson(names: AppNames): string {
       description: `${names.title}, an app for a Sovereign instance`,
       engines: { node: '>=24.15' },
       scripts: {
-        dev: 'next dev',
+        // The manifest's port, so `npm run dev` and the image listen where the instance and .env.example say.
+        dev: `next dev --port ${port}`,
         build: 'next build',
-        start: 'node .next/standalone/server.js',
+        start: `PORT=\${PORT:-${port}} node .next/standalone/server.js`,
         typecheck: 'tsc --noEmit',
         'manifest:check': 'sovereign-manifest check',
       },
@@ -84,7 +85,11 @@ export function appPackageJson(names: AppNames): string {
 }
 
 /** Writes the files of an app into `target`, which must be empty or absent, and returns what it wrote. */
-export async function writeApp(target: string, names: AppNames): Promise<string[]> {
+export async function writeApp(
+  target: string,
+  names: AppNames,
+  port: number = DEFAULT_APP_PORT,
+): Promise<string[]> {
   await checkEmpty(target);
   const written: string[] = [];
   const replace = (text: string) =>
@@ -93,16 +98,20 @@ export async function writeApp(target: string, names: AppNames): Promise<string[
       .replaceAll('__PREFIX_LOWER__', names.prefix.toLowerCase())
       .replaceAll('__PREFIX__', names.prefix)
       .replaceAll('__NAME__', names.name)
-      .replaceAll('__TITLE__', names.title);
+      .replaceAll('__TITLE__', names.title)
+      .replaceAll('__PORT__', String(port));
 
   for await (const file of walk(TEMPLATE)) {
     const out = path.join(...file.split(path.sep).map((part) => RENAMED[part] ?? part));
     const target_ = path.join(target, out);
     await mkdir(path.dirname(target_), { recursive: true });
-    await writeFile(target_, replace(await readFile(path.join(TEMPLATE, file), 'utf8')));
+    let text = replace(await readFile(path.join(TEMPLATE, file), 'utf8'));
+    // The template's manifest stays valid JSON (it is formatted and checked as such), so its port is a number and not a placeholder.
+    if (out === 'sovereign.manifest.json') text = text.replace(/"port": \d+/, `"port": ${port}`);
+    await writeFile(target_, text);
     written.push(out);
   }
-  await writeFile(path.join(target, 'package.json'), appPackageJson(names));
+  await writeFile(path.join(target, 'package.json'), appPackageJson(names, port));
   written.push('package.json');
   return written.sort();
 }
@@ -112,15 +121,16 @@ export async function writeApp(target: string, names: AppNames): Promise<string[
  * as it stands. The files, `git init`, the lockfile, and the first commit. It does not install or build.
  */
 export async function createApp(
-  request: { dir: string },
+  request: { dir: string; port?: number },
   io: CreateIo,
   exec: Exec,
   cwd: string,
 ): Promise<void> {
   const target = path.resolve(cwd, request.dir);
   const names = namesOf(target);
-  const written = await writeApp(target, names);
-  io.err(`Wrote the files of ${names.name}.`);
+  const port = request.port ?? DEFAULT_APP_PORT;
+  const written = await writeApp(target, names, port);
+  io.err(`Wrote the files of ${names.name}, on port ${port}.`);
 
   const step = async (label: string, command: string, args: string[], hint: string) => {
     const done = await exec(command, args, { cwd: target });
@@ -152,6 +162,6 @@ export async function createApp(
     'git needs a name and an email: git config --global user.name ... and user.email ..., then commit by hand.',
   );
   io.err(
-    `Made ${names.name}. Next:\n  cd ${request.dir}\n  npm install && npm run build\n  docker build -t ${names.name} .\nThen host it with ./sv app add ${names.name} --image <the image> in your instance. See README.md.`,
+    `Made ${names.name}. Next:\n  cd ${request.dir}\n  npm install && npm run dev   (http://localhost:${port})\n  npm run build\n  docker build -t ${names.name} .\nThen host it with ./sv app add ${names.name} --image <the image> in your instance. See README.md.`,
   );
 }

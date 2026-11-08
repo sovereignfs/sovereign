@@ -86,6 +86,17 @@ describe('what npm create was asked', () => {
     expect(read(['x'], { npm_config_instance: 'false' }).kind).toBeUndefined();
   });
 
+  it('may name the port of an app, from the arguments or from what npm kept for itself, and refuses one it cannot bind', () => {
+    expect(read(['app', 'a', '--port', '3005']).port).toBe(3005);
+    expect(read(['app', 'a', '--port=3005']).port).toBe(3005);
+    expect(read(['app', 'a'], { npm_config_port: '4000' }).port).toBe(4000);
+    expect(read(['app', 'a']).port).toBeUndefined();
+    for (const bad of ['80', '0', '65536', '30a', '3.5', '']) {
+      expect(() => read(['app', 'a', `--port=${bad}`]), bad).toThrow(CreateError);
+    }
+    expect(() => read(['app', 'a', '--port'])).toThrow(CreateError);
+  });
+
   it('is nothing to go on when there is no word, and says what is wrong with an odd option or too many words', () => {
     expect(read([])).toEqual({ kind: undefined, dir: undefined, remote: undefined });
     expect(() => read(['instance', 'a', 'b'])).toThrow('Too many arguments');

@@ -32,7 +32,28 @@ export type Request = {
   kind: 'instance' | 'app' | undefined;
   dir: string | undefined;
   remote: string | undefined;
+  /** The port an app listens on, everywhere it is written (§2.2). Absent means the default, or ask. */
+  port: number | undefined;
 };
+
+/**
+ * The port a new app is made with when none is given: clear of core's (3000) and the first-party apps' (Fjord 3001, Tusk 3002), so an app
+ * made from the template runs beside them on a developer's machine.
+ */
+export const DEFAULT_APP_PORT = 3100;
+
+/** A port a new app may listen on: a whole number a process that is not root can bind (the image does not run as root). */
+export function parsePort(value: string): number {
+  const port = /^[0-9]+$/.test(value) ? Number(value) : Number.NaN;
+  if (!Number.isInteger(port) || port < 1024 || port > 65535) {
+    throw new CreateError(
+      `${value || '(nothing)'} is not a port an app can listen on.`,
+      2,
+      'Use a whole number from 1024 to 65535: the image does not run as root, so it cannot bind a lower one.',
+    );
+  }
+  return port;
+}
 
 /**
  * Reads what `npm create @sovereignfs` was given: a word saying what to make and a directory, or the flag in its place, which npm
@@ -41,6 +62,7 @@ export type Request = {
 export function readRequest(argv: readonly string[], env: NodeJS.ProcessEnv): Request {
   let kind: Request['kind'];
   let remote: string | undefined;
+  let port: string | undefined;
   const words: string[] = [];
   for (let i = 0; i < argv.length; i += 1) {
     const word = argv[i] as string;
@@ -48,11 +70,13 @@ export function readRequest(argv: readonly string[], env: NodeJS.ProcessEnv): Re
     else if (word === '--app') kind = 'app';
     else if (word === '--remote') remote = argv[++i];
     else if (word.startsWith('--remote=')) remote = word.slice('--remote='.length);
+    else if (word === '--port') port = argv[++i] ?? '';
+    else if (word.startsWith('--port=')) port = word.slice('--port='.length);
     else if (word.startsWith('--'))
       throw new CreateError(
         `There is no option ${word}.`,
         2,
-        'Use: npm create @sovereignfs instance <folder> [--remote URL]',
+        'Use: npm create @sovereignfs instance <folder> [--remote URL], or app <folder> [--port N]',
       );
     else words.push(word);
   }
@@ -70,7 +94,12 @@ export function readRequest(argv: readonly string[], env: NodeJS.ProcessEnv): Re
       2,
       'Use: npm create @sovereignfs instance <folder>',
     );
-  return { kind, dir: words[0], remote };
+  // npm keeps `--port` before `--` for itself, and hands it over as npm_config_port.
+  port ??=
+    env.npm_config_port === undefined || env.npm_config_port === ''
+      ? undefined
+      : env.npm_config_port;
+  return { kind, dir: words[0], remote, port: port === undefined ? undefined : parsePort(port) };
 }
 
 /** Whether `dir` can be made into an instance: absent, or empty. Anything else is refused, and nothing is written. */

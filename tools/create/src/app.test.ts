@@ -7,7 +7,7 @@ import addFormats from 'ajv-formats';
 import { satisfies } from 'semver';
 import { afterEach, describe, expect, it } from 'vitest';
 import { appPackageJson, createApp, namesOf, writeApp } from './app.js';
-import { CreateError, type CreateIo, type Exec } from './create.js';
+import { CreateError, DEFAULT_APP_PORT, type CreateIo, type Exec } from './create.js';
 import { APP_DEPENDENCIES, APP_DEV_DEPENDENCIES } from './versions.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -64,7 +64,7 @@ describe('the files of an app', () => {
       ]),
     );
     for (const file of all(target)) {
-      expect(read(target, file), file).not.toMatch(/__(PREFIX|PREFIX_LOWER|NAME|TITLE)__/);
+      expect(read(target, file), file).not.toMatch(/__(PREFIX|PREFIX_LOWER|NAME|TITLE|PORT)__/);
     }
     expect(read(target, 'lib/db.ts')).toContain("required('MYNOTES_POSTGRES_URL')");
     // The pool is the size the instance gives it, whose role's limit is set from the same number (operator-cli §6.4.4).
@@ -73,6 +73,38 @@ describe('the files of an app', () => {
     expect(read(target, 'app/page.tsx')).toContain('title="My Notes"');
     // The manifest is the one copy: nothing in the app repeats it, or the sync script that kept a second one.
     expect(written).not.toContain('scripts/manifest.mjs');
+  });
+
+  it('listen on one port, written wherever it is needed: the default, clear of the suite, or the one asked for', async () => {
+    const portsOf = (target: string) => {
+      const manifest = JSON.parse(read(target, 'sovereign.manifest.json')) as { port: number };
+      const pkg = JSON.parse(read(target, 'package.json')) as { scripts: Record<string, string> };
+      return {
+        manifest: manifest.port,
+        dev: pkg.scripts.dev,
+        start: pkg.scripts.start,
+        url: /MYNOTES_URL=(\S+)/.exec(read(target, '.env.example'))?.[1],
+        readme: read(target, 'README.md').includes(`http://localhost:${manifest.port}`),
+      };
+    };
+    const byDefault = path.join(temp(), 'my-notes');
+    await writeApp(byDefault, namesOf(byDefault));
+    expect(portsOf(byDefault)).toEqual({
+      manifest: 3100,
+      dev: 'next dev --port 3100',
+      start: 'PORT=${PORT:-3100} node .next/standalone/server.js',
+      url: 'http://localhost:3100',
+      readme: true,
+    });
+    const chosen = path.join(temp(), 'my-notes');
+    await writeApp(chosen, namesOf(chosen), 4321);
+    expect(portsOf(chosen)).toMatchObject({
+      manifest: 4321,
+      dev: 'next dev --port 4321',
+      url: 'http://localhost:4321',
+    });
+    // The image takes the port from the manifest when it is built, so no number is written in it.
+    expect(read(chosen, 'Dockerfile')).not.toMatch(/4321|3100/);
   });
 
   it('meet the app manifest schema, and ask for the variables the manifest says the instance gives', async () => {
@@ -130,7 +162,7 @@ describe('the files of an app', () => {
     // A build without the port stops, saying how to build.
     expect(dockerfile).toContain('sovereign-manifest docker-args');
     const manifest = JSON.parse(read(target, 'sovereign.manifest.json')) as { port: number };
-    expect(manifest.port).toBe(3000);
+    expect(manifest.port).toBe(DEFAULT_APP_PORT);
     expect(read(target, 'package.json')).toContain('"manifest:check": "sovereign-manifest check"');
   });
 

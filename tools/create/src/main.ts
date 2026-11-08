@@ -3,7 +3,15 @@ import { execFile } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 import pkg from '../package.json' with { type: 'json' };
 import { createApp } from './app.js';
-import { CreateError, createInstance, readRequest, type CreateIo, type Exec } from './create.js';
+import {
+  CreateError,
+  DEFAULT_APP_PORT,
+  createInstance,
+  parsePort,
+  readRequest,
+  type CreateIo,
+  type Exec,
+} from './create.js';
 
 const exec: Exec = (command, args, options) =>
   new Promise((resolve) => {
@@ -67,8 +75,19 @@ async function main(): Promise<number> {
           2,
           'Add a remote to an app with git remote add.',
         );
-      await createApp({ dir }, io, exec, process.cwd());
+      let { port } = request;
+      if (port === undefined && io.interactive) {
+        const answer = await io.ask(`Which port should it listen on? (${DEFAULT_APP_PORT})`);
+        port = answer === '' ? DEFAULT_APP_PORT : parsePort(answer);
+      }
+      await createApp({ dir, port }, io, exec, process.cwd());
     } else {
+      if (request.port !== undefined)
+        throw new CreateError(
+          '--port is for an app.',
+          2,
+          'An instance’s apps each listen on the port their manifest names.',
+        );
       await createInstance(
         { dir, remote: request.remote, cliVersion: pkg.version },
         io,

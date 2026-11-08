@@ -63,6 +63,9 @@ npm create @sovereignfs instance my-instance
 - `--instance` and `--app` MUST be accepted in place of the word, read from the arguments or from `npm_config_instance` and
   `npm_config_app`, since npm keeps a flag before `--` for itself. The documented form is the word.
 - `<dir>` MUST be empty or absent. Anything else is refused, and nothing is written.
+- `--port N` (or `npm_config_port`) names the port an app listens on (§2.2), a whole number from 1024 to 65535, since the image does
+  not run as root. With no port it MUST ask when there is a terminal, and otherwise use **3100**, which is clear of core's 3000 and the
+  first-party apps' (Fjord 3001, Tusk 3002), so a new app runs beside them on a developer's machine. `--port` with `instance` is refused.
 
 `instance` MUST, in order: write the files of §2.1, run `git init`, install the toolkit from the lockfile it wrote, add
 `--remote URL` as `origin` if given, and make the first commit. It MUST NOT push.
@@ -87,6 +90,8 @@ It MUST meet [`contracts/app-manifest.md`](../../contracts/app-manifest.md), and
   `<PREFIX>_POSTGRES_DIRECT_URL` in a small pool of its own, with everything else on `<PREFIX>_POSTGRES_URL`, so the manifest declares
   `database.pooling: transaction`;
 - an image that does not run as root, listens on `PORT` and is configured by its environment alone;
+- one port, the manifest's `port`, that `npm run dev`, `npm start` and `<PREFIX>_URL` in `.env.example` are made with, so the app runs on
+  a developer's machine where the instance will run it;
 - a workflow, `.github/workflows/publish.yml`, that on a `vX.Y.Z` tag builds that image for linux/amd64 and linux/arm64, with the
   arguments `sovereign-manifest docker-args` prints, and publishes it to `ghcr.io/<owner>/<repository>` tagged `X.Y.Z`, which is where `sv app add --git` looks for it
   (§4.2.1).
@@ -818,3 +823,4 @@ with a DNS provider's module, which the stock image does not carry.
 | 2026-11-02 | The optional pooler: `database.pooler`, `images.pooler`, `sv database pooler enable                                                                                                                                                                                                                                                                                                                                                                                                                                     | disable`, `sv-pooler`in`sv apply`and its pools in`sv status` (§4.2.2, §6.4.5): [research 0003](../research/0003-database-connections.md). |
 | 2026-11-02 | An app's manifest is the file `sovereign.manifest.json` at its source root, made into the image label by `@sovereignfs/manifest`; `sv` gives every hosted app `PORT`; manifest 2 has a lower-case `prefix` that is the default app name, an optional `signIn` (an app with none has no client and no launcher entry) and sized `generate` entries (§2.2, §4.2, §6.1, §6.4.1): [RFC 0003](../rfcs/0003-apps-of-their-own.md). Built in tasks 13.28 (the package, `PORT`, the file and the label) and 13.29 (manifest 2). |
 | 2026-11-02 | A `generate` secret is URL-safe base64, which is what the toolkit has always made; the contract said base64 (`contracts/app-manifest.md` §2.5, §3).                                                                                                                                                                                                                                                                                                                                                                     |
+| 2026-11-08 | `npm create @sovereignfs app` takes `--port N` (asked when there is a terminal, otherwise 3100), and writes the one port into the manifest, the `dev` and `start` scripts and `.env.example` (§2, §2.2).                                                                                                                                                                                                                                                                                                                |

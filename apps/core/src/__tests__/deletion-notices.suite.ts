@@ -246,7 +246,10 @@ export function deletionNoticesSuite(createDatabase: () => Promise<TestDatabase>
       await manager().deleteSelf({ id: ctx.ada.id, role: 'platform:user' });
       const text = JSON.stringify(await notices());
       expect(text).not.toContain('ada@sovereign.local');
-      expect(text).not.toContain('Ada');
+      // The whole name, and its surname alone: the row also holds the app's client id, 32 random letters and digits, which now and then
+      // contain "Ada" and made a check for the first name alone fail by chance.
+      expect(text).not.toContain('Ada Lovelace');
+      expect(text).not.toContain('Lovelace');
       expect(Object.keys((await notices())[0] ?? {}).sort()).toEqual(
         [
           'attempts',

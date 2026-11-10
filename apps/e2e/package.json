@@ -15,8 +15,8 @@
     "@sovereignfs/database": "workspace:*",
     "@sovereignfs/tsconfig": "workspace:*",
     "@types/node": "catalog:",
-    "jose": "^6.2.13",
-    "openid-client": "^6.8.8",
+    "jose": "^6.2.15",
+    "openid-client": "^6.8.9",
     "typescript": "catalog:"
   }
 }

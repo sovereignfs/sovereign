@@ -5,3 +5,5 @@ node_modules/
 !.env.example
 *.tgz
 .DS_Store
+# People's files, when you run the app on your own machine (see .env.example).
+data/

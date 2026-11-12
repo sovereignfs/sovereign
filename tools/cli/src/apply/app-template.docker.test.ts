@@ -100,7 +100,15 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
     // The Sovereign packages of this repository, packed, since the published ones do not exist yet.
     execFileSync(
       'pnpm',
-      ['--filter', '@sovereignfs/sdk...', '--filter', '@sovereignfs/ui...', 'build'],
+      [
+        '--filter',
+        '@sovereignfs/sdk...',
+        '--filter',
+        '@sovereignfs/ui...',
+        '--filter',
+        '@sovereignfs/storage...',
+        'build',
+      ],
       { cwd: root, stdio: 'ignore' },
     );
     // The command that makes the image's label and port from the manifest, built the way an author gets it from npm.
@@ -110,7 +118,7 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
     });
     const vendor = path.join(app, 'vendor');
     mkdirSync(vendor);
-    for (const name of ['sdk', 'ui', 'manifest']) {
+    for (const name of ['sdk', 'ui', 'manifest', 'config', 'storage']) {
       execFileSync(
         'pnpm',
         ['--filter', `@sovereignfs/${name}`, 'pack', '--pack-destination', vendor],
@@ -121,15 +129,20 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
     const pkg = JSON.parse(readFileSync(path.join(app, 'package.json'), 'utf8')) as {
       dependencies: Record<string, string>;
       devDependencies: Record<string, string>;
+      overrides?: Record<string, string>;
     };
     for (const [name, field] of [
       ['sdk', 'dependencies'],
       ['ui', 'dependencies'],
+      ['config', 'dependencies'],
+      ['storage', 'dependencies'],
       ['manifest', 'devDependencies'],
     ] as const) {
       pkg[field][`@sovereignfs/${name}`] =
         `file:./vendor/${tarballs.find((file) => file.startsWith(`sovereignfs-${name}-`)) as string}`;
     }
+    // The storage package asks for config by version, which is not published either: it is the tarball too.
+    pkg.overrides = { '@sovereignfs/config': pkg.dependencies['@sovereignfs/config'] as string };
     writeFileSync(path.join(app, 'package.json'), `${JSON.stringify(pkg, null, 2)}\n`);
     execFileSync(
       'npm',
@@ -267,4 +280,69 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
     expect([302, 303, 307]).toContain(page.status);
     expect(page.location).toContain('/auth/login');
   });
+
+  it('keeps people’s files in a folder of its own that the app can write, and answers no one who is not signed in', () => {
+    // The instance mounted only this app's folder, owned by the user the image runs as.
+    const write = docker(
+      'exec',
+      'sv-app-tplnotes',
+      'sh',
+      '-c',
+      'touch /data/s3/tplnotes/probe && rm /data/s3/tplnotes/probe && ls /data/s3',
+    );
+    expect(write.status, write.stderr).toBe(0);
+    expect(write.stdout.trim()).toBe('tplnotes');
+    expect(probe('GET', '/api/files').status).toBe(401);
+    expect(probe('GET', '/api/files/abcdefghijklmnopqrstuv').status).toBe(401);
+    // A request that did not come from the app's own pages cannot change anything, signed in or not.
+    expect(probe('POST', '/api/files').status).toBe(403);
+    expect(probe('DELETE', '/api/files/abcdefghijklmnopqrstuv').status).toBe(403);
+  });
+
+  it('starts by itself with docker compose, on a volume it can write, and answers its health path', () => {
+    const project = 'sv-tpl-compose';
+    const override = path.join(appDir, 'compose.override.yml');
+    // The test publishes no port, so it cannot meet whatever is on the machine already.
+    writeFileSync(override, 'services:\n  app:\n    ports: !reset []\n');
+    writeFileSync(path.join(appDir, '.env'), readFileSync(path.join(appDir, '.env.example')));
+    const compose = (...args: string[]) =>
+      spawnSync(
+        'docker',
+        ['compose', '--project-name', project, '-f', 'compose.yml', '-f', override, ...args],
+        {
+          cwd: appDir,
+          encoding: 'utf8',
+        },
+      );
+    try {
+      const up = compose('up', '--build', '--detach', '--wait');
+      expect(up.status, up.stderr).toBe(0);
+      let health = '';
+      for (let attempt = 0; attempt < 30 && health !== 'ok'; attempt += 1) {
+        health = compose(
+          'exec',
+          '-T',
+          'app',
+          'wget',
+          '-qO-',
+          'http://127.0.0.1:3100/api/health',
+        ).stdout.trim();
+        if (health !== 'ok') spawnSync('sleep', ['2']);
+      }
+      expect(health, compose('logs', 'app', '--no-color').stdout.slice(-1500)).toBe('ok');
+      const write = compose(
+        'exec',
+        '-T',
+        'app',
+        'sh',
+        '-c',
+        'touch /data/s3/tplnotes/probe && id -u',
+      );
+      expect(write.status, write.stderr).toBe(0);
+      expect(write.stdout.trim()).not.toBe('0');
+    } finally {
+      compose('down', '--volumes', '--remove-orphans');
+      rmSync(override, { force: true });
+    }
+  }, 300_000);
 });

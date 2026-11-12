@@ -5,3 +5,5 @@ node_modules
 .env.*
 Dockerfile
 README.md
+data
+compose.yml

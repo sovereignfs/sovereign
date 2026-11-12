@@ -1,5 +1,6 @@
 import { nextAuth } from '@sovereignfs/sdk/next';
 import { db } from './db';
+import { files } from './files';
 import { sovereign } from './sovereign';
 
 /**
@@ -10,6 +11,8 @@ export const auth = () =>
   nextAuth(sovereign(), {
     onAccountDeleted: async ({ sub }) => {
       await db().query('DELETE FROM notes WHERE owner = $1', [sub]);
+      // And the files they uploaded: their folder, which is gone once this has run, however often it does.
+      await files().removeAll(sub);
       // The SDK has already ended the person's sessions and forgotten their refresh token.
     },
   });

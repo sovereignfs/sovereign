@@ -30,6 +30,9 @@ COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
 # The migrations are read from disk when the server starts, and Next does not trace them.
 COPY --from=build --chown=node:node /app/migrations ./migrations
+# People's files (manifest `storage`): an instance mounts this app's own folder here, and running it yourself mounts a volume (compose.yml). The
+# folder is made in the image and is the user's, because Docker makes a volume from it, owned as it is, and a root-owned one cannot be written.
+RUN mkdir -p /data/s3/__NAME__ && chown -R node:node /data
 USER node
 EXPOSE ${PORT}
 CMD ["node", "server.js"]

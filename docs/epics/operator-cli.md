@@ -921,7 +921,7 @@ can have a plain copy when they ask for one, and cannot lose every backup by los
 - A person deleted after the backup does not come back in an app restored alone
 - A format 1 archive still restores; a format 2 archive is refused by a toolkit that reads only 1
 
-#### 📋 13.34 — The template keeps files, and has a Docker setup of its own `[parallel]`
+#### ✅ 13.34 — The template keeps files, and has a Docker setup of its own `[parallel]`
 
 **Goal:** A new app keeps people's files the suite's way without its author writing it, and runs on its own with Docker.
 

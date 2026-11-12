@@ -78,13 +78,18 @@ variable prefix is that in upper case), and its title is the name in words.
 
 It MUST meet [`contracts/app-manifest.md`](../../contracts/app-manifest.md), and so MUST hold:
 
-- `sovereign.manifest.json`, a manifest 2 valid against its schema, which is the one copy of the manifest, with `@sovereignfs/manifest` as a
+- `sovereign.manifest.json`, a manifest 3 valid against its schema, which is the one copy of the manifest, with `@sovereignfs/manifest` as a
   development dependency and a script that runs `sovereign-manifest check`; and a `Dockerfile` that holds no copy of it: it takes the port
   as `ARG PORT` and sets `ENV PORT=${PORT}` and `EXPOSE ${PORT}`, and the image's label and `PORT` build argument come from
   `sovereign-manifest docker-args` when the image is built (`contracts/app-manifest.md` §1);
 - sign-in through `@sovereignfs/sdk` with its sessions and refresh tokens in the app's own database, the tokens encrypted, and routes for
   sign-in, the callback, sign-out, core's back-channel logout and core's account-deleted notice at the paths the manifest names;
 - a page behind sign-in using `@sovereignfs/ui`, whose every server action asks who is calling and whose every delete names the owner;
+- people's files kept the suite's way (`"storage": true`; [RFC 0004](../rfcs/0004-file-storage.md)): `@sovereignfs/storage` for the
+  store, routes to upload, list, serve and delete that ask who is calling and, for what changes something, where the request came from,
+  the person's files deleted with the notice that they deleted their account, and a folder in the image at `/data/s3/<name>` that the
+  user it runs as owns;
+- a `compose.yml` that runs the app and a PostgreSQL database for it on a developer's machine, with the files in a volume at that folder;
 - a health route that answers 200 when its database does;
 - its own migrations, applied once each when it starts, behind a lock, and that lock and any other held across a request taken on
   `<PREFIX>_POSTGRES_DIRECT_URL` in a small pool of its own, with everything else on `<PREFIX>_POSTGRES_URL`, so the manifest declares

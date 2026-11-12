@@ -12,3 +12,11 @@ __PREFIX___POSTGRES_DIRECT_URL=postgres://user:password@localhost:5432/__NAME__
 # database role to that number plus 2. Without it, 10.
 __PREFIX___POSTGRES_POOL_MAX=10
 __PREFIX___AUTH_SECRET=change-me-to-something-long-and-random
+# People's files (contracts/app-manifest.md §2.7). An instance mounts this app's folder at /data/s3/__NAME__ and sets these; running it yourself,
+# the folder is here (docker compose mounts a volume at /data/s3/__NAME__ instead). Each person's quota: megabytes and files.
+__PREFIX___STORAGE_DRIVER=fs
+__PREFIX___STORAGE_PATH=./data/s3/__NAME__
+__PREFIX___STORAGE_QUOTA_MB=204800
+__PREFIX___STORAGE_FILE_QUOTA=1000
+# Signs the addresses that serve a file without a session, for a few minutes. At least 32 characters. An instance makes its own.
+__PREFIX___STORAGE_SIGNING_KEY=change-me-to-something-at-least-thirty-two-characters

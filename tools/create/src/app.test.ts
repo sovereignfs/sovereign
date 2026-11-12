@@ -56,6 +56,10 @@ describe('the files of an app', () => {
         'app/api/health/route.ts',
         'instrumentation.ts',
         'migrations/001_init.sql',
+        'compose.yml',
+        'lib/files.ts',
+        'app/api/files/route.ts',
+        'app/api/files/[id]/route.ts',
         '.gitignore',
         'tsconfig.json',
         '.dockerignore',
@@ -119,12 +123,12 @@ describe('the files of an app', () => {
     addFormats(ajv);
     const validate = ajv.compile(
       JSON.parse(
-        readFileSync(path.join(root, 'contracts/schemas/app-manifest-v2.schema.json'), 'utf8'),
+        readFileSync(path.join(root, 'contracts/schemas/app-manifest-v3.schema.json'), 'utf8'),
       ),
     );
     expect(validate(manifest), JSON.stringify(validate.errors)).toBe(true);
     // The manifest names the app in lower case, and the variables are its upper case (app-manifest §2.4).
-    expect(manifest.manifest).toBe(2);
+    expect(manifest.manifest).toBe(3);
     expect(manifest.prefix).toBe('mynotes');
     // What the code reads is what the manifest gives it (contracts/app-manifest.md §3).
     const code = all(target)
@@ -227,10 +231,98 @@ describe('the files of an app', () => {
   });
 });
 
+describe('the files an app keeps for people', () => {
+  const made = async () => {
+    const target = path.join(temp(), 'my-notes');
+    await writeApp(target, namesOf(target));
+    return target;
+  };
+
+  it('are the manifest’s `storage`, a folder of the app’s own in the image, and the variables an instance gives', async () => {
+    const target = await made();
+    expect(JSON.parse(read(target, 'sovereign.manifest.json'))).toMatchObject({ storage: true });
+    // The folder exists in the image and is the user's, or Docker makes a volume of it that is root's and the app cannot write.
+    const dockerfile = read(target, 'Dockerfile');
+    expect(dockerfile).toContain('RUN mkdir -p /data/s3/my-notes && chown -R node:node /data');
+    expect(dockerfile.indexOf('chown -R node:node /data')).toBeLessThan(
+      dockerfile.indexOf('USER node'),
+    );
+    const env = read(target, '.env.example');
+    for (const name of ['DRIVER', 'PATH', 'QUOTA_MB', 'FILE_QUOTA', 'SIGNING_KEY'])
+      expect(env).toContain(`MYNOTES_STORAGE_${name}=`);
+    expect(read(target, '.gitignore')).toMatch(/^data\/$/m);
+    expect(read(target, 'lib/files.ts')).toContain("defaultPath: '/data/s3/my-notes'");
+  });
+
+  it('are asked for only by someone signed in, and changed only from the app’s own pages', async () => {
+    const target = await made();
+    for (const file of ['app/api/files/route.ts', 'app/api/files/[id]/route.ts']) {
+      const code = read(target, file);
+      expect(code, file).toContain('auth().getSession()');
+      expect(code, file).toContain('unauthorised()');
+      // Every handler that changes something asks where the request came from before it asks who made it.
+      for (const method of ['POST', 'DELETE']) {
+        const at = code.indexOf(`export async function ${method}`);
+        if (at !== -1) {
+          const body = code.slice(at);
+          expect(body.indexOf('refuseCrossOrigin(request)'), `${file} ${method}`).toBeGreaterThan(
+            -1,
+          );
+          expect(body.indexOf('refuseCrossOrigin(request)')).toBeLessThan(
+            body.indexOf('getSession()'),
+          );
+        }
+      }
+    }
+    // The person comes from the session and from nothing a request carries, in every call to the store.
+    for (const file of [
+      'app/api/files/route.ts',
+      'app/api/files/[id]/route.ts',
+      'app/actions.ts',
+    ]) {
+      for (const call of read(target, file).match(/files\(\)\.(put|list|usage|remove)\([^,)]*/g) ??
+        [])
+        expect(call, `${file}: ${call}`).toMatch(/session\.sub|sub$/);
+    }
+    expect(read(target, 'lib/files.ts')).toContain("request.headers.get('origin')");
+  });
+
+  it('are deleted with the person, in the handler of the notice that they deleted their account', async () => {
+    const target = await made();
+    const auth = read(target, 'lib/auth.ts');
+    expect(auth).toContain('await files().removeAll(sub)');
+    expect(auth.indexOf('DELETE FROM notes')).toBeLessThan(auth.indexOf('removeAll(sub)'));
+  });
+
+  it('run with docker compose on a volume where an instance mounts the app’s folder, and the port the manifest names', async () => {
+    const target = await made();
+    const compose = read(target, 'compose.yml');
+    const manifest = JSON.parse(read(target, 'sovereign.manifest.json')) as { port: number };
+    expect(compose).toContain('- files:/data/s3/my-notes');
+    expect(compose).toContain('MYNOTES_STORAGE_PATH: /data/s3/my-notes');
+    expect(compose).toContain(`PORT: '${manifest.port}'`);
+    expect(compose).toContain(`'${manifest.port}:${manifest.port}'`);
+    expect(compose).toMatch(/image: postgres:18/);
+    expect(compose).toContain('condition: service_healthy');
+    // No secret of an instance is in it: the core's address and the client are the person's own, in .env.
+    expect(compose).not.toMatch(/CLIENT_SECRET:/);
+    expect(read(target, '.dockerignore')).toContain('.env');
+  });
+
+  it('say how to turn them off, and what to delete', async () => {
+    const readme = read(await made(), 'README.md');
+    expect(readme).toContain("## People's files");
+    expect(readme).toContain('docker compose up --build');
+    expect(readme).toContain('`"storage": false`');
+  });
+});
+
 describe('what the app depends on', () => {
   it('are ranges the Sovereign packages of this repository satisfy', () => {
     for (const [name, dir] of [
+      ['@sovereignfs/config', 'config'],
       ['@sovereignfs/sdk', 'sdk'],
+      ['@sovereignfs/storage', 'storage'],
       ['@sovereignfs/ui', 'ui'],
     ] as const) {
       const version = (

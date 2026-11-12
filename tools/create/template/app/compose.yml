@@ -1,0 +1,48 @@
+# Runs this app on your own machine with Docker: the app, and a PostgreSQL database for it.
+#
+#   cp .env.example .env      # point it at a core you can reach, and give it its client there
+#   docker compose up --build
+#
+# The app still signs people in through a core: set __PREFIX___CORE_URL, __PREFIX___CORE_CLIENT_ID and __PREFIX___CORE_CLIENT_SECRET in .env. People's
+# files are kept in the volume `files`, mounted where an instance mounts the app's own folder, so the app's code is the same in both
+# (contracts/app-manifest.md §2.7).
+services:
+  app:
+    build:
+      context: .
+      args:
+        # The manifest's port, which the image listens on. `npx sovereign-manifest docker-args` prints it, with the image's label.
+        PORT: '__PORT__'
+    ports:
+      - '__PORT__:__PORT__'
+    env_file: .env
+    environment:
+      __PREFIX___POSTGRES_URL: postgres://app:app@db:5432/app
+      __PREFIX___POSTGRES_DIRECT_URL: postgres://app:app@db:5432/app
+      __PREFIX___STORAGE_DRIVER: fs
+      __PREFIX___STORAGE_PATH: /data/s3/__NAME__
+    volumes:
+      - files:/data/s3/__NAME__
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    volumes:
+      - db:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U app -d app']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  files:
+  db:

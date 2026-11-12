@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 
 import { Avatar } from '../components/Avatar/Avatar';
 import { AvatarStack } from '../components/AvatarStack/AvatarStack';
+import { FloatingActionButton } from '../components/FloatingActionButton/FloatingActionButton';
 import { Badge } from '../components/Badge/Badge';
 import { Button } from '../components/Button/Button';
 import { Card } from '../components/Card/Card';
@@ -2917,6 +2918,21 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                   { name: 'Leila Haddad' },
                 ]}
               />
+            </ComponentCard>
+
+            {/* FloatingActionButton */}
+            <ComponentCard
+              name="FloatingActionButton"
+              importLine="import { FloatingActionButton } from '@sovereignfs/ui';"
+              usage="A phone's one main action: a round button above MobileFooter, clear of the safe area. A button, or a link with an href. Shown here in place; in an app it is fixed to the screen."
+            >
+              <div style={{ position: 'relative', height: 96, transform: 'translateZ(0)' }}>
+                <FloatingActionButton
+                  label="Check in"
+                  icon={<Icon name="plus" size="lg" aria-hidden />}
+                  extended
+                />
+              </div>
             </ComponentCard>
 
             {/* NavTabs */}

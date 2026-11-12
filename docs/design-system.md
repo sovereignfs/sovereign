@@ -1811,45 +1811,46 @@ Stories live under two roots inside `packages/ui/src/`:
 
 #### Components (`src/components/<Name>/`)
 
-| Story file                        | Key variants and notes                                                                                                                                          |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Avatar.stories.tsx`              | Initials fallback; image src; sm/md/lg sizes                                                                                                                    |
-| `AvatarStack.stories.tsx`         | Beyond the limit ("+N"); a few; one; labelled; sm/md/lg                                                                                                         |
-| `Badge.stories.tsx`               | All status variants; subtle vs filled                                                                                                                           |
-| `BalanceChip.stories.tsx`         | Owed (positive); owes (negative); settled up (zero); all three states together                                                                                  |
-| `Button.stories.tsx`              | All `variant` × `size` combinations; disabled; icon-leading; icon-only; `AllVariants` grid                                                                      |
-| `Card.stories.tsx`                | sm/md/lg padding; interactive hover; semantic element variants                                                                                                  |
-| `CheckableListRow.stories.tsx`    | Default; checked; with icon and trailing; checked with icon and trailing; disabled; multiple rows in a list context                                             |
-| `CodeTextarea.stories.tsx`        | Default; `FormField` integration; error; disabled; long content; mobile viewport                                                                                |
-| `CurrencyInput.stories.tsx`       | Empty; prefilled cents value; disabled                                                                                                                          |
-| `Dialog.stories.tsx`              | sm/md/lg/auto sizes; closed state; `play` function opens and asserts visibility; Body only / Header + Body / Header + Body + Footer composition shapes          |
-| `Drawer.stories.tsx`              | Mobile viewport default; closed; `play` function opens and asserts panel visible                                                                                |
-| `EmptyState.stories.tsx`          | Heading only; with icon; with action                                                                                                                            |
-| `FormField.stories.tsx`           | Default; with hint; with error (role="alert"); render-prop `children` wires field props (`id`, `aria-describedby`, `aria-invalid`, `required`) onto the control |
-| `Auth.stories.tsx`                | Sign-in card; with a notice and a field error; the second step with `AuthCodeInput`. Mark is a slot (`BrandBadge`); `legal={false}` drops the legal links       |
-| `Icon.stories.tsx`                | Decorative vs meaningful a11y variants; all three sizes; `AllIcons` full grid                                                                                   |
-| `IconPicker.stories.tsx`          | Default; preselected value; disabled                                                                                                                            |
-| `Input.stories.tsx`               | Text/email/password; disabled; error state with `aria-invalid`                                                                                                  |
-| `MemberMultiSelect.stories.tsx`   | Default checked/unchecked rows; with a per-row trailing `CurrencyInput`                                                                                         |
-| `NavList.stories.tsx`             | `static` with an active item; `drilldown` mobile viewport; ungrouped; custom `renderLink`                                                                       |
-| `NavTabs.stories.tsx`             | Default; active tab; mobile horizontal-scroll viewport                                                                                                          |
-| `PageHeader.stories.tsx`          | Title only; with description; with action slot                                                                                                                  |
-| `Popover.stories.tsx`             | Four placements; trigger + content                                                                                                                              |
-| `QuantityStepper.stories.tsx`     | Default; with unit; fractional step (0.5 kg); at minimum; with max; disabled                                                                                    |
-| `SegmentedControl.stories.tsx`    | Two and three options; controlled selection                                                                                                                     |
-| `Select.stories.tsx`              | Default; disabled; with placeholder                                                                                                                             |
-| `Spinner.stories.tsx`             | sm/md/lg sizes; reduced-motion note                                                                                                                             |
-| `SplitMethodSelector.stories.tsx` | Controlled Equal/Amount/Percentage/Shares selection                                                                                                             |
-| `SplitPane.stories.tsx`           | Resizable editor/preview; fixed panes; keyboard resizing; long content; mobile single-column fallback                                                           |
-| `StatusBadge.stories.tsx`         | All editor status states; accessible abbreviated label; long content; mobile wrapping                                                                           |
-| `SuggestionInput.stories.tsx`     | Controlled with matched options; without create row; open with pre-filled matches; loading; empty (no matches); disabled                                        |
-| `SystemBanner.stories.tsx`        | All four categories (info/success/warning/error); dismissible                                                                                                   |
-| `Tabs.stories.tsx`                | Controlled tabs; default selected; keyboard navigation                                                                                                          |
-| `TagInput.stories.tsx`            | Controlled tags; `FormField` integration; error; disabled; keyboard behavior; long content; mobile viewport                                                     |
-| `Textarea.stories.tsx`            | Default; with value; custom `rows`; disabled                                                                                                                    |
-| `Toast.stories.tsx`               | All six categories triggered imperatively via `useToast`                                                                                                        |
-| `Toggle.stories.tsx`              | On/off; disabled; label association                                                                                                                             |
-| `Tooltip.stories.tsx`             | Four placement variants; hover and focus triggers                                                                                                               |
+| Story file                         | Key variants and notes                                                                                                                                          |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Avatar.stories.tsx`               | Initials fallback; image src; sm/md/lg sizes                                                                                                                    |
+| `AvatarStack.stories.tsx`          | Beyond the limit ("+N"); a few; one; labelled; sm/md/lg                                                                                                         |
+| `Badge.stories.tsx`                | All status variants; subtle vs filled                                                                                                                           |
+| `BalanceChip.stories.tsx`          | Owed (positive); owes (negative); settled up (zero); all three states together                                                                                  |
+| `FloatingActionButton.stories.tsx` | Icon only; extended with its label; as a link                                                                                                                   |
+| `Button.stories.tsx`               | All `variant` × `size` combinations; disabled; icon-leading; icon-only; `AllVariants` grid                                                                      |
+| `Card.stories.tsx`                 | sm/md/lg padding; interactive hover; semantic element variants                                                                                                  |
+| `CheckableListRow.stories.tsx`     | Default; checked; with icon and trailing; checked with icon and trailing; disabled; multiple rows in a list context                                             |
+| `CodeTextarea.stories.tsx`         | Default; `FormField` integration; error; disabled; long content; mobile viewport                                                                                |
+| `CurrencyInput.stories.tsx`        | Empty; prefilled cents value; disabled                                                                                                                          |
+| `Dialog.stories.tsx`               | sm/md/lg/auto sizes; closed state; `play` function opens and asserts visibility; Body only / Header + Body / Header + Body + Footer composition shapes          |
+| `Drawer.stories.tsx`               | Mobile viewport default; closed; `play` function opens and asserts panel visible                                                                                |
+| `EmptyState.stories.tsx`           | Heading only; with icon; with action                                                                                                                            |
+| `FormField.stories.tsx`            | Default; with hint; with error (role="alert"); render-prop `children` wires field props (`id`, `aria-describedby`, `aria-invalid`, `required`) onto the control |
+| `Auth.stories.tsx`                 | Sign-in card; with a notice and a field error; the second step with `AuthCodeInput`. Mark is a slot (`BrandBadge`); `legal={false}` drops the legal links       |
+| `Icon.stories.tsx`                 | Decorative vs meaningful a11y variants; all three sizes; `AllIcons` full grid                                                                                   |
+| `IconPicker.stories.tsx`           | Default; preselected value; disabled                                                                                                                            |
+| `Input.stories.tsx`                | Text/email/password; disabled; error state with `aria-invalid`                                                                                                  |
+| `MemberMultiSelect.stories.tsx`    | Default checked/unchecked rows; with a per-row trailing `CurrencyInput`                                                                                         |
+| `NavList.stories.tsx`              | `static` with an active item; `drilldown` mobile viewport; ungrouped; custom `renderLink`                                                                       |
+| `NavTabs.stories.tsx`              | Default; active tab; mobile horizontal-scroll viewport                                                                                                          |
+| `PageHeader.stories.tsx`           | Title only; with description; with action slot                                                                                                                  |
+| `Popover.stories.tsx`              | Four placements; trigger + content                                                                                                                              |
+| `QuantityStepper.stories.tsx`      | Default; with unit; fractional step (0.5 kg); at minimum; with max; disabled                                                                                    |
+| `SegmentedControl.stories.tsx`     | Two and three options; controlled selection                                                                                                                     |
+| `Select.stories.tsx`               | Default; disabled; with placeholder                                                                                                                             |
+| `Spinner.stories.tsx`              | sm/md/lg sizes; reduced-motion note                                                                                                                             |
+| `SplitMethodSelector.stories.tsx`  | Controlled Equal/Amount/Percentage/Shares selection                                                                                                             |
+| `SplitPane.stories.tsx`            | Resizable editor/preview; fixed panes; keyboard resizing; long content; mobile single-column fallback                                                           |
+| `StatusBadge.stories.tsx`          | All editor status states; accessible abbreviated label; long content; mobile wrapping                                                                           |
+| `SuggestionInput.stories.tsx`      | Controlled with matched options; without create row; open with pre-filled matches; loading; empty (no matches); disabled                                        |
+| `SystemBanner.stories.tsx`         | All four categories (info/success/warning/error); dismissible                                                                                                   |
+| `Tabs.stories.tsx`                 | Controlled tabs; default selected; keyboard navigation                                                                                                          |
+| `TagInput.stories.tsx`             | Controlled tags; `FormField` integration; error; disabled; keyboard behavior; long content; mobile viewport                                                     |
+| `Textarea.stories.tsx`             | Default; with value; custom `rows`; disabled                                                                                                                    |
+| `Toast.stories.tsx`                | All six categories triggered imperatively via `useToast`                                                                                                        |
+| `Toggle.stories.tsx`               | On/off; disabled; label association                                                                                                                             |
+| `Tooltip.stories.tsx`              | Four placement variants; hover and focus triggers                                                                                                               |
 
 ### Themes toolbar
 

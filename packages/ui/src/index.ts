@@ -175,6 +175,8 @@ export { ScrollArea } from './components/ScrollArea/ScrollArea';
 export type { ScrollAreaProps } from './components/ScrollArea/ScrollArea';
 export { Typography } from './components/Typography/Typography';
 export type { TypographyProps, TypographyVariant } from './components/Typography/Typography';
+export { FloatingActionButton } from './components/FloatingActionButton/FloatingActionButton';
+export type { FloatingActionButtonProps } from './components/FloatingActionButton/FloatingActionButton';
 export { Marker } from './components/Marker/Marker';
 export type { MarkerProps } from './components/Marker/Marker';
 export { Message } from './components/Message/Message';

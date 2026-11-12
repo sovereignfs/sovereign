@@ -1,0 +1,70 @@
+.fab {
+  /* Above the footer the shell or MobileFooter publishes; with none, above the home indicator. */
+  position: fixed;
+  inset-inline-end: max(var(--sv-space-4), env(safe-area-inset-right, 0px));
+  bottom: calc(var(--sv-shell-footer-height, env(safe-area-inset-bottom, 0px)) + var(--sv-space-4));
+  /* Under the footer's and an overlay's own layers (101, 100): it floats over the page, never over a sheet. */
+  z-index: 99;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sv-space-2);
+  box-sizing: border-box;
+  min-width: 56px;
+  height: 56px;
+  padding: 0;
+  border: none;
+  border-radius: var(--sv-radius-full);
+  background: var(--sv-color-accent);
+  color: var(--sv-color-text-on-accent);
+  box-shadow: var(--sv-shadow-overlay);
+  font-family: var(--sv-font-family);
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.extended {
+  padding-inline: var(--sv-space-5);
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.label {
+  white-space: nowrap;
+}
+
+.fab:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 3px;
+}
+
+.fab:active {
+  transform: scale(0.96);
+}
+
+@media (hover: hover) {
+  .fab:hover {
+    background: var(--sv-color-accent-hover);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fab {
+    transition: none;
+  }
+
+  .fab:active {
+    transform: none;
+  }
+}

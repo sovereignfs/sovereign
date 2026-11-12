@@ -15,7 +15,11 @@ test('§3.17.2: the first account signs up and becomes the owner', async ({ page
   await expect(heading(page)).toHaveText('Apps');
   // The header has the instance's name on the left and the person's avatar on the right, and the avatar's menu
   // holds their account, the Console, which an owner may enter, and signing out.
-  await expect(page.getByRole('link', { name: 'Sovereign' })).toHaveAttribute('href', '/');
+  // Exact: the launcher's "Add an app" tile is a link too, and its description mentions the instance by name.
+  await expect(page.getByRole('link', { name: 'Sovereign', exact: true })).toHaveAttribute(
+    'href',
+    '/',
+  );
   await page.getByRole('button', { name: 'Your account' }).click();
   await expect(page.getByRole('menuitem')).toHaveText(['Account', 'Console', 'Sign out']);
   await page.getByRole('menuitem', { name: 'Console' }).click();

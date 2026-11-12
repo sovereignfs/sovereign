@@ -1814,6 +1814,7 @@ Stories live under two roots inside `packages/ui/src/`:
 | Story file                        | Key variants and notes                                                                                                                                          |
 | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Avatar.stories.tsx`              | Initials fallback; image src; sm/md/lg sizes                                                                                                                    |
+| `AvatarStack.stories.tsx`         | Beyond the limit ("+N"); a few; one; labelled; sm/md/lg                                                                                                         |
 | `Badge.stories.tsx`               | All status variants; subtle vs filled                                                                                                                           |
 | `BalanceChip.stories.tsx`         | Owed (positive); owes (negative); settled up (zero); all three states together                                                                                  |
 | `Button.stories.tsx`              | All `variant` × `size` combinations; disabled; icon-leading; icon-only; `AllVariants` grid                                                                      |

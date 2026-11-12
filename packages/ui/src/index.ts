@@ -126,6 +126,8 @@ export { Spinner } from './components/Spinner/Spinner';
 export type { SpinnerProps } from './components/Spinner/Spinner';
 export { Avatar } from './components/Avatar/Avatar';
 export type { AvatarProps } from './components/Avatar/Avatar';
+export { AvatarStack } from './components/AvatarStack/AvatarStack';
+export type { AvatarStackPerson, AvatarStackProps } from './components/AvatarStack/AvatarStack';
 export { NavTabs } from './components/NavTabs/NavTabs';
 export type { NavTabsProps, NavTabItem, NavTabLinkProps } from './components/NavTabs/NavTabs';
 export { Tooltip } from './components/Tooltip/Tooltip';

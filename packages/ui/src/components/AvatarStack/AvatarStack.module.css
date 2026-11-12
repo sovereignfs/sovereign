@@ -1,0 +1,46 @@
+.stack {
+  --stack-size: 32px;
+  --stack-overlap: calc(var(--stack-size) * -0.28);
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  font-family: var(--sv-font-family);
+}
+
+.sm {
+  --stack-size: 24px;
+}
+
+.md {
+  --stack-size: 32px;
+}
+
+.lg {
+  --stack-size: 40px;
+}
+
+/* Each avatar sits in a ring of the surface it is on, so overlapping ones stay apart in light and dark. */
+.item {
+  display: inline-flex;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--sv-color-surface);
+}
+
+.item + .item {
+  margin-inline-start: var(--stack-overlap);
+}
+
+.more {
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: var(--stack-size);
+  height: var(--stack-size);
+  padding-inline: 6px;
+  border: var(--sv-border-width-hairline) solid var(--sv-color-border);
+  background: var(--sv-color-surface-raised);
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-label);
+  font-weight: var(--sv-font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}

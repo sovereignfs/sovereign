@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
 import { Avatar } from '../components/Avatar/Avatar';
+import { AvatarStack } from '../components/AvatarStack/AvatarStack';
 import { Badge } from '../components/Badge/Badge';
 import { Button } from '../components/Button/Button';
 import { Card } from '../components/Card/Card';
@@ -2897,6 +2898,25 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                 <Avatar name="Jane Smith" size="lg" />
                 <Avatar name="Admin" src="https://i.pravatar.cc/150?u=sb" size="lg" />
               </div>
+            </ComponentCard>
+
+            {/* AvatarStack */}
+            <ComponentCard
+              name="AvatarStack"
+              importLine="import { AvatarStack } from '@sovereignfs/ui';"
+              usage="Who is in something: overlapping avatars with a '+N' count beyond a limit. One image to a screen reader, named for everyone in it."
+            >
+              <AvatarStack
+                label="Going"
+                max={3}
+                people={[
+                  { name: 'Ada Lovelace' },
+                  { name: 'Grace Hopper' },
+                  { name: 'Sam Rivera' },
+                  { name: 'Noor Khan' },
+                  { name: 'Leila Haddad' },
+                ]}
+              />
             </ComponentCard>
 
             {/* NavTabs */}

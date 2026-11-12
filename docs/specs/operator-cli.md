@@ -1,9 +1,9 @@
 # Sovereign — operator CLI specification
 
-|            |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status** | Draft. Specified from [RFC 0002](../rfcs/0002-deployment-strategies.md); the commands on the operator's machine and `sv apply` for core and apps, deploying over SSH, backups, restores, rollbacks, publishing, upgrading and deploying from GitHub are built ([epic 13](../epics/operator-cli.md)). Apps from git, app upgrades, rollback to a chosen release, backups to a destination and more commands from GitHub are specified and not built yet ([workstream 0001](../workstreams/0001-operator-workflow.md)) |
-| **Covers** | `tools/cli`: the `sv` toolkit, `sv apply`, and `@sovereignfs/create`                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+|            |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status** | Draft. Specified from [RFC 0002](../rfcs/0002-deployment-strategies.md); the commands on the operator's machine and `sv apply` for core and apps, deploying over SSH, backups (whole or by part, kept in `.backups/`, with a recovery key), restores, rollbacks, publishing, upgrading and deploying from GitHub are built ([epic 13](../epics/operator-cli.md)). Apps from git, app upgrades, rollback to a chosen release, backups to a destination and more commands from GitHub are specified and not built yet ([workstream 0001](../workstreams/0001-operator-workflow.md)) |
+| **Covers** | `tools/cli`: the `sv` toolkit, `sv apply`, and `@sovereignfs/create`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 This document is the single source of truth for what the operator CLI does. Where code, another document or an issue
 disagrees with it, this document wins until it is changed.
@@ -112,9 +112,11 @@ overrides/            optional additions (contracts/suite.md)
 .github/workflows/    a thin deployment workflow
 .gitignore
 README.md
+.backups/             backups sv backup took (§10.2); git-ignored, never committed
 ```
 
-`package.json` MUST pin `@sovereignfs/cli` to an exact version. Every file here belongs to the operator.
+`package.json` MUST pin `@sovereignfs/cli` to an exact version. Every file here belongs to the operator. `.gitignore` MUST
+ignore `.backups/`: `create` writes it so, and `sv backup` adds the line to a repository that lacks it.
 
 ---
 
@@ -273,13 +275,14 @@ digests in it are what the instance runs, so it is restored from git.
 
 ### 4.6 Updating and recovering
 
-| Command                                         | What it does                                                                                              | Reaches the server |
-| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------ |
-| `sv upgrade [--to vX.Y.Z]`                      | Moves the repository to a newer release (§10)                                                             | no                 |
-| `sv rollback [--to RELEASE \| --list]`          | Returns the server to an earlier release that worked: the previous one, or one it names (§10.3)           | yes                |
-| `sv backup [--app NAME] [--to PATH]`            | Takes a backup and copies it to the operator's machine, or sends it to the instance's destination (§10.2) | yes                |
-| `sv backups`                                    | Lists the backups at the instance's destination and those kept on the server (§10.2.2)                    | yes, read only     |
-| `sv restore PATH \| --from BACKUP [--app NAME]` | Restores a backup to the server, from a file or from the destination (§10.2)                              | yes                |
+| Command                                                                   | What it does                                                                                                     | Reaches the server |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------ |
+| `sv upgrade [--to vX.Y.Z]`                                                | Moves the repository to a newer release (§10)                                                                    | no                 |
+| `sv rollback [--to RELEASE \| --list]`                                    | Returns the server to an earlier release that worked: the previous one, or one it names (§10.3)                  | yes                |
+| `sv backup [--all \| --core \| --app NAME …] [--unencrypted] [--to PATH]` | Takes a backup of the instance, core or apps into `.backups/`, or sends it to the instance's destination (§10.2) | yes                |
+| `sv backups`                                                              | Lists the backups at the instance's destination and those kept on the server (§10.2.2)                           | yes, read only     |
+| `sv restore PATH \| --from BACKUP [--core \| --app NAME …] [--key FILE]`  | Restores a backup, or one part of it, to the server, from a file or from the destination (§10.2)                 | yes                |
+| `sv key recovery [--out FILE] [--remove]`                                 | Adds a recovery key, kept offline, to the recipients, or removes it (§9.4)                                       | no                 |
 
 ---
 
@@ -622,6 +625,10 @@ The operator's key is made by `sv setup` and kept outside the repository, at `~/
 alone. A second operator adds their public key to `secrets.recipients`, and someone who already has access runs `sv secret
 rekey`. Removing a recipient and re-keying does not take back what they could already read, and `sv secret rekey` MUST say so.
 
+Losing that key loses every backup and every secret it alone opens. The operator SHOULD keep a copy of it offline, apart from the
+machine, and MAY add a recovery key (§9.4). `sv setup` says so when it makes the key, and `sv backup` the first time it fills
+`.backups/`.
+
 ### 9.2 What the server generates
 
 `sv apply` generates these once, in `secrets/`, and never replaces them:
@@ -647,6 +654,18 @@ working at once ([core-app §3.7.3](core-app.md)), so an external app stops sign
 and the command MUST say so before it runs.
 
 `SV_AUTH_SECRET` is not rotated by any command: changing it signs everyone out and ends every two-factor enrolment.
+
+### 9.4 A recovery key
+
+`sv key recovery` makes a second age key for keeping offline, and adds its public key to `secrets.recipients`, marked in
+`suite.yml` with the comment `# recovery key`, then re-encrypts `secrets.age.yml` to the recipients as `sv secret rekey` does.
+
+- Its private half MUST be shown once, in a terminal, or written with `--out FILE` (mode `0600`, never over a file), and MUST NOT be
+  written inside the instance repository or kept by `sv`. With no terminal and no `--out`, the command refuses.
+- Backups taken after the next deployment are encrypted to it too, and `sv restore PATH --key FILE` and `sv backup --unencrypted --key
+FILE` open them with it.
+- `sv key recovery --remove` takes every recovery key out of the recipients and re-encrypts, and MUST say, as `sv secret rekey` does,
+  that this does not take back what it could already read: the backups taken before.
 
 ---
 
@@ -705,12 +724,45 @@ deleted since the backup will reappear. The file holds `sub`s and nothing else a
 
 A backup taken by a deployment (§6.1) stays on the server, under the same encryption.
 
+**Where backups are kept.** `sv backup` with no `--to` writes to `.backups/` in the instance repository (`0700`, each file `0600`),
+named `sovereign-<host>-<time>-<scope>.tar.age`, with `-2`, `-3`… when two are taken in one second. The folder is git-ignored
+(§2.1).
+
+**What it holds.** `--all`, or no flag, is the whole instance. `--core` is core's database and its own generated secrets (its role's
+password, `SV_AUTH_SECRET`, `SV_FIELD_ENCRYPTION_KEYS`). `--app NAME`, which may be given again, is that hosted app's database, its
+data volumes and its generated secrets; an app the server does not run, or an external one, is refused. `--core` and `--app` go
+together; `--all` goes with neither. Every archive begins with `backup.json`: its format, what it holds, when it was taken, and the
+versions of core and of each app it holds.
+
+**Your key must open it.** `sv backup` needs the operator's key before it asks the server for anything, and once the archive has
+arrived it opens it with that key. When it cannot (the server encrypted to the recipients of the last deployment, which may not
+include it), it deletes the file and refuses, naming `sv secret rekey`, `sv push` and `sv deploy`.
+
+**A plain copy.** `--unencrypted` asks first, since such a file holds every secret and the data of everyone on the instance in the
+clear, and needs `--yes` with no terminal. The server still sends the archive encrypted; it is decrypted on the operator's machine
+into `.backups/unsafe/`, as a plain `.tar`, and the encrypted copy is removed. The server never writes or sends a backup in the clear.
+
+**Restoring one part.** `sv restore PATH` restores what the archive holds, from a `.tar.age` or a plain `.tar`. With `--core` or
+`--app NAME` it restores only that part, from a backup that holds it, and refuses otherwise; a backup from before `backup.json`
+holds every database in one dump and is only restored whole.
+
+- Restoring **core** stops core alone, keeps the deletions, replaces core's database and secrets, and runs `instance restored`
+  and `instance deletions apply` as a whole restore does. Core's records of apps go back with it: a client secret rotated since the
+  backup is the old one again to core, and that app needs `sv secret rotate` again. The command says so before it runs.
+- Restoring **an app** stops that app alone, replaces its database, data volumes and generated secrets, except its client secret,
+  since core's record of the client is not restored, and does not stop core, sign anyone out or touch another app.
+- Each database is dropped and loaded from its own dump; its role is made, with the restored password, on a server that has none.
+- What is there now of the part being replaced is backed up on the server first; an app the server does not run yet has nothing to
+  keep.
+
 #### 10.2.1 As built
 
-- **What a backup holds:** one `pg_dumpall` of every database and role, `state.json`, the generated secrets, and a tar of each hosted
+- **What a backup holds:** `backup.json` first; `pg_dumpall --globals-only` (the roles, for the whole instance only) and a
+  `pg_dump --create` of each database in `databases/`; `state.json`, the generated secrets, and a tar of each hosted
   app's data volume (`sovereign-app-<name>_data-<n>`, copied through the toolkit's image, which has `tar`). Volumes are copied while the
   app runs, so they are as consistent as a crash would leave them. It is encrypted to `secrets.recipients` without the server's own key.
-- **`sv backup`** has the server make one, sends it down the connection as it is, and does not keep a copy there. The backups a
+- **`sv backup`** has the server make one (`backup [core] [app NAME]…` on the connection), sends it down the connection as it is,
+  and does not keep a copy there. The backups a
   deployment takes stay in `backups/`, and are restored by copying them down (`scp`) and using `sv restore`.
 - **`sv restore`** decrypts here, with your key, and sends the pushed commit's deployment files and then the backup in the clear over
   the encrypted connection: the server has no key that opens a backup. The server runs `sv apply --restore-from`, which, in this order:
@@ -747,9 +799,6 @@ schedule, without the operator's machine.
 - **Listing and restoring:** `sv backups` lists what is at the destination and what is kept on the server. `sv restore --from BACKUP`
   fetches one with the operator's own access to the destination (their S3 credentials in the environment, their git or SSH access),
   never with the server's, and then restores it as `sv restore PATH` does: it is decrypted on the operator's machine.
-- **One app:** `sv backup --app NAME` holds that app's database and role and its data volumes, under the same encryption.
-  `sv restore --app NAME` stops that app, puts them back and starts it, and touches neither core nor another app. Core's record of the app
-  (its client and the consents people gave it) is not in such a backup and is not changed.
 
 ### 10.3 Rolling back
 
@@ -766,7 +815,8 @@ does not undo its migrations: the command MUST say so before it runs, and name t
 - Every refusal MUST say what is wrong and what to do about it.
 - `--json` on a read command MUST print a stable document and nothing else.
 - With no terminal, a command that would ask MUST refuse and say what to pass.
-- No secret value is ever printed, except by `sv app show --secret`, and `sv server bootstrap`'s deployment key.
+- No secret value is ever printed, except by `sv app show --secret`, `sv server bootstrap`'s deployment key, and the recovery key
+  `sv key recovery` shows once in a terminal (§9.4).
 
 | Code | Meaning                                     |
 | ---- | ------------------------------------------- |

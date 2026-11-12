@@ -172,6 +172,9 @@ as an app and passkeys will not work until it does.
 | ------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `recipients` | yes      | The age public keys every secret is encrypted to, at least one, none twice. The operator's, and the server's once it has been bootstrapped |
 
+A recipient may be a recovery key, which `sv key recovery` adds with the comment `# recovery key` on its line
+([operator-cli §9.4](../docs/specs/operator-cli.md)); backups are encrypted to every recipient but the server's.
+
 ### 1.7 `apps`
 
 A map from an app's name to what it is. A name:

@@ -1,3 +1,4 @@
+import { parseScopeWords, type BackupScope } from '../apply/scope.js';
 import { Refused } from '../errors.js';
 
 /** What the server is asked (operator-cli §8): a verb and the few words it takes, each checked against a pattern before anything is done. */
@@ -10,8 +11,8 @@ export type Request =
   | { verb: 'app'; name: string; secret: boolean }
   | { verb: 'rotate'; name: string }
   | { verb: 'seed'; json: boolean }
-  | { verb: 'backup' }
-  | { verb: 'restore'; commit: string }
+  | { verb: 'backup'; scope: BackupScope }
+  | { verb: 'restore'; commit: string; scope?: BackupScope }
   | { verb: 'rollback' };
 
 const COMMIT = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
@@ -35,9 +36,13 @@ export function parseRequest(line: string): Request {
       if (rest.length === 1 && COMMIT.test(rest[0] as string))
         return { verb, commit: rest[0] as string };
       break;
+    case 'backup': {
+      const scope = parseScopeWords(rest);
+      if (scope) return { verb, scope };
+      break;
+    }
     case 'status':
     case 'doctor':
-    case 'backup':
     case 'rollback':
       if (rest.length === 0) return { verb };
       break;
@@ -65,10 +70,13 @@ export function parseRequest(line: string): Request {
       }
       break;
     }
-    case 'restore':
-      if (rest.length === 1 && COMMIT.test(rest[0] as string))
-        return { verb, commit: rest[0] as string };
+    case 'restore': {
+      const [commit, ...words] = rest;
+      const scope = parseScopeWords(words);
+      if (commit !== undefined && COMMIT.test(commit) && scope)
+        return words.length === 0 ? { verb, commit } : { verb, commit, scope };
       break;
+    }
     case 'seed':
       if (rest.length === 0) return { verb, json: false };
       if (rest.length === 1 && rest[0] === '--json') return { verb, json: true };

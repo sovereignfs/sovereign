@@ -29,9 +29,10 @@ import { CONTAINER, NETWORK, POOLER_PORT, PROJECT } from './names.js';
 import { appCompose, appOrigin, byDigest, type ImageOverrides } from './render.js';
 import type { GeneratedSecrets } from './secrets.js';
 import type { State } from './state.js';
+import { appDatabaseOf, isAppSecretFile } from './scope.js';
 
 /** The names an app is given in the database server: one role and one database, which only that role may open. */
-export const databaseOf = (name: string) => `app_${name.replace(/-/g, '_')}`;
+export const databaseOf = appDatabaseOf;
 
 /** Reads the manifest of every hosted app, as the lock pins it, and refuses the apps whose manifest cannot be used (operator-cli §6.5). */
 export async function readManifests(
@@ -417,11 +418,7 @@ export async function purgeApp(
     );
   }
   for (const file of await readdir(generated.dir)) {
-    if (
-      file === `app-${name}-client-secret` ||
-      file.startsWith(`app-${name}-`) ||
-      file === `role-app-${name}-password`
-    ) {
+    if (isAppSecretFile(name, file)) {
       await rm(generated.pathOf(file), { force: true });
     }
   }

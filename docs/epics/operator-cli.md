@@ -428,7 +428,7 @@ restored alone.
 
 - `backup` in `suite.yml` and its schema; `sv-backup`, run by `sv apply` when a schedule is set; retention by `keep`
 - The `s3` destination, with its credentials as operator secrets under `backup`
-- `sv backups`, `sv restore --from BACKUP`, `sv backup --app` and `sv restore --app`
+- `sv backups` and `sv restore --from BACKUP` (one app's backup is 13.31)
 - A failed scheduled backup in `sv status` and `sv doctor`
 
 **Dependencies:** 13.13
@@ -845,3 +845,29 @@ before the change). It is no longer a GitHub template, its description says it i
 **Review checklist:**
 
 - No page in this repository sends a reader to it
+
+#### ✅ 13.31 — Backups kept in the instance, by scope `[parallel]`
+
+**Goal:** An operator takes a backup of the whole instance, of core alone or of one app, keeps it in the instance's folder out of git,
+can have a plain copy when they ask for one, and cannot lose every backup by losing one key.
+
+**Priority:** 9.
+
+**Deliverables:**
+
+- `sv backup [--all | --core | --app NAME …] [--unencrypted] [--to PATH]`, saving to `.backups/` (encrypted) or `.backups/unsafe/`
+  (a plain tar, decrypted on the operator's machine, after a confirmation); `.backups/` is git-ignored
+- `backup.json` at the head of every archive, naming what it holds
+- `sv restore PATH [--core | --app NAME …]`, from an encrypted or a plain archive, touching only what it names
+- `sv backup` refuses an archive the operator's key cannot open
+- `sv key recovery [--remove]`, an offline recovery key among the recipients; `--key FILE` on `sv restore` and `sv backup --unencrypted`
+
+**Dependencies:** 13.8
+
+**Spec reference:** operator-cli §4.6, §9.1, §9.4, §10.2; `contracts/suite.md` §2
+
+**Review checklist:**
+
+- The server never writes or sends a backup in the clear, and its own key is never a recipient
+- An app's restore leaves core and its client secret as they are; a core restore runs `instance restored` and keeps deletions
+- A recovery key's private half is shown once and never written inside the repository

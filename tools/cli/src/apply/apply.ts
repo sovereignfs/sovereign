@@ -39,14 +39,15 @@ import {
 } from './apps.js';
 import { takeBackup } from './backup.js';
 import {
-  BACKUP,
   loadDatabases,
+  loadScopedDatabases,
   markRestored,
   restoreSecrets,
   restoreVolumes,
   saveDeletions,
   stopRunning,
 } from './restore.js';
+import { ALL, describeScope, touchesCore, type BackupScope } from './scope.js';
 import { look, refusals, refuseIfAny } from './checks.js';
 import { composeUp, docker, ensureDatabase, ensureNetwork, ensureOnNetwork } from './docker.js';
 import { applyPooler, removePooler } from './pooler.js';
@@ -83,6 +84,8 @@ export type ApplyOptions = {
   restore: boolean;
   /** A backup unpacked in a folder: the instance is brought to the commit and then its data is put back (operator-cli §10.2). */
   restoreFrom?: string;
+  /** What of the backup is put back: the whole instance when it is not given, or core and the apps it names, leaving the rest as they are. */
+  restoreScope?: BackupScope;
   /** The image this run is in, written down so the server’s wrapper starts the next request from it. */
   toolkitImage?: string;
   /** For tests that run a locally built image. Nothing in the toolkit sets it, and no command line flag reaches it. */
@@ -181,25 +184,38 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
   // A restore (operator-cli §10.2) first stops what runs and keeps what must survive it: a copy of what is there now, and the people deleted
   // since the backup. The backup’s secrets go in before any is made, since the passwords in its dump are the ones they hold.
   let deletions: string | undefined;
+  const restoreScope = options.restoreScope ?? ALL;
   if (options.restoreFrom) {
-    if ((await containerId(host, CONTAINER.database)) !== undefined) {
+    // What is there now of what is about to be replaced: an app the server does not run yet has nothing to keep.
+    const there: BackupScope = restoreScope.all
+      ? ALL
+      : {
+          all: false,
+          core: restoreScope.core,
+          apps: restoreScope.apps.filter((name) => state?.apps[name]?.kind === 'hosted'),
+        };
+    const somethingThere = there.all || there.core || there.apps.length > 0;
+    if (somethingThere && (await containerId(host, CONTAINER.database)) !== undefined) {
       const archive = await takeBackup(host, {
         stateDir: options.stateDir,
         recipients: suite.secrets.recipients,
         reason: 'before-restore',
+        scope: there,
         ...(options.toolkitImage ? { image: options.toolkitImage } : {}),
       });
       say(`Backed up what is there now to ${archive}, before it is replaced.`);
     }
-    deletions = await saveDeletions(host, options.stateDir);
-    if (!deletions)
-      say(
-        'Core could not be reached to list its deletions: people deleted since the backup was taken will reappear.',
-      );
-    await stopRunning(host);
-    const count = await restoreSecrets(options.restoreFrom, paths.secrets);
+    if (touchesCore(restoreScope)) {
+      deletions = await saveDeletions(host, options.stateDir);
+      if (!deletions)
+        say(
+          'Core could not be reached to list its deletions: people deleted since the backup was taken will reappear.',
+        );
+    }
+    await stopRunning(host, restoreScope);
+    const count = await restoreSecrets(options.restoreFrom, paths.secrets, restoreScope);
     say(
-      `Stopped core and the apps, and put back ${count} secret${count === 1 ? '' : 's'} from the backup.`,
+      `Stopped ${restoreScope.all ? 'core and the apps' : describeScope(restoreScope)}, and put back ${count} secret${count === 1 ? '' : 's'} from the backup.`,
     );
   }
 
@@ -287,8 +303,14 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
     files: [path.join(release, 'database', 'compose.yml'), ...(overrides.files.database ?? [])],
   });
   if (options.restoreFrom) {
-    await loadDatabases(host, path.join(options.restoreFrom, BACKUP.databases));
-    const volumes = await restoreVolumes(host, options.restoreFrom, options.toolkitImage);
+    if (restoreScope.all) await loadDatabases(host, options.restoreFrom);
+    else await loadScopedDatabases(host, options.restoreFrom, restoreScope, paths.secrets);
+    const volumes = await restoreVolumes(
+      host,
+      options.restoreFrom,
+      options.toolkitImage,
+      restoreScope,
+    );
     say(`The databases and ${volumes} data volume${volumes === 1 ? '' : 's'} are back.`);
   }
   await ensureDatabase(
@@ -299,7 +321,7 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
     roleLimit(corePool(suite)),
   );
   say('The database server is up, with core’s database.');
-  if (options.restoreFrom) {
+  if (options.restoreFrom && touchesCore(restoreScope)) {
     await markRestored(host, path.join(release, 'core', 'compose.yml'), deletions);
     say('Recorded the restore: every session and token from before it is ended.');
   }

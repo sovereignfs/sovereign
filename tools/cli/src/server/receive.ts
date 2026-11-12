@@ -12,6 +12,15 @@ import { CONTAINER } from '../apply/names.js';
 import { Failed, Locked, Refused } from '../errors.js';
 import { gt } from 'semver';
 import { takeBackup } from '../apply/backup.js';
+import {
+  ALL,
+  MANIFEST_FILE,
+  describeScope,
+  holds,
+  readManifest,
+  scopeWords,
+  type BackupScope,
+} from '../apply/scope.js';
 import { SuiteFile, readLock } from '../suite/files.js';
 import { DEPLOY_ONLY, parseRequest, type Request } from './request.js';
 import { IMAGE_BY_DIGEST } from './image.js';
@@ -78,9 +87,9 @@ export async function receive(host: ReceiverHost, options: ReceiveOptions): Prom
     case 'seed':
       return seed(host, options, request.json);
     case 'backup':
-      return backup(host, options);
+      return backup(host, options, request.scope);
     case 'restore':
-      return restore(host, options, request.commit);
+      return restore(host, options, request.commit, request.scope);
     case 'rollback':
       return rollback(host, options);
   }
@@ -192,7 +201,9 @@ async function deploy(
 
 /** The backup's files, and nothing else: the databases, the generated secrets, and the app data (operator-cli §10.2). */
 export const isBackupPath = (name: string) =>
+  name === MANIFEST_FILE ||
   name === 'databases.sql' ||
+  /^databases\/[a-z0-9_]{1,63}\.sql$/.test(name) ||
   name === 'state.json' ||
   /^secrets\/[A-Za-z0-9_.-]{1,128}$/.test(name) ||
   /^volumes\/sovereign-app-[a-z0-9-]+_data-[0-9]+\.tar$/.test(name);
@@ -203,6 +214,7 @@ async function restore(
   host: ReceiverHost,
   options: ReceiveOptions,
   commit: string,
+  asked: BackupScope | undefined,
 ): Promise<number> {
   await requireIdle(host);
   const incoming = path.join(options.stateDir, 'incoming');
@@ -212,8 +224,27 @@ async function restore(
     maxBytes: MAX_RESTORE_BYTES,
     stripDot: true,
   });
-  if (!backup.some((entry) => entry.name === 'databases.sql'))
+  const manifest = backup.find((entry) => entry.name === MANIFEST_FILE);
+  // A backup from before backup.json was written holds the whole instance, in one dump.
+  const held = manifest ? readManifest(manifest.data.toString('utf8')).scope : ALL;
+  const dumps = backup.filter(
+    (entry) => entry.name === 'databases.sql' || entry.name.startsWith('databases/'),
+  );
+  if (dumps.length === 0)
     throw new Refused('The backup holds no databases.', 'This is not a backup taken by sv backup.');
+  const scope = asked ?? held;
+  if (!holds(held, scope)) {
+    throw new Refused(
+      `The backup holds ${describeScope(held)}, not ${describeScope(scope)}.`,
+      'Restore what it holds, or choose a backup that holds the rest.',
+    );
+  }
+  if (!scope.all && dumps.some((entry) => entry.name === 'databases.sql')) {
+    throw new Refused(
+      'This backup holds every database in one dump, so it can only be restored whole.',
+      'Restore it without --core or --app.',
+    );
+  }
   const { dir, pinned, files } = await unpack(options, commit, sent.deployment);
   const data = path.join(incoming, 'restore');
   await mkdir(data, { recursive: true, mode: 0o700 });
@@ -225,7 +256,16 @@ async function restore(
   options.out(
     `Received ${files} files for ${commit.slice(0, 12)} and a backup of ${backup.length} files.\n`,
   );
-  return launch(host, options, { commit, dir, pinned, extra: ['--restore-from', data] });
+  return launch(host, options, {
+    commit,
+    dir,
+    pinned,
+    extra: [
+      '--restore-from',
+      data,
+      ...(scope.all ? [] : ['--restore-scope', ...scopeWords(scope)]),
+    ],
+  });
 }
 
 /** `sv rollback`: applies the previous release's files again (operator-cli §10.3), unless core would go backward. */
@@ -269,7 +309,7 @@ async function rollback(host: ReceiverHost, options: ReceiveOptions): Promise<nu
 }
 
 /** `sv backup`: a backup of the instance, encrypted to the operator's keys alone, sent down the connection and not kept on the server. */
-async function backup(host: Host, options: ReceiveOptions): Promise<number> {
+async function backup(host: Host, options: ReceiveOptions, scope: BackupScope): Promise<number> {
   const paths = layout(options.stateDir);
   if (!options.sendFile) throw new Refused('This connection cannot carry a backup.');
   if (!existsSync(path.join(paths.current, 'suite.yml'))) {
@@ -282,6 +322,7 @@ async function backup(host: Host, options: ReceiveOptions): Promise<number> {
     stateDir: options.stateDir,
     recipients: suite.secrets.recipients,
     reason: 'manual',
+    scope,
     ...(existsSync(imageFile) ? { image: (await readFile(imageFile, 'utf8')).trim() } : {}),
   });
   try {

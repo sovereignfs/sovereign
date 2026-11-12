@@ -41,6 +41,8 @@ export const GITIGNORE = `node_modules/
 age.key
 .env
 .env.*
+# Backups taken by sv backup, which are never committed: encrypted in .backups/, plain copies in .backups/unsafe/.
+.backups/
 `;
 
 export function readme(name: string): string {

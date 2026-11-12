@@ -9,6 +9,7 @@ import { seed } from './commands/seed.js';
 import { doctor, logs, status } from './commands/remote.js';
 import { server } from './commands/server.js';
 import { receiveCommand, serverKeyCommand } from './commands/serve.js';
+import { key } from './commands/key.js';
 import { secret } from './commands/secret.js';
 import { setup } from './commands/setup.js';
 import { upgrade } from './commands/upgrade.js';
@@ -27,6 +28,7 @@ Apps
   app add|update|remove|list    change which apps the instance has
 Secrets
   secret set|remove|list|rekey  keep secrets in secrets.age.yml, encrypted
+  key recovery [--remove]       a second key, kept offline, that opens backups and secrets
 Deploying
   push                          check the repository, commit its files, and push
   server bootstrap              prepare a new machine: Docker, folders, keys
@@ -37,7 +39,8 @@ Deploying
   seed                          make test accounts and a sample app on a development or staging instance
 Recovering
   upgrade [--to vX.Y.Z]         move the repository to a newer release, for you to review
-  backup | restore PATH         a backup encrypted to your key alone, and bringing one back
+  backup [--core | --app NAME]  a backup encrypted to your keys alone, kept in .backups/ (--unencrypted: .backups/unsafe/)
+  restore PATH [--core | --app] bring a backup back, or one part of it
   rollback                      run the previous release again
   apply                         on the server: make it match one commit (sv deploy starts it)
 
@@ -49,6 +52,7 @@ const COMMANDS: Record<string, Command> = {
   setup,
   app,
   secret,
+  key,
   push,
   server,
   deploy,

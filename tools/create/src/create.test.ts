@@ -124,6 +124,7 @@ describe('making an instance repository', () => {
       dependencies: { '@sovereignfs/cli': '0.1.0' },
     });
     expect(readFileSync(path.join(made.dir, '.gitignore'), 'utf8')).toContain('age.key');
+    expect(readFileSync(path.join(made.dir, '.gitignore'), 'utf8')).toMatch(/^\.backups\/$/m);
     expect(statSync(path.join(made.dir, 'sv')).mode & 0o111).not.toBe(0);
     expect(made.calls).toEqual([
       'git init --initial-branch=main',

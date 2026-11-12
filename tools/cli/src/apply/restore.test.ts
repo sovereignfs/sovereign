@@ -217,3 +217,128 @@ describe('a restore on the server that was running', () => {
     expect(done).not.toBeInstanceOf(Error);
   });
 });
+
+/** A backup in the form `backup.json` came with: a dump for each database, and the roles only for the whole instance. */
+function unpackedByDatabase(input: {
+  databases: string[];
+  globals?: boolean;
+  secrets: Record<string, string>;
+}) {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'sv-backup-'));
+  cleanup.push(dir);
+  mkdirSync(path.join(dir, 'databases'));
+  if (input.globals)
+    writeFileSync(path.join(dir, 'databases', 'globals.sql'), 'CREATE ROLE core;\n');
+  for (const name of input.databases)
+    writeFileSync(path.join(dir, 'databases', `${name}.sql`), `-- dump of ${name}\n`);
+  mkdirSync(path.join(dir, 'secrets'));
+  for (const [name, value] of Object.entries(input.secrets))
+    writeFileSync(path.join(dir, 'secrets', name), value);
+  return dir;
+}
+
+describe('a restore by scope', () => {
+  async function running() {
+    const made = await source();
+    const docker = new FakeDocker();
+    const { host, logs } = fakeHost({ docker });
+    await apply(host, { ...options(made, '' as never), restoreFrom: undefined });
+    return { made, docker, host, logs };
+  }
+  const secret = (made: Source, name: string) =>
+    readFileSync(path.join(made.stateDir, 'secrets', name), 'utf8');
+
+  it('of the whole instance loads the roles, then each database on its own, where no error is let through', async () => {
+    const { made, docker, host } = await running();
+    const backup = unpackedByDatabase({
+      databases: ['app_notes', 'core'],
+      globals: true,
+      secrets: { 'role-core-password': 'old-core' },
+    });
+    await apply(host, options(made, backup, { commit: 'b'.repeat(40) }));
+    const loads = docker.calls.filter((c) => c.inputFrom?.includes(backup));
+    expect(loads.map((c) => path.basename(c.inputFrom as string))).toEqual([
+      'globals.sql',
+      'app_notes.sql',
+      'core.sql',
+    ]);
+    expect(loads[0]?.args).toContain('ON_ERROR_STOP=0');
+    expect(loads[1]?.args).toContain('ON_ERROR_STOP=1');
+  });
+
+  it('of core replaces core’s database and secrets, stops no app, records the restore, and leaves the server’s own secrets', async () => {
+    const { made, docker, host } = await running();
+    const admin = secret(made, 'postgres-admin-password');
+    docker.calls = [];
+    const backup = unpackedByDatabase({
+      databases: ['core'],
+      secrets: { 'role-core-password': 'old-core', SV_AUTH_SECRET: 'old-auth' },
+    });
+    await apply(
+      host,
+      options(made, backup, {
+        commit: 'b'.repeat(40),
+        restoreScope: { all: false, core: true, apps: [] },
+      }),
+    );
+    expect(secret(made, 'role-core-password')).toBe('old-core');
+    expect(secret(made, 'SV_AUTH_SECRET')).toBe('old-auth');
+    expect(secret(made, 'postgres-admin-password')).toBe(admin);
+    expect(
+      docker.psql.some((sql) => sql.includes('DROP DATABASE IF EXISTS "core" WITH (FORCE)')),
+    ).toBe(true);
+    expect(docker.psql.some((sql) => sql.includes('DROP ROLE'))).toBe(false);
+    const [exported = -1, stopped = -1, loaded = -1, restored = -1] = order(
+      docker,
+      'deletions export',
+      'stop sv-core',
+      'ON_ERROR_STOP=1 ',
+      'instance restored',
+    );
+    expect(exported).toBeGreaterThan(-1);
+    expect(exported).toBeLessThan(stopped);
+    expect(restored).toBeGreaterThan(loaded);
+    expect(readdirSync(path.join(made.stateDir, 'backups'))).toEqual([
+      expect.stringMatching(/-before-restore-core\.tar\.age$/),
+    ]);
+  });
+
+  it('of an app touches neither core nor its client secret, and makes its role on a server that has none', async () => {
+    const { made, docker, host } = await running();
+    writeFileSync(path.join(made.stateDir, 'secrets', 'app-notes-client-secret'), 'current');
+    docker.calls = [];
+    docker.composeRuns = [];
+    const backup = unpackedByDatabase({
+      databases: ['app_notes'],
+      secrets: {
+        'role-app-notes-password': 'notes-pw',
+        'app-notes-client-secret': 'stale',
+        'app-notes-SIGNING_KEY': 'old-key',
+        SV_AUTH_SECRET: 'not-for-an-app',
+      },
+    });
+    await apply(
+      host,
+      options(made, backup, {
+        commit: 'b'.repeat(40),
+        restoreScope: { all: false, core: false, apps: ['notes'] },
+      }),
+    );
+    expect(secret(made, 'app-notes-client-secret')).toBe('current');
+    expect(secret(made, 'app-notes-SIGNING_KEY')).toBe('old-key');
+    expect(secret(made, 'SV_AUTH_SECRET')).not.toBe('not-for-an-app');
+    const joined = docker.calls.map((c) => c.args.join(' '));
+    expect(joined.some((c) => c.includes('stop sv-core'))).toBe(false);
+    expect(joined.some((c) => c.includes('deletions export'))).toBe(false);
+    expect(docker.composeRuns.flat().join(' ')).not.toContain('instance restored');
+    expect(
+      docker.psql.some(
+        (sql) =>
+          sql.includes('DROP DATABASE IF EXISTS "app_notes" WITH (FORCE)') &&
+          sql.includes(`CREATE ROLE "app_notes" LOGIN PASSWORD 'notes-pw'`),
+      ),
+    ).toBe(true);
+    // Nothing of notes ran here before, so there was nothing to keep.
+    expect(readdirSync(path.join(made.stateDir, 'backups'))).toEqual([]);
+  });
+});

@@ -21,6 +21,32 @@ describe('what the server is asked', () => {
     expect(parseRequest('rotate notes')).toEqual({ verb: 'rotate', name: 'notes' });
   });
 
+  it('reads what a backup or a restore covers: the whole instance, core, and apps by name', () => {
+    expect(parseRequest('backup')).toEqual({ verb: 'backup', scope: { all: true } });
+    expect(parseRequest('backup core app notes app tasks')).toEqual({
+      verb: 'backup',
+      scope: { all: false, core: true, apps: ['notes', 'tasks'] },
+    });
+    expect(parseRequest(`restore ${commit}`)).toEqual({ verb: 'restore', commit });
+    expect(parseRequest(`restore ${commit} app notes`)).toEqual({
+      verb: 'restore',
+      commit,
+      scope: { all: false, core: false, apps: ['notes'] },
+    });
+    for (const line of [
+      'backup all',
+      'backup core core',
+      'backup app',
+      'backup app Notes',
+      'backup app notes app notes',
+      'backup app notes; id',
+      `restore ${commit} --core`,
+      'restore core',
+    ]) {
+      expect(() => parseRequest(line), line).toThrow(Refused);
+    }
+  });
+
   it('refuses anything else, including what a shell would read as more than one word', () => {
     for (const line of [
       '',

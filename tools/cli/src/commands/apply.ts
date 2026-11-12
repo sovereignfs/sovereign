@@ -4,6 +4,14 @@ import { realHost, type Host } from '../apply/host.js';
 import { parseArgs, positionals } from '../args.js';
 import { Refused } from '../errors.js';
 import type { Io } from '../io.js';
+import { parseScopeWords, type BackupScope } from '../apply/scope.js';
+
+/** The words `sv receive` passes after `--restore-scope`: `core`, `app NAME`, … */
+function restoreScopeOf(words: string[]): BackupScope {
+  const scope = parseScopeWords(words);
+  if (!scope) throw new Refused(`--restore-scope ${words.join(' ').slice(0, 60)} is not a scope.`);
+  return scope;
+}
 
 const OPTIONS = {
   from: 'value',
@@ -13,6 +21,7 @@ const OPTIONS = {
   'skip-dns': 'switch',
   restore: 'switch',
   'restore-from': 'value',
+  'restore-scope': 'list',
 } as const;
 
 /**
@@ -43,6 +52,9 @@ export async function applyCommand(
     restore: args.switches.has('restore'),
     ...(args.values.get('restore-from')
       ? { restoreFrom: path.resolve(args.values.get('restore-from') as string) }
+      : {}),
+    ...(args.lists.get('restore-scope')
+      ? { restoreScope: restoreScopeOf(args.lists.get('restore-scope') as string[]) }
       : {}),
     ...(process.env.SV_TOOLKIT_IMAGE ? { toolkitImage: process.env.SV_TOOLKIT_IMAGE } : {}),
   });

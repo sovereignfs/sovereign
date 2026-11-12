@@ -126,7 +126,7 @@ export async function setup(ctx: Context, argv: string[]): Promise<void> {
   io.err(`Wrote ${FILE.suite} for ${domain}, and ${FILE.lock} with the digests it resolves to.`);
   io.err(
     created
-      ? `Made your key at ${key.file}. Keep it: it is the only way to read the secrets you add, and it is not in the repository.`
+      ? `Made your key at ${key.file}. Keep it: it is the only way to read the secrets you add and every backup, and it is not in the repository. Keep a copy offline too, or make a second key with sv key recovery.`
       : `Used your key at ${key.file}.`,
   );
   if (environment !== 'production')

@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.91.1 · **Last updated:** 2026-11-02
+**Version:** 0.92.0 · **Last updated:** 2026-11-12
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -197,6 +197,7 @@ Epic [15](docs/epics/core-services.md)
 | —       | 6        | Scheduled backups to S3, and one app's backup          | 📋     | [13.17](docs/epics/operator-cli.md) |
 | —       | 7        | Backups to git and SFTP `[parallel]`                   | 📋     | [13.18](docs/epics/operator-cli.md) |
 | —       | 8        | More from GitHub, and servers its runners cannot reach | 📋     | [13.19](docs/epics/operator-cli.md) |
+| 0.92.0  | 9        | Backups kept in the instance, by scope `[parallel]`    | ✅     | [13.31](docs/epics/operator-cli.md) |
 
 ### M11 — Development and staging instances can be tried
 

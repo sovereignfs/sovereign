@@ -474,6 +474,64 @@ describe('a rollback', () => {
   });
 });
 
+describe('a restore by scope', () => {
+  const idle = (args: string[]) =>
+    args[0] === 'inspect' ? { stdout: 'false\n' } : args[0] === 'wait' ? { stdout: '0\n' } : {};
+  const manifest = (scope: object) => JSON.stringify({ format: 1, scope, takenAt: 'x', apps: {} });
+  const restoreWith = async (line: string, files: Record<string, string>) => {
+    const { archive } = await archiveOf();
+    const { host, calls } = receiver(idle);
+    const body = joinRestore(archive, makeArchive(files));
+    const { options: o } = options(stateDir(), line, { stdin: async () => body });
+    return { run: () => receive(host, o), calls };
+  };
+  const applyArgs = (calls: string[][]) => calls.find((c) => c.includes('apply')) ?? [];
+
+  it('restores what backup.json says the archive holds, and tells sv apply', async () => {
+    const { run, calls } = await restoreWith(`restore ${commit}`, {
+      'backup.json': manifest({ all: false, core: false, apps: ['notes'] }),
+      'databases/app_notes.sql': '--',
+      'secrets/role-app-notes-password': 'pw',
+    });
+    expect(await run()).toBe(0);
+    const args = applyArgs(calls);
+    expect(args.slice(args.indexOf('--restore-scope'))).toEqual([
+      '--restore-scope',
+      'app',
+      'notes',
+    ]);
+  });
+
+  it('restores one part out of a whole backup when asked', async () => {
+    const { run, calls } = await restoreWith(`restore ${commit} core`, {
+      'backup.json': manifest({ all: true }),
+      'databases/globals.sql': '--',
+      'databases/core.sql': '--',
+    });
+    expect(await run()).toBe(0);
+    expect(applyArgs(calls)).toContain('--restore-scope');
+  });
+
+  it('refuses a part the backup does not hold, and a part of a backup made of one dump, starting nothing', async () => {
+    const missing = await restoreWith(`restore ${commit} core`, {
+      'backup.json': manifest({ all: false, core: false, apps: ['notes'] }),
+      'databases/app_notes.sql': '--',
+    });
+    await expect(missing.run()).rejects.toThrow(/holds notes, not core/);
+    const old = await restoreWith(`restore ${commit} app notes`, { 'databases.sql': '--' });
+    await expect(old.run()).rejects.toThrow(/only be restored whole/);
+    for (const { calls } of [missing, old]) expect(calls.some((c) => c[0] === 'run')).toBe(false);
+  });
+
+  it('refuses a backup taken by a newer toolkit', async () => {
+    const { run } = await restoreWith(`restore ${commit}`, {
+      'backup.json': JSON.stringify({ format: 2 }),
+      'databases/core.sql': '--',
+    });
+    await expect(run()).rejects.toThrow(/newer toolkit/);
+  });
+});
+
 describe('a backup', () => {
   it('is taken to the operator’s keys alone, sent as it is, and not kept on the server', async () => {
     const made = await makeSource();

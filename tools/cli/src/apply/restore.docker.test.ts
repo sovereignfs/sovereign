@@ -153,7 +153,10 @@ describe.skipIf(!runnable)('a backup and a restore against the real Docker', () 
     const entries = readArchive(plain, isBackupPath, { stripDot: true });
     expect(entries.map((e) => e.name)).toEqual(
       expect.arrayContaining([
-        'databases.sql',
+        'backup.json',
+        'databases/globals.sql',
+        'databases/core.sql',
+        'databases/app_alpha.sql',
         'state.json',
         'volumes/sovereign-app-alpha_data-0.tar',
       ]),
@@ -161,7 +164,7 @@ describe.skipIf(!runnable)('a backup and a restore against the real Docker', () 
     await extract(
       entries.filter(
         (e) =>
-          e.name === 'databases.sql' ||
+          e.name.startsWith('databases/') ||
           e.name.startsWith('secrets/') ||
           e.name.startsWith('volumes/'),
       ),
@@ -196,5 +199,49 @@ describe.skipIf(!runnable)('a backup and a restore against the real Docker', () 
       'healthy',
     );
     expect(existsSync(path.join(fresh, 'deletions.json'))).toBe(false);
+
+    // One app alone, on that machine: its row and file come back from a backup of it, and core is left running as it was.
+    const appBackup = await takeBackup(host(), {
+      stateDir: fresh,
+      recipients: source.suite.secrets.recipients,
+      reason: 'manual',
+      image: cliImage,
+      scope: { all: false, core: false, apps: ['alpha'] },
+    });
+    const appDecrypter = new Decrypter();
+    appDecrypter.addIdentity(source.operator.identity);
+    const appPlain = Buffer.from(
+      await new Response(
+        (await appDecrypter.decrypt(
+          Readable.toWeb(Readable.from([readFileSync(appBackup)])) as ReadableStream<Uint8Array>,
+        )) as ReadableStream,
+      ).arrayBuffer(),
+    );
+    const appEntries = readArchive(appPlain, isBackupPath, { stripDot: true });
+    expect(appEntries.map((e) => e.name)).not.toContain('databases/core.sql');
+    const appUnpacked = path.join(newState(), 'backup');
+    await extract(
+      appEntries.filter((e) => e.name !== 'state.json' && e.name !== 'backup.json'),
+      appUnpacked,
+    );
+    expect(psql('app_alpha', "INSERT INTO kept VALUES ('after the app backup')").status).toBe(0);
+    const coreStarted = docker('inspect', '--format', '{{.State.StartedAt}}', 'sv-core').stdout;
+    await apply(
+      host(),
+      options(fresh, {
+        commit: 'b'.repeat(40),
+        restoreFrom: appUnpacked,
+        restoreScope: { all: false, core: false, apps: ['alpha'] },
+      }),
+    );
+    expect(psql('app_alpha', 'SELECT v FROM kept ORDER BY v').stdout.trim()).toBe(
+      'before the backup',
+    );
+    expect(docker('inspect', '--format', '{{.State.StartedAt}}', 'sv-core').stdout).toBe(
+      coreStarted,
+    );
+    expect(docker('inspect', '--format', '{{.State.Running}}', 'sv-app-alpha').stdout.trim()).toBe(
+      'true',
+    );
   });
 });

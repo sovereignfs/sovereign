@@ -23,6 +23,8 @@ export class FakeDocker {
   networks = new Set<string>();
   containers = new Map<string, Container>();
   psql: string[] = [];
+  /** The databases the server holds, besides `postgres`, as the question that lists them is answered. */
+  databases: string[] = ['core'];
   /** What the question about connections is answered with (apply/database-use.ts), as JSON text; empty is an answer that cannot be read. */
   connectionsReport = '';
   caddyReloads = 0;
@@ -117,6 +119,14 @@ export class FakeDocker {
     }
     if (command === 'volume') {
       if (rest[0] === 'ls') {
+        const prefix = rest.find((word) => word.startsWith('name=^'))?.slice('name=^'.length);
+        if (prefix !== undefined)
+          return ok(
+            Object.values(this.volumes)
+              .flat()
+              .filter((name) => name.startsWith(prefix))
+              .join('\n'),
+          );
         const project = (
           rest.find((word) => word.startsWith('label=com.docker.compose.project=')) ?? ''
         )
@@ -291,7 +301,14 @@ export class FakeDocker {
     }
     if (program === 'psql') {
       if ((options.input ?? '').includes('json_build_object')) return ok(this.connectionsReport);
+      if ((options.input ?? '').includes('SELECT datname FROM pg_database'))
+        return ok(this.databases.join('\n'));
       this.psql.push(options.input ?? '');
+      return ok('');
+    }
+    if (program === 'pg_dump') {
+      const database = more[more.indexOf('-d') + 1] ?? '';
+      if (options.stdoutTo) writeFileSync(options.stdoutTo, `-- dump of ${database}\n`);
       return ok('');
     }
     if (program === 'pg_dumpall') {

@@ -1,14 +1,26 @@
-import { chmod, copyFile, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { Failed, Refused } from '../errors.js';
-import { docker } from './docker.js';
+import { docker, psql as runSql } from './docker.js';
 import type { Host } from './host.js';
-import { CONTAINER, DATABASE_ADMIN } from './names.js';
+import { CONTAINER, CORE_DATABASE, DATABASE_ADMIN } from './names.js';
+import {
+  ALL,
+  databasesOf,
+  secretInScope,
+  touchesCore,
+  volumeInScope,
+  type BackupScope,
+} from './scope.js';
 
 /** What a backup holds once it is unpacked (operator-cli §10.2). */
 export const BACKUP = {
-  databases: 'databases.sql',
+  /** One dump of every database, as a backup taken before `backup.json` held it; it can only be restored whole. */
+  allDatabases: 'databases.sql',
+  /** A folder of dumps: `globals.sql` (the roles, in a backup of the whole instance) and one `<database>.sql` each. */
+  databases: 'databases',
+  globals: 'globals.sql',
   secrets: 'secrets',
   volumes: 'volumes',
 } as const;
@@ -37,40 +49,56 @@ export async function saveDeletions(host: Host, stateDir: string): Promise<strin
   return file;
 }
 
-/** Stops core and the hosted apps. The database server is left running: the backup is loaded into it. */
-export async function stopRunning(host: Host): Promise<void> {
+/** Stops what a restore replaces: core and the hosted apps, or those the scope names. The database server is left running: the backup is loaded into it. */
+export async function stopRunning(host: Host, scope: BackupScope = ALL): Promise<void> {
   const listed = await host.docker(['ps', '--filter', 'name=^sv-', '--format', '{{.Names}}']);
   const names = listed.stdout
     .split('\n')
     .map((line) => line.trim())
-    .filter((name) => name === CONTAINER.core || name.startsWith('sv-app-'));
-  if (names.length > 0) await docker(host, 'Stopping core and the apps', ['stop', ...names]);
+    .filter((name) =>
+      name === CONTAINER.core
+        ? touchesCore(scope)
+        : name.startsWith('sv-app-') &&
+          (scope.all || scope.apps.some((app) => name === CONTAINER.app(app))),
+    );
+  if (names.length > 0) await docker(host, 'Stopping what is restored', ['stop', ...names]);
 }
 
 /** Puts the backup's generated secrets in place: the passwords in the dump are the ones these files hold. */
-export async function restoreSecrets(from: string, to: string): Promise<number> {
+export async function restoreSecrets(
+  from: string,
+  to: string,
+  scope: BackupScope = ALL,
+): Promise<number> {
   const source = path.join(from, BACKUP.secrets);
   if (!existsSync(source)) return 0;
   await mkdir(to, { recursive: true, mode: 0o700 });
   await chmod(to, 0o700);
   let count = 0;
   for (const name of await readdir(source)) {
+    if (!secretInScope(scope, name, true)) continue;
     const target = path.join(to, name);
     const temporary = `${target}.restoring`;
     await copyFile(path.join(source, name), temporary);
     await chmod(temporary, 0o444);
     await rm(target, { force: true });
-    await (await import('node:fs/promises')).rename(temporary, target);
+    await rename(temporary, target);
     count += 1;
   }
   return count;
 }
 
 /**
- * Replaces what the database server holds with the dump. What is there is dropped first, so the dump meets an empty server, and the only
- * errors it may report are about the administrator, whose role it cannot drop or make again while connected as it.
+ * Replaces what the database server holds with the backup's. What is there is dropped first, so the dumps meet an empty server, and the
+ * only errors the roles may report are about the administrator, whose role it cannot drop or make again while connected as it. Then
+ * each database is loaded from its own dump, where no error is accepted. A backup from before each database had its own dump holds one
+ * dump of them all, loaded as the roles are.
  */
-export async function loadDatabases(host: Host, dump: string): Promise<void> {
+export async function loadDatabases(host: Host, from: string): Promise<void> {
+  const whole = path.join(from, BACKUP.allDatabases);
+  const folder = path.join(from, BACKUP.databases);
+  const dump = existsSync(whole) ? whole : path.join(folder, BACKUP.globals);
+  if (!existsSync(dump)) throw new Failed('The backup holds no roles to restore.');
   const psql = (sql: string) =>
     docker(
       host,
@@ -144,6 +172,81 @@ export async function loadDatabases(host: Host, dump: string): Promise<void> {
       'The backup may be damaged or from another version of the database server. Nothing else has been started.',
     );
   }
+  if (dump === whole) return;
+  for (const file of (await readdir(folder)).filter(isDatabaseDump).sort())
+    await loadDump(host, path.join(folder, file));
+}
+
+const isDatabaseDump = (file: string) => file !== BACKUP.globals && /^[a-z0-9_]+\.sql$/.test(file);
+
+/** Loads one database's dump, made with `--create`, which must go in without an error. */
+async function loadDump(host: Host, file: string): Promise<void> {
+  const name = path.basename(file, '.sql');
+  const loaded = await host.docker(
+    [
+      'exec',
+      '-i',
+      CONTAINER.database,
+      'psql',
+      '-U',
+      DATABASE_ADMIN,
+      '-d',
+      'postgres',
+      '-q',
+      '-v',
+      'ON_ERROR_STOP=1',
+    ],
+    { inputFrom: file },
+  );
+  if (loaded.code !== 0) {
+    throw new Failed(
+      `Loading the database ${name} failed: ${loaded.stderr.trim().split('\n').slice(-3).join(' ')}`,
+      'The backup may be damaged or from another version of the database server.',
+    );
+  }
+}
+
+/**
+ * Replaces the databases of core or of the apps a scope names, and leaves every other one as it is. Each is dropped, its role is made
+ * when the server has none (a new server) with the password the restored secrets hold, and its dump is loaded. A database the backup
+ * does not hold is one the app never had.
+ */
+export async function loadScopedDatabases(
+  host: Host,
+  from: string,
+  scope: { core: boolean; apps: readonly string[] },
+  secretsDir: string,
+): Promise<number> {
+  let count = 0;
+  for (const { database, role, passwordSecret } of databasesOf(scope)) {
+    const dump = path.join(from, BACKUP.databases, `${database}.sql`);
+    if (!existsSync(dump)) {
+      if (database === CORE_DATABASE) throw new Failed('The backup holds no database for core.');
+      continue;
+    }
+    const secret = path.join(secretsDir, passwordSecret);
+    if (!existsSync(secret)) {
+      throw new Failed(
+        `There is no password for the role ${role}.`,
+        'The backup holds none and the server has none: restore the whole instance instead.',
+      );
+    }
+    const password = (await readFile(secret, 'utf8')).replace(/\r?\n$/, '').replace(/'/g, "''");
+    await runSql(
+      host,
+      `Clearing the database ${database}`,
+      `DROP DATABASE IF EXISTS "${database}" WITH (FORCE);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${role}') THEN
+    CREATE ROLE "${role}" LOGIN PASSWORD '${password}';
+  END IF;
+END $$;
+`,
+    );
+    await loadDump(host, dump);
+    count += 1;
+  }
+  return count;
 }
 
 /** Puts each app's data back into a volume Compose will adopt, emptied first. Needs a container with `tar`: the toolkit’s image. */
@@ -151,10 +254,13 @@ export async function restoreVolumes(
   host: Host,
   from: string,
   image: string | undefined,
+  scope: BackupScope = ALL,
 ): Promise<number> {
   const folder = path.join(from, BACKUP.volumes);
   if (!existsSync(folder)) return 0;
-  const files = (await readdir(folder)).filter((name) => VOLUME_FILE.test(name));
+  const files = (await readdir(folder)).filter(
+    (name) => VOLUME_FILE.test(name) && volumeInScope(scope, name.replace(/\.tar$/, '')),
+  );
   if (files.length === 0) return 0;
   if (!image) {
     throw new Refused(

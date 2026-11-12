@@ -62,7 +62,10 @@ describe.skipIf(!runnable)('folders of people’s files against the real Docker'
     const reach = inside('alpha', 'ls /data/s3/beta; cat ../beta/person-1/file');
     expect(reach.status).not.toBe(0);
     expect(reach.stdout).not.toContain('secret');
-    expect(inside('alpha', 'ls /data/s3').stdout.trim()).toBe('alpha');
+    // The image's own folder for core's files is part of the image (`/data/s3/core`), so the listing has it and alpha's; it has no beta.
+    const listing = inside('alpha', 'ls /data/s3').stdout.trim().split('\n');
+    expect(listing).toContain('alpha');
+    expect(listing).not.toContain('beta');
     // And a person's folder in alpha's is not writable by someone else's user.
     expect(inside('alpha', 'stat -c %u:%g .').stdout.trim()).toBe(owner);
   }, 120_000);

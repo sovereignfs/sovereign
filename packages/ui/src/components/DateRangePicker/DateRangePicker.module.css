@@ -1,0 +1,33 @@
+/* DateRangePicker — the shading of a range on top of Calendar's grid. Tokens only. A cell is the grid cell around a day's button; the days between the two ends are shaded across the whole cell, and the ends are
+ * shaded on the side that faces the range, so the range reads as one band. */
+
+.cell {
+  position: relative;
+}
+
+.cellInside {
+  background: var(--sv-color-surface-sunken);
+}
+
+.cellStart {
+  background: linear-gradient(to right, transparent 50%, var(--sv-color-surface-sunken) 50%);
+}
+
+.cellEnd {
+  background: linear-gradient(to left, transparent 50%, var(--sv-color-surface-sunken) 50%);
+}
+
+.summary {
+  margin: 0;
+  min-height: 1.5em;
+  text-align: center;
+  font-family: var(--sv-font-family);
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-muted);
+}
+
+/* A day in a range keeps the same ring as in Calendar, drawn inside the cell so the shading around it is not cut. */
+.cell button:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: -2px;
+}

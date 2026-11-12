@@ -19,7 +19,7 @@ npm install @sovereignfs/ui
 import { Button, Input, Card, Dialog, Drawer } from '@sovereignfs/ui';
 ```
 
-Available components and hooks: `Avatar`, `Badge`, `Button`, `Calendar`, `Card`, `CheckableListRow`, `Checkbox`, `CodeTextarea`, `ConfirmDialog`, `DatePicker`, `Dialog`, `DragHandleRow`, `Drawer`, `EmptyState`, `FormField`, `Icon`, `IconPicker`, `Input`, `Menu`, `NavTabs`, `OverlayHeader`, `PageHeader`, `Popover`, `QuantityStepper`, `SegmentedControl`, `Select`, `Sheet`, `Spinner`, `SplitPane`, `StatusBadge`, `SuggestionInput`, `SystemBanner`, `Tabs`, `TagInput`, `Textarea`, `Toast` / `useToast`, `Toggle`, `Tooltip`, `useDoubleTapHandler`, `useIsMobile`, `useLongPress`, and `useSingleOrDoubleTap`.
+Available components and hooks: `Avatar`, `Badge`, `Button`, `Calendar`, `Card`, `CheckableListRow`, `Checkbox`, `CodeTextarea`, `ConfirmDialog`, `DatePicker`, `DateRangePicker`, `Dialog`, `DragHandleRow`, `Drawer`, `EmptyState`, `FormField`, `Icon`, `IconPicker`, `Input`, `Menu`, `NavTabs`, `OverlayHeader`, `PageHeader`, `Popover`, `QuantityStepper`, `SegmentedControl`, `Select`, `Sheet`, `Spinner`, `SplitPane`, `StatusBadge`, `SuggestionInput`, `SystemBanner`, `Tabs`, `TagInput`, `Textarea`, `Toast` / `useToast`, `Toggle`, `Tooltip`, `useDoubleTapHandler`, `useIsMobile`, `useLongPress`, and `useSingleOrDoubleTap`.
 
 ### Tokens
 

@@ -1741,8 +1741,8 @@ import { DatePicker } from '@sovereignfs/ui';
 />;
 ```
 
-`Calendar` is a keyboard-navigable month grid — date-only (no time or range
-selection yet; recurrence UI stays app-side). Keyboard follows the WAI-ARIA
+`Calendar` is a keyboard-navigable month grid — date-only (no time; a range is
+`DateRangePicker`, below; recurrence UI stays app-side). Keyboard follows the WAI-ARIA
 APG grid pattern with roving tabindex: arrow keys move focus by day/week,
 Home/End jump to the start/end of the focused week, PageUp/PageDown change
 month, Enter/Space selects. `minDate`/`maxDate` disable out-of-range dates.
@@ -1761,6 +1761,31 @@ import { Calendar } from '@sovereignfs/ui';
 // using DatePicker's built-in trigger:
 <Calendar value={selected} onChange={setSelected} minDate={today} aria-label="Pick a date" />;
 ```
+
+### `DateRangePicker`
+
+```tsx
+import { DateRangePicker } from '@sovereignfs/ui';
+
+<DateRangePicker
+  value={{ start: stop.arrive, end: stop.depart }}
+  onChange={({ start, end }) => save(start, end)}
+  min={trip.startDate}
+  max={trip.endDate}
+  aria-label="Arrival and departure"
+  placeholder="Select dates"
+/>;
+```
+
+Two dates in one control, for a stay or a trip's stop. **Dates go in and come out as `YYYY-MM-DD` strings**, because the date a
+person means has no time or zone to be wrong in (`new Date('2026-05-10')` is UTC midnight, the 9th in some places); an
+unreal date (`2026-02-30`) is no value. The trigger says the range and the nights between (`10 May 2026 – 12 May 2026 · 2 nights`);
+it opens a `RangeCalendar` in a `Popover` on desktop and a bottom-sheet `Drawer` on mobile, as `DatePicker` does.
+**The first pick starts a range and the second completes it** (the earlier of the two is the start whichever came first; one day
+twice is a day with no nights); the days between are shaded as the pointer or focus moves, the nights are said in a status line,
+and `Escape` drops a range being chosen. `min` and `max` disable the days outside them. The keyboard is `Calendar`'s (the APG
+grid pattern with a roving tabindex). `onChange` is called only with a complete range. `RangeCalendar` takes `Date`s and can be
+embedded as `Calendar` can.
 
 ### `AppTile`
 

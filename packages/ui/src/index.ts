@@ -233,6 +233,10 @@ export { Calendar } from './components/Calendar/Calendar';
 export type { CalendarProps } from './components/Calendar/Calendar';
 export { DatePicker } from './components/DatePicker/DatePicker';
 export type { DatePickerProps } from './components/DatePicker/DatePicker';
+export { DateRangePicker } from './components/DateRangePicker/DateRangePicker';
+export type { DateRange, DateRangePickerProps } from './components/DateRangePicker/DateRangePicker';
+export { RangeCalendar } from './components/DateRangePicker/RangeCalendar';
+export type { RangeCalendarProps } from './components/DateRangePicker/RangeCalendar';
 export { SuggestionInput } from './components/SuggestionInput/SuggestionInput';
 export type {
   SuggestionInputProps,

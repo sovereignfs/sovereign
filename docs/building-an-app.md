@@ -89,9 +89,9 @@ with their own database and sign-in, hosted on the live instance.
 
 Every app has its own port, in its manifest, its image, its Compose files and `pnpm dev`, so the suite runs side by side on one machine:
 
-| Core | Fjord | Tusk | A new app                                                                                  |
-| ---- | ----- | ---- | ------------------------------------------------------------------------------------------ |
-| 3000 | 3001  | 3002 | The next free one (3003 onward). The app template's default is 3100; `--port N` changes it |
+| Core | Fjord | Tusk | Ledger | Tally | Waymark | Wallet | Shopper | A new app                                                                                  |
+| ---- | ----- | ---- | ------ | ----- | ------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
+| 3000 | 3001  | 3002 | 3003   | 3004  | 3005    | 3006   | 3007    | The next free one (3008 onward). The app template's default is 3100; `--port N` changes it |
 
 The port is written once, in `sovereign.manifest.json`; everything else reads it or is held to it by a test (Tusk's
 `src/deploy.test.ts`). The hosted app is given it as `PORT`.
@@ -346,7 +346,7 @@ What a plan has to decide, in this order. An agent planning one writes these ans
 
 1. **What it is**, for whom, and the user journeys. What it is not, and what of the legacy plugins it replaces.
 2. **Name and prefix** (lower case, letters and digits, a DNS label of 2–32 characters, not reserved), and **its port** (the next free
-   one after 3002; add it to §2's table).
+   one after the last in §2's table; add it there).
 3. **Alone, hosted, or both.** If both (the default for the suite): local and/or core sign-in, three database forms. If hosted only:
    the template is a start.
 4. **Sign-in**: which ways in, the scopes, sign-up default, the delete-everything function and the tables it covers.

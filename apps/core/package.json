@@ -15,8 +15,8 @@
     "db:generate:postgres": "drizzle-kit generate --config=drizzle.config.postgres.ts && node scripts/unqualify-postgres.mjs"
   },
   "dependencies": {
-    "@better-auth/oauth-provider": "1.7.13",
-    "@better-auth/passkey": "1.7.13",
+    "@better-auth/oauth-provider": "1.7.18",
+    "@better-auth/passkey": "1.7.18",
     "@sovereignfs/api-client": "workspace:*",
     "@sovereignfs/config": "workspace:*",
     "@sovereignfs/crypto": "workspace:*",
@@ -24,7 +24,7 @@
     "@sovereignfs/mailer": "workspace:*",
     "@sovereignfs/storage": "workspace:*",
     "@sovereignfs/ui": "workspace:*",
-    "better-auth": "^1.7.13",
+    "better-auth": "^1.7.18",
     "drizzle-orm": "catalog:",
     "jose": "^6.2.13",
     "next": "catalog:",

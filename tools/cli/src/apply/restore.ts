@@ -4,10 +4,12 @@ import path from 'node:path';
 import { Failed, Refused } from '../errors.js';
 import { docker, psql as runSql } from './docker.js';
 import type { Host } from './host.js';
-import { CONTAINER, CORE_DATABASE, DATABASE_ADMIN } from './names.js';
+import { CONTAINER, CORE_DATABASE, DATABASE_ADMIN, DATA_VOLUME } from './names.js';
+import { ensureDataVolume } from './files.js';
 import {
   ALL,
   databasesOf,
+  filesInScope,
   secretInScope,
   touchesCore,
   volumeInScope,
@@ -23,6 +25,8 @@ export const BACKUP = {
   globals: 'globals.sql',
   secrets: 'secrets',
   volumes: 'volumes',
+  /** `files/<name>.tar`: one tar of each folder of people's files (core and apps), RFC 0004 §6. */
+  files: 'files',
 } as const;
 const VOLUME_FILE = /^(sovereign-app-[a-z0-9-]+)_(data-[0-9]+)\.tar$/;
 
@@ -334,4 +338,54 @@ export async function markRestored(
     await run(['instance', 'deletions', 'apply'], deletions);
     await rm(deletions, { force: true });
   }
+}
+
+const FILES_TAR = /^([a-z0-9-]{1,63})\.tar$/;
+
+/**
+ * Puts back each folder of people's files the backup holds and the scope names (RFC 0004 §6): the folder is emptied and filled from its
+ * tar, and every person's usage record is removed so the store counts again on first use. It is run as root in the toolkit's image,
+ * which has `tar`. The owners are the ones of the machine the backup was taken on, so the app's own start hands them over (`ensureFilesFolder`
+ * with `recursive`). Returns the names it put back.
+ */
+export async function restoreFiles(
+  host: Host,
+  from: string,
+  image: string | undefined,
+  scope: BackupScope = ALL,
+): Promise<string[]> {
+  const folder = path.join(from, BACKUP.files);
+  if (!existsSync(folder)) return [];
+  const names = filesInScope(
+    scope,
+    (await readdir(folder)).flatMap((file) => FILES_TAR.exec(file)?.[1] ?? []),
+  );
+  if (names.length === 0) return [];
+  if (!image) {
+    throw new Refused(
+      'The backup holds people’s files, and there is no toolkit image to put them back with.',
+      'sv restore gives one.',
+    );
+  }
+  await ensureDataVolume(host);
+  for (const name of names) {
+    await docker(host, `Restoring ${name}’s files`, [
+      'run',
+      '--rm',
+      '--user',
+      '0',
+      '--entrypoint',
+      'sh',
+      '--volume',
+      `${DATA_VOLUME}:/v`,
+      '--volume',
+      `${folder}:/src:ro`,
+      image,
+      '-c',
+      'set -e; d="/v/s3/$1"; mkdir -p "$d"; find "$d" -mindepth 1 -delete; tar -C "$d" -xf "/src/$1.tar"; find "$d" -mindepth 2 -maxdepth 2 -name .usage.json -delete; chmod 0700 "$d"',
+      'sh',
+      name,
+    ]);
+  }
+  return names;
 }

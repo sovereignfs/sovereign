@@ -138,11 +138,28 @@ async function firstEntry(
   }
 }
 
-/** What an archive holds, from its `backup.json`; a backup from before it was written is the whole instance. */
-async function heldBy(stream: ReadableStream<Uint8Array>): Promise<BackupScope> {
+/** What an archive holds, from its `backup.json`; a backup from before it was written is the whole instance, with no people's files. */
+async function heldBy(
+  stream: ReadableStream<Uint8Array>,
+): Promise<{ scope: BackupScope; files: string[] }> {
   const first = await firstEntry(stream);
   if (!first) throw new Refused('The backup is empty or damaged.');
-  return first.name === MANIFEST_FILE ? readManifest(first.data.toString('utf8')).scope : ALL;
+  if (first.name !== MANIFEST_FILE) return { scope: ALL, files: [] };
+  const manifest = readManifest(first.data.toString('utf8'));
+  return { scope: manifest.scope, files: manifest.files ?? [] };
+}
+
+/** The lines `sv backup` says about people's files: what the archive holds of them, and what it does not (RFC 0004 §6). */
+function describeFiles(manifest: {
+  files?: string[];
+  elsewhere?: Record<string, string>;
+}): string[] {
+  const lines: string[] = [];
+  if (manifest.files && manifest.files.length > 0)
+    lines.push(`It holds the files people uploaded to: ${manifest.files.join(', ')}.`);
+  for (const [app, where] of Object.entries(manifest.elsewhere ?? {}))
+    lines.push(`Not in it: ${app}’s files are kept in ${where}. Back those up there.`);
+  return lines;
 }
 
 /**
@@ -252,6 +269,9 @@ export async function backup(ctx: Context, argv: string[]): Promise<void> {
       ? `Saved ${file} (${size}), in the clear. Delete it when you are done with it.`
       : `Saved ${file} (${size}), encrypted to your keys. The server cannot read it, so keep it where you would keep your key.`,
   );
+  if (first.name === MANIFEST_FILE) {
+    for (const line of describeFiles(readManifest(first.data.toString('utf8')))) ctx.io.err(line);
+  }
   if (firstBackup)
     ctx.io.err(
       `Keep a copy of ${key.file} somewhere other than this machine, offline: without it no encrypted backup can be opened. sv key recovery makes a second key for that.`,
@@ -273,7 +293,7 @@ export async function restore(ctx: Context, argv: string[]): Promise<void> {
   if (!existsSync(file)) throw new Refused(`There is no file ${file}.`);
   const asked = scopeOf({ core: args.switches.has('core'), apps: args.lists.get('app') ?? [] });
   const key = () => keyFrom(ctx, args);
-  const held = await heldBy((await plainStream(file, key)).stream);
+  const { scope: held, files: heldFiles } = await heldBy((await plainStream(file, key)).stream);
   if (!asked.all && !holds(held, asked)) {
     throw new Refused(
       `The backup holds ${describeScope(held)}, not ${describeScope(asked)}.`,
@@ -288,8 +308,8 @@ export async function restore(ctx: Context, argv: string[]): Promise<void> {
   await confirm(
     ctx.io,
     scope.all
-      ? `This replaces what ${target.host} holds with the backup: its databases, its apps’ data and its secrets, and everyone is signed out. What is there now is backed up on the server first. Go on?`
-      : `This replaces ${describeScope(scope)} on ${target.host} with the backup’s: ${scope.core ? 'core’s database and secrets' : ''}${scope.core && scope.apps.length > 0 ? ', and ' : ''}${scope.apps.length > 0 ? 'the databases, data and secrets of the apps' : ''}. ${scope.core ? 'Everyone is signed out, and secrets rotated since the backup go back to what they were in core.' : 'Core and the other apps are left as they are.'} What is there now is backed up on the server first. Go on?`,
+      ? `This replaces what ${target.host} holds with the backup: its databases, its apps’ data${heldFiles.length > 0 ? ', the files people uploaded' : ''} and its secrets, and everyone is signed out. What is there now is backed up on the server first. Go on?`
+      : `This replaces ${describeScope(scope)} on ${target.host} with the backup’s: ${scope.core ? 'core’s database and secrets' : ''}${scope.core && scope.apps.length > 0 ? ', and ' : ''}${scope.apps.length > 0 ? 'the databases, data and secrets of the apps' : ''}${heldFiles.length > 0 ? ', and the files people uploaded to them' : ''}. ${scope.core ? 'Everyone is signed out, and secrets rotated since the backup go back to what they were in core.' : 'Core and the other apps are left as they are.'} What is there now is backed up on the server first. Go on?`,
     args.switches.has('yes'),
   );
 

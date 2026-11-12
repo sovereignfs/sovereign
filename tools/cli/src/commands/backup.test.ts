@@ -252,6 +252,53 @@ describe('sv restore', () => {
   });
 });
 
+describe('sv backup and restore with people’s files', () => {
+  const manifest = (extra: object) =>
+    JSON.stringify({ format: 2, scope: { all: true }, takenAt: 'x', apps: {}, ...extra });
+
+  it('says which folders of people’s files the backup holds, and where the ones it does not hold are', async () => {
+    await ready();
+    world.ctx.remote = (
+      await backingUp(await operatorRecipient(), {
+        'backup.json': manifest({ files: ['core', 'notes'], elsewhere: { wiki: 'a bucket' } }),
+        'databases/core.sql': '--',
+      })
+    ).remote;
+    const done = await sv(world, 'backup');
+    expect(done.code).toBe(0);
+    expect(done.text).toContain('files people uploaded to: core, notes');
+    expect(done.text).toContain('wiki’s files are kept in a bucket');
+  });
+
+  it('asks before replacing people’s files, and sends the backup whole, files and all', async () => {
+    await ready();
+    const file = await backupFile(await operatorRecipient(), temp(), {
+      'backup.json': manifest({ files: ['core'] }),
+      'databases/core.sql': '--',
+      'files/core.tar': 'a tar',
+    });
+    let body = Buffer.alloc(0);
+    world.ctx.remote = async (_t, _w, options) => {
+      body = await drain(options?.inputStream);
+      return { code: 0, stdout: '', stderr: '' };
+    };
+    const asked = await sv(world, 'restore', file);
+    expect(asked.code).toBe(2);
+    expect(asked.text).toContain('the files people uploaded');
+    expect((await sv(world, 'restore', file, '--yes')).code).toBe(0);
+    expect(readArchive(splitRestore(body).backup, () => true).map((e) => e.name)).toContain(
+      'files/core.tar',
+    );
+  });
+
+  it('does not mention files for a backup that holds none', async () => {
+    await ready();
+    const file = await backupFile(await operatorRecipient(), temp());
+    world.ctx.remote = async () => ({ code: 0, stdout: '', stderr: '' });
+    expect((await sv(world, 'restore', file)).text).not.toContain('files people uploaded');
+  });
+});
+
 describe('sv restore by scope', () => {
   const manifest = (scope: object) => JSON.stringify({ format: 1, scope, takenAt: 'x', apps: {} });
 

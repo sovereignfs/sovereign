@@ -55,6 +55,8 @@ export class FakeDocker {
   imageUsers: Record<string, string> = {};
   /** The folders of people's files made in `sovereign-data`, with the owner each was given. */
   filesFolders = new Map<string, string>();
+  /** The folders a restore put back, by name, in order. */
+  restoredFiles: string[] = [];
   /** Volumes, by compose project label. */
   volumes: Record<string, string[]> = {};
   #next = 0;
@@ -175,8 +177,33 @@ export class FakeDocker {
       const args = rest.slice(rest.indexOf('-c') + 3);
       if (script.startsWith('mkdir')) this.filesFolders.set(args[0] as string, args[1] as string);
       else if (script.startsWith('rm')) this.filesFolders.delete(args[0] as string);
-      else if (script.includes('du -sk'))
-        return ok([...this.filesFolders.keys()].map((folder) => `${folder.slice(3)} 8`).join('\n'));
+      else if (script.includes('for d in'))
+        return ok(
+          [...this.filesFolders.keys()]
+            .map((folder) => (script.includes('du -sk') ? `${folder.slice(3)} 8` : folder.slice(3)))
+            .join('\n'),
+        );
+      else if (script.includes('tar -C')) {
+        // A restore of one folder: it is emptied and filled from the backup's tar, and handed to whoever is told.
+        this.restoredFiles.push(args[0] as string);
+        this.filesFolders.set(`s3/${args[0]}`, args[1] ?? '0:0');
+      }
+      return ok('');
+    }
+    // A tar made of a volume or of a folder of files: the file is written where the container would have put it.
+    if (
+      command === 'run' &&
+      rest.includes('--entrypoint') &&
+      rest[rest.indexOf('--entrypoint') + 1] === 'tar'
+    ) {
+      const mount = rest.find((word) => word.endsWith(':/target'));
+      const file = rest[rest.indexOf('-cf') + 1];
+      if (mount && file) {
+        writeFileSync(
+          path.join(mount.slice(0, -':/target'.length), file.replace('/target/', '')),
+          `tar of ${rest[rest.indexOf('-C') + 1]}`,
+        );
+      }
       return ok('');
     }
     // `docker run` is how a check is made from inside an app's network namespace.

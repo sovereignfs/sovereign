@@ -59,6 +59,7 @@ export async function receiveCommand(
     deployOnly: args.switches.has('deploy-only'),
     stateDir: stateDirOf(args.values.get('state-dir')),
     stdin: options.stdin ?? ((max) => readAll(process.stdin, max)),
+    ...(options.stdin ? {} : { stream: () => process.stdin }),
     sendFile: options.sendFile ?? sendFile,
     out: options.write ?? ((text) => void process.stdout.write(text)),
     applyFlags: [

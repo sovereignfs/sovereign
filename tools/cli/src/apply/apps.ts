@@ -200,6 +200,8 @@ export type AppRun = {
   hadClient: (name: string) => boolean;
   /** The apps that go through the pooler this run: those that declare it, when it is on (operator-cli §6.4.5). */
   pooled: ReadonlySet<string>;
+  /** The folders of people's files a restore put back this run, whose contents are handed to the app's user as it starts. */
+  restoredFiles: ReadonlySet<string>;
 };
 
 export type AppResult = State['apps'][string] & {
@@ -293,7 +295,13 @@ export async function applyHostedApp(
     await generated.ensure(`app-${name}-${variable}`, () => generated.random(48));
     secrets[variable] = `app-${name}-${variable}`;
     const helper = run.imageOverrides?.core ?? byDigest(lock.images.core);
-    await ensureFilesFolder(host, helper, name, await imageUser(host, image));
+    await ensureFilesFolder(
+      host,
+      helper,
+      name,
+      await imageUser(host, image),
+      run.restoredFiles.has(name),
+    );
   }
   const composeFile = path.join(run.release, 'apps', name, 'compose.yml');
   await mkdir(path.dirname(composeFile), { recursive: true });

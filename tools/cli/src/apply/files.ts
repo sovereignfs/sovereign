@@ -107,6 +107,8 @@ export async function ensureFilesFolder(
   helperImage: string,
   name: string,
   owner: string,
+  /** Hand over everything in it, not only the folder: after a restore, which brings back the owners of the machine it was taken on. */
+  recursive = false,
 ): Promise<void> {
   check(name);
   if (!NUMERIC_USER.test(owner)) throw new Error(`${owner} is not a uid:gid`);
@@ -115,7 +117,9 @@ export async function ensureFilesFolder(
     host,
     `Making the folder for ${name}’s files`,
     helperImage,
-    'mkdir -p "/v/$1" && chown "$2" "/v/$1" && chmod 0700 "/v/$1"',
+    recursive
+      ? 'mkdir -p "/v/$1" && chown -R "$2" "/v/$1" && chmod 0700 "/v/$1"'
+      : 'mkdir -p "/v/$1" && chown "$2" "/v/$1" && chmod 0700 "/v/$1"',
     [filesFolder(name), owner],
   );
 }
@@ -131,6 +135,23 @@ export async function removeFilesFolder(
   await inVolume(host, `Deleting ${name}’s files`, helperImage, 'rm -rf "/v/$1"', [
     filesFolder(name),
   ]);
+}
+
+/** The names of the folders there are, quickly: nothing is measured. */
+export async function filesFolders(host: Host, helperImage: string): Promise<string[]> {
+  if ((await host.docker(['volume', 'inspect', DATA_VOLUME])).code !== 0) return [];
+  const done = await inVolume(
+    host,
+    'Listing people’s files',
+    helperImage,
+    'cd /v/s3 2>/dev/null && for d in */; do [ -d "$d" ] && echo "${d%/}"; done; true',
+    [],
+    true,
+  );
+  return done.stdout
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((name) => NAME.test(name));
 }
 
 /** How many bytes each folder holds, by name. */

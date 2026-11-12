@@ -1,4 +1,5 @@
 import { existsSync, readlinkSync } from 'node:fs';
+import { Readable } from 'node:stream';
 import { cp, mkdir, readFile, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { byDigest } from '../apply/render.js';
@@ -25,7 +26,14 @@ import {
 import { SuiteFile, readLock } from '../suite/files.js';
 import { DEPLOY_ONLY, parseRequest, type Request } from './request.js';
 import { IMAGE_BY_DIGEST } from './image.js';
-import { MAX_ARCHIVE_BYTES, extract, readArchive, splitRestore } from './tar.js';
+import {
+  ChunkReader,
+  MAX_ARCHIVE_BYTES,
+  extract,
+  extractStream,
+  readArchive,
+  takeRestoreFrame,
+} from './tar.js';
 
 /** The server's side of the operator's commands (operator-cli §8): what the wrapper installed by `sv server bootstrap` starts. */
 export interface ReceiverHost extends Host {
@@ -42,6 +50,8 @@ export type ReceiveOptions = {
   stdin: (max: number) => Promise<Buffer>;
   /** Standard output: what the request answers. */
   out: (text: string) => void;
+  /** Standard input as a stream, for a restore, which may be of any size. Without it `stdin` is used. */
+  stream?: () => AsyncIterable<Uint8Array>;
   /** Sends a file to standard output as it is, for a backup. */
   sendFile?: (file: string) => Promise<void>;
   /** Used by a test that runs a locally built image. Nothing in the toolkit sets it. */
@@ -207,7 +217,11 @@ export const isBackupPath = (name: string) =>
   /^databases\/[a-z0-9_]{1,63}\.sql$/.test(name) ||
   name === 'state.json' ||
   /^secrets\/[A-Za-z0-9_.-]{1,128}$/.test(name) ||
-  /^volumes\/sovereign-app-[a-z0-9-]+_data-[0-9]+\.tar$/.test(name);
+  /^volumes\/sovereign-app-[a-z0-9-]+_data-[0-9]+\.tar$/.test(name) ||
+  /^files\/[a-z0-9-]{1,63}\.tar$/.test(name);
+/** What a stream may leave free on the server's disk while a backup is being received (operator-cli §10.2). */
+const MIN_FREE_WHILE_RECEIVING = 1024 ** 3;
+/** Only when the restore is handed over as a buffer, which a test does: the real one is a stream with no limit but the disk's. */
 const MAX_RESTORE_BYTES = 1024 ** 3;
 
 /** `sv restore`: the deployment's files and the backup arrive together; `sv apply` brings the instance to the commit and puts the data back. */
@@ -220,53 +234,73 @@ async function restore(
   await requireIdle(host);
   const incoming = path.join(options.stateDir, 'incoming');
   await rm(incoming, { recursive: true, force: true });
-  const sent = splitRestore(await options.stdin(MAX_RESTORE_BYTES));
-  const backup = readArchive(sent.backup, isBackupPath, {
-    maxBytes: MAX_RESTORE_BYTES,
-    stripDot: true,
-  });
-  const manifest = backup.find((entry) => entry.name === MANIFEST_FILE);
-  // A backup from before backup.json was written holds the whole instance, in one dump.
-  const held = manifest ? readManifest(manifest.data.toString('utf8')).scope : ALL;
-  const dumps = backup.filter(
-    (entry) => entry.name === 'databases.sql' || entry.name.startsWith('databases/'),
-  );
-  if (dumps.length === 0)
-    throw new Refused('The backup holds no databases.', 'This is not a backup taken by sv backup.');
-  const scope = asked ?? held;
-  if (!holds(held, scope)) {
-    throw new Refused(
-      `The backup holds ${describeScope(held)}, not ${describeScope(scope)}.`,
-      'Restore what it holds, or choose a backup that holds the rest.',
+  // The backup is written to disk as it arrives and never held, so it may be of any size (operator-cli §10.2). What was written when
+  // something is wrong is removed at once rather than left to fill the disk until the next deployment.
+  try {
+    const reader = new ChunkReader(
+      options.stream ? options.stream() : Readable.from(await options.stdin(MAX_RESTORE_BYTES)),
     );
-  }
-  if (!scope.all && dumps.some((entry) => entry.name === 'databases.sql')) {
-    throw new Refused(
-      'This backup holds every database in one dump, so it can only be restored whole.',
-      'Restore it without --core or --app.',
+    const { deployment } = await takeRestoreFrame(reader);
+    const { dir, pinned, files } = await unpack(options, commit, deployment);
+    const data = path.join(incoming, 'restore');
+    await mkdir(data, { recursive: true, mode: 0o700 });
+    const received = await extractStream(reader, data, {
+      allowed: isBackupPath,
+      // state.json is in the backup for a person to read; the restore makes its own, from the files it applies.
+      skip: (name) => name === 'state.json',
+      stripDot: true,
+      guard: async () => {
+        if ((await host.freeBytes(options.stateDir)) < MIN_FREE_WHILE_RECEIVING) {
+          throw new Refused(
+            'There is not enough room on the server to receive this backup.',
+            'Free some disk space, then run sv restore again.',
+          );
+        }
+      },
+    });
+    const names = new Set(received.names);
+    // A backup from before backup.json was written holds the whole instance, in one dump.
+    const held = names.has(MANIFEST_FILE)
+      ? readManifest(await readFile(path.join(data, MANIFEST_FILE), 'utf8')).scope
+      : ALL;
+    const dumps = received.names.filter(
+      (name) => name === 'databases.sql' || name.startsWith('databases/'),
     );
+    if (dumps.length === 0)
+      throw new Refused(
+        'The backup holds no databases.',
+        'This is not a backup taken by sv backup.',
+      );
+    const scope = asked ?? held;
+    if (!holds(held, scope)) {
+      throw new Refused(
+        `The backup holds ${describeScope(held)}, not ${describeScope(scope)}.`,
+        'Restore what it holds, or choose a backup that holds the rest.',
+      );
+    }
+    if (!scope.all && names.has('databases.sql')) {
+      throw new Refused(
+        'This backup holds every database in one dump, so it can only be restored whole.',
+        'Restore it without --core or --app.',
+      );
+    }
+    options.out(
+      `Received ${files} files for ${commit.slice(0, 12)} and a backup of ${received.names.length} files.\n`,
+    );
+    return await launch(host, options, {
+      commit,
+      dir,
+      pinned,
+      extra: [
+        '--restore-from',
+        data,
+        ...(scope.all ? [] : ['--restore-scope', ...scopeWords(scope)]),
+      ],
+    });
+  } catch (error) {
+    await rm(incoming, { recursive: true, force: true });
+    throw error;
   }
-  const { dir, pinned, files } = await unpack(options, commit, sent.deployment);
-  const data = path.join(incoming, 'restore');
-  await mkdir(data, { recursive: true, mode: 0o700 });
-  // state.json is in the backup for a person to read; the restore makes its own, from the files it applies.
-  await extract(
-    backup.filter((entry) => entry.name !== 'state.json'),
-    data,
-  );
-  options.out(
-    `Received ${files} files for ${commit.slice(0, 12)} and a backup of ${backup.length} files.\n`,
-  );
-  return launch(host, options, {
-    commit,
-    dir,
-    pinned,
-    extra: [
-      '--restore-from',
-      data,
-      ...(scope.all ? [] : ['--restore-scope', ...scopeWords(scope)]),
-    ],
-  });
 }
 
 /** `sv rollback`: applies the previous release's files again (operator-cli §10.3), unless core would go backward. */

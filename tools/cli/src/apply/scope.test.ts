@@ -52,7 +52,7 @@ describe('a scope', () => {
   });
 
   it('refuses a backup.json it does not know, and an app name that is not one', () => {
-    expect(() => readManifest('{"format":2}')).toThrow(/newer toolkit/);
+    expect(() => readManifest('{"format":3}')).toThrow(/newer toolkit/);
     expect(() => readManifest('not json')).toThrow(Refused);
     expect(() =>
       readManifest('{"format":1,"scope":{"all":false,"core":false,"apps":["../x"]}}'),

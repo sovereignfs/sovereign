@@ -43,6 +43,7 @@ import {
   loadDatabases,
   loadScopedDatabases,
   markRestored,
+  restoreFiles,
   restoreSecrets,
   restoreVolumes,
   saveDeletions,
@@ -185,6 +186,8 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
   // A restore (operator-cli §10.2) first stops what runs and keeps what must survive it: a copy of what is there now, and the people deleted
   // since the backup. The backup’s secrets go in before any is made, since the passwords in its dump are the ones they hold.
   let deletions: string | undefined;
+  /** The folders of people's files a restore put back, which each start hands to its app's user. */
+  let restoredFiles: string[] = [];
   const restoreScope = options.restoreScope ?? ALL;
   if (options.restoreFrom) {
     // What is there now of what is about to be replaced: an app the server does not run yet has nothing to keep.
@@ -313,7 +316,15 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
       options.toolkitImage,
       restoreScope,
     );
-    say(`The databases and ${volumes} data volume${volumes === 1 ? '' : 's'} are back.`);
+    restoredFiles = await restoreFiles(
+      host,
+      options.restoreFrom,
+      options.toolkitImage,
+      restoreScope,
+    );
+    say(
+      `The databases, ${volumes} data volume${volumes === 1 ? '' : 's'} and ${restoredFiles.length} folder${restoredFiles.length === 1 ? '' : 's'} of people’s files are back.`,
+    );
   }
   await ensureDatabase(
     host,
@@ -385,7 +396,13 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
 
   // Core's folder of people's files, made before core mounts it and owned by the user core runs as (core-app §4.6).
   const coreImage = options.imageOverrides?.core ?? byDigest(lock.images.core);
-  await ensureFilesFolder(host, coreImage, 'core', await imageUser(host, coreImage));
+  await ensureFilesFolder(
+    host,
+    coreImage,
+    'core',
+    await imageUser(host, coreImage),
+    restoredFiles.includes('core'),
+  );
   await composeUp(host, {
     project: PROJECT.core,
     files: [path.join(release, 'core', 'compose.yml'), ...(overrides.files.core ?? [])],
@@ -431,6 +448,7 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
     overrideFiles: (name) => overrides.files[name] ?? [],
     operatorSecrets,
     hadClient: (name) => Boolean(state?.apps?.[name]?.clientId),
+    restoredFiles: new Set(restoredFiles),
   };
   const results: Record<string, AppResult> = {};
   const failures: { name: string; message: string }[] = [];

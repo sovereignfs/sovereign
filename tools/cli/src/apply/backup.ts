@@ -8,12 +8,14 @@ import { Encrypter, identityToRecipient } from 'age-encryption';
 import { Failed, Refused } from '../errors.js';
 import { docker, psql } from './docker.js';
 import type { Host } from './host.js';
-import { CONTAINER, DATABASE_ADMIN } from './names.js';
+import { filesFolders } from './files.js';
+import { CONTAINER, DATABASE_ADMIN, DATA_VOLUME, filesFolder } from './names.js';
 import { BACKUP } from './restore.js';
 import {
   ALL,
   MANIFEST_FILE,
   databasesOf,
+  filesInScope,
   scopeLabel,
   secretInScope,
   volumeInScope,
@@ -42,6 +44,8 @@ export async function takeBackup(
     image?: string;
     /** What to take; the whole instance when it is not given. */
     scope?: BackupScope;
+    /** Apps whose files are kept in a store of their own, which the archive does not hold, and where each is (RFC 0004 §6). */
+    elsewhere?: Record<string, string>;
   },
 ): Promise<string> {
   const scope = input.scope ?? ALL;
@@ -69,11 +73,16 @@ export async function takeBackup(
     `${stamp}-${input.reason}${scope.all ? '' : `-${scopeLabel(scope)}`}.tar.age`,
   );
   try {
+    const folders = input.image ? filesInScope(scope, await filesFolders(host, input.image)) : [];
     const manifest: BackupManifest = {
-      format: 1,
+      format: 2,
       scope,
       takenAt: new Date(host.now()).toISOString(),
       ...(state?.core?.version ? { core: state.core.version } : {}),
+      files: folders,
+      ...(input.elsewhere && Object.keys(input.elsewhere).length > 0
+        ? { elsewhere: input.elsewhere }
+        : {}),
       apps: Object.fromEntries(
         Object.entries(state?.apps ?? {}).flatMap(([name, app]) =>
           app.version && (scope.all || scope.apps.includes(name)) ? [[name, app.version]] : [],
@@ -104,6 +113,7 @@ export async function takeBackup(
     }
     if (existsSync(paths.state)) await cp(paths.state, path.join(work, 'state.json'));
     if (input.image) await copyVolumes(host, input.image, work, scope);
+    if (input.image) await copyFiles(host, input.image, work, folders);
     if (existsSync(paths.secrets)) {
       await mkdir(path.join(work, BACKUP.secrets), { mode: 0o700 });
       for (const name of await readdir(paths.secrets)) {
@@ -209,6 +219,41 @@ async function copyVolumes(
       '/source',
       '-cf',
       `/target/${volume}.tar`,
+      '.',
+    ]);
+  }
+}
+
+/**
+ * Copies each folder of people's files to `<work>/files/<name>.tar`, through a container of the toolkit's image that mounts the shared
+ * volume read only (RFC 0004 §6). Like an app's data volume it is copied while the apps run, as consistent as a crash would leave it,
+ * and the tar keeps who owns what, so a restore on the same machine puts it back as it was.
+ */
+async function copyFiles(
+  host: Host,
+  image: string,
+  work: string,
+  folders: string[],
+): Promise<void> {
+  if (folders.length === 0) return;
+  await mkdir(path.join(work, BACKUP.files), { recursive: true, mode: 0o700 });
+  for (const name of folders) {
+    await docker(host, `Copying ${name}’s files`, [
+      'run',
+      '--rm',
+      '--user',
+      '0',
+      '--entrypoint',
+      'tar',
+      '--volume',
+      `${DATA_VOLUME}:/source:ro`,
+      '--volume',
+      `${path.join(work, BACKUP.files)}:/target`,
+      image,
+      '-C',
+      `/source/${filesFolder(name)}`,
+      '-cf',
+      `/target/${name}.tar`,
       '.',
     ]);
   }

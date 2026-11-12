@@ -474,6 +474,83 @@ describe('a rollback', () => {
   });
 });
 
+describe('a restore that carries people’s files', () => {
+  const idle = (args: string[]) =>
+    args[0] === 'inspect' ? { stdout: 'false\n' } : args[0] === 'wait' ? { stdout: '0\n' } : {};
+  const archiveOf2 = async (names: Record<string, string>) => {
+    const { archive } = await archiveOf();
+    return joinRestore(archive, makeArchive(names));
+  };
+
+  it('keeps each folder of files as the tar it is in the backup, for sv apply to put back', async () => {
+    const body = await archiveOf2({
+      './backup.json': JSON.stringify({
+        format: 2,
+        scope: { all: true },
+        takenAt: 'x',
+        apps: {},
+        files: ['core', 'notes'],
+      }),
+      './databases/core.sql': '--',
+      './files/core.tar': 'tar of core’s files',
+      './files/notes.tar': 'tar of notes’ files',
+    });
+    const dir = stateDir();
+    const { host, calls } = receiver(idle);
+    const { options: o } = options(dir, `restore ${commit}`, { stdin: async () => body });
+    expect(await receive(host, o)).toBe(0);
+    expect(readFileSync(path.join(dir, 'incoming', 'restore', 'files', 'notes.tar'), 'utf8')).toBe(
+      'tar of notes’ files',
+    );
+    expect(calls.some((c) => c.includes('--restore-from'))).toBe(true);
+  });
+
+  it('reads a restore from a stream, in pieces of any size, so none of it is held', async () => {
+    const body = await archiveOf2({
+      './databases/core.sql': '--',
+      './files/core.tar': 'x'.repeat(100_000),
+    });
+    async function* pieces() {
+      for (let at = 0; at < body.length; at += 997) yield body.subarray(at, at + 997);
+    }
+    const dir = stateDir();
+    const { host } = receiver(idle);
+    const { options: o } = options(dir, `restore ${commit}`, {
+      stdin: () => Promise.reject(new Error('read it all at once')),
+    });
+    expect(await receive(host, { ...o, stream: pieces })).toBe(0);
+    expect(
+      readFileSync(path.join(dir, 'incoming', 'restore', 'files', 'core.tar'), 'utf8'),
+    ).toHaveLength(100_000);
+  });
+
+  it('removes what it received when the backup is refused, so nothing is left to fill the disk', async () => {
+    const body = await archiveOf2({
+      './backup.json': JSON.stringify({
+        format: 1,
+        scope: { all: false, core: false, apps: ['notes'] },
+        takenAt: 'x',
+        apps: {},
+      }),
+      './databases/app_notes.sql': '--',
+      './files/notes.tar': 'x'.repeat(5000),
+    });
+    const dir = stateDir();
+    const { host, calls } = receiver(idle);
+    const { options: o } = options(dir, `restore ${commit} core`, { stdin: async () => body });
+    await expect(receive(host, o)).rejects.toThrow(/holds notes, not core/);
+    expect(existsSync(path.join(dir, 'incoming'))).toBe(false);
+    expect(calls.some((c) => c[0] === 'run')).toBe(false);
+  });
+
+  it('refuses a file in the backup that is not one a backup holds, as it arrives', async () => {
+    const body = await archiveOf2({ './databases/core.sql': '--', './files/../x.tar': 'y' });
+    const { host } = receiver(idle);
+    const { options: o } = options(stateDir(), `restore ${commit}`, { stdin: async () => body });
+    await expect(receive(host, o)).rejects.toThrow(/not allowed|not an instance file/);
+  });
+});
+
 describe('a restore by scope', () => {
   const idle = (args: string[]) =>
     args[0] === 'inspect' ? { stdout: 'false\n' } : args[0] === 'wait' ? { stdout: '0\n' } : {};
@@ -525,7 +602,7 @@ describe('a restore by scope', () => {
 
   it('refuses a backup taken by a newer toolkit', async () => {
     const { run } = await restoreWith(`restore ${commit}`, {
-      'backup.json': JSON.stringify({ format: 2 }),
+      'backup.json': JSON.stringify({ format: 3 }),
       'databases/core.sql': '--',
     });
     await expect(run()).rejects.toThrow(/newer toolkit/);

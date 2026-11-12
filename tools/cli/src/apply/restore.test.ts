@@ -13,7 +13,9 @@ afterEach(() => {
 });
 
 /** A backup as it is unpacked on the server: the dump, the generated secrets and an app's data. */
-function unpacked(extra: { volumes?: string[]; secrets?: Record<string, string> } = {}) {
+function unpacked(
+  extra: { volumes?: string[]; secrets?: Record<string, string>; files?: string[] } = {},
+) {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'sv-backup-'));
   cleanup.push(dir);
   writeFileSync(path.join(dir, 'databases.sql'), 'CREATE ROLE core;\n');
@@ -24,6 +26,10 @@ function unpacked(extra: { volumes?: string[]; secrets?: Record<string, string> 
     ...extra.secrets,
   }))
     writeFileSync(path.join(dir, 'secrets', name), value);
+  if (extra.files) {
+    mkdirSync(path.join(dir, 'files'));
+    for (const name of extra.files) writeFileSync(path.join(dir, 'files', `${name}.tar`), 'tar');
+  }
   if (extra.volumes) {
     mkdirSync(path.join(dir, 'volumes'));
     for (const name of extra.volumes) writeFileSync(path.join(dir, 'volumes', name), 'tar');
@@ -340,5 +346,85 @@ describe('a restore by scope', () => {
     ).toBe(true);
     // Nothing of notes ran here before, so there was nothing to keep.
     expect(readdirSync(path.join(made.stateDir, 'backups'))).toEqual([]);
+  });
+});
+
+describe('a restore that carries people’s files', () => {
+  async function running() {
+    const made = await source();
+    const docker = new FakeDocker();
+    const { host } = fakeHost({ docker });
+    await apply(host, { ...options(made, '' as never), restoreFrom: undefined });
+    return { made, docker, host };
+  }
+  const tars = (docker: FakeDocker) =>
+    docker.calls.filter((c) => c.args.join(' ').includes('tar -C'));
+
+  it('puts each folder back from its tar, before core starts, and empties what was there', async () => {
+    const { made, docker, host } = await running();
+    docker.calls = [];
+    await apply(
+      host,
+      options(made, unpacked({ files: ['core', 'notes'] }), { commit: 'b'.repeat(40) }),
+    );
+    expect(docker.restoredFiles).toEqual(['core', 'notes']);
+    const [restored = -1, coreUp = -1] = order(docker, 'tar -C', 'sovereign-core');
+    expect(restored).toBeGreaterThan(-1);
+    expect(restored).toBeLessThan(coreUp);
+    const script = tars(docker)[0]?.args.join(' ') ?? '';
+    expect(script).toContain('find "$d" -mindepth 1 -delete');
+    expect(script).toContain('-name .usage.json -delete');
+    expect(script).toContain('--volume sovereign-data:/v');
+    expect(script).toContain(':/src:ro');
+  });
+
+  it('hands every file of a restored folder to the user the app runs as, and only the restored ones', async () => {
+    const { made, docker, host } = await running();
+    docker.calls = [];
+    await apply(host, options(made, unpacked({ files: ['core'] }), { commit: 'b'.repeat(40) }));
+    const owned = docker.calls
+      .map((c) => c.args.join(' '))
+      .filter((c) => c.includes('mkdir -p "/v/$1"'));
+    expect(owned.some((c) => c.includes('chown -R'))).toBe(true);
+    // Without a restore the same step hands over the folder alone, which is cheap when it holds a great deal.
+    docker.calls = [];
+    await apply(host, {
+      ...options(made, '' as never),
+      restoreFrom: undefined,
+      commit: 'c'.repeat(40),
+    });
+    expect(docker.calls.map((c) => c.args.join(' ')).some((c) => c.includes('chown -R'))).toBe(
+      false,
+    );
+  });
+
+  it('puts back only the folders of the scope: core’s with core, an app’s with that app', async () => {
+    const { made, docker, host } = await running();
+    await apply(
+      host,
+      options(made, unpacked({ files: ['core', 'notes', 'tasks'] }), {
+        commit: 'b'.repeat(40),
+        restoreScope: { all: false, core: false, apps: ['notes'] },
+      }),
+    );
+    expect(docker.restoredFiles).toEqual(['notes']);
+  });
+
+  it('puts back nothing of the kind when the backup holds no files, as a backup from before did', async () => {
+    const { made, docker, host } = await running();
+    await apply(host, options(made, unpacked(), { commit: 'b'.repeat(40) }));
+    expect(docker.restoredFiles).toEqual([]);
+  });
+
+  it('refuses, rather than skip them, when it has no image to put them back with', async () => {
+    const { made, host } = await running();
+    const failure = await apply(
+      host,
+      options(made, unpacked({ files: ['core'] }), {
+        commit: 'b'.repeat(40),
+        toolkitImage: undefined,
+      }),
+    ).catch((e: unknown) => e);
+    expect((failure as Error).message).toContain('no toolkit image');
   });
 });

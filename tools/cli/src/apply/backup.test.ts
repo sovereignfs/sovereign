@@ -185,7 +185,7 @@ describe('a backup by scope', () => {
     const dir = folders.at(-1) as string;
     const manifest = JSON.parse(readFileSync(path.join(dir, 'backup.json'), 'utf8'));
     expect(manifest).toMatchObject({
-      format: 1,
+      format: 2,
       scope: { all: true },
       core: '0.90.0',
       apps: { notes: '1.2.0', tasks: '2.0.0' },
@@ -258,5 +258,96 @@ describe('a backup by scope', () => {
       expect((error as Refused).message).toContain(name);
     }
     expect(existsSync(path.join(made.stateDir, 'backups'))).toBe(false);
+  });
+});
+
+describe('a backup that carries people’s files', () => {
+  async function withFiles() {
+    const found = await server();
+    found.docker.volumes['sovereign-data'] = ['sovereign-data'];
+    found.docker.filesFolders.set('s3/core', '1000:1000');
+    found.docker.filesFolders.set('s3/notes', '1000:1000');
+    found.docker.filesFolders.set('s3/tasks', '1000:1000');
+    writeFileSync(
+      path.join(found.made.stateDir, 'state.json'),
+      JSON.stringify({
+        schema: 1,
+        core: { version: '0.90.0' },
+        apps: {
+          notes: { kind: 'hosted', database: 'app_notes', role: 'app_notes', version: '1.0.0' },
+          tasks: { kind: 'hosted', database: 'app_tasks', role: 'app_tasks', version: '1.0.0' },
+        },
+      }),
+    );
+    found.docker.databases = ['app_notes', 'app_tasks', 'core'];
+    return found;
+  }
+  const take = (
+    found: Awaited<ReturnType<typeof withFiles>>,
+    scope?: { all: false; core: boolean; apps: string[] },
+    extra: { elsewhere?: Record<string, string> } = {},
+  ) =>
+    takeBackup(found.host, {
+      stateDir: found.made.stateDir,
+      recipients: found.made.suite.secrets.recipients,
+      reason: 'manual',
+      image: 'sv-cli:test',
+      ...(scope ? { scope } : {}),
+      ...extra,
+    });
+  const manifestIn = async (file: string, identity: string) => {
+    await open(file, identity);
+    return JSON.parse(readFileSync(path.join(folders.at(-1) as string, 'backup.json'), 'utf8'));
+  };
+
+  it('holds a tar of every folder for the whole instance, and says which in backup.json', async () => {
+    const found = await withFiles();
+    const file = await take(found);
+    const entries = await open(file, found.made.operator.identity);
+    expect(entries).toEqual(
+      expect.arrayContaining(['files/core.tar', 'files/notes.tar', 'files/tasks.tar']),
+    );
+    const manifest = await manifestIn(file, found.made.operator.identity);
+    expect(manifest).toMatchObject({ format: 2, files: ['core', 'notes', 'tasks'] });
+    // Taken through the toolkit's image, with the volume read only, so nothing can change in it.
+    const copied = found.docker.calls.filter((c) => c.args.join(' ').includes('/target/core.tar'));
+    expect(copied[0]?.args.join(' ')).toContain('sovereign-data:/source:ro');
+    expect(copied[0]?.args.join(' ')).toContain('-C /source/s3/core');
+  });
+
+  it('holds only core’s folder for --core, and only the named apps’ for --app', async () => {
+    const found = await withFiles();
+    const core = await open(
+      await take(found, { all: false, core: true, apps: [] }),
+      found.made.operator.identity,
+    );
+    expect(core.filter((e) => e.startsWith('files/'))).toEqual(['files/core.tar']);
+    const apps = await open(
+      await take(found, { all: false, core: false, apps: ['notes'] }),
+      found.made.operator.identity,
+    );
+    expect(apps.filter((e) => e.startsWith('files/'))).toEqual(['files/notes.tar']);
+  });
+
+  it('holds no files for an app that has no folder, and names where the files of one kept elsewhere are', async () => {
+    const found = await withFiles();
+    found.docker.filesFolders.delete('s3/tasks');
+    const file = await take(found, undefined, { elsewhere: { wiki: 's3 bucket files.example' } });
+    const manifest = await manifestIn(file, found.made.operator.identity);
+    expect(manifest.files).toEqual(['core', 'notes']);
+    expect(manifest.elsewhere).toEqual({ wiki: 's3 bucket files.example' });
+  });
+
+  it('holds no files without the toolkit’s image, as before it could carry any', async () => {
+    const found = await withFiles();
+    const file = await takeBackup(found.host, {
+      stateDir: found.made.stateDir,
+      recipients: found.made.suite.secrets.recipients,
+      reason: 'x',
+    });
+    expect(
+      (await open(file, found.made.operator.identity)).some((e) => e.startsWith('files/')),
+    ).toBe(false);
+    expect((await manifestIn(file, found.made.operator.identity)).files).toEqual([]);
   });
 });

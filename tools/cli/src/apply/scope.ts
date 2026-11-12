@@ -15,12 +15,17 @@ const APP_NAME = /^[a-z][a-z0-9-]{0,30}[a-z0-9]$/;
 export const MANIFEST_FILE = 'backup.json';
 
 export type BackupManifest = {
-  format: 1;
+  /** 2 since backups carry people's files; 1 is read as before, with none (operator-cli §10.2). */
+  format: 1 | 2;
   scope: BackupScope;
   takenAt: string;
   /** Core's version and each hosted app's when the backup was taken, as `state.json` recorded them. */
   core?: string;
   apps: Record<string, string>;
+  /** The folders of people's files the archive holds, as `files/<name>.tar`: `core` and apps. Absent in format 1. */
+  files?: string[];
+  /** Apps whose files are kept in a store of their own (`s3`, `git`) and so are not in the archive, with where each is. */
+  elsewhere?: Record<string, string>;
 };
 
 /** A scope of core and apps, checked; none named is the whole instance. */
@@ -138,6 +143,15 @@ export function volumeInScope(scope: BackupScope, volume: string): boolean {
   return scope.apps.some((name) => volume.startsWith(`sovereign-app-${name}_data-`));
 }
 
+/** The folders of people's files a scope holds, out of those there are: all of them, or core's and the named apps' (RFC 0004 §6). */
+export function filesInScope(scope: BackupScope, existing: readonly string[]): string[] {
+  if (scope.all) return [...existing].sort();
+  const wanted = new Set([...(scope.core ? ['core'] : []), ...scope.apps]);
+  return existing.filter((name) => wanted.has(name)).sort();
+}
+
+const FOLDER = /^[a-z0-9-]{1,63}$/;
+
 /** Reads `backup.json`, refusing one this toolkit does not know. */
 export function readManifest(text: string): BackupManifest {
   let parsed: unknown;
@@ -147,13 +161,18 @@ export function readManifest(text: string): BackupManifest {
     throw new Refused('The backup’s backup.json cannot be read.', 'The backup may be damaged.');
   }
   const value = parsed as Partial<BackupManifest> | null;
-  if (value?.format !== 1) {
+  if (value?.format !== 1 && value?.format !== 2) {
     throw new Refused(
       'The backup was taken by a newer toolkit than this one.',
       'Run sv upgrade, then restore it.',
     );
   }
   const scope = value.scope as Partial<{ all: boolean; core: boolean; apps: string[] }> | undefined;
+  // What names a folder is checked here, since a name from a backup ends up in a path on the server.
+  const files = Array.isArray(value.files)
+    ? value.files.filter((name): name is string => typeof name === 'string' && FOLDER.test(name))
+    : undefined;
+  if (files) (value as BackupManifest).files = files;
   if (scope?.all === true) return { ...(value as BackupManifest), scope: ALL };
   if (scope?.all !== false || !Array.isArray(scope.apps)) {
     throw new Refused('The backup’s backup.json does not say what it holds.');

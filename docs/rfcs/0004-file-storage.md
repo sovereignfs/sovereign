@@ -136,7 +136,7 @@ else, where the store allows it.
 - **Manifest 3** adds `"storage": true`. A toolkit that reads 3 reads 1 and 2 as before, and an app with `storage` has no `data` path
   at `/data/s3`.
 - For an app with `storage`, `sv apply` gives it `<PREFIX>_STORAGE_DRIVER` (default `fs`), `_STORAGE_PATH`, `_STORAGE_QUOTA_MB` and
-  `_STORAGE_FILE_QUOTA` (defaults `1024` and `10000`, changed under the app's `env` in `suite.yml`), and generates
+  `_STORAGE_FILE_QUOTA` (defaults `204800`, which is 200 GB, and `1000`, changed under the app's `env` in `suite.yml`), and generates
   `_STORAGE_SIGNING_KEY`. The `s3` variables are the operator's, under the app's `env` and secrets.
 - `contracts/env.md` names these variables as shared, like `<PREFIX>_POSTGRES_URL`.
 
@@ -148,7 +148,7 @@ else, where the store allows it.
   user the app's image runs as (`Config.User` when it is numeric, otherwise `id -u` run in the image), and mounts it with `subpath`.
 - Purging an app (§6.2) deletes `s3/<app>` after the backup it already takes.
 - `sv status` shows how much of `sovereign-data` each app's folder holds.
-- The minimum Docker Engine rises to 26 for `subpath`, unless the tasks settle on bind mounts for older engines (research 0005).
+- The minimum Docker Engine rises from 24 to 26, for `subpath`; `sv apply` and `sv doctor` refuse an older engine and say so.
 
 **`sv backup`** (operator-cli §10.2)
 
@@ -234,11 +234,14 @@ Each phase is one task and ships on its own.
 5. **`s3`.**
 6. **`git`.**
 
-## Open questions
+## Settled in review
 
-- Raise the minimum Docker Engine to 26, or keep bind mounts for older engines?
-- Is `forward_auth` worth it in the first version, or only when large downloads show the cost?
-- The default quotas: 1 GiB and 10 000 files per person in each app?
+- **Docker Engine 26 is the minimum,** for `subpath`. There is no fallback to bind mounts.
+- **The app serves its files itself in the first version.** Caddy's `forward_auth`, where the app says yes and the proxy sends the bytes,
+  is left until large downloads show a cost that is measured: it adds a second request per download and a rule in the proxy for every
+  app, for a saving nobody has seen yet. The download route streams, so a large file does not sit in memory.
+- **The default quotas are 200 GB and 1000 files** per person in each app (`<PREFIX>_STORAGE_QUOTA_MB=204800`,
+  `<PREFIX>_STORAGE_FILE_QUOTA=1000`).
 
 ## Decision requested
 

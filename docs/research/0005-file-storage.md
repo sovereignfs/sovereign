@@ -107,15 +107,20 @@ Core writing into an app's folder, and an operator changing a quota from the Con
 - **Encrypting files at rest** beyond what the disk or the store does.
 - **Files moved between drivers** when an operator changes `STORAGE_DRIVER`: an app starts empty on the new one until a command exists.
 
+## Settled in review
+
+- The toolkit's minimum Docker Engine rises to 26 for `subpath`; option C is not kept for older engines.
+- The app serves files itself at first; `forward_auth` waits until large downloads show a measured cost.
+- The default quotas are 200 GB and 1000 files per person in each app.
+
 ## To settle in the tasks
 
-- Whether to raise the toolkit's minimum Docker Engine to 26 for `subpath`, or fall back to option C on older engines.
 - How `sv apply` learns the user an image runs as, to own the app's folder: `Config.User` when it is numeric, otherwise `id -u` run in
   the image.
-- Whether `forward_auth` is worth it in the first version, or a later one when large files show the cost.
 
 ## Changelog
 
-| Date       | Change  |
-| ---------- | ------- |
-| 2026-11-12 | Written |
+| Date       | Change                                                     |
+| ---------- | ---------------------------------------------------------- |
+| 2026-11-12 | Written                                                    |
+| 2026-11-12 | Settled the minimum engine, serving and the default quotas |

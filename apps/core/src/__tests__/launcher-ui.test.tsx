@@ -149,6 +149,7 @@ describe('the launcher', () => {
     expect(links).toHaveLength(4);
     expect(links[3]?.textContent).toContain('Add an app');
     expect(links[3]?.className).toContain('ghost');
+    expect(links[3]?.textContent).toContain('sovereign');
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'not' } });
     expect(screen.queryByRole('link', { name: /Add an app/ })).toBeNull();
     rerender(<Launcher title="Apps" subtitle="Choose an app." apps={APPS} canAddApps={false} />);

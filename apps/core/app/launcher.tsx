@@ -144,6 +144,7 @@ export function Launcher({
               name="Add an app"
               description="Register one for this instance"
               icon={<Icon name="plus" size="lg" aria-hidden={true} />}
+              tags={KIND.sovereign}
             />
           ) : null}
         </CardTileGrid>

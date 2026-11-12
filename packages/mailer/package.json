@@ -23,8 +23,8 @@
     "@types/nodemailer": "catalog:",
     "@types/react": "catalog:",
     "@types/smtp-server": "^3.5.13",
-    "mailparser": "^3.12.0",
-    "smtp-server": "^3.21.0",
+    "mailparser": "^3.14.2",
+    "smtp-server": "^3.21.3",
     "tsup": "catalog:",
     "typescript": "catalog:"
   },

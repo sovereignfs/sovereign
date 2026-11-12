@@ -44,16 +44,16 @@ catalog:
   react-dom: ^19.3.1
   '@types/react': ^19.3.0
   '@types/react-dom': ^19.3.0
-  vitest: ^5.0.5
+  vitest: ^5.1.0
   turbo: ^2.11.10
   tsx: ^4.23.15
   jiti: ^2.7.0
-  eslint: ^10.13.0
+  eslint: ^10.14.0
   '@eslint/js': ^10.0.1
-  typescript-eslint: ^8.72.0
+  typescript-eslint: ^8.72.1
   eslint-config-prettier: ^10.1.8
   eslint-plugin-jsx-a11y: ^6.10.2
-  globals: ^17.13.0
+  globals: ^17.14.0
   prettier: ^3.9.10
   lint-staged: ^17.6.0
   simple-git-hooks: ^2.14.0
@@ -66,22 +66,22 @@ catalog:
   jsdom: ^30.1.0
   '@testing-library/react': ^16.3.3
   '@testing-library/dom': ^10.4.1
-  '@playwright/test': ^1.64.0
+  '@playwright/test': ^1.65.0
   '@dnd-kit/core': ^6.3.1
   '@dnd-kit/sortable': ^10.0.0
   maplibre-gl: ^6.17.0
-  nodemailer: ^10.2.0
+  nodemailer: ^10.3.1
   '@types/nodemailer': ^8.0.2
-  '@react-email/render': ^2.1.0
-  react-email: ^6.11.0
+  '@react-email/render': ^2.2.0
+  react-email: ^6.11.6
 
 # Storybook's packages must stay on one version, so they are one named catalog.
 catalogs:
   storybook:
-    storybook: ^10.6.0
-    '@storybook/react-vite': ^10.6.0
-    '@storybook/addon-a11y': ^10.6.0
-    '@storybook/addon-themes': ^10.6.0
+    storybook: ^10.6.6
+    '@storybook/react-vite': ^10.6.6
+    '@storybook/addon-a11y': ^10.6.6
+    '@storybook/addon-themes': ^10.6.6
 
 # Supply-chain age gate: refuse to resolve a release published less than a day
 # ago, and fail loudly instead of quietly adding the package to an exclusion

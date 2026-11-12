@@ -8,6 +8,7 @@ import { SNIFF_BYTES } from './types.js';
 
 const RECORD = '.json';
 const PART = '.part';
+export const STALE_PART_MS = 24 * 60 * 60 * 1000;
 
 /**
  * The `fs` driver (RFC 0004 §1): `<root>/<sub>/<id>` and its record `<id>.json`. A file is written to `<id>.part` and renamed once its
@@ -67,14 +68,18 @@ export class FsDriver implements Driver {
     await rm(this.#file(sub, id, PART), { force: true });
   }
 
-  async read(sub: string, id: string): Promise<Readable | undefined> {
+  async read(
+    sub: string,
+    id: string,
+    range?: { start: number; end: number },
+  ): Promise<Readable | undefined> {
     const file = this.#file(sub, id);
     try {
       await stat(file);
     } catch {
       return undefined;
     }
-    return createReadStream(file);
+    return createReadStream(file, range ? { start: range.start, end: range.end } : {});
   }
 
   async record(sub: string, id: string): Promise<FileRecord | undefined> {
@@ -94,6 +99,7 @@ export class FsDriver implements Driver {
     } catch {
       return [];
     }
+    await this.#clearStale(sub, names);
     const present = new Set(names);
     const found: FileRecord[] = [];
     for (const name of names) {
@@ -107,6 +113,23 @@ export class FsDriver implements Driver {
       }
     }
     return found;
+  }
+
+  /**
+   * Removes what an upload that never finished left: a `.part` file not written to for a day. A slow upload of a large file is
+   * still being written, so it is newer than that; one whose process died is not, and its bytes were never counted against anyone.
+   */
+  async #clearStale(sub: string, names: string[]): Promise<void> {
+    for (const name of names) {
+      if (!name.endsWith(PART)) continue;
+      const file = path.join(this.#folder(sub), name);
+      try {
+        if (Date.now() - (await stat(file)).mtimeMs > STALE_PART_MS)
+          await rm(file, { force: true });
+      } catch {
+        // Gone already: finished, or cleared by another process.
+      }
+    }
   }
 
   async remove(sub: string, id: string): Promise<void> {

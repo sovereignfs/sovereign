@@ -68,8 +68,9 @@ RUN mkdir -p apps/core/admin/node_modules \
  && printf '#!/bin/sh\nexec node /app/apps/core/admin/sovereign-admin.mjs "$@"\n' > /usr/local/bin/sovereign-admin \
  && chmod 0755 /usr/local/bin/sovereign-admin
 
-# A SQLite file is kept here when that is the database chosen; the compose file mounts a volume over it.
-RUN mkdir -p /data && chown node:node /data
+# A SQLite file is kept here when that is the database chosen, and people's own files at /data/s3/core (core-app §4.6); the compose files
+# mount volumes over them. The folders are made here and are the user's, or Docker makes a volume of them owned by root and core cannot write.
+RUN mkdir -p /data/s3/core && chown -R node:node /data
 VOLUME ["/data"]
 
 USER node

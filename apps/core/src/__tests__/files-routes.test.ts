@@ -131,7 +131,7 @@ describe('core’s files', () => {
     expect((await download(id, `?${query}`)).status).toBe(403);
   });
 
-  it('asks for the length, refuses more than 10 MB, and refuses past the quota with a message', async () => {
+  it('asks for the length, refuses more than 100 MB, and refuses past the quota with a message', async () => {
     const noLength = await list.POST(
       new Request(`${ORIGIN}/api/files`, {
         method: 'POST',
@@ -146,7 +146,7 @@ describe('core’s files', () => {
       } as RequestInit),
     );
     expect(noLength.status).toBe(411);
-    const huge = await upload(PNG, { 'content-length': String(11 * 1024 * 1024) });
+    const huge = await upload(PNG, { 'content-length': String(101 * 1024 * 1024) });
     expect(huge.status).toBe(413);
     for (let i = 0; i < 3; i += 1) expect((await upload(PNG)).status).toBe(201);
     const over = await upload(PNG);

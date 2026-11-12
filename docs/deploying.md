@@ -33,7 +33,8 @@ in the example. Secrets can be given as a file instead (`SV_AUTH_SECRET_FILE` an
 suits Docker and Kubernetes secrets.
 
 The database servers are not published: only core is reachable from outside the compose network. Their data lives in
-named volumes (`sqld-data`, `postgres-data`, `core-data`), and so does anything you would want to back up.
+named volumes (`sqld-data`, `postgres-data`, `core-data`), and so does anything you would want to back up. The files people keep in
+their accounts (the Files page) are in `core-files`, mounted at `/data/s3/core`; with SQLite they are in `core-data` with the database.
 
 To use core as the sign-in server for your apps, of any kind, see [Connecting an app](connecting-an-app.md).
 
@@ -121,7 +122,8 @@ should print `200`.
 - Multi-stage on `node:24-alpine`. The last stage holds only the server Next traced, its static files and the
   migrations, which core applies when it starts; there is no source, no dev dependency and no package manager in it.
 - Runs as the unprivileged `node` user, listens on `3000`, and reports `/api/health` (the app and the database) to
-  Docker. `/data` is a volume, for a SQLite file.
+  Docker. `/data` is a volume, for a SQLite file and people's files (`/data/s3/core`, a volume of its own in the sqld and PostgreSQL
+  setups).
 - `docker-compose.yml` and `docker-compose.sqlite.yml` can build it themselves (`docker compose build`), or pull
   the published one; `SV_IMAGE` names the image to use.
 - It is published for `linux/amd64` and `linux/arm64`, tagged by version (`1.2.3`), by minor version (`1.2`) and
@@ -153,6 +155,9 @@ network is down. Nothing needs setting up beyond what sign-in already needs.
 
 - **sqld**: copy the `sqld-data` volume while sqld is stopped. **PostgreSQL**: `pg_dump` the `sovereign` database.
   **SQLite**: copy `core.db` from the `core-data` volume while core is stopped, or use `sqlite3 core.db ".backup"`.
+- **People's files**: copy the `core-files` volume (or `/data/s3/core` in `core-data`, with SQLite) with the database, while core is
+  stopped, so the two agree. Each person's files are in a folder named by their account's id. A file too large for core's 100 MB
+  upload limit cannot be added; an instance that deploys with the operator's toolkit (`sv`) has this backed up by `sv backup`.
 - Keep `SV_AUTH_SECRET` and `SV_FIELD_ENCRYPTION_KEYS` with the backup: without the key ring a saved SMTP password
   cannot be read, and changing `SV_AUTH_SECRET` signs everyone out and ends every two-factor enrolment.
 - To upgrade, pull a newer image and `docker compose up -d`. Migrations are applied at start-up, and only forward.

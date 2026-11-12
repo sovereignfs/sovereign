@@ -58,6 +58,7 @@ operator can change; 200 GB and 1000 files unless they do).
 - `POST /api/files` keeps a file (the body is the file, its name is in `X-File-Name`), `GET /api/files` lists the person's own,
   `GET /api/files/{id}` serves one to its owner, and `DELETE /api/files/{id}` removes it. Each asks who is calling, and a request that
   changes something must come from the app's own pages.
+- A file is served whole or by `Range`, so a video can be sought in and a download resumed.
 - Images are shown, and everything else is downloaded: what a file is comes from its bytes, so nothing uploaded runs as script.
 - A refusal is a `StorageError` with a code and words a person can act on (`over_quota`, `too_large`), which the routes pass on.
 - When a person deletes their account, `onAccountDeleted` in `lib/auth.ts` deletes their folder along with their notes.

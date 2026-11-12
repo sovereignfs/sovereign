@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import type { Readable } from 'node:stream';
 import { LimitExceeded, type Driver, type FileRecord } from './driver.js';
+import { fileResponse, parseRange } from './response.js';
 import { StorageError } from './errors.js';
 import { sign, verify } from './sign.js';
 import { detectKind } from './types.js';
@@ -193,6 +194,27 @@ export class FileStore {
     const body = record ? await this.#driver.read(sub, id) : undefined;
     if (!record || !body) throw new StorageError('not_found', 'There is no such file.');
     return { record, body };
+  }
+
+  /**
+   * The answer that serves one of a person's files, whole or the part of it a `Range` header asks for, so a video can be sought in and a
+   * large download resumed. A person's other files, and ones that are not there, are `not_found`.
+   */
+  async serve(sub: string, id: string, request?: Request): Promise<Response> {
+    checkSub(sub);
+    checkId(id);
+    const record = await this.#driver.record(sub, id);
+    if (!record) throw new StorageError('not_found', 'There is no such file.');
+    const asked = parseRange(request?.headers.get('range') ?? null, record.size);
+    if (asked === 'unsatisfiable') {
+      return new Response(null, {
+        status: 416,
+        headers: { 'content-range': `bytes */${record.size}`, 'accept-ranges': 'bytes' },
+      });
+    }
+    const body = await this.#driver.read(sub, id, asked);
+    if (!body) throw new StorageError('not_found', 'There is no such file.');
+    return fileResponse({ record, body }, asked);
   }
 
   async remove(sub: string, id: string): Promise<void> {

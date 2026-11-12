@@ -65,6 +65,7 @@ through core. No app imports another, and core names no app.
 | `@sovereignfs/ui`                                    | The design system: tokens and React components. Pre-1.0: apps pin it exactly                                                        |
 | `@sovereignfs/sdk`                                   | An app's **server** calling core: sign-in, verifying core's notices, notifications, email, activity, directory. Throws in a browser |
 | `@sovereignfs/config`                                | The environment convention of `contracts/env.md`: settings declared once, read with a prefix, refused at start-up                   |
+| `@sovereignfs/storage`                               | People's files: a folder and a quota for each person, served only to them, with `Range` ([keeping files](keeping-files.md))         |
 | `@sovereignfs/manifest`                              | The manifest's schemas, a validator, and `sovereign-manifest` (`check`, `label`, `docker-args`)                                     |
 | `@sovereignfs/cli` (`sv`), `ghcr.io/sovereignfs/cli` | The operator's toolkit, and the image the server runs it from                                                                       |
 | `@sovereignfs/create`                                | `npm create @sovereignfs` (an instance repository) and `npm create @sovereignfs app <name>` (an app, §11)                           |
@@ -255,6 +256,8 @@ its own") when hosting it:
 - **A released migration is never edited**; a fix is a new one, and a patch release has none.
 - **Tests run on all three databases** and read `<P>_TEST_*`, never the app's own variables, so a test can never wipe a developer's data.
 - Start-up waits for a database that is still starting (`<P>_DB_CONNECT_TIMEOUT_MS`), with retries.
+- **People's files are not in the database.** They are kept with `@sovereignfs/storage` in the app's own folder, `/data/s3/<name>`, when the
+  manifest says `"storage": true`: a folder and a quota for each person, deleted with them. See [Keeping people's files](keeping-files.md).
 
 ## 9. Secrets and encryption
 

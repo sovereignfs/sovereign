@@ -30,7 +30,7 @@ export async function GET(): Promise<Response> {
 
 /**
  * Stores a file for the signed-in person. The body is the file itself; its name is in `X-File-Name`, percent-encoded. The request must
- * say its length (core-app §4.6): core takes at most 10 MB in one upload, since its proxy keeps only that much of a body.
+ * say its length (core-app §4.6): core takes at most 100 MB in one upload, since its proxy keeps only that much of a body.
  */
 export async function POST(request: Request): Promise<Response> {
   try {
@@ -45,7 +45,7 @@ export async function POST(request: Request): Promise<Response> {
     }
     if (length > MAX_UPLOAD_BYTES) {
       return NextResponse.json(
-        { error: 'too_large', message: 'A file sent to core can be at most 10 MB.' },
+        { error: 'too_large', message: 'A file sent to core can be at most 100 MB.' },
         { status: 413 },
       );
     }

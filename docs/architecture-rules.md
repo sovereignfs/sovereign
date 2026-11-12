@@ -724,6 +724,13 @@ pointing here.
   that blocks on the network gets a `loading.tsx`.
 - **Import-time faults in optional modules must not abort boot.**
 
+- **People's files are kept only through `@sovereignfs/storage`.** A path is made from the person's `sub` and an id the store makes, both
+  checked first, and never from a name a request sent; what a file is comes from its bytes, so only images are shown and everything else
+  is downloaded, with `nosniff` and a sandboxing policy. Every call names the person from the session. A quota is reserved before a byte
+  is written. An app's container mounts **only its own folder** of `sovereign-data` (`subpath`), never the whole volume, so one app
+  cannot read another's files or core's. A file is deleted with the person, and the folder is made in the image and owned by the user it
+  runs as, or Docker makes a root-owned volume of it. ([RFC 0004](rfcs/0004-file-storage.md), `docs/keeping-files.md`.)
+
 ## UI and client behaviour
 
 - **Core's pages follow the established Sovereign UI.** The sign-in pages, the

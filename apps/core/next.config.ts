@@ -13,6 +13,9 @@ const config: NextConfig = {
   serverExternalPackages: ['@libsql/client', 'libsql', 'pg', 'nodemailer'],
   // The migrations are read from disk at start-up, so a traced (standalone) build must ship them.
   outputFileTracingIncludes: { '/*': ['./migrations/**/*.sql'] },
+  // Core's proxy copies a request's body into memory (10 MB by default and cut short beyond it), and a person's upload to /api/files is
+  // one such body. Keep this equal to MAX_UPLOAD_BYTES in src/files (core-app §4.6).
+  experimental: { proxyClientMaxBodySize: '100mb' },
   poweredByHeader: false,
   reactStrictMode: true,
 };

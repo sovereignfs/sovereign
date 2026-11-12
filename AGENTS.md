@@ -280,6 +280,8 @@ each: `docs/architecture-rules.md`.
   fails when a package is added and not copied), and `pnpm docker:smoke` (CI's
   `image` job) boots sqld, PostgreSQL and SQLite from it. The seed refuses any
   address that is not on this machine.
+- **People's files are kept only through `@sovereignfs/storage`**: paths from the `sub` and a store-made id, types from bytes, only images
+  shown inline, the person from the session in every call, and each app's container mounting its own folder of `sovereign-data` alone.
 - **Every Console page calls `requireConsole` itself** (a test fails when one does
   not), and answers someone who may not enter with a page that is not there.
 - **A client is written only by `ClientRegistry`** (validation, the provider's

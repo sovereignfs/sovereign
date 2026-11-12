@@ -34,6 +34,9 @@ services:
       SV_SQLD_URL: http://sqld:8080
       SV_SQLD_ADMIN_URL: http://sqld:8081
       SV_SQLD_NAMESPACE: ${SV_SQLD_NAMESPACE:-default}
+    volumes:
+      # People's own files (core-app §4.6): kept apart from the database, so they are backed up on their own and survive the container.
+      - core-files:/data/s3/core
     depends_on:
       sqld:
         condition: service_healthy
@@ -65,3 +68,4 @@ services:
 
 volumes:
   sqld-data:
+  core-files:

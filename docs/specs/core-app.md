@@ -1071,6 +1071,7 @@ closing them returns there (§1.3).
 | Profile        | Name and avatar. The email address is shown but cannot be changed in Phase 1                                      |
 | Security       | Change password; manage passkeys; enrol or remove TOTP and backup codes; list sessions and end any of them        |
 | Preferences    | Timezone and locale; appearance; notifications and, where an app they use can send it, email from apps            |
+| Files          | The files the person keeps in core, how much of their space they use; add one, open one, delete one (§4.6)        |
 | Connected apps | Apps the person has allowed, with the scopes granted; **Remove access** revokes the app's tokens as well (§3.6.4) |
 | Activity       | What apps noted they did for the person, newest first, by app; delete one, an app's or all (§4.3)                 |
 | Delete account | Requires the password. The owner must transfer ownership first                                                    |
@@ -1754,7 +1755,7 @@ people's files, through `@sovereignfs/storage`.
   reserved before a byte is written and what was not used is given back, so two uploads at once cannot together pass it.
 - **Routes**, each calling `requireCapability('files:manage')` (§3.2.2), and `requireSameOrigin` for upload and delete:
   - `POST /api/files`: the body is the file, its name in `X-File-Name` (percent-encoded). The request MUST say its length (`411`
-    otherwise), at most **10 MB** (`413`): core's proxy keeps only that much of a body (`proxyClientMaxBodySize`), and a body shorter than
+    otherwise), at most **100 MB** (`413`): core's proxy copies a body into memory and keeps only `proxyClientMaxBodySize` of it, which `next.config.ts` sets to the same number when core is built, and a body shorter than
     it said is refused rather than kept. Answers `201` with the record and its address.
   - `GET /api/files`: the person's files, newest first, with their usage and quota.
   - `GET /api/files/{id}`: the file, to its owner's session, or to an address signed with `SV_STORAGE_SIGNING_KEY` (`?u=&expires=&signature=`,
@@ -1765,6 +1766,13 @@ people's files, through `@sovereignfs/storage`.
 - **Serving.** The type is judged by the file's bytes, never its name or the type sent. Images (PNG, JPEG, GIF, WebP, AVIF) are shown;
   everything else is sent as `application/octet-stream` to download, so nothing uploaded runs as script. Every answer carries `nosniff`,
   `Content-Disposition` and `Content-Security-Policy: default-src 'none'; sandbox`.
+- **The Files page** (`/files`, in the identity pages, §3.11) is how a person uses all of this: their usage against their quota, a
+  dropzone that sends the file to `POST /api/files` and shows the server's own words when it is refused, the list with each file's size and
+  date, and a delete that asks first. A role without `files:manage` is told so, not sent to sign in again. A file the browser would
+  otherwise run is offered as a download. Nothing on it is shared: there is no link to give someone.
+- **A file is served with `Range`**: `206` with `Content-Range` for one span, `416` past the end, and the whole file for a header it cannot read as
+  one span, so a video can be sought in and a large download resumed. `Accept-Ranges: bytes` is on every answer.
+- **A partial upload** (`<id>.part`) that nothing has written to for a day is deleted the next time the person's folder is read.
 - **Deleting an account** deletes the person's folder, once the deletion has committed, whoever deletes it and including a deletion a
   restore carries across (§4.5). A failure to delete it is logged and does not undo the deletion.
 

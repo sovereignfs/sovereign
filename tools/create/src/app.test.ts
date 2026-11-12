@@ -280,8 +280,9 @@ describe('the files an app keeps for people', () => {
       'app/api/files/[id]/route.ts',
       'app/actions.ts',
     ]) {
-      for (const call of read(target, file).match(/files\(\)\.(put|list|usage|remove)\([^,)]*/g) ??
-        [])
+      for (const call of read(target, file).match(
+        /files\(\)\.(put|list|usage|remove|serve)\([^,)]*/g,
+      ) ?? [])
         expect(call, `${file}: ${call}`).toMatch(/session\.sub|sub$/);
     }
     expect(read(target, 'lib/files.ts')).toContain("request.headers.get('origin')");

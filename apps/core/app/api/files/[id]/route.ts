@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { fileResponse } from '@sovereignfs/storage';
 import {
   authorizationResponse,
   requireCapability,
@@ -33,7 +32,7 @@ export async function GET(request: Request, { params }: Context): Promise<Respon
         { status: 403 },
       );
     }
-    return fileResponse(await files.get(sub, id));
+    return await files.serve(sub, id, request);
   } catch (error) {
     return storageErrorResponse(error) ?? authorizationResponse(error) ?? Promise.reject(error);
   }

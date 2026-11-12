@@ -1,0 +1,58 @@
+/* The files a person keeps: a name and what is known of it on the left, and the one thing to do with it on the right. */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sv-space-4);
+  padding: var(--sv-space-4);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-lg);
+}
+
+.about {
+  min-width: 0;
+}
+
+.name {
+  margin: 0;
+  font-weight: var(--sv-font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.link {
+  color: var(--sv-color-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--sv-radius-sm);
+}
+
+@media (hover: hover) {
+  .link:hover {
+    color: var(--sv-color-accent);
+  }
+}
+
+.actions {
+  flex: none;
+}
+
+@media (max-width: 768px) {
+  .item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

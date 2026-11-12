@@ -38,7 +38,12 @@ export interface Driver {
   commit(sub: string, record: FileRecord): Promise<void>;
   /** Drops a written file that was not committed. */
   discard(sub: string, id: string): Promise<void>;
-  read(sub: string, id: string): Promise<Readable | undefined>;
+  /** The bytes of a file, or of `range` of it (both ends included), or nothing when there is no such file. */
+  read(
+    sub: string,
+    id: string,
+    range?: { start: number; end: number },
+  ): Promise<Readable | undefined>;
   record(sub: string, id: string): Promise<FileRecord | undefined>;
   records(sub: string): Promise<FileRecord[]>;
   remove(sub: string, id: string): Promise<void>;

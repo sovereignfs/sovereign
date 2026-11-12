@@ -43,10 +43,20 @@ export class FileUsageStore implements UsageStore {
     const run = before
       .catch(() => undefined)
       .then(async () => {
-        let usage = await this.#read(sub);
-        if (!usage || this.#now() - usage.countedAt > RECOUNT_AFTER_MS) usage = await recount();
+        const stored = await this.#read(sub);
+        const usage =
+          !stored || this.#now() - stored.countedAt > RECOUNT_AFTER_MS ? await recount() : stored;
         const done = change(usage);
-        await this.#write(sub, done.usage);
+        // A read changes nothing and writes nothing, unless it had to count again: a file written on every look is a file a watcher
+        // wakes for, and a disk touched for nothing.
+        const unchanged =
+          stored !== undefined &&
+          stored.bytes === done.usage.bytes &&
+          stored.files === done.usage.files &&
+          stored.countedAt === done.usage.countedAt;
+        // Nor does a person who keeps nothing get a folder and a record by looking.
+        const nothing = stored === undefined && done.usage.bytes === 0 && done.usage.files === 0;
+        if (!unchanged && !nothing) await this.#write(sub, done.usage);
         return done.result;
       });
     const settled = run.catch(() => undefined);

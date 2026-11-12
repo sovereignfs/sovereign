@@ -1,10 +1,20 @@
-import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  utimesSync,
+  writeFileSync,
+} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Secret } from '@sovereignfs/config';
 import { StorageError } from '../errors.js';
-import { fileResponse } from '../response.js';
+import { fileResponse, parseRange } from '../response.js';
+import { STALE_PART_MS } from '../fs.js';
 import { createFileStore, DEFAULT_FILE_QUOTA, DEFAULT_QUOTA_MB } from '../settings.js';
 import { cleanName, type FileStore } from '../store.js';
 import { RECOUNT_AFTER_MS } from '../usage.js';
@@ -203,5 +213,76 @@ describe('a file store', () => {
     expect(cleanName('..')).toBe('file');
     expect(cleanName(undefined)).toBe('file');
     expect(cleanName('x'.repeat(300))).toHaveLength(200);
+  });
+
+  it('serves the part of a file a Range asks for, so a video can be sought in and a download resumed', async () => {
+    const { files } = store();
+    const bytes = Uint8Array.from({ length: 1000 }, (_, i) => i % 251);
+    bytes.set(PNG, 0);
+    const record = await files.put(SUB, bytes, { name: 'clip.png', size: bytes.length });
+    const ask = (range?: string) =>
+      files.serve(SUB, record.id, new Request('http://x/', range ? { headers: { range } } : {}));
+    const whole = await ask();
+    expect(whole.status).toBe(200);
+    expect(whole.headers.get('accept-ranges')).toBe('bytes');
+    expect((await whole.arrayBuffer()).byteLength).toBe(1000);
+    for (const [range, from, to] of [
+      ['bytes=0-99', 0, 99],
+      ['bytes=500-', 500, 999],
+      ['bytes=-10', 990, 999],
+      ['bytes=990-5000', 990, 999],
+    ] as const) {
+      const part = await ask(range);
+      expect(part.status, range).toBe(206);
+      expect(part.headers.get('content-range'), range).toBe(`bytes ${from}-${to}/1000`);
+      expect(part.headers.get('content-length')).toBe(String(to - from + 1));
+      expect(Buffer.from(await part.arrayBuffer()), range).toEqual(
+        Buffer.from(bytes.subarray(from, to + 1)),
+      );
+    }
+    const past = await ask('bytes=2000-');
+    expect(past.status).toBe(416);
+    expect(past.headers.get('content-range')).toBe('bytes */1000');
+    // What it cannot read as one span is answered whole, as the standard allows.
+    for (const range of ['bytes=0-1,5-9', 'items=0-1', 'bytes=-', 'nonsense'])
+      expect((await ask(range)).status, range).toBe(200);
+    expect(await refusal(files.serve('person-2', record.id))).toBe('not_found');
+  });
+
+  it('reads a Range as the standard does', () => {
+    expect(parseRange('bytes=0-0', 10)).toEqual({ start: 0, end: 0 });
+    expect(parseRange('bytes=5-3', 10)).toBe('unsatisfiable');
+    expect(parseRange('bytes=-0', 10)).toBe('unsatisfiable');
+    expect(parseRange('bytes=-100', 10)).toEqual({ start: 0, end: 9 });
+    expect(parseRange(null, 10)).toBeUndefined();
+  });
+
+  it('clears an upload that never finished once it is a day old, and leaves one being written', async () => {
+    const { files, root } = store();
+    await files.put(SUB, PNG);
+    const dir = path.join(root, SUB);
+    writeFileSync(path.join(dir, 'abandoned.part'), 'half');
+    writeFileSync(path.join(dir, 'writing.part'), 'more');
+    const old = new Date(Date.now() - STALE_PART_MS - 60_000);
+    utimesSync(path.join(dir, 'abandoned.part'), old, old);
+    await files.list(SUB);
+    expect(existsSync(path.join(dir, 'abandoned.part'))).toBe(false);
+    expect(existsSync(path.join(dir, 'writing.part'))).toBe(true);
+  });
+
+  it('writes nothing when it is only looked at, and makes no folder for someone who keeps nothing', async () => {
+    const { files, root } = store();
+    await files.usage('nobody');
+    await files.list('nobody');
+    expect(existsSync(path.join(root, 'nobody'))).toBe(false);
+    await files.put(SUB, PNG);
+    const record = path.join(root, SUB, '.usage.json');
+    const before = statSync(record).mtimeMs;
+    const content = readFileSync(record, 'utf8');
+    utimesSync(record, new Date(1000), new Date(1000));
+    for (let look = 0; look < 3; look += 1) await files.usage(SUB);
+    expect(statSync(record).mtimeMs).toBe(1000);
+    expect(readFileSync(record, 'utf8')).toBe(content);
+    expect(before).toBeGreaterThan(1000);
   });
 });

@@ -2,8 +2,9 @@ export type { Driver, FileRecord } from './driver.js';
 export { LimitExceeded } from './driver.js';
 export { StorageError, STORAGE_STATUS } from './errors.js';
 export type { StorageErrorCode } from './errors.js';
-export { FsDriver } from './fs.js';
-export { fileResponse } from './response.js';
+export { FsDriver, STALE_PART_MS } from './fs.js';
+export { fileResponse, parseRange } from './response.js';
+export type { ByteRange } from './response.js';
 export {
   createFileStore,
   DEFAULT_FILE_QUOTA,

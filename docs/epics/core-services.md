@@ -229,9 +229,11 @@ built by tasks 14.7 to 14.10.
 - Every route calls `requireCapability`, and upload and delete call `requireSameOrigin`
 - A signed address expires and is compared in constant time
 
-#### 📋 15.10 — Files in any S3-compatible store `[parallel]`
+#### 🚧 15.10 — Files in any S3-compatible store `[parallel]`
 
 **Goal:** An app keeps its people's files in S3-compatible storage instead of on the server's disk, with the same quotas and serving.
+
+**Parked:** deferred until the disk is done end to end (15.12); not started.
 
 **Priority:** 10.
 
@@ -250,9 +252,11 @@ built by tasks 14.7 to 14.10.
 - The driver passes the same tests as `fs`
 - No quota check lists the bucket
 
-#### 📋 15.11 — Files in a repository the person connects
+#### 🚧 15.11 — Files in a repository the person connects
 
 **Goal:** A person keeps their files in a git repository of their own, which the app commits to and serves from.
+
+**Parked:** deferred until the disk is done end to end (15.12); not started.
 
 **Priority:** 11.
 
@@ -272,3 +276,33 @@ built by tasks 14.7 to 14.10.
 
 - A person is told a repository is public before anything is written to it
 - The access a person gives never leaves the app unencrypted, and reaches only their repository
+
+#### ✅ 15.12 — Files on disk, end to end
+
+**Goal:** The disk driver is finished: a person can see, add, open and delete their own files in core, every download supports `Range`, an
+abandoned upload does not linger, core's own deployments keep the files on a volume, and an app's author has a guide.
+
+**Priority:** 12.
+
+**Deliverables:**
+
+- core's Files page (`/files`, in the identity pages): usage against quota, a dropzone, the list, a delete that asks first, and a role without
+  `files:manage` told so instead of sent to sign in again
+- `Range` on every download (`206`, `416`, `Accept-Ranges`) through `FileStore.serve`, used by core and the template; core's upload limit
+  raised to 100 MB with `proxyClientMaxBodySize`; a development default path that is writable
+- a partial upload a day old is deleted; reading a person's usage writes nothing and makes no folder for someone who keeps nothing
+- `core-files` volume in the sqld and PostgreSQL compose setups, and `/data/s3/core` made in the image, owned by the user core runs as
+- [Keeping people's files](../keeping-files.md), the architecture rule and the deploying guide
+- a real-Docker test of core over HTTP: a 60 MB file across the proxy, its bytes back and a part of them, the quota, refusals, the Files page, and
+  the files still there when the container is made again over the same volumes
+
+**Dependencies:** 15.9, 13.32, 13.33, 13.34
+
+**Spec reference:** core-app §3.11, §4.6; RFC 0004 §1–§4
+
+**Review checklist:**
+
+- A file of 60 MB arrives whole through core's proxy, and the bytes returned are the bytes sent
+- A range of a file is exactly that range, and one past the end is 416
+- Looking at the Files page with no files makes no folder and writes nothing
+- Without `files:manage` the page says so and does not redirect

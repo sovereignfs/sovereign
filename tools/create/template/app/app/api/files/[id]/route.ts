@@ -1,4 +1,3 @@
-import { fileResponse } from '@sovereignfs/storage';
 import { auth } from '@/lib/auth';
 import { failure, files, refuseCrossOrigin, unauthorised } from '@/lib/files';
 
@@ -15,7 +14,7 @@ export async function GET(request: Request, { params }: Context) {
     : (await auth().getSession())?.sub;
   if (!sub) return query.has('signature') ? expired() : unauthorised();
   try {
-    return fileResponse(await files().get(sub, id));
+    return await files().serve(sub, id, request);
   } catch (error) {
     const known = failure(error);
     if (known) return known;

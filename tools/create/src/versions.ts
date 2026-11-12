@@ -17,7 +17,7 @@ export const APP_DEPENDENCIES = {
 
 export const APP_DEV_DEPENDENCIES = {
   // Makes the image's label and port from the manifest, and checks the manifest (`sovereign-manifest`).
-  '@sovereignfs/manifest': '^0.1.0',
+  '@sovereignfs/manifest': '^0.2.0',
   '@types/node': '^24.19.2',
   '@types/pg': '^8.23.1',
   '@types/react': '^19.3.0',

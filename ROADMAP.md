@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.93.0 · **Last updated:** 2026-11-12
+**Version:** 0.94.0 · **Last updated:** 2026-11-12
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -241,7 +241,7 @@ Epic [15](docs/epics/core-services.md)
 | Version | Priority | Task                                                          | Status | Epic task                            |
 | ------- | -------- | ------------------------------------------------------------- | ------ | ------------------------------------ |
 | 0.93.0  | 1        | Files: `@sovereignfs/storage` with `fs`, and core's own       | ✅     | [15.9](docs/epics/core-services.md)  |
-| —       | 2        | Manifest 3, and each app's folder of files                    | 📋     | [13.32](docs/epics/operator-cli.md)  |
+| 0.94.0  | 2        | Manifest 3, and each app's folder of files                    | ✅     | [13.32](docs/epics/operator-cli.md)  |
 | —       | 3        | Files in backups and restores                                 | 📋     | [13.33](docs/epics/operator-cli.md)  |
 | —       | 4        | The template keeps files, and has a Docker setup `[parallel]` | 📋     | [13.34](docs/epics/operator-cli.md)  |
 | —       | 5        | Files in any S3-compatible store `[parallel]`                 | 📋     | [15.10](docs/epics/core-services.md) |

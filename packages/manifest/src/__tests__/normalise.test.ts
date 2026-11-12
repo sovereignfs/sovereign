@@ -17,6 +17,7 @@ describe('normalise', () => {
       database: { enabled: true, pooling: 'transaction' },
       generate: [{ name: 'NOTES_AUTH_SECRET', bytes: 48 }],
       data: [],
+      storage: false,
       core: '>=0.49.0 <1.0.0',
     });
   });
@@ -64,6 +65,7 @@ describe('normalise, manifest 2', () => {
         { name: 'FJORD_ENCRYPTION_KEY', bytes: 32 },
       ],
       data: [],
+      storage: false,
       core: '>=0.57.0 <1.0.0',
     });
   });
@@ -94,5 +96,13 @@ describe('normalise, manifest 2', () => {
       { name: 'A_D', bytes: 16 },
     ]);
     expect(secretsOf({})).toEqual([]);
+  });
+
+  it('says whether an app keeps files, which only a manifest 3 can', () => {
+    expect(normalise({ ...manifest2Of(), manifest: 3, storage: true } as never).storage).toBe(true);
+    expect(normalise({ ...manifest2Of(), manifest: 3 } as never).storage).toBe(false);
+    expect(normalise({ ...manifest2Of(), manifest: 3, storage: true } as never).defaultName).toBe(
+      'fjord',
+    );
   });
 });

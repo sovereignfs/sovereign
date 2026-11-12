@@ -22,6 +22,6 @@ describe('what this release of the toolkit says it supports', () => {
 
   it('reads the schema and manifest versions the specifications are at', () => {
     expect(RELEASE.schemas).toEqual([1]);
-    expect(RELEASE.manifests).toEqual([1, 2]);
+    expect(RELEASE.manifests).toEqual([1, 2, 3]);
   });
 });

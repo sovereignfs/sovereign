@@ -12,6 +12,7 @@ import { CONTAINER } from '../apply/names.js';
 import { Failed, Locked, Refused } from '../errors.js';
 import { gt } from 'semver';
 import { takeBackup } from '../apply/backup.js';
+import { filesUsage } from '../apply/files.js';
 import {
   ALL,
   MANIFEST_FILE,
@@ -356,6 +357,11 @@ async function status(host: Host, options: ReceiveOptions): Promise<number> {
       deploying: await running(host, APPLY_CONTAINER),
       connections: await readConnections(host),
       pools: await readPools(host),
+      // Measured from core's image, which has a shell; nothing to measure before core has run.
+      files: await (async () => {
+        const core = containers.find((c) => c.name === CONTAINER.core)?.image;
+        return core ? filesUsage(host, core) : {};
+      })(),
     })}\n`,
   );
   return 0;

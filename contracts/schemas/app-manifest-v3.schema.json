@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/sovereignfs/sovereign/main/contracts/schemas/app-manifest-v3.schema.json",
+  "title": "Sovereign app manifest, version 3",
+  "description": "What an app provides so that it can be hosted. contracts/app-manifest.md is the prose. Versions 1 and 2 stay in their own files.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["manifest", "prefix", "name", "port", "health"],
+  "properties": {
+    "manifest": { "const": 3 },
+    "prefix": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*$",
+      "not": { "const": "sv" }
+    },
+    "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "description": { "type": "string", "maxLength": 280 },
+    "icon": {
+      "type": "string",
+      "anyOf": [{ "$ref": "#/$defs/path" }, { "pattern": "^https://[^\\s]+$" }]
+    },
+    "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+    "health": { "$ref": "#/$defs/path" },
+    "launch": { "$ref": "#/$defs/path" },
+    "signIn": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["redirect", "scopes"],
+      "properties": {
+        "redirect": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/path" },
+          "minItems": 1,
+          "maxItems": 20,
+          "uniqueItems": true
+        },
+        "postLogout": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/path" },
+          "maxItems": 20,
+          "uniqueItems": true
+        },
+        "backChannel": { "$ref": "#/$defs/path" },
+        "accountDeleted": { "$ref": "#/$defs/path" },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "enum": ["openid", "profile", "email", "roles", "directory", "offline_access"]
+          },
+          "contains": { "const": "openid" },
+          "uniqueItems": true
+        }
+      }
+    },
+    "database": {
+      "oneOf": [
+        { "type": "boolean" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "pooling": { "const": "transaction" } }
+        }
+      ]
+    },
+    "generate": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/variable" },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name"],
+            "properties": {
+              "name": { "$ref": "#/$defs/variable" },
+              "bytes": { "type": "integer", "minimum": 16, "maximum": 64 }
+            }
+          }
+        ]
+      }
+    },
+    "data": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/path" },
+      "uniqueItems": true
+    },
+    "storage": { "type": "boolean" },
+    "core": { "type": "string", "minLength": 1 }
+  },
+  "if": { "required": ["signIn"] },
+  "then": { "required": ["core"] },
+  "else": {
+    "properties": {
+      "icon": false,
+      "launch": false
+    }
+  },
+  "$defs": {
+    "path": {
+      "type": "string",
+      "pattern": "^/[^\\s?#]*$",
+      "not": { "pattern": "(^|/)\\.\\.(/|$)" }
+    },
+    "variable": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]*_[A-Z0-9_]+$"
+    }
+  }
+}

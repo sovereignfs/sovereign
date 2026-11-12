@@ -1,5 +1,13 @@
 export { schemas, supportedVersions, versionOf, type ManifestVersion } from './schemas';
-export type { GenerateEntry, Manifest, Manifest1, Manifest2, Problem, SignIn } from './types';
+export type {
+  GenerateEntry,
+  Manifest,
+  Manifest1,
+  Manifest2,
+  Manifest3,
+  Problem,
+  SignIn,
+} from './types';
 export { validate, type Validated } from './validate';
 export {
   DEFAULT_SECRET_BYTES,

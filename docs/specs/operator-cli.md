@@ -335,7 +335,7 @@ Every step MUST do nothing when its result is already true. In order:
 ### 6.2 Purging
 
 `sv app remove --purge` records the app's name under `purge` in `suite.yml`. At step 7 `sv apply` MUST delete that app's
-database, role, data volumes and generated secrets, after taking a backup of that app. The record is removed by the next
+database, role, data volumes, folder of people's files (§6.4.6) and generated secrets, after taking a backup of that app. The record is removed by the next
 `sv` command that writes the file. A purge of an app still listed under `apps` is refused.
 
 ### 6.3 Failing
@@ -471,6 +471,23 @@ pooler`, so turning the pooler on or off recreates it and it reads its new addre
 - **`sv status` shows its pools** (`pools` in the answer: for each app, the clients active and waiting and the server connections active and
   idle), from the pooler's own console, and says nothing when the pooler is not running.
 
+### 6.4.6 People's files
+
+For core and each hosted app whose manifest has `storage` ([`app-manifest.md`](../../contracts/app-manifest.md) §2.7), `sv apply` MUST,
+before it starts the container ([RFC 0004](../rfcs/0004-file-storage.md) §6):
+
+- make the volume `sovereign-data` when it is not there;
+- make the folder `s3/<name>` in it (`s3/core` for core), owned by the user the image runs as and readable by that user alone. That user
+  is the image's `Config.User` when it is a number, or the ids of the name it gives, read by running `id` in the image; an image with no
+  user is root. The work is done in a container of core's image, run as root;
+- mount **that folder alone**, with a volume `subpath`, at `/data/s3/<name>`: no container but the toolkit's own sees the whole volume;
+- give the container `<PREFIX>_STORAGE_DRIVER=fs`, `_STORAGE_PATH`, the quotas (`204800` MB and `1000` files, unless the operator's `env`
+  sets them), and a signing key it generates once in `secrets/` (core's `SV_STORAGE_*`). `sv push` refuses an `env` that sets a storage
+  variable but the two quotas.
+
+A purge deletes the folder (§6.2). `sv status` lists how many bytes each folder holds, and `--json` carries them as `files`. This needs
+Docker Engine 26 and Compose 2.26, for `subpath`; `sv apply` and `sv doctor` refuse older ones (§6.5).
+
 ### 6.5 What it refuses
 
 `sv apply` MUST refuse to run, changing nothing, when:
@@ -481,6 +498,7 @@ pooler`, so turning the pooler on or off recreates it and it reads its new addre
 - `suite.yml` names a value `sv apply` itself provides (`contracts/suite.md`);
 - the connection limits add up to more than the server allows, when the operator set `maxConnections` or `connections` (§6.4.4), or the pooled apps
   may open more connections than the pooler takes (§6.4.5);
+- the Docker Engine is older than 26 or Compose older than 2.26, which cannot mount one folder of a volume (§6.4.6);
 - the toolkit does not support the instance's core version or `schema`;
 - core's version would go backward, unless the run is a restore;
 - `database.version` differs from the running server's major version;
@@ -508,6 +526,7 @@ pooler`, so turning the pooler on or off recreates it and it reads its new addre
 - Nothing in `releases/` is a secret. An environment file names a secret by its path, through the `_FILE` form
   (`contracts/env.md`).
 - Decrypted operator secrets MUST be written only to `secrets/`.
+- People's files are not under this directory: they are in the Docker volume `sovereign-data` (§6.4.6), which `sv backup` carries.
 - The last five releases are kept, and always the one `current` names.
 
 ---

@@ -25,7 +25,8 @@ describe('the schemas', () => {
   it('say which version a document is, only if the package reads it', () => {
     expect(versionOf({ manifest: 1 })).toBe(1);
     expect(versionOf({ manifest: 2 })).toBe(2);
-    for (const manifest of [0, 3, '2', null, undefined])
+    expect(versionOf({ manifest: 3 })).toBe(3);
+    for (const manifest of [0, 4, '2', null, undefined])
       expect(versionOf({ manifest })).toBe(undefined);
     expect(versionOf(null)).toBe(undefined);
   });

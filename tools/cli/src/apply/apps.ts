@@ -26,7 +26,8 @@ import {
 } from './docker.js';
 import type { Host } from './host.js';
 import { CONTAINER, NETWORK, POOLER_PORT, PROJECT } from './names.js';
-import { appCompose, appOrigin, byDigest, type ImageOverrides } from './render.js';
+import { appCompose, appOrigin, byDigest, keepsFiles, type ImageOverrides } from './render.js';
+import { ensureFilesFolder, imageUser, removeFilesFolder } from './files.js';
 import type { GeneratedSecrets } from './secrets.js';
 import type { State } from './state.js';
 import { appDatabaseOf, isAppSecretFile } from './scope.js';
@@ -285,6 +286,15 @@ export async function applyHostedApp(
   const image =
     run.imageOverrides?.apps?.[name] ??
     byDigest(lock.apps?.[name] as { ref: string; digest: string });
+  // The app's folder of people's files (RFC 0004 §6): made before it is mounted, owned by the user the app runs as, with a key the app
+  // signs download addresses with. The folder is made from core's image, which has a shell.
+  if (keepsFiles(manifest)) {
+    const variable = `${prefix}_STORAGE_SIGNING_KEY`;
+    await generated.ensure(`app-${name}-${variable}`, () => generated.random(48));
+    secrets[variable] = `app-${name}-${variable}`;
+    const helper = run.imageOverrides?.core ?? byDigest(lock.images.core);
+    await ensureFilesFolder(host, helper, name, await imageUser(host, image));
+  }
   const composeFile = path.join(run.release, 'apps', name, 'compose.yml');
   await mkdir(path.dirname(composeFile), { recursive: true });
   await writeFile(
@@ -398,8 +408,11 @@ export async function purgeApp(
   host: Host,
   generated: GeneratedSecrets,
   name: string,
+  /** An image with a shell, to delete the app's folder of people's files with: core's. */
+  helperImage: string,
 ): Promise<void> {
   await host.docker(['rm', '--force', CONTAINER.app(name)]);
+  await removeFilesFolder(host, helperImage, name);
   const volumes = await host.docker([
     'volume',
     'ls',

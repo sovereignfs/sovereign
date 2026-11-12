@@ -10,8 +10,10 @@ import type { Host } from './host.js';
 import type { State } from './state.js';
 
 /** Docker’s Compose plugin must know `up --wait`, which came with 2.17, and the engine must be a supported one. */
-export const MIN_ENGINE = '24.0.0';
-export const MIN_COMPOSE = '2.20.0';
+/** 26 mounts part of a volume (`subpath`), which each app's folder of people's files needs (RFC 0004 §6). */
+export const MIN_ENGINE = '26.0.0';
+/** 2.26 reads a volume's `subpath` (RFC 0004 §6). */
+export const MIN_COMPOSE = '2.26.0';
 const MIN_FREE_BYTES = 1024 ** 3;
 
 const list = (problems: Problem[]) => problems.map((p) => `  ${p.at}: ${p.message}`).join('\n');

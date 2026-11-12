@@ -58,6 +58,8 @@ type ServerState = {
   connections?: Connections | null;
   /** The pooler's pools, absent from a server whose toolkit is older and null when it is not running (operator-cli §6.4.5). */
   pools?: Pool[] | null;
+  /** Bytes in each folder of people's files, by app (core is `core`); absent from a server whose toolkit is older (RFC 0004 §6). */
+  files?: Record<string, number>;
 };
 
 async function localHead(ctx: Context): Promise<string | undefined> {
@@ -102,6 +104,7 @@ export async function status(ctx: Context, argv: string[]): Promise<void> {
     containers: server.containers,
     connections: server.connections ?? null,
     pools: server.pools ?? null,
+    files: server.files ?? null,
   };
   if (args.switches.has('json')) {
     ctx.io.out(JSON.stringify(document, null, 2));
@@ -148,6 +151,23 @@ export async function status(ctx: Context, argv: string[]): Promise<void> {
   } else if (suite.database.pooler && server.pools === null) {
     ctx.io.out('Pooler: on in suite.yml, and not running (sv deploy starts it)');
   }
+  if (server.files && Object.keys(server.files).length > 0) {
+    ctx.io.out('People’s files:');
+    for (const [name, bytes] of Object.entries(server.files).sort(([a], [b]) => a.localeCompare(b)))
+      ctx.io.out(`  ${name}: ${formatBytes(bytes)}`);
+  }
+}
+
+/** A size as people read it: 512 KB, 3.4 MB, 1.2 GB. */
+export function formatBytes(bytes: number): string {
+  const units = ['bytes', 'KB', 'MB', 'GB', 'TB'];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return unit === 0 ? `${value} bytes` : `${value.toFixed(value < 10 ? 1 : 0)} ${units[unit]}`;
 }
 
 /** `sv logs [NAME]` (operator-cli §4.4): core, the proxy, the database, an app, or the last deployment (the default). */

@@ -104,7 +104,9 @@ describe('core', () => {
     expect(coreEnvironment(i).SV_SMTP_PASSWORD_FILE).toBe('/run/secrets/SV_SMTP_PASSWORD');
     const mounts = (
       parse(coreCompose(i)) as {
-        services: { core: { volumes: { source: string; target: string; read_only: boolean }[] } };
+        services: {
+          core: { volumes: { type: string; source: string; target: string; read_only: boolean }[] };
+        };
       }
     ).services.core.volumes;
     expect(mounts.find((m) => m.target === '/run/secrets/SV_SMTP_PASSWORD')).toEqual({
@@ -113,7 +115,14 @@ describe('core', () => {
       target: '/run/secrets/SV_SMTP_PASSWORD',
       read_only: true,
     });
-    expect(mounts.every((m) => m.read_only)).toBe(true);
+    expect(mounts.filter((m) => m.type === 'bind').every((m) => m.read_only)).toBe(true);
+    // Core's folder of people's files, and nothing else of the volume.
+    expect(mounts.find((m) => m.target === '/data/s3/core')).toEqual({
+      type: 'volume',
+      source: 'sovereign-data',
+      target: '/data/s3/core',
+      volume: { subpath: 's3/core' },
+    });
   });
 
   it('trusts the proxy’s own authority only when the certificates are the proxy’s own', async () => {

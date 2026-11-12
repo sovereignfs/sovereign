@@ -38,6 +38,7 @@ import {
   type AppRun,
 } from './apps.js';
 import { takeBackup } from './backup.js';
+import { ensureFilesFolder, imageUser } from './files.js';
 import {
   loadDatabases,
   loadScopedDatabases,
@@ -280,6 +281,7 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
   await generated.ensure('postgres-admin-password', () => generated.random(24));
   const rolePassword = await generated.ensure('role-core-password', () => generated.random(24));
   await generated.ensure('SV_AUTH_SECRET', () => generated.random(48));
+  await generated.ensure('SV_STORAGE_SIGNING_KEY', () => generated.random(48));
   await generated.ensure(
     'SV_FIELD_ENCRYPTION_KEYS',
     () => `k1:${host.random(32).toString('base64url')}`,
@@ -381,6 +383,9 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
     );
   }
 
+  // Core's folder of people's files, made before core mounts it and owned by the user core runs as (core-app §4.6).
+  const coreImage = options.imageOverrides?.core ?? byDigest(lock.images.core);
+  await ensureFilesFolder(host, coreImage, 'core', await imageUser(host, coreImage));
   await composeUp(host, {
     project: PROJECT.core,
     files: [path.join(release, 'core', 'compose.yml'), ...(overrides.files.core ?? [])],
@@ -484,7 +489,12 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
     say(`${name} is stopped and no longer registered; its data stays.`);
   }
   for (const name of purging) {
-    await purgeApp(host, generated, name);
+    await purgeApp(
+      host,
+      generated,
+      name,
+      options.imageOverrides?.core ?? byDigest(lock.images.core),
+    );
     say(`${name}’s database, data and secrets are deleted.`);
   }
 

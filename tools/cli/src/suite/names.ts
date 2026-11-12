@@ -18,6 +18,10 @@ export const CORE_RESERVED = [
   'SV_AUTH_WEBAUTHN_RP_ID',
   'SV_ENVIRONMENT',
   'SV_POSTGRES_POOL_MAX',
+  // Where core keeps people's files, and what it signs download addresses with (RFC 0004): the instance's. The quotas are the operator's.
+  'SV_STORAGE_DRIVER',
+  'SV_STORAGE_PATH',
+  'SV_STORAGE_SIGNING_KEY',
 ] as const;
 
 /** Whether a name is one the deployment owns, in either form (`NAME` or `NAME_FILE`). */
@@ -37,6 +41,9 @@ export function reservedForApp(prefix: string, generate: readonly string[] = [])
     `${prefix}_POSTGRES_URL`,
     `${prefix}_POSTGRES_DIRECT_URL`,
     `${prefix}_POSTGRES_POOL_MAX`,
+    `${prefix}_STORAGE_DRIVER`,
+    `${prefix}_STORAGE_PATH`,
+    `${prefix}_STORAGE_SIGNING_KEY`,
     ...generate,
   ];
 }

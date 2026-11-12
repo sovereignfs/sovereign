@@ -39,3 +39,12 @@ export const CA_IN_CONTAINER = `${CA_DIR_IN_CONTAINER}/root.crt`;
 export const DATABASE_ADMIN = 'sovereign';
 export const CORE_DATABASE = 'core';
 export const CORE_ROLE = 'core';
+
+/**
+ * The volume people's files are kept in (RFC 0004 §1): `s3/<app>` for each app with `storage`, and `s3/core`. A container mounts only its
+ * own folder (`subpath`); only the toolkit's helpers mount the whole volume.
+ */
+export const DATA_VOLUME = 'sovereign-data';
+/** An app's folder of files in the volume, and where it is mounted in the app's container. Core's is `core`. */
+export const filesFolder = (name: string) => `s3/${name}`;
+export const filesTarget = (name: string) => `/data/s3/${name}`;

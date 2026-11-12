@@ -51,6 +51,10 @@ export class FakeDocker {
   unhealthy = new Set<string>();
   /** Apps whose container will not start. */
   wontStart = new Set<string>();
+  /** The user each image runs as (`Config.User`), by image; `node` when a test does not say. */
+  imageUsers: Record<string, string> = {};
+  /** The folders of people's files made in `sovereign-data`, with the owner each was given. */
+  filesFolders = new Map<string, string>();
   /** Volumes, by compose project label. */
   volumes: Record<string, string[]> = {};
   #next = 0;
@@ -151,6 +155,29 @@ export class FakeDocker {
         }
         return ok('');
       }
+    }
+    if (command === 'image' && rest[0] === 'inspect' && rest.includes('{{.Config.User}}')) {
+      const image = rest[rest.length - 1] as string;
+      const key = Object.keys(this.imageUsers).find(
+        (name) => image === name || image.startsWith(`${name}@`),
+      );
+      return ok(key === undefined ? '1000' : (this.imageUsers[key] as string));
+    }
+    // The helpers that read an image's user and keep the folders of people's files (apply/files.ts).
+    if (
+      command === 'run' &&
+      rest.includes('--entrypoint') &&
+      rest[rest.indexOf('--entrypoint') + 1] === 'id'
+    )
+      return ok(rest.includes('-u') ? '1000' : '1000');
+    if (command === 'run' && rest.some((word) => word.startsWith('sovereign-data:/v'))) {
+      const script = rest[rest.indexOf('-c') + 1] ?? '';
+      const args = rest.slice(rest.indexOf('-c') + 3);
+      if (script.startsWith('mkdir')) this.filesFolders.set(args[0] as string, args[1] as string);
+      else if (script.startsWith('rm')) this.filesFolders.delete(args[0] as string);
+      else if (script.includes('du -sk'))
+        return ok([...this.filesFolders.keys()].map((folder) => `${folder.slice(3)} 8`).join('\n'));
+      return ok('');
     }
     // `docker run` is how a check is made from inside an app's network namespace.
     if (command === 'run')

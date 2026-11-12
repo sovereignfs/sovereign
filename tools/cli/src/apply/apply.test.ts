@@ -115,6 +115,7 @@ describe('the first deployment', () => {
       'SV_AUTH_SECRET',
       'SV_FIELD_ENCRYPTION_KEYS',
       'SV_POSTGRES_URL',
+      'SV_STORAGE_SIGNING_KEY',
       'postgres-admin-password',
       'role-core-password',
     ]);
@@ -307,6 +308,7 @@ describe('a deployment that stops', () => {
         const probe =
           args[0] === 'inspect' ||
           (args[0] === 'network' && args[1] === 'inspect') ||
+          (args[0] === 'volume' && args[1] === 'inspect') ||
           args.includes('node') ||
           args.includes('cat');
         expect(probe, args[0]).toBe(true);
@@ -571,11 +573,11 @@ describe('what it refuses, with nothing changed', () => {
     const old = fakeHost({ docker: Object.assign(new FakeDocker(), { engine: '20.10.0' }) });
     expect(
       ((await apply(old.host, options(made)).catch((e: unknown) => e)) as Refused).message,
-    ).toContain('needs 24.0.0 or newer');
+    ).toContain('needs 26.0.0 or newer');
     const oldCompose = fakeHost({ docker: Object.assign(new FakeDocker(), { compose: '2.10.0' }) });
     expect(
       ((await apply(oldCompose.host, options(made)).catch((e: unknown) => e)) as Refused).message,
-    ).toContain('needs 2.20.0 or newer');
+    ).toContain('needs 2.26.0 or newer');
     const full = fakeHost({ free: 100 * 1024 * 1024 });
     expect(
       ((await apply(full.host, options(made)).catch((e: unknown) => e)) as Refused).message,
@@ -935,6 +937,83 @@ describe('apps of manifest 2', () => {
   });
 });
 
+describe('apps that keep people’s files', () => {
+  const NOTES = { image: 'ghcr.io/example/notes:1' };
+  const IMAGE = 'ghcr.io/example/notes:1';
+  const registryOf = (manifest: unknown) => fakeRegistry({ [IMAGE]: { manifest } }).registry;
+  const withFiles = { ...manifest2Of(), manifest: 3, storage: true };
+  const rendered = (made: Source, commit = 'a'.repeat(40)) =>
+    parse(
+      readFileSync(
+        path.join(made.stateDir, 'releases', commit, 'apps', 'notes', 'compose.yml'),
+        'utf8',
+      ),
+    ) as {
+      services: Record<string, { environment: Record<string, string>; volumes: unknown[] }>;
+      volumes?: Record<string, unknown>;
+    };
+
+  it('mounts only its own folder of the shared volume, made first and owned by the user its image runs as', async () => {
+    const made = await source({ suite: { apps: { notes: NOTES } } });
+    const { host, docker } = fakeHost({ registry: registryOf(withFiles) });
+    docker.imageUsers[IMAGE] = '1001:1002';
+    await apply(host, options(made));
+    const app = Object.values(rendered(made).services)[0];
+    expect(app?.volumes).toContainEqual({
+      type: 'volume',
+      source: 'sovereign-data',
+      target: '/data/s3/notes',
+      volume: { subpath: 's3/notes' },
+    });
+    expect(JSON.stringify(app?.volumes)).not.toContain('s3/core');
+    expect(rendered(made).volumes).toMatchObject({
+      'sovereign-data': { external: true, name: 'sovereign-data' },
+    });
+    expect(docker.filesFolders.get('s3/notes')).toBe('1001:1002');
+    expect(docker.filesFolders.has('s3/core')).toBe(true);
+    const made1 = docker.calls.findIndex((c) => c.args.join(' ').includes('mkdir -p'));
+    const up = docker.calls.findIndex((c) => c.args.includes('sovereign-app-notes'));
+    expect(made1).toBeLessThan(up);
+  });
+
+  it('is given the folder, the default quota under the operator’s own, and a key it signs addresses with', async () => {
+    const made = await source({
+      suite: { apps: { notes: { ...NOTES, env: { NOTES_STORAGE_FILE_QUOTA: '50' } } } },
+    });
+    const { host } = fakeHost({ registry: registryOf(withFiles) });
+    await apply(host, options(made));
+    expect(Object.values(rendered(made).services)[0]?.environment).toMatchObject({
+      NOTES_STORAGE_DRIVER: 'fs',
+      NOTES_STORAGE_PATH: '/data/s3/notes',
+      NOTES_STORAGE_QUOTA_MB: '204800',
+      NOTES_STORAGE_FILE_QUOTA: '50',
+      NOTES_STORAGE_SIGNING_KEY_FILE: '/run/secrets/NOTES_STORAGE_SIGNING_KEY',
+    });
+    expect(secretFiles(made)).toContain('app-notes-NOTES_STORAGE_SIGNING_KEY');
+  });
+
+  it('has no folder, mount or storage variables when its manifest does not keep files', async () => {
+    const made = await source({ suite: { apps: { notes: NOTES } } });
+    const { host, docker } = fakeHost({ registry: registryOf(manifest2Of()) });
+    await apply(host, options(made));
+    const app = Object.values(rendered(made).services)[0];
+    expect(JSON.stringify(app?.volumes)).not.toContain('sovereign-data');
+    expect(Object.keys(app?.environment ?? {}).filter((k) => k.includes('STORAGE'))).toEqual([]);
+    expect(docker.filesFolders.has('s3/notes')).toBe(false);
+  });
+
+  it('deletes its folder when it is purged', async () => {
+    const made = await source({ suite: { apps: { notes: NOTES } } });
+    const { host, docker } = fakeHost({ registry: registryOf(withFiles) });
+    await apply(host, options(made));
+    expect(docker.filesFolders.has('s3/notes')).toBe(true);
+    const purged = await source({ suite: { purge: ['notes'] } });
+    await apply(host, options(purged, { commit: 'b'.repeat(40), stateDir: made.stateDir }));
+    expect(docker.filesFolders.has('s3/notes')).toBe(false);
+    expect(docker.filesFolders.has('s3/core')).toBe(true);
+  });
+});
+
 describe('Mailpit on a development or staging instance', () => {
   const upProjects = (docker: FakeDocker) =>
     docker.calls
@@ -1027,7 +1106,7 @@ describe('Mailpit on a development or staging instance', () => {
     await apply(host, { ...options(prod), stateDir: dev.stateDir });
     expect(docker.containers.has('sv-mailpit')).toBe(false);
     expect(docker.calls.some((c) => c.args.join(' ') === 'rm --force sv-mailpit')).toBe(true);
-    expect(docker.calls.some((c) => c.args[0] === 'volume')).toBe(false);
+    expect(docker.calls.some((c) => c.args[0] === 'volume' && c.args[1] === 'rm')).toBe(false);
   });
 });
 

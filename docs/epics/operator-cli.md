@@ -872,7 +872,7 @@ can have a plain copy when they ask for one, and cannot lose every backup by los
 - An app's restore leaves core and its client secret as they are; a core restore runs `instance restored` and keeps deletions
 - A recovery key's private half is shown once and never written inside the repository
 
-#### 📋 13.32 — Manifest 3, and each app's folder of files
+#### ✅ 13.32 — Manifest 3, and each app's folder of files
 
 **Goal:** An app says it keeps files, and the instance gives it a folder of its own in one shared volume, which no other app can see.
 

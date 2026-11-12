@@ -133,3 +133,30 @@ describe('validate, manifest 2', () => {
     expect(validate({ ...manifestOf(), manifest: 2 }).ok).toBe(false);
   });
 });
+
+describe('manifest 3', () => {
+  const manifest3Of = (change: Record<string, unknown> = {}) => ({
+    ...manifest2Of(),
+    manifest: 3,
+    storage: true,
+    ...change,
+  });
+
+  it('accepts storage, and only from version 3', () => {
+    expect(problemsOf(manifest3Of())).toEqual([]);
+    expect(problemsOf(manifest3Of({ storage: false }))).toEqual([]);
+    expect(validate({ ...manifest2Of(), storage: true }).ok).toBe(false);
+    expect(JSON.stringify(problemsOf(manifest3Of({ storage: 'yes' })))).toContain('storage');
+  });
+
+  it('keeps a data path away from where the files are mounted, and leaves the signing key to the instance', () => {
+    expect(problemsOf(manifest3Of({ data: ['/data/s3/fjord'] }))[0]?.at).toBe('data.0');
+    expect(problemsOf(manifest3Of({ data: ['/data/s3'] }))[0]?.at).toBe('data.0');
+    expect(problemsOf(manifest3Of({ data: ['/data'] }))).toEqual([]);
+    expect(problemsOf(manifest3Of({ data: ['/var/lib/fjord'] }))).toEqual([]);
+    expect(problemsOf(manifest3Of({ storage: false, data: ['/data'] }))).toEqual([]);
+    expect(
+      problemsOf(manifest3Of({ generate: ['FJORD_STORAGE_SIGNING_KEY'] }))[0]?.message,
+    ).toContain('made by the instance');
+  });
+});

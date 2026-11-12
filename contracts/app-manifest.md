@@ -69,6 +69,7 @@ for one, for an image that has no label. When an image has both, the address is 
 | `database`    | no            | Whether it needs a PostgreSQL database, and how it may be reached (§2.2). Default `false`             |
 | `generate`    | no            | Variables, with the app's variable prefix, for which the server generates a random secret once (§2.5) |
 | `data`        | no            | Absolute paths in the container to keep across upgrades                                               |
+| `storage`     | no            | Manifest 3 only. `true` when the app keeps people's files the suite's way (§2.7). Default `false`     |
 | `core`        | with `signIn` | The core versions it works with, as an npm-style semver range (§2.6). Optional without `signIn`       |
 
 A manifest MUST NOT be extended with fields of its own. An unknown field is refused, so that a future field is never ignored. A field that
@@ -141,6 +142,22 @@ once. The server makes `N` random bytes, in URL-safe base64 (`-` and `_`, no pad
 
 ---
 
+### 2.7 `storage`
+
+Manifest 3 only. An app with `"storage": true` keeps the files people upload in a folder of the instance's shared volume, through
+[`@sovereignfs/storage`](../packages/storage/README.md) ([RFC 0004](../docs/rfcs/0004-file-storage.md)).
+
+- The instance mounts **only the app's own folder**, `s3/<name>` of the volume `sovereign-data`, at `/data/s3/<name>`, made before the
+  app starts and owned by the user its image runs as. The app cannot see another app's folder, or core's. The image's `USER` MUST be a
+  name or a numeric id, and the app MUST NOT use `/data/s3` or a path inside it for a `data` entry.
+- The folder is the app's `STORAGE_PATH` and holds a folder per person, named by their `sub`. A standalone app mounts a volume of its
+  own at the same path, so its code does not tell the two apart.
+- Backups and restores carry the folder ([operator-cli §10.2](../docs/specs/operator-cli.md)). An app with `driver` other than `fs` keeps
+  its files elsewhere and they are not in the backup.
+- It MUST delete a person's files when it is told their account was deleted (§4).
+
+---
+
 ### 2.6 `core`
 
 A core version is the **platform version**: the tag of `ghcr.io/sovereignfs/sovereign`, the root `package.json` of the Sovereign
@@ -165,9 +182,14 @@ marked secret is given in its `_FILE` form, so an app MUST read a secret either 
 | `<PREFIX>_POSTGRES_URL`        | With `database` | yes    | Its own database, as its own role. Through a transaction pooler only when the app declares `pooling` (§2.2) and the instance runs one; otherwise the server itself |
 | `<PREFIX>_POSTGRES_DIRECT_URL` | With `database` | yes    | Its own database, as its own role, on the database server itself, never through a pooler. For what needs a session                                                 |
 | `<PREFIX>_POSTGRES_POOL_MAX`   | With `database` |        | The most connections its pool may hold                                                                                                                             |
+| `<PREFIX>_STORAGE_DRIVER`      | With `storage`  |        | `fs`                                                                                                                                                               |
+| `<PREFIX>_STORAGE_PATH`        | With `storage`  |        | `/data/s3/<name>`, the app's own folder of the shared volume (§2.7)                                                                                                |
+| `<PREFIX>_STORAGE_QUOTA_MB`    | With `storage`  |        | What each person may keep: `204800` (200 GB) unless the operator sets it under the app's `env`                                                                     |
+| `<PREFIX>_STORAGE_FILE_QUOTA`  | With `storage`  |        | How many files each person may keep: `1000` unless the operator sets it under the app's `env`                                                                      |
+| `<PREFIX>_STORAGE_SIGNING_KEY` | With `storage`  | yes    | Made by the instance: 48 random bytes, in URL-safe base64, once                                                                                                    |
 | What `generate` names          | When listed     | yes    | Random bytes, in URL-safe base64, made once and kept: 48, or the entry's `bytes` (§2.5)                                                                            |
 
-Anything else comes from the operator: `env` in `suite.yml`, or `secrets.age.yml`. Neither may set a variable in this table.
+Anything else comes from the operator: `env` in `suite.yml`, or `secrets.age.yml`. Neither may set a variable in this table, except the two quotas.
 
 ---
 
@@ -216,3 +238,9 @@ nothing else:
 | `generate` | Variable names only, each 48 bytes                                                                                                   |
 
 Everything an app is given (§3, including `PORT`) and everything it must do (§4) is the same for both versions.
+
+### 5.2 Manifest 3
+
+Manifest 3 is [`schemas/app-manifest-v3.schema.json`](schemas/app-manifest-v3.schema.json). It is manifest 2 and one more field, `storage`
+(§2.7), and nothing else. A toolkit that reads 3 reads 1 and 2 as it did, and a toolkit that reads only 1 and 2 refuses a manifest 3 and
+names the version that reads it.

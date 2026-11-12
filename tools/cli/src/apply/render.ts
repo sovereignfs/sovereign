@@ -1,4 +1,4 @@
-import { variablePrefix } from '@sovereignfs/manifest';
+import { normalise, variablePrefix } from '@sovereignfs/manifest';
 import { stringify } from 'yaml';
 import {
   DEFAULT_MAX_CONNECTIONS,
@@ -18,9 +18,12 @@ import {
   CA_DIR_IN_CONTAINER,
   CA_IN_CONTAINER,
   CONTAINER,
+  DATA_VOLUME,
   NETWORK,
   PROJECT,
   SECRETS_IN_CONTAINER,
+  filesFolder,
+  filesTarget,
 } from './names.js';
 
 /** An image, by the digest the lock pins, so a moved tag cannot change what runs (operator-cli §5). */
@@ -92,6 +95,10 @@ export function coreEnvironment(input: BaseInput): Record<string, string> {
     SV_POSTGRES_URL_FILE: `${SECRETS_IN_CONTAINER}/SV_POSTGRES_URL`,
     SV_AUTH_SECRET_FILE: `${SECRETS_IN_CONTAINER}/SV_AUTH_SECRET`,
     SV_FIELD_ENCRYPTION_KEYS_FILE: `${SECRETS_IN_CONTAINER}/SV_FIELD_ENCRYPTION_KEYS`,
+    // People's own files, in core's folder of the shared volume (core-app §4.6, RFC 0004 §1).
+    SV_STORAGE_DRIVER: 'fs',
+    SV_STORAGE_PATH: filesTarget('core'),
+    SV_STORAGE_SIGNING_KEY_FILE: `${SECRETS_IN_CONTAINER}/SV_STORAGE_SIGNING_KEY`,
   };
   for (const name of coreSecrets) {
     if (!(name in GENERATED_FOR_CORE)) env[`${name}_FILE`] = `${SECRETS_IN_CONTAINER}/${name}`;
@@ -105,7 +112,19 @@ export const GENERATED_FOR_CORE: Record<string, true> = {
   SV_POSTGRES_URL: true,
   SV_AUTH_SECRET: true,
   SV_FIELD_ENCRYPTION_KEYS: true,
+  SV_STORAGE_SIGNING_KEY: true,
 };
+
+/** The shared volume of people's files, which `sv apply` makes and every project that mounts part of it names as external. */
+const DATA_VOLUME_DECLARATION = { [DATA_VOLUME]: { external: true, name: DATA_VOLUME } };
+
+/** One app's folder of the shared volume, at the path the app finds it (RFC 0004 §1), and nothing else of the volume. */
+const filesMount = (name: string) => ({
+  type: 'volume',
+  source: DATA_VOLUME,
+  target: filesTarget(name),
+  volume: { subpath: filesFolder(name) },
+});
 
 /** core’s compose project. The environment is inline and every mount is at a path that does not change, so a deployment that changes nothing recreates nothing. */
 export function coreCompose(input: BaseInput): string {
@@ -132,11 +151,12 @@ export function coreCompose(input: BaseInput): string {
         container_name: CONTAINER.core,
         restart: 'unless-stopped',
         environment: coreEnvironment(input),
-        volumes,
+        volumes: [...volumes, filesMount('core')],
         networks: [NETWORK.core],
       },
     },
     networks: { [NETWORK.core]: { external: true } },
+    volumes: DATA_VOLUME_DECLARATION,
   });
 }
 
@@ -368,6 +388,13 @@ export function appEnvironment(input: AppInput): Record<string, string> {
     env[`${prefix}_CORE_URL`] = `https://${suite.domain}`;
     env[`${prefix}_CORE_CLIENT_ID`] = clientId;
   }
+  if (keepsFiles(manifest)) {
+    // The instance's defaults, under what the operator set (RFC 0004 §5); the driver and the folder are the instance's.
+    env[`${prefix}_STORAGE_QUOTA_MB`] ??= String(DEFAULT_QUOTA_MB);
+    env[`${prefix}_STORAGE_FILE_QUOTA`] ??= String(DEFAULT_FILE_QUOTA);
+    env[`${prefix}_STORAGE_DRIVER`] = 'fs';
+    env[`${prefix}_STORAGE_PATH`] = filesTarget(name);
+  }
   if (hasDatabase(manifest)) {
     env[`${prefix}_DB_DIALECT`] = 'postgres';
     env[`${prefix}_POSTGRES_POOL_MAX`] = String(appPool(suite, name));
@@ -377,6 +404,13 @@ export function appEnvironment(input: AppInput): Record<string, string> {
   if (internalCa) env.NODE_EXTRA_CA_CERTS = CA_IN_CONTAINER;
   return env;
 }
+
+/** Whether an app keeps people's files the suite's way: a manifest 3 with `storage` (RFC 0004 §5). */
+export const keepsFiles = (manifest: Manifest) => normalise(manifest).storage;
+
+/** The quota an instance gives an app's people when the operator sets none (RFC 0004, Settled in review). */
+export const DEFAULT_QUOTA_MB = 204800;
+export const DEFAULT_FILE_QUOTA = 1000;
 
 /** A hosted app's compose project: its own, so it can be started, upgraded and removed alone (operator-cli §6.4). */
 export function appCompose(input: AppInput): string {
@@ -399,6 +433,7 @@ export function appCompose(input: AppInput): string {
     named[`data-${index}`] = {};
     volumes.push({ type: 'volume', source: `data-${index}`, target });
   });
+  if (keepsFiles(manifest)) volumes.push(filesMount(name));
   return yaml({
     name: PROJECT.app(name),
     services: {
@@ -414,6 +449,8 @@ export function appCompose(input: AppInput): string {
       },
     },
     networks: { [NETWORK.app(name)]: { external: true } },
-    ...(Object.keys(named).length > 0 ? { volumes: named } : {}),
+    ...(Object.keys(named).length > 0 || keepsFiles(manifest)
+      ? { volumes: { ...named, ...(keepsFiles(manifest) ? DATA_VOLUME_DECLARATION : {}) } }
+      : {}),
   });
 }

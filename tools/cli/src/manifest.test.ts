@@ -78,8 +78,8 @@ describe('reading an app’s manifest', () => {
     ['not json', 'nope', 'is not JSON'],
     [
       'a version it does not read',
-      manifestOf({ manifest: 3 }),
-      'version 3, which this toolkit does not read',
+      manifestOf({ manifest: 9 }),
+      'version 9, which this toolkit does not read',
     ],
     ['an unknown field', manifestOf({ extra: true }), 'extra is not allowed'],
     [

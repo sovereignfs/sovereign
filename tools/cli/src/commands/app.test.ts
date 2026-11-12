@@ -198,6 +198,38 @@ describe('sv app add', () => {
     expect(bad.text).toContain('is given to the app by the deployment');
   });
 
+  it('refuses env that names where people’s files are kept or what signs their addresses, but lets the quotas be set', async () => {
+    await withNotes();
+    const bad = await sv(
+      world,
+      'app',
+      'add',
+      'notes',
+      '--image',
+      NOTES_IMAGE,
+      '--env',
+      'NOTES_STORAGE_PATH=/elsewhere',
+      'NOTES_STORAGE_DRIVER=s3',
+      '--yes',
+    );
+    expect(bad.code).toBe(2);
+    expect(bad.text).toContain('NOTES_STORAGE_PATH');
+    expect(bad.text).toContain('is given to the app by the deployment');
+    const good = await sv(
+      world,
+      'app',
+      'add',
+      'notes',
+      '--image',
+      NOTES_IMAGE,
+      '--env',
+      'NOTES_STORAGE_FILE_QUOTA=50',
+      'NOTES_STORAGE_QUOTA_MB=1024',
+      '--yes',
+    );
+    expect(good.code).toBe(0);
+  });
+
   it('refuses a name that is taken, reserved or not a name, and a name waiting to be purged', async () => {
     await withNotes();
     await sv(world, 'app', 'add', 'notes', '--image', NOTES_IMAGE, '--yes');

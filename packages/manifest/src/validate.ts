@@ -7,6 +7,7 @@ const ajv = new Ajv2020({ strict: false, allErrors: true });
 const validators = {
   1: ajv.compile(schemas[1]),
   2: ajv.compile(schemas[2]),
+  3: ajv.compile(schemas[3]),
 } satisfies Record<ManifestVersion, unknown>;
 
 export type Validated = { ok: true; manifest: Manifest } | { ok: false; problems: Problem[] };
@@ -83,6 +84,29 @@ function ruleProblems(manifest: Manifest): Problem[] {
     }
     if (seen.has(name)) problems.push({ at: `generate.${index}`, message: 'is named twice' });
     seen.add(name);
+    if (
+      manifest.manifest === 3 &&
+      manifest.storage === true &&
+      name === `${prefix}_STORAGE_SIGNING_KEY`
+    ) {
+      problems.push({
+        at: `generate.${index}`,
+        message: 'is made by the instance for an app with storage, so it is not generated here',
+      });
+    }
   });
+  // The instance mounts the app's folder of files at /data/s3/<app>; a data path there would hide it or be hidden by it. A path above it,
+  // such as /data, is fine: Docker mounts the folder inside it.
+  if (manifest.manifest === 3 && manifest.storage === true) {
+    (manifest.data ?? []).forEach((target, index) => {
+      if (target === '/data/s3' || target.startsWith('/data/s3/')) {
+        problems.push({
+          at: `data.${index}`,
+          message:
+            'must not be /data/s3 or inside it, where the instance mounts the app’s files (storage)',
+        });
+      }
+    });
+  }
   return problems;
 }

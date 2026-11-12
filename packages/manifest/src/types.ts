@@ -42,5 +42,11 @@ export type Manifest2 = Common & {
   core?: string;
 };
 
+/** Manifest 3 (§2): manifest 2, and `storage`, which says the app keeps people's files the suite's way (RFC 0004). */
+export type Manifest3 = Omit<Manifest2, 'manifest'> & {
+  manifest: 3;
+  storage?: boolean;
+};
+
 /** A manifest, of any version this package reads. */
-export type Manifest = Manifest1 | Manifest2;
+export type Manifest = Manifest1 | Manifest2 | Manifest3;

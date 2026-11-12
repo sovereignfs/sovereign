@@ -29,7 +29,7 @@ export type Normalised = {
   prefix: string;
   /** The prefix of every variable it reads: `prefix` in upper case (`contracts/env.md` §1). */
   variablePrefix: string;
-  /** The name `sv app add` uses when it is given none. Only a manifest 2 has one (§2.4). */
+  /** The name `sv app add` uses when it is given none. A manifest 2 or 3 has one (§2.4). */
   defaultName?: string;
   name: string;
   description?: string;
@@ -44,6 +44,8 @@ export type Normalised = {
   /** The secrets the server makes, each with its size in bytes. */
   generate: { name: string; bytes: number }[];
   data: string[];
+  /** Whether it keeps people's files in its folder of the instance's `sovereign-data` volume (manifest 3, RFC 0004). */
+  storage: boolean;
   /** The core versions it works with, as a semver range. */
   core?: string;
 };
@@ -54,7 +56,7 @@ export function normalise(manifest: Manifest): Normalised {
     version: manifest.manifest,
     prefix: manifest.prefix.toLowerCase(),
     variablePrefix: variablePrefix(manifest),
-    ...(manifest.manifest === 2 ? { defaultName: manifest.prefix } : {}),
+    ...(manifest.manifest !== 1 ? { defaultName: manifest.prefix } : {}),
     name: manifest.name,
     ...(manifest.description === undefined ? {} : { description: manifest.description }),
     ...(manifest.icon === undefined ? {} : { icon: manifest.icon }),
@@ -68,6 +70,7 @@ export function normalise(manifest: Manifest): Normalised {
     },
     generate: secretsOf(manifest),
     data: manifest.data ?? [],
+    storage: manifest.manifest === 3 && manifest.storage === true,
     ...(manifest.core === undefined ? {} : { core: manifest.core }),
   };
 }

@@ -4,6 +4,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Avatar } from '../components/Avatar/Avatar';
 import { AvatarStack } from '../components/AvatarStack/AvatarStack';
 import { FloatingActionButton } from '../components/FloatingActionButton/FloatingActionButton';
+import { PhotoGallery } from '../components/PhotoViewer/PhotoGrid';
 import { Badge } from '../components/Badge/Badge';
 import { Button } from '../components/Button/Button';
 import { Card } from '../components/Card/Card';
@@ -2933,6 +2934,24 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                   extended
                 />
               </div>
+            </ComponentCard>
+
+            {/* PhotoGallery */}
+            <ComponentCard
+              name="PhotoGallery"
+              importLine="import { PhotoGallery, PhotoGrid, PhotoViewer } from '@sovereignfs/ui';"
+              usage="Photos shown well: a grid of thumbnails that opens a full-screen viewer. Swipe or arrow keys between photos, pinch or double-tap to zoom, Esc or a swipe down to close, a caption slot, focus returned. Shows only the addresses it is given, blob: URLs included."
+            >
+              <PhotoGallery
+                photos={['Harbour', 'Tram', 'Bakery'].map((name, index) => ({
+                  id: name,
+                  alt: `${name}, drawn for the gallery`,
+                  caption: name,
+                  src: `data:image/svg+xml;utf8,${encodeURIComponent(
+                    `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600"><rect width="900" height="600" fill="hsl(${index * 90 + 200} 55% 62%)"/></svg>`,
+                  )}`,
+                }))}
+              />
             </ComponentCard>
 
             {/* NavTabs */}

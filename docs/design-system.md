@@ -1851,6 +1851,7 @@ Stories live under two roots inside `packages/ui/src/`:
 | `Toast.stories.tsx`                | All six categories triggered imperatively via `useToast`                                                                                                        |
 | `Toggle.stories.tsx`               | On/off; disabled; label association                                                                                                                             |
 | `Tooltip.stories.tsx`              | Four placement variants; hover and focus triggers                                                                                                               |
+| `PhotoViewer.stories.tsx`          | Gallery (grid and viewer); grid alone; viewer open; swipe, pinch, double tap, arrow keys, `Esc`; drawn pictures, no network                                     |
 
 ### Themes toolbar
 

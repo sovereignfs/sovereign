@@ -1,0 +1,153 @@
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  background: color-mix(in srgb, var(--sv-black) calc(var(--photo-fade, 1) * 94%), transparent);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  font-family: var(--sv-font-family);
+}
+
+.scrimOpen {
+  opacity: 1;
+}
+
+.panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  color: var(--sv-color-text-on-dark-fill);
+  outline: none;
+}
+
+.bar {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: max(var(--sv-space-3), env(safe-area-inset-top))
+    max(var(--sv-space-3), env(safe-area-inset-right)) var(--sv-space-3)
+    max(var(--sv-space-3), env(safe-area-inset-left));
+  pointer-events: none;
+}
+
+.bar > * {
+  pointer-events: auto;
+}
+
+.count {
+  font-size: var(--sv-font-size-sm);
+  font-variant-numeric: tabular-nums;
+  padding-inline: var(--sv-space-2);
+}
+
+.control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: var(--sv-radius-full);
+  background: color-mix(in srgb, var(--sv-black) 45%, transparent);
+  color: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.control:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .control:hover {
+    background: color-mix(in srgb, var(--sv-black) 70%, transparent);
+  }
+}
+
+.previous,
+.next {
+  position: absolute;
+  inset-block-start: 50%;
+  z-index: 2;
+  translate: 0 -50%;
+}
+
+.previous {
+  inset-inline-start: max(var(--sv-space-3), env(safe-area-inset-left));
+}
+
+.next {
+  inset-inline-end: max(var(--sv-space-3), env(safe-area-inset-right));
+}
+
+/* A touch screen swipes; the arrow buttons are for a pointer and a keyboard. */
+@media (pointer: coarse) {
+  .previous,
+  .next {
+    display: none;
+  }
+}
+
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  /* Every gesture here is ours: the browser must not scroll or zoom the page under a finger. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transform-origin: center;
+  transition: transform 0.2s ease;
+  will-change: transform;
+  -webkit-user-drag: none;
+}
+
+/* Under a finger the photo follows it exactly, with no easing to lag behind. */
+.dragging {
+  transition: none;
+}
+
+.failed {
+  margin: 0;
+  padding: var(--sv-space-6);
+  text-align: center;
+  color: var(--sv-color-text-on-dark-fill);
+}
+
+.caption {
+  position: relative;
+  z-index: 2;
+  max-height: 30%;
+  overflow-y: auto;
+  padding: var(--sv-space-3) max(var(--sv-space-4), env(safe-area-inset-right))
+    max(var(--sv-space-4), env(safe-area-inset-bottom))
+    max(var(--sv-space-4), env(safe-area-inset-left));
+  background: color-mix(in srgb, var(--sv-black) 55%, transparent);
+  font-size: var(--sv-font-size-sm);
+  line-height: 1.45;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrim,
+  .image {
+    transition: none;
+  }
+}

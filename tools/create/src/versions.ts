@@ -8,7 +8,7 @@ export const APP_DEPENDENCIES = {
   '@dnd-kit/core': '^6.3.1',
   '@dnd-kit/sortable': '^10.0.0',
   '@sovereignfs/sdk': '^2.0.0',
-  '@sovereignfs/ui': '^0.94.0',
+  '@sovereignfs/ui': '^0.95.0',
   next: '^16.4.3',
   pg: '^8.23.1',
   react: '^19.3.1',

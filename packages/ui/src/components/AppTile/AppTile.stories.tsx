@@ -62,6 +62,13 @@ export const Grid: Story = {
           </Badge>
         }
       />
+      <AppTile
+        variant="ghost"
+        href="#"
+        name="Add an app"
+        description="Register one for this instance"
+        icon={<Icon name="plus" size="lg" aria-hidden={true} />}
+      />
       <AppTile href="#" name="No tags" icon={<Icon name="folder" size="lg" aria-hidden={true} />} />
     </CardTileGrid>
   ),

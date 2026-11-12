@@ -100,7 +100,7 @@ describe('the home page, which is the launcher', () => {
   it('invites an operator to add the first app, and tells anyone else whom to ask', async () => {
     as(ROLE_ADMIN);
     const forOperator = renderToStaticMarkup(await Page());
-    expect(forOperator).toContain('No other apps yet');
+    expect(forOperator).toContain('Add an app');
     expect(forOperator).toContain('href="/console/apps/new"');
     as(ROLE_USER);
     const forPerson = renderToStaticMarkup(await Page());

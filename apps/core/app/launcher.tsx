@@ -48,56 +48,76 @@ export function Launcher({
   apps,
   canAddApps,
   canOpenConsole = false,
+  title,
+  subtitle,
 }: {
   apps: LauncherApp[];
   canAddApps: boolean;
   canOpenConsole?: boolean;
+  /** The page's heading and the line beneath it, which sit beside the search. */
+  title: string;
+  subtitle: string;
 }) {
   const [query, setQuery] = useState('');
   const needle = query.trim().toLowerCase();
   const matches = (name: string) => needle === '' || name.toLowerCase().includes(needle);
   const shown = apps.filter((app) => matches(app.name));
   const showConsole = canOpenConsole && matches(CONSOLE.name);
+  const searchable = apps.length > 0 || canOpenConsole;
 
-  if (apps.length === 0 && !canOpenConsole) {
+  const heading = (
+    <header className={styles.header}>
+      <h1 className={styles.title}>{title}</h1>
+      <p className={styles.subtitle}>{subtitle}</p>
+      {searchable ? (
+        <div className={styles.search}>
+          <Input
+            type="search"
+            aria-label="Search apps"
+            placeholder="Search apps"
+            autoComplete="off"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+      ) : null}
+    </header>
+  );
+
+  if (!searchable) {
     return (
-      <EmptyState
-        icon="layout-grid"
-        heading="No apps yet"
-        description={
-          canAddApps
-            ? 'Add the first app and it appears here for everyone who can use the launcher.'
-            : 'When someone adds an app to this instance, it appears here. Ask whoever runs it.'
-        }
-        action={
-          canAddApps ? (
-            <ButtonLink href="/console/apps/new" renderLink={(props) => <Link {...props} />}>
-              Add an app
-            </ButtonLink>
-          ) : undefined
-        }
-      />
+      <div className={styles.launcher}>
+        {heading}
+        <EmptyState
+          icon="layout-grid"
+          heading="No apps yet"
+          description={
+            canAddApps
+              ? 'Add the first app and it appears here for everyone who can use the launcher.'
+              : 'When someone adds an app to this instance, it appears here. Ask whoever runs it.'
+          }
+          action={
+            canAddApps ? (
+              <ButtonLink href="/console/apps/new" renderLink={(props) => <Link {...props} />}>
+                Add an app
+              </ButtonLink>
+            ) : undefined
+          }
+        />
+      </div>
     );
   }
 
+  const addTile = canAddApps && needle === '';
   return (
     <div className={styles.launcher}>
-      <div className={styles.search}>
-        <Input
-          type="search"
-          aria-label="Search apps"
-          placeholder="Search apps"
-          autoComplete="off"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-      </div>
+      {heading}
       {shown.length === 0 && !showConsole ? (
         <p className={styles.none} role="status">
           No app is called “{query.trim()}”.
         </p>
       ) : (
-        <CardTileGrid minTileWidth={240}>
+        <CardTileGrid minTileWidth={260}>
           {showConsole ? (
             <AppTile
               href={CONSOLE.href}
@@ -113,25 +133,25 @@ export function Launcher({
               href={app.launchUrl}
               name={app.name}
               {...(app.description ? { description: app.description } : {})}
-              icon={<Avatar name={app.name} {...(app.icon ? { src: app.icon } : {})} size="lg" />}
+              icon={<Avatar name={app.name} {...(app.icon ? { src: app.icon } : {})} size="md" />}
               tags={KIND.sovereign}
             />
           ))}
+          {addTile ? (
+            <AppTile
+              variant="ghost"
+              href="/console/apps/new"
+              name="Add an app"
+              description="Register one for this instance"
+              icon={<Icon name="plus" size="lg" aria-hidden={true} />}
+            />
+          ) : null}
         </CardTileGrid>
       )}
-      {apps.length === 0 && needle === '' ? (
-        <div className={styles.hint}>
-          <p className={styles.none}>
-            {canAddApps
-              ? 'No other apps yet. Add the first one and it appears here for everyone who can use the launcher.'
-              : 'When someone adds an app to this instance, it appears here. Ask whoever runs it.'}
-          </p>
-          {canAddApps ? (
-            <ButtonLink href="/console/apps/new" renderLink={(props) => <Link {...props} />}>
-              Add an app
-            </ButtonLink>
-          ) : null}
-        </div>
+      {apps.length === 0 && needle === '' && !canAddApps ? (
+        <p className={styles.none}>
+          When someone adds an app to this instance, it appears here. Ask whoever runs it.
+        </p>
       ) : null}
     </div>
   );

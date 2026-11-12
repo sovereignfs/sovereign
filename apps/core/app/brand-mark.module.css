@@ -1,3 +1,7 @@
+.sm {
+  --mark-size: 32px;
+}
+
 .md {
   --mark-size: 34px;
 }

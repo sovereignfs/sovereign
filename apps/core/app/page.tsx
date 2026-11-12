@@ -27,15 +27,22 @@ export default async function Page() {
       <div className={styles.page}>
         <AccountHeader />
 
-        <h1 className={styles.title}>Apps</h1>
-        <p className={styles.text}>
-          {launcher
-            ? `You are signed in as ${session.user.name}. Choose an app to open it.`
-            : `You are signed in as ${session.user.name}. You do not have access to the apps on this instance.`}
-        </p>
         {launcher ? (
-          <Launcher apps={apps} canAddApps={canAddApps} canOpenConsole={canOpenConsole} />
-        ) : null}
+          <Launcher
+            apps={apps}
+            canAddApps={canAddApps}
+            canOpenConsole={canOpenConsole}
+            title="Apps"
+            subtitle={`You are signed in as ${session.user.name}. Choose an app to open it.`}
+          />
+        ) : (
+          <>
+            <h1 className={styles.title}>Apps</h1>
+            <p className={styles.text}>
+              {`You are signed in as ${session.user.name}. You do not have access to the apps on this instance.`}
+            </p>
+          </>
+        )}
       </div>
     </PageContainer>
   );

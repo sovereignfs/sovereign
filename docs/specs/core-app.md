@@ -908,7 +908,9 @@ message`), 2 when the command line is wrong or core is not configured, and 3 whe
 - A tile is an `AppTile`: the icon in a rounded box, the name, the description, and beneath a divider what kind of app it is. Core's
   own apps are **platform** apps and every app an operator added is a **Sovereign** app. For a person with `console:access` the
   Console is a platform app and the first tile; it is not in the registry, is found by search like any other, and is shown to no one
-  else. With no Sovereign app yet, the tile is followed by an invitation to add one, or by whom to ask.
+  else. Tiles are the size of the earlier launcher's, in a grid whose columns are at least 260px; the heading and its line are on the
+  left and the search on the right (stacked on a phone). A person who may add apps (`client:manage`) has a dashed "Add an app" tile
+  after the others, which is not shown while searching; anyone else, with no app yet, is told whom to ask.
 - A tile's icon is the address an operator gave, or a drawn one from the name
   when there is none or it will not load. Only this page may load pictures from
   other addresses (`https`, and `http` on `localhost` on a development

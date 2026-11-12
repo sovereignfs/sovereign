@@ -10,12 +10,12 @@ export async function BrandMark({
   size = 'md',
   labelled = false,
 }: {
-  size?: 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg';
   /** Name the logo for a screen reader, where nothing beside it already says whose it is. */
   labelled?: boolean;
 }) {
   const { name, logoLight, logoDark } = await getInstanceIdentity();
-  const sized = size === 'lg' ? styles.lg : styles.md;
+  const sized = size === 'lg' ? styles.lg : size === 'sm' ? styles.sm : styles.md;
   if (logoLight || logoDark) {
     return (
       <span className={`${styles.picture} ${sized}`}>

@@ -1783,7 +1783,8 @@ import { AppTile, Badge, CardTileGrid } from '@sovereignfs/ui';
 ```
 
 One app in a grid: a rounded icon box, the name, a line about it and, beneath a divider, what kind of app it is. With `href` the
-whole tile is the link; it never imports a router. Tags sit at the bottom, so a row of tiles lines up.
+whole tile is the link; it never imports a router. Tags sit at the bottom, so a row of tiles lines up. `variant="ghost"` is a
+dashed, flat tile of the same size, for adding another one.
 
 ### `AvatarStack`, `FloatingActionButton` and the photo viewer
 

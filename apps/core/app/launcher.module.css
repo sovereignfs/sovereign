@@ -1,11 +1,40 @@
 .launcher {
   display: flex;
   flex-direction: column;
-  gap: var(--sv-space-4);
+  gap: var(--sv-space-6);
+}
+
+/* The heading and its line on the left, the search on the right across both rows; on a phone they stack. */
+.header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: var(--sv-space-6);
+  row-gap: var(--sv-space-1);
+  margin-top: var(--sv-space-4);
+}
+
+.title {
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0;
+  font-size: var(--sv-font-size-2xl);
+  font-weight: var(--sv-font-weight-semibold);
+}
+
+.subtitle {
+  grid-column: 1;
+  grid-row: 2;
+  margin: 0;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-sm);
 }
 
 .search {
-  max-width: 24rem;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  width: 280px;
 }
 
 .none {
@@ -13,9 +42,16 @@
   color: var(--sv-color-text-muted);
 }
 
-.hint {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--sv-space-3);
+@media (max-width: 768px) {
+  .header {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    row-gap: var(--sv-space-3);
+  }
+
+  .search {
+    grid-column: 1;
+    grid-row: 3;
+    width: auto;
+  }
 }

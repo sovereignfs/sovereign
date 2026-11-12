@@ -12,6 +12,8 @@ export interface AppTileProps {
   tags?: ReactNode;
   /** Makes the whole tile one link. Without it the tile is a plain box. The tile never imports a router: pass the address, or wrap it yourself. */
   href?: string;
+  /** `ghost` is a dashed, flat tile for adding another one: the same size as the others, so it sits in the grid as an empty place. */
+  variant?: 'solid' | 'ghost';
   className?: string;
 }
 
@@ -19,18 +21,32 @@ export interface AppTileProps {
  * AppTile — one app in a grid: a rounded icon box, the name, a line about it and, beneath a divider, what kind of app it is. The
  * whole tile is the link when `href` is given. Lay tiles out with `CardTileGrid`.
  */
-export function AppTile({ icon, name, description, tags, href, className }: AppTileProps) {
-  const classes = [styles.tile, href && styles.link, className].filter(Boolean).join(' ');
+export function AppTile({
+  icon,
+  name,
+  description,
+  tags,
+  href,
+  variant = 'solid',
+  className,
+}: AppTileProps) {
+  const classes = [styles.tile, variant === 'ghost' && styles.ghost, href && styles.link, className]
+    .filter(Boolean)
+    .join(' ');
   const content = (
     <>
       <span className={styles.icon} aria-hidden="true">
         {icon}
       </span>
       <span className={styles.name}>{name}</span>
-      {description ? <span className={styles.description}>{description}</span> : null}
+      {description ? (
+        <span className={styles.description}>{description}</span>
+      ) : (
+        <span className={styles.fill} />
+      )}
       {tags ? (
         <>
-          <span className={styles.spacer} />
+          <span className={styles.separator} aria-hidden="true" />
           <span className={styles.tags}>{tags}</span>
         </>
       ) : null}

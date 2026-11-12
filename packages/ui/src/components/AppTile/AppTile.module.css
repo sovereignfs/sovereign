@@ -1,20 +1,25 @@
-/* A card with its content centred in a column: icon box, name, description, then (pushed to the bottom, so a row of tiles lines up)
-   a divider and the tags. */
+/* A card with its content centred in a column: icon box, name, description (which takes the spare height, so the divider and tags sit at
+   the bottom and a row of tiles lines up), then the tags. The size is the earlier launcher's. */
 .tile {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--sv-space-2);
+  gap: var(--sv-space-3);
   box-sizing: border-box;
   height: 100%;
-  padding: var(--sv-space-6) var(--sv-space-5) var(--sv-space-5);
+  padding: var(--sv-space-6) var(--sv-space-5);
   border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-xl);
+  border-radius: var(--sv-radius-lg);
   background: var(--sv-color-surface-raised);
   box-shadow: var(--sv-shadow-card);
   color: var(--sv-color-text-primary);
   text-align: center;
   text-decoration: none;
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
 }
 
 @media (hover: hover) {
@@ -23,36 +28,42 @@
   }
 }
 
-.link:focus-visible {
-  outline: 2px solid var(--sv-color-focus-ring);
-  outline-offset: 2px;
-}
-
 .icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 5.25rem;
-  height: 5.25rem;
-  margin-bottom: var(--sv-space-2);
-  border-radius: var(--sv-radius-xl);
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--sv-radius-md);
   background: var(--sv-color-surface-sunken);
+  color: var(--sv-color-text-primary);
 }
 
 .name {
   max-width: 100%;
-  font-size: var(--sv-font-size-lg);
+  font-size: var(--sv-font-size-md);
   font-weight: var(--sv-font-weight-medium);
   overflow-wrap: anywhere;
 }
 
 .description {
+  flex: 1;
   color: var(--sv-color-text-muted);
-  font-size: var(--sv-font-size-md);
+  font-size: var(--sv-font-size-sm);
+  line-height: 1.5;
 }
 
-.spacer {
+/* Without a description the space is taken by this, so the tags still sit at the bottom. */
+.fill {
   flex: 1;
+}
+
+.separator {
+  display: block;
+  width: 100%;
+  height: 1px;
+  background: var(--sv-color-border);
 }
 
 .tags {
@@ -60,8 +71,30 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: var(--sv-space-2);
-  width: 100%;
-  margin-top: var(--sv-space-2);
-  padding-top: var(--sv-space-4);
-  border-top: 1px solid var(--sv-color-border);
+}
+
+/* A place for one more: dashed, flat and quiet, in the same footprint. */
+.ghost {
+  border-style: dashed;
+  border-color: var(--sv-color-border-strong);
+  background: transparent;
+  box-shadow: none;
+  color: var(--sv-color-text-muted);
+}
+
+.ghost .icon {
+  border: 1px dashed var(--sv-color-border-strong);
+  background: transparent;
+  color: inherit;
+}
+
+.ghost .name {
+  font-weight: var(--sv-font-weight-regular);
+}
+
+@media (hover: hover) {
+  .ghost.link:hover {
+    color: var(--sv-color-text-primary);
+    background: var(--sv-color-surface-sunken);
+  }
 }

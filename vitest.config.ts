@@ -24,6 +24,7 @@ export default defineConfig({
       source('mailer', './packages/mailer/src/index.ts'),
       source('manifest', './packages/manifest/src/index.ts'),
       source('sdk', './packages/sdk/src/index.ts'),
+      source('storage', './packages/storage/src/index.ts'),
       {
         find: /^@sovereignfs\/database\/testing$/,
         replacement: fileURLToPath(new URL('./packages/database/src/testing.ts', import.meta.url)),

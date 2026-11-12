@@ -210,6 +210,7 @@ them.
 | ---------------------------- | ---------------------------------------------------------- | ------------------ |
 | `profile:manage`             | Edit one's own profile, credentials and preferences        | user, admin, owner |
 | `launcher:access`            | Use the launcher                                           | user, admin, owner |
+| `files:manage`               | Keep one's own files in core (§4.6)                        | user, admin, owner |
 | `console:access`             | Enter the Console                                          | admin, owner       |
 | `user:view`                  | View the account list                                      | admin, owner       |
 | `user:manage`                | Invite, deactivate, reactivate, delete accounts; reset MFA | admin, owner       |
@@ -1300,6 +1301,8 @@ What an app may call on core is defined once, in `contracts/core-api/openapi.yam
 | `SV_AUTH_WEBAUTHN_RP_ID`, `_RP_NAME`, `_ORIGIN`                                                                                      | no              | Passkey relying party (§3.4.2)                                                                                                                                                                                                                                             |
 | `SV_DB_DIALECT`, `SV_SQLD_URL`, `SV_SQLD_ADMIN_URL`, `SV_SQLD_NAMESPACE`, `SV_SQLITE_URL`, `SV_POSTGRES_URL`, `SV_POSTGRES_POOL_MAX` | yes, by dialect | Database                                                                                                                                                                                                                                                                   |
 | `SV_FIELD_ENCRYPTION_KEYS` / `_FILE`                                                                                                 | yes             | Key ring for stored secrets: `id:key` entries, newest first (`contracts/env.md`)                                                                                                                                                                                           |
+| `SV_STORAGE_DRIVER`, `SV_STORAGE_PATH`, `SV_STORAGE_QUOTA_MB`, `SV_STORAGE_FILE_QUOTA`                                               | no              | People's own files (§4.6): `fs`, the folder (default `/data/s3/core`), and each person's quota (default 204800 MB and 1000 files)                                                                                                                                          |
+| `SV_STORAGE_SIGNING_KEY` / `_FILE`                                                                                                   | no              | Signs addresses that serve a file without a session (§4.6). At least 32 characters                                                                                                                                                                                         |
 | `SV_ENVIRONMENT`                                                                                                                     | no              | `development`, `staging` or `production`; default `production`. What the instance is for (§3.15.1)                                                                                                                                                                         |
 | `SV_SMTP_HOST`, `_PORT`, `_USER`, `_PASSWORD` / `_PASSWORD_FILE`, `_FROM`                                                            | no              | Mail defaults (§3.12)                                                                                                                                                                                                                                                      |
 
@@ -1731,6 +1734,33 @@ operator's guide says so.
 
 ---
 
+### 4.6 Files
+
+Built ([RFC 0004](../rfcs/0004-file-storage.md)). Core keeps files a person uploads to their own account the way every app keeps its
+people's files, through `@sovereignfs/storage`.
+
+- **Where.** `SV_STORAGE_PATH`, default `/data/s3/core`: a folder per person, named by their `sub`, holding each file under an id core
+  makes (128 random bits) and a record beside it (the name they gave it, cleaned of any path; the type; the size; when). On an instance
+  that folder is core's part of the `sovereign-data` volume (operator-cli §6.4); no app can see it. `SV_STORAGE_DRIVER` is `fs`; other
+  stores follow (RFC 0004 §3).
+- **Quota.** Per person: `SV_STORAGE_QUOTA_MB` (default 204800, 200 GB) and `SV_STORAGE_FILE_QUOTA` (default 1000). Room for a file is
+  reserved before a byte is written and what was not used is given back, so two uploads at once cannot together pass it.
+- **Routes**, each calling `requireCapability('files:manage')` (§3.2.2), and `requireSameOrigin` for upload and delete:
+  - `POST /api/files`: the body is the file, its name in `X-File-Name` (percent-encoded). The request MUST say its length (`411`
+    otherwise), at most **10 MB** (`413`): core's proxy keeps only that much of a body (`proxyClientMaxBodySize`), and a body shorter than
+    it said is refused rather than kept. Answers `201` with the record and its address.
+  - `GET /api/files`: the person's files, newest first, with their usage and quota.
+  - `GET /api/files/{id}`: the file, to its owner's session, or to an address signed with `SV_STORAGE_SIGNING_KEY` (`?u=&expires=&signature=`,
+    at most an hour, compared in constant time; `403` once it has run out). A file of someone else's is `404`, the same as none.
+  - `DELETE /api/files/{id}`: `204`, and its space is given back.
+- **Refusals** carry a code a page can act on: `too_large` (`413`), `over_quota` (`507`), `not_found` (`404`), `invalid` and `empty`
+  (`400`), each with a message.
+- **Serving.** The type is judged by the file's bytes, never its name or the type sent. Images (PNG, JPEG, GIF, WebP, AVIF) are shown;
+  everything else is sent as `application/octet-stream` to download, so nothing uploaded runs as script. Every answer carries `nosniff`,
+  `Content-Disposition` and `Content-Security-Policy: default-src 'none'; sandbox`.
+- **Deleting an account** deletes the person's folder, once the deletion has committed, whoever deletes it and including a deletion a
+  restore carries across (§4.5). A failure to delete it is logged and does not undo the deletion.
+
 ## Changelog
 
 | Date       | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
@@ -1806,3 +1836,4 @@ operator's guide says so.
 | 2026-10-31 | §4.5, §3.10: account-deletion notices are sent: each is tried at once after the deletion and again from the table on the schedule, with a lease so two instances do not send it twice, until the app answers `2xx` or the 30 days end; the Console's Deletions page lists those not delivered and lets an operator mark one done. Only the restore commands remain.                                                                                                                                                                                                                                                                                                                                                           |
 | 2026-10-31 | §4.5: deletions across a restore are built: every deletion is written to `deleted_accounts` (90 days), `sovereign-admin instance deletions export` and `apply` carry them across a restore, deleting a brought-back account again and making its apps' notices, once for a given export. `sv` calls them with `sv restore` (task 13.8).                                                                                                                                                                                                                                                                                                                                                                                       |
 | 2026-11-01 | §3.15.1: `SV_ENVIRONMENT`, and a seed for development and staging instances (accounts, a sample app, passwords by environment), specified and not built: [workstream 0002](../workstreams/0002-test-instances.md).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 2026-11-12 | §4.6: files a person keeps in core, through `@sovereignfs/storage` (RFC 0004); §3.2.2: `files:manage`, held by every role.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |

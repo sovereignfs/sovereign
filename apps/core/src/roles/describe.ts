@@ -21,6 +21,10 @@ export const CAPABILITY_TEXT: Record<Capability, { label: string; description: s
     label: 'Use the app launcher',
     description: 'See the apps they can open and open them.',
   },
+  'files:manage': {
+    label: 'Keep their own files',
+    description: 'Upload files to their account, see them, download them and delete them.',
+  },
   'console:access': {
     label: 'Open the Console',
     description: 'Enter the Console. Without this, nothing else in the Console is reachable.',

@@ -142,6 +142,8 @@ export type AccountManagerHooks = {
   deletionNotices?: () => Promise<void>;
   /** Tells the account holder that an operator reset their two-factor sign-in. Resolves true when it was sent. */
   mfaReset?: (to: { email: string; name: string }) => Promise<boolean>;
+  /** Deletes the files the person kept in core (core-app §4.6), once the account is gone. Safe to run again. */
+  removeFiles?: (sub: string) => Promise<void>;
   log?: (message: string) => void;
 };
 
@@ -269,6 +271,13 @@ export class AccountManager {
       await removeAccount(tx, id);
       return planned;
     });
+    try {
+      await this.#hooks.removeFiles?.(id);
+    } catch (error) {
+      this.#log(
+        `Deleting the files of a deleted account failed: ${error instanceof Error ? error.message : 'unknown error'}`,
+      );
+    }
     if (queued) {
       try {
         await this.#hooks.deletionNotices?.();

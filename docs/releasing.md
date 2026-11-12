@@ -5,7 +5,7 @@ Three things are released from this repository: a package to npm, core's image t
 
 ## Packages
 
-Four packages are published to npm:
+Five packages are published to npm:
 
 | Package                 | What it is                                                                                                        | Licence                                  |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
@@ -13,6 +13,7 @@ Four packages are published to npm:
 | `@sovereignfs/sdk`      | How an app's server calls core: tokens, failure, version support and sign-in                                      | MPL-2.0                                  |
 | `@sovereignfs/manifest` | The app manifest: its schemas, a validator, and `sovereign-manifest`, which makes the image label and port        | MPL-2.0                                  |
 | `@sovereignfs/config`   | The environment convention of `contracts/env.md`: settings declared once, read with a prefix, refused at start-up | MPL-2.0                                  |
+| `@sovereignfs/storage`  | The files people upload: a folder per person, a quota per person, served only to them (RFC 0004)                  | MPL-2.0                                  |
 
 Every other package is `private` for now and is not published, **`@sovereignfs/bridge`
 included**: it is release-ready (licence, files, README) but marked `private`, so nothing can
@@ -91,7 +92,8 @@ package's `bin`, and `packages:check` holds it to a tool's rules (in `dist/`, in
 ### Releasing a package
 
 Pushing a tag releases the package: `ui-vX.Y.Z` releases `@sovereignfs/ui`, `sdk-vX.Y.Z` releases
-`@sovereignfs/sdk`, and `manifest-vX.Y.Z` releases `@sovereignfs/manifest`.
+`@sovereignfs/sdk`, `manifest-vX.Y.Z` releases `@sovereignfs/manifest`, `config-vX.Y.Z` releases `@sovereignfs/config`, and
+`storage-vX.Y.Z` releases `@sovereignfs/storage`.
 `.github/workflows/publish.yml` does the rest, and **publishes
 nothing unless every one of these holds**:
 

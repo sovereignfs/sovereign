@@ -26,6 +26,8 @@ test-results/
 **/data/*.db-journal
 **/data/*.db-wal
 **/data/*.db-shm
+# People's files kept by the storage package in development (SV_STORAGE_PATH=./data/s3/core).
+**/data/s3/
 /backups/
 
 # The active task (written by /sv-task-start, deleted by /sv-update-task-docs).

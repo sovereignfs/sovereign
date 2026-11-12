@@ -55,6 +55,11 @@ the prefix differs: `SV_URL` in core, `TASKS_URL` in an app that uses the `TASKS
 | `DB_CONNECT_TIMEOUT_MS`                            | How long to wait at start-up for a database that is still starting                                                                                           |        |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_FROM` | Outgoing mail                                                                                                                                                |        |
 | `SMTP_PASSWORD`                                    | Its password                                                                                                                                                 | yes    |
+| `STORAGE_DRIVER`                                   | Where people's files are kept: `fs`, a folder ([RFC 0004](../docs/rfcs/0004-file-storage.md)). Default `fs`                                                  |        |
+| `STORAGE_PATH`                                     | The folder, with `fs`. An instance sets `/data/s3/<app>`                                                                                                     |        |
+| `STORAGE_QUOTA_MB`                                 | How many megabytes each person may keep in the app. Default 204800 (200 GB)                                                                                  |        |
+| `STORAGE_FILE_QUOTA`                               | How many files each person may keep in the app. Default 1000                                                                                                 |        |
+| `STORAGE_SIGNING_KEY`                              | Signs addresses that serve a file without a session, for a few minutes. At least 32 characters                                                               | yes    |
 
 Database variables name the **engine**, not the component: `SV_POSTGRES_URL`, never
 `SV_DB_URL`. `DB_DIALECT` says which engine is in use; nothing infers it from a URL,

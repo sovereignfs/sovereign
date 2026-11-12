@@ -204,7 +204,7 @@ built by tasks 14.7 to 14.10.
 - A session, an access token, a refresh token and an app token issued before the marker are each refused, and ones after it work
 - The marker only ever moves forward
 
-#### 📋 15.9 — Files: `@sovereignfs/storage` with `fs`, and core's own files
+#### ✅ 15.9 — Files: `@sovereignfs/storage` with `fs`, and core's own files
 
 **Goal:** Core and every app keep the files people upload the same way: a folder per person, a quota per person, served only to them.
 

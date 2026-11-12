@@ -1,0 +1,46 @@
+{
+  "name": "@sovereignfs/storage",
+  "version": "0.1.0",
+  "description": "The files people upload to a Sovereign app or core: a folder per person, a quota per person, served only to them.",
+  "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sovereignfs/sovereign.git",
+    "directory": "packages/storage"
+  },
+  "homepage": "https://github.com/sovereignfs/sovereign/tree/main/packages/storage#readme",
+  "bugs": {
+    "url": "https://github.com/sovereignfs/sovereign/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sovereignfs/config": "workspace:*"
+  },
+  "devDependencies": {
+    "@sovereignfs/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}

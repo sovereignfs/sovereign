@@ -10,6 +10,7 @@ import { isRole, ROLE_ADMIN, ROLE_OWNER, ROLE_USER, type Role } from '../auth/ro
 export const CAPABILITIES = {
   'profile:manage': { ownerOnly: false },
   'launcher:access': { ownerOnly: false },
+  'files:manage': { ownerOnly: false },
   'console:access': { ownerOnly: false },
   'user:view': { ownerOnly: false },
   'user:manage': { ownerOnly: false },
@@ -33,7 +34,7 @@ export const OWNER_ONLY_CAPABILITIES = ALL_CAPABILITIES.filter(
 export type EditableRole = typeof ROLE_ADMIN | typeof ROLE_USER;
 export type Matrix = Readonly<Record<EditableRole, ReadonlySet<Capability>>>;
 
-const USER_CAPABILITIES: Capability[] = ['profile:manage', 'launcher:access'];
+const USER_CAPABILITIES: Capability[] = ['profile:manage', 'launcher:access', 'files:manage'];
 
 /** The matrix the instance starts with, and the one in force until an owner changes it. */
 export const DEFAULT_MATRIX: Matrix = {

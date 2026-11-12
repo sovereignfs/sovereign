@@ -29,6 +29,7 @@ COPY packages/crypto/package.json packages/crypto/package.json
 COPY packages/database/package.json packages/database/package.json
 COPY packages/mailer/package.json packages/mailer/package.json
 COPY packages/manifest/package.json packages/manifest/package.json
+COPY packages/storage/package.json packages/storage/package.json
 COPY packages/sdk/package.json packages/sdk/package.json
 COPY packages/tsconfig/package.json packages/tsconfig/package.json
 COPY packages/ui/package.json packages/ui/package.json

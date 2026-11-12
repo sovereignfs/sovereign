@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/core",
-  "version": "0.60.0",
+  "version": "0.61.0",
   "private": true,
   "type": "module",
   "description": "Sovereign core \u2014 the sign-in server, Console and launcher.",
@@ -22,6 +22,7 @@
     "@sovereignfs/crypto": "workspace:*",
     "@sovereignfs/database": "workspace:*",
     "@sovereignfs/mailer": "workspace:*",
+    "@sovereignfs/storage": "workspace:*",
     "@sovereignfs/ui": "workspace:*",
     "better-auth": "^1.7.13",
     "drizzle-orm": "catalog:",

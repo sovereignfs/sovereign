@@ -5,6 +5,8 @@ name: Publish
 #   ui-vX.Y.Z      -> @sovereignfs/ui
 #   sdk-vX.Y.Z     -> @sovereignfs/sdk
 #   manifest-vX.Y.Z -> @sovereignfs/manifest
+#   config-vX.Y.Z  -> @sovereignfs/config
+#   storage-vX.Y.Z -> @sovereignfs/storage
 # Every other package is private and never published (@sovereignfs/bridge is private for now;
 # publishing it later means removing "private" and adding its tag and case here).
 # docs/releasing.md has the whole process.
@@ -19,6 +21,7 @@ on:
       - 'sdk-v*.*.*'
       - 'manifest-v*.*.*'
       - 'config-v*.*.*'
+      - 'storage-v*.*.*'
 
 permissions:
   contents: read
@@ -60,6 +63,7 @@ jobs:
             sdk-v*) dir=sdk; prefix=sdk-v ;;
             manifest-v*) dir=manifest; prefix=manifest-v ;;
             config-v*) dir=config; prefix=config-v ;;
+            storage-v*) dir=storage; prefix=storage-v ;;
             *) echo "The tag $TAG is not a package release tag." >&2; exit 1 ;;
           esac
           expected="${TAG#"$prefix"}"

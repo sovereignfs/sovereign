@@ -10,6 +10,7 @@ import {
 } from '@sovereignfs/config';
 import { fieldEncryptionVariables, resolveFieldEncryption } from '@sovereignfs/crypto';
 import { databaseVariables, resolveDatabase } from '@sovereignfs/database';
+import { storageVariables } from '@sovereignfs/storage';
 
 /**
  * Every environment variable core reads is declared here (rules: contracts/env.md), and
@@ -123,6 +124,7 @@ export const config = defineConfig({
     smtpFrom: string({ name: 'SMTP_FROM', description: 'The address mail is sent from' }),
     ...databaseVariables,
     ...fieldEncryptionVariables,
+    ...storageVariables,
   },
 });
 

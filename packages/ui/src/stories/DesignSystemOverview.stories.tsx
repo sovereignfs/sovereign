@@ -5,6 +5,8 @@ import { Avatar } from '../components/Avatar/Avatar';
 import { AvatarStack } from '../components/AvatarStack/AvatarStack';
 import { FloatingActionButton } from '../components/FloatingActionButton/FloatingActionButton';
 import { PhotoGallery } from '../components/PhotoViewer/PhotoGrid';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
+import { Map } from '../map';
 import { Badge } from '../components/Badge/Badge';
 import { Button } from '../components/Button/Button';
 import { Card } from '../components/Card/Card';
@@ -2952,6 +2954,41 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                   )}`,
                 }))}
               />
+            </ComponentCard>
+
+            {/* Map */}
+            <ComponentCard
+              name="Map"
+              importLine="import { Map } from '@sovereignfs/ui/map';"
+              usage="MapLibre GL JS in the suite's style, from a style the app serves. Markers are labelled buttons (clustered when close), plus a line, fit to points, the person's position and choosing a point. Makes no request to an address the app did not give. Its own entry, so an app with no map carries no MapLibre."
+            >
+              <div style={{ height: 220 }}>
+                <Map
+                  styleUrl={`data:application/json,${encodeURIComponent(
+                    JSON.stringify({
+                      version: 8,
+                      sources: {},
+                      layers: [
+                        {
+                          id: 'background',
+                          type: 'background',
+                          paint: { 'background-color': '#e8edf2' },
+                        },
+                      ],
+                    }),
+                  )}`}
+                  ariaLabel="Places in Portugal"
+                  workerUrl={workerUrl}
+                  markers={[
+                    { id: 'lisbon', lat: 38.7223, lng: -9.1393, label: 'Lisbon' },
+                    { id: 'porto', lat: 41.1579, lng: -8.6291, label: 'Porto' },
+                  ]}
+                  line={[
+                    { lat: 38.7223, lng: -9.1393 },
+                    { lat: 41.1579, lng: -8.6291 },
+                  ]}
+                />
+              </div>
             </ComponentCard>
 
             {/* NavTabs */}

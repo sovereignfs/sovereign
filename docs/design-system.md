@@ -1762,6 +1762,68 @@ import { Calendar } from '@sovereignfs/ui';
 <Calendar value={selected} onChange={setSelected} minDate={today} aria-label="Pick a date" />;
 ```
 
+### `AvatarStack`, `FloatingActionButton` and the photo viewer
+
+```tsx
+import { AvatarStack, FloatingActionButton, PhotoGallery } from '@sovereignfs/ui';
+
+<AvatarStack label="Going" people={members} max={4} />;
+<FloatingActionButton
+  label="Check in"
+  icon={<Icon name="plus" size="lg" aria-hidden />}
+  href="/checkins/new"
+/>;
+<PhotoGallery photos={photos} />;
+```
+
+`AvatarStack` overlaps avatars in a ring of the surface they are on and shows a "+N" beyond `max` (never for just one more).
+It is **one image to assistive technology**, labelled with every name, so nobody is only a number.
+
+`FloatingActionButton` is a phone's one main action: round, fixed, **above `MobileFooter`** (it reads
+`--sv-shell-footer-height`, which the footer and the shell publish, and falls back to the home indicator's safe area when
+there is no footer). A link when it has an `href`, a button otherwise. It has no breakpoint of its own: render it on a phone.
+
+`PhotoGrid` is a grid of thumbnails, each a button; `PhotoViewer` is the full-screen viewer (a modal dialog on the same overlay
+hooks as `Dialog`: focus captured and returned, scroll locked, `Esc`); `PhotoGallery` is the two together. Swipe or the arrow
+keys move between photos; pinch, double tap or the wheel zoom around the point; a zoomed photo is dragged (or moved with the
+arrow keys); a swipe down closes. A photo has a `caption` slot. **The viewer requests only the `src` and `thumbSrc` addresses
+it is given**, from the browser's own `<img>`, so a `blob:` URL works and an app's CSP needs only `img-src`.
+
+### `Map`
+
+```tsx
+import { Map } from '@sovereignfs/ui/map';
+
+<Map
+  styleUrl="/api/map/style.json"
+  workerUrl="/maplibre-gl-worker.mjs"
+  ariaLabel="Where you have been"
+  markers={places}
+  cluster
+  line={route}
+  position={here}
+  fitKey={tripId}
+/>;
+```
+
+The map is **its own entry** (`@sovereignfs/ui/map`), so an app with no map carries no MapLibre. It needs `maplibre-gl` (an
+optional peer dependency: install it, 6.17 or later in the 6 line) and imports MapLibre's stylesheet itself.
+
+- **A style the app serves** (`styleUrl`). The app decides its tiles, glyphs and sprite; light or dark is the style's: pass
+  another address and the map changes. **The map makes no request to an address the app did not give:** requests to the page's
+  origin and the style's own are let through, `allowedOrigins` adds any other, and everything else is turned into a request
+  that cannot succeed (`isAllowedRequest`), whatever the style says.
+- **The worker and the CSP.** MapLibre runs in a worker. Serve `maplibre-gl/dist/maplibre-gl-worker.mjs` from the app's own
+  origin and give its address as `workerUrl`; the CSP then needs `worker-src 'self'`. With no `workerUrl` MapLibre makes a
+  `blob:` worker, which needs `worker-src blob:`. A tile, glyph or sprite address is `connect-src` and `img-src`: the app's own.
+- **Markers are real buttons** with an accessible label, in token colours (`tone`); with `cluster`, markers close together on
+  the screen become one button with a count that zooms in when chosen. Draw a list of the same places beside the map: a map is
+  never the only way to reach them.
+- **A line** (`line`), **fit to points** (at the start and whenever `fitKey` changes, never when only the markers change),
+  **the person's position** (`position`, a dot) and **attribution** (the style's, and `attribution` added).
+- **Choosing a point** (`pick`): a click or tap chooses that point and shows a pin at `pick.value`; with the map focused, the
+  arrow keys move it and Enter chooses its middle.
+
 ---
 
 ## Component stories (Storybook)
@@ -1852,6 +1914,7 @@ Stories live under two roots inside `packages/ui/src/`:
 | `Toggle.stories.tsx`               | On/off; disabled; label association                                                                                                                             |
 | `Tooltip.stories.tsx`              | Four placement variants; hover and focus triggers                                                                                                               |
 | `PhotoViewer.stories.tsx`          | Gallery (grid and viewer); grid alone; viewer open; swipe, pinch, double tap, arrow keys, `Esc`; drawn pictures, no network                                     |
+| `Map.stories.tsx`                  | Markers; clustered; with a line; the person's position; dark; choosing a point. A tile-less style as a `data:` address, so no network                           |
 
 ### Themes toolbar
 

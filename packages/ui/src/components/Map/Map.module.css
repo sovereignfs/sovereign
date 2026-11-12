@@ -1,0 +1,110 @@
+.root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 240px;
+  overflow: hidden;
+  border-radius: inherit;
+  background: var(--sv-color-surface-sunken);
+  font-family: var(--sv-font-family);
+}
+
+.picking {
+  cursor: crosshair;
+}
+
+/* Markers are real buttons: reached by Tab, named for a screen reader, in token colours. */
+.marker {
+  --marker-colour: var(--sv-color-accent);
+  display: block;
+  box-sizing: border-box;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 3px solid var(--sv-color-surface);
+  border-radius: var(--sv-radius-full);
+  background: var(--marker-colour);
+  box-shadow: var(--sv-shadow-control);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* A finger needs more than 22px: the target grows around the dot without growing the dot. */
+.marker::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
+.marker:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 3px;
+}
+
+.selected {
+  width: 28px;
+  height: 28px;
+  box-shadow:
+    0 0 0 3px var(--sv-color-focus-ring),
+    var(--sv-shadow-control);
+}
+
+.cluster {
+  width: 36px;
+  height: 36px;
+  background: var(--sv-color-accent);
+  color: var(--sv-color-text-on-accent);
+  font-family: var(--sv-font-family);
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.accent,
+.success,
+.warning,
+.error,
+.neutral {
+  /* the colour comes from --marker-colour, set on the element from the tone's token */
+  background: var(--marker-colour);
+}
+
+.position {
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  border: 3px solid var(--sv-color-surface);
+  border-radius: var(--sv-radius-full);
+  background: var(--sv-color-accent);
+  box-shadow:
+    0 0 0 0 color-mix(in srgb, var(--sv-color-accent) 45%, transparent),
+    var(--sv-shadow-control);
+  animation: pulse 2.4s ease-out infinite;
+}
+
+@keyframes pulse {
+  to {
+    box-shadow:
+      0 0 0 16px color-mix(in srgb, var(--sv-color-accent) 0%, transparent),
+      var(--sv-shadow-control);
+  }
+}
+
+.pin {
+  width: 26px;
+  height: 26px;
+  box-sizing: border-box;
+  border: 3px solid var(--sv-color-surface);
+  border-radius: var(--sv-radius-full) var(--sv-radius-full) var(--sv-radius-full) 0;
+  background: var(--sv-color-accent);
+  box-shadow: var(--sv-shadow-control);
+  rotate: -45deg;
+  translate: 0 -8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .position {
+    animation: none;
+  }
+}

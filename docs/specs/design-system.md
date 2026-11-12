@@ -134,7 +134,8 @@ Every component MUST have a story, and tests of what it does. Every component an
 - The package MUST have no runtime `dependencies`.
 - It MUST depend on no other Sovereign package, on no framework such as Next.js, and MUST work in any React app.
 - Its peer dependencies are `react` and `react-dom` at version 19. Anything else MUST be an optional peer, needed only by the
-  components that use it, as `@dnd-kit` is for reordering.
+  components that use it, as `@dnd-kit` is for reordering and `maplibre-gl` for the map (which has an entry of its own,
+  `@sovereignfs/ui/map`, so an app with no map carries none of it).
 - It ships its own typeface and icons, and MUST NOT request anything from another site. Icon data is in the bundle.
 
 ## 8. What belongs here

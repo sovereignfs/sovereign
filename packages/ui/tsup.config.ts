@@ -82,14 +82,17 @@ const flatCssModules: Plugin = {
 
 /** Every CSS file the bundle imports must be in `dist/`: a published package whose import does not resolve breaks the app that installs it. */
 function checkBundleImports(): void {
-  const bundle = readFileSync(join(DIST, 'index.js'), 'utf8');
-  const missing = [...bundle.matchAll(/from "(\.[^"]+\.css)"/g)]
-    .map((match) => match[1] as string)
-    .filter((specifier) => !existsSync(join(DIST, specifier)));
-  if (missing.length > 0) {
-    throw new Error(
-      `[ui build] dist/index.js imports CSS that is not in dist/: ${missing.join(', ')}`,
-    );
+  for (const file of ['index.js', 'map.js']) {
+    const bundle = readFileSync(join(DIST, file), 'utf8');
+    // `import "./x.css"` as well as `from "./x.css"`: the map's stylesheets are side-effect imports.
+    const missing = [...bundle.matchAll(/(?:from|import) "(\.[^"]+\.css)"/g)]
+      .map((match) => match[1] as string)
+      .filter((specifier) => !existsSync(join(DIST, specifier)));
+    if (missing.length > 0) {
+      throw new Error(
+        `[ui build] dist/${file} imports CSS that is not in dist/: ${missing.join(', ')}`,
+      );
+    }
   }
 }
 
@@ -104,16 +107,19 @@ const CLIENT_DIRECTIVE = "'use client';";
 
 /** The directive must be the bundle's first statement, or React ignores it. */
 function checkClientDirective(): void {
-  const first = readFileSync(join(DIST, 'index.js'), 'utf8').split('\n', 1)[0];
-  if (first?.trim() !== CLIENT_DIRECTIVE) {
-    throw new Error(
-      `[ui build] dist/index.js must begin with ${CLIENT_DIRECTIVE}, and begins with: ${first}`,
-    );
+  for (const file of ['index.js', 'map.js']) {
+    const first = readFileSync(join(DIST, file), 'utf8').split('\n', 1)[0];
+    if (first?.trim() !== CLIENT_DIRECTIVE) {
+      throw new Error(
+        `[ui build] dist/${file} must begin with ${CLIENT_DIRECTIVE}, and begins with: ${first}`,
+      );
+    }
   }
 }
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  // The map is an entry of its own, so that an app with no map carries no MapLibre (it is an optional peer).
+  entry: ['src/index.ts', 'src/map.ts'],
   format: ['esm'],
   dts: true,
   clean: true,
@@ -122,7 +128,7 @@ export default defineConfig({
   // when installed from npm) processes the CSS. `onSuccess` copies the .css into
   // dist/ so the published package's imports resolve; `publishConfig` (in
   // package.json) repoints exports at dist/ on publish.
-  external: ['react', 'react-dom', 'react/jsx-runtime', /^@dnd-kit\//],
+  external: ['react', 'react-dom', 'react/jsx-runtime', /^@dnd-kit\//, /^maplibre-gl/],
   banner: { js: CLIENT_DIRECTIVE },
   esbuildPlugins: [flatCssModules],
   esbuildOptions(options) {

@@ -84,7 +84,8 @@ describe('dependencies', () => {
   });
 
   it('imports no other Sovereign package and no framework', () => {
-    const allowed = /^(react|react-dom|react\/jsx-runtime|@dnd-kit\/[a-z]+)(\/|$)/;
+    // The optional peers (`@dnd-kit` for reordering, `maplibre-gl` for the map) are the only packages besides React.
+    const allowed = /^(react|react-dom|react\/jsx-runtime|@dnd-kit\/[a-z]+|maplibre-gl)(\/|$)/;
     for (const file of sources) {
       const imports = [...read(file).matchAll(/from '([^.'][^']*)'/g)].map((match) =>
         String(match[1]),

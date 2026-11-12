@@ -203,3 +203,72 @@ built by tasks 14.7 to 14.10.
 
 - A session, an access token, a refresh token and an app token issued before the marker are each refused, and ones after it work
 - The marker only ever moves forward
+
+#### 📋 15.9 — Files: `@sovereignfs/storage` with `fs`, and core's own files
+
+**Goal:** Core and every app keep the files people upload the same way: a folder per person, a quota per person, served only to them.
+
+**Priority:** 9.
+
+**Deliverables:**
+
+- `packages/storage`, published as `@sovereignfs/storage`: put, list, get, remove, removeAll, usage and signed addresses; types judged by
+  their bytes; the usage record reserved before a write; a usage store an app can replace; the `fs` driver
+- Core's files at `/data/s3/core`: `POST`, `GET` and `DELETE` under `/api/files`, the `files:manage` capability held by every role, and the
+  person's folder deleted with their account
+- core-app §4.6 and §3.4; the `SV_STORAGE_*` variables in `.env.example`, the spec's table and `contracts/env.md`; `docs/releasing.md`
+
+**Dependencies:** none
+
+**Spec reference:** RFC 0004 §1–§4; core-app §4.6 (new), §3.4, §4.5
+
+**Review checklist:**
+
+- Two uploads at once cannot together pass a quota, and a failed write gives its reservation back
+- No path is built from anything a request sent; HTML and SVG are never served inline
+- Every route calls `requireCapability`, and upload and delete call `requireSameOrigin`
+- A signed address expires and is compared in constant time
+
+#### 📋 15.10 — Files in any S3-compatible store `[parallel]`
+
+**Goal:** An app keeps its people's files in S3-compatible storage instead of on the server's disk, with the same quotas and serving.
+
+**Priority:** 10.
+
+**Deliverables:**
+
+- The `s3` driver: `<PREFIX>_S3_ENDPOINT`, `_S3_BUCKET`, `_S3_PREFIX`, `_S3_REGION`, and the credentials as operator secrets
+- Usage kept in the usage store, never by listing; objects at `<prefix>/<sub>/<id>` with the record as metadata
+- The package's driver tests run against MinIO
+
+**Dependencies:** 15.9
+
+**Spec reference:** RFC 0004 §3
+
+**Review checklist:**
+
+- The driver passes the same tests as `fs`
+- No quota check lists the bucket
+
+#### 📋 15.11 — Files in a repository the person connects
+
+**Goal:** A person keeps their files in a git repository of their own, which the app commits to and serves from.
+
+**Priority:** 11.
+
+**Deliverables:**
+
+- The `git` driver, allowed by `<PREFIX>_STORAGE_DRIVER=git` and `<PREFIX>_GIT_HOSTS`
+- Connecting a repository with a deploy key the app makes, or a token, kept encrypted and used for that repository alone
+- A public GitHub repository's files served from their raw-content address, after telling the person they are public; a private one's
+  through the app
+- The file quota kept, and a file over the host's limit refused before it is sent
+
+**Dependencies:** 15.9
+
+**Spec reference:** RFC 0004 §3
+
+**Review checklist:**
+
+- A person is told a repository is public before anything is written to it
+- The access a person gives never leaves the app unencrypted, and reaches only their repository

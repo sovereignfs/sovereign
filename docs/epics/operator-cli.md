@@ -871,3 +871,75 @@ can have a plain copy when they ask for one, and cannot lose every backup by los
 - The server never writes or sends a backup in the clear, and its own key is never a recipient
 - An app's restore leaves core and its client secret as they are; a core restore runs `instance restored` and keeps deletions
 - A recovery key's private half is shown once and never written inside the repository
+
+#### 📋 13.32 — Manifest 3, and each app's folder of files
+
+**Goal:** An app says it keeps files, and the instance gives it a folder of its own in one shared volume, which no other app can see.
+
+**Priority:** 10.
+
+**Deliverables:**
+
+- Manifest 3 with `"storage": true`, its schema, and `@sovereignfs/manifest` reading it
+- `sv apply`: the `sovereign-data` volume; `s3/<app>` made before the app starts, owned by the user its image runs as, and mounted with
+  `subpath` at `/data/s3/<app>`; core's `s3/core`; the `_STORAGE_*` variables, with the defaults 204800 MB and 1000 files, and the
+  generated signing key
+- Purging an app deletes its folder after the backup; `sv status` shows how much each folder holds
+- The minimum Docker Engine raised to 26, refused by `sv apply` and `sv doctor` below it
+
+**Dependencies:** 15.9
+
+**Spec reference:** RFC 0004 §5, §6; operator-cli §6.2, §6.4, §6.5, §7; app-manifest §2, §5; `contracts/env.md`
+
+**Review checklist:**
+
+- A container cannot see another app's folder (a Docker test)
+- An app's folder is writable by the user its image runs as, and by no one else's container
+
+#### 📋 13.33 — Files in backups and restores
+
+**Goal:** `sv backup` and `sv restore` carry people's files, whole and by scope, and an app restored alone loses no deletion.
+
+**Priority:** 11.
+
+**Deliverables:**
+
+- `files/<app>.tar` for core and each `fs` app, by `--all`, `--core` and `--app`, in the encrypted archive and with `--unencrypted`
+- `backup.json` format 2, with `files` and `elsewhere`; `sv backup` naming the apps whose files are kept in `s3` or `git`
+- `sv receive` streaming a restore to disk, checking free space first, with no 1 GiB limit
+- Folders put back before the apps start, owned by the app's user on this server, with their usage records removed
+- `sovereign-admin instance deletions resend --app CLIENT --since TIME`, run after an app is restored alone, and a warning when the
+  backup is older than the 90 days core keeps deletions
+
+**Dependencies:** 13.32, 13.31
+
+**Spec reference:** RFC 0004 §6; operator-cli §10.2; core-app §4.5
+
+**Review checklist:**
+
+- An archive over 1 GiB is restored
+- A person deleted after the backup does not come back in an app restored alone
+- A format 1 archive still restores; a format 2 archive is refused by a toolkit that reads only 1
+
+#### 📋 13.34 — The template keeps files, and has a Docker setup of its own `[parallel]`
+
+**Goal:** A new app keeps people's files the suite's way without its author writing it, and runs on its own with Docker.
+
+**Priority:** 12.
+
+**Deliverables:**
+
+- Manifest 3 with `"storage": true`; `@sovereignfs/storage` and `lib/files.ts`
+- `POST`, `GET` and `DELETE` under `/api/files`, for the signed-in person only, with refusals a person can act on
+- The account-deleted handler removing the person's files before it answers
+- `compose.yml` with the app, PostgreSQL and a volume at `/data/s3/<app>`; the `Dockerfile` making that folder; `.env.example` with the
+  storage variables
+
+**Dependencies:** 15.9, 13.32
+
+**Spec reference:** RFC 0004 §7; app-manifest §4
+
+**Review checklist:**
+
+- A scaffold builds, starts with `docker compose up`, uploads a file and serves it to its owner only
+- A scaffold is a valid manifest 3 under the published `@sovereignfs/manifest`

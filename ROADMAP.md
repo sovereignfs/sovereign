@@ -232,3 +232,17 @@ Epic [15](docs/epics/core-services.md)
 | 0.90.0  | 3        | Manifest 2                                 | ✅     | [13.29](docs/epics/operator-cli.md) |
 | 0.91.0  | 4        | Verifying a notice on its own `[parallel]` | ✅     | [14.11](docs/epics/sdk.md)          |
 | —       | 5        | Retire the plugin template `[parallel]`    | ✅     | [13.30](docs/epics/operator-cli.md) |
+
+### M14 — People's files are kept the same way everywhere
+
+[RFC 0004](docs/rfcs/0004-file-storage.md) (Accepted) · [research 0005](docs/research/0005-file-storage.md) · epics
+[13](docs/epics/operator-cli.md) and [15](docs/epics/core-services.md)
+
+| Version | Priority | Task                                                          | Status | Epic task                            |
+| ------- | -------- | ------------------------------------------------------------- | ------ | ------------------------------------ |
+| —       | 1        | Files: `@sovereignfs/storage` with `fs`, and core's own       | 📋     | [15.9](docs/epics/core-services.md)  |
+| —       | 2        | Manifest 3, and each app's folder of files                    | 📋     | [13.32](docs/epics/operator-cli.md)  |
+| —       | 3        | Files in backups and restores                                 | 📋     | [13.33](docs/epics/operator-cli.md)  |
+| —       | 4        | The template keeps files, and has a Docker setup `[parallel]` | 📋     | [13.34](docs/epics/operator-cli.md)  |
+| —       | 5        | Files in any S3-compatible store `[parallel]`                 | 📋     | [15.10](docs/epics/core-services.md) |
+| —       | 6        | Files in a repository the person connects                     | 📋     | [15.11](docs/epics/core-services.md) |

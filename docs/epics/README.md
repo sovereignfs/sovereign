@@ -45,7 +45,7 @@ the task is corrected.
 | 12  | [Release and deployment](release.md)          | ✅ Complete    | The published image, guides for operators, the deployment design ([RFC 0002](../rfcs/0002-deployment-strategies.md))          |
 | 13  | [Operator CLI](operator-cli.md)               | ⏳ In Progress | `sv`, `sv apply` and `sovereign-admin`: deploying and running an instance ([RFC 0002](../rfcs/0002-deployment-strategies.md)) |
 | 14  | [SDK](sdk.md)                                 | ⏳ In Progress | `@sovereignfs/sdk`: tokens, failure, version support and sign-in over the Core API                                            |
-| 15  | [Core services](core-services.md)             | 📋 Planned     | Specifying Phase 2: notifications, mail, activity and backups                                                                 |
+| 15  | [Core services](core-services.md)             | 📋 Planned     | Specifying Phase 2: notifications, mail, activity, backups and people's files                                                 |
 
 _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked · ❌ Rejected_
 

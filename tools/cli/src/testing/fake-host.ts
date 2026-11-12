@@ -55,6 +55,9 @@ export class FakeDocker {
   imageUsers: Record<string, string> = {};
   /** The folders of people's files made in `sovereign-data`, with the owner each was given. */
   filesFolders = new Map<string, string>();
+  /** What each `instance deletions resend` was asked: `--app NAME --since TIME`. */
+  resends: string[] = [];
+  resendFails = false;
   /** The folders a restore put back, by name, in order. */
   restoredFiles: string[] = [];
   /** Volumes, by compose project label. */
@@ -320,6 +323,12 @@ export class FakeDocker {
     const [group, verb, name] = more;
     if (group === 'instance' && verb === 'deletions' && name === 'export')
       return ok(this.deletionsExport);
+    if (group === 'instance' && verb === 'deletions' && name === 'resend') {
+      this.resends.push(more.slice(3).join(' '));
+      return this.resendFails
+        ? { code: 1, stdout: '', stderr: 'core could not make the notices' }
+        : ok('{"accounts":2,"notices":2}');
+    }
     if (group !== 'apps' || !name) return { code: 1, stdout: '', stderr: 'unknown admin command' };
     if (verb === 'ensure') {
       const known = this.clients.get(name);

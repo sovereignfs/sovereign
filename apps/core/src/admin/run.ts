@@ -5,7 +5,7 @@ import {
   type RegisterInput,
 } from '../clients/registry';
 import type { SystemActor } from '../clients/system-actor';
-import { LedgerError, type Applied } from '../accounts/deletion-ledger';
+import { LedgerError, type Applied, type Resent } from '../accounts/deletion-ledger';
 import { SeedError, type SeedReport } from '../dev/seed';
 import type { Restored } from '../instance/restore';
 import { parse, UsageError, USAGE, type Command } from './args';
@@ -17,6 +17,8 @@ export type InstanceOperations = {
   exportDeletions(): Promise<string>;
   /** Applies deletions read from `file`, or from standard input when there is none. */
   applyDeletions(file: string | undefined): Promise<Applied>;
+  /** Makes notices again for one app, of every account deleted after `since` (milliseconds). */
+  resendDeletions(clientId: string, since: number): Promise<Resent>;
   /** Seeds a development or staging instance (core-app §3.15.1). `local` also requires core's address to be on this machine. */
   seed(options: { local: boolean }): Promise<SeedReport>;
 };
@@ -171,6 +173,18 @@ export async function runAdmin(
           done.skipped
             ? 'sovereign-admin: these deletions were already applied; nothing changed'
             : `sovereign-admin: applied the deletions: ${done.deletedAgain} accounts deleted again, ${done.alreadyGone} already gone, ${done.kept} kept, ${done.notices} notices made`,
+        );
+        out(JSON.stringify(done));
+        return 0;
+      }
+      case 'deletions-resend': {
+        if (!instance) throw new Error('the instance operations were not given to sovereign-admin');
+        const since = Date.parse(command.since);
+        if (!Number.isFinite(since)) throw new LedgerError('--since is not a time.');
+        const clientId = await registry.clientIdOfKey(actor, command.key);
+        const done = await instance.resendDeletions(clientId, since);
+        log(
+          `sovereign-admin: ${done.accounts} accounts were deleted since then; ${done.notices} notices made for ${command.key}`,
         );
         out(JSON.stringify(done));
         return 0;

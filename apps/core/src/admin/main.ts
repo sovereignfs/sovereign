@@ -2,7 +2,12 @@ import { readFile } from 'node:fs/promises';
 import { ConfigError } from '@sovereignfs/config';
 import { AccountManager } from '../accounts/manage';
 import { AccountStates } from '../accounts/states';
-import { applyDeletions, exportDeletions, parseDeletions } from '../accounts/deletion-ledger';
+import {
+  applyDeletions,
+  exportDeletions,
+  parseDeletions,
+  resendDeletions,
+} from '../accounts/deletion-ledger';
 import { getAuth } from '../auth';
 import { getAuthSettings } from '../auth/settings';
 import { getClientRegistry } from '../clients';
@@ -53,6 +58,7 @@ async function main(): Promise<number> {
       },
       {
         restore: () => recordRestore(database),
+        resendDeletions: (clientId, since) => resendDeletions(database, clientId, since),
         exportDeletions: async () => JSON.stringify(await exportDeletions(database), null, 2),
         seed: async ({ local }) => {
           const config = getConfig();

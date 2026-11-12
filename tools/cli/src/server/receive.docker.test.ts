@@ -46,6 +46,7 @@ describe.skipIf(!runnable)('the server receiving a deployment against the real D
   afterAll(() => {
     docker('rm', '--force', ...NAMES);
     docker('compose', '--project-name', 'sovereign-database', 'down', '--volumes');
+    docker('volume', 'rm', '--force', 'sovereign-data');
     docker('network', 'rm', 'sv-net-core');
     // The deployment ran as root in a container, so what it wrote in the state directory is root's, and a runner's own user cannot remove it.
     if (state) {

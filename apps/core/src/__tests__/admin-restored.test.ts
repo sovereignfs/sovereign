@@ -32,6 +32,7 @@ describe('sovereign-admin instance restored', () => {
             restore,
             exportDeletions: () => Promise.resolve(''),
             applyDeletions: () => Promise.reject(new Error('unused')),
+            resendDeletions: () => Promise.reject(new Error('unused')),
             seed: () => Promise.reject(new Error('unused')),
           }
         : undefined,
@@ -79,8 +80,8 @@ describe('sovereign-admin instance deletions', () => {
   });
 
   it.each([
-    [['instance', 'deletions'], 'deletions is export or apply'],
-    [['instance', 'deletions', 'forget'], 'deletions is export or apply'],
+    [['instance', 'deletions'], 'deletions is export, apply or resend'],
+    [['instance', 'deletions', 'forget'], 'deletions is export, apply or resend'],
     [['instance', 'deletions', 'export', 'x'], 'takes no argument'],
     [['instance', 'deletions', 'apply', 'a', 'b'], 'takes one FILE'],
     [['instance', 'deletions', 'export', '--json'], 'unknown option --json'],
@@ -94,6 +95,7 @@ describe('sovereign-admin instance deletions', () => {
     exportDeletions: () => Promise.resolve('{"version":1}'),
     applyDeletions: () =>
       Promise.resolve({ skipped: false, deletedAgain: 2, alreadyGone: 1, kept: 0, notices: 3 }),
+    resendDeletions: () => Promise.resolve({ accounts: 4, notices: 2 }),
     seed: () => Promise.reject(new Error('unused')),
     ...extra,
   });
@@ -109,6 +111,56 @@ describe('sovereign-admin instance deletions', () => {
     );
     return { code, out, log };
   };
+
+  it('reads resend, with the app and the time it needs', () => {
+    expect(
+      parse([
+        'instance',
+        'deletions',
+        'resend',
+        '--app',
+        'notes',
+        '--since',
+        '2026-11-12T00:00:00Z',
+      ]),
+    ).toEqual({ name: 'deletions-resend', key: 'notes', since: '2026-11-12T00:00:00Z' });
+    for (const words of [
+      ['instance', 'deletions', 'resend'],
+      ['instance', 'deletions', 'resend', '--app', 'notes'],
+      ['instance', 'deletions', 'resend', '--since', 'x'],
+      ['instance', 'deletions', 'resend', 'extra', '--app', 'a', '--since', 'x'],
+    ])
+      expect(() => parse(words), words.join(' ')).toThrow(UsageError);
+  });
+
+  it('makes the notices for the app it names, since the time given, and says how many', async () => {
+    const resend = vi.fn(() => Promise.resolve({ accounts: 4, notices: 2 }));
+    const registry = {
+      clientIdOfKey: (_actor: unknown, key: string) => Promise.resolve(`client-${key}`),
+    };
+    const out: string[] = [];
+    const log: string[] = [];
+    const code = await runAdmin(
+      ['instance', 'deletions', 'resend', '--app', 'notes', '--since', '2026-11-12T00:00:00Z'],
+      registry as never,
+      {} as never,
+      { out: (line) => out.push(line), log: (line) => log.push(line) },
+      operations({ resendDeletions: resend }),
+    );
+    expect(code).toBe(0);
+    expect(resend).toHaveBeenCalledWith('client-notes', Date.parse('2026-11-12T00:00:00Z'));
+    expect(JSON.parse(out[0] as string)).toEqual({ accounts: 4, notices: 2 });
+    expect(log.join('\n')).toContain('2 notices made for notes');
+  });
+
+  it('exits 1, naming what is wrong, for a time that is not one', async () => {
+    const { code, log } = await run(
+      ['instance', 'deletions', 'resend', '--app', 'notes', '--since', 'yesterday-ish'],
+      operations(),
+    );
+    expect(code).toBe(1);
+    expect(log.join('\n')).toContain('--since is not a time');
+  });
 
   it('writes the export on standard output and nothing else there', async () => {
     const { code, out, log } = await run(['instance', 'deletions', 'export'], operations());

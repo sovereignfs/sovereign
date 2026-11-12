@@ -229,7 +229,7 @@ async function copyVolumes(
  * volume read only (RFC 0004 §6). Like an app's data volume it is copied while the apps run, as consistent as a crash would leave it,
  * and the tar keeps who owns what, so a restore on the same machine puts it back as it was.
  */
-async function copyFiles(
+export async function copyFiles(
   host: Host,
   image: string,
   work: string,

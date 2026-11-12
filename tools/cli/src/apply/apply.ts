@@ -44,6 +44,7 @@ import {
   loadScopedDatabases,
   markRestored,
   restoreFiles,
+  resendDeletionsToApps,
   restoreSecrets,
   restoreVolumes,
   saveDeletions,
@@ -334,6 +335,16 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
     roleLimit(corePool(suite)),
   );
   say('The database server is up, with core’s database.');
+  // Core's folder of people's files, made before anything mounts it and owned by the user core runs as (core-app §4.6). A restore runs
+  // core in a container of its own just below, which mounts the folder too, and on a new machine neither it nor the volume is there yet.
+  const coreImage = options.imageOverrides?.core ?? byDigest(lock.images.core);
+  await ensureFilesFolder(
+    host,
+    coreImage,
+    'core',
+    await imageUser(host, coreImage),
+    restoredFiles.includes('core'),
+  );
   if (options.restoreFrom && touchesCore(restoreScope)) {
     await markRestored(host, path.join(release, 'core', 'compose.yml'), deletions);
     say('Recorded the restore: every session and token from before it is ended.');
@@ -394,15 +405,6 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
     );
   }
 
-  // Core's folder of people's files, made before core mounts it and owned by the user core runs as (core-app §4.6).
-  const coreImage = options.imageOverrides?.core ?? byDigest(lock.images.core);
-  await ensureFilesFolder(
-    host,
-    coreImage,
-    'core',
-    await imageUser(host, coreImage),
-    restoredFiles.includes('core'),
-  );
   await composeUp(host, {
     project: PROJECT.core,
     files: [path.join(release, 'core', 'compose.yml'), ...(overrides.files.core ?? [])],
@@ -467,6 +469,15 @@ async function run(host: Host, options: ApplyOptions): Promise<ApplyResult> {
       failures.push({ name, message: error.message });
       host.log(`${name} failed: ${error.message}`);
     }
+  }
+  // Apps restored alone leave core as it was, so it still knows who was deleted since their backup, and the apps are told again.
+  if (options.restoreFrom && !restoreScope.all && !restoreScope.core) {
+    await resendDeletionsToApps(
+      host,
+      options.restoreFrom,
+      restoreScope.apps.filter((name) => results[name]?.clientId !== undefined),
+      say,
+    );
   }
   // Turned off, the pooler goes once every app is back on the server itself, so none is left holding a connection to it.
   if (!suite.database.pooler && (await removePooler(host, options.stateDir))) {

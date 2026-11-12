@@ -416,6 +416,16 @@ describe('a restore that carries people’s files', () => {
     expect(docker.restoredFiles).toEqual([]);
   });
 
+  it('makes core’s folder of files before the restore is recorded, which runs core mounting it, on a machine with none', async () => {
+    const made = await source();
+    const docker = new FakeDocker();
+    const { host } = fakeHost({ docker });
+    await apply(host, options(made, unpacked()));
+    const [folder = -1, recorded = -1] = order(docker, 'mkdir -p "/v/$1"', 'instance restored');
+    expect(folder).toBeGreaterThan(-1);
+    expect(folder).toBeLessThan(recorded);
+  });
+
   it('refuses, rather than skip them, when it has no image to put them back with', async () => {
     const { made, host } = await running();
     const failure = await apply(

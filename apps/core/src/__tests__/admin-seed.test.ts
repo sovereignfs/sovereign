@@ -48,6 +48,7 @@ describe('sovereign-admin seed: what it says', () => {
         restore: () => Promise.reject(new Error('unused')),
         exportDeletions: () => Promise.resolve(''),
         applyDeletions: () => Promise.reject(new Error('unused')),
+        resendDeletions: () => Promise.reject(new Error('unused')),
         seed: (options) => {
           asked.push(options);
           return seed(options);

@@ -2,6 +2,7 @@ import {
   existsSync,
   lstatSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   readlinkSync,
   readdirSync,
@@ -10,6 +11,7 @@ import {
   utimesSync,
   writeFileSync,
 } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
@@ -1011,6 +1013,99 @@ describe('apps that keep people’s files', () => {
     await apply(host, options(purged, { commit: 'b'.repeat(40), stateDir: made.stateDir }));
     expect(docker.filesFolders.has('s3/notes')).toBe(false);
     expect(docker.filesFolders.has('s3/core')).toBe(true);
+  });
+});
+
+describe('restoring one app, which leaves core as it was', () => {
+  const NOTES = { image: 'ghcr.io/example/notes:1' };
+  const IMAGE = 'ghcr.io/example/notes:1';
+  const registryOf = (manifest: unknown) => fakeRegistry({ [IMAGE]: { manifest } }).registry;
+  const backupOf = (takenAt: string | undefined) => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'sv-app-backup-'));
+    sources.push({ dir: path.join(dir, 'x') } as never);
+    mkdirSync(path.join(dir, 'databases'));
+    writeFileSync(path.join(dir, 'databases', 'app_notes.sql'), '--');
+    mkdirSync(path.join(dir, 'secrets'));
+    writeFileSync(path.join(dir, 'secrets', 'role-app-notes-password'), 'pw');
+    if (takenAt !== undefined)
+      writeFileSync(
+        path.join(dir, 'backup.json'),
+        JSON.stringify({
+          format: 2,
+          scope: { all: false, core: false, apps: ['notes'] },
+          takenAt,
+          apps: {},
+          files: [],
+        }),
+      );
+    return dir;
+  };
+  const restoreNotes = async (takenAt: string | undefined, docker = new FakeDocker()) => {
+    const made = await source({ suite: { apps: { notes: NOTES } } });
+    const { host, logs } = fakeHost({ docker, registry: registryOf(manifest2Of()) });
+    await apply(host, options(made));
+    const result = await apply(
+      host,
+      options(made, {
+        commit: 'b'.repeat(40),
+        restoreFrom: backupOf(takenAt),
+        restoreScope: { all: false, core: false, apps: ['notes'] },
+        toolkitImage: 'sv-cli:test',
+      }),
+    ).catch((e: unknown) => e);
+    return { result, docker, logs };
+  };
+
+  it('tells the app again of the people deleted since its backup, after it is up, and says so', async () => {
+    const taken = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+    const { result, docker, logs } = await restoreNotes(taken);
+    expect(result).not.toBeInstanceOf(Error);
+    expect(docker.resends).toEqual([`--app notes --since ${taken}`]);
+    expect(logs.join('\n')).toContain('notes is told again of the people deleted since the backup');
+    expect(logs.join('\n')).not.toContain('more than 90 days');
+    const calls = docker.calls.map((c) => c.args.join(' '));
+    const resent = calls.findIndex((c) => c.includes('deletions resend'));
+    const up = calls.findIndex((c) => c.includes('sovereign-app-notes') && c.includes(' up'));
+    expect(resent).toBeGreaterThan(up);
+    // Core was neither stopped nor told it was restored: only the app was.
+    expect(calls.some((c) => c.includes('instance restored'))).toBe(false);
+    expect(calls.some((c) => c.includes('stop sv-core'))).toBe(false);
+  });
+
+  it('says that people may be back when the backup is older than core remembers', async () => {
+    const taken = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString();
+    const { docker, logs } = await restoreNotes(taken);
+    expect(logs.join('\n')).toContain('more than 90 days old');
+    expect(docker.resends).toHaveLength(1);
+  });
+
+  it('fails, saying what to do, when core cannot make the notices, and when the backup says no time', async () => {
+    const stuck = new FakeDocker();
+    stuck.resendFails = true;
+    const failed = await restoreNotes(new Date().toISOString(), stuck);
+    expect(failed.result).toBeInstanceOf(Failed);
+    expect((failed.result as Failed).message).toContain('notes about the people deleted');
+    expect((failed.result as Failed).hint).toContain('sv restore again');
+    const untimed = await restoreNotes(undefined);
+    expect(untimed.result).toBeInstanceOf(Failed);
+    expect((untimed.result as Failed).message).toContain('does not say when');
+  });
+
+  it('does not tell an app that signs nobody in through core, which core never told', async () => {
+    const made = await source({ suite: { apps: { notes: NOTES } } });
+    const docker = new FakeDocker();
+    const { host } = fakeHost({ docker, registry: registryOf(kioskOf()) });
+    await apply(host, options(made));
+    await apply(
+      host,
+      options(made, {
+        commit: 'b'.repeat(40),
+        restoreFrom: backupOf(new Date().toISOString()),
+        restoreScope: { all: false, core: false, apps: ['notes'] },
+        toolkitImage: 'sv-cli:test',
+      }),
+    );
+    expect(docker.resends).toEqual([]);
   });
 });
 

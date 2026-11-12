@@ -170,6 +170,7 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
     for (const project of PROJECTS)
       docker('compose', '--project-name', project, 'down', '--volumes', '--remove-orphans');
     docker('rm', '--force', ...NAMES);
+    docker('volume', 'rm', '--force', 'sovereign-data');
     for (const network of NETWORKS) docker('network', 'rm', network);
     for (const dir of [work, state, source && path.dirname(source.dir)]) {
       if (dir) rmSync(dir, { recursive: true, force: true });

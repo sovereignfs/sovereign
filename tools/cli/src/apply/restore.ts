@@ -8,8 +8,10 @@ import { CONTAINER, CORE_DATABASE, DATABASE_ADMIN, DATA_VOLUME } from './names.j
 import { ensureDataVolume } from './files.js';
 import {
   ALL,
+  MANIFEST_FILE,
   databasesOf,
   filesInScope,
+  readManifest,
   secretInScope,
   touchesCore,
   volumeInScope,
@@ -388,4 +390,65 @@ export async function restoreFiles(
     ]);
   }
   return names;
+}
+
+/** How long core remembers that an account was deleted (core-app §4.5): a backup older than this cannot be made whole. */
+export const DELETIONS_REMEMBERED_MS = 90 * 24 * 60 * 60 * 1000;
+
+/**
+ * After apps alone are restored (core-app §4.5, "After a restore of one app"): core was not restored, so it still knows who was deleted
+ * since their backup and the apps do not. Each restored app that signs people in through core is told again of every account deleted
+ * after the backup was taken, so it deletes them again. Says when the backup is older than core remembers, since people deleted before
+ * then will have come back and nothing can tell the app. Core is running, and sends the notices within the minute.
+ */
+export async function resendDeletionsToApps(
+  host: Host,
+  from: string,
+  apps: readonly string[],
+  say: (line: string) => void,
+  now: number = Date.now(),
+): Promise<void> {
+  if (apps.length === 0) return;
+  let takenAt: string | undefined;
+  try {
+    takenAt = readManifest(await readFile(path.join(from, MANIFEST_FILE), 'utf8')).takenAt;
+  } catch {
+    takenAt = undefined;
+  }
+  const since = takenAt === undefined ? Number.NaN : Date.parse(takenAt);
+  if (!Number.isFinite(since)) {
+    throw new Failed(
+      'The backup does not say when it was taken, so the people deleted since cannot be told to the apps.',
+      'Take a backup with sv backup, which does, and restore that.',
+    );
+  }
+  if (now - since > DELETIONS_REMEMBERED_MS) {
+    say(
+      `This backup is more than 90 days old, and core remembers a deletion for 90 days: people deleted before ${new Date(now - DELETIONS_REMEMBERED_MS).toISOString().slice(0, 10)} may be back in what was restored, and nothing can tell the apps.`,
+    );
+  }
+  for (const name of apps) {
+    const done = await host.docker([
+      'exec',
+      CONTAINER.core,
+      'sovereign-admin',
+      'instance',
+      'deletions',
+      'resend',
+      '--app',
+      name,
+      '--since',
+      new Date(since).toISOString(),
+    ]);
+    if (done.code !== 0) {
+      throw new Failed(
+        `Telling ${name} about the people deleted since the backup failed: ${(done.stderr || done.stdout).trim().split('\n').slice(-2).join(' ')}`,
+        'The restore is done, but they are back in that app. Run sv restore again; it is safe, and it replaces the app with the backup once more.',
+      );
+    }
+    const counted = /"notices":(\d+)/.exec(done.stdout)?.[1];
+    say(
+      `${name} is told again of the people deleted since the backup${counted ? ` (${counted} notices)` : ''}.`,
+    );
+  }
 }

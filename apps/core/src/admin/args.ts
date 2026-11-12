@@ -32,7 +32,8 @@ export type Command =
   | { name: 'restored'; json: boolean }
   | { name: 'seed'; local: boolean; json: boolean }
   | { name: 'deletions-export' }
-  | { name: 'deletions-apply'; file: string | undefined };
+  | { name: 'deletions-apply'; file: string | undefined }
+  | { name: 'deletions-resend'; key: string; since: string };
 
 export class UsageError extends Error {
   override name = 'UsageError';
@@ -48,10 +49,13 @@ export const USAGE = `Usage:
   sovereign-admin instance restored [--json]
   sovereign-admin seed [--local] [--json]
   sovereign-admin instance deletions export
-  sovereign-admin instance deletions apply [FILE]`;
+  sovereign-admin instance deletions apply [FILE]
+  sovereign-admin instance deletions resend --app KEY --since TIME`;
 
 const VALUE = new Set([
   'name',
+  'app',
+  'since',
   'back-channel',
   'account-deleted',
   'launch-url',
@@ -107,6 +111,7 @@ const ALL = new Set([...VALUE, ...LIST, ...SWITCH]);
 const JSON_ONLY = new Set(['json']);
 const NONE = new Set<string>();
 const SEED_FLAGS = new Set(['json', 'local']);
+const RESEND_FLAGS = new Set(['app', 'since']);
 
 function one(rest: string[], what: string): string {
   if (rest.length !== 1) throw new UsageError(`${what} needs exactly one KEY`);
@@ -123,6 +128,15 @@ export function parse(argv: string[]): Command {
   if (group === 'instance') {
     if (verb === 'deletions') {
       const [what, ...more] = words;
+      if (what === 'resend') {
+        const { rest, flags } = flagsOf(more, RESEND_FLAGS);
+        if (rest.length > 0) throw new UsageError('deletions resend takes no argument');
+        const key = flags.values.get('app');
+        const since = flags.values.get('since');
+        if (key === undefined || since === undefined)
+          throw new UsageError('deletions resend needs --app KEY and --since TIME');
+        return { name: 'deletions-resend', key, since };
+      }
       const { rest } = flagsOf(more, NONE);
       if (what === 'export') {
         if (rest.length > 0) throw new UsageError('deletions export takes no argument');
@@ -133,7 +147,7 @@ export function parse(argv: string[]): Command {
           throw new UsageError('deletions apply takes one FILE, or reads standard input');
         return { name: 'deletions-apply', file: rest[0] };
       }
-      throw new UsageError('deletions is export or apply');
+      throw new UsageError('deletions is export, apply or resend');
     }
     if (verb !== 'restored') {
       throw new UsageError(

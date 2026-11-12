@@ -896,7 +896,7 @@ can have a plain copy when they ask for one, and cannot lose every backup by los
 - A container cannot see another app's folder (a Docker test)
 - An app's folder is writable by the user its image runs as, and by no one else's container
 
-#### 📋 13.33 — Files in backups and restores
+#### ✅ 13.33 — Files in backups and restores
 
 **Goal:** `sv backup` and `sv restore` carry people's files, whole and by scope, and an app restored alone loses no deletion.
 

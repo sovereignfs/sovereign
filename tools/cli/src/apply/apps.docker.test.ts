@@ -44,6 +44,7 @@ function teardown() {
   for (const project of PROJECTS)
     docker('compose', '--project-name', project, 'down', '--volumes', '--remove-orphans');
   docker('rm', '--force', ...NAMES);
+  docker('volume', 'rm', '--force', 'sovereign-data');
   for (const network of NETWORKS) docker('network', 'rm', network);
 }
 

@@ -15,6 +15,7 @@ import {
   applyDeletions,
   exportDeletions,
   parseDeletions,
+  resendDeletions,
   type DeletionsFile,
 } from '../accounts/deletion-ledger';
 import { DONE_KEPT_FOR } from '../accounts/deletion-notices';
@@ -156,6 +157,44 @@ export function deletionLedgerSuite(createDatabase: () => Promise<TestDatabase>)
     it('is empty on an instance where nobody left', async () => {
       await instance();
       expect((await exportDeletions(db)).deletions).toEqual([]);
+    });
+  });
+
+  describe('telling one app again, after it alone was restored', () => {
+    it('makes a notice for the app of each account deleted after the time it was backed up, and of none before', async () => {
+      const ctx = await instance();
+      await manager().deleteSelf({ id: ctx.ada, role: 'platform:user' });
+      const between = Date.now() + 5;
+      await db.run('update deleted_accounts set deleted_at = ? where sub = ?', [
+        between - 10,
+        ctx.ada,
+      ]);
+      await db.run('delete from account_deletion_notices');
+      await manager().deleteSelf({ id: ctx.bo, role: 'platform:user' });
+      await db.run('delete from account_deletion_notices');
+      const done = await resendDeletions(db, ctx.app.clientId, between - 5);
+      expect(done).toEqual({ accounts: 1, notices: 1 });
+      expect((await notices()).map((row) => [row.sub, row.client_id, row.state])).toEqual([
+        [ctx.bo, ctx.app.clientId, 'pending'],
+      ]);
+    });
+
+    it('tells it of everyone when the time is long ago, once for each, however often it is run', async () => {
+      const ctx = await instance();
+      await manager().deleteSelf({ id: ctx.ada, role: 'platform:user' });
+      await manager().deleteSelf({ id: ctx.bo, role: 'platform:user' });
+      await db.run('delete from account_deletion_notices');
+      expect(await resendDeletions(db, ctx.app.clientId, 0)).toEqual({ accounts: 2, notices: 2 });
+      expect(await resendDeletions(db, ctx.app.clientId, 0)).toEqual({ accounts: 2, notices: 0 });
+      expect(await notices()).toHaveLength(2);
+    });
+
+    it('makes none for an app that wants none told, or that is not there', async () => {
+      const ctx = await instance();
+      await manager().deleteSelf({ id: ctx.ada, role: 'platform:user' });
+      await db.run('delete from account_deletion_notices');
+      expect(await resendDeletions(db, 'no-such-app', 0)).toEqual({ accounts: 1, notices: 0 });
+      expect(await notices()).toEqual([]);
     });
   });
 

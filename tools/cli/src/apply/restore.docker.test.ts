@@ -43,6 +43,7 @@ function loseEverything() {
   for (const project of PROJECTS)
     docker('compose', '--project-name', project, 'down', '--volumes', '--remove-orphans');
   docker('rm', '--force', ...NAMES);
+  docker('volume', 'rm', '--force', 'sovereign-data');
   for (const network of NETWORKS) docker('network', 'rm', network);
 }
 
@@ -221,7 +222,7 @@ describe.skipIf(!runnable)('a backup and a restore against the real Docker', () 
     expect(appEntries.map((e) => e.name)).not.toContain('databases/core.sql');
     const appUnpacked = path.join(newState(), 'backup');
     await extract(
-      appEntries.filter((e) => e.name !== 'state.json' && e.name !== 'backup.json'),
+      appEntries.filter((e) => e.name !== 'state.json'),
       appUnpacked,
     );
     expect(psql('app_alpha', "INSERT INTO kept VALUES ('after the app backup')").status).toBe(0);

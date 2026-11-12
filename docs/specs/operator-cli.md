@@ -768,11 +768,33 @@ holds every database in one dump and is only restored whole.
 - Restoring **core** stops core alone, keeps the deletions, replaces core's database and secrets, and runs `instance restored`
   and `instance deletions apply` as a whole restore does. Core's records of apps go back with it: a client secret rotated since the
   backup is the old one again to core, and that app needs `sv secret rotate` again. The command says so before it runs.
-- Restoring **an app** stops that app alone, replaces its database, data volumes and generated secrets, except its client secret,
-  since core's record of the client is not restored, and does not stop core, sign anyone out or touch another app.
+- Restoring **an app** stops that app alone, replaces its database, data volumes, folder of people's files and generated secrets,
+  except its client secret, since core's record of the client is not restored, and does not stop core, sign anyone out or touch another
+  app. Core was not restored, so it still knows who was deleted since the backup and the app does not: once the app is up, `sv apply`
+  runs `sovereign-admin instance deletions resend --app NAME --since TIME` (`TIME` is when the backup was taken), which makes a notice
+  for that app of every account core remembers as deleted after then, for the app to delete them again ([core-app §4.5](core-app.md)).
+  Core remembers deletions for 90 days: a backup older than that is restored with a warning that people deleted before then may be back,
+  and a failure to make the notices fails the restore, saying so. An app that signs nobody in through core was never told, and is not.
 - Each database is dropped and loaded from its own dump; its role is made, with the restored password, on a server that has none.
 - What is there now of the part being replaced is backed up on the server first; an app the server does not run yet has nothing to
   keep.
+
+**People's files** ([RFC 0004](../rfcs/0004-file-storage.md) §6). An archive holds `files/<name>.tar` for core and for each app with a
+folder in `sovereign-data` (§6.4.6), by the same scopes: `--all` all of them, `--core` core's, `--app NAME` that app's. It is made through
+the toolkit's image, which mounts the volume read only, and is as consistent as a crash would leave it, like a data volume. `backup.json`
+is **format 2**: it lists the folders it holds (`files`) and, for an app whose files are kept in a store of its own (`s3`, `git`), where
+they are (`elsewhere`). Those files are not in the archive, and `sv backup` names each, saying that backing them up is that store's to
+do. A toolkit that reads only format 1 refuses a format 2 archive as one taken by a newer toolkit; a format 1 archive restores as before,
+with no files.
+
+A restore puts each folder in scope back after the databases and volumes and before core and the apps start: the folder is emptied,
+unpacked, and every person's usage record in it removed, so the store counts again on first use. Its owner is handed over as the app
+starts, to the user its image runs as **on this machine**, which a new server may run as another. A backup of one part restores only
+that part's folders.
+
+`sv receive` MUST NOT hold a restore in memory: it writes the backup's files to disk as they arrive, under the same rules as a deployment
+(regular files, names that stay inside the folder, only what a backup holds), stops while the disk still has a gigabyte free, and removes
+what it received when the backup is refused. There is no limit on its size but the disk's; the 32 MiB of the deployment's files remains.
 
 #### 10.2.1 As built
 
@@ -787,7 +809,8 @@ holds every database in one dump and is only restored whole.
   the encrypted connection: the server has no key that opens a backup. The server runs `sv apply --restore-from`, which, in this order:
   backs up what is there (when there is something), keeps the deletions core remembers, stops core and the apps, puts the backup's
   secrets in place **before** any is made, starts the database server, empties it and loads the dump (the only errors it accepts are the
-  administrator's own role, which it cannot drop while connected as it), puts each app's volume back, and, with core still stopped, runs
+  administrator's own role, which it cannot drop while connected as it), puts each app's volume and each folder of people's files back, and,
+  with core still stopped, runs
   `sovereign-admin instance restored` and then `instance deletions apply` in a container of its own. Only then does it start the proxy,
   core and the apps, and verify as a deployment does. A restore may take core's version backward.
 - **`sv rollback`** applies the previous release's files again, as the commit they were. `state.json` records which that is

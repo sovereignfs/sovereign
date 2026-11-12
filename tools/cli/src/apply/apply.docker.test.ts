@@ -31,6 +31,7 @@ const PROJECTS = ['sovereign-core', 'sovereign-proxy', 'sovereign-database'];
 function teardown() {
   for (const project of PROJECTS)
     docker('compose', '--project-name', project, 'down', '--volumes', '--remove-orphans');
+  docker('volume', 'rm', '--force', 'sovereign-data');
   docker('network', 'rm', 'sv-net-core');
 }
 

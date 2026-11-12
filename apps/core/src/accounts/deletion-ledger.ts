@@ -145,3 +145,36 @@ export async function applyDeletions(
   );
   return result;
 }
+
+/** What `resend` did. */
+export type Resent = {
+  /** Accounts core remembers as deleted after the time given. */
+  accounts: number;
+  /** Notices made for the app: one for each of them it was not already waiting to be told of. */
+  notices: number;
+};
+
+/**
+ * Tells one app again about every account deleted after `since` (core-app §4.5, "After a restore of one app"). Restoring one app puts
+ * back its database and files as they were at its backup and leaves core alone, so a person deleted since is back in the app and core
+ * has nothing to say about it: this makes the notice again, whether or not the app was told before, for the app to delete them.
+ * Core remembers deletions for 90 days, so a backup older than that cannot be made whole, which the caller says.
+ */
+export async function resendDeletions(
+  database: Database,
+  clientId: string,
+  since: number,
+  now: number = Date.now(),
+): Promise<Resent> {
+  const deleted = await database.run(
+    'select sub from deleted_accounts where deleted_at > ? order by deleted_at, sub',
+    [since],
+  );
+  let notices = 0;
+  await database.transaction(async (tx) => {
+    for (const row of deleted.rows) {
+      if (await queueDeletionNotice(tx, clientId, String(row.sub), now)) notices += 1;
+    }
+  });
+  return { accounts: deleted.rows.length, notices };
+}

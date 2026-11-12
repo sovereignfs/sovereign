@@ -905,6 +905,10 @@ message`), 2 when the command line is wrong or core is not configured, and 3 whe
   matches. An app with no launch address has nothing to open and is not listed.
   A person without `launcher:access` sees no apps and is told so, with their
   account links.
+- A tile is an `AppTile`: the icon in a rounded box, the name, the description, and beneath a divider what kind of app it is. Core's
+  own apps are **platform** apps and every app an operator added is a **Sovereign** app. For a person with `console:access` the
+  Console is a platform app and the first tile; it is not in the registry, is found by search like any other, and is shown to no one
+  else. With no Sovereign app yet, the tile is followed by an invitation to add one, or by whom to ask.
 - A tile's icon is the address an operator gave, or a drawn one from the name
   when there is none or it will not load. Only this page may load pictures from
   other addresses (`https`, and `http` on `localhost` on a development

@@ -19,6 +19,7 @@ export default async function Page() {
   const matrix = await getCapabilityMatrix();
   const launcher = can(session.user.role, 'launcher:access', matrix);
   const canAddApps = can(session.user.role, 'client:manage', matrix);
+  const canOpenConsole = can(session.user.role, 'console:access', matrix);
   const apps = launcher ? await getLauncherApps() : [];
 
   return (
@@ -32,7 +33,9 @@ export default async function Page() {
             ? `You are signed in as ${session.user.name}. Choose an app to open it.`
             : `You are signed in as ${session.user.name}. You do not have access to the apps on this instance.`}
         </p>
-        {launcher ? <Launcher apps={apps} canAddApps={canAddApps} /> : null}
+        {launcher ? (
+          <Launcher apps={apps} canAddApps={canAddApps} canOpenConsole={canOpenConsole} />
+        ) : null}
       </div>
     </PageContainer>
   );

@@ -1762,6 +1762,29 @@ import { Calendar } from '@sovereignfs/ui';
 <Calendar value={selected} onChange={setSelected} minDate={today} aria-label="Pick a date" />;
 ```
 
+### `AppTile`
+
+```tsx
+import { AppTile, Badge, CardTileGrid } from '@sovereignfs/ui';
+
+<CardTileGrid minTileWidth={240}>
+  <AppTile
+    href="/console"
+    name="Console"
+    description="Run this instance"
+    icon={<Icon name="layout-dashboard" size="lg" />}
+    tags={
+      <Badge variant="mono" size="sm" uppercase={false}>
+        platform
+      </Badge>
+    }
+  />
+</CardTileGrid>;
+```
+
+One app in a grid: a rounded icon box, the name, a line about it and, beneath a divider, what kind of app it is. With `href` the
+whole tile is the link; it never imports a router. Tags sit at the bottom, so a row of tiles lines up.
+
 ### `AvatarStack`, `FloatingActionButton` and the photo viewer
 
 ```tsx
@@ -1876,6 +1899,7 @@ Stories live under two roots inside `packages/ui/src/`:
 | Story file                         | Key variants and notes                                                                                                                                          |
 | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Avatar.stories.tsx`               | Initials fallback; image src; sm/md/lg sizes                                                                                                                    |
+| `AppTile.stories.tsx`              | A link with tags; a grid with a wrapping name and no tags                                                                                                       |
 | `AvatarStack.stories.tsx`          | Beyond the limit ("+N"); a few; one; labelled; sm/md/lg                                                                                                         |
 | `Badge.stories.tsx`                | All status variants; subtle vs filled                                                                                                                           |
 | `BalanceChip.stories.tsx`          | Owed (positive); owes (negative); settled up (zero); all three states together                                                                                  |

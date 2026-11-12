@@ -10,6 +10,7 @@ import { Map } from '../map';
 import { Badge } from '../components/Badge/Badge';
 import { Button } from '../components/Button/Button';
 import { Card } from '../components/Card/Card';
+import { AppTile } from '../components/AppTile/AppTile';
 import { CardTile, CardTileGrid, NewCardTile } from '../components/CardTile/CardTile';
 import { Dialog } from '../components/Dialog/Dialog';
 import { Drawer } from '../components/Drawer/Drawer';
@@ -2293,6 +2294,38 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                   Interactive card — hover me
                 </Card>
               </div>
+            </ComponentCard>
+
+            {/* AppTile */}
+            <ComponentCard
+              name="AppTile"
+              importLine="import { AppTile, CardTileGrid } from '@sovereignfs/ui';"
+              usage="One app in a grid: a rounded icon box, the name, a line about it and, beneath a divider, what kind of app it is. The whole tile is a link when href is given. Lay tiles out with CardTileGrid."
+            >
+              <CardTileGrid minTileWidth={220}>
+                <AppTile
+                  href="#"
+                  name="Console"
+                  description="Run this instance"
+                  icon={<Icon name="layout-dashboard" size="lg" aria-hidden={true} />}
+                  tags={
+                    <Badge variant="mono" size="sm" uppercase={false}>
+                      platform
+                    </Badge>
+                  }
+                />
+                <AppTile
+                  href="#"
+                  name="Notes"
+                  description="Journal on this server"
+                  icon={<Icon name="notebook-pen" size="lg" aria-hidden={true} />}
+                  tags={
+                    <Badge variant="mono" size="sm" uppercase={false}>
+                      sovereign
+                    </Badge>
+                  }
+                />
+              </CardTileGrid>
             </ComponentCard>
 
             {/* CardTile */}

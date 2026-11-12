@@ -1,0 +1,67 @@
+/* A card with its content centred in a column: icon box, name, description, then (pushed to the bottom, so a row of tiles lines up)
+   a divider and the tags. */
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sv-space-2);
+  box-sizing: border-box;
+  height: 100%;
+  padding: var(--sv-space-6) var(--sv-space-5) var(--sv-space-5);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-xl);
+  background: var(--sv-color-surface-raised);
+  box-shadow: var(--sv-shadow-card);
+  color: var(--sv-color-text-primary);
+  text-align: center;
+  text-decoration: none;
+}
+
+@media (hover: hover) {
+  .link:hover {
+    border-color: var(--sv-color-border-strong);
+  }
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 5.25rem;
+  height: 5.25rem;
+  margin-bottom: var(--sv-space-2);
+  border-radius: var(--sv-radius-xl);
+  background: var(--sv-color-surface-sunken);
+}
+
+.name {
+  max-width: 100%;
+  font-size: var(--sv-font-size-lg);
+  font-weight: var(--sv-font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.description {
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-md);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--sv-space-2);
+  width: 100%;
+  margin-top: var(--sv-space-2);
+  padding-top: var(--sv-space-4);
+  border-top: 1px solid var(--sv-color-border);
+}

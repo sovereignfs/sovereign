@@ -86,4 +86,33 @@ describe('the launcher', () => {
     expect(screen.queryByRole('link')).toBeNull();
     expect(screen.getByText(/Ask whoever runs it/)).toBeTruthy();
   });
+
+  it('has the Console first, as a platform app, for an operator, and marks every other tile as a Sovereign app', () => {
+    render(<Launcher apps={APPS} canAddApps={false} canOpenConsole />);
+    const links = screen.getAllByRole('link');
+    expect(links).toHaveLength(4);
+    expect(links[0]?.getAttribute('href')).toBe('/console');
+    expect(links[0]?.textContent).toContain('Console');
+    expect(links[0]?.textContent).toContain('platform');
+    expect(screen.getAllByText('sovereign')).toHaveLength(3);
+    expect(screen.getAllByText('platform')).toHaveLength(1);
+  });
+
+  it('has no Console for someone who cannot open it', () => {
+    render(<Launcher apps={APPS} canAddApps={false} />);
+    expect(screen.queryByRole('link', { name: /Console/ })).toBeNull();
+    expect(screen.queryByText('platform')).toBeNull();
+  });
+
+  it('finds the Console by name too, and still shows it when no app has been added', () => {
+    const { rerender } = render(<Launcher apps={APPS} canAddApps={false} canOpenConsole />);
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'cons' } });
+    expect(screen.getAllByRole('link')).toHaveLength(1);
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: '' } });
+    rerender(<Launcher apps={[]} canAddApps canOpenConsole />);
+    expect(screen.getByRole('link', { name: /Console/ })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Add an app' }).getAttribute('href')).toBe(
+      '/console/apps/new',
+    );
+  });
 });

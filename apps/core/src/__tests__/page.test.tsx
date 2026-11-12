@@ -88,10 +88,19 @@ describe('the home page, which is the launcher', () => {
     expect(getLauncherApps).toHaveBeenCalledTimes(1);
   });
 
+  it('gives an operator the Console as a platform app, and no one else', async () => {
+    as(ROLE_ADMIN);
+    const forOperator = renderToStaticMarkup(await Page());
+    expect(forOperator).toContain('href="/console"');
+    expect(forOperator).toContain('platform');
+    as(ROLE_USER);
+    expect(renderToStaticMarkup(await Page())).not.toContain('href="/console"');
+  });
+
   it('invites an operator to add the first app, and tells anyone else whom to ask', async () => {
     as(ROLE_ADMIN);
     const forOperator = renderToStaticMarkup(await Page());
-    expect(forOperator).toContain('No apps yet');
+    expect(forOperator).toContain('No other apps yet');
     expect(forOperator).toContain('href="/console/apps/new"');
     as(ROLE_USER);
     const forPerson = renderToStaticMarkup(await Page());

@@ -88,6 +88,8 @@ export type { ToastItem, ToastContextValue } from './components/Toast/Toast';
 export { Card } from './components/Card/Card';
 export type { CardProps } from './components/Card/Card';
 
+export { AppTile } from './components/AppTile/AppTile';
+export type { AppTileProps } from './components/AppTile/AppTile';
 export { CardTile, CardTileGrid, NewCardTile } from './components/CardTile/CardTile';
 export type {
   CardTileProps,

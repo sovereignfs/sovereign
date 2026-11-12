@@ -165,6 +165,7 @@ From [`app-manifest.md`](../contracts/app-manifest.md) §4, the ones a plan has 
 - Keep what must survive an upgrade only in its database or under `data`.
 - **Stop cleanly on `SIGTERM`.**
 - When core is its only way in, give an account to anyone core signs in, without being told to (`<P>_AUTH_SIGNUP` defaults to `open`).
+- An app that brings people in by invitation (a trip, a household) accepts `<P>_AUTH_SIGNUP=invite`: the first account, and anyone holding a valid invitation the app issued, checked when the account is made ([`contracts/env.md`](../contracts/env.md) §2).
 
 ## 4. Configuration
 

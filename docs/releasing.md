@@ -1,9 +1,10 @@
 # Releasing
 
-Everything is released from `main`, and `main` changes only through a **release pull request** from `develop`
-([CONTRIBUTING](../CONTRIBUTING.md#releasing-develop-into-main)): titled `Release vX.Y.Z` (the root version on `develop`),
-merged with a merge commit, which is the release commit every tag of that release goes on. Version bumps are made on
-`develop` as before; nothing is tagged there. Pushing a tag is not a push to `main`, so `main`'s protection does not stop it.
+Everything is released from `main`, and `main` changes only through a **promotion pull request** from `develop`
+([CONTRIBUTING](../CONTRIBUTING.md#promoting-develop-into-main)), merged with a merge commit. Its title, from
+`pnpm promotion:draft`, names the versions it carries, with `Release` in front only when all of them will be tagged; the
+tags go on its merge commit. Version bumps are made on `develop` as before; nothing is tagged there. Pushing a tag is not a
+push to `main`, so `main`'s protection does not stop it.
 
 Three things are released from this repository: a package to npm, core's image to the GitHub Container Registry
 ([below](#releasing-the-image)), and the operator's toolkit, which is both ([below](#releasing-the-toolkit)).
@@ -114,9 +115,9 @@ another run could have stored.
 
 To release:
 
-1. Land the version bump (the `ui-vX.Y.Z` commit) on `develop`, and merge the `Release vX.Y.Z` pull request into
-   `main`.
-2. Tag the release merge commit and push the tag: `git switch main && git pull && git tag ui-v0.85.2 && git push origin ui-v0.85.2`.
+1. Land the version bump (the `ui-vX.Y.Z` commit) on `develop`, and merge the promotion pull request
+   (`Release ui-v0.85.2`) into `main`.
+2. Tag the promotion's merge commit and push the tag: `git switch main && git pull && git tag ui-v0.85.2 && git push origin ui-v0.85.2`.
 3. Watch the Publish run in the Actions tab. A published version cannot be replaced, so if a step
    fails after npm accepted the package, bump the version and release again.
 
@@ -151,9 +152,9 @@ keeps its `core-vX.Y.Z` commits but is no tag and releases nothing.
 
 To release:
 
-1. Land the commit that carries the root version bump on `develop`, and merge the `Release v1.2.3` pull request into
-   `main`.
-2. Tag the release merge commit and push the tag: `git switch main && git pull && git tag v1.2.3 && git push origin v1.2.3`.
+1. Land the commit that carries the root version bump on `develop`, and merge the promotion pull request
+   (`Release v1.2.3`) into `main`.
+2. Tag the promotion's merge commit and push the tag: `git switch main && git pull && git tag v1.2.3 && git push origin v1.2.3`.
 3. Watch the Publish image run in the Actions tab.
 4. From somewhere that has never logged in to GitHub's registry, check it arrived:
    `docker pull ghcr.io/sovereignfs/sovereign:1.2.3`.
@@ -181,8 +182,8 @@ and `RELEASE.version` in `tools/cli/src/release.ts`. A toolkit release also says
 starts a new instance on the newest published core in the supported range, never older than it (and on it when the registry cannot be
 asked), so a core release needs no toolkit release to be what new instances start on.
 
-To release: land the commit that sets those versions and `newestCore` on `develop`, merge the release pull request into `main`, tag
-its merge commit `cli-vX.Y.Z`, push the tag, and watch the run.
+To release: land the commit that sets those versions and `newestCore` on `develop`, merge the promotion pull request (`Release cli-vX.Y.Z`) into
+`main`, tag its merge commit `cli-vX.Y.Z`, push the tag, and watch the run.
 Then, from a machine that has never logged in to GitHub's registry, check `docker pull ghcr.io/sovereignfs/cli:X.Y.Z`, and that
 `npm create @sovereignfs@X.Y.Z` makes a repository that `./sv setup` can finish. On the first release, make the `cli` package public
 in the organization's Packages settings, and check the `@sovereignfs` scope on npm is yours.

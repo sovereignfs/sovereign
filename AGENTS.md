@@ -61,7 +61,7 @@ recorded as an ADR in `docs/adrs/`. A documented "not now" is a valid outcome.
   verify, open a draft PR, stop. One version bump per leg.
 - **Two branches: `develop` is where work lands, `main` is what is released**
   (`CONTRIBUTING.md`, "Branches"). `main` is protected: nothing is pushed to it;
-  it changes only through a `Release vX.Y.Z` pull request from `develop`. A change
+  it changes only through a promotion pull request from `develop`. A change
   reaches `develop` one of two ways, as the developer says: **committed directly on
   `develop`**, or **on a feature branch merged into `develop` by pull request**.
   When unsure which, ask.
@@ -87,8 +87,10 @@ recorded as an ADR in `docs/adrs/`. A documented "not now" is a valid outcome.
   agent's footer (`🤖 Generated with [Claude Code](https://claude.com/claude-code)`
   or `🤖 Generated with [Codex](https://developers.openai.com/codex)`).
 - **Merge strategy: rebase and merge into `develop`** — never squash, never a merge commit.
-  **The release pull request (`develop` → `main`, titled `Release vX.Y.Z`) is merged with a
-  merge commit**, which is the release commit the tags go on (`docs/releasing.md`).
+  **The promotion pull request (`develop` → `main`) is merged with a merge commit**; its title
+  and body come from `pnpm promotion:draft`: the versions it carries (`v0.98.0, ui-v0.97.0`, or
+  `sdk-v2.2.0` alone, or the current `vX.Y.Z` when none changed), with `Release` in front only when
+  all of them will be tagged on merge (never for a version already tagged). Tags go on that merge commit (`CONTRIBUTING.md`, `docs/releasing.md`).
   **Fix commit messages before they reach `develop`**; never rewrite `develop` or `main`.
   **Never merge automatically** — wait for instruction or ask.
 - **Never commit or push without being asked.** Prepare changes in the working
@@ -128,7 +130,7 @@ recorded as an ADR in `docs/adrs/`. A documented "not now" is a valid outcome.
     for `ui` a major bump from `1.0.0` (`docs/specs/design-system.md` §4).
   - Tags/commit subjects: root `vX.Y.Z`; packages and apps `<slug>-vX.Y.Z`
     (`ui-`, `bridge-`, `core-`, …). Bump commits land on `develop`; the tags go on
-    the release merge commit on `main`.
+    the promotion's merge commit on `main`.
 
 ## Naming conventions
 
@@ -427,6 +429,7 @@ pnpm packages:check              # pack the published packages, check the tarbal
 pnpm generate:icons              # regenerate the Icon components from scripts/icon-list.ts
 pnpm generate:theme-presets      # regenerate tokens/theme-presets.css from theme-presets.ts
 pnpm docs:check-links            # every relative Markdown link resolves
+pnpm promotion:draft             # the title and body of the develop → main pull request (--release <ids>|all)
 pnpm verify:push                 # format:check, lint, typecheck, design:tokens:check, docs:check-links, test (the pre-push hook)
 ```
 

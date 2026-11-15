@@ -7,7 +7,7 @@ How Claude Code and Codex work on this repository side by side.
 Each agent works from its own **separate local clone** of the repository. There
 is no shared working tree, no shared branch, and no shared `CURRENT_TASK.md`.
 Agents work independently; the only shared state is `develop` (via git), where work lands; `main` changes only
-by release pull request (`CONTRIBUTING.md`, "Branches").
+by a promotion pull request (`CONTRIBUTING.md`, "Branches").
 
 ```
 Developer

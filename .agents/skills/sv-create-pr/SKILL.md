@@ -19,16 +19,18 @@ Create a GitHub pull request for the current branch.
    and `CURRENT_TASK.md` if it exists.
 
 2. Check branch and worktree: `git branch --show-current`, `git status --short`.
-   - Never create a PR from `main` or `develop`, except the release pull
-     request (`develop` → `main`, titled `Release vX.Y.Z`, merged with a merge
-     commit; `CONTRIBUTING.md`, "Releasing"), and only when the user asks.
+   - Never create a PR from `main` or `develop`, except the promotion pull
+     request (`develop` → `main`), and only when the user asks: its title and
+     body are what `pnpm promotion:draft` prints (`--release <ids>|all` for the
+     versions that will be tagged), and it is merged with a merge commit
+     (`CONTRIBUTING.md`, "Promoting develop into main").
    - Do not commit, amend, rebase, or push unless the user explicitly asked
      for that action in this session. If the branch has no pushed commits or
      the tree has uncommitted task changes, report the blocker instead of
      inventing a commit.
    - Pushing runs the pre-push hook (`pnpm verify:push`).
 
-3. Target `develop`; `--head` is the current branch. Only the release pull
+3. Target `develop`; `--head` is the current branch. Only the promotion pull
    request targets `main`.
 
 4. Prepare the title and body:

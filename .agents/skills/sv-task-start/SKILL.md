@@ -29,7 +29,7 @@ or one **leg** of a workstream (`docs/workstreams/`).
 
 3. **Check git state:** `git status --short` and `git log --oneline -5`.
    The worktree must be clean and on `develop` (where work lands; `main` is
-   released only by a release pull request — `CONTRIBUTING.md`, "Branches"); if
+   released only by a promotion pull request — `CONTRIBUTING.md`, "Branches"); if
    not, stop and ask. Then `git switch develop && git pull`. Ask whether the
    task is worked **directly on `develop`** or **on a feature branch**, unless
    the developer already said.

@@ -1,9 +1,10 @@
 name: CI
 
-# Validation runs on pull requests targeting `main`, and on demand. There is no
-# push trigger: `main` is meant to be gated by the pull request. A cheap first job
-# works out what the change touches and the others run only when it says so, so a
-# documentation-only pull request runs nothing but that job. Run it by hand
+# Validation runs on pull requests targeting `main`, on every push to `main`
+# (work also lands there directly, and a commit nothing checked is found only at
+# release time), and on demand. A cheap first job works out what the change
+# touches and the others run only when it says so, so a documentation-only change
+# runs nothing but that job. Run it by hand
 # (Actions -> CI -> Run workflow) to check any branch, `main` included.
 #
 # While a pull request is a draft, or carries the `skip-ci` label, no job runs;
@@ -15,6 +16,8 @@ name: CI
 # that GitHub added in July 2026 and zizmor prefers; ./ works everywhere and cannot
 # be tested from here. Revisit when workflows can be run before they are merged.
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
@@ -22,10 +25,10 @@ on:
   # Called by publish.yml on a release tag, where every job runs.
   workflow_call:
 
-# Cancel a superseded run of the same pull request (or branch).
+# Cancel a superseded run of the same pull request; every push to `main` is checked to the end.
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -67,9 +70,13 @@ jobs:
           EVENT: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
         run: |
           if [[ "$EVENT" == "pull_request" ]]; then
             git diff --name-only "$BASE_SHA...$HEAD_SHA" | node scripts/ci-changes.ts | tee -a "$GITHUB_OUTPUT"
+          elif [[ "$EVENT" == "push" && -n "$BEFORE_SHA" && ! "$BEFORE_SHA" =~ ^0+$ ]] && git cat-file -e "$BEFORE_SHA^{commit}" 2>/dev/null; then
+            git diff --name-only "$BEFORE_SHA" "$AFTER_SHA" | node scripts/ci-changes.ts | tee -a "$GITHUB_OUTPUT"
           else
             node scripts/ci-changes.ts --all | tee -a "$GITHUB_OUTPUT"
           fi

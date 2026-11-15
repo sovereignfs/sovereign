@@ -143,7 +143,8 @@ secure by default and drawn with the design system.
   per dialect gives each leg something real to prove: sqld keeps namespaces apart,
   a SQLite file round-trips, PostgreSQL isolates schemas and returns `bigint` as a
   string. A leg with no dialect set fails rather than passing empty
-- Triggers: pull requests targeting `main` only (no push trigger) and a manual
+- Triggers: pull requests targeting `main` (pushes to `main` were added later, once work
+  also landed there directly) and a manual
   `workflow_dispatch`; no job runs while the PR is a draft or labelled `skip-ci`,
   and GitHub skips the run for `[skip ci]` in the head commit
 - `codeql.yml` (also on pushes to `main`), the weekly `dependency-audit.yml`, and

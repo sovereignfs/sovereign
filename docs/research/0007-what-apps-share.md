@@ -2,7 +2,7 @@
 
 |                   |                                                                                                                                                                                                                                                     |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**        | Recommended; for review                                                                                                                                                                                                                             |
+| **Status**        | Recommended; the first slice settled (below)                                                                                                                                                                                                        |
 | **Date**          | November 2026                                                                                                                                                                                                                                       |
 | **Author**        | Claude Code                                                                                                                                                                                                                                         |
 | **Scope**         | The app repositories of the suite; [`tools/create`](../../tools/create) and its template; this repository's workflows, [CONTRIBUTING](../../CONTRIBUTING.md) and [AGENTS.md](../../AGENTS.md); [research 0004](0004-a-kit-for-apps-of-their-own.md) |
@@ -115,17 +115,30 @@ documents (`DESIGN.md`, `ROADMAP.md`, its changelog, its manifest) anywhere but 
 - Generating `DESIGN.md`, `ROADMAP.md` or an app's own sections of `AGENTS.md`.
 - Converting the apps' Next.js code; that is research 0004.
 
-## To settle in review
+## Settled in review (15 November 2026)
+
+For the first slice, the one release model (E) with its workflows shared (C):
+
+- **All six one-package apps move in one pass,** since none can release until it does.
+- **The release workflows are shared from this repository** (`app-promotion.yml`, `app-release.yml`, `app-publish.yml`), called by each
+  app at a **pinned commit** that Dependabot moves.
+- **Apps use this repository's changelog rule:** a version's section is written in the change that sets it, a test fails without it,
+  and it becomes the GitHub release's notes.
+- **The old release machinery is removed in the same change** (the library, its script and tests, the app's component file), and
+  `RELEASING.md` is rewritten for the new model.
+- **Each app's change is a draft pull request into its `develop`,** for review.
+- **fjord stays one repository; its web app (`clients/web`) takes the shared model,** without changing how fjord's other components build
+  and release. So the shared workflows take the directory an app is in and the prefix of its tag (`web-vX.Y.Z`), not only the
+  repository's root and `vX.Y.Z`.
+
+## Still to settle
 
 - Whether `sync` is a command of `@sovereignfs/create` or a tool of its own (`@sovereignfs/app`), and whether `sync --check` fails an app's
   CI or only warns.
-- Whether the shared workflows are pinned by commit (safest, Dependabot moves them) or by a tag of their own (`workflows-vX.Y.Z`), readable
-  in a pull request.
-- Whether the apps move to the single release model one by one with their next change, or in one pass now, since their releases are blocked
-  until they do.
 
 ## Changelog
 
-| Date       | Change         |
-| ---------- | -------------- |
-| 2026-11-15 | First version. |
+| Date       | Change                                                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-15 | First version.                                                                                                                  |
+| 2026-11-15 | The first slice settled in review: all six apps in one pass, shared workflows pinned by commit, fjord's `clients/web` included. |

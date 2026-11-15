@@ -88,8 +88,8 @@ land.
 
 There are two ways to get a change into `develop`; pick per change:
 
-1. **Directly on `develop`.** Commit on an up-to-date `develop` and push it. CI runs on every push to
-   `develop`. Suits small, low-risk changes by a maintainer.
+1. **Directly on `develop`.** Commit on an up-to-date `develop` and push it. The pre-push hook
+   (`pnpm verify:push`) checks it on your machine; CI does not run for `develop`. Suits small, low-risk changes by a maintainer.
 
    ```bash
    git switch develop && git pull
@@ -174,9 +174,12 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>
 
 ### Continuous integration
 
-CI (`.github/workflows/ci.yml`) runs on every pull request targeting `develop` or `main`, on every push to
-either, and on demand: **Actions → CI → Run workflow** checks any branch. A push is classified by the files it
-changed, like a pull request.
+CI (`.github/workflows/ci.yml`) runs only for `main`: on pull requests targeting it that are not drafts (the
+promotion from `develop`), on pushes to it, and on every release tag. It does not run for `develop`, for feature
+branches or for pull requests into `develop`, Dependabot's included, so runner time is not spent on every commit;
+the pre-push hook checks your work locally, and **Actions → CI → Run workflow** checks any branch by hand when you
+want the jobs the hook cannot run (the build, the database legs, the image, the acceptance suite) before the
+promotion. A push is classified by the files it changed, like a pull request.
 
 A first job, **Classify changes**, runs `scripts/ci-changes.ts` over the files the
 pull request touches and decides which of the others run. A change to
@@ -195,7 +198,8 @@ everything.
 | Database (3 legs) | `pnpm test:db` against sqld, a SQLite file and PostgreSQL            |
 | Dependency audit  | `pnpm audit --audit-level=high`, when a manifest or lockfile changes |
 
-CodeQL (`codeql.yml`) also runs on pushes to `develop` and `main`, on pull requests, and weekly;
+CodeQL (`codeql.yml`) runs the same way (pushes to `main`, pull requests into `main` that are not drafts) and
+weekly;
 `dependency-audit.yml` repeats the audit against `main` weekly. Dependabot opens
 weekly pull requests into `develop` for dependencies and for the pinned workflow actions.
 

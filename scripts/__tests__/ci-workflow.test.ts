@@ -1,6 +1,6 @@
 /**
- * Work is committed directly on `develop` as well as merged into it, and `main` takes release pull requests, so CI checks every push to
- * either branch and every pull request into either, and never cancels a run on them.
+ * CI and CodeQL run only for `main`: its pushes, and pull requests into it that are not drafts. `develop` and feature branches are
+ * checked by the pre-push hook, and by hand when wanted, so runner time is not spent on every commit.
  */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -11,10 +11,15 @@ const root = fileURLToPath(new URL('../..', import.meta.url));
 const workflow = readFileSync(path.join(root, '.github/workflows/ci.yml'), 'utf8');
 
 describe('the CI workflow', () => {
-  it('runs on pushes to develop and main as well as on pull requests into either', () => {
+  it('runs on pushes to main and pull requests into main only, never for develop', () => {
     expect(workflow).toMatch(
-      /on:\n {2}push:\n {4}branches: \[main, develop\]\n {2}pull_request:\n {4}branches: \[main, develop\]/,
+      /on:\n {2}push:\n {4}branches: \[main\]\n {2}pull_request:\n {4}branches: \[main\]/,
     );
+    expect(workflow).not.toMatch(/branches: \[[^\]]*develop/);
+  });
+
+  it('skips a draft pull request', () => {
+    expect(workflow).toContain('github.event.pull_request.draft == false');
   });
 
   it('cancels superseded pull request runs only', () => {
@@ -27,13 +32,15 @@ describe('the CI workflow', () => {
   });
 });
 
-describe('the other workflows that follow develop', () => {
+describe('the other workflows', () => {
   const read = (file: string) => readFileSync(path.join(root, file), 'utf8');
 
-  it('runs CodeQL on develop too', () => {
-    expect(read('.github/workflows/codeql.yml')).toMatch(
-      /push:\n {4}branches: \[main, develop\]\n {2}pull_request:\n {4}branches: \[main, develop\]/,
+  it('runs CodeQL for main only, and skips a draft', () => {
+    const codeql = read('.github/workflows/codeql.yml');
+    expect(codeql).toMatch(
+      /push:\n {4}branches: \[main\]\n {2}pull_request:\n {4}branches: \[main\]/,
     );
+    expect(codeql).toContain('github.event.pull_request.draft == false');
   });
 
   it('sends Dependabot’s pull requests into develop, for every ecosystem', () => {

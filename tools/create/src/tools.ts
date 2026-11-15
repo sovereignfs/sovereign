@@ -7,7 +7,8 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { appendFile } from 'node:fs/promises';
 import { CreateError, type CreateIo, type Exec } from './create.js';
-import { changelogSection, checkTitle, isPrefix, tagOf, trailerProblems } from './release.js';
+import { changelogSection, checkComponentsTitle, isPrefix, trailerProblems } from './release.js';
+import { componentVersion, readReleases } from './components.js';
 import { syncApp } from './sync.js';
 import { apply, differences, readLive, readRepositoryFile } from './settings.js';
 
@@ -48,26 +49,6 @@ export function optionsOf(
   return { values, flags, words };
 }
 
-async function readVersion(dir: string): Promise<string> {
-  try {
-    const { version } = JSON.parse(await readFile(path.join(dir, 'package.json'), 'utf8')) as {
-      version?: unknown;
-    };
-    if (typeof version === 'string' && version !== '') return version;
-  } catch {
-    // Said below.
-  }
-  throw new CreateError(`There is no version in ${path.join(dir, 'package.json')}.`, 1);
-}
-
-async function readChangelog(dir: string): Promise<string> {
-  try {
-    return await readFile(path.join(dir, 'CHANGELOG.md'), 'utf8');
-  } catch {
-    return '';
-  }
-}
-
 /** Runs a command of this file; the caller has seen its first word is one of `TOOL_COMMANDS`. */
 export async function runTool(argv: readonly string[], ctx: ToolContext): Promise<number> {
   const [command, verb, ...rest] = argv;
@@ -89,61 +70,107 @@ export async function runTool(argv: readonly string[], ctx: ToolContext): Promis
 }
 
 /**
- * `release check --title T [--dir D] [--prefix P] [--github-output]`: holds a promotion title to the app in D (its package.json version,
- * its tags, its changelog). With --github-output it writes release=, tag= and version= to $GITHUB_OUTPUT for the release workflow.
+ * `release check --title T [--dir D] [--prefix P] [--github-output]`: holds a promotion title to what the repository releases: the app in D
+ * (its package.json version, its tags, its changelog), or every component `sovereign.json` at the repository's root lists. With
+ * --github-output it writes release=, tags= (the tag of each component a Release publishes, as JSON), tag= (the one tag, when exactly one is
+ * released) and version= (an app's version) to $GITHUB_OUTPUT for the release workflow.
  */
 async function releaseCheck(argv: readonly string[], ctx: ToolContext): Promise<number> {
   const { values, flags, words } = optionsOf(argv, ['title', 'dir', 'prefix'], ['github-output']);
   if (words.length > 0) throw new CreateError(`Too many arguments: ${words.join(' ')}.`, 2);
   const title = values.get('title') ?? ctx.env.PR_TITLE;
   if (title === undefined) throw new CreateError('Give the title with --title, or in PR_TITLE.', 2);
-  const prefix = values.get('prefix') ?? '';
-  if (!isPrefix(prefix))
+  const prefix = values.get('prefix');
+  if (prefix !== undefined && !isPrefix(prefix))
     throw new CreateError(`--prefix "${prefix}" must be empty or end in "-", such as web-.`, 2);
-  const dir = path.resolve(ctx.cwd, values.get('dir') ?? '.');
-  const version = await readVersion(dir);
-  const tag = tagOf(prefix, version);
-  const listed = await ctx.exec('git', ['tag', '--list', tag], { cwd: dir });
-  const checked = checkTitle(title, {
-    version,
-    prefix,
-    tagged: listed.code === 0 && listed.stdout.trim() !== '',
-    hasNotes: changelogSection(await readChangelog(dir), version) !== undefined,
-  });
+  const appDir = path.resolve(ctx.cwd, values.get('dir') ?? '.');
+  const root = await gitRoot(ctx, appDir);
+  const releases = await readReleases(root, appDir);
+  if (prefix && releases.file === 'package.json' && releases.components[0])
+    releases.components[0].tagPrefix = prefix;
+  const facts = [];
+  for (const component of releases.components) {
+    const version = await componentVersion(root, component);
+    const tag = `${component.tagPrefix}v${version}`;
+    const listed = await ctx.exec('git', ['tag', '--list', tag], { cwd: root });
+    facts.push({
+      name: component.name,
+      tagPrefix: component.tagPrefix,
+      version,
+      tagged: listed.code === 0 && listed.stdout.trim() !== '',
+      hasNotes:
+        changelogSection(await readText(path.join(root, component.changelog)), version) !==
+        undefined,
+    });
+  }
+  const checked = checkComponentsTitle(title, facts);
   if (checked.problems.length > 0) {
-    ctx.io.err(`The title "${title}" does not match the app:`);
+    ctx.io.err(`The title "${title}" does not match what this repository releases:`);
     for (const problem of checked.problems) ctx.io.err(`  ${problem}`);
     return 1;
   }
-  ctx.io.out(JSON.stringify({ release: checked.release, tag: checked.tag, version }));
+  const released = Object.values(checked.tags);
+  const single = facts.length === 1 ? facts[0] : undefined;
+  ctx.io.out(
+    JSON.stringify({
+      release: checked.release,
+      tags: checked.tags,
+      ...(single ? { tag: `${single.tagPrefix}v${single.version}`, version: single.version } : {}),
+    }),
+  );
   if (flags.has('github-output')) {
     const file = ctx.env.GITHUB_OUTPUT;
     if (!file) throw new CreateError('--github-output needs GITHUB_OUTPUT.', 2);
     await appendFile(
       file,
-      `release=${String(checked.release)}\ntag=${checked.release ? checked.tag : ''}\nversion=${version}\n`,
+      `release=${String(checked.release)}\ntags=${JSON.stringify(checked.tags)}\ntag=${released.length === 1 ? released[0] : ''}\nversion=${single?.version ?? ''}\n`,
     );
   }
   return 0;
 }
 
-/** `release notes VERSION [--dir D]`: the version's section of the app's CHANGELOG.md, for the GitHub release. */
+/**
+ * `release notes VERSION-OR-TAG [--dir D]`: the version's section of its changelog, for the GitHub release. A tag names its component
+ * (`web-v1.2.0` is web's); a bare version is the app's.
+ */
 async function releaseNotes(argv: readonly string[], ctx: ToolContext): Promise<number> {
   const { values, words } = optionsOf(argv, ['dir']);
-  const [version, ...more] = words;
-  if (version === undefined || more.length > 0)
-    throw new CreateError('Give one version: release notes 1.2.0.', 2);
-  const dir = path.resolve(ctx.cwd, values.get('dir') ?? '.');
-  const section = changelogSection(
-    await readChangelog(dir),
-    version.replace(/^(?:[a-z][a-z0-9-]*-)?v/, ''),
-  );
+  const [asked, ...more] = words;
+  if (asked === undefined || more.length > 0)
+    throw new CreateError('Give one version or tag: release notes 1.2.0.', 2);
+  const appDir = path.resolve(ctx.cwd, values.get('dir') ?? '.');
+  const root = await gitRoot(ctx, appDir);
+  const releases = await readReleases(root, appDir);
+  const byPrefix = [...releases.components].sort((a, b) => b.tagPrefix.length - a.tagPrefix.length);
+  const component =
+    byPrefix.find(
+      (c) =>
+        asked.startsWith(`${c.tagPrefix}v`) &&
+        /^v\d+\.\d+\.\d+$/.test(asked.slice(c.tagPrefix.length)),
+    ) ?? (releases.components.length === 1 ? releases.components[0] : undefined);
+  if (!component) throw new CreateError(`${asked} is not the tag of a component here.`, 1);
+  const version = asked.replace(/^(?:[a-z][a-z0-9-]*-)?v/, '');
+  const section = changelogSection(await readText(path.join(root, component.changelog)), version);
   if (section === undefined) {
-    ctx.io.err(`CHANGELOG.md in ${dir} has no section for ${version}.`);
+    ctx.io.err(`${component.changelog} has no section for ${version}.`);
     return 1;
   }
   ctx.io.out(section);
   return 0;
+}
+
+async function readText(file: string): Promise<string> {
+  try {
+    return await readFile(file, 'utf8');
+  } catch {
+    return '';
+  }
+}
+
+/** The repository's root, from git; the folder itself when it is not in one. */
+async function gitRoot(ctx: ToolContext, dir: string): Promise<string> {
+  const top = await ctx.exec('git', ['rev-parse', '--show-toplevel'], { cwd: dir });
+  return top.code === 0 && top.stdout.trim() !== '' ? top.stdout.trim() : dir;
 }
 
 /** `commits check BASE..HEAD`: every commit in the range carries only the agent trailers allowed. */

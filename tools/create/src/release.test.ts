@@ -74,3 +74,27 @@ describe('agent trailers', () => {
     for (const trailer of AGENT_TRAILERS) expect(hook).toContain(`'${trailer}'`);
   });
 });
+
+describe('a title for several components', () => {
+  const comps = [
+    { name: 'cli', tagPrefix: 'fjord-cli-', version: '0.6.0', tagged: false, hasNotes: true },
+    { name: 'web', tagPrefix: 'web-', version: '0.5.0', tagged: true, hasNotes: true },
+    { name: 'root', tagPrefix: '', version: '1.0.0', tagged: false, hasNotes: false },
+  ];
+  it('matches each tag to its component by the longest prefix', async () => {
+    const { checkComponentsTitle } = await import('./release.js');
+    expect(checkComponentsTitle('fjord-cli-v0.6.0, web-v0.5.0, v1.0.0', comps).problems).toEqual(
+      [],
+    );
+    expect(checkComponentsTitle('Release fjord-cli-v0.6.0', comps).tags).toEqual({
+      cli: 'fjord-cli-v0.6.0',
+    });
+    expect(checkComponentsTitle('Release v1.0.0', comps).problems[0]).toContain('no section');
+    expect(checkComponentsTitle('Release web-v0.5.0', comps).problems[0]).toContain(
+      'tagged already',
+    );
+    expect(checkComponentsTitle('web-v0.5.0, web-v0.5.0', comps).problems[0]).toContain(
+      'named twice',
+    );
+  });
+});

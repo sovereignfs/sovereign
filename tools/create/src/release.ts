@@ -89,3 +89,76 @@ export function trailerProblems(message: string): string[] {
   }
   return problems;
 }
+
+/** What a component is when a title is checked against it. */
+export type ComponentFacts = {
+  name: string;
+  tagPrefix: string;
+  version: string;
+  tagged: boolean;
+  hasNotes: boolean;
+};
+
+export type ComponentsCheck = {
+  release: boolean;
+  /** The tag of each component a Release title publishes, by component name. */
+  tags: Record<string, string>;
+  problems: string[];
+};
+
+/**
+ * Checks a promotion title against a repository's components (one for an app, several for a repository such as fjord). The title names one
+ * or more of their versions by tag, each the component's current version, optionally after `Release`; a Release title's every version must
+ * be untagged and have its changelog section. GitHub's ` (#35)` suffix is ignored.
+ */
+export function checkComponentsTitle(
+  title: string,
+  components: readonly ComponentFacts[],
+): ComponentsCheck {
+  const text = title.trim().replace(/\s+\(#\d+\)$/, '');
+  const release = /^Release(\s|$)/.test(text);
+  const ids = (release ? text.replace(/^Release\s*/, '') : text)
+    .split(',')
+    .map((part) => part.trim())
+    .filter((part) => part !== '');
+  const problems: string[] = [];
+  const tags: Record<string, string> = {};
+  const expected = components.map((c) => tagOf(c.tagPrefix, c.version)).join(', ');
+  if (ids.length === 0)
+    problems.push(`The title names no version; it should name one or more of: ${expected}.`);
+  // The longest prefix first, so `web-v1.0.0` is web's even when another component's prefix is empty.
+  const byPrefix = [...components].sort((a, b) => b.tagPrefix.length - a.tagPrefix.length);
+  const seen = new Set<string>();
+  for (const id of ids) {
+    const component = byPrefix.find(
+      (c) =>
+        id.startsWith(`${c.tagPrefix}v`) && /^v\d+\.\d+\.\d+$/.test(id.slice(c.tagPrefix.length)),
+    );
+    if (!component) {
+      problems.push(`"${id}" is not the tag of a version here; it should be one of: ${expected}.`);
+      continue;
+    }
+    if (seen.has(component.name)) {
+      problems.push(`${component.name} is named twice.`);
+      continue;
+    }
+    seen.add(component.name);
+    const tag = tagOf(component.tagPrefix, component.version);
+    if (id !== tag) {
+      problems.push(`${id}: ${component.name} is at ${component.version}, so it is ${tag}.`);
+      continue;
+    }
+    if (release) {
+      if (component.tagged)
+        problems.push(
+          `${tag} is tagged already; Release names only versions this promotion will tag.`,
+        );
+      else if (!component.hasNotes)
+        problems.push(
+          `${tag}: ${component.name}'s changelog has no section for ${component.version}, which would be the release's notes.`,
+        );
+      else tags[component.name] = tag;
+    }
+  }
+  return { release, tags: problems.length > 0 ? {} : tags, problems };
+}

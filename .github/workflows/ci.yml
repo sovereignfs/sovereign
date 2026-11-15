@@ -1,8 +1,8 @@
 name: CI
 
-# Validation runs on pull requests targeting `main`, on every push to `main`
-# (work also lands there directly, and a commit nothing checked is found only at
-# release time), and on demand. A cheap first job works out what the change
+# Validation runs on pull requests targeting `develop` or `main`, on every push to
+# either (work is also committed directly on `develop`, and a commit nothing checked
+# is found only at release time), and on demand. A cheap first job works out what the change
 # touches and the others run only when it says so, so a documentation-only change
 # runs nothing but that job. Run it by hand
 # (Actions -> CI -> Run workflow) to check any branch, `main` included.
@@ -17,15 +17,15 @@ name: CI
 # be tested from here. Revisit when workflows can be run before they are merged.
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
     types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
   workflow_dispatch:
   # Called by publish.yml on a release tag, where every job runs.
   workflow_call:
 
-# Cancel a superseded run of the same pull request; every push to `main` is checked to the end.
+# Cancel a superseded run of the same pull request; every push to `develop` or `main` is checked to the end.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}

@@ -4,6 +4,8 @@ updates:
   # The pnpm workspace. Dependabot resolves the whole repository, including the
   # catalog in pnpm-workspace.yaml, from the root; no per-package entries needed.
   - package-ecosystem: 'npm'
+    # Work lands on `develop`; `main` changes only by release pull request (CONTRIBUTING.md).
+    target-branch: 'develop'
     directory: '/'
     schedule:
       interval: 'weekly'
@@ -51,6 +53,8 @@ updates:
   # Workflow actions (actions/checkout, etc.), pinned to commit SHAs with the
   # release in a comment; Dependabot updates both together.
   - package-ecosystem: 'github-actions'
+    # Work lands on `develop`; `main` changes only by release pull request (CONTRIBUTING.md).
+    target-branch: 'develop'
     directory: '/'
     schedule:
       interval: 'weekly'

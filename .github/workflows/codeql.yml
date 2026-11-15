@@ -8,9 +8,9 @@ name: CodeQL
 # them.
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
     types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
   schedule:
     # Mondays 06:00 UTC.

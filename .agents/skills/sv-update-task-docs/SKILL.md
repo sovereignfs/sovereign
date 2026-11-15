@@ -20,7 +20,7 @@ standalone. Requires `CURRENT_TASK.md`.
    **each** listed epic task.
 
 2. **Resolve the final root platform version** before editing the roadmap:
-   `git diff main...HEAD -- package.json` plus staged/unstaged changes. If the
+   `git diff origin/develop...HEAD -- package.json` plus staged/unstaged changes. If the
    root version changed, use it exactly. Otherwise keep the row's existing
    non-`—` version, or `—`. Never substitute a package or app version.
 
@@ -50,7 +50,7 @@ standalone. Requires `CURRENT_TASK.md`.
    workstream is complete.
 
 7. **Sync version-bearing docs** when this branch bumped the root version
-   (`git diff main...HEAD -- package.json`): update the "Current platform
+   (`git diff origin/develop...HEAD -- package.json`): update the "Current platform
    version" line in `AGENTS.md` and the "Version" header in `ROADMAP.md`, and set
    that file's "Last updated" date to today.
 

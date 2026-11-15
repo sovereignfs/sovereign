@@ -13,7 +13,7 @@ Run the standard quality checks and return a compact result table.
 ## Workflow
 
 1. **Read `CURRENT_TASK.md`** if it exists. Note whether the task/leg or the
-   diff (`git diff main...HEAD --name-only`) touches: `contracts/core-api/` or an
+   diff (`git diff origin/develop...HEAD --name-only`) touches: `contracts/core-api/` or an
    API route; env vars / `.env.example` / `contracts/env.md`; `packages/ui/src/`;
    database schemas or migrations; `docs/specs/core-app.md`.
 
@@ -57,7 +57,7 @@ Run the standard quality checks and return a compact result table.
    grep -m1 '"version"' package.json
    grep -n '^Current platform version:' AGENTS.md
    grep -n '^\*\*Version:\*\*' ROADMAP.md
-   git diff main...HEAD -- package.json
+   git diff origin/develop...HEAD -- package.json
    ```
 
    - If root `package.json` changed on this branch, its version must appear in

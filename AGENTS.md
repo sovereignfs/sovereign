@@ -59,11 +59,21 @@ recorded as an ADR in `docs/adrs/`. A documented "not now" is a valid outcome.
   _Workstream legs_ (`docs/workstreams/`) are the exception: one leg = one
   branch = one PR = one review gate; run every task in the leg uninterrupted,
   verify, open a draft PR, stop. One version bump per leg.
+- **Two branches: `develop` is where work lands, `main` is what is released**
+  (`CONTRIBUTING.md`, "Branches"). `main` is protected: nothing is pushed to it;
+  it changes only through a promotion pull request from `develop`. A change
+  reaches `develop` one of two ways, as the developer says: **committed directly on
+  `develop`**, or **on a feature branch merged into `develop` by pull request**.
+  When unsure which, ask.
+- **CI runs only for `main`**: on pull requests into `main` that are not drafts, on release tags
+  and by hand; never for `develop`, a feature branch or a pull request into `develop`, which the
+  pre-push hook checks locally. CodeQL also scans each push to `main` (`CONTRIBUTING.md`,
+  "Continuous integration"). Every app keeps the same strategy (`docs/building-an-app.md` §13);
+  the app template ships it and a test holds the template to it.
 - **Tasks are sequenced** — each depends on the ones its Dependencies line names;
   tasks tagged `[parallel]` can run alongside others whose dependencies are met.
-- **Branch per task, cut from an up-to-date `main`** (`git switch main && git pull`).
-  Name by change type: `feat/<slug>`, `fix/<slug>`, `docs/<slug>`, `chore/<slug>`.
-  _(Post-v1.0.0, `main` becomes production and `dev` the integration branch.)_
+- **A feature branch is cut from an up-to-date `develop`** (`git switch develop && git pull`),
+  one per task. Name by change type: `feat/<slug>`, `fix/<slug>`, `docs/<slug>`, `chore/<slug>`.
 - **Epic task IDs (`4.3`) are permanent** — use them in doc cross-references and
   dependency lists, never in branch names, commit messages, or PR titles/bodies.
   **Roadmap versions are volatile** — look them up in `ROADMAP.md`, never
@@ -74,14 +84,19 @@ recorded as an ADR in `docs/adrs/`. A documented "not now" is a valid outcome.
   what was run. They end with your agent's trailer — for Claude Code
   `Co-Authored-By: Claude Code <noreply@anthropic.com>` (model-agnostic — never a
   specific model name), for Codex `Co-Authored-By: Codex <noreply@openai.com>`.
+  The `commit-msg` hook refuses any other trailer at those addresses.
   One logical change per commit.
-- **PRs** target `main`, are created with `gh pr create --draft`, and are marked
+- **PRs** target `develop`, are created with `gh pr create --draft --base develop`, and are marked
   ready only on explicit instruction. Bodies describe what changed and why, cite
   spec sections (`core-app §3.6.4`), carry no task numbers, and end with your
   agent's footer (`🤖 Generated with [Claude Code](https://claude.com/claude-code)`
   or `🤖 Generated with [Codex](https://developers.openai.com/codex)`).
-- **Merge strategy: rebase and merge** — never squash, never a merge commit.
-  **Fix commit messages before merging**; never rewrite `main`.
+- **Merge strategy: rebase and merge into `develop`** — never squash, never a merge commit.
+  **The promotion pull request (`develop` → `main`) is merged with a merge commit**; its title
+  and body come from `pnpm promotion:draft`: the versions it carries (`v0.98.0, ui-v0.97.0`, or
+  `sdk-v2.2.0` alone, or the current `vX.Y.Z` when none changed), with `Release` in front only when
+  all of them will be tagged on merge (never for a version already tagged). Tags go on that merge commit (`CONTRIBUTING.md`, `docs/releasing.md`).
+  **Fix commit messages before they reach `develop`**; never rewrite `develop` or `main`.
   **Never merge automatically** — wait for instruction or ask.
 - **Never commit or push without being asked.** Prepare changes in the working
   tree and stop.
@@ -119,7 +134,8 @@ recorded as an ADR in `docs/adrs/`. A documented "not now" is a valid outcome.
     needs at least a minor bump plus a migration note (`docs/upgrade.md`), and
     for `ui` a major bump from `1.0.0` (`docs/specs/design-system.md` §4).
   - Tags/commit subjects: root `vX.Y.Z`; packages and apps `<slug>-vX.Y.Z`
-    (`ui-`, `bridge-`, `core-`, …).
+    (`ui-`, `bridge-`, `core-`, …). Bump commits land on `develop`; the tags go on
+    the promotion's merge commit on `main`.
 
 ## Naming conventions
 
@@ -360,7 +376,7 @@ promises: `docs/specs/design-system.md`. How to use it: `docs/design-system.md`.
 
 ## Tech stack
 
-Next.js — latest stable, 16.4.3 at the time of writing (App Router) ·
+Next.js — latest stable, 16.4.6 at the time of writing (App Router) ·
 TypeScript 6 · Turborepo + pnpm workspaces ·
 better-auth 1.7 + `@better-auth/oauth-provider` · Drizzle ORM (sqld, PostgreSQL,
 SQLite file) · nodemailer SMTP (`packages/mailer`) · CSS Modules + CSS custom
@@ -418,6 +434,7 @@ pnpm packages:check              # pack the published packages, check the tarbal
 pnpm generate:icons              # regenerate the Icon components from scripts/icon-list.ts
 pnpm generate:theme-presets      # regenerate tokens/theme-presets.css from theme-presets.ts
 pnpm docs:check-links            # every relative Markdown link resolves
+pnpm promotion:draft             # the title and body of the develop → main pull request (--release <ids>|all)
 pnpm verify:push                 # format:check, lint, typecheck, design:tokens:check, docs:check-links, test (the pre-push hook)
 ```
 

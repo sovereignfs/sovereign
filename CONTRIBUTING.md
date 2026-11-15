@@ -1,6 +1,6 @@
 # Contributing to Sovereign
 
-Thank you for helping. This guide covers how work gets into `main`. Agents
+Thank you for helping. This guide covers how work gets into `develop`, and from there into `main`. Agents
 follow the same rules, written for them in [AGENTS.md](AGENTS.md).
 
 ## Contents
@@ -79,12 +79,64 @@ land.
 
 ## Branching and commits
 
-Always branch from an up-to-date `main`:
+### Branches
 
-```bash
-git switch main && git pull
-git switch -c feat/your-feature-name
-````
+| Branch    | What it is                                                                                                                                                                                       |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `develop` | The working branch. Every change lands here first.                                                                                                                                               |
+| `main`    | What is released. It is **protected**: a change reaches it only through a promotion pull request from `develop`, never by a push (an administrator may bypass this in an emergency, and says so). |
+
+There are two ways to get a change into `develop`; pick per change:
+
+1. **Directly on `develop`.** Commit on an up-to-date `develop` and push it. The pre-push hook
+   (`pnpm verify:push`) checks it on your machine; CI does not run for `develop`. Suits small, low-risk changes by a maintainer.
+
+   ```bash
+   git switch develop && git pull
+   # edit, commit
+   git push origin develop
+   ```
+
+2. **A feature branch.** Branch from an up-to-date `develop`, open a draft pull request **into `develop`**, and
+   merge it with **rebase and merge** once it is reviewed. Suits anything that wants review, and every outside
+   contribution.
+
+   ```bash
+   git switch develop && git pull
+   git switch -c feat/your-feature-name
+   ```
+
+The commit, version-bump and pull request rules below are the same either way.
+
+### Promoting `develop` into `main`
+
+`main` changes only through a pull request from `develop`, merged with **a merge commit**, the one place a merge
+commit is used. `develop` is never rewritten, so it stays an ancestor of `main` and the next promotion shows only
+what is new. Not every promotion publishes something.
+
+1. On an up-to-date `develop`, run `pnpm promotion:draft`. It compares `origin/main` with `develop` and prints the
+   pull request's title and body:
+   - **The title names the versions it carries**, by the identifiers tags and version commits use: the platform's
+     `vX.Y.Z` first, then `<slug>-vX.Y.Z` for each published package or the toolkit whose version changed
+     (`v0.98.0, ui-v0.97.0`; a promotion of the SDK alone is `sdk-v2.2.0`). When no version changed, it is the
+     platform's current `vX.Y.Z`.
+   - **It starts with `Release`** only when every version it names will be tagged and published once it is merged:
+     say which with `--release v0.98.0,ui-v0.97.0`, or `--release all`. `Release` is for versions this promotion
+     will tag, never one already tagged: the command refuses those.
+   - **The body** lists every version that changed, core's and the private packages' included, says whether merging
+     publishes each, and lists the commits by the part of the repository they touch (core, the toolkit, each
+     package, contracts, documentation, the repository).
+2. Open the pull request from `develop` into `main` with that title and body, and merge it with a merge commit,
+   which takes the title (`Release v0.98.0, ui-v0.97.0`).
+3. To publish, tag the merge commit and push the tags named in the title: `vX.Y.Z` for the image, a
+   `<slug>-vX.Y.Z` for a package or the toolkit ([releasing](docs/releasing.md)). Tags are not branches, so `main`'s
+   protection does not stop them, and the publish workflows refuse a tag whose commit is not on `main`. A version
+   promoted without being tagged can be tagged later, on the merge commit that brought it.
+
+Once the promotion is merged, `.github/workflows/sync-develop.yml` moves `develop` forward to the merge commit. It is a
+fast-forward, never a rewrite (`develop` is already in the merge commit's history), so `develop` is not shown as behind
+`main` and the release tags are in its history. If a commit reached `develop` after the merge, the run leaves `develop`
+as it is and says so; pull before you start new work either way.
 
 **Branch prefixes:**
 
@@ -94,8 +146,6 @@ git switch -c feat/your-feature-name
 | `fix/`   | Bug fixes                                       |
 | `docs/`  | Documentation only                              |
 | `chore/` | Tooling, scaffolding, dependencies, maintenance |
-
-_(After v1.0.0, `main` becomes production and `dev` the integration branch.)_
 
 **Commit messages** should explain _why_, not just _what_. Write the subject as
 `type(scope): summary` — for example `feat(ui): add a currency's own fraction
@@ -122,16 +172,21 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>
   version-bump commit subjects use the same identifier as the release tag
   (`vX.Y.Z` for root, `<slug>-vX.Y.Z` for packages and apps). See the version
   bump conventions in [AGENTS.md](AGENTS.md).
-- PRs are merged with **rebase and merge** — no squash, no merge commits.
-- Fix commit messages before the PR is merged; correcting them after means
-  rewriting `main`.
+- PRs into `develop` are merged with **rebase and merge** — no squash, no merge commits. The pull
+  request that promotes `develop` into `main` is the one exception: it is merged with a merge commit (above).
+- Fix commit messages before they reach `develop` (before the PR is merged, or before you push); correcting
+  them after means rewriting `develop`, which is never done.
 
 ### Continuous integration
 
-CI (`.github/workflows/ci.yml`) runs on every pull request targeting `main`, and
-on demand: **Actions → CI → Run workflow** checks any branch, `main` included.
-There is no push-to-`main` trigger — `main` is meant to be gated by the pull
-request.
+CI (`.github/workflows/ci.yml`) runs only for `main`: on pull requests targeting it that are not drafts (the
+promotion from `develop`) and on every release tag. Not on a push to `main`, which changes only by merging a
+promotion whose run already checked that merge result; after an emergency push that bypassed `main`'s protection,
+run CI on `main` by hand. It does not run for `develop`, for feature
+branches or for pull requests into `develop`, Dependabot's included, so runner time is not spent on every commit;
+the pre-push hook checks your work locally, and **Actions → CI → Run workflow** checks any branch by hand when you
+want the jobs the hook cannot run (the build, the database legs, the image, the acceptance suite) before the
+promotion.
 
 A first job, **Classify changes**, runs `scripts/ci-changes.ts` over the files the
 pull request touches and decides which of the others run. A change to
@@ -150,9 +205,10 @@ everything.
 | Database (3 legs) | `pnpm test:db` against sqld, a SQLite file and PostgreSQL            |
 | Dependency audit  | `pnpm audit --audit-level=high`, when a manifest or lockfile changes |
 
-CodeQL (`codeql.yml`) also runs on pushes to `main`, on pull requests, and weekly;
+CodeQL (`codeql.yml`) runs the same way (pushes to `main`, pull requests into `main` that are not drafts) and
+weekly;
 `dependency-audit.yml` repeats the audit against `main` weekly. Dependabot opens
-weekly pull requests for dependencies and for the pinned workflow actions.
+weekly pull requests into `develop` for dependencies and for the pinned workflow actions.
 
 **While a PR is a draft, all jobs are skipped** — marking it _Ready for review_
 runs them. To skip CI on demand you have three options:
@@ -227,3 +283,4 @@ its current and future licences (including commercial use).
 **How to sign:** Read this document in full, then tick the CLA checkbox in the
 PR template when you open your pull request. That checkbox is your agreement —
 no separate form or signature is required at this stage.
+````

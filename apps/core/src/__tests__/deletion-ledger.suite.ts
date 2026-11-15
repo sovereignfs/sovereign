@@ -164,15 +164,17 @@ export function deletionLedgerSuite(createDatabase: () => Promise<TestDatabase>)
     it('makes a notice for the app of each account deleted after the time it was backed up, and of none before', async () => {
       const ctx = await instance();
       await manager().deleteSelf({ id: ctx.ada, role: 'platform:user' });
-      const between = Date.now() + 5;
+      // The backup is a millisecond before Bo's deletion begins, so Bo's deletion is after it even when it takes no time at all:
+      // the ledger asks for deletions strictly after the backup.
+      const backedUp = Date.now() - 1;
       await db.run('update deleted_accounts set deleted_at = ? where sub = ?', [
-        between - 10,
+        backedUp - 10,
         ctx.ada,
       ]);
       await db.run('delete from account_deletion_notices');
       await manager().deleteSelf({ id: ctx.bo, role: 'platform:user' });
       await db.run('delete from account_deletion_notices');
-      const done = await resendDeletions(db, ctx.app.clientId, between - 5);
+      const done = await resendDeletions(db, ctx.app.clientId, backedUp);
       expect(done).toEqual({ accounts: 1, notices: 1 });
       expect((await notices()).map((row) => [row.sub, row.client_id, row.state])).toEqual([
         [ctx.bo, ctx.app.clientId, 'pending'],

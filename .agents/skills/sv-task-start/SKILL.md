@@ -28,8 +28,11 @@ or one **leg** of a workstream (`docs/workstreams/`).
    workstream document and `docs/workstreams/README.md`.
 
 3. **Check git state:** `git status --short` and `git log --oneline -5`.
-   The worktree must be clean and on `main`; if not, stop and ask. Then
-   `git switch main && git pull`.
+   The worktree must be clean and on `develop` (where work lands; `main` is
+   released only by a promotion pull request — `CONTRIBUTING.md`, "Branches"); if
+   not, stop and ask. Then `git switch develop && git pull`. Ask whether the
+   task is worked **directly on `develop`** or **on a feature branch**, unless
+   the developer already said.
    - For a leg: confirm the previous leg's PR is merged (the "no task on an
      unmerged PR" rule applies at leg boundaries). If the leg has a
      **Do not proceed if** clause, check it now and stop if it holds.
@@ -44,8 +47,9 @@ or one **leg** of a workstream (`docs/workstreams/`).
      task's epic file and block, the leg's Technical notes, Done-when, and
      Do-not-proceed-if text, and whether the leg is a **gate**.
 
-5. **Choose the branch name** by change type — `feat/`, `fix/`, `docs/`,
-   `chore/` plus a kebab slug. A leg uses `feat/<workstream-slug>-leg-<n>` (or
+5. **Choose the branch name** (feature-branch mode only; directly on `develop`,
+   stay there and skip this) by change type — `feat/`, `fix/`, `docs/`,
+   `chore/` plus a kebab slug, cut from `develop`. A leg uses `feat/<workstream-slug>-leg-<n>` (or
    the matching type prefix). Never include roadmap versions or epic IDs.
 
 6. **Write `CURRENT_TASK.md`** in the repo root. It is gitignored, transient,

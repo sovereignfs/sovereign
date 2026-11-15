@@ -297,7 +297,7 @@ From [`specs/design-system.md`](specs/design-system.md) and [the guide](design-s
 | `CHANGELOG.md`                                     | Keep a Changelog; `[Unreleased]` as you go; it is the release notes                            |
 | `RELEASING.md`, `scripts/release.sh`               | The release, copied from Tusk                                                                  |
 | `sovereign.manifest.json`, `Dockerfile`, `deploy/` | What an instance reads; the image; Compose setups for running it alone (one per database form) |
-| `.github/workflows/`                               | CI (only what a change affects), publish on a tag                                              |
+| `.github/workflows/`                               | CI for non-draft pull requests into `main` only (§13), publish on a tag of `main`              |
 
 **The image**: multi-stage, standalone Next server only; `USER node`; `ARG PORT` (required) and `EXPOSE ${PORT}`; migrations copied
 beside the server; the licences in `/usr/share/licenses/`; `.dockerignore` keeps every `.env` out. **Debian, not Alpine**, if it uses
@@ -311,8 +311,8 @@ will only ever be hosted. An app that must also run alone is started from Tusk's
 ## 12. Releasing and hosting
 
 **Release**: changes collect under `[Unreleased]`; `scripts/release.sh check | prepare | propose | tag | verify X.Y.Z`. `prepare`
-makes the release commit on a branch; it merges through a PR (rebase and merge); `tag` waits for CI on that exact commit, pushes
-`vX.Y.Z`, and the publish workflow builds `linux/amd64` and `linux/arm64` on native runners, joins them, attests provenance, pulls
+makes the version commit on `develop`; it reaches `main` through the promotion pull request (merged with a merge commit, §13); `tag`
+waits for CI on that pull request, pushes `vX.Y.Z` on the merge commit, and the publish workflow builds `linux/amd64` and `linux/arm64` on native runners, joins them, attests provenance, pulls
 the published image and boots it, then writes the release page. The first time, make the package public in the organisation's
 Packages settings. Semver for an app: a patch has no migration and no setting change; a minor may (forward-only); pre-1.0 a break is
 a minor marked **breaking**.
@@ -333,8 +333,17 @@ The name is its subdomain (`tusk.sovereign.openfs.io`). Images are pinned by tag
 
 The ones every repository of the suite shares (each repository's `AGENTS.md` is authoritative for itself):
 
-- **One task, one branch, one draft PR**, from an up-to-date `main`; branches `feat/`, `fix/`, `docs/`, `chore/`. Nothing goes to `main`
-  directly; merge with rebase and merge; never merge automatically. Never commit or push without being asked.
+- **Two branches, as in Sovereign** ([CONTRIBUTING](../CONTRIBUTING.md#branches)): work lands on `develop`, committed directly or
+  through a feature branch (`feat/`, `fix/`, `docs/`, `chore/`) cut from `develop` and merged by draft PR with rebase and merge; `main`
+  is protected and changes only by a promotion pull request from `develop`, titled with its version (`vX.Y.Z`, or `Release vX.Y.Z`
+  when merging it will be tagged), merged with a merge commit that the release tag goes on. A workflow then fast-forwards
+  `develop` to that merge commit (`.github/workflows/sync-develop.yml`, the same file in every repository of the suite). Never merge automatically. Never commit
+  or push without being asked.
+- **CI runs only for `main`, as in Sovereign**: on pull requests into `main` that are not drafts, on release tags, and by hand;
+  never on a push to `develop` or a feature branch, nor on a pull request into `develop`, where a pre-push hook checks the work
+  locally instead. CodeQL, where an app has it, may also scan each push to `main`. Runner time is spent where a change is about to
+  reach what is released, not on every commit. The app template ships this (`.github/workflows/ci.yml`, `.githooks/pre-push`), and a
+  test in `sovereign` holds the template to it.
 - **Commits**: `type(scope): summary` under 72 characters, a body that says why, wrapped at 100, a `Verified:` line naming what was run,
   one logical change each. An agent's commits end with `Co-Authored-By: Claude Code <noreply@anthropic.com>`.
 - **Docs are part of the change**: a statement made false is fixed in the same PR, and a change of behaviour adds a changelog line.

@@ -1,5 +1,11 @@
 # Releasing
 
+Everything is released from `main`, and `main` changes only through a **promotion pull request** from `develop`
+([CONTRIBUTING](../CONTRIBUTING.md#promoting-develop-into-main)), merged with a merge commit. Its title, from
+`pnpm promotion:draft`, names the versions it carries, with `Release` in front only when all of them will be tagged; the
+tags go on its merge commit. Version bumps are made on `develop` as before; nothing is tagged there. Pushing a tag is not a
+push to `main`, so `main`'s protection does not stop it.
+
 Three things are released from this repository: a package to npm, core's image to the GitHub Container Registry
 ([below](#releasing-the-image)), and the operator's toolkit, which is both ([below](#releasing-the-toolkit)).
 
@@ -109,8 +115,9 @@ another run could have stored.
 
 To release:
 
-1. Merge the pull request that carries the version bump (the `ui-vX.Y.Z` commit).
-2. Tag the merge commit and push the tag: `git tag ui-v0.85.2 && git push origin ui-v0.85.2`.
+1. Land the version bump (the `ui-vX.Y.Z` commit) on `develop`, and merge the promotion pull request
+   (`Release ui-v0.85.2`) into `main`.
+2. Tag the promotion's merge commit and push the tag: `git switch main && git pull && git tag ui-v0.85.2 && git push origin ui-v0.85.2`.
 3. Watch the Publish run in the Actions tab. A published version cannot be replaced, so if a step
    fails after npm accepted the package, bump the version and release again.
 
@@ -145,8 +152,9 @@ keeps its `core-vX.Y.Z` commits but is no tag and releases nothing.
 
 To release:
 
-1. Land the commit that carries the root version bump on `main`.
-2. Tag that commit and push the tag: `git tag v1.2.3 && git push origin v1.2.3`.
+1. Land the commit that carries the root version bump on `develop`, and merge the promotion pull request
+   (`Release v1.2.3`) into `main`.
+2. Tag the promotion's merge commit and push the tag: `git switch main && git pull && git tag v1.2.3 && git push origin v1.2.3`.
 3. Watch the Publish image run in the Actions tab.
 4. From somewhere that has never logged in to GitHub's registry, check it arrived:
    `docker pull ghcr.io/sovereignfs/sovereign:1.2.3`.
@@ -163,8 +171,9 @@ published at the same version in the same job because `suite.lock` pins it by th
 `.github/workflows/publish-cli.yml` does the rest. They are AGPL-3.0-or-later and are run, not imported, which is why the package
 check treats them apart from the libraries above (a `bin` and not an exports map).
 
-The workflow **publishes nothing unless** the full CI passes on the tagged commit, the commit is on `main`, and the tag matches the
-`version` of both `tools/cli` and `tools/create`. The order is the image, then `@sovereignfs/cli`, then `@sovereignfs/create`, because a
+The workflow **publishes nothing unless** the full CI passes on the tagged commit, the commit is on `main`, the tag matches the
+`version` of both `tools/cli` and `tools/create`, and every Sovereign package the app template names (`tools/create/src/versions.ts`)
+is on npm in its range (`pnpm template:check-published`): release those packages first. The order is the image, then `@sovereignfs/cli`, then `@sovereignfs/create`, because a
 repository made by `create@X` pins the image of toolkit X and cannot be set up until it exists. The image is signed by the build with
 the run's `GITHUB_TOKEN`; the packages are published with provenance by `NPM_TOKEN`, which only the last step holds.
 
@@ -173,7 +182,8 @@ and `RELEASE.version` in `tools/cli/src/release.ts`. A toolkit release also says
 starts a new instance on the newest published core in the supported range, never older than it (and on it when the registry cannot be
 asked), so a core release needs no toolkit release to be what new instances start on.
 
-To release: land the commit that sets those versions and `newestCore` on `main`, tag it `cli-vX.Y.Z`, push the tag, and watch the run.
+To release: land the commit that sets those versions and `newestCore` on `develop`, merge the promotion pull request (`Release cli-vX.Y.Z`) into
+`main`, tag its merge commit `cli-vX.Y.Z`, push the tag, and watch the run.
 Then, from a machine that has never logged in to GitHub's registry, check `docker pull ghcr.io/sovereignfs/cli:X.Y.Z`, and that
 `npm create @sovereignfs@X.Y.Z` makes a repository that `./sv setup` can finish. On the first release, make the `cli` package public
 in the organization's Packages settings, and check the `@sovereignfs` scope on npm is yours.
@@ -184,7 +194,7 @@ The design system's Storybook is built in this repository and published to its o
 `sovereignfs/storybook`, whose GitHub Pages serves <https://sovereignfs.github.io/storybook/>.
 `.github/workflows/storybook.yml` does the publishing:
 
-- Push a tag `sb-vX.Y.Z` (it need not match a package version; it marks the commit to put
+- Push a tag `sb-vX.Y.Z` on a commit of `main` (it need not match a package version; it marks the commit to put
   live), or start the workflow by hand from the Actions tab.
 - It pushes the static build to the `gh-pages` branch of `sovereignfs/storybook`, so the address
   does not change and this repository's own Pages settings are not used.

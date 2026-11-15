@@ -70,6 +70,15 @@ describe('the toolkit release workflow', () => {
     ).toHaveLength(2);
   });
 
+  it('refuses to publish while a Sovereign package the app template needs is not on npm', () => {
+    const check = workflow.indexOf('pnpm template:check-published');
+    expect(check).toBeGreaterThan(-1);
+    expect(check).toBeLessThan(workflow.indexOf('docker/login-action'));
+    expect(json('package.json').scripts).toMatchObject({
+      'template:check-published': 'tsx scripts/check-template-published.ts',
+    });
+  });
+
   it('checks the version and the commit before it can log in or push, in the image job', () => {
     const login = workflow.indexOf('docker/login-action');
     expect(login).toBeGreaterThan(workflow.indexOf('expects version $expected'));

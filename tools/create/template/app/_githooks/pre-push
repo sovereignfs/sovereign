@@ -1,0 +1,5 @@
+#!/bin/sh
+# Checks the work before it is pushed (CONTRIBUTING.md, "Continuous integration"): CI does not run for `develop` or a feature branch,
+# so this is their check. `npm install` turns it on (the `prepare` script sets core.hooksPath to .githooks). Skip it once, knowingly,
+# with `git push --no-verify`.
+exec npm run --silent verify

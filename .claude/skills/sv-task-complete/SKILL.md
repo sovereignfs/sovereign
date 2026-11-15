@@ -34,7 +34,7 @@ failing check.
 Run the `sv-security-check` skill if the diff touches any sensitive path:
 
 ```bash
-git diff main...HEAD --name-only | grep -E \
+git diff origin/develop...HEAD --name-only | grep -E \
   'apps/core/(proxy|app/api|app/.*/actions)|actions\.ts|auth|oauth|oidc|packages/(config|crypto|database)/|scripts/|Dockerfile|docker-compose|\.env|csp|cookie|session|secret|token'
 ```
 
@@ -52,8 +52,8 @@ In the same branch, per your instruction file's version-bump conventions:
 - Packages and `apps/core` bump independently by what actually changed in
   them. `ui`, `bridge` and `api-client` never ship a breaking change in a
   patch.
-- If `main` moved while this branch was open, re-target the bumps onto the
-  real current `main` after rebasing — a stale base silently produces a
+- If `develop` moved while this branch was open, re-target the bumps onto the
+  real current `develop` after rebasing — a stale base silently produces a
   duplicate version number.
 
 Finish all version edits before step 5; the docs updater reads the final

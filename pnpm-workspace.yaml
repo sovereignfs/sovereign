@@ -39,7 +39,7 @@ supportedArchitectures:
 catalog:
   typescript: ~6.0.3
   '@types/node': ^24.19.2
-  next: ^16.4.3
+  next: ^16.4.6
   react: ^19.3.1
   react-dom: ^19.3.1
   '@types/react': ^19.3.0
@@ -73,7 +73,7 @@ catalog:
   nodemailer: ^10.2.0
   '@types/nodemailer': ^8.0.2
   '@react-email/render': ^2.1.0
-  react-email: ^6.11.0
+  react-email: ^6.11.13
 
 # Storybook's packages must stay on one version, so they are one named catalog.
 catalogs:

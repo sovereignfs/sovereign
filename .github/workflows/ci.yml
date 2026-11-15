@@ -1,10 +1,13 @@
 name: CI
 
-# Validation runs on pull requests targeting `main`, and on demand. There is no
-# push trigger: `main` is meant to be gated by the pull request. A cheap first job
-# works out what the change touches and the others run only when it says so, so a
-# documentation-only pull request runs nothing but that job. Run it by hand
-# (Actions -> CI -> Run workflow) to check any branch, `main` included.
+# Validation runs on pull requests targeting `main` (the promotion from `develop`)
+# that are not drafts, on release tags (through workflow_call), and on demand. Not on
+# a push to `main`: it changes only by merging a promotion, whose run already checked
+# that merge result. Nothing runs for `develop` or a feature branch: the pre-push hook
+# checks those locally. Actions -> CI -> Run workflow checks any branch by hand, and
+# `main` after an emergency push that bypassed its protection. A cheap first job works
+# out what the change touches and the others run only when it says so, so a
+# documentation-only change runs nothing but that job.
 #
 # While a pull request is a draft, or carries the `skip-ci` label, no job runs;
 # GitHub itself also skips the run when the head commit message says [skip ci].
@@ -22,10 +25,10 @@ on:
   # Called by publish.yml on a release tag, where every job runs.
   workflow_call:
 
-# Cancel a superseded run of the same pull request (or branch).
+# Cancel a superseded run of the same pull request; a manual or release run is never cancelled.
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read

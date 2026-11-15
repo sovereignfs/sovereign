@@ -18,6 +18,8 @@ const RENAMED: Record<string, string> = {
   // A published package may not carry a file called tsconfig.json.
   '_tsconfig.json': 'tsconfig.json',
   _github: '.github',
+  // Hooks are versioned here and turned on by the `prepare` script (CONTRIBUTING.md).
+  _githooks: '.githooks',
 };
 
 export type AppNames = { name: string; prefix: string; title: string };
@@ -75,6 +77,10 @@ export function appPackageJson(names: AppNames, port: number = DEFAULT_APP_PORT)
         start: `PORT=\${PORT:-${port}} node .next/standalone/server.js`,
         typecheck: 'tsc --noEmit',
         'manifest:check': 'sovereign-manifest check',
+        // What the pre-push hook runs: CI does not run for `develop` or a feature branch (CONTRIBUTING.md).
+        verify: 'npm run typecheck && npm run manifest:check',
+        // Turns the versioned hooks on for whoever installs; harmless where there is no repository (the image's build).
+        prepare: 'git config core.hooksPath .githooks || true',
       },
       dependencies: APP_DEPENDENCIES,
       devDependencies: APP_DEV_DEPENDENCIES,
@@ -99,6 +105,8 @@ export async function writeApp(
       .replaceAll('__PREFIX__', names.prefix)
       .replaceAll('__NAME__', names.name)
       .replaceAll('__TITLE__', names.title)
+      // Prettier, the repository's formatter, writes `__TITLE__` in the template's Markdown as `**TITLE**` (strong emphasis).
+      .replaceAll('**TITLE**', names.title)
       .replaceAll('__PORT__', String(port));
 
   for await (const file of walk(TEMPLATE)) {
@@ -108,7 +116,10 @@ export async function writeApp(
     let text = replace(await readFile(path.join(TEMPLATE, file), 'utf8'));
     // The template's manifest stays valid JSON (it is formatted and checked as such), so its port is a number and not a placeholder.
     if (out === 'sovereign.manifest.json') text = text.replace(/"port": \d+/, `"port": ${port}`);
-    await writeFile(target_, text);
+    // A hook runs only when it is executable.
+    await writeFile(target_, text, {
+      mode: out.startsWith(`.githooks${path.sep}`) ? 0o755 : 0o644,
+    });
     written.push(out);
   }
   await writeFile(path.join(target, 'package.json'), appPackageJson(names, port));
@@ -118,7 +129,7 @@ export async function writeApp(
 
 /**
  * Makes an app (operator-cli §2.2): a Next.js app that signs people in through core and meets the app manifest, so an instance can host it
- * as it stands. The files, `git init`, the lockfile, and the first commit. It does not install or build.
+ * as it stands. The files, `git init`, the lockfile, the first commit on `main`, and `develop` checked out. It does not install or build.
  */
 export async function createApp(
   request: { dir: string; port?: number },
@@ -161,7 +172,14 @@ export async function createApp(
     ['commit', '-m', 'Create the app'],
     'git needs a name and an email: git config --global user.name ... and user.email ..., then commit by hand.',
   );
+  // Work lands on `develop` and `main` takes release pull requests (CONTRIBUTING.md), so the app starts on `develop`.
+  await step(
+    'Making develop',
+    'git',
+    ['switch', '--create', 'develop'],
+    'Run git switch --create develop by hand.',
+  );
   io.err(
-    `Made ${names.name}. Next:\n  cd ${request.dir}\n  npm install && npm run dev   (http://localhost:${port})\n  npm run build\n  docker build -t ${names.name} .\nThen host it with ./sv app add ${names.name} --image <the image> in your instance. See README.md.`,
+    `Made ${names.name}, on the branch develop (CONTRIBUTING.md: main takes release pull requests). Next:\n  cd ${request.dir}\n  npm install && npm run dev   (http://localhost:${port})\n  npm run build\n  docker build -t ${names.name} .\nThen host it with ./sv app add ${names.name} --image <the image> in your instance. See README.md.`,
   );
 }

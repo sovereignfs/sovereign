@@ -184,8 +184,73 @@ describe('the files of an app', () => {
       '${{ steps.image.outputs.name }}:${{ steps.version.outputs.version }}',
     );
     expect(workflow).toContain('ghcr.io/${GITHUB_REPOSITORY,,}');
+    // Every action from elsewhere is pinned to a commit; the app's own ci.yml is called by path.
     for (const action of workflow.matchAll(/uses: (\S+)/g))
+      if (!action[1]?.startsWith('./')) expect(action[1], 'an action').toMatch(/@[0-9a-f]{40}$/);
+  });
+
+  it('check only where a change reaches main: CI on pull requests into main and tags, a pre-push hook for the rest', async () => {
+    const target = path.join(temp(), 'my-notes');
+    const written = await writeApp(target, namesOf(target));
+    expect(written).toEqual(
+      expect.arrayContaining([
+        '.github/workflows/ci.yml',
+        '.githooks/pre-push',
+        '.github/workflows/sync-develop.yml',
+      ]),
+    );
+    const ci = read(target, '.github/workflows/ci.yml');
+    expect(ci).toMatch(/on:\n {2}pull_request:\n {4}branches: \[main\]/);
+    expect(ci).not.toMatch(/^ {2}push:/m);
+    expect(ci).toContain('github.event.pull_request.draft == false');
+    for (const step of ['npm run typecheck', 'npm run manifest:check', 'npm run build'])
+      expect(ci).toContain(step);
+    for (const action of ci.matchAll(/uses: (\S+)/g))
       expect(action[1], 'an action').toMatch(/@[0-9a-f]{40}$/);
+    // A release tag runs the checks before anything is built.
+    const publish = read(target, '.github/workflows/publish.yml');
+    expect(publish).toContain('uses: ./.github/workflows/ci.yml');
+    expect(publish).toMatch(/image:\n {4}needs: validate/);
+    // The hook is executable, runs verify, and npm install turns it on.
+    const hook = path.join(target, '.githooks', 'pre-push');
+    expect(statSync(hook).mode & 0o111).not.toBe(0);
+    expect(read(target, '.githooks/pre-push')).toContain('npm run --silent verify');
+    const scripts = (
+      JSON.parse(read(target, 'package.json')) as { scripts: Record<string, string> }
+    ).scripts;
+    expect(scripts.verify).toBe('npm run typecheck && npm run manifest:check');
+    expect(scripts.prepare).toBe('git config core.hooksPath .githooks || true');
+    expect(read(target, 'CONTRIBUTING.md')).toContain('## Continuous integration');
+  });
+
+  it('name the app in the Markdown, though the formatter writes the placeholder as bold', async () => {
+    const target = path.join(temp(), 'my-notes');
+    await writeApp(target, namesOf(target));
+    expect(read(target, 'README.md').split('\n')[0]).toBe('# My Notes');
+    expect(read(target, 'README.md')).not.toContain('TITLE');
+  });
+
+  it('release only from main: the workflow refuses a tag off main, and CONTRIBUTING.md says how work reaches it', async () => {
+    const target = path.join(temp(), 'my-notes');
+    await writeApp(target, namesOf(target));
+    const workflow = read(target, '.github/workflows/publish.yml');
+    expect(workflow).toContain('git merge-base --is-ancestor "$GITHUB_SHA" origin/main');
+    expect(workflow).toContain('fetch-depth: 0');
+    expect(workflow.indexOf('git merge-base')).toBeLessThan(
+      workflow.indexOf('docker/login-action'),
+    );
+    const contributing = read(target, 'CONTRIBUTING.md');
+    expect(contributing).toContain('# Contributing to My Notes');
+    for (const rule of [
+      'Directly on `develop`',
+      'A feature branch',
+      '**`vX.Y.Z`**',
+      '**`Release vX.Y.Z`** when that version',
+      'a merge commit',
+      'rebase and merge',
+    ])
+      expect(contributing, rule).toContain(rule);
+    expect(read(target, 'README.md')).toContain('[CONTRIBUTING.md](CONTRIBUTING.md)');
   });
 
   it('keep what a sign-in needs: a conditional token write, encrypted tokens, and an owner in every delete', async () => {
@@ -395,7 +460,12 @@ describe('npm create @sovereignfs app', () => {
       'npm install',
       'git add',
       'git commit',
+      'git switch',
     ]);
+    // The first commit is on main, and the app is left on develop, where work lands (CONTRIBUTING.md).
+    expect(ran[0]).toBe('git init --initial-branch=main');
+    expect(ran[4]).toBe('git switch --create develop');
+    expect(io.said.join('\n')).toContain('on the branch develop');
     expect(ran[1]).toContain('--package-lock-only');
     expect(ran[1]).toContain('--ignore-scripts');
     expect(io.said.join('\n')).toContain('./sv app add my-notes');

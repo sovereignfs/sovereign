@@ -9,6 +9,7 @@ import { appendFile } from 'node:fs/promises';
 import { CreateError, type CreateIo, type Exec } from './create.js';
 import { changelogSection, checkTitle, isPrefix, tagOf, trailerProblems } from './release.js';
 import { syncApp } from './sync.js';
+import { apply, differences, readLive, readRepositoryFile } from './settings.js';
 
 export { TOOL_COMMANDS } from './commands.js';
 
@@ -73,6 +74,8 @@ export async function runTool(argv: readonly string[], ctx: ToolContext): Promis
   if (command === 'release' && verb === 'check') return releaseCheck(rest, ctx);
   if (command === 'release' && verb === 'notes') return releaseNotes(rest, ctx);
   if (command === 'commits' && verb === 'check') return commitsCheck(rest, ctx);
+  if (command === 'settings' && (verb === 'apply' || verb === 'check'))
+    return settings(verb, rest, ctx);
   if (command === 'sync')
     return sync(
       [verb, ...rest].filter((word) => word !== undefined),
@@ -200,4 +203,60 @@ async function sync(argv: readonly string[], ctx: ToolContext): Promise<number> 
     return 1;
   }
   return 0;
+}
+
+/**
+ * `settings apply|check [--file F] [--repo OWNER/NAME] [--prune]`: the repository's settings as code. F defaults to
+ * .github/repository.json at the repository's root; the repository is GITHUB_REPOSITORY in CI, or the one `gh` sees here.
+ */
+async function settings(
+  verb: 'apply' | 'check',
+  argv: readonly string[],
+  ctx: ToolContext,
+): Promise<number> {
+  const { values, flags, words } = optionsOf(argv, ['file', 'repo'], ['prune']);
+  if (words.length > 0) throw new CreateError(`Too many arguments: ${words.join(' ')}.`, 2);
+  const top = await ctx.exec('git', ['rev-parse', '--show-toplevel'], { cwd: ctx.cwd });
+  const root = top.code === 0 && top.stdout.trim() !== '' ? top.stdout.trim() : ctx.cwd;
+  const file = await readRepositoryFile(
+    path.resolve(root, values.get('file') ?? '.github/repository.json'),
+  );
+  let repo = values.get('repo') ?? ctx.env.GITHUB_REPOSITORY;
+  if (!repo) {
+    const seen = await ctx.exec(
+      'gh',
+      ['repo', 'view', '--json', 'nameWithOwner', '-q', '.nameWithOwner'],
+      { cwd: root },
+    );
+    repo = seen.code === 0 ? seen.stdout.trim() : '';
+  }
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)) {
+    throw new CreateError(
+      'Say which repository: --repo OWNER/NAME, or run it where gh knows the repository.',
+      2,
+    );
+  }
+  const live = await readLive(ctx.exec, root, repo, file);
+  for (const what of live.unreadable)
+    ctx.io.err(`  ${what}: not checked; this token cannot read it (an owner's apply can).`);
+  if (verb === 'apply') {
+    const done = await apply(ctx.exec, root, repo, file, live, flags.has('prune'));
+    for (const line of done.length > 0 ? done : ['nothing to change']) ctx.io.out(`  ${line}`);
+    return 0;
+  }
+  const found = differences(file, live);
+  if (found.length === 0) {
+    ctx.io.out(`${repo} has the settings in the file.`);
+    return 0;
+  }
+  ctx.io.err(`${repo} differs from the file in ${found.length} place(s):`);
+  for (const { what, want, have } of found) {
+    ctx.io.err(
+      `  ${what}: the file says ${JSON.stringify(want)}, GitHub has ${JSON.stringify(have)}`,
+    );
+  }
+  ctx.io.err(
+    'Change the file and apply it (npm create @sovereignfs app settings apply); never the interface.',
+  );
+  return 1;
 }

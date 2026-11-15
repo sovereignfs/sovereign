@@ -37,6 +37,13 @@ jobs:
         run: pnpm -s release:check
       # The agent trailers AGENTS.md allows, on every commit the promotion brings to main: the commit-msg hook can be missing from a
       # clone or skipped, and this check is required.
+      # The repository's settings and rulesets are code (.github/repository.json); one changed in GitHub's interface fails this. What this
+      # token cannot read is said and not checked; an owner's `pnpm github:apply` reads and writes it all.
+      - name: Check the repository's settings are the file's
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: pnpm -s github:check
+
       - name: Check the commits' trailers
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}

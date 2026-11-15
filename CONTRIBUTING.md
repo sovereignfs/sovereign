@@ -142,6 +142,20 @@ fast-forward, never a rewrite (`develop` is already in the merge commit's histor
 `main` and the release tags are in its history. If a commit reached `develop` after the merge, the run leaves `develop`
 as it is and says so; pull before you start new work either way.
 
+### Repository settings
+
+The repository's merge settings and rulesets (what `main` and `develop` allow, and the checks `main` requires) are code, in
+`.github/repository.json`, and are never changed in GitHub's interface. A change is a commit like any other; once it lands, an owner
+applies it, signed in with `gh`:
+
+```bash
+pnpm github:apply   # make GitHub match .github/repository.json (--prune also removes a ruleset the file does not have)
+pnpm github:check   # say what differs, and fail
+```
+
+The Promotion title check runs `github:check` with the workflow's own token, so a setting changed in the interface fails it; what that
+token cannot read is said and not checked. Apps keep theirs the same way (`npm create @sovereignfs app settings apply`).
+
 **Branch prefixes:**
 
 | Prefix   | Use for                                         |

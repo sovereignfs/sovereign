@@ -31,6 +31,8 @@
     "release:check": "tsx scripts/release-check.ts",
     "release:notes": "tsx scripts/release-notes.ts",
     "commits:check": "tsx scripts/check-commits.ts",
+    "github:apply": "tsx tools/create/src/main.ts app settings apply",
+    "github:check": "tsx tools/create/src/main.ts app settings check",
     "generate:icons": "tsx scripts/generate-icons.ts && prettier --write packages/ui/src/components/Icon/icons",
     "generate:theme-presets": "tsx scripts/generate-theme-presets-css.ts && prettier --write packages/ui/src/tokens/theme-presets.css",
     "verify:push": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm design:tokens:check && pnpm docs:check-links && pnpm test",

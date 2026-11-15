@@ -59,6 +59,8 @@ recorded as an ADR in `docs/adrs/`. A documented "not now" is a valid outcome.
   _Workstream legs_ (`docs/workstreams/`) are the exception: one leg = one
   branch = one PR = one review gate; run every task in the leg uninterrupted,
   verify, open a draft PR, stop. One version bump per leg.
+- **Repository settings are code** (`.github/repository.json`), applied with `pnpm github:apply`
+  and held by `pnpm github:check` in the promotion check; never change one in GitHub's interface.
 - **Two branches: `develop` is where work lands, `main` is what is released**
   (`CONTRIBUTING.md`, "Branches"). `main` is protected: nothing is pushed to it;
   it changes only through a promotion pull request from `develop`. A change
@@ -443,6 +445,7 @@ pnpm docs:check-links            # every relative Markdown link resolves
 pnpm promotion:draft             # the title and body of the develop → main pull request (--release <ids>|all)
 pnpm release:check --title "…"   # hold a promotion title to the code (what the Promotion title check runs)
 pnpm release:notes <tag>         # a version's changelog section, the GitHub release's notes
+pnpm github:apply / github:check  # make GitHub's settings and rulesets match .github/repository.json, or say what differs
 pnpm verify:push                 # format:check, lint, typecheck, design:tokens:check, docs:check-links, test (the pre-push hook)
 ```
 

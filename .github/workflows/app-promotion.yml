@@ -67,6 +67,14 @@ jobs:
           CREATE: ${{ steps.create.outputs.version }}
         run: npm exec --yes --package="@sovereignfs/create@$CREATE" -- create app commits check "$BASE_SHA..$HEAD_SHA"
 
+      # The repository's settings and rulesets are code (.github/repository.json); one changed in GitHub's interface fails this. What this
+      # token cannot read is said and not checked; an owner's `app settings apply` reads and writes it all.
+      - name: Check the repository's settings are the file's
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CREATE: ${{ steps.create.outputs.version }}
+        run: npm exec --yes --package="@sovereignfs/create@$CREATE" -- create app settings check
+
       - name: Check the shared files are the template's
         env:
           DIR: ${{ inputs.directory }}

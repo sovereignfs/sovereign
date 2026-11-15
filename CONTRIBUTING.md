@@ -83,7 +83,7 @@ land.
 
 | Branch    | What it is                                                                                                                                                                                       |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `develop` | The working branch. Every change lands here first.                                                                                                                                               |
+| `develop` | The working branch. Every change lands here first. It can never be deleted or force-pushed, not even by an administrator, so merging a promotion (which would otherwise delete its head branch) leaves it in place. |
 | `main`    | What is released. It is **protected**: a change reaches it only through a promotion pull request from `develop`, never by a push (an administrator may bypass this in an emergency, and says so). |
 
 There are two ways to get a change into `develop`; pick per change:

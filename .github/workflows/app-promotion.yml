@@ -1,0 +1,74 @@
+name: App promotion
+
+# Shared by every app of the suite (research 0007), called by the app's own .github/workflows/promotion.yml at a pinned commit of this
+# repository. On a promotion pull request (develop -> main) that is not a draft it checks, with the app's own pinned
+# @sovereignfs/create: that the title names the app's version (`vX.Y.Z`, or `Release vX.Y.Z` when merging it is to publish, with the
+# app's tag prefix if it has one); that every commit carries only the agent trailers allowed; and that the app's shared files are the ones
+# its template writes (`sync --check`). The app's ruleset requires this check on `main`.
+on:
+  workflow_call:
+    inputs:
+      directory:
+        description: The app's folder in its repository, where its package.json is; `.` for an app at the root.
+        type: string
+        required: false
+        default: '.'
+      tag-prefix:
+        description: What the app's tags start with before the `v`, such as `web-`; empty for `vX.Y.Z`.
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Promotion title
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event.pull_request.draft == false && github.event.pull_request.head.ref == 'develop'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Every tag, to know whether the version is tagged already.
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      # The checks are the app's own pinned version of @sovereignfs/create, so they change only when the app moves its pin.
+      - id: create
+        name: Find the app's @sovereignfs/create
+        env:
+          DIR: ${{ inputs.directory }}
+        run: |
+          version="$(node -p "require(require('node:path').resolve(process.env.DIR, 'package.json')).devDependencies?.['@sovereignfs/create'] ?? ''")"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::$DIR/package.json must pin @sovereignfs/create to an exact version among its devDependencies (it is \"$version\")."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Check the title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          DIR: ${{ inputs.directory }}
+          PREFIX: ${{ inputs.tag-prefix }}
+          CREATE: ${{ steps.create.outputs.version }}
+        run: npm exec --yes --package="@sovereignfs/create@$CREATE" -- create release check --dir "$DIR" --prefix "$PREFIX"
+
+      - name: Check the commits' trailers
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          CREATE: ${{ steps.create.outputs.version }}
+        run: npm exec --yes --package="@sovereignfs/create@$CREATE" -- create commits check "$BASE_SHA..$HEAD_SHA"
+
+      - name: Check the shared files are the template's
+        env:
+          DIR: ${{ inputs.directory }}
+          CREATE: ${{ steps.create.outputs.version }}
+        run: npm exec --yes --package="@sovereignfs/create@$CREATE" -- create sync --check --dir "$DIR"

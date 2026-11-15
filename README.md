@@ -111,6 +111,8 @@ rules; [`AGENTS.md`](AGENTS.md) has the same conventions written for AI agents.
   is started, built and finished.
 - [`docs/architecture-rules.md`](docs/architecture-rules.md) — the hard rules,
   with the reason behind each.
+- [`docs/security-review-phase-1.md`](docs/security-review-phase-1.md) and
+  [phase 2](docs/security-review-phase-2.md) — what was reviewed, what was found and fixed, and what was accepted.
 - [`docs/design-system.md`](docs/design-system.md) — the `@sovereignfs/ui` model.
 - [`docs/research/`](docs/research/), [`docs/rfcs/`](docs/rfcs/) and
   [`docs/adrs/`](docs/adrs/) — explorations, proposals and settled decisions.

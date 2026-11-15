@@ -52,5 +52,5 @@ against a built core in a real browser (the acceptance suite's instance), on eve
 
 ## Not in this review
 
-Phase 2 and later (encrypted backups, shared services); the dependency audit, which has its own CI job; and
+Phase 2 and later (encrypted backups, shared services), which the [Phase 2 review](security-review-phase-2.md) covers; the dependency audit, which has its own CI job; and
 the deployment's network (the operator's proxy, TLS and firewall), which `docs/deploying.md` covers.

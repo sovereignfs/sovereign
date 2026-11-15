@@ -572,6 +572,12 @@ pointing here.
   allowlist. A spawned `git` never inherits `GIT_DIR`/`GIT_WORK_TREE`, and gets
   credentials through its environment (`GIT_ASKPASS`, or `GIT_SSH_COMMAND` with
   a `0600` temporary identity removed in `finally`), never argv or a URL.
+  **An argv array is not enough over `ssh`**, which joins the words and hands
+  the line to the server's shell: `sshArgs` quotes every word (`shellWord`),
+  and a value is still checked before it is sent (security review, Phase 2).
+- **A request body is read with a byte limit, not measured after.** A chunked
+  request says no length, so `request.text()` would hold whatever it streams;
+  the Core API's `bodyOf` stops at 16 KB and refuses (security review, Phase 2).
 - **Service-to-service trust uses one signed-token pattern** (HMAC-SHA256 over
   the request, with expiry). Never invent a new mechanism per service pair.
 - **An anchored quantifier before `$` or `^` is quadratic even alone**

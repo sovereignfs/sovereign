@@ -1,0 +1,24 @@
+name: Promotion
+
+# Written by `npm create @sovereignfs sync`; do not edit it here (CONTRIBUTING.md, "Shared files"). Checks a promotion pull request
+# (develop -> main) with the workflow every app of the suite shares: its title names this app's version, its commits carry only the agent
+# trailers allowed, and the shared files are the template's. `main` requires this check (.github/repository.json).
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: promotion-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  promotion:
+    name: Promotion
+    uses: sovereignfs/sovereign/.github/workflows/app-promotion.yml@__WORKFLOWS_REF__
+    with:
+      directory: '__DIRECTORY__'
+      tag-prefix: '__TAG_PREFIX__'

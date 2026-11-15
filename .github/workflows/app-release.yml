@@ -70,7 +70,7 @@ jobs:
           DIR: ${{ inputs.directory }}
           PREFIX: ${{ inputs.tag-prefix }}
           CREATE: ${{ steps.create.outputs.version }}
-        run: npm exec --yes --package="@sovereignfs/create@$CREATE" -- create release check --dir "$DIR" --prefix "$PREFIX" --github-output
+        run: npm exec --yes --package="@sovereignfs/create@$CREATE" -- create app release check --dir "$DIR" --prefix "$PREFIX" --github-output
 
       - name: Tag the merge commit
         if: steps.plan.outputs.tag != ''

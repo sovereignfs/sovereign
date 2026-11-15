@@ -97,7 +97,7 @@ repositories.
    today.
 3. **B, for configuration:** publish `@sovereignfs/tsconfig`, `@sovereignfs/eslint-config` and `@sovereignfs/prettier-config`; this
    repository uses the same packages, so the configuration it is checked by is the one apps get.
-4. **D, for the files that must be files:** `create sync` and `sync --check`, writing from the template, so the template is the one source
+4. **D, for the files that must be files:** `create app sync` and `sync --check`, writing from the template, so the template is the one source
    of every shared file. `AGENTS.md`'s shared sections (the working conventions, the CI strategy, the commit rules, pnpm) become one text in
    the template, which this repository's own `AGENTS.md` also carries, held to it by a test.
 5. **The template becomes the full app**, as research 0004's last step says: the tusk family's repository (the deployment check, the three
@@ -133,7 +133,7 @@ For the first slice, the one release model (E) with its workflows shared (C):
   and release. So the shared workflows take the directory an app is in and the prefix of its tag (`web-vX.Y.Z`), not only the
   repository's root and `vX.Y.Z`.
 
-- **`sync` is a command of `@sovereignfs/create`:** `npm create @sovereignfs sync` writes an app's shared files from the template, and
+- **`sync` is a command of `@sovereignfs/create`:** `npm create @sovereignfs app sync` writes an app's shared files from the template, and
   `sync --check` reports when they have drifted. An app pins `@sovereignfs/create` among its development dependencies, so a sync writes what
   that version's template holds, and Dependabot's move of the pin is where an app takes new shared files.
 - **`sync --check` fails an app's CI on drift** (assumed, not yet confirmed: recommended in review over a warning), unless the app lists the

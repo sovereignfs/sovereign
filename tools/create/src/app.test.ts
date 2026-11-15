@@ -36,6 +36,14 @@ describe('the names of an app', () => {
     expect(namesOf('/x/Tasks')).toEqual({ name: 'tasks', prefix: 'TASKS', title: 'Tasks' });
   });
 
+  it('are refused when they are a word of the app commands, so app sync is never an app called sync', () => {
+    for (const word of ['sync', 'release', 'commits', 'settings']) {
+      expect(() => namesOf(`/x/${word}`), word).toThrow(
+        'is a command of npm create @sovereignfs app',
+      );
+    }
+  });
+
   it('are refused when an instance could not host the app: too short, not a name, or core’s own prefix', () => {
     for (const bad of ['/x/a', '/x/9lives', '/x/---', '/x/sv']) {
       expect(() => namesOf(bad), bad).toThrow(CreateError);
@@ -242,7 +250,10 @@ describe('the files of an app', () => {
     const target = path.join(temp(), 'my-notes');
     await writeApp(target, namesOf(target));
     const workflow = read(target, '.github/workflows/publish.yml');
-    expect(workflow).toContain('git merge-base --is-ancestor "$GITHUB_SHA" origin/main');
+    expect(workflow).toContain('git merge-base --is-ancestor HEAD origin/main');
+    // Called by release.yml with the tag a merged Release promotion made, and making the GitHub release from the changelog.
+    expect(workflow).toMatch(/workflow_call:\n {4}inputs:\n {6}tag:/);
+    expect(workflow).toContain('npx create app release notes "$TAG" > notes.md');
     expect(workflow).toContain('fetch-depth: 0');
     expect(workflow.indexOf('git merge-base')).toBeLessThan(
       workflow.indexOf('docker/login-action'),
@@ -253,7 +264,9 @@ describe('the files of an app', () => {
       'Directly on `develop`',
       'A feature branch',
       '**`vX.Y.Z`**',
-      '**`Release vX.Y.Z`** when that version',
+      '**`Release vX.Y.Z`** when merging it is to publish',
+      '## Shared files',
+      '## Repository settings',
       'a merge commit',
       'rebase and merge',
     ])

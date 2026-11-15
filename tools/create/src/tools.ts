@@ -1,5 +1,5 @@
 /**
- * The commands an app's repository runs through `npm create @sovereignfs …` once it exists (research 0007): checking a promotion title,
+ * The commands an app's repository runs through `npm create @sovereignfs app …` once it exists (research 0007): checking a promotion title,
  * reading a version's release notes, checking commits' trailers, and (below) keeping the shared files in step and the repository's
  * settings as code. Each answers with an exit code: 0 for good, 1 for a problem found, 2 for a command used wrongly.
  */
@@ -8,9 +8,9 @@ import path from 'node:path';
 import { appendFile } from 'node:fs/promises';
 import { CreateError, type CreateIo, type Exec } from './create.js';
 import { changelogSection, checkTitle, isPrefix, tagOf, trailerProblems } from './release.js';
+import { syncApp } from './sync.js';
 
-/** The commands this file answers, by their first word. */
-export const TOOL_COMMANDS = ['release', 'commits'] as const;
+export { TOOL_COMMANDS } from './commands.js';
 
 export type ToolContext = {
   io: CreateIo & { out: (line: string) => void };
@@ -73,10 +73,15 @@ export async function runTool(argv: readonly string[], ctx: ToolContext): Promis
   if (command === 'release' && verb === 'check') return releaseCheck(rest, ctx);
   if (command === 'release' && verb === 'notes') return releaseNotes(rest, ctx);
   if (command === 'commits' && verb === 'check') return commitsCheck(rest, ctx);
+  if (command === 'sync')
+    return sync(
+      [verb, ...rest].filter((word) => word !== undefined),
+      ctx,
+    );
   throw new CreateError(
     `There is no command ${[command, verb].filter(Boolean).join(' ')}.`,
     2,
-    'Use: release check --title T, release notes VERSION, commits check BASE..HEAD',
+    'Use: npm create @sovereignfs app release check --title T, app release notes VERSION, app commits check BASE..HEAD',
   );
 }
 
@@ -161,5 +166,38 @@ async function commitsCheck(argv: readonly string[], ctx: ToolContext): Promise<
     return 1;
   }
   ctx.io.out(`Every commit in ${range} has allowed trailers.`);
+  return 0;
+}
+
+/**
+ * `sync [--check] [--dir D]`: writes the app's shared files from this version's template, or with --check writes nothing and fails when
+ * any differs. D is the app's folder (default: here); the workflows and settings go to its repository's root.
+ */
+async function sync(argv: readonly string[], ctx: ToolContext): Promise<number> {
+  const { values, flags, words } = optionsOf(argv, ['dir'], ['check']);
+  if (words.length > 0) throw new CreateError(`Too many arguments: ${words.join(' ')}.`, 2);
+  const appDir = path.resolve(ctx.cwd, values.get('dir') ?? '.');
+  const top = await ctx.exec('git', ['rev-parse', '--show-toplevel'], { cwd: appDir });
+  const gitRoot = top.code === 0 && top.stdout.trim() !== '' ? top.stdout.trim() : appDir;
+  const check = flags.has('check');
+  const results = await syncApp(appDir, gitRoot, { check });
+  for (const result of results) {
+    const said = {
+      same: 'the same',
+      written: 'written',
+      drifted: 'differs from the template',
+      unmanaged: "kept as the app's own",
+    }[result.state];
+    const line = `  ${result.path}: ${said}${result.reason ? ` (${result.reason})` : ''}`;
+    if (result.state === 'drifted') ctx.io.err(line);
+    else ctx.io.out(line);
+  }
+  const drifted = results.filter((result) => result.state === 'drifted');
+  if (drifted.length > 0) {
+    ctx.io.err(
+      `${drifted.length} shared file(s) differ from the template. Run npm create @sovereignfs app sync, or list a file under sovereign.unmanaged in package.json if this app keeps it as its own.`,
+    );
+    return 1;
+  }
   return 0;
 }

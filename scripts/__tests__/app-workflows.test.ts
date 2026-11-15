@@ -26,7 +26,7 @@ describe.each([
     expect(workflow).toContain("devDependencies?.['@sovereignfs/create']");
     expect(workflow).toContain('=~ ^[0-9]+\\.[0-9]+\\.[0-9]+$');
     expect(workflow).toContain(
-      'npm exec --yes --package="@sovereignfs/create@$CREATE" -- create release check',
+      'npm exec --yes --package="@sovereignfs/create@$CREATE" -- create app release check',
     );
   });
 
@@ -47,8 +47,8 @@ describe('the app promotion check', () => {
   });
 
   it('checks the title, the commits’ trailers and the shared files', () => {
-    expect(promotion).toContain('create commits check "$BASE_SHA..$HEAD_SHA"');
-    expect(promotion).toContain('create sync --check --dir "$DIR"');
+    expect(promotion).toContain('create app commits check "$BASE_SHA..$HEAD_SHA"');
+    expect(promotion).toContain('create app sync --check --dir "$DIR"');
   });
 });
 

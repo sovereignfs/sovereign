@@ -2,7 +2,7 @@
  * Releasing an app (research 0007, the one release model): a promotion pull request from `develop` into `main` is titled with the app's
  * version, `vX.Y.Z` (or `<prefix>vX.Y.Z` for an app in a folder of a larger repository, such as fjord's `web-vX.Y.Z`), and starts with
  * `Release` when merging it is to tag and publish that version. This is the logic the shared workflows run, through
- * `npm create @sovereignfs release …`; it is the one-package form of this repository's own `pnpm release:check`.
+ * `npm create @sovereignfs app release …`; it is the one-package form of this repository's own `pnpm release:check`.
  */
 
 export type TitleCheck = {

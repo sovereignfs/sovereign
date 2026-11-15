@@ -58,17 +58,17 @@ jobs:
           DIR: ${{ inputs.directory }}
           PREFIX: ${{ inputs.tag-prefix }}
           CREATE: ${{ steps.create.outputs.version }}
-        run: npm exec --yes --package="@sovereignfs/create@$CREATE" -- create release check --dir "$DIR" --prefix "$PREFIX"
+        run: npm exec --yes --package="@sovereignfs/create@$CREATE" -- create app release check --dir "$DIR" --prefix "$PREFIX"
 
       - name: Check the commits' trailers
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           CREATE: ${{ steps.create.outputs.version }}
-        run: npm exec --yes --package="@sovereignfs/create@$CREATE" -- create commits check "$BASE_SHA..$HEAD_SHA"
+        run: npm exec --yes --package="@sovereignfs/create@$CREATE" -- create app commits check "$BASE_SHA..$HEAD_SHA"
 
       - name: Check the shared files are the template's
         env:
           DIR: ${{ inputs.directory }}
           CREATE: ${{ steps.create.outputs.version }}
-        run: npm exec --yes --package="@sovereignfs/create@$CREATE" -- create sync --check --dir "$DIR"
+        run: npm exec --yes --package="@sovereignfs/create@$CREATE" -- create app sync --check --dir "$DIR"

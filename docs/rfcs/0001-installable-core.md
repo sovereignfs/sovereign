@@ -1,13 +1,13 @@
 # RFC 0001 — An installable core (PWA)
 
-|                |                                                                                                                                    |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**     | Accepted; partially implemented (the manifest, metadata, service worker and app icons; the device checks of task 11.3 are not run) |
-| **Date**       | October 2026                                                                                                                       |
-| **Author**     | Claude Code, for review                                                                                                            |
-| **Scope**      | `apps/core`: a web app manifest, a service worker, an offline page, mobile metadata; `docs/specs/core-app.md` §1.3, §3.5           |
-| **Tasks**      | [Epic 11](../epics/pwa.md)                                                                                                         |
-| **Supersedes** | Nothing. The established Sovereign app had a PWA (manifest, Workbox, offline page, Apple splash images); core has none             |
+|                |                                                                                                                                            |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Status**     | Accepted; partially implemented (the manifest, metadata, service worker and app icons; the device checks of task 11.3 are parked, not run) |
+| **Date**       | October 2026                                                                                                                               |
+| **Author**     | Claude Code, for review                                                                                                                    |
+| **Scope**      | `apps/core`: a web app manifest, a service worker, an offline page, mobile metadata; `docs/specs/core-app.md` §1.3, §3.5                   |
+| **Tasks**      | [Epic 11](../epics/pwa.md)                                                                                                                 |
+| **Supersedes** | Nothing. The established Sovereign app had a PWA (manifest, Workbox, offline page, Apple splash images); core has none                     |
 
 ## Summary
 

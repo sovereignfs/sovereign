@@ -15,6 +15,9 @@ history and tags.
 - `app release check` and `app release notes` for the one release model (a promotion titled `Release vX.Y.Z` publishes on merge), and
   `app commits check` for agent trailers: what the workflows every app shares (in sovereignfs/sovereign) run.
 - `app settings apply` and `app settings check` keep a repository's settings and rulesets as code, in `.github/repository.json`.
+- A repository that releases several components (such as a Rust CLI and a web app) describes them in `sovereign.json` at its root: each
+  one's version file (`package.json` or `Cargo.toml`), tag prefix, changelog and publish workflow. A promotion title names any of their
+  versions, the release tags each and calls each one's publish workflow, and `app sync` generates that release workflow.
 - A new app carries all of these, pins `@sovereignfs/create`, and has a `CHANGELOG.md`; its publish workflow is called on a merged
   `Release` promotion and makes the GitHub release.
 

@@ -131,7 +131,7 @@ For the first slice, the one release model (E) with its workflows shared (C):
 - **Each app's change is a draft pull request into its `develop`,** for review.
 - **fjord stays one repository; its web app (`clients/web`) takes the shared model,** without changing how fjord's other components build
   and release. So the shared workflows take the directory an app is in and the prefix of its tag (`web-vX.Y.Z`), not only the
-  repository's root and `vX.Y.Z`.
+  repository's root and `vX.Y.Z`. (Built: `sovereign.json` describes a repository's several components, so fjord moves whole, its CLI included.)
 
 - **`sync` is a command of `@sovereignfs/create`:** `npm create @sovereignfs app sync` writes an app's shared files from the template, and
   `sync --check` reports when they have drifted. An app pins `@sovereignfs/create` among its development dependencies, so a sync writes what

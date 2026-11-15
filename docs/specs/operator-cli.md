@@ -131,6 +131,13 @@ sovereignfs/sovereign at the commit this version of `create` names; `.github/wor
 `<!-- sovereign:shared:end -->`. Workflows and settings go to the repository's root, the documents to the app's folder, so an app in a
 folder of a larger repository (with a `tagPrefix` such as `web-`) is served too.
 
+A repository that releases several things (fjord: a Rust CLI and a web app) lists them in `sovereign.json` at its root instead of an
+app's `package.json`: its `name`, the `create` version it pins, its `requiredChecks` and `unmanaged` files, and its `components`, each with
+a `name`, the `version` file (a `package.json`, or a `Cargo.toml`, read at `[workspace.package]` then `[package]`), a `tagPrefix`, a
+`changelog` and a `publish` workflow. A promotion's title then names one or more of their versions by tag (`Release fjord-cli-v0.6.0,
+web-v0.6.0`); the release tags each and calls each one's publish workflow, from a `release.yml` that `app sync` generates from the list;
+the documents are at the root.
+
 ### 2.1 What an instance repository holds
 
 ```text
@@ -951,3 +958,4 @@ with a DNS provider's module, which the stock image does not carry.
 | 2026-11-15 | §2.2: `npm create @sovereignfs app` makes the first commit on `main`, creates and checks out `develop`, and writes a `CONTRIBUTING.md` with the develop/main workflow; the template's publish workflow refuses a tag whose commit is not on `main`.                                                                                                                                                                                                                                                                     |
 | 2026-11-15 | §2.2: an app made by `npm create @sovereignfs app` is named `@sovereignfs/<name>` in its `package.json`, which stays `private`.                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2026-11-15 | §2.2, §2.3: an app's shared files and the `app sync`, `release`, `commits` and `settings` commands; its publish workflow is called on a merged `Release` promotion.                                                                                                                                                                                                                                                                                                                                                     |
+| 2026-11-15 | §2.3: a repository of several components, described in `sovereign.json`, is served by the same commands and shared workflows.                                                                                                                                                                                                                                                                                                                                                                                           |

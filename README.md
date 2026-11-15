@@ -11,9 +11,9 @@ a launcher entry for each one — never about a particular application. Apps liv
 in their own repositories and can run on their own, with their own database, or
 alongside core as one suite.
 
-> **Status: early development. Nothing is released yet.** Core, the operator toolkit, the SDK and the
-> design system are built and tested, milestone by milestone, from the [roadmap](ROADMAP.md); the first
-> release is next.
+> **Status: pre-1.0.** Core's image (`ghcr.io/sovereignfs/sovereign`), the operator toolkit and the published
+> packages are released, but versions below `1.0.0` may still change in ways that need an operator or app to act
+> ([upgrade notes](docs/upgrade.md)). Work proceeds milestone by milestone from the [roadmap](ROADMAP.md).
 
 ## What core does
 
@@ -32,26 +32,36 @@ Phase 1 of the MVP, specified in [`docs/specs/core-app.md`](docs/specs/core-app.
 - **Self-hostable** — runs on sqld, PostgreSQL or a SQLite file, configured with
   environment variables, with secrets that never have defaults.
 
-Later phases add mail, notifications and activity services for apps, backups,
-and more. The spec lists what is in and out of each phase.
+Phase 2 adds services for apps, most of them built (core-app §4):
+
+- **Notifications, mail and activity** — apps send a person notifications, mail through the instance's SMTP,
+  and entries for their activity feed, through the Core API.
+- **Account deletion reaches every app** — a deleted account is announced to each app with a signed notice,
+  kept and retried, and still announced after a restore.
+- **People's files** — `@sovereignfs/storage` keeps uploads in a folder and a quota per person, on disk today.
+- **Backups and restores** — run by the toolkit, files included.
+
+Groups and access policies, export and the recovery kit are later; the spec lists what is in and out of each
+phase.
 
 ## Repository layout
 
 | Path                  | What                                                            | State                                       |
 | --------------------- | --------------------------------------------------------------- | ------------------------------------------- |
 | `apps/core`           | Core: the sign-in server, Console and launcher                  | Built, with Phase 1 acceptance (`apps/e2e`) |
-| `tools/cli`           | The operator toolkit, `sv`, and the image the server runs it in | Built, not published yet                    |
-| `tools/create`        | `npm create @sovereignfs`: an instance, or an app               | Built, not published yet                    |
+| `tools/cli`           | The operator toolkit, `sv`, and the image the server runs it in | Published                                   |
+| `tools/create`        | `npm create @sovereignfs`: an instance, or an app               | Published                                   |
 | `packages/tsconfig`   | Shared TypeScript configuration                                 | In the workspace                            |
 | `packages/ui`         | The design system, `@sovereignfs/ui`                            | Published                                   |
 | `packages/bridge`     | The device bridge, `@sovereignfs/bridge`                        | In the workspace                            |
 | `packages/mailer`     | Mail delivery                                                   | In the workspace                            |
-| `packages/config`     | The environment convention and start-up validation              | In the workspace                            |
+| `packages/config`     | The environment convention and start-up validation              | Published                                   |
 | `packages/database`   | One interface over sqld, PostgreSQL and a SQLite file           | In the workspace                            |
 | `packages/crypto`     | Field encryption with a key ring (end-to-end later)             | In the workspace                            |
 | `packages/api-client` | The typed Core API client, generated from the contract          | In the workspace                            |
-| `packages/sdk`        | The SDK: sign-in, tokens, failure and version support for apps  | In the workspace, not published yet         |
-| `packages/manifest`   | The app manifest: schemas, a validator, and the image label     | In the workspace, not published yet         |
+| `packages/sdk`        | The SDK: sign-in, tokens, failure and version support for apps  | Published                                   |
+| `packages/manifest`   | The app manifest: schemas, a validator, and the image label     | Published                                   |
+| `packages/storage`    | People's files: a folder and a quota per person                 | Published                                   |
 | `packages/*` (later)  | `auth`, …                                                       | Planned                                     |
 | `contracts/`          | The Core API, the file formats and the environment convention   | Written                                     |
 | `docs/`               | The spec, epics, research, RFCs and decisions                   | [Index below](#documentation)               |

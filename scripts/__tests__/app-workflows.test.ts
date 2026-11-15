@@ -22,8 +22,9 @@ describe.each([
     expect(workflow).not.toMatch(/^ {2}(push|pull_request|schedule):/m);
   });
 
-  it('runs the app’s own pinned @sovereignfs/create, refusing a range', () => {
+  it('runs the repository’s own pinned @sovereignfs/create (sovereign.json’s, or the app’s), refusing a range', () => {
     expect(workflow).toContain("devDependencies?.['@sovereignfs/create']");
+    expect(workflow).toContain("JSON.parse(fs.readFileSync(several, 'utf8')).create");
     expect(workflow).toContain('=~ ^[0-9]+\\.[0-9]+\\.[0-9]+$');
     expect(workflow).toContain(
       'npm exec --yes --package="@sovereignfs/create@$CREATE" -- create app release check',
@@ -66,8 +67,10 @@ describe('the app release', () => {
 
   it('checks the title against the merged code before it tags the merge commit', () => {
     expect(release).toContain('ref: ${{ github.event.pull_request.merge_commit_sha }}');
-    expect(release.indexOf('--github-output')).toBeLessThan(release.indexOf('refs/tags/$TAG'));
-    expect(release).toContain("if: steps.plan.outputs.tag != ''");
+    expect(release.indexOf('--github-output')).toBeLessThan(release.indexOf('refs/tags/$tag'));
+    expect(release).toContain("if: steps.plan.outputs.tags != '{}'");
+    // Every version a title names, an app's one or several components', is tagged and handed on by component.
+    expect(release).toContain('value: ${{ jobs.plan.outputs.tags }}');
   });
 });
 

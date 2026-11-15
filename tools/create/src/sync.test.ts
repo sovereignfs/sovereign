@@ -128,3 +128,57 @@ describe('sync --check', () => {
     expect(readFileSync(path.join(dir, 'RELEASING.md'), 'utf8')).toContain('Releasing Fjord Web');
   });
 });
+
+describe('a repository of several components', () => {
+  function repo() {
+    const root = mkdtempSync(path.join(tmpdir(), 'sv-sync-several-'));
+    writeFileSync(
+      path.join(root, 'sovereign.json'),
+      JSON.stringify({
+        name: 'fjord',
+        create: '0.14.0',
+        requiredChecks: ['CI'],
+        components: [
+          {
+            name: 'cli',
+            version: 'Cargo.toml',
+            tagPrefix: 'fjord-cli-',
+            changelog: 'crates/cli/CHANGELOG.md',
+            publish: 'fjord-cli-release.yml',
+          },
+          {
+            name: 'web',
+            version: 'clients/web/package.json',
+            tagPrefix: 'web-',
+            changelog: 'clients/web/CHANGELOG.md',
+            publish: 'web-release.yml',
+          },
+        ],
+      }),
+    );
+    return root;
+  }
+
+  it('keeps its documents at the root and releases each component with its own publish workflow', async () => {
+    const root = repo();
+    await syncApp(root, root, { check: false });
+    expect(readFileSync(path.join(root, 'RELEASING.md'), 'utf8')).toContain(
+      'releases several components',
+    );
+    const release = readFileSync(path.join(root, '.github/workflows/release.yml'), 'utf8');
+    expect(release).toContain(`app-release.yml@${SHARED_WORKFLOWS_REF}`);
+    expect(release).toContain('uses: ./.github/workflows/fjord-cli-release.yml');
+    expect(release).toContain("tag: ${{ fromJSON(needs.plan.outputs.tags || '{}')['web'] }}");
+    const settings = JSON.parse(readFileSync(path.join(root, '.github/repository.json'), 'utf8'));
+    const checks = settings.rulesets[0].rules.find(
+      (r: { type: string }) => r.type === 'required_status_checks',
+    );
+    expect(checks.parameters.required_status_checks).toEqual([
+      { context: 'Promotion / Promotion title' },
+      { context: 'CI' },
+    ]);
+    expect((await syncApp(root, root, { check: true })).every((r) => r.state === 'same')).toBe(
+      true,
+    );
+  });
+});

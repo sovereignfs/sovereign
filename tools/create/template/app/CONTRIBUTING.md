@@ -94,7 +94,7 @@ npm create @sovereignfs app settings check   # say what differs, and fail
 ```
 
 `main` takes changes only by pull request, merged with a merge commit, and requires the Promotion check and the checks under
-`sovereign.requiredChecks` in `package.json`; `develop` can never be deleted or force-pushed, so merging a promotion (which would
+`sovereign.requiredChecks` in `package.json` (`requiredChecks` in `sovereign.json` for a repository of several components); `develop` can never be deleted or force-pushed, so merging a promotion (which would
 otherwise delete its head branch) leaves it in place. A change to the settings is a commit like any other, applied after it lands.
 
 <!-- sovereign:shared:end -->

@@ -28,8 +28,9 @@ this app's own; the shared one is written by `npm create @sovereignfs app sync` 
   promotion check refuses it).
 - **Pull requests into `develop` are drafts,** marked ready only on instruction; the body says what changed and why and ends with the
   agent's footer.
-- **A version is set with its changelog section,** in the same change: `version` in `package.json` and `## [X.Y.Z] - date` in
-  `CHANGELOG.md`, in plain words for someone upgrading. A promotion titled `Release vX.Y.Z` publishes it on merge (`RELEASING.md`).
+- **A version is set with its changelog section,** in the same change: `version` in `package.json` (or, in a repository of several
+  components, the file `sovereign.json` names for it) and `## [X.Y.Z] - date` in its changelog, in plain words for someone upgrading. A
+  promotion titled `Release` with that version's tag publishes it on merge (`RELEASING.md`).
 - **CI runs only for `main`:** on pull requests into it that are not drafts, before a release and by hand; never for `develop` or a
   feature branch, which the pre-push hook (`npm run verify`) checks locally.
 - **Verify before claiming done,** and show the output. A regression test is trusted only after it has been seen to fail against the code

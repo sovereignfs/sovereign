@@ -8,6 +8,7 @@ import path from 'node:path';
 import { namesOf } from './app.js';
 import { CreateError, DEFAULT_APP_PORT } from './create.js';
 import { fill, TEMPLATE, targetOf, type Fill } from './fill.js';
+import { readReleases, type Releases } from './components.js';
 import { isPrefix } from './release.js';
 import { DEFAULT_REQUIRED_CHECKS, repositorySettings } from './settings-file.js';
 import { SHARED_WORKFLOWS_REF } from './versions.js';
@@ -138,9 +139,15 @@ export async function syncApp(
   gitRoot: string,
   options: { check: boolean },
 ): Promise<Synced[]> {
-  const settings = await readAppSettings(appDir);
-  const names = namesOf(path.join(path.sep, settings.name || path.basename(appDir)));
-  const directory = path.relative(gitRoot, appDir) || '.';
+  const releases = await readReleases(gitRoot, appDir, DEFAULT_REQUIRED_CHECKS);
+  const several = releases.file === 'sovereign.json';
+  // A repository of several components keeps its documents at its root; an app, in its folder.
+  const docsDir = several ? gitRoot : appDir;
+  const settings = several
+    ? { port: DEFAULT_APP_PORT, tagPrefix: '' }
+    : await readAppSettings(appDir);
+  const names = namesOf(path.join(path.sep, releases.name || path.basename(appDir)));
+  const directory = several ? '.' : path.relative(gitRoot, appDir) || '.';
   const values: Fill = {
     names,
     port: settings.port,
@@ -150,15 +157,26 @@ export async function syncApp(
   };
   const results: Synced[] = [];
   for (const entry of MANAGED) {
-    const base = entry.at === 'root' ? gitRoot : appDir;
+    const base = entry.at === 'root' ? gitRoot : docsDir;
     const target = path.join(base, targetOf(entry.file));
     const shown = path.relative(gitRoot, target).split(path.sep).join('/');
-    if (settings.unmanaged.includes(shown)) {
+    if (releases.unmanaged.includes(shown)) {
       results.push({ path: shown, state: 'unmanaged' });
       continue;
     }
-    let wanted = fill(await readFile(path.join(TEMPLATE, entry.file), 'utf8'), values);
-    if (entry.kind === 'json') wanted = repositorySettings(wanted, settings.requiredChecks);
+    let wanted =
+      several && entry.file === '_github/workflows/release.yml'
+        ? releaseWorkflowFor(releases)
+        : fill(
+            await readFile(
+              several && entry.file === 'RELEASING.md'
+                ? path.join(TEMPLATE, '..', 'components', 'RELEASING.md')
+                : path.join(TEMPLATE, entry.file),
+              'utf8',
+            ),
+            values,
+          );
+    if (entry.kind === 'json') wanted = repositorySettings(wanted, releases.requiredChecks);
     const present = await readText(target);
 
     let same: boolean;
@@ -191,4 +209,57 @@ export async function syncApp(
     }
   }
   return results;
+}
+
+/**
+ * The release workflow of a repository of several components: the shared plan, then one job for each component that calls its own publish
+ * workflow with its tag when the plan made one. GitHub requires each called workflow to be written out, so it is made from the list.
+ */
+export function releaseWorkflowFor(releases: Releases): string {
+  const lines = [
+    'name: Release',
+    '',
+    '# Written by `npm create @sovereignfs app sync` from sovereign.json; do not edit it here (CONTRIBUTING.md, "Shared files"). When a',
+    '# promotion pull request titled `Release …` is merged, the workflow every repository of the suite shares checks the title against the',
+    '# merged code and tags the merge commit with each version it names; each component released is then published by its own workflow',
+    '# (RELEASING.md). A title without `Release` publishes nothing.',
+    'on:',
+    '  pull_request:',
+    '    branches: [main]',
+    '    types: [closed]',
+    '',
+    'permissions:',
+    '  contents: read',
+    '',
+    'concurrency:',
+    '  group: release-${{ github.event.pull_request.number }}',
+    '  cancel-in-progress: false',
+    '',
+    'jobs:',
+    '  plan:',
+    '    name: Plan',
+    '    permissions:',
+    '      contents: write',
+    `    uses: sovereignfs/sovereign/.github/workflows/app-release.yml@${SHARED_WORKFLOWS_REF}`,
+  ];
+  for (const component of releases.components) {
+    const tag = `fromJSON(needs.plan.outputs.tags || '{}')['${component.name}']`;
+    lines.push(
+      '',
+      `  publish-${component.name}:`,
+      `    name: Publish ${component.name}`,
+      '    needs: plan',
+      `    if: \${{ ${tag} != null }}`,
+      '    permissions:',
+      '      contents: write',
+      '      packages: write',
+      '      id-token: write',
+      '      attestations: write',
+      `    uses: ./.github/workflows/${component.publish}`,
+      '    with:',
+      `      tag: \${{ ${tag} }}`,
+      '    secrets: inherit',
+    );
+  }
+  return `${lines.join('\n')}\n`;
 }

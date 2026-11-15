@@ -96,7 +96,11 @@ belongs to a person.
 
 **Not here:** offline use of any signed-in page, push notifications and background sync (a later phase, with its own RFC), and caching anything of an app.
 
-#### ⏳ 11.3 — Standalone polish, guide and checks
+#### 🚧 11.3 — Standalone polish, guide and checks
+
+**Parked** (November 2026): what is left needs a person with the devices: the Chrome or Edge and Android columns of the checklist
+below, and the iPhone rows marked "not run", on a real phone over https. Re-read the checklist and RFC 0001's open questions before
+resuming; everything else this task asked for is done (**Done so far**).
 
 **Goal:** An installed core behaves on the devices people use, and an operator knows what it needs.
 

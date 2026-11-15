@@ -65,7 +65,8 @@ async function* walk(dir: string, base = dir): AsyncGenerator<string> {
 export function appPackageJson(names: AppNames, port: number = DEFAULT_APP_PORT): string {
   return `${JSON.stringify(
     {
-      name: names.name,
+      // Every app of the suite is named in the @sovereignfs scope. It is private, so the name claims nothing on npm.
+      name: `@sovereignfs/${names.name}`,
       version: '0.1.0',
       private: true,
       description: `${names.title}, an app for a Sovereign instance`,

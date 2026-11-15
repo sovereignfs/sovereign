@@ -133,7 +133,7 @@ what is new. Not every promotion publishes something.
 3. Merge it with a merge commit, which takes the title (`Release v0.98.0, ui-v0.97.0`). **Merging a `Release` promotion
    publishes it**: the Release workflow checks the title once more, tags the merge commit with each version it names, and
    runs the publish workflows, which publish the image, the toolkit or the package and make each version's GitHub release
-   from its changelog section ([releasing](docs/releasing.md)). A title without `Release` publishes nothing; a version
+   from its changelog section (and, when `ui` is among them, put its Storybook live) ([releasing](docs/releasing.md)). A title without `Release` publishes nothing; a version
    promoted that way can be published later by pushing its tag on the merge commit that brought it, which the publish
    workflows accept as before (a tag is not a branch, so `main`'s protection does not stop it).
 

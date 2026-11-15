@@ -229,11 +229,11 @@ built by tasks 14.7 to 14.10.
 - Every route calls `requireCapability`, and upload and delete call `requireSameOrigin`
 - A signed address expires and is compared in constant time
 
-#### 🚧 15.10 — Files in any S3-compatible store `[parallel]`
+#### 📋 15.10 — Files in any S3-compatible store `[parallel]`
 
 **Goal:** An app keeps its people's files in S3-compatible storage instead of on the server's disk, with the same quotas and serving.
 
-**Parked:** deferred until the disk is done end to end (15.12); not started.
+**Planned:** the disk is done end to end (15.12), which this waited for; not started.
 
 **Priority:** 10.
 
@@ -256,7 +256,8 @@ built by tasks 14.7 to 14.10.
 
 **Goal:** A person keeps their files in a git repository of their own, which the app commits to and serves from.
 
-**Parked:** deferred until the disk is done end to end (15.12); not started.
+**Parked:** first deferred until the disk was done end to end (15.12, done); now until the S3 store (15.10) has been used, since
+it is the second driver of the same interface and should learn from the first.
 
 **Priority:** 11.
 

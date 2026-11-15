@@ -175,14 +175,18 @@ pointing here.
   thing back; a failing notice is logged. Core's own session check also refuses
   a deactivated account, for a session created in the same moment.
 - **A passkey answer must be user-verified, and core checks it itself.**
-  better-auth asks the device to unlock ("preferred") but verifies with
-  `requireUserVerification: false`, so a bare touch of a security key would
-  sign in. Both ceremonies refuse an answer without the user-verified flag in
-  the plugin's `afterVerification` hook (`PASSKEY_NOT_UNLOCKED`); passkeys are
-  asked for as discoverable and unlocked.
-- **better-auth's packages move together.** `@better-auth/passkey` is pinned to
-  the exact version of `better-auth` (no `^`): a caret pulled 1.7.14 while
-  `better-auth` was 1.7.13, and each brought its own `@better-auth/core`, whose
+  Up to 1.7.17 better-auth verified with `requireUserVerification: false`, so a
+  bare touch of a security key would sign in. Both ceremonies refuse an answer
+  without the user-verified flag in the plugin's `afterVerification` hook
+  (`PASSKEY_NOT_UNLOCKED`); passkeys are asked for as discoverable and unlocked.
+  Since 1.7.18 the plugin requires user verification itself when
+  `userVerification` is `'required'`, so it refuses such an answer first
+  (`FAILED_TO_VERIFY_REGISTRATION`, `AUTHENTICATION_FAILED`); core's check stays
+  behind it, so a later change of the plugin's default cannot reopen the gap,
+  and the pages name the likely cause for either code.
+- **better-auth's packages move together.** `better-auth`, `@better-auth/passkey`
+  and `@better-auth/oauth-provider` are all pinned to one exact version (no `^`):
+  a caret pulled 1.7.14 while `better-auth` was 1.7.13, and each brought its own `@better-auth/core`, whose
   separate context storage breaks transactions and hooks. Bump them in one
   change, against a populated store.
 - **Core offers no "trust this device".** The second step is never skipped for a
@@ -568,6 +572,12 @@ pointing here.
   allowlist. A spawned `git` never inherits `GIT_DIR`/`GIT_WORK_TREE`, and gets
   credentials through its environment (`GIT_ASKPASS`, or `GIT_SSH_COMMAND` with
   a `0600` temporary identity removed in `finally`), never argv or a URL.
+  **An argv array is not enough over `ssh`**, which joins the words and hands
+  the line to the server's shell: `sshArgs` quotes every word (`shellWord`),
+  and a value is still checked before it is sent (security review, Phase 2).
+- **A request body is read with a byte limit, not measured after.** A chunked
+  request says no length, so `request.text()` would hold whatever it streams;
+  the Core API's `bodyOf` stops at 16 KB and refuses (security review, Phase 2).
 - **Service-to-service trust uses one signed-token pattern** (HMAC-SHA256 over
   the request, with expiry). Never invent a new mechanism per service pair.
 - **An anchored quantifier before `$` or `^` is quadratic even alone**

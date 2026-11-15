@@ -5,7 +5,7 @@
  *
  * It fails, saying why, when the title names a version the code does not have, or a Release title names something unpublished or
  * already tagged. On success it prints the plan as JSON; with --github-output it also writes image=, cli=, packages= and release= to
- * $GITHUB_OUTPUT for the release workflow.
+ * $GITHUB_OUTPUT for the release workflow, and storybook= when the design system is released.
  */
 import { execFileSync } from 'node:child_process';
 import { appendFileSync } from 'node:fs';
@@ -50,7 +50,9 @@ if (checked.problems.length > 0) {
   process.exit(1);
 }
 
-const plan = checked.release ? planOf(checked.targets) : { image: null, cli: null, packages: [] };
+const plan = checked.release
+  ? planOf(checked.targets)
+  : { image: null, cli: null, packages: [], storybook: null };
 console.log(JSON.stringify({ release: checked.release, ...plan }));
 if (process.argv.includes('--github-output')) {
   const out = process.env.GITHUB_OUTPUT;
@@ -65,6 +67,7 @@ if (process.argv.includes('--github-output')) {
       `image=${plan.image ?? ''}`,
       `cli=${plan.cli ?? ''}`,
       `packages=${JSON.stringify(plan.packages)}`,
+      `storybook=${plan.storybook ?? ''}`,
     ].join('\n') + '\n',
   );
 }

@@ -3,7 +3,8 @@ name: Promotion
 # Checks the title of a promotion pull request (develop -> main) against the code it promotes, before it can be merged
 # (CONTRIBUTING.md, "Promoting develop into main"): every version it names must be the one in that package.json, and a
 # `Release` title may name only published things that are not tagged yet, since merging it tags and publishes them
-# (release.yml). Runs when the title is edited, as well as when the code changes; a draft runs nothing.
+# (release.yml). It also checks that every commit it brings has only the agent trailers AGENTS.md allows. Runs when the title is
+# edited, as well as when the code changes; a draft runs nothing.
 on:
   pull_request:
     branches: [main]
@@ -34,3 +35,10 @@ jobs:
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: pnpm -s release:check
+      # The agent trailers AGENTS.md allows, on every commit the promotion brings to main: the commit-msg hook can be missing from a
+      # clone or skipped, and this check is required.
+      - name: Check the commits' trailers
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: pnpm -s commits:check "$BASE_SHA..$HEAD_SHA"

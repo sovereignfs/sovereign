@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/create",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "type": "module",
   "description": "npm create @sovereignfs: makes an instance repository, pinned to the toolkit (sv) of the same version.",
   "license": "AGPL-3.0-or-later",
@@ -30,10 +30,10 @@
   "devDependencies": {
     "@sovereignfs/tsconfig": "workspace:*",
     "@types/node": "catalog:",
+    "@types/semver": "^7.8.0",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
-    "semver": "^7.8.5",
-    "@types/semver": "^7.7.1",
+    "semver": "^7.8.6",
     "tsup": "catalog:",
     "typescript": "catalog:"
   }

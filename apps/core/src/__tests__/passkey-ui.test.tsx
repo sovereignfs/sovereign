@@ -103,6 +103,22 @@ describe('the passkeys panel', () => {
     expect(await screen.findByText('Use one that asks for a PIN.')).toBeTruthy();
   });
 
+  it('says what to do when better-auth refuses the device, as it does one that was not unlocked', async () => {
+    addPasskey.mockResolvedValue({
+      data: null,
+      error: {
+        status: 400,
+        code: 'FAILED_TO_VERIFY_REGISTRATION',
+        message: 'Failed to verify registration',
+      },
+    });
+    render(<PasskeyPanel passkeys={[]} />);
+    click('Add a passkey');
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'asks for a PIN or biometrics',
+    );
+  });
+
   it('offers nothing to add, and says why, in a browser without passkeys', async () => {
     vi.stubGlobal('PublicKeyCredential', undefined);
     render(<PasskeyPanel passkeys={[]} />);

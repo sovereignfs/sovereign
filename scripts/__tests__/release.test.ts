@@ -30,7 +30,10 @@ describe('a promotion title', () => {
       image: 'v0.98.0',
       cli: 'cli-v0.12.0',
       packages: ['ui-v0.97.0'],
+      // The design system's Storybook goes out with it.
+      storybook: 'ui-v0.97.0',
     });
+    expect(planOf(check('Release cli-v0.12.0').targets).storybook).toBeNull();
   });
 
   it('publishes nothing without Release, but is still held to the code', () => {

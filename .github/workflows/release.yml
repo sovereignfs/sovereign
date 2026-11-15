@@ -4,7 +4,8 @@ name: Release
 # that starts with `Release` (`Release v0.98.0, ui-v0.97.0`) is checked again against the merged code, each version it names
 # is tagged on the merge commit, and the publish workflows release them: the image (publish-image.yml), the toolkit
 # (publish-cli.yml) and each npm package (publish.yml), each of which runs the full CI first and makes the GitHub release
-# from the version's changelog section. A title without `Release` publishes nothing.
+# from the version's changelog section. When the design system is among them, its Storybook is published from the same tag
+# once the packages are (storybook.yml). A title without `Release` publishes nothing.
 #
 # The tags are made with this run's own token, which by design starts no workflow, so the publish workflows are called
 # from here rather than started by the tags; a tag pushed by hand still starts them as before.
@@ -37,6 +38,7 @@ jobs:
       image: ${{ steps.plan.outputs.image }}
       cli: ${{ steps.plan.outputs.cli }}
       packages: ${{ steps.plan.outputs.packages }}
+      storybook: ${{ steps.plan.outputs.storybook }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -109,4 +111,15 @@ jobs:
     with:
       tag: ${{ matrix.tag }}
       pr: ${{ github.event.pull_request.html_url }}
+    secrets: inherit
+
+  # The design system's Storybook, from the tag `ui` was released at, once the packages are published.
+  storybook:
+    name: Storybook
+    needs: [plan, packages]
+    if: needs.plan.outputs.storybook != '' && needs.packages.result == 'success'
+    uses: ./.github/workflows/storybook.yml
+    with:
+      ref: ${{ needs.plan.outputs.storybook }}
+    # Only its deploy token, which it reads as STORYBOOK_DEPLOY_TOKEN.
     secrets: inherit

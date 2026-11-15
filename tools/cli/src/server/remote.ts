@@ -47,7 +47,21 @@ export function targetOf(suite: Suite): Target {
   return { host, ...(port === undefined ? {} : { port }), user: user ?? 'root' };
 }
 
-/** The `ssh` command line: the destination follows `--`, so a host can never be read as an option. */
+/** Plain words the server's shell reads as they are: names, paths, commits, numbers and flags. */
+const PLAIN = /^[A-Za-z0-9_./:=@%+-]+$/;
+
+/**
+ * A word as the server's shell must be given it. `ssh` joins the words of a command with spaces and the server's shell reads the
+ * line, so a word with a space, a quote, `;`, `$`, a backtick or a newline would be read as shell rather than passed on. A plain word
+ * goes as it is; any other is single-quoted, so it reaches the program as one argument and nothing in it runs. (The deployment key's
+ * forced command never reaches a shell; this is for the operator's own access.)
+ */
+export function shellWord(word: string): string {
+  if (PLAIN.test(word)) return word;
+  return `'${word.replaceAll("'", `'\\''`)}'`;
+}
+
+/** The `ssh` command line: the destination follows `--`, so a host can never be read as an option, and every word is quoted for the server's shell. */
 export function sshArgs(target: Target, words: readonly string[]): string[] {
   return [
     '-T',
@@ -64,7 +78,7 @@ export function sshArgs(target: Target, words: readonly string[]): string[] {
       : []),
     '--',
     `${target.user}@${target.host}`,
-    ...words,
+    ...words.map(shellWord),
   ];
 }
 

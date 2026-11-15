@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.97.0 · **Last updated:** 2026-11-12
+**Version:** 0.97.1 · **Last updated:** 2026-11-15
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -105,7 +105,7 @@ be argued before anything is built.
 | ------- | -------- | ----------------------------------------------- | ------ | ------------------------- |
 | 0.45.0  | 1        | Manifest, icons and mobile metadata             | ✅     | [11.1](docs/epics/pwa.md) |
 | 0.46.0  | 2        | Service worker and offline page                 | ✅     | [11.2](docs/epics/pwa.md) |
-| —       | 3        | Standalone polish, guide and checks             | ⏳     | [11.3](docs/epics/pwa.md) |
+| —       | 3        | Standalone polish, guide and checks             | 🚧     | [11.3](docs/epics/pwa.md) |
 | 0.47.0  | 4        | Icons from the instance's own logo `[parallel]` | ✅     | [11.4](docs/epics/pwa.md) |
 
 ### M5 — Core can be deployed
@@ -244,6 +244,6 @@ Epic [15](docs/epics/core-services.md)
 | 0.94.0  | 2        | Manifest 3, and each app's folder of files                    | ✅     | [13.32](docs/epics/operator-cli.md)  |
 | 0.95.0  | 3        | Files in backups and restores                                 | ✅     | [13.33](docs/epics/operator-cli.md)  |
 | 0.96.0  | 4        | The template keeps files, and has a Docker setup `[parallel]` | ✅     | [13.34](docs/epics/operator-cli.md)  |
-| —       | 5        | Files in any S3-compatible store `[parallel]`                 | 🚧     | [15.10](docs/epics/core-services.md) |
+| —       | 5        | Files in any S3-compatible store `[parallel]`                 | 📋     | [15.10](docs/epics/core-services.md) |
 | —       | 6        | Files in a repository the person connects                     | 🚧     | [15.11](docs/epics/core-services.md) |
 | 0.97.0  | 7        | Files on disk, end to end                                     | ✅     | [15.12](docs/epics/core-services.md) |

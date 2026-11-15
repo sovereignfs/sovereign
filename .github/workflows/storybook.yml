@@ -2,8 +2,9 @@ name: Storybook
 
 # Builds the design system's Storybook here and publishes it to the dedicated repository
 # sovereignfs/storybook, whose GitHub Pages serves https://sovereignfs.github.io/storybook/.
-# It runs when a `sb-v*` tag is pushed (the tag need not match a package version; it marks the
-# commit to put live) or when started by hand.
+# It runs when the release workflow (release.yml) publishes the design system, from that release's
+# `ui-vX.Y.Z` tag; when a `sb-v*` tag is pushed (the tag need not match a package version; it marks
+# the commit to put live); or when started by hand.
 #
 # It authenticates with the Actions secret STORYBOOK_DEPLOY_TOKEN: a personal access token that
 # can write to sovereignfs/storybook (fine-grained: Contents read and write on that one
@@ -13,6 +14,12 @@ on:
   push:
     tags: ['sb-v*']
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: The tag to build Storybook from, such as ui-v0.97.0.
+        type: string
+        required: true
 
 permissions:
   contents: read
@@ -31,6 +38,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ inputs.ref }}
+
+      - id: commit
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Check the deploy token is configured
         env:
@@ -51,4 +62,4 @@ jobs:
           external_repository: sovereignfs/storybook
           publish_branch: gh-pages
           publish_dir: packages/ui/storybook-static
-          commit_message: 'deploy: storybook from ${{ github.sha }}'
+          commit_message: 'deploy: storybook from ${{ steps.commit.outputs.sha }}'

@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/cli",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "type": "module",
   "description": "The operator toolkit: sv. Deploys core, with or without apps, to one machine with Docker.",
   "license": "AGPL-3.0-or-later",
@@ -31,11 +31,11 @@
     "@sovereignfs/manifest": "workspace:*",
     "@sovereignfs/tsconfig": "workspace:*",
     "@types/node": "catalog:",
-    "@types/semver": "^7.7.1",
+    "@types/semver": "^7.8.0",
     "age-encryption": "^0.3.1",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
-    "semver": "^7.8.5",
+    "semver": "^7.8.6",
     "tsup": "catalog:",
     "typescript": "catalog:",
     "yaml": "^2.9.1"

@@ -50,12 +50,12 @@ describe('the publish workflow', () => {
 
   it('runs the whole CI on the tagged commit before it publishes', () => {
     expect(workflow).toMatch(/validate:[\s\S]*uses: \.\/\.github\/workflows\/ci\.yml/);
-    expect(workflow).toMatch(/publish:[\s\S]*needs: validate/);
+    expect(workflow).toMatch(/publish:[\s\S]*needs: \[validate, notes\]/);
     expect(ci).toMatch(/^\s{2}workflow_call:/m);
   });
 
   it('refuses a tagged commit that is not on main, and a tag that does not match the version', () => {
-    expect(workflow).toContain('git merge-base --is-ancestor "$GITHUB_SHA" origin/main');
+    expect(workflow).toContain('git merge-base --is-ancestor HEAD origin/main');
     expect(workflow).toContain('expects $name@$expected');
   });
 
@@ -80,11 +80,11 @@ describe('the image workflow', () => {
 
   it('runs the whole CI on the tagged commit before it publishes', () => {
     expect(imageWorkflow).toMatch(/validate:[\s\S]*uses: \.\/\.github\/workflows\/ci\.yml/);
-    expect(imageWorkflow).toMatch(/image:[\s\S]*needs: validate/);
+    expect(imageWorkflow).toMatch(/image:[\s\S]*needs: \[validate, notes\]/);
   });
 
   it('refuses a tagged commit that is not on main, and a tag that does not match the version', () => {
-    expect(imageWorkflow).toContain('git merge-base --is-ancestor "$GITHUB_SHA" origin/main');
+    expect(imageWorkflow).toContain('git merge-base --is-ancestor HEAD origin/main');
     expect(imageWorkflow).toContain("require('./package.json').version");
     expect(imageWorkflow).toContain('expects version $expected');
   });

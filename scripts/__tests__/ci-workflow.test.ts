@@ -21,8 +21,20 @@ describe('the CI workflow', () => {
     expect(workflow).toContain('github.event.pull_request.draft == false');
   });
 
-  it('cancels superseded pull request runs only', () => {
-    expect(workflow).toContain("cancel-in-progress: ${{ github.event_name == 'pull_request' }}");
+  it('cancels superseded pull request runs only, never a release run', () => {
+    expect(workflow).toContain(
+      "cancel-in-progress: ${{ github.event_name == 'pull_request' && inputs.ref == '' }}",
+    );
+    expect(workflow).toContain(
+      'group: ci-${{ inputs.ref || github.event.pull_request.number || github.sha }}',
+    );
+  });
+
+  it('checks every job out at the ref a release run names, and runs all of them for it', () => {
+    const checkouts = workflow.match(/uses: actions\/checkout@/g) ?? [];
+    expect(workflow.match(/ref: \$\{\{ inputs\.ref \}\}/g)).toHaveLength(checkouts.length);
+    expect(workflow).toMatch(/if: >-\n {6}inputs\.ref != '' \|\|/);
+    expect(workflow).toContain('if [[ "$EVENT" == "pull_request" && -z "$RELEASE_REF" ]]; then');
   });
 
   it('classifies a pull request by what it changed, and runs everything otherwise', () => {

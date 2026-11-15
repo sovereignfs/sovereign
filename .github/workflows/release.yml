@@ -1,0 +1,112 @@
+name: Release
+
+# Releases what a merged promotion pull request's title names (CONTRIBUTING.md, "Promoting develop into main"). A title
+# that starts with `Release` (`Release v0.98.0, ui-v0.97.0`) is checked again against the merged code, each version it names
+# is tagged on the merge commit, and the publish workflows release them: the image (publish-image.yml), the toolkit
+# (publish-cli.yml) and each npm package (publish.yml), each of which runs the full CI first and makes the GitHub release
+# from the version's changelog section. A title without `Release` publishes nothing.
+#
+# The tags are made with this run's own token, which by design starts no workflow, so the publish workflows are called
+# from here rather than started by the tags; a tag pushed by hand still starts them as before.
+on:
+  pull_request:
+    branches: [main]
+    types: [closed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Plan and tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref == 'develop' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.title, 'Release')
+    permissions:
+      # To make the tags.
+      contents: write
+    outputs:
+      image: ${{ steps.plan.outputs.image }}
+      cli: ${{ steps.plan.outputs.cli }}
+      packages: ${{ steps.plan.outputs.packages }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+      - uses: ./.github/actions/setup
+        with:
+          cache: 'false'
+      - id: plan
+        name: Check the title against the merged code
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: pnpm -s release:check --ref HEAD --github-output
+      - name: Tag the merge commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          IMAGE: ${{ steps.plan.outputs.image }}
+          CLI: ${{ steps.plan.outputs.cli }}
+          PACKAGES: ${{ steps.plan.outputs.packages }}
+        run: |
+          tags=()
+          [[ -n "$IMAGE" ]] && tags+=("$IMAGE")
+          [[ -n "$CLI" ]] && tags+=("$CLI")
+          while IFS= read -r tag; do [[ -n "$tag" ]] && tags+=("$tag"); done < <(node -e 'for (const t of JSON.parse(process.argv[1])) console.log(t)' "$PACKAGES")
+          for tag in "${tags[@]}"; do
+            gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$tag" -f "sha=$MERGE_SHA" --silent
+            echo "Tagged $tag on $MERGE_SHA."
+          done
+
+  image:
+    name: Image
+    needs: plan
+    if: needs.plan.outputs.image != ''
+    permissions:
+      contents: write
+      packages: write
+    uses: ./.github/workflows/publish-image.yml
+    with:
+      tag: ${{ needs.plan.outputs.image }}
+      pr: ${{ github.event.pull_request.html_url }}
+
+  toolkit:
+    name: Toolkit
+    needs: plan
+    if: needs.plan.outputs.cli != ''
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    uses: ./.github/workflows/publish-cli.yml
+    with:
+      tag: ${{ needs.plan.outputs.cli }}
+      pr: ${{ github.event.pull_request.html_url }}
+    secrets: inherit
+
+  packages:
+    name: Package
+    needs: plan
+    if: needs.plan.outputs.packages != '[]' && needs.plan.outputs.packages != ''
+    strategy:
+      fail-fast: false
+      matrix:
+        tag: ${{ fromJSON(needs.plan.outputs.packages) }}
+    permissions:
+      contents: write
+      id-token: write
+    uses: ./.github/workflows/publish.yml
+    with:
+      tag: ${{ matrix.tag }}
+      pr: ${{ github.event.pull_request.html_url }}
+    secrets: inherit

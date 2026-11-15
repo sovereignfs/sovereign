@@ -11,9 +11,13 @@ name: Publish
 # publishing it later means removing "private" and adding its tag and case here).
 # docs/releasing.md has the whole process.
 #
+# The release workflow (release.yml) calls it with the tag when a `Release` promotion is merged; a tag
+# pushed by hand starts it too.
+#
 # Nothing publishes unless the full CI passes on the tagged commit, the commit is on `main`, the
-# tag matches the version in package.json, and the packed tarball passes `pnpm packages:check`.
-# It authenticates with the Actions secret NPM_TOKEN.
+# tag matches the version in package.json, the version has a section in the package's CHANGELOG.md,
+# and the packed tarball passes `pnpm packages:check`. It authenticates with the Actions secret
+# NPM_TOKEN. Once published, it makes the GitHub release from that changelog section.
 on:
   push:
     tags:
@@ -22,13 +26,24 @@ on:
       - 'manifest-v*.*.*'
       - 'config-v*.*.*'
       - 'storage-v*.*.*'
+  workflow_call:
+    inputs:
+      tag:
+        description: The tag to release, such as ui-v0.97.0; it exists already, on the promotion's merge commit.
+        type: string
+        required: true
+      pr:
+        description: The promotion pull request's address, named in the release notes.
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read
 
 # Never two releases of one tag at once, and never cancel one that has begun publishing.
 concurrency:
-  group: publish-${{ github.ref }}
+  group: publish-${{ inputs.tag || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -36,12 +51,41 @@ jobs:
   validate:
     name: Validate
     uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ inputs.tag }}
+
+  # The release notes, read before anything is published: a version with no changelog section is not released.
+  notes:
+    name: Release notes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      body: ${{ steps.notes.outputs.body }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.tag }}
+      - uses: ./.github/actions/setup
+        with:
+          cache: 'false'
+      - id: notes
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+          PR: ${{ inputs.pr }}
+        run: |
+          if [[ -n "$PR" ]]; then pnpm -s release:notes "$TAG" --pr "$PR" > notes.md; else pnpm -s release:notes "$TAG" > notes.md; fi
+          {
+            echo 'body<<SOVEREIGN_NOTES_END'
+            cat notes.md
+            echo 'SOVEREIGN_NOTES_END'
+          } >> "$GITHUB_OUTPUT"
 
   publish:
     name: Publish
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: validate
+    needs: [validate, notes]
     permissions:
       contents: read
       # Lets npm sign a provenance statement: the package is shown as built from this
@@ -52,11 +96,12 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+          ref: ${{ inputs.tag }}
 
       - name: Work out which package this tag releases
         id: package
         env:
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           case "$TAG" in
             ui-v*) dir=ui; prefix=ui-v ;;
@@ -80,7 +125,7 @@ jobs:
       - name: Check the tagged commit is on main
         run: |
           git fetch --no-tags origin main
-          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+          if ! git merge-base --is-ancestor HEAD origin/main; then
             echo "The tagged commit is not on main; refusing to publish." >&2
             exit 1
           fi
@@ -103,3 +148,24 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           PACKAGE: ${{ steps.package.outputs.name }}
         run: pnpm --filter "$PACKAGE" publish --no-git-checks --access public --provenance
+
+  # The GitHub release for the tag, with the changelog section as its notes. Run again, it replaces the notes.
+  release:
+    name: GitHub release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [publish, notes]
+    permissions:
+      contents: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+          BODY: ${{ needs.notes.outputs.body }}
+        run: |
+          printf '%s\n' "$BODY" > notes.md
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file notes.md
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" --notes-file notes.md
+          fi

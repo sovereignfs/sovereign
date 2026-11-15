@@ -175,14 +175,18 @@ pointing here.
   thing back; a failing notice is logged. Core's own session check also refuses
   a deactivated account, for a session created in the same moment.
 - **A passkey answer must be user-verified, and core checks it itself.**
-  better-auth asks the device to unlock ("preferred") but verifies with
-  `requireUserVerification: false`, so a bare touch of a security key would
-  sign in. Both ceremonies refuse an answer without the user-verified flag in
-  the plugin's `afterVerification` hook (`PASSKEY_NOT_UNLOCKED`); passkeys are
-  asked for as discoverable and unlocked.
-- **better-auth's packages move together.** `@better-auth/passkey` is pinned to
-  the exact version of `better-auth` (no `^`): a caret pulled 1.7.14 while
-  `better-auth` was 1.7.13, and each brought its own `@better-auth/core`, whose
+  Up to 1.7.17 better-auth verified with `requireUserVerification: false`, so a
+  bare touch of a security key would sign in. Both ceremonies refuse an answer
+  without the user-verified flag in the plugin's `afterVerification` hook
+  (`PASSKEY_NOT_UNLOCKED`); passkeys are asked for as discoverable and unlocked.
+  Since 1.7.18 the plugin requires user verification itself when
+  `userVerification` is `'required'`, so it refuses such an answer first
+  (`FAILED_TO_VERIFY_REGISTRATION`, `AUTHENTICATION_FAILED`); core's check stays
+  behind it, so a later change of the plugin's default cannot reopen the gap,
+  and the pages name the likely cause for either code.
+- **better-auth's packages move together.** `better-auth`, `@better-auth/passkey`
+  and `@better-auth/oauth-provider` are all pinned to one exact version (no `^`):
+  a caret pulled 1.7.14 while `better-auth` was 1.7.13, and each brought its own `@better-auth/core`, whose
   separate context storage breaks transactions and hooks. Bump them in one
   change, against a populated store.
 - **Core offers no "trust this device".** The second step is never skipped for a

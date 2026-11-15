@@ -77,6 +77,7 @@ and Docker (for the development database and the image).
 ```bash
 git clone git@github.com:sovereignfs/sovereign.git
 cd sovereign
+git switch develop               # work lands on develop; main is what is released
 pnpm install --frozen-lockfile   # also installs the pre-commit and pre-push hooks
 pnpm verify:push                 # format, lint, typecheck, design tokens, doc links and tests
 ```
@@ -85,7 +86,7 @@ To run core from a published image on sqld, PostgreSQL or a SQLite file, see
 [`docs/deploying.md`](docs/deploying.md). To work on it, `pnpm dev` starts the server (and sqld, when the
 environment chooses it) and `pnpm seed` makes local accounts.
 
-[`CONTRIBUTING.md`](CONTRIBUTING.md) has the branching, commit and pull request
+[`CONTRIBUTING.md`](CONTRIBUTING.md) has the branching (`develop` and `main`), commit, pull request and release
 rules; [`AGENTS.md`](AGENTS.md) has the same conventions written for AI agents.
 
 ## Documentation

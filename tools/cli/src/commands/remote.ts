@@ -178,6 +178,12 @@ export async function logs(ctx: Context, argv: string[]): Promise<void> {
     : [];
   const lines = args.values.get('lines') ?? '200';
   if (!/^[0-9]{1,5}$/.test(lines)) throw new Refused('--lines takes a number.');
+  // core, proxy, database, deploy or an app: every one is a name of this shape, which the server checks again.
+  if (!/^[a-z][a-z0-9-]{0,30}[a-z0-9]$/.test(name)) {
+    throw new Refused(
+      `“${name.slice(0, 40)}” is not core, the proxy, the database, deploy or an app.`,
+    );
+  }
   const suite = (await SuiteFile.load(ctx.root)).value;
   const text = await ask(ctx, targetOf(suite), ['logs', name, lines], 'Reading the logs');
   ctx.io.out(text.replace(/\n$/, ''));

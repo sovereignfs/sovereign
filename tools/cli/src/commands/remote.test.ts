@@ -114,6 +114,16 @@ describe('sv logs', () => {
     expect(fake.asked).toEqual(['logs deploy 200', 'logs notes 20']);
     expect((await sv(world, 'logs', '--lines', 'many')).code).toBe(2);
   });
+
+  it('refuses a name that is not core, the proxy, the database, deploy or an app, before asking the server', async () => {
+    await ready();
+    const fake = answering({ logs: { stdout: '' } });
+    world.ctx.remote = fake.remote;
+    const done = await sv(world, 'logs', 'x; reboot');
+    expect(done.code).toBe(2);
+    expect(done.text).toContain('is not core');
+    expect(fake.asked).toEqual([]);
+  });
 });
 
 describe('sv app show', () => {

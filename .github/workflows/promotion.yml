@@ -1,0 +1,36 @@
+name: Promotion
+
+# Checks the title of a promotion pull request (develop -> main) against the code it promotes, before it can be merged
+# (CONTRIBUTING.md, "Promoting develop into main"): every version it names must be the one in that package.json, and a
+# `Release` title may name only published things that are not tagged yet, since merging it tags and publishes them
+# (release.yml). Runs when the title is edited, as well as when the code changes; a draft runs nothing.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: promotion-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  title:
+    name: Promotion title
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event.pull_request.draft == false && github.event.pull_request.head.ref == 'develop'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Every tag, to know which versions are tagged already.
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: ./.github/actions/setup
+      - name: Check the title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: pnpm -s release:check

@@ -8,7 +8,7 @@ How work gets into `develop`, and from there into `main`. It is the workflow of
 
 | Branch    | What it is                                                                                                                                                         |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `develop` | The working branch. Every change lands here first. `npm create @sovereignfs app` leaves you on it.                                                                 |
+| `develop` | The working branch. Every change lands here first. `npm create @sovereignfs app` leaves you on it. It can never be deleted or force-pushed.                        |
 | `main`    | What is released. It is **protected**: a change reaches it only through a release pull request from `develop`, never by a push (an administrator may bypass this). |
 
 There are two ways to get a change into `develop`; pick per change:
@@ -79,6 +79,8 @@ git push -u origin main develop
 ```
 
 Then, in **Settings → Rules → Rulesets**, add a ruleset for the default branch `main` that requires a pull request before merging, allows
-merge commits, and blocks force pushes and deletion, with the Repository admin role allowed to bypass it. In **Settings → General → Pull
+merge commits, and blocks force pushes and deletion, with the Repository admin role allowed to bypass it. Add a second ruleset for `develop`
+that blocks deletion and force pushes, with no one allowed to bypass it: GitHub's "Automatically delete head branches" setting would
+otherwise delete `develop` when a promotion is merged, and it leaves a branch alone when its deletion is blocked. In **Settings → General → Pull
 Requests**, keep merge commits and rebase merging allowed, and set the default merge commit message to the pull request's title and
 description, so the merge commit reads `vX.Y.Z` or `Release vX.Y.Z`.

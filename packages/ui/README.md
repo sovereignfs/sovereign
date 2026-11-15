@@ -1,5 +1,7 @@
 # @sovereignfs/ui
 
+[![npm](https://img.shields.io/npm/v/@sovereignfs/ui?label=npm)](https://www.npmjs.com/package/@sovereignfs/ui) [![licence](https://img.shields.io/badge/licence-MPL--2.0-blue)](https://github.com/sovereignfs/sovereign/blob/main/packages/ui/LICENSE)
+
 Sovereign Design System — design tokens and React components for building [Sovereign](https://github.com/sovereignfs) apps.
 
 ## Installation

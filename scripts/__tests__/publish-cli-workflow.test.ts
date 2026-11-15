@@ -58,13 +58,11 @@ describe('the toolkit release workflow', () => {
 
   it('runs the whole CI on the tagged commit before anything is published', () => {
     expect(workflow).toMatch(/validate:[\s\S]*uses: \.\/\.github\/workflows\/ci\.yml/);
-    expect(workflow).toMatch(/image:[\s\S]*needs: validate/);
+    expect(workflow).toMatch(/image:[\s\S]*needs: \[validate, notes\]/);
   });
 
   it('refuses a tagged commit that is not on main, and a tag that does not match both packages', () => {
-    expect(
-      workflow.match(/git merge-base --is-ancestor "\$GITHUB_SHA" origin\/main/g),
-    ).toHaveLength(2);
+    expect(workflow.match(/git merge-base --is-ancestor HEAD origin\/main/g)).toHaveLength(2);
     expect(
       workflow.match(/expects version \$expected, but tools\/\$dir\/package\.json/g),
     ).toHaveLength(2);

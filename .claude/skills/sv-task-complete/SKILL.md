@@ -52,6 +52,12 @@ In the same branch, per your instruction file's version-bump conventions:
 - Packages and `apps/core` bump independently by what actually changed in
   them. `ui`, `bridge` and `api-client` never ship a breaking change in a
   patch.
+- Every bump of a published thing (the root, `tools/cli`, `ui`, `sdk`,
+  `manifest`, `config`, `storage`) writes that version's section in its
+  `CHANGELOG.md` (`## [X.Y.Z] - YYYY-MM-DD`, Keep a Changelog: Added /
+  Changed / Fixed / Removed), in plain words for someone upgrading. It becomes
+  the GitHub release's notes; `scripts/__tests__/changelogs.test.ts` fails
+  without it.
 - If `develop` moved while this branch was open, re-target the bumps onto the
   real current `develop` after rebasing — a stale base silently produces a
   duplicate version number.

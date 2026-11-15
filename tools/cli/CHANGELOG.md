@@ -1,0 +1,26 @@
+# Changelog: @sovereignfs/cli and @sovereignfs/create
+
+What changed in each version of the operator toolkit, `sv`, its image and `npm create @sovereignfs`, released together, newest first, in the form of [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
+versions follow [semver](https://semver.org/). A version's section is written in the change that sets the version, dated that day,
+and becomes the release notes when the version is published. This file starts at 0.12.0; earlier versions are in the repository's
+history and tags.
+
+## [0.12.0] - 2026-11-15
+
+### Added
+
+- An app made by `npm create @sovereignfs app` starts on `develop`, with its first commit on `main`, and a `CONTRIBUTING.md` that
+  explains the branch workflow: work lands on `develop`, and `main` changes only by a promotion pull request merged with a merge commit.
+- The app's checks run where a change is about to reach `main`: `.github/workflows/ci.yml` (typecheck, the manifest check, the build)
+  on pull requests into `main` that are not drafts and before each release, and a versioned pre-push hook (`.githooks/pre-push`,
+  turned on by `npm install`) for everything else.
+- `.github/workflows/sync-develop.yml` fast-forwards the app's `develop` to the merge commit after each promotion.
+
+### Changed
+
+- The app's publish workflow refuses a tag whose commit is not on `main`, and runs the app's checks before it builds.
+- The app depends on Next.js `^16.4.6`.
+
+### Fixed
+
+- The app's README is titled with the app's name; it read "**TITLE**".

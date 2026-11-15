@@ -4,21 +4,35 @@ name: Publish image
 #   vX.Y.Z         -> ghcr.io/sovereignfs/sovereign:X.Y.Z, :X.Y and :latest
 # for linux/amd64 and linux/arm64. docs/releasing.md has the whole process.
 #
+# The release workflow (release.yml) calls it with the tag when a `Release` promotion is merged; a tag pushed by hand starts it too.
+#
 # Nothing publishes unless the full CI passes on the tagged commit (its `image` job boots every compose setup from the
-# image), the commit is on `main`, and the tag matches the root version in package.json. It authenticates with the
+# image), the commit is on `main`, the tag matches the root version in package.json, and the version has a
+# section in CHANGELOG.md, which becomes the GitHub release's notes once the image is published. It authenticates with the
 # job's own GITHUB_TOKEN, so there is no secret to keep. The build uses no cache: what it publishes must not depend on
 # anything another run could have stored.
 on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_call:
+    inputs:
+      tag:
+        description: The tag to release, such as v0.98.0; it exists already, on the promotion's merge commit.
+        type: string
+        required: true
+      pr:
+        description: The promotion pull request's address, named in the release notes.
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read
 
 # Never two releases of one tag at once, and never cancel one that has begun publishing.
 concurrency:
-  group: publish-image-${{ github.ref }}
+  group: publish-image-${{ inputs.tag || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -26,13 +40,42 @@ jobs:
   validate:
     name: Validate
     uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ inputs.tag }}
+
+  # The release notes, read before anything is published: a version with no changelog section is not released.
+  notes:
+    name: Release notes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      body: ${{ steps.notes.outputs.body }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.tag }}
+      - uses: ./.github/actions/setup
+        with:
+          cache: 'false'
+      - id: notes
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+          PR: ${{ inputs.pr }}
+        run: |
+          if [[ -n "$PR" ]]; then pnpm -s release:notes "$TAG" --pr "$PR" > notes.md; else pnpm -s release:notes "$TAG" > notes.md; fi
+          {
+            echo 'body<<SOVEREIGN_NOTES_END'
+            cat notes.md
+            echo 'SOVEREIGN_NOTES_END'
+          } >> "$GITHUB_OUTPUT"
 
   image:
     name: Image
     runs-on: ubuntu-latest
     # arm64 is built under emulation, which is most of this.
     timeout-minutes: 90
-    needs: validate
+    needs: [validate, notes]
     permissions:
       contents: read
       packages: write
@@ -43,11 +86,15 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+          ref: ${{ inputs.tag }}
+
+      - id: commit
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Work out the version this tag releases
         id: version
         env:
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           expected="${TAG#v}"
           actual="$(node -p "require('./package.json').version")"
@@ -69,7 +116,7 @@ jobs:
       - name: Check the tagged commit is on main
         run: |
           git fetch --no-tags origin main
-          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+          if ! git merge-base --is-ancestor HEAD origin/main; then
             echo "The tagged commit is not on main; refusing to publish." >&2
             exit 1
           fi
@@ -100,5 +147,26 @@ jobs:
             org.opencontainers.image.title=Sovereign
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.version=${{ steps.version.outputs.version }}
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ steps.commit.outputs.sha }}
             org.opencontainers.image.licenses=AGPL-3.0-or-later
+
+  # The GitHub release for the tag, with the changelog section as its notes. Run again, it replaces the notes.
+  release:
+    name: GitHub release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [image, notes]
+    permissions:
+      contents: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+          BODY: ${{ needs.notes.outputs.body }}
+        run: |
+          printf '%s\n' "$BODY" > notes.md
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file notes.md
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" --notes-file notes.md
+          fi

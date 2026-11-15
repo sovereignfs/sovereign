@@ -1,5 +1,7 @@
 # Sovereign
 
+[![image](https://img.shields.io/github/v/tag/sovereignfs/sovereign?filter=v*&sort=semver&label=image)](https://github.com/sovereignfs/sovereign/pkgs/container/sovereign) [![CodeQL](https://github.com/sovereignfs/sovereign/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/sovereignfs/sovereign/actions/workflows/codeql.yml) [![core and toolkit: AGPL-3.0-or-later](https://img.shields.io/badge/core%20%26%20toolkit-AGPL--3.0--or--later-blue)](LICENSE) [![packages: MPL-2.0](https://img.shields.io/badge/packages-MPL--2.0-blue)](#licence) [![node](https://img.shields.io/badge/node-%3E%3D24.15-339933)](.node-version)
+
 Sovereign is a self-hostable identity and foundation service, and the tools to run it. Anyone can
 deploy **core**, its sign-in server, point any OpenID Connect application at it for sign-in, and keep
 the accounts, the sign-in policy and the data on infrastructure they own. The operator toolkit, `sv`,
@@ -46,26 +48,26 @@ phase.
 
 ## Repository layout
 
-| Path                  | What                                                            | State                                       |
-| --------------------- | --------------------------------------------------------------- | ------------------------------------------- |
-| `apps/core`           | Core: the sign-in server, Console and launcher                  | Built, with Phase 1 acceptance (`apps/e2e`) |
-| `tools/cli`           | The operator toolkit, `sv`, and the image the server runs it in | Published                                   |
-| `tools/create`        | `npm create @sovereignfs`: an instance, or an app               | Published                                   |
-| `packages/tsconfig`   | Shared TypeScript configuration                                 | In the workspace                            |
-| `packages/ui`         | The design system, `@sovereignfs/ui`                            | Published                                   |
-| `packages/bridge`     | The device bridge, `@sovereignfs/bridge`                        | In the workspace                            |
-| `packages/mailer`     | Mail delivery                                                   | In the workspace                            |
-| `packages/config`     | The environment convention and start-up validation              | Published                                   |
-| `packages/database`   | One interface over sqld, PostgreSQL and a SQLite file           | In the workspace                            |
-| `packages/crypto`     | Field encryption with a key ring (end-to-end later)             | In the workspace                            |
-| `packages/api-client` | The typed Core API client, generated from the contract          | In the workspace                            |
-| `packages/sdk`        | The SDK: sign-in, tokens, failure and version support for apps  | Published                                   |
-| `packages/manifest`   | The app manifest: schemas, a validator, and the image label     | Published                                   |
-| `packages/storage`    | People's files: a folder and a quota per person                 | Published                                   |
-| `packages/*` (later)  | `auth`, …                                                       | Planned                                     |
-| `contracts/`          | The Core API, the file formats and the environment convention   | Written                                     |
-| `docs/`               | The spec, epics, research, RFCs and decisions                   | [Index below](#documentation)               |
-| `scripts/`            | Repository tooling and the tests that guard the repo's rules    | In use                                      |
+| Path                  | What                                                            | State                                                                                                                                                                                                                  |
+| --------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/core`           | Core: the sign-in server, Console and launcher                  | Built, with Phase 1 acceptance (`apps/e2e`) [![image](https://img.shields.io/github/v/tag/sovereignfs/sovereign?filter=v*&sort=semver&label=image)](https://github.com/sovereignfs/sovereign/pkgs/container/sovereign) |
+| `tools/cli`           | The operator toolkit, `sv`, and the image the server runs it in | [![npm](https://img.shields.io/npm/v/@sovereignfs/cli?label=npm)](https://www.npmjs.com/package/@sovereignfs/cli)                                                                                                      |
+| `tools/create`        | `npm create @sovereignfs`: an instance, or an app               | [![npm](https://img.shields.io/npm/v/@sovereignfs/create?label=npm)](https://www.npmjs.com/package/@sovereignfs/create)                                                                                                |
+| `packages/tsconfig`   | Shared TypeScript configuration                                 | In the workspace                                                                                                                                                                                                       |
+| `packages/ui`         | The design system, `@sovereignfs/ui`                            | [![npm](https://img.shields.io/npm/v/@sovereignfs/ui?label=npm)](https://www.npmjs.com/package/@sovereignfs/ui)                                                                                                        |
+| `packages/bridge`     | The device bridge, `@sovereignfs/bridge`                        | In the workspace                                                                                                                                                                                                       |
+| `packages/mailer`     | Mail delivery                                                   | In the workspace                                                                                                                                                                                                       |
+| `packages/config`     | The environment convention and start-up validation              | [![npm](https://img.shields.io/npm/v/@sovereignfs/config?label=npm)](https://www.npmjs.com/package/@sovereignfs/config)                                                                                                |
+| `packages/database`   | One interface over sqld, PostgreSQL and a SQLite file           | In the workspace                                                                                                                                                                                                       |
+| `packages/crypto`     | Field encryption with a key ring (end-to-end later)             | In the workspace                                                                                                                                                                                                       |
+| `packages/api-client` | The typed Core API client, generated from the contract          | In the workspace                                                                                                                                                                                                       |
+| `packages/sdk`        | The SDK: sign-in, tokens, failure and version support for apps  | [![npm](https://img.shields.io/npm/v/@sovereignfs/sdk?label=npm)](https://www.npmjs.com/package/@sovereignfs/sdk)                                                                                                      |
+| `packages/manifest`   | The app manifest: schemas, a validator, and the image label     | [![npm](https://img.shields.io/npm/v/@sovereignfs/manifest?label=npm)](https://www.npmjs.com/package/@sovereignfs/manifest)                                                                                            |
+| `packages/storage`    | People's files: a folder and a quota per person                 | [![npm](https://img.shields.io/npm/v/@sovereignfs/storage?label=npm)](https://www.npmjs.com/package/@sovereignfs/storage)                                                                                              |
+| `packages/*` (later)  | `auth`, …                                                       | Planned                                                                                                                                                                                                                |
+| `contracts/`          | The Core API, the file formats and the environment convention   | Written                                                                                                                                                                                                                |
+| `docs/`               | The spec, epics, research, RFCs and decisions                   | [Index below](#documentation)                                                                                                                                                                                          |
+| `scripts/`            | Repository tooling and the tests that guard the repo's rules    | In use                                                                                                                                                                                                                 |
 
 ## Getting started
 

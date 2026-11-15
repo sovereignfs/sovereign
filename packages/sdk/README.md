@@ -1,5 +1,7 @@
 # @sovereignfs/sdk
 
+[![npm](https://img.shields.io/npm/v/@sovereignfs/sdk?label=npm)](https://www.npmjs.com/package/@sovereignfs/sdk) [![licence](https://img.shields.io/badge/licence-MPL--2.0-blue)](https://github.com/sovereignfs/sovereign/blob/main/packages/sdk/LICENSE)
+
 How a JavaScript app's **server** talks to the Sovereign server it signs people in with. It wraps a client generated from core's
 API contract (bundled in, so there is nothing else to install) with what is tedious to do by hand: tokens, failure, and version
 support. What it promises is in [`docs/specs/sdk.md`](https://github.com/sovereignfs/sovereign/blob/main/docs/specs/sdk.md); the

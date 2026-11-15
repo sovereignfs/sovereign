@@ -22,13 +22,21 @@ on:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
   workflow_dispatch:
-  # Called by publish.yml on a release tag, where every job runs.
+  # Called by the publish workflows before they publish, where every job runs. `ref` is the tag being released when the release
+  # workflow calls them after merging a promotion (whose event this run then sees); empty, the run checks out what triggered it.
   workflow_call:
+    inputs:
+      ref:
+        description: The commit, tag or branch to check; empty for the one that triggered the run.
+        type: string
+        required: false
+        default: ''
 
-# Cancel a superseded run of the same pull request; a manual or release run is never cancelled.
+# Cancel a superseded run of the same pull request; a manual or release run is never cancelled. A release run is grouped by the tag
+# it checks, so the image's, the toolkit's and each package's runs of one release never cancel one another.
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-${{ inputs.ref || github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && inputs.ref == '' }}
 
 permissions:
   contents: read
@@ -43,7 +51,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     # Every other job needs this one, so skipping it skips them all.
+    # A release run (`ref` given) always runs, whatever the merged pull request's labels said.
     if: >-
+      inputs.ref != '' ||
       github.event_name != 'pull_request' ||
       (github.event.pull_request.draft == false &&
       !contains(github.event.pull_request.labels.*.name, 'skip-ci'))
@@ -58,6 +68,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
           fetch-depth: 0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -68,10 +79,11 @@ jobs:
         name: Classify the changed files
         env:
           EVENT: ${{ github.event_name }}
+          RELEASE_REF: ${{ inputs.ref }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          if [[ "$EVENT" == "pull_request" ]]; then
+          if [[ "$EVENT" == "pull_request" && -z "$RELEASE_REF" ]]; then
             git diff --name-only "$BASE_SHA...$HEAD_SHA" | node scripts/ci-changes.ts | tee -a "$GITHUB_OUTPUT"
           else
             node scripts/ci-changes.ts --all | tee -a "$GITHUB_OUTPUT"
@@ -86,6 +98,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
       - uses: ./.github/actions/setup
       - run: pnpm format:check
@@ -99,6 +112,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
       - uses: ./.github/actions/setup
       - run: pnpm lint
@@ -113,6 +127,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
       - uses: ./.github/actions/setup
       - run: pnpm typecheck
@@ -126,6 +141,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
       - uses: ./.github/actions/setup
       - run: pnpm test
@@ -139,6 +155,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
       - uses: ./.github/actions/setup
       - run: pnpm build
@@ -156,6 +173,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
       - run: bash scripts/docker-smoke.sh
 
@@ -170,6 +188,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
       - uses: ./.github/actions/setup
       - run: pnpm test:docker
@@ -197,6 +216,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
       - uses: ./.github/actions/setup
 
@@ -262,6 +282,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
       - uses: ./.github/actions/setup
 
@@ -312,6 +333,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
       - uses: ./.github/actions/setup
       # Development tooling is audited too: it runs on contributors' machines and in

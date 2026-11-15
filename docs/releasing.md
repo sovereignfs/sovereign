@@ -2,9 +2,22 @@
 
 Everything is released from `main`, and `main` changes only through a **promotion pull request** from `develop`
 ([CONTRIBUTING](../CONTRIBUTING.md#promoting-develop-into-main)), merged with a merge commit. Its title, from
-`pnpm promotion:draft`, names the versions it carries, with `Release` in front only when all of them will be tagged; the
-tags go on its merge commit. Version bumps are made on `develop` as before; nothing is tagged there. Pushing a tag is not a
-push to `main`, so `main`'s protection does not stop it.
+`pnpm promotion:draft`, names the versions it carries, with `Release` in front only when merging it is to publish all of
+them. Version bumps are made on `develop` as before; nothing is tagged there.
+
+**Merging a `Release` promotion releases it.** `.github/workflows/promotion.yml` checks the title against the code before
+the merge (`pnpm release:check`: each version is the one in its `package.json`, and a `Release` title names only published
+things not tagged yet). Once it is merged, `.github/workflows/release.yml` checks it again, tags the merge commit with each
+version, and calls the publish workflows below for them, which publish and then make each version's GitHub release. A title
+without `Release` publishes nothing. Pushing a tag by hand still releases, as below: to publish later a version promoted
+without `Release`, tag the merge commit that brought it, or to try a failed release again. A tag is not a push to `main`, so
+`main`'s protection does not stop it.
+
+**Every published thing keeps a changelog**, in the Keep a Changelog form: `CHANGELOG.md` at the root for the platform and
+its image, `tools/cli/CHANGELOG.md` for the toolkit and `create`, and one beside each published package, which ships it to
+npm. A version's section (`## [X.Y.Z] - date`, dated the day it is set) is written in the change that sets the version; a
+test fails when a published thing's version has none. Each publish workflow reads that section before it publishes anything
+(`pnpm release:notes <tag>`), so a version without one is not released, and makes it the GitHub release's notes afterwards.
 
 Three things are released from this repository: a package to npm, core's image to the GitHub Container Registry
 ([below](#releasing-the-image)), and the operator's toolkit, which is both ([below](#releasing-the-toolkit)).
@@ -32,13 +45,13 @@ they follow); `apps/core` and the repository are AGPL-3.0-or-later ([README](../
 
 ### What a release is made of
 
-- **A version, set in the pull request.** The package's own `version` follows semver by what
+- **A version and its changelog section, set in the pull request.** The package's own `version` follows semver by what
   changed in it ([AGENTS.md](../AGENTS.md) has the policy: `ui` is a published
   contract, so a patch never breaks, and a break needs a minor bump plus a migration note in
   [`docs/upgrade.md`](upgrade.md), or a major bump from `1.0.0`:
   [design system §4](specs/design-system.md)).
-  The bump is its own commit, `ui-vX.Y.Z`.
-- **A tarball that is only what an app needs:** `dist/`, `LICENSE`, `README.md`, and for `ui`
+  The bump is its own commit, `ui-vX.Y.Z`, and carries the version's section in the package's `CHANGELOG.md`.
+- **A tarball that is only what an app needs:** `dist/`, `LICENSE`, `README.md`, `CHANGELOG.md`, and for `ui`
   the `NOTICE` with Lucide's ISC licence. No source, tests, stories or configuration; no
   `workspace:` or `catalog:` dependency (pnpm rewrites them to real ranges when it packs).
 - **Entry points in `dist/`.** In the repository `exports` point at `src/`; `publishConfig`
@@ -97,7 +110,7 @@ package's `bin`, and `packages:check` holds it to a tool's rules (in `dist/`, in
 
 ### Releasing a package
 
-Pushing a tag releases the package: `ui-vX.Y.Z` releases `@sovereignfs/ui`, `sdk-vX.Y.Z` releases
+Merging a promotion titled with the package's version under `Release` releases it, or pushing its tag does: `ui-vX.Y.Z` releases `@sovereignfs/ui`, `sdk-vX.Y.Z` releases
 `@sovereignfs/sdk`, `manifest-vX.Y.Z` releases `@sovereignfs/manifest`, `config-vX.Y.Z` releases `@sovereignfs/config`, and
 `storage-vX.Y.Z` releases `@sovereignfs/storage`.
 `.github/workflows/publish.yml` does the rest, and **publishes
@@ -106,19 +119,20 @@ nothing unless every one of these holds**:
 1. the full CI passes on the tagged commit (the same suite as a pull request, every job);
 2. the tagged commit is on `main`, so a tag put on a branch by mistake cannot release;
 3. the tag matches the version in the package's `package.json` (`ui-v0.85.2` needs `0.85.2`);
-4. the build and `pnpm packages:check` pass, so the tarball is the one described above.
+4. the version has a section in the package's `CHANGELOG.md`;
+5. the build and `pnpm packages:check` pass, so the tarball is the one described above.
 
 Then it runs `pnpm publish --access public --provenance`, authenticated with the Actions secret
 `NPM_TOKEN`. **Provenance** makes npm show the package as built from this repository at this
 commit. The release job installs without any cache, so nothing it publishes depends on what
-another run could have stored.
+another run could have stored. Once published, it makes the GitHub release for the tag from the changelog section.
 
 To release:
 
-1. Land the version bump (the `ui-vX.Y.Z` commit) on `develop`, and merge the promotion pull request
-   (`Release ui-v0.85.2`) into `main`.
-2. Tag the promotion's merge commit and push the tag: `git switch main && git pull && git tag ui-v0.85.2 && git push origin ui-v0.85.2`.
-3. Watch the Publish run in the Actions tab. A published version cannot be replaced, so if a step
+1. Land the version bump (the `ui-vX.Y.Z` commit, with its changelog section) on `develop`.
+2. Merge the promotion pull request titled `Release ui-v0.85.2` into `main`. The Release run tags the merge commit and
+   publishes; by hand instead: `git switch main && git pull && git tag ui-v0.85.2 && git push origin ui-v0.85.2`.
+3. Watch the Release (or Publish) run in the Actions tab. A published version cannot be replaced, so if a step
    fails after npm accepted the package, bump the version and release again.
 
 `NPM_TOKEN` is an npm automation token with publish rights on the `@sovereignfs` scope; it
@@ -134,14 +148,15 @@ first release from here, so that two places cannot release the same package.
 
 ## Releasing the image
 
-Pushing a version tag releases the image: `vX.Y.Z` publishes `ghcr.io/sovereignfs/sovereign` for `linux/amd64` and
+Merging a promotion titled with the platform's version under `Release` releases the image, or pushing its tag does: `vX.Y.Z` publishes `ghcr.io/sovereignfs/sovereign` for `linux/amd64` and
 `linux/arm64`, tagged `X.Y.Z`, `X.Y` and `latest`. `.github/workflows/publish-image.yml` does the rest, and **publishes
 nothing unless every one of these holds**:
 
 1. the full CI passes on the tagged commit, whose `image` job boots every compose setup from the image, and whose
    acceptance suite runs on each database;
 2. the tagged commit is on `main`, so a tag put on a branch by mistake cannot release;
-3. the tag is a plain `vX.Y.Z` that matches the root `package.json`.
+3. the tag is a plain `vX.Y.Z` that matches the root `package.json`;
+4. the version has a section in the root `CHANGELOG.md`, which becomes the GitHub release's notes.
 
 The build uses no cache, so nothing it publishes depends on what another run stored, and it attaches a provenance
 statement and a software bill of materials. It authenticates with the run's own `GITHUB_TOKEN`, so there is no secret to
@@ -152,10 +167,10 @@ keeps its `core-vX.Y.Z` commits but is no tag and releases nothing.
 
 To release:
 
-1. Land the commit that carries the root version bump on `develop`, and merge the promotion pull request
-   (`Release v1.2.3`) into `main`.
-2. Tag the promotion's merge commit and push the tag: `git switch main && git pull && git tag v1.2.3 && git push origin v1.2.3`.
-3. Watch the Publish image run in the Actions tab.
+1. Land the commit that carries the root version bump, with its changelog section, on `develop`.
+2. Merge the promotion pull request titled `Release v1.2.3` into `main`. The Release run tags the merge commit and
+   publishes; by hand instead: `git switch main && git pull && git tag v1.2.3 && git push origin v1.2.3`.
+3. Watch the Release (or Publish image) run in the Actions tab.
 4. From somewhere that has never logged in to GitHub's registry, check it arrived:
    `docker pull ghcr.io/sovereignfs/sovereign:1.2.3`.
 
@@ -172,7 +187,7 @@ published at the same version in the same job because `suite.lock` pins it by th
 check treats them apart from the libraries above (a `bin` and not an exports map).
 
 The workflow **publishes nothing unless** the full CI passes on the tagged commit, the commit is on `main`, the tag matches the
-`version` of both `tools/cli` and `tools/create`, and every Sovereign package the app template names (`tools/create/src/versions.ts`)
+`version` of both `tools/cli` and `tools/create`, the version has a section in `tools/cli/CHANGELOG.md`, and every Sovereign package the app template names (`tools/create/src/versions.ts`)
 is on npm in its range (`pnpm template:check-published`): release those packages first. The order is the image, then `@sovereignfs/cli`, then `@sovereignfs/create`, because a
 repository made by `create@X` pins the image of toolkit X and cannot be set up until it exists. The image is signed by the build with
 the run's `GITHUB_TOKEN`; the packages are published with provenance by `NPM_TOKEN`, which only the last step holds.
@@ -182,8 +197,9 @@ and `RELEASE.version` in `tools/cli/src/release.ts`. A toolkit release also says
 starts a new instance on the newest published core in the supported range, never older than it (and on it when the registry cannot be
 asked), so a core release needs no toolkit release to be what new instances start on.
 
-To release: land the commit that sets those versions and `newestCore` on `develop`, merge the promotion pull request (`Release cli-vX.Y.Z`) into
-`main`, tag its merge commit `cli-vX.Y.Z`, push the tag, and watch the run.
+To release: land the commit that sets those versions, `newestCore` and the changelog section on `develop`, and merge the promotion pull
+request titled `Release cli-vX.Y.Z` into `main`; the Release run tags its merge commit and publishes (or tag it `cli-vX.Y.Z` by hand and
+push the tag).
 Then, from a machine that has never logged in to GitHub's registry, check `docker pull ghcr.io/sovereignfs/cli:X.Y.Z`, and that
 `npm create @sovereignfs@X.Y.Z` makes a repository that `./sv setup` can finish. On the first release, make the `cli` package public
 in the organization's Packages settings, and check the `@sovereignfs` scope on npm is yours.

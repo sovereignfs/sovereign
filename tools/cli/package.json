@@ -17,7 +17,8 @@
     "sv": "./dist/sv.mjs"
   },
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "engines": {
     "node": ">=24.15"

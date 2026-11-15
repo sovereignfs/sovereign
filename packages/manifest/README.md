@@ -1,5 +1,7 @@
 # @sovereignfs/manifest
 
+[![npm](https://img.shields.io/npm/v/@sovereignfs/manifest?label=npm)](https://www.npmjs.com/package/@sovereignfs/manifest) [![licence](https://img.shields.io/badge/licence-MPL--2.0-blue)](https://github.com/sovereignfs/sovereign/blob/main/packages/manifest/LICENSE)
+
 The manifest of an app on a [Sovereign](https://github.com/sovereignfs/sovereign) instance: what it provides so that the instance's
 toolkit (`sv`) can host it ([`contracts/app-manifest.md`](https://github.com/sovereignfs/sovereign/blob/main/contracts/app-manifest.md)).
 

@@ -1,5 +1,7 @@
 # @sovereignfs/storage
 
+[![npm](https://img.shields.io/npm/v/@sovereignfs/storage?label=npm)](https://www.npmjs.com/package/@sovereignfs/storage) [![licence](https://img.shields.io/badge/licence-MPL--2.0-blue)](https://github.com/sovereignfs/sovereign/blob/main/packages/storage/LICENSE)
+
 The files people upload to a [Sovereign](https://github.com/sovereignfs/sovereign) app, or to core: a folder per person, a quota per
 person, served only to them. The design is [RFC 0004](https://github.com/sovereignfs/sovereign/blob/main/docs/rfcs/0004-file-storage.md).
 

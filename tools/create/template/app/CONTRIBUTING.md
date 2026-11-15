@@ -40,16 +40,16 @@ commit; fix commit messages before they reach `develop`, which is never rewritte
 
 ## Continuous integration
 
-CI (`.github/workflows/ci.yml`: typecheck, the manifest check, the build) runs only where a change is about to reach what is
-released:
+CI runs only where a change is about to reach what is released:
 
 - on a pull request into `main` that is not a draft (the promotion from `develop`); marking a draft ready for review runs it;
-- on each release tag, before the image is built (`.github/workflows/publish.yml` calls it);
+- before each release is published (the publish workflow runs the checks on the tagged commit);
 - by hand, for any branch: **Actions → CI → Run workflow**.
 
 It never runs on a push to `develop` or a feature branch, nor on a pull request into `develop`, so runner time is not spent on every
-commit. Those are checked on your machine instead: `npm install` turns on the versioned hooks in `.githooks/`, and the pre-push hook runs
-`npm run verify` (typecheck and the manifest check) before anything is pushed. This is the CI strategy of every Sovereign app.
+commit. Those are checked on your machine instead: where the repository has versioned hooks in `.githooks/` (an app's `npm install` turns
+them on), the pre-push hook runs its checks (`npm run verify`) before anything is pushed. This is the CI strategy of every repository of
+the suite.
 
 ## Promoting `develop` into `main`
 
@@ -69,7 +69,7 @@ work either way.
 ## Shared files
 
 Some files are the same in every app of the suite and are written, not edited: `.github/workflows/promotion.yml`, `release.yml` and
-`sync-develop.yml`, `.github/repository.json`, `RELEASING.md`, `CLAUDE.md`, and the shared sections of this file and of `AGENTS.md`. They come
+`sync-develop.yml`, `.github/repository.json`, `CLAUDE.md`, and the shared sections of this file, `RELEASING.md` and `AGENTS.md`. They come
 from the template of the version of `@sovereignfs/create` that `package.json` pins:
 
 ```bash

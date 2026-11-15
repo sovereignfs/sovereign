@@ -18,7 +18,7 @@ export const END = '<!-- sovereign:shared:end -->';
 
 /**
  * The shared files: where each is in the template, whether it belongs at the repository's root (workflows and settings) or in the app's
- * folder (documents), and how it is compared: whole, by content (JSON), or only its shared section (`CONTRIBUTING.md`, `AGENTS.md`), so
+ * folder (documents), and how it is compared: whole, by content (JSON), or only its shared section (`CONTRIBUTING.md`, `RELEASING.md`, `AGENTS.md`), so
  * an app keeps its own sections of those around it.
  */
 export const MANAGED = [
@@ -27,7 +27,7 @@ export const MANAGED = [
   { file: '_github/workflows/sync-develop.yml', at: 'root', kind: 'text' },
   { file: '_github/repository.json', at: 'root', kind: 'json' },
   { file: 'CONTRIBUTING.md', at: 'app', kind: 'section' },
-  { file: 'RELEASING.md', at: 'app', kind: 'text' },
+  { file: 'RELEASING.md', at: 'app', kind: 'section' },
   { file: 'CLAUDE.md', at: 'app', kind: 'text' },
   { file: 'AGENTS.md', at: 'app', kind: 'section' },
 ] as const;

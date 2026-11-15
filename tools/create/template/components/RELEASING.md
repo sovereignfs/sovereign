@@ -1,6 +1,9 @@
 # Releasing **TITLE**
 
-Written by `npm create @sovereignfs app sync`; do not edit it here (CONTRIBUTING.md, "Shared files").
+The sections above and below the shared one are this repository's own (what is particular to how it publishes); the shared one is
+written by `npm create @sovereignfs app sync` and is the same in every repository of the suite.
+
+<!-- sovereign:shared:begin -->
 
 This repository releases several components, each with its own version, tag and changelog, listed in `sovereign.json`. A release is a
 promotion of `develop` into `main` that says which of them it publishes. There is no release script.
@@ -20,3 +23,5 @@ A version promoted without `Release` can be published later by pushing its tag o
 The promotion check and the release are workflows every repository of the suite shares, kept in
 [sovereignfs/sovereign](https://github.com/sovereignfs/sovereign/tree/main/.github/workflows) and run with the version of
 `@sovereignfs/create` that `sovereign.json` pins.
+
+<!-- sovereign:shared:end -->

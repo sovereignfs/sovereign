@@ -223,6 +223,14 @@ describe('the files of an app', () => {
     expect(read(target, 'CONTRIBUTING.md')).toContain('## Continuous integration');
   });
 
+  it('name the package in the @sovereignfs scope, private, so it claims nothing on npm', async () => {
+    const target = path.join(temp(), 'my-notes');
+    await writeApp(target, namesOf(target));
+    const manifest = JSON.parse(read(target, 'package.json')) as { name: string; private: boolean };
+    expect(manifest.name).toBe('@sovereignfs/my-notes');
+    expect(manifest.private).toBe(true);
+  });
+
   it('name the app in the Markdown, though the formatter writes the placeholder as bold', async () => {
     const target = path.join(temp(), 'my-notes');
     await writeApp(target, namesOf(target));

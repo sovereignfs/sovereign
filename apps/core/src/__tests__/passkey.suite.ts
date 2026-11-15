@@ -174,7 +174,9 @@ export function passkeySuite(createDatabase: () => Promise<TestDatabase>): void 
       const { jar } = await signUp(a);
       const reply = await addPasskey(a, jar, device({ userVerified: false }));
       expect(reply.status).toBe(400);
-      expect(reply.body.code).toBe('PASSKEY_NOT_UNLOCKED');
+      // better-auth refuses it first since 1.7.18 (it asks the WebAuthn library to require user verification); core's own check in
+      // the passkey hooks stays behind it, so either refusal is the one wanted.
+      expect(['FAILED_TO_VERIFY_REGISTRATION', 'PASSKEY_NOT_UNLOCKED']).toContain(reply.body.code);
       expect(await count('passkeys')).toBe(0);
     });
 
@@ -280,7 +282,8 @@ export function passkeySuite(createDatabase: () => Promise<TestDatabase>): void 
       dev.settings.userVerified = false;
       const { reply, jar } = await signInWithPasskey(a, dev);
       expect(reply.status).toBe(400);
-      expect(reply.body.code).toBe('PASSKEY_NOT_UNLOCKED');
+      // As when adding one: better-auth refuses it first, core's check stays behind it.
+      expect(['AUTHENTICATION_FAILED', 'PASSKEY_NOT_UNLOCKED']).toContain(reply.body.code);
       expect(jar.get(SESSION_COOKIE)).toBeUndefined();
       expect(await count('sessions')).toBe(0);
       expect((await stored())[0]?.counter).toBe(0);

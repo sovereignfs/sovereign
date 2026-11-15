@@ -11,3 +11,14 @@ npm create @sovereignfs my-instance
 
 Then `./sv setup`. `npm create @sovereignfs app my-notes` makes a Next.js app that an instance can host as it stands: it signs in through
 the instance's core, keeps its data in its own database, and builds into an image whose label is its manifest. See [`@sovereignfs/cli`](https://www.npmjs.com/package/@sovereignfs/cli). Licence: AGPL-3.0-or-later.
+
+Once an app exists, it keeps the files every app of the suite shares (its release workflows, repository settings, contributing and
+release guides, and the shared section of `AGENTS.md`) with the version of this package it pins:
+
+```bash
+npm create @sovereignfs app sync           # write them from this version's template
+npm create @sovereignfs app sync --check   # say which differ, and fail
+npm create @sovereignfs app settings apply # make GitHub's settings and rulesets match .github/repository.json
+```
+
+`app release check`, `app release notes` and `app commits check` are what its promotion check and release run.

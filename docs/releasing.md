@@ -226,6 +226,8 @@ The design system's Storybook is built in this repository and published to its o
 `sovereignfs/storybook`, whose GitHub Pages serves <https://sovereignfs.github.io/storybook/>.
 `.github/workflows/storybook.yml` does the publishing:
 
+- **It is published with the design system:** when a `Release` promotion publishes `ui-vX.Y.Z`, the release workflow
+  builds Storybook from that tag and puts it live once the packages are published.
 - Push a tag `sb-vX.Y.Z` on a commit of `main` (it need not match a package version; it marks the commit to put
   live), or start the workflow by hand from the Actions tab.
 - It pushes the static build to the `gh-pages` branch of `sovereignfs/storybook`, so the address

@@ -16,6 +16,8 @@ export type Plan = {
   cli: string | null;
   /** `<slug>-vX.Y.Z` for each npm package (publish.yml). */
   packages: string[];
+  /** `ui-vX.Y.Z` when the design system is released: its Storybook is published from that tag too (storybook.yml). */
+  storybook: string | null;
 };
 
 export type Checked = { release: boolean; targets: Target[]; problems: string[] };
@@ -94,11 +96,12 @@ export function checkTitle(
 
 /** What a merged `Release` promotion publishes, by workflow. */
 export function planOf(targets: readonly Target[]): Plan {
-  const plan: Plan = { image: null, cli: null, packages: [] };
+  const plan: Plan = { image: null, cli: null, packages: [], storybook: null };
   for (const { id, unit } of targets) {
     if (unit.slug === null) plan.image = id;
     else if (unit.slug === 'cli') plan.cli = id;
     else plan.packages.push(id);
+    if (unit.slug === 'ui') plan.storybook = id;
   }
   return plan;
 }

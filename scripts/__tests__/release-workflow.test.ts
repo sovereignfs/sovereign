@@ -65,8 +65,21 @@ describe('the release workflow', () => {
     expect(release).toContain('tag: ${{ matrix.tag }}');
     expect(release).toContain('matrix:\n        tag: ${{ fromJSON(needs.plan.outputs.packages) }}');
     expect(release).not.toMatch(/secrets\.[A-Z_]+/);
-    // Only the npm releases need the npm token, which they inherit.
-    expect(release.match(/secrets: inherit/g)).toHaveLength(2);
+    // The npm releases inherit the npm token, and Storybook its deploy token: nothing else is handed on.
+    expect(release.match(/secrets: inherit/g)).toHaveLength(3);
+  });
+
+  it('publishes the design system’s Storybook from the tag ui was released at, once the packages are out', () => {
+    expect(release).toContain('storybook: ${{ steps.plan.outputs.storybook }}');
+    expect(release).toMatch(
+      /storybook:\n {4}name: Storybook\n {4}needs: \[plan, packages\]\n {4}if: needs\.plan\.outputs\.storybook != '' && needs\.packages\.result == 'success'\n {4}uses: \.\/\.github\/workflows\/storybook\.yml/,
+    );
+    expect(release).toContain('ref: ${{ needs.plan.outputs.storybook }}');
+    const storybook = read('storybook.yml');
+    expect(storybook).toMatch(/workflow_call:\n {4}inputs:\n {6}ref:[\s\S]*?required: true/);
+    expect(storybook).toContain("tags: ['sb-v*']");
+    expect(storybook).toContain('ref: ${{ inputs.ref }}');
+    expect(storybook).not.toContain('${{ github.sha }}');
   });
 });
 

@@ -119,7 +119,9 @@ documents (`DESIGN.md`, `ROADMAP.md`, its changelog, its manifest) anywhere but 
 
 For the first slice, the one release model (E) with its workflows shared (C):
 
-- **All six one-package apps move in one pass,** since none can release until it does.
+- **One pilot first:** tusk, the reference app, gets the change as one draft pull request; once it is reviewed, what the review changes is
+  made in the shared pieces and the template, and the other five apps and fjord's `clients/web` follow, each its own draft pull request.
+  (This replaces moving all six in one pass.)
 - **The release workflows are shared from this repository** (`app-promotion.yml`, `app-release.yml`, `app-publish.yml`), called by each
   app at a **pinned commit** that Dependabot moves.
 - **Apps use this repository's changelog rule:** a version's section is written in the change that sets it, a test fails without it,
@@ -131,14 +133,20 @@ For the first slice, the one release model (E) with its workflows shared (C):
   and release. So the shared workflows take the directory an app is in and the prefix of its tag (`web-vX.Y.Z`), not only the
   repository's root and `vX.Y.Z`.
 
-## Still to settle
-
-- Whether `sync` is a command of `@sovereignfs/create` or a tool of its own (`@sovereignfs/app`), and whether `sync --check` fails an app's
-  CI or only warns.
+- **`sync` is a command of `@sovereignfs/create`:** `npm create @sovereignfs sync` writes an app's shared files from the template, and
+  `sync --check` reports when they have drifted. An app pins `@sovereignfs/create` among its development dependencies, so a sync writes what
+  that version's template holds, and Dependabot's move of the pin is where an app takes new shared files.
+- **`sync --check` fails an app's CI on drift** (assumed, not yet confirmed: recommended in review over a warning), unless the app lists the
+  file as its own (`"unmanaged": [...]` in its settings), so a local change is a decision written in the repository.
+- **Repository settings are code, never set in GitHub's interface, and no third-party app is used.** Each repository keeps its rulesets and
+  merge settings in a versioned file; `pnpm github:apply`, run under an owner's own `gh` sign-in, makes GitHub match it, and
+  `pnpm github:check` in CI, with the workflow's own token, fails when GitHub differs from it. No token is stored, since making one would be
+  a step in the interface.
 
 ## Changelog
 
-| Date       | Change                                                                                                                          |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-11-15 | First version.                                                                                                                  |
-| 2026-11-15 | The first slice settled in review: all six apps in one pass, shared workflows pinned by commit, fjord's `clients/web` included. |
+| Date       | Change                                                                                                                   |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------ |
+| 2026-11-15 | First version.                                                                                                           |
+| 2026-11-15 | The first slice settled in review: shared workflows pinned by commit, fjord's `clients/web` included.                    |
+| 2026-11-15 | A tusk pilot first; `sync` in `create`, with `--check`; repository settings as code, applied by an owner, checked in CI. |

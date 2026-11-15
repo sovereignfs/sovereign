@@ -19,6 +19,22 @@ npm. A version's section (`## [X.Y.Z] - date`, dated the day it is set) is writt
 test fails when a published thing's version has none. Each publish workflow reads that section before it publishes anything
 (`pnpm release:notes <tag>`), so a version without one is not released, and makes it the GitHub release's notes afterwards.
 
+## What carries a version
+
+Several things here have a version, each counted on its own; two of them being close in number means nothing.
+
+| What                                                                  | Version in                                  | Tag             | Released as                                           | How it moves                                                                                                                                                     |
+| --------------------------------------------------------------------- | ------------------------------------------- | --------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **The platform**: what an instance runs                               | root `package.json`                         | `vX.Y.Z`        | the image, `ghcr.io/sovereignfs/sovereign:X.Y.Z`      | a minor per completed roadmap task, a patch for a fix between tasks; `1.0.0` marks the public release (AGENTS.md)                                                |
+| **Core's app**                                                        | `apps/core/package.json`                    | none            | nothing on its own: it is inside the image            | semver by what changed in core; its `core-vX.Y.Z` commits record it. Which core an operator runs is the platform version.                                        |
+| **The toolkit**: `sv`, its image, `npm create @sovereignfs`           | `tools/cli` and `tools/create`, one version | `cli-vX.Y.Z`    | `@sovereignfs/cli`, `@sovereignfs/create`, two images | semver by what changed for operators and for the apps the template makes                                                                                         |
+| **A published package**: `ui`, `sdk`, `manifest`, `config`, `storage` | its own `package.json`                      | `<name>-vX.Y.Z` | `@sovereignfs/<name>` on npm                          | semver as a contract (AGENTS.md). `sdk` started at `2.0.0` after the legacy repository's `1.x`; `ui` has taken a minor for every feature since its first release |
+| **A private package**: `database`, `crypto`, `mailer`, …              | its own `package.json`                      | none            | nothing: bundled or used inside this repository       | semver by what changed, never published                                                                                                                          |
+
+A version is set on `develop` in the change that makes it, with its changelog section when it is published (below); it is
+released when a promotion titled with it under `Release` is merged, or its tag is pushed. Not every version is released: one can be
+promoted and tagged later.
+
 Three things are released from this repository: a package to npm, core's image to the GitHub Container Registry
 ([below](#releasing-the-image)), and the operator's toolkit, which is both ([below](#releasing-the-toolkit)).
 

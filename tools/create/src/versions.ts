@@ -36,4 +36,4 @@ export const CREATE_VERSION: string = pkg.version;
  * The commit of sovereignfs/sovereign whose shared workflows (`app-promotion.yml`, `app-release.yml`) an app calls. Moved here, by a
  * commit of its own, when they change; an app takes it with its next `npm create @sovereignfs sync`.
  */
-export const SHARED_WORKFLOWS_REF = '77ce151294d3c16b543d598686f93a6806e19b0f';
+export const SHARED_WORKFLOWS_REF = '137f3530974e075c0c42be2f16d3806e4732de96';

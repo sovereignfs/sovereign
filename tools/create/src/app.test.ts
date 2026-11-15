@@ -184,8 +184,39 @@ describe('the files of an app', () => {
       '${{ steps.image.outputs.name }}:${{ steps.version.outputs.version }}',
     );
     expect(workflow).toContain('ghcr.io/${GITHUB_REPOSITORY,,}');
+    // Every action from elsewhere is pinned to a commit; the app's own ci.yml is called by path.
     for (const action of workflow.matchAll(/uses: (\S+)/g))
+      if (!action[1]?.startsWith('./')) expect(action[1], 'an action').toMatch(/@[0-9a-f]{40}$/);
+  });
+
+  it('check only where a change reaches main: CI on pull requests into main and tags, a pre-push hook for the rest', async () => {
+    const target = path.join(temp(), 'my-notes');
+    const written = await writeApp(target, namesOf(target));
+    expect(written).toEqual(
+      expect.arrayContaining(['.github/workflows/ci.yml', '.githooks/pre-push']),
+    );
+    const ci = read(target, '.github/workflows/ci.yml');
+    expect(ci).toMatch(/on:\n {2}pull_request:\n {4}branches: \[main\]/);
+    expect(ci).not.toMatch(/^ {2}push:/m);
+    expect(ci).toContain('github.event.pull_request.draft == false');
+    for (const step of ['npm run typecheck', 'npm run manifest:check', 'npm run build'])
+      expect(ci).toContain(step);
+    for (const action of ci.matchAll(/uses: (\S+)/g))
       expect(action[1], 'an action').toMatch(/@[0-9a-f]{40}$/);
+    // A release tag runs the checks before anything is built.
+    const publish = read(target, '.github/workflows/publish.yml');
+    expect(publish).toContain('uses: ./.github/workflows/ci.yml');
+    expect(publish).toMatch(/image:\n {4}needs: validate/);
+    // The hook is executable, runs verify, and npm install turns it on.
+    const hook = path.join(target, '.githooks', 'pre-push');
+    expect(statSync(hook).mode & 0o111).not.toBe(0);
+    expect(read(target, '.githooks/pre-push')).toContain('npm run --silent verify');
+    const scripts = (
+      JSON.parse(read(target, 'package.json')) as { scripts: Record<string, string> }
+    ).scripts;
+    expect(scripts.verify).toBe('npm run typecheck && npm run manifest:check');
+    expect(scripts.prepare).toBe('git config core.hooksPath .githooks || true');
+    expect(read(target, 'CONTRIBUTING.md')).toContain('## Continuous integration');
   });
 
   it('name the app in the Markdown, though the formatter writes the placeholder as bold', async () => {

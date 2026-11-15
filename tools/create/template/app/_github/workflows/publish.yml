@@ -5,6 +5,8 @@ name: Publish
 #
 #   git tag v1.0.0 && git push origin v1.0.0
 #
+# Nothing is published unless the checks in ci.yml pass on the tagged commit and that commit is on `main`.
+#
 # The image carries the manifest as its label and is built to listen on the manifest's port, both made from sovereign.manifest.json by
 # @sovereignfs/manifest, so the manifest is written once.
 on:
@@ -17,7 +19,12 @@ permissions:
   packages: write
 
 jobs:
+  # The app's checks (ci.yml) on the tagged commit, before anything is built or published.
+  validate:
+    uses: ./.github/workflows/ci.yml
+
   image:
+    needs: validate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

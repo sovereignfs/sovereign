@@ -49,3 +49,29 @@ describe('the other workflows', () => {
     expect(config.match(/target-branch: 'develop'/g)).toHaveLength(ecosystems.length);
   });
 });
+
+describe('the app template’s CI', () => {
+  const read = (file: string) => readFileSync(path.join(root, file), 'utf8');
+  const template = read('tools/create/template/app/_github/workflows/ci.yml');
+  /** The triggers a workflow names, and the branches its pull requests run for. */
+  const triggers = (text: string) => {
+    const block = /^on:\n((?: {2}.*\n|\n)+)/m.exec(text)?.[1] ?? '';
+    return {
+      events: [...block.matchAll(/^ {2}([a-z_]+):/gm)].map((m) => m[1]).sort(),
+      branches: /pull_request:\n {4}branches: (\[[^\]]*\])/.exec(block)?.[1],
+    };
+  };
+
+  it('follows this repository’s strategy: the same triggers, for pull requests into main only', () => {
+    expect(triggers(template)).toEqual(triggers(workflow));
+    expect(triggers(template)).toEqual({
+      events: ['pull_request', 'workflow_call', 'workflow_dispatch'],
+      branches: '[main]',
+    });
+  });
+
+  it('skips a draft, as this repository’s does', () => {
+    expect(template).toContain('github.event.pull_request.draft == false');
+    expect(workflow).toContain('github.event.pull_request.draft == false');
+  });
+});

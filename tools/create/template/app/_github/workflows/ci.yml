@@ -1,0 +1,39 @@
+name: CI
+
+# The checks, run only where a change is about to reach what is released (CONTRIBUTING.md, "Continuous integration"): on pull requests
+# into `main` that are not drafts (the promotion from `develop`), on each release tag (publish.yml calls this first), and by hand
+# (Actions -> CI -> Run workflow, for any branch). Never on a push to `develop` or a feature branch, nor on a pull request into
+# `develop`: the pre-push hook (.githooks/pre-push) checks those on your machine, so runner time is not spent on every commit. This is
+# the CI strategy of every Sovereign app (docs/building-an-app.md §13 in sovereignfs/sovereign).
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+  workflow_call:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # A draft pull request runs nothing; marking it ready for review runs it.
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run manifest:check
+      - run: npm run build

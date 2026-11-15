@@ -18,6 +18,8 @@ const RENAMED: Record<string, string> = {
   // A published package may not carry a file called tsconfig.json.
   '_tsconfig.json': 'tsconfig.json',
   _github: '.github',
+  // Hooks are versioned here and turned on by the `prepare` script (CONTRIBUTING.md).
+  _githooks: '.githooks',
 };
 
 export type AppNames = { name: string; prefix: string; title: string };
@@ -75,6 +77,10 @@ export function appPackageJson(names: AppNames, port: number = DEFAULT_APP_PORT)
         start: `PORT=\${PORT:-${port}} node .next/standalone/server.js`,
         typecheck: 'tsc --noEmit',
         'manifest:check': 'sovereign-manifest check',
+        // What the pre-push hook runs: CI does not run for `develop` or a feature branch (CONTRIBUTING.md).
+        verify: 'npm run typecheck && npm run manifest:check',
+        // Turns the versioned hooks on for whoever installs; harmless where there is no repository (the image's build).
+        prepare: 'git config core.hooksPath .githooks || true',
       },
       dependencies: APP_DEPENDENCIES,
       devDependencies: APP_DEV_DEPENDENCIES,
@@ -110,7 +116,10 @@ export async function writeApp(
     let text = replace(await readFile(path.join(TEMPLATE, file), 'utf8'));
     // The template's manifest stays valid JSON (it is formatted and checked as such), so its port is a number and not a placeholder.
     if (out === 'sovereign.manifest.json') text = text.replace(/"port": \d+/, `"port": ${port}`);
-    await writeFile(target_, text);
+    // A hook runs only when it is executable.
+    await writeFile(target_, text, {
+      mode: out.startsWith(`.githooks${path.sep}`) ? 0o755 : 0o644,
+    });
     written.push(out);
   }
   await writeFile(path.join(target, 'package.json'), appPackageJson(names, port));

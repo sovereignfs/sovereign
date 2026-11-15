@@ -12,6 +12,7 @@ stands. It is a starting point: a notes page, to show the pieces. Change it into
 | `Dockerfile`                                          | One image, not root, on the manifest's port. Its label and port are made from the manifest when it is built                                  |
 | `.github/workflows/publish.yml`                       | On a `vX.Y.Z` tag of a commit on `main`, builds the image for amd64 and arm64 and publishes it to `ghcr.io/<owner>/<repository>`             |
 | `CONTRIBUTING.md`                                     | How work lands on `develop` and is released to `main` (below)                                                                                |
+| `.github/workflows/ci.yml`, `.githooks/pre-push`      | The checks: CI for pull requests into `main` and release tags only, the pre-push hook for everything else                                    |
 | `app/auth/[action]/route.ts`                          | Sign-in, sign-out, core's back-channel logout, and core's notice that a person deleted their account                                         |
 | `lib/auth.ts`, `lib/stores.ts`                        | The SDK's sign-in, and where it keeps sessions and refresh tokens (your database; tokens encrypted)                                          |
 | `app/api/health/route.ts`                             | Answers 200 when the database does                                                                                                           |

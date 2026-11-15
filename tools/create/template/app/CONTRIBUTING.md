@@ -35,6 +35,19 @@ Either way, a commit explains _why_, not only _what_: a subject under 72 charact
 body that says what was checked. Pull requests into `develop` are merged with **rebase and merge**, never squashed and never with a merge
 commit; fix commit messages before they reach `develop`, which is never rewritten.
 
+## Continuous integration
+
+CI (`.github/workflows/ci.yml`: typecheck, the manifest check, the build) runs only where a change is about to reach what is
+released:
+
+- on a pull request into `main` that is not a draft (the promotion from `develop`); marking a draft ready for review runs it;
+- on each release tag, before the image is built (`.github/workflows/publish.yml` calls it);
+- by hand, for any branch: **Actions → CI → Run workflow**.
+
+It never runs on a push to `develop` or a feature branch, nor on a pull request into `develop`, so runner time is not spent on every
+commit. Those are checked on your machine instead: `npm install` turns on the versioned hooks in `.githooks/`, and the pre-push hook runs
+`npm run verify` (typecheck and the manifest check) before anything is pushed. This is the CI strategy of every Sovereign app.
+
 ## Promoting `develop` into `main`
 
 1. Set the new version in `package.json` on `develop` (semver: a fix is a patch, a feature a minor, a break a major).

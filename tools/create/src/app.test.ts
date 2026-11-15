@@ -188,6 +188,13 @@ describe('the files of an app', () => {
       expect(action[1], 'an action').toMatch(/@[0-9a-f]{40}$/);
   });
 
+  it('name the app in the Markdown, though the formatter writes the placeholder as bold', async () => {
+    const target = path.join(temp(), 'my-notes');
+    await writeApp(target, namesOf(target));
+    expect(read(target, 'README.md').split('\n')[0]).toBe('# My Notes');
+    expect(read(target, 'README.md')).not.toContain('TITLE');
+  });
+
   it('keep what a sign-in needs: a conditional token write, encrypted tokens, and an owner in every delete', async () => {
     const target = path.join(temp(), 'my-notes');
     await writeApp(target, namesOf(target));

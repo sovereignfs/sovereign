@@ -99,6 +99,8 @@ export async function writeApp(
       .replaceAll('__PREFIX__', names.prefix)
       .replaceAll('__NAME__', names.name)
       .replaceAll('__TITLE__', names.title)
+      // Prettier, the repository's formatter, writes `__TITLE__` in the template's Markdown as `**TITLE**` (strong emphasis).
+      .replaceAll('**TITLE**', names.title)
       .replaceAll('__PORT__', String(port));
 
   for await (const file of walk(TEMPLATE)) {

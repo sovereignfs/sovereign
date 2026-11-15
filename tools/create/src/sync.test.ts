@@ -70,6 +70,17 @@ describe('sync --check', () => {
     expect(after).toContain('Never merge a pull request');
   });
 
+  it('keeps an app’s own sections of CONTRIBUTING.md, such as how to set it up', async () => {
+    const dir = await newApp();
+    const file = path.join(dir, 'CONTRIBUTING.md');
+    const ours = readFileSync(file, 'utf8').replace(
+      BEGIN,
+      `## Development setup\n\nRun pnpm install.\n\n${BEGIN}`,
+    );
+    writeFileSync(file, ours);
+    expect(states(await syncApp(dir, dir, { check: true }))['CONTRIBUTING.md']).toBe('same');
+  });
+
   it('says when AGENTS.md has no shared section, and sync adds one', async () => {
     const dir = await newApp();
     writeFileSync(path.join(dir, 'AGENTS.md'), '# AGENTS.md\n\nOur own rules.\n');

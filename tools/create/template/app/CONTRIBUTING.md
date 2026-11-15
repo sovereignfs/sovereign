@@ -2,7 +2,10 @@
 
 How work gets into `develop`, and from there into `main`. It is the workflow of
 [Sovereign](https://github.com/sovereignfs/sovereign/blob/main/CONTRIBUTING.md) itself, so an app made with
-`npm create @sovereignfs app` is worked on the same way.
+`npm create @sovereignfs app` is worked on the same way. The sections above and below the shared one are this app's own (how to set it
+up, how it is planned); the shared one is written by `npm create @sovereignfs app sync` and is the same in every app of the suite.
+
+<!-- sovereign:shared:begin -->
 
 ## Branches
 
@@ -66,7 +69,7 @@ work either way.
 ## Shared files
 
 Some files are the same in every app of the suite and are written, not edited: `.github/workflows/promotion.yml`, `release.yml` and
-`sync-develop.yml`, `.github/repository.json`, this file, `RELEASING.md`, `CLAUDE.md`, and the shared section of `AGENTS.md`. They come
+`sync-develop.yml`, `.github/repository.json`, `RELEASING.md`, `CLAUDE.md`, and the shared sections of this file and of `AGENTS.md`. They come
 from the template of the version of `@sovereignfs/create` that `package.json` pins:
 
 ```bash
@@ -93,3 +96,5 @@ npm create @sovereignfs app settings check   # say what differs, and fail
 `main` takes changes only by pull request, merged with a merge commit, and requires the Promotion check and the checks under
 `sovereign.requiredChecks` in `package.json`; `develop` can never be deleted or force-pushed, so merging a promotion (which would
 otherwise delete its head branch) leaves it in place. A change to the settings is a commit like any other, applied after it lands.
+
+<!-- sovereign:shared:end -->

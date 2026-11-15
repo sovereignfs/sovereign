@@ -74,6 +74,7 @@ recorded as an ADR in `docs/adrs/`. A documented "not now" is a valid outcome.
   what was run. They end with your agent's trailer — for Claude Code
   `Co-Authored-By: Claude Code <noreply@anthropic.com>` (model-agnostic — never a
   specific model name), for Codex `Co-Authored-By: Codex <noreply@openai.com>`.
+  The `commit-msg` hook refuses any other trailer at those addresses.
   One logical change per commit.
 - **PRs** target `main`, are created with `gh pr create --draft`, and are marked
   ready only on explicit instruction. Bodies describe what changed and why, cite

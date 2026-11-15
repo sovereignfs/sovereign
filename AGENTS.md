@@ -95,7 +95,10 @@ recorded as an ADR in `docs/adrs/`. A documented "not now" is a valid outcome.
   **The promotion pull request (`develop` → `main`) is merged with a merge commit**; its title
   and body come from `pnpm promotion:draft`: the versions it carries (`v0.98.0, ui-v0.97.0`, or
   `sdk-v2.2.0` alone, or the current `vX.Y.Z` when none changed), with `Release` in front only when
-  all of them will be tagged on merge (never for a version already tagged). Tags go on that merge commit (`CONTRIBUTING.md`, `docs/releasing.md`).
+  all of them will be tagged on merge (never for a version already tagged). **Merging a `Release`
+  promotion publishes it**: `release.yml` tags the merge commit and calls the publish workflows;
+  the Promotion title check (`pnpm release:check`) holds the title to the code first
+  (`CONTRIBUTING.md`, `docs/releasing.md`).
   **Fix commit messages before they reach `develop`**; never rewrite `develop` or `main`.
   **Never merge automatically** — wait for instruction or ask.
 - **Never commit or push without being asked.** Prepare changes in the working
@@ -121,6 +124,9 @@ recorded as an ADR in `docs/adrs/`. A documented "not now" is a valid outcome.
   `docs/specs/core-app.md`; an HTTP change updates `contracts/core-api/`; an env var
   change updates `.env.example`, the spec's variable table and `contracts/env.md`;
   every `process.env` read is declared in `.env.example`.
+- **A published thing's version is set with its changelog section** (`## [X.Y.Z] - date` in the
+  root, `tools/cli` or package `CHANGELOG.md`, Keep a Changelog), in the same commit: it becomes the
+  GitHub release's notes, a test fails without it, and no release is made without it.
 - **Version bumps are part of the PR**, semver by change type: `fix/` → patch,
   `feat/` → minor, breaking → major plus a `docs/upgrade.md` note, `chore/` /
   `docs/` → none unless a public API changed.
@@ -435,6 +441,8 @@ pnpm generate:icons              # regenerate the Icon components from scripts/i
 pnpm generate:theme-presets      # regenerate tokens/theme-presets.css from theme-presets.ts
 pnpm docs:check-links            # every relative Markdown link resolves
 pnpm promotion:draft             # the title and body of the develop → main pull request (--release <ids>|all)
+pnpm release:check --title "…"   # hold a promotion title to the code (what the Promotion title check runs)
+pnpm release:notes <tag>         # a version's changelog section, the GitHub release's notes
 pnpm verify:push                 # format:check, lint, typecheck, design:tokens:check, docs:check-links, test (the pre-push hook)
 ```
 

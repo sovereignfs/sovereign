@@ -126,12 +126,15 @@ what is new. Not every promotion publishes something.
    - **The body** lists every version that changed, core's and the private packages' included, says whether merging
      publishes each, and lists the commits by the part of the repository they touch (core, the toolkit, each
      package, contracts, documentation, the repository).
-2. Open the pull request from `develop` into `main` with that title and body, and merge it with a merge commit,
-   which takes the title (`Release v0.98.0, ui-v0.97.0`).
-3. To publish, tag the merge commit and push the tags named in the title: `vX.Y.Z` for the image, a
-   `<slug>-vX.Y.Z` for a package or the toolkit ([releasing](docs/releasing.md)). Tags are not branches, so `main`'s
-   protection does not stop them, and the publish workflows refuse a tag whose commit is not on `main`. A version
-   promoted without being tagged can be tagged later, on the merge commit that brought it.
+2. Open the pull request from `develop` into `main` with that title and body. Once it is ready for review, the
+   **Promotion title** check holds the title to the code (`pnpm release:check`): each version must be the one in its
+   `package.json`, and a `Release` title may name only published things not tagged yet. Editing the title runs it again.
+3. Merge it with a merge commit, which takes the title (`Release v0.98.0, ui-v0.97.0`). **Merging a `Release` promotion
+   publishes it**: the Release workflow checks the title once more, tags the merge commit with each version it names, and
+   runs the publish workflows, which publish the image, the toolkit or the package and make each version's GitHub release
+   from its changelog section ([releasing](docs/releasing.md)). A title without `Release` publishes nothing; a version
+   promoted that way can be published later by pushing its tag on the merge commit that brought it, which the publish
+   workflows accept as before (a tag is not a branch, so `main`'s protection does not stop it).
 
 Once the promotion is merged, `.github/workflows/sync-develop.yml` moves `develop` forward to the merge commit. It is a
 fast-forward, never a rewrite (`develop` is already in the merge commit's history), so `develop` is not shown as behind
@@ -168,7 +171,8 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>
   `pnpm typecheck`.
 - If your change touches behaviour, cite the relevant spec section in the PR
   description (e.g. `core-app §3.6.4`), and update the spec in the same PR.
-- Bump the relevant `package.json` version(s) in the same PR where required —
+- Bump the relevant `package.json` version(s) in the same PR where required, with the version's section in that
+  component's `CHANGELOG.md` when it is published (a test fails without it) —
   version-bump commit subjects use the same identifier as the release tag
   (`vX.Y.Z` for root, `<slug>-vX.Y.Z` for packages and apps). See the version
   bump conventions in [AGENTS.md](AGENTS.md).

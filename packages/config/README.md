@@ -1,5 +1,7 @@
 # @sovereignfs/config
 
+[![npm](https://img.shields.io/npm/v/@sovereignfs/config?label=npm)](https://www.npmjs.com/package/@sovereignfs/config) [![licence](https://img.shields.io/badge/licence-MPL--2.0-blue)](https://github.com/sovereignfs/sovereign/blob/main/packages/config/LICENSE)
+
 The environment variable convention for Sovereign core and the apps that run beside
 it: declare your settings once, read them in one place, and fail at start-up, naming
 the variable, when one is wrong. The convention itself is

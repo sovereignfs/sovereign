@@ -1,5 +1,7 @@
 # @sovereignfs/cli
 
+[![npm](https://img.shields.io/npm/v/@sovereignfs/cli?label=npm)](https://www.npmjs.com/package/@sovereignfs/cli) [![licence](https://img.shields.io/badge/licence-AGPL--3.0--or--later-blue)](https://github.com/sovereignfs/sovereign/blob/main/LICENSE)
+
 `sv`, the operator toolkit for [Sovereign](https://github.com/sovereignfs/sovereign): it deploys core, with or without apps, to one
 machine that has Docker, from an instance repository you keep in git.
 

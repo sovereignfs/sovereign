@@ -120,7 +120,7 @@ export async function writeApp(
 
 /**
  * Makes an app (operator-cli §2.2): a Next.js app that signs people in through core and meets the app manifest, so an instance can host it
- * as it stands. The files, `git init`, the lockfile, and the first commit. It does not install or build.
+ * as it stands. The files, `git init`, the lockfile, the first commit on `main`, and `develop` checked out. It does not install or build.
  */
 export async function createApp(
   request: { dir: string; port?: number },
@@ -163,7 +163,14 @@ export async function createApp(
     ['commit', '-m', 'Create the app'],
     'git needs a name and an email: git config --global user.name ... and user.email ..., then commit by hand.',
   );
+  // Work lands on `develop` and `main` takes release pull requests (CONTRIBUTING.md), so the app starts on `develop`.
+  await step(
+    'Making develop',
+    'git',
+    ['switch', '--create', 'develop'],
+    'Run git switch --create develop by hand.',
+  );
   io.err(
-    `Made ${names.name}. Next:\n  cd ${request.dir}\n  npm install && npm run dev   (http://localhost:${port})\n  npm run build\n  docker build -t ${names.name} .\nThen host it with ./sv app add ${names.name} --image <the image> in your instance. See README.md.`,
+    `Made ${names.name}, on the branch develop (CONTRIBUTING.md: main takes release pull requests). Next:\n  cd ${request.dir}\n  npm install && npm run dev   (http://localhost:${port})\n  npm run build\n  docker build -t ${names.name} .\nThen host it with ./sv app add ${names.name} --image <the image> in your instance. See README.md.`,
   );
 }

@@ -195,6 +195,29 @@ describe('the files of an app', () => {
     expect(read(target, 'README.md')).not.toContain('TITLE');
   });
 
+  it('release only from main: the workflow refuses a tag off main, and CONTRIBUTING.md says how work reaches it', async () => {
+    const target = path.join(temp(), 'my-notes');
+    await writeApp(target, namesOf(target));
+    const workflow = read(target, '.github/workflows/publish.yml');
+    expect(workflow).toContain('git merge-base --is-ancestor "$GITHUB_SHA" origin/main');
+    expect(workflow).toContain('fetch-depth: 0');
+    expect(workflow.indexOf('git merge-base')).toBeLessThan(
+      workflow.indexOf('docker/login-action'),
+    );
+    const contributing = read(target, 'CONTRIBUTING.md');
+    expect(contributing).toContain('# Contributing to My Notes');
+    for (const rule of [
+      'Directly on `develop`',
+      'A feature branch',
+      '**`vX.Y.Z`**',
+      '**`Release vX.Y.Z`** when that version',
+      'a merge commit',
+      'rebase and merge',
+    ])
+      expect(contributing, rule).toContain(rule);
+    expect(read(target, 'README.md')).toContain('[CONTRIBUTING.md](CONTRIBUTING.md)');
+  });
+
   it('keep what a sign-in needs: a conditional token write, encrypted tokens, and an owner in every delete', async () => {
     const target = path.join(temp(), 'my-notes');
     await writeApp(target, namesOf(target));
@@ -402,7 +425,12 @@ describe('npm create @sovereignfs app', () => {
       'npm install',
       'git add',
       'git commit',
+      'git switch',
     ]);
+    // The first commit is on main, and the app is left on develop, where work lands (CONTRIBUTING.md).
+    expect(ran[0]).toBe('git init --initial-branch=main');
+    expect(ran[4]).toBe('git switch --create develop');
+    expect(io.said.join('\n')).toContain('on the branch develop');
     expect(ran[1]).toContain('--package-lock-only');
     expect(ran[1]).toContain('--ignore-scripts');
     expect(io.said.join('\n')).toContain('./sv app add my-notes');

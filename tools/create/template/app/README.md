@@ -10,7 +10,8 @@ stands. It is a starting point: a notes page, to show the pieces. Change it into
 | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `sovereign.manifest.json`                             | The manifest, the one copy: what the instance needs to know to host it (its address paths, the scopes it asks for, its port and health path) |
 | `Dockerfile`                                          | One image, not root, on the manifest's port. Its label and port are made from the manifest when it is built                                  |
-| `.github/workflows/publish.yml`                       | On a `vX.Y.Z` tag, builds the image for amd64 and arm64 and publishes it to `ghcr.io/<owner>/<repository>`                                   |
+| `.github/workflows/publish.yml`                       | On a `vX.Y.Z` tag of a commit on `main`, builds the image for amd64 and arm64 and publishes it to `ghcr.io/<owner>/<repository>`             |
+| `CONTRIBUTING.md`                                     | How work lands on `develop` and is released to `main` (below)                                                                                |
 | `app/auth/[action]/route.ts`                          | Sign-in, sign-out, core's back-channel logout, and core's notice that a person deleted their account                                         |
 | `lib/auth.ts`, `lib/stores.ts`                        | The SDK's sign-in, and where it keeps sessions and refresh tokens (your database; tokens encrypted)                                          |
 | `app/api/health/route.ts`                             | Answers 200 when the database does                                                                                                           |
@@ -18,6 +19,13 @@ stands. It is a starting point: a notes page, to show the pieces. Change it into
 | `app/page.tsx`                                        | A page behind sign-in, using [`@sovereignfs/ui`](https://www.npmjs.com/package/@sovereignfs/ui)                                              |
 | `lib/files.ts`, `app/api/files/`, `app/upload.tsx`    | People's files, kept the suite's way: a folder and a quota for each person, served only to them (below)                                      |
 | `compose.yml`                                         | Runs the app and a PostgreSQL database for it on your own machine with Docker (below)                                                        |
+
+## Branches and releases
+
+Work lands on `develop`, committed directly or merged from a feature branch; `main` is what is released, protected, and changed only by a
+pull request from `develop` titled with its version, merged with a merge commit, which is tagged `vX.Y.Z` when that version is published. `npm create @sovereignfs app`
+made both branches and left you on `develop`. [CONTRIBUTING.md](CONTRIBUTING.md) has the whole workflow, and how to protect `main` on
+GitHub.
 
 ## Build and host it
 

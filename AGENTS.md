@@ -59,11 +59,16 @@ recorded as an ADR in `docs/adrs/`. A documented "not now" is a valid outcome.
   _Workstream legs_ (`docs/workstreams/`) are the exception: one leg = one
   branch = one PR = one review gate; run every task in the leg uninterrupted,
   verify, open a draft PR, stop. One version bump per leg.
+- **Two branches: `develop` is where work lands, `main` is what is released**
+  (`CONTRIBUTING.md`, "Branches"). `main` is protected: nothing is pushed to it;
+  it changes only through a `Release vX.Y.Z` pull request from `develop`. A change
+  reaches `develop` one of two ways, as the developer says: **committed directly on
+  `develop`**, or **on a feature branch merged into `develop` by pull request**.
+  When unsure which, ask.
 - **Tasks are sequenced** — each depends on the ones its Dependencies line names;
   tasks tagged `[parallel]` can run alongside others whose dependencies are met.
-- **Branch per task, cut from an up-to-date `main`** (`git switch main && git pull`).
-  Name by change type: `feat/<slug>`, `fix/<slug>`, `docs/<slug>`, `chore/<slug>`.
-  _(Post-v1.0.0, `main` becomes production and `dev` the integration branch.)_
+- **A feature branch is cut from an up-to-date `develop`** (`git switch develop && git pull`),
+  one per task. Name by change type: `feat/<slug>`, `fix/<slug>`, `docs/<slug>`, `chore/<slug>`.
 - **Epic task IDs (`4.3`) are permanent** — use them in doc cross-references and
   dependency lists, never in branch names, commit messages, or PR titles/bodies.
   **Roadmap versions are volatile** — look them up in `ROADMAP.md`, never
@@ -76,13 +81,15 @@ recorded as an ADR in `docs/adrs/`. A documented "not now" is a valid outcome.
   specific model name), for Codex `Co-Authored-By: Codex <noreply@openai.com>`.
   The `commit-msg` hook refuses any other trailer at those addresses.
   One logical change per commit.
-- **PRs** target `main`, are created with `gh pr create --draft`, and are marked
+- **PRs** target `develop`, are created with `gh pr create --draft --base develop`, and are marked
   ready only on explicit instruction. Bodies describe what changed and why, cite
   spec sections (`core-app §3.6.4`), carry no task numbers, and end with your
   agent's footer (`🤖 Generated with [Claude Code](https://claude.com/claude-code)`
   or `🤖 Generated with [Codex](https://developers.openai.com/codex)`).
-- **Merge strategy: rebase and merge** — never squash, never a merge commit.
-  **Fix commit messages before merging**; never rewrite `main`.
+- **Merge strategy: rebase and merge into `develop`** — never squash, never a merge commit.
+  **The release pull request (`develop` → `main`, titled `Release vX.Y.Z`) is merged with a
+  merge commit**, which is the release commit the tags go on (`docs/releasing.md`).
+  **Fix commit messages before they reach `develop`**; never rewrite `develop` or `main`.
   **Never merge automatically** — wait for instruction or ask.
 - **Never commit or push without being asked.** Prepare changes in the working
   tree and stop.
@@ -120,7 +127,8 @@ recorded as an ADR in `docs/adrs/`. A documented "not now" is a valid outcome.
     needs at least a minor bump plus a migration note (`docs/upgrade.md`), and
     for `ui` a major bump from `1.0.0` (`docs/specs/design-system.md` §4).
   - Tags/commit subjects: root `vX.Y.Z`; packages and apps `<slug>-vX.Y.Z`
-    (`ui-`, `bridge-`, `core-`, …).
+    (`ui-`, `bridge-`, `core-`, …). Bump commits land on `develop`; the tags go on
+    the release merge commit on `main`.
 
 ## Naming conventions
 

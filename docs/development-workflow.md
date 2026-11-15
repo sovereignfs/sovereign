@@ -88,7 +88,7 @@ Run `/sv-task-start`. The skill:
 
 1. Takes the task the developer specifies (epic task ID or description) or the
    workstream leg ("workstream 0001 leg 2") — there is no "next" pointer.
-2. Confirms `main` is clean and pulls latest; for a leg, confirms the previous
+2. Confirms `develop` is clean and pulls latest; for a leg, confirms the previous
    leg's PR is merged and the leg's "Do not proceed if" clause doesn't hold.
 3. Looks up the epic file via `docs/epics/README.md`, then extracts the full
    task block (Goal → Deliverables → Spec reference → Review checklist) — for
@@ -96,8 +96,9 @@ Run `/sv-task-start`. The skill:
 4. Writes **`CURRENT_TASK.md`** in the repo root — the full task in one file
    (`**Mode:** task` or `**Mode:** leg`), no further navigation needed.
 5. Reads the spec sections and any RFC the task references.
-6. Prints a summary and creates the branch (`feat/<workstream-slug>-leg-<n>` for
-   a leg).
+6. Prints a summary and creates the feature branch from `develop`
+   (`feat/<workstream-slug>-leg-<n>` for a leg) — or, when the developer works
+   directly on `develop` (`CONTRIBUTING.md`, "Branches"), stays on `develop`.
 
 ### During implementation
 
@@ -163,7 +164,7 @@ Status values, used identically in `ROADMAP.md` rows and epic headings:
 | ------ | ------------------------------------------------------------------------------------ |
 | 📋     | Planned — not started                                                                |
 | ⏳     | In progress — a branch/PR is open for it                                             |
-| ✅     | Complete — merged to `main`                                                          |
+| ✅     | Complete — landed on `develop`                                                       |
 | 🚧     | Parked — deliberately paused; the heading names what must be re-read before resuming |
 | ❌     | Rejected — decided against, kept for the record; never delete the row or heading     |
 

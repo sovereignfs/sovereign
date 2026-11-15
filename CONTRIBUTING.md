@@ -1,6 +1,6 @@
 # Contributing to Sovereign
 
-Thank you for helping. This guide covers how work gets into `main`. Agents
+Thank you for helping. This guide covers how work gets into `develop`, and from there into `main`. Agents
 follow the same rules, written for them in [AGENTS.md](AGENTS.md).
 
 ## Contents
@@ -79,12 +79,47 @@ land.
 
 ## Branching and commits
 
-Always branch from an up-to-date `main`:
+### Branches
 
-```bash
-git switch main && git pull
-git switch -c feat/your-feature-name
-````
+| Branch    | What it is                                                                                                                                                                                       |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `develop` | The working branch. Every change lands here first.                                                                                                                                               |
+| `main`    | What is released. It is **protected**: a change reaches it only through a release pull request from `develop`, never by a push (an administrator may bypass this in an emergency, and says so). |
+
+There are two ways to get a change into `develop`; pick per change:
+
+1. **Directly on `develop`.** Commit on an up-to-date `develop` and push it. CI runs on every push to
+   `develop`. Suits small, low-risk changes by a maintainer.
+
+   ```bash
+   git switch develop && git pull
+   # edit, commit
+   git push origin develop
+   ```
+
+2. **A feature branch.** Branch from an up-to-date `develop`, open a draft pull request **into `develop`**, and
+   merge it with **rebase and merge** once it is reviewed. Suits anything that wants review, and every outside
+   contribution.
+
+   ```bash
+   git switch develop && git pull
+   git switch -c feat/your-feature-name
+   ```
+
+The commit, version-bump and pull request rules below are the same either way.
+
+### Releasing: `develop` into `main`
+
+When `develop` is ready to release:
+
+1. Open a pull request from `develop` into `main`, titled **`Release vX.Y.Z`**, where `X.Y.Z` is the root
+   `package.json` version on `develop`. Its body lists what the release carries.
+2. Merge it with **a merge commit**, the one place a merge commit is used. That merge commit, titled
+   `Release vX.Y.Z`, is the release commit; `develop` is never rewritten, so it stays an ancestor of `main` and the
+   next release pull request shows only what is new.
+3. Tag the merge commit and push the tags: `vX.Y.Z` for the image, plus a `<slug>-vX.Y.Z` tag for each package or
+   the toolkit whose version changed ([releasing](docs/releasing.md)). Tags are not branches, so `main`'s
+   protection does not stop them, and the publish workflows refuse a tag whose commit is not on `main`.
 
 **Branch prefixes:**
 
@@ -94,8 +129,6 @@ git switch -c feat/your-feature-name
 | `fix/`   | Bug fixes                                       |
 | `docs/`  | Documentation only                              |
 | `chore/` | Tooling, scaffolding, dependencies, maintenance |
-
-_(After v1.0.0, `main` becomes production and `dev` the integration branch.)_
 
 **Commit messages** should explain _why_, not just _what_. Write the subject as
 `type(scope): summary` — for example `feat(ui): add a currency's own fraction
@@ -122,16 +155,16 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>
   version-bump commit subjects use the same identifier as the release tag
   (`vX.Y.Z` for root, `<slug>-vX.Y.Z` for packages and apps). See the version
   bump conventions in [AGENTS.md](AGENTS.md).
-- PRs are merged with **rebase and merge** — no squash, no merge commits.
-- Fix commit messages before the PR is merged; correcting them after means
-  rewriting `main`.
+- PRs into `develop` are merged with **rebase and merge** — no squash, no merge commits. The release pull
+  request into `main` is the one exception: it is merged with a merge commit (above).
+- Fix commit messages before they reach `develop` (before the PR is merged, or before you push); correcting
+  them after means rewriting `develop`, which is never done.
 
 ### Continuous integration
 
-CI (`.github/workflows/ci.yml`) runs on every pull request targeting `main`, and
-on demand: **Actions → CI → Run workflow** checks any branch, `main` included.
-There is no push-to-`main` trigger — `main` is meant to be gated by the pull
-request.
+CI (`.github/workflows/ci.yml`) runs on every pull request targeting `develop` or `main`, on every push to
+either, and on demand: **Actions → CI → Run workflow** checks any branch. A push is classified by the files it
+changed, like a pull request.
 
 A first job, **Classify changes**, runs `scripts/ci-changes.ts` over the files the
 pull request touches and decides which of the others run. A change to
@@ -150,9 +183,9 @@ everything.
 | Database (3 legs) | `pnpm test:db` against sqld, a SQLite file and PostgreSQL            |
 | Dependency audit  | `pnpm audit --audit-level=high`, when a manifest or lockfile changes |
 
-CodeQL (`codeql.yml`) also runs on pushes to `main`, on pull requests, and weekly;
+CodeQL (`codeql.yml`) also runs on pushes to `develop` and `main`, on pull requests, and weekly;
 `dependency-audit.yml` repeats the audit against `main` weekly. Dependabot opens
-weekly pull requests for dependencies and for the pinned workflow actions.
+weekly pull requests into `develop` for dependencies and for the pinned workflow actions.
 
 **While a PR is a draft, all jobs are skipped** — marking it _Ready for review_
 runs them. To skip CI on demand you have three options:
@@ -227,3 +260,4 @@ its current and future licences (including commercial use).
 **How to sign:** Read this document in full, then tick the CLA checkbox in the
 PR template when you open your pull request. That checkbox is your agreement —
 no separate form or signature is required at this stage.
+````

@@ -33,9 +33,10 @@ Run it manually any time with `sv-security-check`.
    summary and, for anything unclear, `docs/architecture-rules.md` (the full
    detail, including the reason for each rule).
 
-2. **Scope the diff:** `git diff main...HEAD --name-only` (use the assigned
-   base if not `main`). For each sensitive file, read
-   `git diff main...HEAD -- <file>`.
+2. **Scope the diff:** `git diff origin/develop...HEAD --name-only` (use the assigned
+   base if not `develop`; it also covers commits made directly on `develop` and not yet
+   pushed). For each sensitive file, read
+   `git diff origin/develop...HEAD -- <file>`.
 
 3. **Check these rules explicitly:**
 

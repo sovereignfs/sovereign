@@ -5,6 +5,14 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.12.0; earlier versions are in the repository's
 history and tags.
 
+## [0.12.1] - 2026-11-15
+
+### Fixed
+
+- Every word `sv` sends to the server over SSH is quoted for the server's shell, so a word with a space, a quote, `;`, `$` or a
+  backtick reaches the server's program as one argument and nothing in it runs (security review, Phase 2).
+- `sv logs` refuses a name that is not core, the proxy, the database, `deploy` or an app before asking the server.
+
 ## [0.12.0] - 2026-11-15
 
 ### Added

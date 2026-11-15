@@ -27,6 +27,10 @@ describe('the promotion title check', () => {
     expect(promotion).toContain("github.event.pull_request.head.ref == 'develop'");
   });
 
+  it('checks the trailers of every commit the promotion brings', () => {
+    expect(promotion).toContain('run: pnpm -s commits:check "$BASE_SHA..$HEAD_SHA"');
+  });
+
   it('checks the title from the environment, never pasted into the script', () => {
     expect(promotion).toContain('PR_TITLE: ${{ github.event.pull_request.title }}');
     expect(promotion).toContain('run: pnpm -s release:check');

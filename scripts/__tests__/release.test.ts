@@ -76,6 +76,13 @@ describe('a changelog section', () => {
     expect(changelogSection(text, '0.11.0')).toBe('- Older.');
   });
 
+  it('treats the version as text, not as a pattern', () => {
+    expect(changelogSection(text, '0.12.')).toBeUndefined();
+    expect(changelogSection(text, '0.1.0')).toBeUndefined();
+    expect(changelogSection(text, '.*')).toBeUndefined();
+    expect(changelogSection('## [1x2y3] - 2026-01-01\n\n- a', '1.2.3')).toBeUndefined();
+  });
+
   it('is missing for a version with no heading, and does not match a longer version', () => {
     expect(changelogSection(text, '0.13.0')).toBeUndefined();
     expect(changelogSection(text, '0.1.0')).toBeUndefined();

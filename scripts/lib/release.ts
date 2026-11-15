@@ -106,8 +106,9 @@ export function planOf(targets: readonly Target[]): Plan {
 /** The section of a Keep a Changelog file for one version, without its heading; undefined when it has none. */
 export function changelogSection(text: string, version: string): string | undefined {
   const lines = text.split('\n');
-  const heading = new RegExp(`^## \\[${version.replace(/\./g, '\\.')}\\]`);
-  const start = lines.findIndex((line) => heading.test(line));
+  // A plain prefix, never a pattern made from the version, which comes from the command line.
+  const heading = `## [${version}]`;
+  const start = lines.findIndex((line) => line.startsWith(heading));
   if (start === -1) return undefined;
   const rest = lines.slice(start + 1);
   const end = rest.findIndex((line) => /^## /.test(line));

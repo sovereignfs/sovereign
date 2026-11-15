@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Exec } from './create.js';
 import { apply, differences, readLive, type Live } from './settings.js';
-import type { RepositoryFile } from './settings-file.js';
+import type { RepositoryFile, Ruleset } from './settings-file.js';
 
 const file = JSON.parse(
   readFileSync(new URL('../template/app/_github/repository.json', import.meta.url), 'utf8'),
@@ -29,7 +29,7 @@ describe('the differences', () => {
     if (pr?.parameters) pr.parameters.allowed_merge_methods = ['merge', 'rebase'];
     live.rulesets.pop();
     live.rulesets.push({
-      ...structuredClone(file.rulesets[1] as never),
+      ...structuredClone(file.rulesets[1] as Ruleset),
       name: 'made in the interface',
       id: 9,
     });
@@ -85,7 +85,7 @@ describe('apply', () => {
     const pr = live.rulesets[0]?.rules.find((rule) => rule.type === 'pull_request');
     if (pr?.parameters) pr.parameters.allowed_merge_methods = ['merge', 'rebase'];
     live.rulesets[1] = {
-      ...structuredClone(file.rulesets[1] as never),
+      ...structuredClone(file.rulesets[1] as Ruleset),
       name: 'made in the interface',
       id: 9,
     };

@@ -361,7 +361,7 @@ promises: `docs/specs/design-system.md`. How to use it: `docs/design-system.md`.
 
 ## Tech stack
 
-Next.js — latest stable, 16.4.3 at the time of writing (App Router) ·
+Next.js — latest stable, 16.4.6 at the time of writing (App Router) ·
 TypeScript 6 · Turborepo + pnpm workspaces ·
 better-auth 1.7 + `@better-auth/oauth-provider` · Drizzle ORM (sqld, PostgreSQL,
 SQLite file) · nodemailer SMTP (`packages/mailer`) · CSS Modules + CSS custom

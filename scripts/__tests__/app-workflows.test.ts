@@ -70,3 +70,18 @@ describe('the app release', () => {
     expect(release).toContain("if: steps.plan.outputs.tag != ''");
   });
 });
+
+describe('the commit apps call the shared workflows at', () => {
+  it('holds the shared workflows as they are now, so a new or synced app calls these and not older ones', async () => {
+    const { execFileSync } = await import('node:child_process');
+    const git = (...args: string[]) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
+    // A shallow clone (CI's checkout) may not have the commit; the check is for where the history is.
+    if (git('rev-parse', '--is-shallow-repository').trim() === 'true') return;
+    const versions = readFileSync(path.join(root, 'tools/create/src/versions.ts'), 'utf8');
+    const ref = /SHARED_WORKFLOWS_REF = '([0-9a-f]{40})'/.exec(versions)?.[1];
+    expect(ref, 'SHARED_WORKFLOWS_REF').toBeDefined();
+    for (const file of ['app-promotion.yml', 'app-release.yml']) {
+      expect(git('show', `${ref}:.github/workflows/${file}`), `${file} at ${ref}`).toBe(read(file));
+    }
+  });
+});

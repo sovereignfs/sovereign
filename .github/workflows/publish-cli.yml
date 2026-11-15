@@ -80,6 +80,10 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache: 'false'
+      # An app made by `create` installs the Sovereign packages its template names from npm, so each must be published in range
+      # before anything of this release is: otherwise every new app fails to install (docs/releasing.md).
+      - name: Check the app template's packages are on npm
+        run: pnpm template:check-published
       # The image holds the bundled toolkit, which is built here and copied in.
       - run: pnpm --filter @sovereignfs/cli build
 

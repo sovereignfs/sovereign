@@ -163,8 +163,9 @@ published at the same version in the same job because `suite.lock` pins it by th
 `.github/workflows/publish-cli.yml` does the rest. They are AGPL-3.0-or-later and are run, not imported, which is why the package
 check treats them apart from the libraries above (a `bin` and not an exports map).
 
-The workflow **publishes nothing unless** the full CI passes on the tagged commit, the commit is on `main`, and the tag matches the
-`version` of both `tools/cli` and `tools/create`. The order is the image, then `@sovereignfs/cli`, then `@sovereignfs/create`, because a
+The workflow **publishes nothing unless** the full CI passes on the tagged commit, the commit is on `main`, the tag matches the
+`version` of both `tools/cli` and `tools/create`, and every Sovereign package the app template names (`tools/create/src/versions.ts`)
+is on npm in its range (`pnpm template:check-published`): release those packages first. The order is the image, then `@sovereignfs/cli`, then `@sovereignfs/create`, because a
 repository made by `create@X` pins the image of toolkit X and cannot be set up until it exists. The image is signed by the build with
 the run's `GITHUB_TOKEN`; the packages are published with provenance by `NPM_TOKEN`, which only the last step holds.
 

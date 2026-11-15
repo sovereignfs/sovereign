@@ -26,6 +26,7 @@
     "docs:check-links": "tsx scripts/check-doc-links.ts",
     "design:tokens:check": "tsx scripts/design-tokens-check.ts",
     "packages:check": "tsx scripts/check-packages.ts",
+    "template:check-published": "tsx scripts/check-template-published.ts",
     "generate:icons": "tsx scripts/generate-icons.ts && prettier --write packages/ui/src/components/Icon/icons",
     "generate:theme-presets": "tsx scripts/generate-theme-presets-css.ts && prettier --write packages/ui/src/tokens/theme-presets.css",
     "verify:push": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm design:tokens:check && pnpm docs:check-links && pnpm test",

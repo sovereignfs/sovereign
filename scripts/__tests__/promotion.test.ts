@@ -61,6 +61,14 @@ describe('the promotion body', () => {
     expect(body).toContain('| `core-v0.64.0` | `0.63.0` | never (not published) |');
   });
 
+  it('marks a version released now that was promoted before', () => {
+    const body = promotionBody([change('cli', '0.12.0', '0.12.0')], [], new Set(['cli-v0.12.0']));
+    expect(body).toContain('| `cli-v0.12.0` | unchanged (promoted before) | yes |');
+    expect(
+      promotionTitle([change('cli', '0.12.0', '0.12.0')], '0.97.0', new Set(['cli-v0.12.0'])),
+    ).toBe('Release cli-v0.12.0');
+  });
+
   it('groups commits by the part of the repository most of their files are in', () => {
     const body = promotionBody(
       [],

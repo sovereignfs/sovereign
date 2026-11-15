@@ -122,7 +122,8 @@ what is new. Not every promotion publishes something.
      platform's current `vX.Y.Z`.
    - **It starts with `Release`** only when every version it names will be tagged and published once it is merged:
      say which with `--release v0.98.0,ui-v0.97.0`, or `--release all`. `Release` is for versions this promotion
-     will tag, never one already tagged: the command refuses those.
+     will tag, never one already tagged: the command refuses those. A version promoted earlier without `Release`, and so
+     never tagged, can be named too: it is released by this promotion.
    - **The body** lists every version that changed, core's and the private packages' included, says whether merging
      publishes each, and lists the commits by the part of the repository they touch (core, the toolkit, each
      package, contracts, documentation, the repository).

@@ -8,12 +8,15 @@
  */
 import { execFileSync } from 'node:child_process';
 import {
+  UNITS,
   changedVersions,
   identifier,
   promotionBody,
   promotionTitle,
+  type Change,
   type Commit,
 } from './lib/promotion';
+import { checkTitle } from './lib/release';
 
 const git = (...args: string[]) => execFileSync('git', args, { encoding: 'utf8' });
 
@@ -28,35 +31,40 @@ const versionOn = (ref: 'main' | 'develop', dir: string): string | undefined => 
   }
 };
 
-const changes = changedVersions(versionOn);
+const changed = changedVersions(versionOn);
 const platform = versionOn('develop', '.') ?? '0.0.0';
+const isTagged = (id: string) => git('tag', '--list', id).trim() !== '';
 
 const flag = process.argv.indexOf('--release');
 const asked = flag === -1 ? [] : (process.argv[flag + 1] ?? '').split(',').filter(Boolean);
-const released = new Set(
-  asked.includes('all')
-    ? changes
-        .filter(({ unit }) => unit.published)
-        .map(({ unit, to }) => identifier(unit.slug, to))
-        .filter((id) => git('tag', '--list', id).trim() === '')
-    : asked,
+const releasedIds = asked.includes('all')
+  ? changed
+      .filter(({ unit }) => unit.published)
+      .map(({ unit, to }) => identifier(unit.slug, to))
+      .filter((id) => !isTagged(id))
+  : asked;
+
+// --release accepts what the Promotion title check accepts (pnpm release:check): a published version this code has, not tagged yet,
+// whether or not it changed since the last promotion (one promoted before without Release can be released now).
+const checked = checkTitle(
+  `Release ${releasedIds.join(', ')}`,
+  (dir) => versionOn('develop', dir),
+  isTagged,
 );
-const known = new Set(changes.map(({ unit, to }) => identifier(unit.slug, to)));
-for (const id of released) {
-  if (!known.has(id) && id !== identifier(null, platform)) {
-    console.error(`promotion:draft - ${id} is not a version this promotion changes.`);
-    process.exit(1);
-  }
+if (releasedIds.length > 0 && checked.problems.length > 0) {
+  console.error('promotion:draft - --release names a version this promotion cannot release:\n');
+  for (const problem of checked.problems) console.error(`  ${problem}`);
+  process.exit(1);
 }
-// `Release` is for versions this promotion will tag once merged, never one already tagged.
-for (const id of released) {
-  if (git('tag', '--list', id).trim() !== '') {
-    console.error(
-      `promotion:draft - ${id} is already tagged; --release names only versions this promotion will tag.`,
-    );
-    process.exit(1);
-  }
+const released = new Set(releasedIds);
+
+// A released version that did not change since the last promotion is listed too, as unchanged.
+const changes: Change[] = [...changed];
+for (const { unit, version } of releasedIds.length > 0 ? checked.targets : []) {
+  if (!changes.some((change) => change.unit === unit))
+    changes.push({ unit, from: version, to: version });
 }
+changes.sort((a, b) => UNITS.indexOf(a.unit) - UNITS.indexOf(b.unit));
 
 const shas = git('rev-list', '--no-merges', '--reverse', `${refs.main}..${refs.develop}`)
   .split('\n')

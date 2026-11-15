@@ -117,7 +117,9 @@ export function promotionBody(
     for (const { unit, from, to } of changes) {
       const id = identifier(unit.slug, to);
       const publish = !unit.published ? 'never (not published)' : released.has(id) ? 'yes' : 'no';
-      lines.push(`| \`${id}\` | ${from === undefined ? 'new' : `\`${from}\``} | ${publish} |`);
+      const was =
+        from === undefined ? 'new' : from === to ? 'unchanged (promoted before)' : `\`${from}\``;
+      lines.push(`| \`${id}\` | ${was} | ${publish} |`);
     }
   }
   lines.push('', '## Changes', '');

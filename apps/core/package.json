@@ -3,7 +3,7 @@
   "version": "0.63.0",
   "private": true,
   "type": "module",
-  "description": "Sovereign core \u2014 the sign-in server, Console and launcher.",
+  "description": "Sovereign core — the sign-in server, Console and launcher.",
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "dev": "next dev",
@@ -26,7 +26,7 @@
     "@sovereignfs/ui": "workspace:*",
     "better-auth": "^1.7.13",
     "drizzle-orm": "catalog:",
-    "jose": "^6.2.13",
+    "jose": "^6.2.17",
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",

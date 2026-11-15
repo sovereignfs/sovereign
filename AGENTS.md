@@ -65,6 +65,11 @@ recorded as an ADR in `docs/adrs/`. A documented "not now" is a valid outcome.
   reaches `develop` one of two ways, as the developer says: **committed directly on
   `develop`**, or **on a feature branch merged into `develop` by pull request**.
   When unsure which, ask.
+- **CI runs only for `main`**: on pull requests into `main` that are not drafts, on release tags
+  and by hand; never for `develop`, a feature branch or a pull request into `develop`, which the
+  pre-push hook checks locally. CodeQL also scans each push to `main` (`CONTRIBUTING.md`,
+  "Continuous integration"). Every app keeps the same strategy (`docs/building-an-app.md` §13);
+  the app template ships it and a test holds the template to it.
 - **Tasks are sequenced** — each depends on the ones its Dependencies line names;
   tasks tagged `[parallel]` can run alongside others whose dependencies are met.
 - **A feature branch is cut from an up-to-date `develop`** (`git switch develop && git pull`),

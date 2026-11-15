@@ -1,5 +1,5 @@
 /**
- * CI and CodeQL run only for `main`: its pushes, and pull requests into it that are not drafts. `develop` and feature branches are
+ * CI runs only for pull requests into `main` that are not drafts (and release tags); CodeQL also scans each push to `main`. `develop` and feature branches are
  * checked by the pre-push hook, and by hand when wanted, so runner time is not spent on every commit.
  */
 import { readFileSync } from 'node:fs';
@@ -11,10 +11,9 @@ const root = fileURLToPath(new URL('../..', import.meta.url));
 const workflow = readFileSync(path.join(root, '.github/workflows/ci.yml'), 'utf8');
 
 describe('the CI workflow', () => {
-  it('runs on pushes to main and pull requests into main only, never for develop', () => {
-    expect(workflow).toMatch(
-      /on:\n {2}push:\n {4}branches: \[main\]\n {2}pull_request:\n {4}branches: \[main\]/,
-    );
+  it('runs on pull requests into main only: not on a push, never for develop', () => {
+    expect(workflow).toMatch(/on:\n {2}pull_request:\n {4}branches: \[main\]/);
+    expect(workflow).not.toMatch(/^ {2}push:/m);
     expect(workflow).not.toMatch(/branches: \[[^\]]*develop/);
   });
 
@@ -26,8 +25,8 @@ describe('the CI workflow', () => {
     expect(workflow).toContain("cancel-in-progress: ${{ github.event_name == 'pull_request' }}");
   });
 
-  it('classifies a push by what it changed, and falls back to everything', () => {
-    expect(workflow).toContain('git diff --name-only "$BEFORE_SHA" "$AFTER_SHA"');
+  it('classifies a pull request by what it changed, and runs everything otherwise', () => {
+    expect(workflow).toContain('git diff --name-only "$BASE_SHA...$HEAD_SHA"');
     expect(workflow).toContain('node scripts/ci-changes.ts --all');
   });
 });

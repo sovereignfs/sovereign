@@ -175,11 +175,13 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>
 ### Continuous integration
 
 CI (`.github/workflows/ci.yml`) runs only for `main`: on pull requests targeting it that are not drafts (the
-promotion from `develop`), on pushes to it, and on every release tag. It does not run for `develop`, for feature
+promotion from `develop`) and on every release tag. Not on a push to `main`, which changes only by merging a
+promotion whose run already checked that merge result; after an emergency push that bypassed `main`'s protection,
+run CI on `main` by hand. It does not run for `develop`, for feature
 branches or for pull requests into `develop`, Dependabot's included, so runner time is not spent on every commit;
 the pre-push hook checks your work locally, and **Actions → CI → Run workflow** checks any branch by hand when you
 want the jobs the hook cannot run (the build, the database legs, the image, the acceptance suite) before the
-promotion. A push is classified by the files it changed, like a pull request.
+promotion.
 
 A first job, **Classify changes**, runs `scripts/ci-changes.ts` over the files the
 pull request touches and decides which of the others run. A change to

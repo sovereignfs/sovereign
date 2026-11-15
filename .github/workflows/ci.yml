@@ -1,12 +1,13 @@
 name: CI
 
 # Validation runs on pull requests targeting `main` (the promotion from `develop`)
-# that are not drafts, on pushes to `main`, on release tags (through workflow_call),
-# and on demand. Nothing runs for `develop` or a feature branch: the pre-push hook
-# checks those locally, and Actions -> CI -> Run workflow checks any branch by hand. A cheap first job works out what the change
-# touches and the others run only when it says so, so a documentation-only change
-# runs nothing but that job. Run it by hand
-# (Actions -> CI -> Run workflow) to check any branch, `main` included.
+# that are not drafts, on release tags (through workflow_call), and on demand. Not on
+# a push to `main`: it changes only by merging a promotion, whose run already checked
+# that merge result. Nothing runs for `develop` or a feature branch: the pre-push hook
+# checks those locally. Actions -> CI -> Run workflow checks any branch by hand, and
+# `main` after an emergency push that bypassed its protection. A cheap first job works
+# out what the change touches and the others run only when it says so, so a
+# documentation-only change runs nothing but that job.
 #
 # While a pull request is a draft, or carries the `skip-ci` label, no job runs;
 # GitHub itself also skips the run when the head commit message says [skip ci].
@@ -17,8 +18,6 @@ name: CI
 # that GitHub added in July 2026 and zizmor prefers; ./ works everywhere and cannot
 # be tested from here. Revisit when workflows can be run before they are merged.
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
@@ -26,7 +25,7 @@ on:
   # Called by publish.yml on a release tag, where every job runs.
   workflow_call:
 
-# Cancel a superseded run of the same pull request; every push to `main` is checked to the end.
+# Cancel a superseded run of the same pull request; a manual or release run is never cancelled.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -71,13 +70,9 @@ jobs:
           EVENT: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          BEFORE_SHA: ${{ github.event.before }}
-          AFTER_SHA: ${{ github.sha }}
         run: |
           if [[ "$EVENT" == "pull_request" ]]; then
             git diff --name-only "$BASE_SHA...$HEAD_SHA" | node scripts/ci-changes.ts | tee -a "$GITHUB_OUTPUT"
-          elif [[ "$EVENT" == "push" && -n "$BEFORE_SHA" && ! "$BEFORE_SHA" =~ ^0+$ ]] && git cat-file -e "$BEFORE_SHA^{commit}" 2>/dev/null; then
-            git diff --name-only "$BEFORE_SHA" "$AFTER_SHA" | node scripts/ci-changes.ts | tee -a "$GITHUB_OUTPUT"
           else
             node scripts/ci-changes.ts --all | tee -a "$GITHUB_OUTPUT"
           fi

@@ -133,6 +133,11 @@ what is new. Not every promotion publishes something.
    protection does not stop them, and the publish workflows refuse a tag whose commit is not on `main`. A version
    promoted without being tagged can be tagged later, on the merge commit that brought it.
 
+Once the promotion is merged, `.github/workflows/sync-develop.yml` moves `develop` forward to the merge commit. It is a
+fast-forward, never a rewrite (`develop` is already in the merge commit's history), so `develop` is not shown as behind
+`main` and the release tags are in its history. If a commit reached `develop` after the merge, the run leaves `develop`
+as it is and says so; pull before you start new work either way.
+
 **Branch prefixes:**
 
 | Prefix   | Use for                                         |

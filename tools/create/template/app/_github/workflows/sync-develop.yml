@@ -1,0 +1,51 @@
+name: Sync develop
+
+# After a promotion pull request (develop -> main) is merged, moves `develop` forward to the merge commit (CONTRIBUTING.md, "Promoting
+# develop into main"). It is a fast-forward, never a rewrite: the merge commit's first parent is `main` and its second is the `develop`
+# that was promoted, so `develop` is already in its history. Afterwards GitHub no longer shows `develop` as behind `main`, and the release
+# tags on merge commits are in `develop`'s history (`git describe`, `git tag --merged`).
+#
+# When `develop` moved after the merge (a commit pushed in between), it is not a fast-forward any more: the run says so and changes
+# nothing, and `develop` stays as it would be without this workflow. It never forces.
+on:
+  pull_request:
+    branches: [main]
+    types: [closed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-develop
+  cancel-in-progress: false
+
+jobs:
+  fast-forward:
+    name: Fast-forward develop
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Only a merged promotion from this repository's own `develop`.
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref == 'develop' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      # To push `develop`, which is not protected; `main` is never pushed.
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          # The push below needs the job's token; the job runs no code from the repository.
+          persist-credentials: true
+      - name: Move develop to the merge commit, if it is a fast-forward
+        env:
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          git fetch --no-tags origin develop
+          if git merge-base --is-ancestor origin/develop "$MERGE_SHA"; then
+            git push origin "$MERGE_SHA:refs/heads/develop"
+            echo "develop is now $MERGE_SHA."
+          else
+            echo "::notice::develop has commits that are not in $MERGE_SHA (pushed after the merge), so it was left as it is."
+          fi

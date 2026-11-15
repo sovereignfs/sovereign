@@ -75,3 +75,27 @@ describe('the app template’s CI', () => {
     expect(workflow).toContain('github.event.pull_request.draft == false');
   });
 });
+
+describe('moving develop forward after a promotion', () => {
+  const read = (file: string) => readFileSync(path.join(root, file), 'utf8');
+  const sync = read('.github/workflows/sync-develop.yml');
+
+  it('runs for a merged pull request from this repository’s develop into main only', () => {
+    expect(sync).toMatch(/on:\n {2}pull_request:\n {4}branches: \[main\]\n {4}types: \[closed\]/);
+    expect(sync).toContain('github.event.pull_request.merged == true');
+    expect(sync).toContain("github.event.pull_request.head.ref == 'develop'");
+    expect(sync).toContain('github.event.pull_request.head.repo.full_name == github.repository');
+  });
+
+  it('only ever fast-forwards develop to the merge commit, and never forces or touches main', () => {
+    expect(sync).toContain('git merge-base --is-ancestor origin/develop "$MERGE_SHA"');
+    expect(sync).toContain('git push origin "$MERGE_SHA:refs/heads/develop"');
+    expect(sync).not.toMatch(/--force|\s-f\s|\+refs|:refs\/heads\/main/);
+    for (const action of sync.matchAll(/uses: (\S+)/g))
+      expect(action[1], 'an action').toMatch(/@[0-9a-f]{40}$/);
+  });
+
+  it('is the same file in the app template, so every app does the same', () => {
+    expect(read('tools/create/template/app/_github/workflows/sync-develop.yml')).toBe(sync);
+  });
+});

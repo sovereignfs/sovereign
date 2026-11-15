@@ -193,7 +193,11 @@ describe('the files of an app', () => {
     const target = path.join(temp(), 'my-notes');
     const written = await writeApp(target, namesOf(target));
     expect(written).toEqual(
-      expect.arrayContaining(['.github/workflows/ci.yml', '.githooks/pre-push']),
+      expect.arrayContaining([
+        '.github/workflows/ci.yml',
+        '.githooks/pre-push',
+        '.github/workflows/sync-develop.yml',
+      ]),
     );
     const ci = read(target, '.github/workflows/ci.yml');
     expect(ci).toMatch(/on:\n {2}pull_request:\n {4}branches: \[main\]/);

@@ -336,7 +336,8 @@ The ones every repository of the suite shares (each repository's `AGENTS.md` is 
 - **Two branches, as in Sovereign** ([CONTRIBUTING](../CONTRIBUTING.md#branches)): work lands on `develop`, committed directly or
   through a feature branch (`feat/`, `fix/`, `docs/`, `chore/`) cut from `develop` and merged by draft PR with rebase and merge; `main`
   is protected and changes only by a promotion pull request from `develop`, titled with its version (`vX.Y.Z`, or `Release vX.Y.Z`
-  when merging it will be tagged), merged with a merge commit that the release tag goes on. Never merge automatically. Never commit
+  when merging it will be tagged), merged with a merge commit that the release tag goes on. A workflow then fast-forwards
+  `develop` to that merge commit (`.github/workflows/sync-develop.yml`, the same file in every repository of the suite). Never merge automatically. Never commit
   or push without being asked.
 - **CI runs only for `main`, as in Sovereign**: on pull requests into `main` that are not drafts, on release tags, and by hand;
   never on a push to `develop` or a feature branch, nor on a pull request into `develop`, where a pre-push hook checks the work

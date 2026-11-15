@@ -65,6 +65,11 @@ commit. Those are checked on your machine instead: `npm install` turns on the ve
    A tag is not a branch, so `main`'s protection does not stop it; the workflow refuses a tag whose commit is not on `main`, or whose
    version is not the one in `package.json`.
 
+Once the promotion is merged, `.github/workflows/sync-develop.yml` moves `develop` forward to the merge commit. It is a fast-forward,
+never a rewrite (`develop` is already in the merge commit's history), so `develop` is not shown as behind `main` and the release tags are
+in its history. If a commit reached `develop` after the merge, the run leaves `develop` as it is and says so; pull before you start new
+work either way.
+
 ## Setting it up on GitHub
 
 Once the repository is on GitHub, push both branches and protect `main`:

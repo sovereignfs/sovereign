@@ -62,6 +62,26 @@ describe('reading GitHub', () => {
     expect(live.unreadable).toContain('rulesets');
     expect(live.unreadable).not.toContain('settings.default_branch');
   });
+
+  it('notes a ruleset whose bypass list is withheld, and does not call it a difference', async () => {
+    // What a workflow's own token gets: the rulesets, without who may bypass them.
+    const withheld = file.rulesets.map((ruleset, i) => {
+      const { bypass_actors: _hidden, ...rest } = structuredClone(ruleset);
+      return { ...rest, id: i + 1 };
+    });
+    const exec: Exec = async (_c, args) => {
+      const endpoint = args[1] as string;
+      if (endpoint === 'repos/o/r')
+        return { code: 0, stdout: JSON.stringify({ ...file.settings }), stderr: '' };
+      if (endpoint === 'repos/o/r/rulesets')
+        return { code: 0, stdout: JSON.stringify(withheld.map(({ id }) => ({ id }))), stderr: '' };
+      const id = Number(endpoint.split('/').pop());
+      return { code: 0, stdout: JSON.stringify(withheld[id - 1]), stderr: '' };
+    };
+    const live = await readLive(exec, '.', 'o/r', file);
+    expect(live.unreadable).toContain(`ruleset "${file.rulesets[0]?.name}".bypass_actors`);
+    expect(differences(file, live)).toEqual([]);
+  });
 });
 
 describe('apply', () => {

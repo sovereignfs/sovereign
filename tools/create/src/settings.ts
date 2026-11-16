@@ -76,6 +76,7 @@ export function differences(file: RepositoryFile, live: Live): Difference[] {
       continue;
     }
     for (const key of ['target', 'enforcement', 'conditions', 'bypass_actors'] as const) {
+      if (live.unreadable.includes(`ruleset "${ruleset.name}".${key}`)) continue;
       if (!same(ruleset[key], current[key])) {
         out.push({
           what: `ruleset "${ruleset.name}": ${key}`,
@@ -124,7 +125,11 @@ export async function readLive(
         unreadable.push('rulesets');
         break;
       }
-      rulesets.push(one.json() as Ruleset & { id: number });
+      const ruleset = one.json() as Ruleset & { id: number };
+      // Who may bypass a ruleset is given only to someone who may administer the repository, too.
+      if (ruleset.bypass_actors === undefined)
+        unreadable.push(`ruleset "${ruleset.name}".bypass_actors`);
+      rulesets.push(ruleset);
     }
   }
   return { settings, rulesets, unreadable };

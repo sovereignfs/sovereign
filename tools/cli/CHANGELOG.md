@@ -14,7 +14,8 @@ history and tags.
   drifted; a file listed under `sovereign.unmanaged` is the app's own.
 - `app release check` and `app release notes` for the one release model (a promotion titled `Release vX.Y.Z` publishes on merge), and
   `app commits check` for agent trailers: what the workflows every app shares (in sovereignfs/sovereign) run.
-- `app settings apply` and `app settings check` keep a repository's settings and rulesets as code, in `.github/repository.json`.
+- `app settings apply` and `app settings check` keep a repository's settings and rulesets as code, in `.github/repository.json`;
+  what a workflow's token cannot read (some merge settings, who may bypass a ruleset) is reported as not checked, never as a difference.
 - A repository that releases several components (such as a Rust CLI and a web app) describes them in `sovereign.json` at its root: each
   one's version file (`package.json` or `Cargo.toml`), tag prefix, changelog and publish workflow. A promotion title names any of their
   versions, the release tags each and calls each one's publish workflow, and `app sync` generates that release workflow.

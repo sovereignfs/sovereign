@@ -2,7 +2,7 @@
 
 |              |                                                                                                                                                                                                                                                                                                                                                                        |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**   | Accepted on 2026-11-16; partially implemented (the library and the design system's two components, used by nothing yet). Step 3 of the rollout onwards waits for a cryptographer's review                                                                                                                                                                              |
+| **Status**   | Accepted on 2026-11-16; partially implemented (the library and the design system's two components, used by nothing yet). Built before the cryptographer's review, at the goal owner's decision (2026-11-16); the review is still to come                                                                                                                               |
 | **Date**     | November 2026                                                                                                                                                                                                                                                                                                                                                          |
 | **Author**   | Claude Code, for review                                                                                                                                                                                                                                                                                                                                                |
 | **Scope**    | `docs/specs/core-app.md` (§3.3.2, §3.4, §3.5, §3.6.2, §3.7, §3.16, a new section); `contracts/core-api/`; `contracts/app-manifest.md` (manifest 4) and its schemas; `docs/specs/sdk.md` §9; `docs/specs/design-system.md`; `AGENTS.md` and `docs/architecture-rules.md` (one rule retired); `packages/crypto`, `packages/sdk`, `packages/ui`, `apps/core`, `tools/cli` |
@@ -64,7 +64,7 @@ One for each job. All but the first are in WebCrypto, so keys can be held as key
 
 | Job                               | Algorithm                                                                                 |
 | --------------------------------- | ----------------------------------------------------------------------------------------- |
-| A secret from a password          | Argon2id, 64 MiB, 3 passes, 1 lane, 16-byte salt, 32 bytes out (RFC 9106), from libsodium |
+| A secret from a password          | Argon2id, 19 MiB, 3 passes, 1 lane, 16-byte salt, 32 bytes out (RFC 9106), from libsodium |
 | One secret into several           | HKDF-SHA-256, with a different `info` for each purpose                                    |
 | Encrypting a key or a small value | AES-256-GCM, a random 96-bit nonce, the record's context as associated data               |
 | Encrypting a document or a file   | AES-256-GCM in chunks of 64 KiB (§1.3)                                                    |
@@ -162,7 +162,8 @@ chunk i = AES-256-GCM(key, nonce = i in 11 bytes ‖ last (1 byte, 0 or 1), asso
 
 #### 1.4 The cost of the password derivation
 
-- **It starts at 64 MiB and 3 passes** (RFC 9106's second recommendation) and is measured, as the first piece of step 1, on real
+- **It is 19 MiB and 3 passes**, measured on an iPhone 15 Pro at about one second (64 MiB, where it started, took 3.4 s). It was
+  measured, as the first piece of step 1, on real
   phones: about one second on an ordinary one, two at most on a slow one.
 - **If it is slower, memory comes down before passes do, and never below OWASP's minimum** (19 MiB and 2 passes).
 - **Every account on an instance has the same cost**, and the code knows which costs are in use; the number after `svp` names the derivation, its cost included.
@@ -411,6 +412,10 @@ Each step is useful by itself and is a task or a few.
   without changing anything stored.
 - **Review in two parts**, the design and then the code (above).
 - **The timing page is the first piece of step 1**, not built before this is accepted.
+- **The cost is 19 MiB and 3 passes** (§1.4), fixed on 2026-11-16 from the goal owner's timing on an iPhone 15 Pro.
+- **Steps 3 onwards are built before the cryptographer's review**, at the goal owner's decision on 2026-11-16. The review is still to
+  come; until it and the code audit are done, everything that describes the feature says it is not yet reviewed or audited, and a
+  finding that changes a stored format becomes a new suite beside the old one.
 - **The reset page is given the account's address** by core when it is rendered (§2), settled after acceptance on 2026-11-16, over
   asking the person to type it or putting it in the link.
 - **Argon2id is libsodium's** (`libsodium-wrappers-sumo`), decided with the goal owner on 2026-11-16 when no browser Argon2id was

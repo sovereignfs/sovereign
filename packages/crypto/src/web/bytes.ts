@@ -60,6 +60,9 @@ export function fromBase64Url(text: string): Uint8Array | undefined {
   return toBase64Url(out) === text ? out : undefined;
 }
 
-/** A `BufferSource` WebCrypto accepts for any `Uint8Array`, whatever buffer type it is over. */
+/**
+ * The same bytes, typed as WebCrypto's `BufferSource` wants them. Not a copy: a copy of a secret is one that nothing overwrites.
+ * Every array here is over an `ArrayBuffer`; none is over a `SharedArrayBuffer`, which WebCrypto would refuse.
+ */
 export const source = (bytes: Uint8Array): Uint8Array<ArrayBuffer> =>
-  new Uint8Array(bytes) as Uint8Array<ArrayBuffer>;
+  bytes as Uint8Array<ArrayBuffer>;

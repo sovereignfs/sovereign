@@ -3,5 +3,5 @@
   "compilerOptions": {
     "noEmit": true
   },
-  "include": ["scripts/**/*.ts", "*.config.ts", "types/**/*.d.ts"]
+  "include": ["scripts/**/*.ts", "*.config.ts", "vitest.setup.ts", "types/**/*.d.ts"]
 }

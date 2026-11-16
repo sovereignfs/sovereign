@@ -35,6 +35,8 @@ export default defineConfig({
     // Node by default; a component test opts into jsdom with a
     // `// @vitest-environment jsdom` pragma at the top of the file.
     environment: 'node',
+    // Drops the variables a git hook sets that name this repository, so a test's `git` acts on its own folder (scripts/lib/test-env.ts).
+    setupFiles: ['./vitest.setup.ts'],
     css: {
       // Resolve CSS Module class names to their literal names so tests can assert
       // on them (styles.ghost === 'ghost').

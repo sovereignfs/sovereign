@@ -4,6 +4,12 @@ import Link from 'next/link';
 import { type FormEvent, useState } from 'react';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../src/auth/client';
+import { signInValue } from '../../../src/auth/derive';
+import {
+  passwordPolicyMessage,
+  passwordProblems,
+  type PasswordPolicy,
+} from '../../../src/auth/password-policy';
 import { AuthField } from '../auth-field';
 import { AuthError, AuthNotice } from '../auth-notice';
 import { emailRequestProblem } from '../messages';
@@ -12,9 +18,14 @@ import styles from '../auth.module.css';
 export function ResetPasswordForm({
   token,
   passwordHint,
+  address,
+  policy,
 }: {
   token: string;
   passwordHint: string;
+  /** The account the link belongs to: the new sign-in value is made from it (core-app §5.2). */
+  address: string;
+  policy: PasswordPolicy;
 }) {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -28,9 +39,22 @@ export function ResetPasswordForm({
       setError('The passwords do not match.');
       return;
     }
+    const problems = passwordProblems(password, policy);
+    if (problems.length > 0) {
+      setError(passwordPolicyMessage(problems));
+      return;
+    }
     setPending(true);
     setError(undefined);
-    const result = await authClient.resetPassword({ newPassword: password, token });
+    let value: string;
+    try {
+      value = await signInValue(password, address);
+    } catch {
+      setPending(false);
+      setError('This page could not get ready. Reload it and try again.');
+      return;
+    }
+    const result = await authClient.resetPassword({ newPassword: value, token });
     if (result.error) {
       setPending(false);
       if (result.error.code === 'INVALID_TOKEN') setExpired(true);

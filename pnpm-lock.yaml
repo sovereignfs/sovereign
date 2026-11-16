@@ -301,6 +301,9 @@ importers:
       '@sovereignfs/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@sovereignfs/crypto':
+        specifier: workspace:*
+        version: link:../../packages/crypto
       '@sovereignfs/database':
         specifier: workspace:*
         version: link:../../packages/database

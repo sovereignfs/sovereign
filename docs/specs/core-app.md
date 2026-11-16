@@ -307,12 +307,14 @@ listed for, or opens for, anyone else.
   same way.
 - Passwords follow the policy set by `SV_AUTH_PASSWORD_MIN_LENGTH` (default 8)
   and, each off by default, `SV_AUTH_PASSWORD_REQUIRE_UPPERCASE`,
-  `…_REQUIRE_LOWERCASE`, `…_REQUIRE_NUMBER` and `…_REQUIRE_SYMBOL`. The server
-  enforces the policy; the page only explains it.
-- The server enforces the policy on every path that stores a password: sign-up,
-  reset, change, and a server-side set. A password that breaks it is refused with
-  the reason (`PASSWORD_DOES_NOT_MEET_POLICY`) and nothing is stored. The longest
-  password is 128 characters.
+  `…_REQUIRE_LOWERCASE`, `…_REQUIRE_NUMBER` and `…_REQUIRE_SYMBOL`. Core never
+  receives a password (§5.2), so the policy is checked in the browser, before the
+  sign-in value is derived, with the reason in one sentence, and nothing is sent.
+- The server refuses, on every path that stores a password (sign-up, reset,
+  change, and a server-side set), anything that is not a sign-in value
+  (`PASSWORD_NOT_DERIVED`), and nothing is stored. Signing in with anything else
+  is answered as a wrong password is, before any account is looked up. The
+  longest password is 128 characters.
 - Repeated sign-in or sign-up attempts from one client address are refused with
   `429` and a `Retry-After`; the counters are kept in the database, so every
   instance shares them.
@@ -842,18 +844,21 @@ CLI calls it ([operator-cli §6](operator-cli.md)), and it is not run by hand.
 
 ```text
 sovereign-admin apps ensure KEY --name NAME --redirect URL ... [--post-logout URL ...]
-                [--back-channel URL] [--account-deleted URL] [--scope SCOPE ...] [--public] [--trusted]
+                [--back-channel URL] [--account-deleted URL] [--key-return URL] [--scope SCOPE ...] [--public] [--trusted]
                 [--launch-url URL] [--description TEXT] [--icon URL] [--hide] [--json]
 sovereign-admin apps list [--json]
 sovereign-admin apps rotate-secret KEY [--json]
 sovereign-admin apps remove KEY
 sovereign-admin instance restored [--json]
 sovereign-admin seed [--local] [--json]
+sovereign-admin accounts reset-link EMAIL
 ```
 
 - **It goes through the registry.** Every rule of §3.7 applies, with the same
   refusals, and it adds no second way to write a client. (`instance restored` writes
-  no client: it records a restore, §4.4.)
+  no client: it records a restore, §4.4. `accounts reset-link` writes none either: it
+  makes a reset link for an account when mail cannot be sent, §5.2, prints it once
+  and logs only that one was made, and exits 1 when there is no such account.)
 - **The managed key.** A client MAY have a key, which `ensure` uses to find it
   again on the next run. It is a DNS label, unique on the instance, set only here,
   and never shown to an app or a person using it. A client made in the Console
@@ -1797,11 +1802,13 @@ sections it changes, and the task that builds it changes them.
 
 ### 5.2 Signing in with a derived value
 
-Changes §3.3.2, §3.3.4, §3.5 and §3.15.1. Built by task 16.3, on every instance.
+Built (task 16.3), on every instance, in §3.3.2, §3.3.4, §3.5 and §3.15.1.
 
-- **The instance id** is 32 random bytes that core makes once, before any account can exist, keeps as a setting, and MUST NOT make
-  again: start-up refuses an instance with accounts and no id, saying so, rather than make one. It is given to core's pages when they
-  are rendered, and is in the instance document (§3.13) as `instanceId`, base64url.
+- **The instance id** is 32 random bytes that core makes once, at start-up when there is none, keeps as a setting, and MUST NOT make
+  again: it is never rewritten, two cores starting at once keep one, and a stored id that is not one stops core rather than be
+  replaced. An instance that has accounts and no id is one upgraded from before this: start-up says so, since those accounts set
+  their passwords again. It is in the instance document (§3.13) as `instanceId`, base64url, which is where core's own pages read
+  it.
 - **The browser derives two values** from the password, the address (trimmed, lower case) and the instance id, by one run of Argon2id
   (RFC 0005 §1.1): the **sign-in value**, `svp1.` and 43 base64url characters, sent where the password was; and the **unlock key**,
   which never leaves the browser. Every form that sets or asks for a password does this: sign-up, sign-in, accepting an invitation, the
@@ -1811,13 +1818,15 @@ Changes §3.3.2, §3.3.4, §3.5 and §3.15.1. Built by task 16.3, on every insta
 - **The policy is the browser's.** The page checks the policy of §3.3.2 before deriving, with the same words, and does not send a
   password that breaks it. The server cannot check what it never receives; a person who goes round the page weakens their own account
   only.
-- **The reset page** is told, when it is rendered, the address of the account its link belongs to, and shows it ("Choose a new
-  password for …"). A link that is not valid shows the address of no one.
+- **The reset page** is told, when it is rendered, the address of the account its link belongs to, and shows it ("For …"). A link
+  that is not valid shows the address of no one.
+- **An operator makes a reset link** with `sovereign-admin accounts reset-link EMAIL` when mail cannot be sent: the link a mailed one
+  would be, working once, for an hour, printed once and never logged.
 - **The seed and `sovereign-admin`** derive in the same way, from the address and the instance id read from the database.
 - **The policy of §3.5** adds `'wasm-unsafe-eval'` to `script-src`, which allows WebAssembly to be compiled and nothing else.
   `'unsafe-eval'` and `'unsafe-inline'` stay out.
-- **Accounts from before** cannot sign in with their old password and set it again through the reset link. Core keeps no second way
-  of signing in.
+- **Accounts from before** cannot sign in with their old password, which is answered as a wrong one, and set it again through a reset
+  link, mailed or made by an operator. Core keeps no second way of signing in.
 - **The cost** of Argon2id is the same for every account on an instance, and the number after `svp` names the derivation with its
   cost. A later change sends a value for each derivation in use, in one request, and stores the newest (RFC 0005 §1.4).
 
@@ -1832,9 +1841,13 @@ Built by task 16.6. Core keeps, for each account, what opens its keys, and can o
 | Apps            | For each app the person has opened: the app key wrapped, its two public keys, their signature, and the two private halves wrapped |
 | Session secrets | For each session, 32 random bytes (§5.4), gone with the session                                                                   |
 
-- **Setting up** happens in the browser the first time a person signs in after this ships, or at sign-up: the account key and the
-  signing key are made there and wrapped by the unlock key, and the **recovery kit** is shown. Nothing else is shown until the person
-  confirms they kept the kit. A person who leaves first is shown it again.
+- **Setting up** happens in the browser, silently, the first time a person signs in with their password after this ships, or at
+  sign-up: the account key and the signing key are made there and wrapped by the unlock key. Signing in says nothing about keys.
+- **The recovery kit** is shown the first time the person opens an encrypted app, on core's page that gives the app its key (§5.7),
+  and nothing more happens there until they confirm they kept it; only then is the kit's way in stored. Until they confirm, a new kit
+  is made each time it is shown: core keeps whether the kit was confirmed, never the kit. A person who never opens an encrypted app
+  is never shown one. (Decided with the goal owner on 2026-11-16, over showing it at the first sign-in, which would have put a
+  blocking screen in every sign-in, an app's included.)
 - **The recovery kit** is 32 random bytes, written as groups of four letters and digits from an alphabet with no `I`, `L`, `O` or `U`
   (Crockford's base32), ending in a check group. A mistyped kit is refused as mistyped. Typing it ignores case, spaces and hyphens,
   and reads `O` as `0` and `I` and `L` as `1`. It is shown once.
@@ -2018,3 +2031,4 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-15 | §2: Phase 2 is built, files included (on disk only); the overview no longer says the deletion fan-out is not built.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | 2026-11-16 | §5: keys, encryption the server cannot read, specified and not built (RFC 0005, epic 16, workstream 0003): signing in with a derived value and an instance id, the vault and the recovery kit, staying unlocked, passkeys that unlock, apps that use encryption, key release and sharing, escrow, and an acceptance list; §2 and §3.16 say so.                                                                                                                                                                                                                                                                                                                                                                                |
 | 2026-11-16 | §5.6, §3.6.2, §3.7.1: apps that use encryption are built, with one setting where §5.6 had two: the key return address, which the `keys` scope follows.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 2026-11-16 | §5.2, §3.3.2, §3.5: signing in with a derived value is built: core never receives a password, the policy is checked in the browser, the instance id is made at start-up (an upgraded instance says so) and read from the instance document, and `sovereign-admin accounts reset-link` makes a reset link without mail.                                                                                                                                                                                                                                                                                                                                                                                                        |

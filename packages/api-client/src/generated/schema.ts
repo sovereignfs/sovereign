@@ -74,6 +74,12 @@ export type InstanceBranding = {
   };
   favicon: string | null;
   /**
+   * 32 random bytes, base64url, made once by the instance and never changed. A browser makes a person's sign-in value
+   * from it, the address and the password, so that the password never reaches core. A core older than this field does
+   * not publish it.
+   */
+  instanceId?: string;
+  /**
    * What this core serves, so an app can tell a capability it lacks from a failure. A core that does not
    * publish this field serves the Directory and the instance document, and nothing else.
    */

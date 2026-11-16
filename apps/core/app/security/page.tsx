@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { Card } from '@sovereignfs/ui';
 import { getAuth } from '../../src/auth';
 import { getSession } from '../../src/auth/session';
+import { getAuthSettings } from '../../src/auth/settings';
 import { getDatabase } from '../../src/database';
 import { listSessions } from '../../src/sessions/sessions';
 import { ChangePasswordForm } from './change-password-form';
@@ -28,7 +29,10 @@ export default async function SecurityPage() {
         <div className={styles.content}>
           <h1 className={styles.title}>Security</h1>
           <h2 className={styles.heading}>Password</h2>
-          <ChangePasswordForm />
+          <ChangePasswordForm
+            address={session.user.email}
+            policy={getAuthSettings().passwordPolicy}
+          />
         </div>
       </Card>
       <Card padding="lg">

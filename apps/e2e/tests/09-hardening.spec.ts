@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { CORE_URL, freshAddress, MINIMAL_URL, person } from '../support/env';
+import { CORE_URL, freshAddress, MINIMAL_URL, person, signInValueFor } from '../support/env';
 import { discovery } from '../support/minimal';
 import { newPerson, signIn } from '../support/ui';
 import { world } from '../support/world';
@@ -51,7 +51,12 @@ test('a request from another site is refused by better-auth, and no origin may r
         'content-type': 'application/json',
         'x-forwarded-for': freshAddress(),
       },
-      body: JSON.stringify({ email: member.email, password: member.password, name: 'x' }),
+      // A sign-in value, as a browser sends it, so that what refuses the request is the origin check and nothing before it.
+      body: JSON.stringify({
+        email: member.email,
+        password: await signInValueFor(member.password, member.email),
+        name: 'x',
+      }),
     });
     expect(response.status, path).toBe(403);
   }

@@ -26,7 +26,15 @@ describe('buildCsp', () => {
 
   it('lets a script run only with the nonce or from a script that has it', () => {
     const scriptSrc = directives(buildCsp({ nonce })).get('script-src');
-    expect(scriptSrc).toEqual(["'self'", `'nonce-${nonce}'`, "'strict-dynamic'"]);
+    expect(scriptSrc).toEqual([
+      "'self'",
+      `'nonce-${nonce}'`,
+      "'strict-dynamic'",
+      "'wasm-unsafe-eval'",
+    ]);
+    // WebAssembly may be compiled (the password derivation, core-app §5.2); script made from text may not.
+    expect(scriptSrc).not.toContain("'unsafe-eval'");
+    expect(scriptSrc).not.toContain("'unsafe-inline'");
   });
 
   it.each([
@@ -104,7 +112,12 @@ describe('pictures from other addresses', () => {
     const csp = buildCsp({ nonce, remoteImages: true });
     const all = directives(csp);
     expect(all.get('default-src')).toEqual(["'self'"]);
-    expect(all.get('script-src')).toEqual(["'self'", `'nonce-${nonce}'`, "'strict-dynamic'"]);
+    expect(all.get('script-src')).toEqual([
+      "'self'",
+      `'nonce-${nonce}'`,
+      "'strict-dynamic'",
+      "'wasm-unsafe-eval'",
+    ]);
     expect(all.get('connect-src')).toEqual(["'self'"]);
     expect(all.get('form-action')).toEqual(["'self'"]);
     expect(csp).not.toMatch(/img-src[^;]*\*(?!:)/);

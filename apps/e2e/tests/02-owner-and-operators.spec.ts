@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { CORE_URL, person } from '../support/env';
+import { CORE_URL, person, signInValueFor } from '../support/env';
 import { alert, freshAddress, heading, newPerson, signIn, signOut, signUp } from '../support/ui';
 import { world } from '../support/world';
 
@@ -67,7 +67,8 @@ test('§3.17.3: the owner turns invite-only on, invites a person, and makes them
     data: {
       name: stranger.name,
       email: stranger.email,
-      password: stranger.password,
+      // As a browser sends it: never the password itself (core-app §5.2).
+      password: await signInValueFor(stranger.password, stranger.email),
       agreedToTerms: true,
     },
   });

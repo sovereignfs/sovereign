@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { Database } from '@sovereignfs/database';
 import type { Auth } from '../auth/auth';
+import { serverSignInValue } from '../auth/derive-server';
 import { passwordProblems, type PasswordPolicy } from '../auth/password-policy';
 import { ROLE_ADMIN, ROLE_OWNER, ROLE_USER, type Role } from '../auth/roles';
 import { DEFAULT_SCOPES, type ClientRegistry, type RegisterInput } from '../clients/registry';
@@ -196,7 +197,8 @@ export async function seedAccounts(
       body: {
         name: account.name,
         email: account.email,
-        password: chosen,
+        // Sent as a browser sends it: the sign-in value made from the password (core-app §5.2).
+        password: await serverSignInValue(deps.database, chosen, account.email),
         agreedToTerms: true,
       } as never,
       headers: new Headers({ origin: new URL(deps.baseUrl).origin }),

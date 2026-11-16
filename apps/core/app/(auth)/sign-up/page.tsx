@@ -50,6 +50,7 @@ export default async function SignUpPage({
         instanceName={name}
         invitedEmail={invited?.state === 'valid' ? invited.email : undefined}
         passwordHint={describePasswordPolicy(getAuthSettings().passwordPolicy)}
+        policy={getAuthSettings().passwordPolicy}
       />
     </AuthCard>
   );

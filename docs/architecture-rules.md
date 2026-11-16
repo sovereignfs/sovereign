@@ -91,14 +91,18 @@ pointing here.
   upgrading, capture the installed version
   (`SV_CAPTURE_AUTH_STORE=1 pnpm vitest run --project unit auth-store.capture`),
   keep the old file, upgrade, and run the suite on all three databases.
-- **The password policy is enforced where the hash is made, not in a request
-  hook.** better-auth stores a password only by hashing it, whichever way it
-  arrived; `setPassword` is server-only and has no path, so a hook keyed on the
-  request path never sees it (found by a test that called it directly). The
-  hash function is wrapped (`policedHash` in `src/auth/auth.ts`) to refuse a
-  password that breaks the policy, with the reason; the hash itself is
-  better-auth's own, so existing accounts keep working. better-auth's own length
-  limits are set wide so core's one sentence is what a person reads.
+- **Core never receives a password; the hash function refuses anything but a
+  sign-in value.** Every form derives the sign-in value in the browser
+  (`src/auth/derive.ts`, core-app §5.2), so the password policy can only be
+  checked there, before deriving, in the same words. better-auth stores a
+  password only by hashing it, whichever way it arrived, and `setPassword` has
+  no path a hook would see, so the shape check stays in the hash function
+  (`policedHash` in `src/auth/auth.ts`), with the reason. Sign-in with a value
+  that is not one is refused in a request hook before any lookup, with the
+  wrong-password answer: left to the route, an unknown address reaches the
+  dummy hash better-auth makes for timing and is refused differently from a
+  known one, which would tell who has an account. This replaces the rule that
+  the policy is enforced where the hash is made (2026-11-16).
 - **The origin and CSRF checks are never switched off.** better-auth turns its
   origin check off by itself when `NODE_ENV` is `test`; core sets
   `disableOriginCheck: false` and `disableCSRFCheck: false` explicitly, so tests

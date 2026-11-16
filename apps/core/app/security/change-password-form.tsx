@@ -3,10 +3,23 @@
 import { type FormEvent, useState } from 'react';
 import { Alert, Button, FormField, Input } from '@sovereignfs/ui';
 import { authClient } from '../../src/auth/client';
+import { signInValue } from '../../src/auth/derive';
+import {
+  passwordPolicyMessage,
+  passwordProblems,
+  type PasswordPolicy,
+} from '../../src/auth/password-policy';
 import styles from './security.module.css';
 
 /** Changing the password asks for the current one, and ends every other session. */
-export function ChangePasswordForm() {
+export function ChangePasswordForm({
+  address,
+  policy,
+}: {
+  /** The account's address, which both values are made from (core-app §5.2). */
+  address: string;
+  policy: PasswordPolicy;
+}) {
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [error, setError] = useState<string | undefined>();
@@ -15,12 +28,27 @@ export function ChangePasswordForm() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setPending(true);
     setError(undefined);
     setDone(false);
+    const problems = passwordProblems(next, policy);
+    if (problems.length > 0) {
+      setError(passwordPolicyMessage(problems));
+      return;
+    }
+    setPending(true);
+    let currentValue: string;
+    let nextValue: string;
+    try {
+      currentValue = await signInValue(current, address);
+      nextValue = await signInValue(next, address);
+    } catch {
+      setPending(false);
+      setError('This page could not get ready. Reload it and try again.');
+      return;
+    }
     const result = await authClient.changePassword({
-      currentPassword: current,
-      newPassword: next,
+      currentPassword: currentValue,
+      newPassword: nextValue,
       revokeOtherSessions: true,
     });
     setPending(false);

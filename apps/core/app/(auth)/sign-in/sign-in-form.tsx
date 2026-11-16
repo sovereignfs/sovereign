@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { type FormEvent, useEffect, useState } from 'react';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../src/auth/client';
+import { signInValue } from '../../../src/auth/derive';
 import { continuationUrl, isContinuation } from '../../../src/auth/oauth-continuation';
 import { DEACTIVATED, passkeyProblem } from '../messages';
 import { AuthError, AuthNotice } from '../auth-notice';
@@ -54,7 +55,16 @@ export function SignInForm({
     setPending(true);
     setError(undefined);
     setUnverified(false);
-    const result = await authClient.signIn.email({ email, password });
+    let value: string;
+    try {
+      // The password never leaves the browser: what is sent is made from it (core-app §5.2).
+      value = await signInValue(password, email);
+    } catch {
+      setPending(false);
+      setError('This page could not get ready to sign you in. Reload it and try again.');
+      return;
+    }
+    const result = await authClient.signIn.email({ email, password: value });
     if (result.error) {
       setPending(false);
       // Said only to someone who gave the right password, so it tells nobody else anything.

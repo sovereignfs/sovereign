@@ -34,7 +34,7 @@ export default async function DeleteAccountPage() {
             .
           </Alert>
         ) : (
-          <DeleteForm />
+          <DeleteForm address={session.user.email} />
         )}
       </div>
     </Card>

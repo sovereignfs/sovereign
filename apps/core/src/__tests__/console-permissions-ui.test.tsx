@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+// The derivation has its own vectors (packages/crypto); here it stands in with a value that shows what it was made from.
+vi.mock('../auth/derive', () => ({
+  signInValue: async (password: string, address: string) => `derived:${password}:${address}`,
+}));
 import { DEFAULT_MATRIX } from '../roles/capabilities';
 import { describeMatrix } from '../roles/describe';
 
@@ -113,7 +117,7 @@ describe('the ownership form', () => {
   };
 
   it('cannot be sent until someone is chosen and the password is typed', () => {
-    render(<TransferForm targets={targets} />);
+    render(<TransferForm targets={targets} address="owner@sovereign.local" />);
     const button = screen.getByRole('button', {
       name: 'Hand over ownership…',
     }) as HTMLButtonElement;
@@ -125,7 +129,7 @@ describe('the ownership form', () => {
   });
 
   it('asks first, naming who will own it, and sends nothing until confirmed', () => {
-    render(<TransferForm targets={targets} />);
+    render(<TransferForm targets={targets} address="owner@sovereign.local" />);
     fill('a2');
     fireEvent.click(screen.getByRole('button', { name: 'Hand over ownership…' }));
     expect(within(dialog()).getByText('Hand over this instance?')).toBeTruthy();
@@ -135,7 +139,7 @@ describe('the ownership form', () => {
 
   it('sends the choice, what the owner becomes and the password once confirmed', async () => {
     transfer.mockResolvedValue({ ok: true });
-    render(<TransferForm targets={targets} />);
+    render(<TransferForm targets={targets} address="owner@sovereign.local" />);
     fill('a1', 'my-password');
     fireEvent.change(screen.getByLabelText(/You will become/), {
       target: { value: 'platform:user' },
@@ -146,12 +150,12 @@ describe('the ownership form', () => {
     const sent = transfer.mock.calls[0]?.[1] as FormData;
     expect(sent.get('target')).toBe('a1');
     expect(sent.get('newRole')).toBe('platform:user');
-    expect(sent.get('password')).toBe('my-password');
+    expect(sent.get('password')).toBe('derived:my-password:owner@sovereign.local');
   });
 
   it('keeps the question open to show a wrong password, and keeps what was typed', async () => {
     transfer.mockResolvedValue({ ok: false, error: 'That password is not right.' });
-    render(<TransferForm targets={targets} />);
+    render(<TransferForm targets={targets} address="owner@sovereign.local" />);
     fill();
     fireEvent.click(screen.getByRole('button', { name: 'Hand over ownership…' }));
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Hand over ownership' }));
@@ -161,7 +165,7 @@ describe('the ownership form', () => {
   });
 
   it('does nothing when the question is backed out of', () => {
-    render(<TransferForm targets={targets} />);
+    render(<TransferForm targets={targets} address="owner@sovereign.local" />);
     fill();
     fireEvent.click(screen.getByRole('button', { name: 'Hand over ownership…' }));
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Cancel' }));

@@ -30,7 +30,7 @@ export default async function OwnershipPage() {
           action={<Link href="/console/accounts">Go to accounts</Link>}
         />
       ) : (
-        <TransferForm targets={targets} />
+        <TransferForm targets={targets} address={session.user.email} />
       )}
     </div>
   );

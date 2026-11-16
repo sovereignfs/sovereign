@@ -12,10 +12,15 @@ export async function register(): Promise<void> {
   ) {
     return;
   }
-  const { migrateDatabaseOrExit, validateConfigOrExit, warnIfMailNotConfigured } =
-    await import('./src/startup');
+  const {
+    ensureInstanceIdOrExit,
+    migrateDatabaseOrExit,
+    validateConfigOrExit,
+    warnIfMailNotConfigured,
+  } = await import('./src/startup');
   validateConfigOrExit();
   await migrateDatabaseOrExit();
+  await ensureInstanceIdOrExit();
   await warnIfMailNotConfigured();
   // Account-deletion notices that were not answered before core stopped are sent again (core-app §4.5).
   const { startDeletionDelivery } = await import('./src/accounts/deletion-scheduler');

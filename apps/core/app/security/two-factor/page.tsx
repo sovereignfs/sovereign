@@ -27,6 +27,7 @@ export default async function TwoFactorSettingsPage() {
           enabled={session.user.twoFactorEnabled === true}
           issuer={name}
           verified={session.user.emailVerified}
+          address={session.user.email}
         />
         <p className={styles.footer}>
           <Link className={styles.link} href="/security">

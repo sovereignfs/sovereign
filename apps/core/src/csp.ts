@@ -50,6 +50,9 @@ export function buildCsp({
       "'self'",
       `'nonce-${nonce}'`,
       "'strict-dynamic'",
+      // WebAssembly may be compiled, and nothing else: the password derivation's Argon2id is WebAssembly (core-app §5.2).
+      // `'unsafe-eval'` stays out, in production.
+      "'wasm-unsafe-eval'",
       ...(development ? ["'unsafe-eval'"] : []),
     ],
     // A nonce makes a browser ignore `'unsafe-inline'`, so development, whose error overlay and indicator

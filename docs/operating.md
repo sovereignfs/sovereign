@@ -132,14 +132,15 @@ out of core and you are signed out of both.
 
 ## Every day
 
-| To see                                    | Run                                                       |
-| ----------------------------------------- | --------------------------------------------------------- |
-| What is running, against the repository   | `./sv status`                                             |
-| What core, an app or the last deploy said | `./sv logs`, `./sv logs core`, `./sv logs notes`          |
-| What is wrong with DNS, ports or Docker   | `./sv doctor`                                             |
-| An app's address, client ID and state     | `./sv app show notes`                                     |
-| Change an app's version or setting        | `./sv app update notes --image ...`, then push and deploy |
-| Give an app a new client secret           | `./sv secret rotate wiki`                                 |
+| To see                                    | Run                                                              |
+| ----------------------------------------- | ---------------------------------------------------------------- |
+| What is running, against the repository   | `./sv status`                                                    |
+| What core, an app or the last deploy said | `./sv logs`, `./sv logs core`, `./sv logs notes`                 |
+| What is wrong with DNS, ports or Docker   | `./sv doctor`                                                    |
+| An app's address, client ID and state     | `./sv app show notes`                                            |
+| Change an app's version or setting        | `./sv app update notes --image ...`, then push and deploy        |
+| Give an app a new client secret           | `./sv secret rotate wiki`                                        |
+| A reset link for someone, with no mail    | `sovereign-admin accounts reset-link EMAIL`, in core's container |
 
 Changing an app's version moves only that app. Its database migrations are the app's own, and they go forward: see
 [rolling back](#going-back) before you rely on undoing one.

@@ -10,6 +10,18 @@ vi.mock('../auth', () => ({
   getAuth: () => Promise.resolve({ api: { listPasskeys: () => listPasskeys() as unknown } }),
 }));
 vi.mock('../database', () => ({ getDatabase: () => Promise.resolve({}) }));
+vi.mock('../auth/settings', () => ({
+  getAuthSettings: () => ({
+    passwordPolicy: {
+      minLength: 8,
+      maxLength: 128,
+      requireUppercase: false,
+      requireLowercase: false,
+      requireNumber: false,
+      requireSymbol: false,
+    },
+  }),
+}));
 vi.mock('../sessions/sessions', () => ({
   listSessions: (...args: unknown[]) => listSessions(...args) as unknown,
 }));

@@ -5,6 +5,23 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.100.0] - 2026-11-16
+
+### Changed
+
+- **Core never receives a password.** Every form that sets or asks for one derives a sign-in value in the browser from the password,
+  the address and the instance id, and sends that instead (core-app §5.2); the password policy is checked in the browser. Accounts
+  made before this set their password again through a reset link (docs/upgrade.md).
+- Signing in with anything but a sign-in value is answered as a wrong password, before any account is looked up.
+- Core's content security policy allows WebAssembly to be compiled (`'wasm-unsafe-eval'`), which the derivation needs.
+
+### Added
+
+- The instance id, made once at start-up and published in the instance document as `instanceId`.
+- The reset page names the account its link is for.
+- `sovereign-admin accounts reset-link EMAIL` makes a reset link for an account when mail cannot be sent.
+- Apps may be allowed encryption by a key return address, which brings the `keys` scope with it (core-app §5.6).
+
 ## [0.99.0] - 2026-11-16
 
 ### Changed

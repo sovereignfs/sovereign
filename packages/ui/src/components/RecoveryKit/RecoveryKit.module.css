@@ -1,0 +1,114 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+  max-width: 28rem;
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--sv-font-size-xl);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+}
+
+.explain,
+.note {
+  margin: 0;
+  color: var(--sv-color-text-muted);
+}
+
+.explain {
+  font-size: var(--sv-font-size-sm);
+}
+
+.note {
+  font-size: var(--sv-font-size-xs);
+}
+
+.printable {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+  padding: var(--sv-space-4);
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface-sunken);
+}
+
+/* Shown only on paper, where the page around it is not. */
+.printTitle {
+  display: none;
+  margin: 0;
+  font-size: var(--sv-font-size-md);
+  font-weight: var(--sv-font-weight-semibold);
+  color: var(--sv-color-text-primary);
+}
+
+.groups {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--sv-space-3) var(--sv-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--sv-font-family-mono);
+  font-size: var(--sv-font-size-md);
+  color: var(--sv-color-text-primary);
+}
+
+.group {
+  letter-spacing: 0.08em;
+}
+
+.check {
+  color: var(--sv-color-text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sv-space-2);
+}
+
+.continue {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .groups {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .actions > * {
+    width: 100%;
+    min-height: var(--sv-touch-target-min);
+  }
+}
+
+/* Printing the page prints the kit alone. */
+@media print {
+  :global(body *) {
+    visibility: hidden;
+  }
+
+  .printable,
+  .printable * {
+    visibility: visible;
+  }
+
+  .printable {
+    position: absolute;
+    inset: 0 auto auto 0;
+    border: none;
+    background: none;
+  }
+
+  .printTitle {
+    display: block;
+  }
+}

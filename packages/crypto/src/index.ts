@@ -7,3 +7,4 @@ export type { FieldKey, KeyRing } from './keyring.js';
 export { generateKey } from './key.js';
 export { fieldEncryptionVariables, resolveFieldEncryption } from './settings.js';
 export type { FieldEncryptionSettings, ResolveOptions } from './settings.js';
+export { isSignInValue, signInValueVersion } from './sign-in-value.js';

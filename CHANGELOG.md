@@ -5,6 +5,15 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.98.0] - 2026-11-16
+
+### Added
+
+- Encryption the server cannot read is specified (core-app §5, RFC 0005), and its first parts are built, used by nothing yet: the
+  library that derives a sign-in value and an unlock key from a password in the browser, seals keys to people, writes the recovery
+  kit and encrypts documents in chunks (`@sovereignfs/crypto/web`), and the design system's `LockedState` and `RecoveryKit`. Nothing
+  about signing in has changed.
+
 ## [0.97.1] - 2026-11-15
 
 ### Fixed

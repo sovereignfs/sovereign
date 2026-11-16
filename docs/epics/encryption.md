@@ -130,7 +130,7 @@ browser and in Node, at a cost that was measured.
 - better-auth's origin and CSRF checks, its rate limits and `confirmPassword`'s count are unchanged
 - `pnpm e2e` passes on each database
 
-#### ⏳ 16.4 — Keys and formats `[parallel]`
+#### ✅ 16.4 — Keys and formats `[parallel]`
 
 **Goal:** `@sovereignfs/crypto` makes, wraps and opens every key and record of RFC 0005, and encrypts a document in chunks, with a test
 for each way a record must be refused.
@@ -162,7 +162,7 @@ for each way a record must be refused.
 - A changed signing key is refused until it is accepted
 - Nothing in the package reads `window` or `indexedDB` at import, and its server entry point still works in Node with no change
 
-#### 📋 16.5 — A locked state and the recovery kit, in the design system `[parallel]`
+#### ✅ 16.5 — A locked state and the recovery kit, in the design system `[parallel]`
 
 **Goal:** `@sovereignfs/ui` has what every encrypted app and core show: a place that this browser cannot open, and the recovery kit.
 

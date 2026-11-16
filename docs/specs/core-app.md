@@ -597,14 +597,15 @@ passkeys), subject to §3.2.1. The account holder is told by email.
 
 #### 3.6.2 Scopes and claims
 
-| Scope            | Claims or access                                                     |
-| ---------------- | -------------------------------------------------------------------- |
-| `openid`         | `sub`: stable, unique, never reused                                  |
-| `profile`        | `name`, `picture`, `locale`, `zoneinfo`                              |
-| `email`          | `email`, `email_verified`                                            |
-| `roles`          | `roles`: the account's platform roles. Trusted clients only (§3.6.4) |
-| `directory`      | Access to the Directory API (§3.9)                                   |
-| `offline_access` | A refresh token                                                      |
+| Scope            | Claims or access                                                                         |
+| ---------------- | ---------------------------------------------------------------------------------------- |
+| `openid`         | `sub`: stable, unique, never reused                                                      |
+| `profile`        | `name`, `picture`, `locale`, `zoneinfo`                                                  |
+| `email`          | `email`, `email_verified`                                                                |
+| `roles`          | `roles`: the account's platform roles. Trusted clients only (§3.6.4)                     |
+| `directory`      | Access to the Directory API (§3.9)                                                       |
+| `keys`           | Encryption the server cannot read (§5.6). Only an app with a key return address holds it |
+| `offline_access` | A refresh token                                                                          |
 
 A client receives only the scopes it is allowed (§3.7) and the user has
 granted (§3.6.4).
@@ -760,6 +761,7 @@ Operators with `client:manage` register clients in the Console.
 | Allowed scopes            | Any of §3.6.2; `roles` only when trusted                                                                                                                                                |
 | Trusted                   | Off by default                                                                                                                                                                          |
 | Enabled                   | On by default                                                                                                                                                                           |
+| Key return address        | Optional, `https` like a redirect address. Set, the app may use encryption the server cannot read and holds `keys` (§5.6)                                                               |
 | App scopes                | What a confidential app may do for itself (§3.6.6). None by default; a public app cannot have any                                                                                       |
 
 #### 3.7.2 Launcher entry
@@ -1871,14 +1873,16 @@ Changes §3.4.2. Built by task 16.8.
 
 ### 5.6 Apps that use encryption
 
-Changes §3.6.2 and §3.7.1. Built by task 16.9.
+Built (task 16.9), in §3.6.2 and §3.7.1.
 
-- An app says it uses encryption in its manifest (manifest 4, `contracts/app-manifest.md` §2.8), and the operator allows it. People
-  are not asked app by app: an app only ever receives its own key.
-- Two client settings join §3.7.1: **Encryption** (off by default) and the **key return address** (`https`, matched exactly, like a
-  redirect address). Both are written only by `ClientRegistry`.
-- The scope **`keys`** joins §3.6.2: access to §5.7's calls. It is granted only to an app whose Encryption is on.
-- Switching Encryption off stops new releases and grants. It makes nothing stored readable or unreadable.
+- An app says it uses encryption in its manifest (manifest 4, `contracts/app-manifest.md` §2.8), and the operator allows it: `sv app
+add` says so, and `sv apply` registers the app's key return address (`sovereign-admin apps ensure --key-return`). People are not
+  asked app by app: an app only ever receives its own key.
+- **One setting decides it, the key return address** (§3.7.1): `https`, checked like a redirect address, written only by
+  `ClientRegistry`, kept with the app's other settings core adds. An app may use encryption exactly when it has one.
+- **The scope `keys`** (§3.6.2) follows it: the registry gives an app `keys` when it has a key return address and takes it away when
+  the address is cleared, whatever was asked for. The Console shows the scope as following the address, never as a box to tick.
+- Clearing the address stops new releases and grants. It makes nothing stored readable or unreadable.
 
 ### 5.7 Key release and sharing
 
@@ -2013,3 +2017,4 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-12 | §4.5: `sovereign-admin instance deletions resend`, which tells one app again of the accounts deleted after its backup, for `sv restore --app`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | 2026-11-15 | §2: Phase 2 is built, files included (on disk only); the overview no longer says the deletion fan-out is not built.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | 2026-11-16 | §5: keys, encryption the server cannot read, specified and not built (RFC 0005, epic 16, workstream 0003): signing in with a derived value and an instance id, the vault and the recovery kit, staying unlocked, passkeys that unlock, apps that use encryption, key release and sharing, escrow, and an acceptance list; §2 and §3.16 say so.                                                                                                                                                                                                                                                                                                                                                                                |
+| 2026-11-16 | §5.6, §3.6.2, §3.7.1: apps that use encryption are built, with one setting where §5.6 had two: the key return address, which the `keys` scope follows.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |

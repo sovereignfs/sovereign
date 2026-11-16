@@ -6,6 +6,8 @@ export const OAUTH_SCOPES = [
   'roles',
   'directory',
   'notifications',
+  // Encryption the server cannot read (core-app §5.6): only an app with a key return address holds it.
+  'keys',
   'offline_access',
 ] as const;
 

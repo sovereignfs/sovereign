@@ -4,39 +4,50 @@ import type { RegisterInput, UpdateInput } from './registry';
  * What each scope means to the operator who allows it (core-app §3.6.2, §3.7.1). The names in the protocol stay
  * in the technical settings; the words say what an app can learn or do.
  */
-export const SCOPE_TEXT: Record<string, { label: string; description: string; locked?: boolean }> =
-  {
-    openid: {
-      label: 'Sign people in',
-      description: 'Know who someone is. Every app needs this.',
-      locked: true,
-    },
-    profile: {
-      label: 'Name and picture',
-      description: 'See their name, picture, language and time zone.',
-    },
-    email: {
-      label: 'Email address',
-      description: 'See their email address and whether it is verified.',
-    },
-    roles: {
-      label: 'Their role here',
-      description: 'See whether they are an admin or the owner. Only for an app you trust.',
-    },
-    directory: {
-      label: 'Look people up',
-      description:
-        'Find other accounts on this instance, for example to share something with them.',
-    },
-    notifications: {
-      label: 'Manage its notifications',
-      description: 'Read, mark read and clear the notifications it sent them.',
-    },
-    offline_access: {
-      label: 'Stay signed in',
-      description: 'Keep working for them when they are not there, until they take access away.',
-    },
-  };
+/**
+ * `locked`: every app has it, and it cannot be unticked. `derived`: it follows another setting and is never ticked by hand (`keys`
+ * follows the key return address, core-app §5.6).
+ */
+export const SCOPE_TEXT: Record<
+  string,
+  { label: string; description: string; locked?: boolean; derived?: boolean }
+> = {
+  openid: {
+    label: 'Sign people in',
+    description: 'Know who someone is. Every app needs this.',
+    locked: true,
+  },
+  profile: {
+    label: 'Name and picture',
+    description: 'See their name, picture, language and time zone.',
+  },
+  email: {
+    label: 'Email address',
+    description: 'See their email address and whether it is verified.',
+  },
+  roles: {
+    label: 'Their role here',
+    description: 'See whether they are an admin or the owner. Only for an app you trust.',
+  },
+  directory: {
+    label: 'Look people up',
+    description: 'Find other accounts on this instance, for example to share something with them.',
+  },
+  keys: {
+    label: 'Keep data encrypted',
+    description:
+      'Keep what people give it encrypted so this server cannot read it. On exactly when a key return address is set below.',
+    derived: true,
+  },
+  notifications: {
+    label: 'Manage its notifications',
+    description: 'Read, mark read and clear the notifications it sent them.',
+  },
+  offline_access: {
+    label: 'Stay signed in',
+    description: 'Keep working for them when they are not there, until they take access away.',
+  },
+};
 
 /**
  * What each thing an app may do for itself means to the operator who allows it (core-app §3.6.6, §3.7.1). No person is asked
@@ -83,6 +94,7 @@ export function appFromForm(form: FormData): UpdateInput & { name: string } {
     postLogoutRedirectUris: lines(form.get('postLogoutRedirectUris')),
     backchannelLogoutUri: text(form.get('backchannelLogoutUri')).trim(),
     accountDeletedUri: text(form.get('accountDeletedUri')).trim(),
+    keyReturnUri: text(form.get('keyReturnUri')).trim(),
     endSession: on(form.get('endSession')),
     scopes: form.getAll('scope').map(String),
     // Only a confidential app's form has these boxes; a public app sends none, which is none allowed.
@@ -123,6 +135,7 @@ const FIELD_OF: Record<string, string> = {
   postLogoutRedirectUris: 'postLogoutRedirectUris',
   backchannelLogoutUri: 'backchannelLogoutUri',
   accountDeletedUri: 'accountDeletedUri',
+  keyReturnUri: 'keyReturnUri',
   scopes: 'scope',
   appScopes: 'appScope',
   secretIn: 'secretIn',
@@ -142,6 +155,7 @@ const LABEL_OF: Record<string, string> = {
   postLogoutRedirectUris: 'The addresses after sign-out',
   backchannelLogoutUri: 'The logout notice address',
   accountDeletedUri: 'The account-deleted address',
+  keyReturnUri: 'The key return address',
   scopes: 'What the app may see',
   appScopes: 'What the app may do on its own',
   secretIn: 'How the app sends its secret',

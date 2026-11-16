@@ -42,6 +42,7 @@ export const NEW_APP: Pick<
   | 'postLogoutRedirectUris'
   | 'backchannelLogoutUri'
   | 'accountDeletedUri'
+  | 'keyReturnUri'
   | 'endSession'
   | 'scopes'
   | 'appScopes'
@@ -56,6 +57,7 @@ export const NEW_APP: Pick<
   postLogoutRedirectUris: [],
   backchannelLogoutUri: undefined,
   accountDeletedUri: undefined,
+  keyReturnUri: undefined,
   endSession: false,
   scopes: ['openid', 'profile', 'email'],
   appScopes: [],
@@ -83,6 +85,7 @@ export function AppForm({ id, initial }: { id?: string; initial: Initial }) {
   const [postLogout, setPostLogout] = useState(initial.postLogoutRedirectUris.join('\n'));
   const [backchannel, setBackchannel] = useState(initial.backchannelLogoutUri ?? '');
   const [accountDeleted, setAccountDeleted] = useState(initial.accountDeletedUri ?? '');
+  const [keyReturn, setKeyReturn] = useState(initial.keyReturnUri ?? '');
   const [endSession, setEndSession] = useState(initial.endSession);
   const [scopes, setScopes] = useState(new Set(initial.scopes));
   const [appScopes, setAppScopes] = useState(new Set(initial.appScopes));
@@ -331,6 +334,21 @@ export function AppForm({ id, initial }: { id?: string; initial: Initial }) {
               />
             )}
           </FormField>
+          <FormField
+            label="Key return address"
+            hint="Set for an app that keeps what people give it encrypted so this server cannot read it. Core sends a person back here with the app’s own key. Setting it lets the app use encryption; clearing it stops new keys, and makes nothing stored readable or unreadable. Not yet reviewed or audited."
+            error={fields.keyReturnUri}
+          >
+            {(field) => (
+              <Input
+                {...field}
+                name="keyReturnUri"
+                inputMode="url"
+                value={keyReturn}
+                onChange={(event) => setKeyReturn(event.target.value)}
+              />
+            )}
+          </FormField>
           <Checkbox
             name="endSession"
             label="Let the app send people to core’s sign-out"
@@ -345,6 +363,21 @@ export function AppForm({ id, initial }: { id?: string; initial: Initial }) {
               if (!text) return null;
               const locked = text.locked === true;
               const needsTrust = scope === 'roles' && !trusted;
+              if (text.derived) {
+                // Never sent: the registry gives `keys` to an app exactly when it has a key return address.
+                return (
+                  <div key={scope} className={styles.scope}>
+                    <Checkbox
+                      id={`scope-${scope}`}
+                      label={`${text.label} (${scope})`}
+                      checked={keyReturn.trim() !== ''}
+                      disabled
+                      onChange={() => undefined}
+                    />
+                    <span className={styles.hint}>{text.description}</span>
+                  </div>
+                );
+              }
               return (
                 <div key={scope} className={styles.scope}>
                   {locked ? <input type="hidden" name="scope" value={scope} /> : null}

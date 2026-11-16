@@ -118,6 +118,7 @@ describe('the command line of sovereign-admin', () => {
       postLogoutRedirectUris: [],
       backchannelLogoutUri: '',
       accountDeletedUri: '',
+      keyReturnUri: '',
       scopes: ['openid', 'profile', 'email'],
       appScopes: [],
       trusted: false,

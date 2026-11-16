@@ -16,6 +16,7 @@ const view = (
   postLogoutRedirectUris: [],
   backchannelLogoutUri: undefined,
   accountDeletedUri: undefined,
+  keyReturnUri: undefined,
   endSession: false,
   scopes: ['openid'],
   appScopes: [],

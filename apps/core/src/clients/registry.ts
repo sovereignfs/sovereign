@@ -39,6 +39,11 @@ export type ClientSettings = {
    * Kept with the app's other settings core adds to the provider's own, not as a column of the provider.
    */
   accountDeletedUri: string | undefined;
+  /**
+   * Where core's key release sends a person back with the app's key (core-app §5.6, §5.7). Set means the app may use encryption the
+   * server cannot read, and only then does it hold the `keys` scope. Kept with the app's other settings core adds, like the above.
+   */
+  keyReturnUri: string | undefined;
   /** Lets the app send people to core's sign-out. On whenever a post-logout or back-channel address is set. */
   endSession: boolean;
   scopes: string[];
@@ -408,6 +413,13 @@ export class ClientRegistry {
       if (problem) problems.push({ field: 'accountDeletedUri', message: problem });
     }
 
+    const keyReturn = 'keyReturnUri' in input ? input.keyReturnUri : before?.keyReturnUri;
+    if (keyReturn !== undefined && keyReturn !== '') {
+      const problem = urlProblem(keyReturn, this.#development);
+      if (problem) problems.push({ field: 'keyReturnUri', message: problem });
+    }
+    const encryption = keyReturn !== undefined && keyReturn !== '';
+
     // Stopping trust takes `roles` with it, quietly: it is the consequence, not a mistake. Asking for
     // `roles` for an untrusted app is a mistake, and is refused.
     let requested: unknown = input.scopes ?? before?.scopes ?? DEFAULT_SCOPES;
@@ -485,12 +497,14 @@ export class ClientRegistry {
       postLogoutRedirectUris,
       backchannelLogoutUri,
       accountDeletedUri: accountDeleted === '' ? undefined : accountDeleted,
+      keyReturnUri: encryption ? keyReturn : undefined,
       // On automatically when an address that needs it is set (core-app §3.7.1).
       endSession:
         (input.endSession ?? before?.endSession ?? false) ||
         postLogoutRedirectUris.length > 0 ||
         backchannelLogoutUri !== undefined,
-      scopes: scopes.list,
+      // `keys` follows the key return address and nothing else: an app may use encryption exactly when it has one (core-app §5.6).
+      scopes: [...scopes.list.filter((scope) => scope !== 'keys'), ...(encryption ? ['keys'] : [])],
       appScopes: [...new Set(appScopes.map(String))],
       trusted,
       enabled: input.enabled ?? before?.enabled ?? true,
@@ -549,6 +563,7 @@ export class ClientRegistry {
           // Kept only when it is not the default, so an app that never chose it has the metadata it always had.
           ...(settings.idTokenAlgorithm === 'RS256' ? { idTokenAlgorithm: 'RS256' } : {}),
           ...(settings.accountDeletedUri ? { accountDeletedUri: settings.accountDeletedUri } : {}),
+          ...(settings.keyReturnUri ? { keyReturnUri: settings.keyReturnUri } : {}),
         },
         updatedAt: new Date(),
       },
@@ -570,6 +585,7 @@ export function clientView(row: ClientRow): ClientView {
     postLogoutRedirectUris: list(row.postLogoutRedirectUris),
     backchannelLogoutUri: blank(row.backchannelLogoutUri),
     accountDeletedUri: blank(metadata.accountDeletedUri),
+    keyReturnUri: blank(metadata.keyReturnUri),
     endSession: row.enableEndSession === true,
     scopes: list(row.scopes),
     appScopes: list(row.clientCredentialsScopes),

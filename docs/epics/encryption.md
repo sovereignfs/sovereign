@@ -31,7 +31,7 @@ server sends. Until a code audit, every guide and screen that describes the feat
 
 ## Tasks
 
-#### 📋 16.1 — The specifications
+#### ✅ 16.1 — The specifications
 
 **Goal:** What RFC 0005 designs is written into the documents that hold authority, so every later task implements a specification and not
 an RFC.

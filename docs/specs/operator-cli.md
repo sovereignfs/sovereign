@@ -727,6 +727,18 @@ FILE` open them with it.
 
 ---
 
+### 9.5 An escrow key
+
+Specified, not built ([core-app §5.8](core-app.md), task 16.12). `sv key escrow` makes an X25519 key pair for recovering people's
+encrypted data, and gives core the public half as an instance setting.
+
+- Its private half is shown or written as §9.4's recovery key is, under the same rules, and MUST NOT reach the server, a backup or the
+  instance repository.
+- `sv key escrow open --key FILE <account>` opens that account's key offline, on the operator's machine, and wraps it for a new
+  recovery kit, which the operator gives the person.
+- Turning escrow on is the owner's: the command refuses an operator whose account is not the owner's.
+- `sv key escrow --remove` takes the public half out of core. Escrow ways in made before stay, and the command MUST say so.
+
 ## 10. Keeping up, and recovering
 
 ### 10.1 Upgrading
@@ -959,3 +971,4 @@ with a DNS provider's module, which the stock image does not carry.
 | 2026-11-15 | §2.2: an app made by `npm create @sovereignfs app` is named `@sovereignfs/<name>` in its `package.json`, which stays `private`.                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2026-11-15 | §2.2, §2.3: an app's shared files and the `app sync`, `release`, `commits` and `settings` commands; its publish workflow is called on a merged `Release` promotion.                                                                                                                                                                                                                                                                                                                                                     |
 | 2026-11-15 | §2.3: a repository of several components, described in `sovereign.json`, is served by the same commands and shared workflows.                                                                                                                                                                                                                                                                                                                                                                                           |
+| 2026-11-16 | §9.5: `sv key escrow`, specified and not built (core-app §5.8).                                                                                                                                                                                                                                                                                                                                                                                                                                                         |

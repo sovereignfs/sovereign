@@ -1,6 +1,6 @@
 # Workstream 0003 — Encryption the server cannot read
 
-**Status:** 📋 Planned\
+**Status:** ⏳ In Progress (leg 1 done)\
 **Date:** November 2026\
 **Author:** Claude Code, for kasunben\
 **Goal owner:** kasunben\
@@ -19,7 +19,7 @@ signs in through core sees no difference at all.
 
 ## Definition of done
 
-- [ ] `16.1` — The specifications
+- [x] `16.1` — The specifications
 - [ ] `16.2` — The password derivation
 - [ ] `16.3` — Signing in with a derived value
 - [ ] `16.4` — Keys and formats
@@ -295,6 +295,7 @@ files after the run and find no plaintext.
 
 ## Changelog
 
-| Version | Date     | Change        |
-| ------- | -------- | ------------- |
-| 0.1     | Nov 2026 | Initial draft |
+| Version | Date     | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | Nov 2026 | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 0.2     | Nov 2026 | Leg 1 done (16.1, no version): core-app §5 specifies keys, not built, with an acceptance list (§5.10); §2 and §3.16 say so. The reset page is given the account's address (a decision taken with the goal owner); the manifest's `encryption` (§2.8, manifest 4), sdk §9.3, operator-cli §9.5 and the design system's two components are specified, not built. RFC 0005 is worded to what is designed on versions and on a reader of the server's memory. Run on the planning branch, not a branch of its own, at the goal owner's request. |

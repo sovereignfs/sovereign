@@ -136,7 +136,9 @@ chunk i = AES-256-GCM(key, nonce = i as 11 bytes ‖ last?(1 byte), associated d
 ```
 
 - **A key for each stored blob**, so counting nonces is safe and no two blobs share one.
-- **The header is authenticated with every chunk**: a blob returned under another document's id, or an older version, does not open.
+- **The header is authenticated with every chunk**: a blob returned under another document's id, or with a version other than the one
+  the browser asked for, does not open. Which version is current is the app's to know; a server that returns an older, valid version
+  when asked for "the latest" is not caught by this alone (a question put to the reviewer).
 - **The last chunk is marked**, so a file cut short does not open.
 - A browser decrypts and shows a chunk at a time; a large file is never whole in memory.
 - The name, type and size a person sees are encrypted the same way, as one small value. The file store sees
@@ -167,6 +169,8 @@ Every instance signs in this way, with encrypted apps or none.
   a password, so the policy is the browser's to hold, and the server refuses anything that is not a derived value._ A person who
   goes round the browser to set a weak password weakens their own account only.
 - **`sovereign-admin` and the seed derive the same way**, in Node, from the address and the instance id they read from the database.
+- **The reset page is told the address** of the account its link belongs to when it is rendered, and shows it, since the page holds
+  only the token and the derivation needs the address. Whoever holds the link received it at that address.
 - **Signing in needs JavaScript**, and takes about a second longer, during which the form says it is working.
 - **Accounts from before set their password again through the reset link**, after a backup. No second way of signing in is kept.
   better-auth's stored hashes are of a different input from then on; the populated-store fixtures are made again for it.
@@ -314,15 +318,15 @@ page open to see it.
 
 ## Security and privacy
 
-| Someone who                                     | Gets                                                                                              |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| copies the disk, the database or a backup       | Ciphertext, wrapped keys, public keys. Passwords can be guessed against a wrap at Argon2id's cost |
-| reads the running server's memory               | The same: no key and no password is ever there                                                    |
-| swaps a public key, a document or a version     | A refusal in the browser (a signature, a remembered key, the header)                              |
-| steals an unlocked laptop                       | Use of the keys until the session is ended from elsewhere; they cannot be copied out              |
-| takes a browser profile after the session ended | Nothing that opens                                                                                |
-| holds the escrow private key                    | Every account's data on that instance; this is why it is off by default and said to people        |
-| changes the code core or an app sends           | Everything, at the next unlock. Not covered                                                       |
+| Someone who                                     | Gets                                                                                                                                                                                         |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| copies the disk, the database or a backup       | Ciphertext, wrapped keys, public keys. Passwords can be guessed against a wrap at Argon2id's cost                                                                                            |
+| reads the running server's memory               | No key and no password, but each sign-in value as it arrives, before it is hashed: a password can be guessed against it at Argon2id's cost alone, and a right guess gives the unlock key too |
+| swaps a public key, a document or a version     | A refusal in the browser (a signature, a remembered key, the header)                                                                                                                         |
+| steals an unlocked laptop                       | Use of the keys until the session is ended from elsewhere; they cannot be copied out                                                                                                         |
+| takes a browser profile after the session ended | Nothing that opens                                                                                                                                                                           |
+| holds the escrow private key                    | Every account's data on that instance; this is why it is off by default and said to people                                                                                                   |
+| changes the code core or an app sends           | Everything, at the next unlock. Not covered                                                                                                                                                  |
 
 - **What the server still sees:** who has keys for which app, who shares with whom, sizes and times.
 - **A weak password is a weak key.** The policy is in the browser now, so the sign-up page's guidance matters more than it did.
@@ -389,6 +393,8 @@ Each step is useful by itself and is a task or a few.
   without changing anything stored.
 - **Review in two parts**, the design and then the code (above).
 - **The timing page is the first piece of step 1**, not built before this is accepted.
+- **The reset page is given the account's address** by core when it is rendered (§2), settled after acceptance on 2026-11-16, over
+  asking the person to type it or putting it in the link.
 - **The salt is made from an instance id, not the instance's address** (§1.1), settled after acceptance, on 2026-11-16: with the
   address, an instance that moved would have locked everyone out of their accounts and their data.
 - **Step 2 is built before the design review, and step 3 is not.** Core never receiving a password is worth having at once, and

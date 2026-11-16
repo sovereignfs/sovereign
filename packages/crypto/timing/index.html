@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Password derivation timing</title>
+    <title>Password derivation timing and checks</title>
     <style>
       :root {
         color-scheme: light dark;
@@ -59,6 +59,11 @@
     </p>
     <p>Keep this tab in front and the screen on while it runs. Each cost runs three times.</p>
     <p id="check">Checking libsodium against the vectors…</p>
+    <h2>Browser checks</h2>
+    <p>The vectors and round trips the Node tests run, in this browser.</p>
+    <ul id="checks">
+      <li>Waiting…</li>
+    </ul>
     <button id="run" type="button" disabled>Run</button>
     <table>
       <thead>

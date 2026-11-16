@@ -4,6 +4,7 @@
  * two HKDFs) costs well under a millisecond.
  */
 import { argon2id, type Argon2Cost } from '../src/web/argon2.js';
+import { CHECKS } from './checks.js';
 import vectors from '../src/web/__tests__/password-vectors.json' with { type: 'json' };
 
 const MiB = 1024 * 1024;
@@ -102,3 +103,24 @@ check().then(
     status.className = 'bad';
   },
 );
+
+/** The browser checks, where a secure context gives `crypto.subtle`. */
+async function runChecks(): Promise<void> {
+  const list = element<HTMLUListElement>('checks');
+  if (!globalThis.isSecureContext || !crypto.subtle) {
+    list.innerHTML =
+      '<li>Needs a secure context: open this page on localhost, or over https. The timing above does not need one.</li>';
+    return;
+  }
+  list.replaceChildren();
+  for (const [name, check] of CHECKS) {
+    const item = document.createElement('li');
+    item.textContent = `${name}: …`;
+    list.append(item);
+    const held = await check().catch(() => false);
+    item.textContent = `${name}: ${held ? 'holds' : 'FAILS'}`;
+    item.className = held ? 'ok' : 'bad';
+  }
+}
+
+void runChecks();

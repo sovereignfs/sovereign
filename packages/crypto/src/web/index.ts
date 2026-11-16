@@ -59,6 +59,15 @@ export {
   importDocumentKey,
 } from './content.js';
 export type { ContentTarget } from './content.js';
+export { acceptChangedKey, memoryRememberedKeys, rememberKey } from './vault.js';
+export type {
+  AccountKeys,
+  AppKeys,
+  Remembered,
+  RememberedKeys,
+  Vault,
+  WayInRecord,
+} from './vault.js';
 export type { ReadKit } from './kit.js';
 export type { DocumentKeyTarget, SealedRecord, SharedKeyRecord } from './sharing.js';
 export { isSignInValue, signInValueVersion } from '../sign-in-value.js';

@@ -25,8 +25,12 @@ const toHex = (bytes: Uint8Array) =>
   Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 const pause = () => new Promise((resolve) => setTimeout(resolve, 50));
 
+/**
+ * Checks libsodium against the cheap vector only (1 MiB): the full-cost vectors need 64 MiB, and a phone that cannot give it must
+ * still reach the timing, where that failure is a result to report.
+ */
 async function check(): Promise<boolean> {
-  for (const vector of vectors) {
+  for (const vector of vectors.filter((item) => item.input.derivation.memoryBytes <= 1024 * 1024)) {
     const password = new TextEncoder().encode(vector.input.password.normalize('NFKC'));
     const secret = await argon2id(
       password,

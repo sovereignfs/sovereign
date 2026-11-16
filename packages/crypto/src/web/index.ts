@@ -19,6 +19,35 @@ export type {
   PasswordDerivation,
   WebKey,
 } from './password.js';
+export { encodeFields, LABEL } from './fields.js';
+export type { Field } from './fields.js';
 export { generateReceivingKey, open, publicKeyBytes, seal } from './hpke.js';
 export type { KeyPair, SealContext, Sealed } from './hpke.js';
+export {
+  accountWrapData,
+  appKeyData,
+  importWrappingKey,
+  KEY_BYTES,
+  newKey,
+  parseWrapRecord,
+  RecordError,
+  rewrapKey,
+  SUITE,
+  unwrapKey,
+  unwrapSecret,
+  wrapSecret,
+} from './records.js';
+export type { WayIn, WrapRecord } from './records.js';
+export {
+  createAccountSigningKey,
+  createAppIdentity,
+  openAccountSigningKey,
+  openAppIdentity,
+  publicKeyFrom,
+  signAppKeys,
+  verifyAppKeys,
+} from './identity.js';
+export type { AppIdentity, OpenedIdentity, WrappedPair } from './identity.js';
+export { openDocumentKey, openEscrowWrap, sealEscrowWrap, shareDocumentKey } from './sharing.js';
+export type { DocumentKeyTarget, SealedRecord, SharedKeyRecord } from './sharing.js';
 export { isSignInValue, signInValueVersion } from '../sign-in-value.js';

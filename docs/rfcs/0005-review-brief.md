@@ -97,13 +97,17 @@ In the order we would like them looked at.
 5. **Sharing (§1.2, §3.1).** A document key is sealed with HPKE in base mode, and the record is signed separately by the person who
    shared it. Is that binding right, or should it be HPKE's authenticated mode, or something else? Can a reader pass on a share as
    if it came from the first person?
-6. **Staying unlocked (§5).** Does wrapping twice give what is claimed: nothing that opens once the session has ended, and nothing
+6. **What "cannot be exported" buys.** A WebCrypto key that cannot be exported cannot be copied out as an object, but any script on
+   the page that can use it can decrypt what it wraps and so recover the bytes, and `unwrapKey` lets the caller choose `extractable`.
+   We now state it that way (Security and privacy). Is there more the design should do about a script on the page, short of a
+   client the server does not deliver?
+7. **Staying unlocked (§5).** Does wrapping twice give what is claimed: nothing that opens once the session has ended, and nothing
    for the server alone?
-7. **Passkeys (§1.2, §4 step 3).** A random PRF input for each passkey, the output through HKDF, and an unlock ceremony whose answer
+8. **Passkeys (§1.2, §4 step 3).** A random PRF input for each passkey, the output through HKDF, and an unlock ceremony whose answer
    is checked nowhere but by whether the account key opens.
-8. **Escrow and the recovery kit (§1.2, §6).** Whether anything about them weakens an account that does not use escrow.
-9. **What is missing.** The design has no way to replace an account key or a signing key after a compromise, and puts off
-   post-quantum key wrapping, although wrapped document keys sit on a server for years. Which of these should not wait?
+9. **Escrow and the recovery kit (§1.2, §6).** Whether anything about them weakens an account that does not use escrow.
+10. **What is missing.** The design has no way to replace an account key or a signing key after a compromise, and puts off
+    post-quantum key wrapping, although wrapped document keys sit on a server for years. Which of these should not wait?
 
 ## What we would like back
 

@@ -93,7 +93,7 @@ browser and in Node, at a cost that was measured.
 - Nothing is fetched from another origin; the WebAssembly is in the package
 - The timing page runs on a phone and its numbers are recorded
 
-#### 📋 16.3 — Signing in with a derived value
+#### ✅ 16.3 — Signing in with a derived value
 
 **Goal:** Core never receives a password. Every place a password is typed sends the sign-in value, on every instance.
 
@@ -274,7 +274,7 @@ do.
 - A passkey must still be user-verified, at both ceremonies
 - Signing in with a passkey that cannot unlock ends in a working session and a prompt, never an error
 
-#### 📋 16.9 — Manifest 4, and allowing an app to use encryption `[parallel]`
+#### ⏳ 16.9 — Manifest 4, and allowing an app to use encryption `[parallel]`
 
 **Goal:** An app says it uses encryption, and an operator allows it, the way an app's scopes are shown and given today.
 

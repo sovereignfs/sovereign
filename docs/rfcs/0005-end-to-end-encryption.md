@@ -368,6 +368,7 @@ Each step is useful by itself and is a task or a few.
   and it finds the mistakes that would otherwise cost a format. A code audit follows when the library and core's vault exist (after
   step 4), and before the guides say the feature protects anything.
 - **Until the audit, the feature is labelled as not yet audited**, in the guides and where an operator allows an app to use it.
+- What a reviewer is asked, and where the design is least sure of itself, is in the [review brief](0005-review-brief.md).
 - Who does each is the developer's to arrange. Programmes that fund audits of open-source software are worth asking; none has been
   approached.
 

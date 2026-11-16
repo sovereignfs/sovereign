@@ -42,8 +42,8 @@ the promise can be raised later without changing what is stored.
 
 ## The design in one page
 
-- **Signing in (RFC §1.1, §2).** The browser runs Argon2id once over the password, with a salt made from the instance's origin and
-  the address. HKDF splits the result into a **sign-in value**, sent to the server in place of the password and hashed there again,
+- **Signing in (RFC §1.1, §2).** The browser runs Argon2id once over the password, with a salt made from a random id of the
+  instance and the address. HKDF splits the result into a **sign-in value**, sent to the server in place of the password and hashed there again,
   and an **unlock key**, which stays in the browser.
 - **Keys (§1.2, §3).** A random **account key** is wrapped once for each way in: the unlock key, each passkey (through the WebAuthn
   PRF extension), a printed recovery kit, and optionally an operator's escrow key. The account key wraps a random **app key** for
@@ -71,7 +71,9 @@ In the order we would like them looked at.
    - The server sees the sign-in value in memory, before it hashes it. Someone who reads that memory can guess passwords against it
      at Argon2id's cost alone, and a right guess gives the unlock key too. Is one Argon2id run with an HKDF split the right shape, or
      should the two values cost separately?
-   - The salt is deterministic, so that nothing is asked of the server before signing in. Is that acceptable?
+   - The salt is the same each time for an account: a random id the instance publishes, and the address. Nothing is asked about an
+     address before signing in. The id is not the page's origin, so that an instance can move; that gives up what binding to the
+     origin would add against a copy of the site. Is that the right trade?
    - Is the plan for changing the cost later (§1.4: send a value for each cost in use, in one request) sound?
 3. **Versions and rollback (§1.3).** The header, with the document's id and version, is authenticated with every chunk. But a server
    can return an **older, valid** version, and the design does not say how a browser knows which version to expect. We think the

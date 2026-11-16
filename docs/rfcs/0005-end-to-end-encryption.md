@@ -7,7 +7,7 @@
 | **Author**   | Claude Code, for review                                                                                                                                                                                                                                                                                                                                                |
 | **Scope**    | `docs/specs/core-app.md` (§3.3.2, §3.4, §3.5, §3.6.2, §3.7, §3.16, a new section); `contracts/core-api/`; `contracts/app-manifest.md` (manifest 4) and its schemas; `docs/specs/sdk.md` §9; `docs/specs/design-system.md`; `AGENTS.md` and `docs/architecture-rules.md` (one rule retired); `packages/crypto`, `packages/sdk`, `packages/ui`, `apps/core`, `tools/cli` |
 | **Research** | [0008](../research/0008-end-to-end-encryption.md), which builds on [0006](../research/0006-data-at-rest.md)                                                                                                                                                                                                                                                            |
-| **Tasks**    | None yet; they are added to the roadmap when this is accepted                                                                                                                                                                                                                                                                                                          |
+| **Tasks**    | [16.1–16.14](../epics/encryption.md), in milestone M15 of the roadmap, run as [workstream 0003](../workstreams/0003-encryption.md)                                                                                                                                                                                                                                     |
 
 ## Summary
 
@@ -84,7 +84,7 @@ One for each job. All but the first are in WebCrypto, so keys can be held as key
 
 ```
 address   = the sign-in address, trimmed and in lower case
-salt      = SHA-256("sovereign/1/password" ‖ instance origin ‖ 0x00 ‖ address)
+salt      = SHA-256("sovereign/1/password" ‖ instance id ‖ address)
 master    = Argon2id(NFKC(password), salt)
 sign-in   = "svp1." ‖ base64url( HKDF(master, info = "sovereign/1/sign-in") )
 unlock    = HKDF(master, salt = the vault's random salt for this account, info = "sovereign/1/unlock")
@@ -92,8 +92,17 @@ unlock    = HKDF(master, salt = the vault's random salt for this account, info =
 
 - **One Argon2id run gives both values.** The sign-in value goes where the password goes today. The unlock key never leaves the
   browser. HKDF is one-way in both directions, so the value core receives gives nothing towards the unlock key.
-- **The salt needs nothing from the server**, so nothing is asked before signing in and nothing tells whether an address has an
-  account. The instance's origin is in it, so the same password and address on two instances give unrelated values.
+- **The instance id is 32 random bytes that core makes once**, before its first account, keeps as a setting and never changes. It
+  is the same for every account, so giving it out tells nothing about who has one. Core's pages are given it when they are rendered,
+  and it is in the public instance document (`/.well-known/sovereign-instance`) for any other client.
+- **It is not the instance's address**, so an instance that moves to another address keeps every sign-in value and every unlock key.
+  It is in the database, so it comes back with a restore; a copy of an instance has the same id and the same values, as it has the
+  same accounts.
+- **Nothing is asked about an address before signing in**, and nothing tells whether one has an account. The same password and
+  address on two instances give unrelated values.
+- **A server that gives a wrong id** makes signing in fail and learns nothing it could not learn by sending altered code. What is
+  given up, against a salt made from the address bar, is that a copy of the site at another address can ask for the real instance's
+  id and so collect values that work on it: no worse than a password typed into such a copy today, and no better.
 - **`master` is dropped as soon as both values are made.**
 
 #### 1.2 Records
@@ -157,7 +166,7 @@ Every instance signs in this way, with encrypted apps or none.
   policy is enforced where the hash is made (AGENTS.md, core-app §3.3.2) is retired, and its replacement says: _core never receives
   a password, so the policy is the browser's to hold, and the server refuses anything that is not a derived value._ A person who
   goes round the browser to set a weak password weakens their own account only.
-- **`sovereign-admin` and the seed derive the same way**, in Node, from the address and the instance's URL.
+- **`sovereign-admin` and the seed derive the same way**, in Node, from the address and the instance id they read from the database.
 - **Signing in needs JavaScript**, and takes about a second longer, during which the form says it is working.
 - **Accounts from before set their password again through the reset link**, after a backup. No second way of signing in is kept.
   better-auth's stored hashes are of a different input from then on; the populated-store fixtures are made again for it.
@@ -380,6 +389,8 @@ Each step is useful by itself and is a task or a few.
   without changing anything stored.
 - **Review in two parts**, the design and then the code (above).
 - **The timing page is the first piece of step 1**, not built before this is accepted.
+- **The salt is made from an instance id, not the instance's address** (§1.1), settled after acceptance, on 2026-11-16: with the
+  address, an instance that moved would have locked everyone out of their accounts and their data.
 - **Step 2 is built before the design review, and step 3 is not.** Core never receiving a password is worth having at once, and
   what the review might change in it costs little: the number after `svp` names the whole derivation and not only its cost, so a
   derivation the review replaces is moved from at each person's next sign-in, as a change of cost is (§1.4), with no second reset.

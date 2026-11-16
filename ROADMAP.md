@@ -247,3 +247,28 @@ Epic [15](docs/epics/core-services.md)
 | —       | 5        | Files in any S3-compatible store `[parallel]`                 | 📋     | [15.10](docs/epics/core-services.md) |
 | —       | 6        | Files in a repository the person connects                     | 🚧     | [15.11](docs/epics/core-services.md) |
 | 0.97.0  | 7        | Files on disk, end to end                                     | ✅     | [15.12](docs/epics/core-services.md) |
+
+### M15 — Apps keep what the server cannot read
+
+[RFC 0005](docs/rfcs/0005-end-to-end-encryption.md) (Accepted) · [research 0008](docs/research/0008-end-to-end-encryption.md) · epic
+[16](docs/epics/encryption.md) · workstream [0003](docs/workstreams/0003-encryption.md)
+
+Two tasks wait on someone outside the work: 16.3 on the cost of the password derivation being measured on real phones, and 16.6 on a
+cryptographer's review of the RFC. The workstream holds both as gates.
+
+| Version | Priority | Task                                                                   | Status | Epic task                         |
+| ------- | -------- | ---------------------------------------------------------------------- | ------ | --------------------------------- |
+| —       | 1        | The specifications                                                     | 📋     | [16.1](docs/epics/encryption.md)  |
+| —       | 2        | The password derivation                                                | 📋     | [16.2](docs/epics/encryption.md)  |
+| —       | 3        | Signing in with a derived value                                        | 📋     | [16.3](docs/epics/encryption.md)  |
+| —       | 4        | Keys and formats `[parallel]`                                          | 📋     | [16.4](docs/epics/encryption.md)  |
+| —       | 5        | A locked state and the recovery kit, in the design system `[parallel]` | 📋     | [16.5](docs/epics/encryption.md)  |
+| —       | 6        | Core's vault and the recovery kit                                      | 📋     | [16.6](docs/epics/encryption.md)  |
+| —       | 7        | Staying unlocked until the session ends                                | 📋     | [16.7](docs/epics/encryption.md)  |
+| —       | 8        | Passkeys that unlock `[parallel]`                                      | 📋     | [16.8](docs/epics/encryption.md)  |
+| —       | 9        | Manifest 4, and allowing an app to use encryption `[parallel]`         | 📋     | [16.9](docs/epics/encryption.md)  |
+| —       | 10       | Key release                                                            | 📋     | [16.10](docs/epics/encryption.md) |
+| —       | 11       | Sharing between people                                                 | 📋     | [16.11](docs/epics/encryption.md) |
+| —       | 12       | Escrow `[parallel]`                                                    | 📋     | [16.12](docs/epics/encryption.md) |
+| —       | 13       | A vault for an app with no core `[parallel]`                           | 📋     | [16.13](docs/epics/encryption.md) |
+| —       | 14       | An encrypted app, end to end                                           | 📋     | [16.14](docs/epics/encryption.md) |

@@ -324,14 +324,16 @@ page open to see it.
 | copies the disk, the database or a backup       | Ciphertext, wrapped keys, public keys. Passwords can be guessed against a wrap at Argon2id's cost                                                                                            |
 | reads the running server's memory               | No key and no password, but each sign-in value as it arrives, before it is hashed: a password can be guessed against it at Argon2id's cost alone, and a right guess gives the unlock key too |
 | swaps a public key, a document or a version     | A refusal in the browser (a signature, a remembered key, the header)                                                                                                                         |
-| steals an unlocked laptop                       | Use of the keys until the session is ended from elsewhere; they cannot be copied out                                                                                                         |
+| steals an unlocked laptop                       | Use of the keys until the session is ended from elsewhere, and, by running code on the page, what they open                                                                                  |
 | takes a browser profile after the session ended | Nothing that opens                                                                                                                                                                           |
 | holds the escrow private key                    | Every account's data on that instance; this is why it is off by default and said to people                                                                                                   |
 | changes the code core or an app sends           | Everything, at the next unlock. Not covered                                                                                                                                                  |
 
 - **What the server still sees:** who has keys for which app, who shares with whom, sizes and times.
 - **A weak password is a weak key.** The policy is in the browser now, so the sign-up page's guidance matters more than it did.
-- **Cross-site scripting in an app** can use that app's key while the page is open, and cannot export it or reach another app's.
+- **Cross-site scripting in an app** can use that app's key while the page is open, and with it open every record that key wraps,
+  to their bytes; it cannot reach another app's key. A key that cannot be exported cannot be copied out as an object; it does not
+  stop a script on the page from doing what the page can do with it.
 - **Core's hardening is unchanged**: origin and CSRF checks, the nonce policy, no fresh-session rule. `/keys/release` is a per-person
   page, never cached, never framed.
 

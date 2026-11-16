@@ -142,6 +142,24 @@ written here over WebCrypto, from RFC 9180 §4 and §5, in about a hundred lines
   the secrets made from it are bytes in this code while it runs, and are overwritten before it
   returns.
 
+### Records
+
+Every key RFC 0005 stores is a small JSON record that names its suite (`{ "suite": 1, … }`), and
+every encryption is bound to whose it is and what it is for: an account key's ways in, an app key,
+an app's two key pairs, the account's signing key, a document key sealed to a reader and signed by
+who shared it, and an escrow wrap. What binds them (associated data, HPKE `info`, signed messages)
+is `encodeFields`: a label first, then each field's length and bytes, so a byte cannot move from a
+person's `sub` into an app's client id and read the same.
+
+### What "cannot be exported" means
+
+Keys are held as WebCrypto keys that cannot be exported, and a key's bytes exist only inside the
+call that needs them, overwritten before it returns. That stops a key object being copied out of the
+page. It does **not** stop a script running on the page: whatever can use a key can decrypt what it
+wraps, and so recover the bytes, and `unwrapKey` lets its caller choose `extractable`. A test holds
+this property, so that no document claims more: cross-site scripting in an app gets that app's keys
+while the page is open, and not another app's.
+
 ### The cost
 
 The derivation starts at RFC 0005 §1.4's **64 MiB and 3 passes** (`PASSWORD_DERIVATION`). It is

@@ -46,6 +46,8 @@ export type Normalised = {
   data: string[];
   /** Whether it keeps people's files in its folder of the instance's `sovereign-data` volume (manifest 3, RFC 0004). */
   storage: boolean;
+  /** Present when it keeps what people give it encrypted (manifest 4, §2.8): the path core returns a person to with its key. */
+  encryption?: { return: string };
   /** The core versions it works with, as a semver range. */
   core?: string;
 };
@@ -70,7 +72,10 @@ export function normalise(manifest: Manifest): Normalised {
     },
     generate: secretsOf(manifest),
     data: manifest.data ?? [],
-    storage: manifest.manifest === 3 && manifest.storage === true,
+    storage: (manifest.manifest === 3 || manifest.manifest === 4) && manifest.storage === true,
+    ...(manifest.manifest === 4 && manifest.encryption !== undefined
+      ? { encryption: { return: manifest.encryption.return } }
+      : {}),
     ...(manifest.core === undefined ? {} : { core: manifest.core }),
   };
 }

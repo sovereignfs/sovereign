@@ -158,7 +158,7 @@ Manifest 3 only. An app with `"storage": true` keeps the files people upload in 
 
 ### 2.8 `encryption`
 
-Manifest 4 only. Specified, not built: no toolkit reads manifest 4 yet ([core-app §5](../docs/specs/core-app.md), task 16.9). An app
+Manifest 4 only ([core-app §5](../docs/specs/core-app.md)). An app
 that keeps what people give it encrypted so the server cannot read it says so:
 
 ```
@@ -262,6 +262,6 @@ names the version that reads it.
 
 ### 5.3 Manifest 4
 
-Specified, not built. Manifest 4 will be `schemas/app-manifest-v4.schema.json`: manifest 3 and one more field, `encryption` (§2.8), and
+Manifest 4 is [`schemas/app-manifest-v4.schema.json`](schemas/app-manifest-v4.schema.json): manifest 3 and one more field, `encryption` (§2.8), and
 nothing else. A toolkit that reads 4 reads 1 to 3 as it did, and a toolkit that reads only 1 to 3 refuses a manifest 4 and names the
 version that reads it.

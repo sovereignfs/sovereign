@@ -98,6 +98,22 @@ describe('normalise, manifest 2', () => {
     expect(secretsOf({})).toEqual([]);
   });
 
+  it("says whether an app keeps its people's data encrypted, which only a manifest 4 can, and keeps storage from 3", () => {
+    const four = {
+      ...manifest2Of(),
+      manifest: 4,
+      storage: true,
+      encryption: { return: '/auth/keys' },
+    };
+    expect(normalise(four as never).encryption).toEqual({ return: '/auth/keys' });
+    expect(normalise(four as never).storage).toBe(true);
+    expect(normalise({ ...manifest2Of(), manifest: 4 } as never).encryption).toBeUndefined();
+    expect(
+      normalise({ ...manifest2Of(), manifest: 3, encryption: { return: '/x' } } as never)
+        .encryption,
+    ).toBeUndefined();
+  });
+
   it('says whether an app keeps files, which only a manifest 3 can', () => {
     expect(normalise({ ...manifest2Of(), manifest: 3, storage: true } as never).storage).toBe(true);
     expect(normalise({ ...manifest2Of(), manifest: 3 } as never).storage).toBe(false);

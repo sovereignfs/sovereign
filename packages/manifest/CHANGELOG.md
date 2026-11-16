@@ -5,6 +5,14 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.2.0; earlier versions are in the repository's
 history and tags.
 
+## [0.3.0] - 2026-11-16
+
+### Added
+
+- Manifest 4: an app that keeps what people give it encrypted so the server cannot read it says so, with `encryption.return`, the
+  path core sends a person back to with the app's key; it needs `signIn`. Manifest 4 keeps manifest 3's `storage` and its rules
+  ([`contracts/app-manifest.md`](https://github.com/sovereignfs/sovereign/blob/main/contracts/app-manifest.md) §2.8).
+
 ## [0.2.0] - 2026-11-15
 
 ### Added

@@ -28,7 +28,8 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit && tsc --noEmit -p timing",
     "vectors": "tsx scripts/password-vectors.ts",
-    "timing": "tsx scripts/timing.ts"
+    "timing": "tsx scripts/timing.ts",
+    "vectors:formats": "tsx scripts/format-vectors.ts"
   },
   "dependencies": {
     "@sovereignfs/config": "workspace:*",

@@ -1,6 +1,7 @@
 import { Aes256Gcm, CipherSuite, DhkemX25519HkdfSha256, HkdfSha256 } from '@hpke/core';
 import { describe, expect, it } from 'vitest';
 import { toBase64Url, utf8 } from '../bytes.js';
+import vector from './rfc9180-a1.json' with { type: 'json' };
 import {
   AES_128_GCM,
   generateReceivingKey,
@@ -40,17 +41,7 @@ async function pairFrom(privateHex: string, publicHex: string) {
 }
 
 // RFC 9180 Appendix A.1.1: DHKEM(X25519, HKDF-SHA256), HKDF-SHA256, AES-128-GCM, base mode, the first encryption.
-const A1 = {
-  info: '4f6465206f6e2061204772656369616e2055726e',
-  pkEm: '37fda3567bdbd628e88668c3c8d7e97d1d1253b6d4ea6d44c150f741f1bf4431',
-  skEm: '52c4a758a802cd8b936eceea314432798d5baf2d7e9235dc084ab1b9cfa2f736',
-  pkRm: '3948cfe0ad1ddb695d780e59077195da6c56506b027329794ab02bca80815c4d',
-  skRm: '4612c550263fc8ad58375df3f557aac531d26850903e55a9f23f21d8534e8ac8',
-  enc: '37fda3567bdbd628e88668c3c8d7e97d1d1253b6d4ea6d44c150f741f1bf4431',
-  pt: '4265617574792069732074727574682c20747275746820626561757479',
-  aad: '436f756e742d30',
-  ct: 'f938558b5d72f1a23810b4be2ab4f84331acc02fc97babc53a52ae8218a355a96d8770ac83d07bea87e13c512a',
-};
+const A1 = vector;
 
 const theirs = new CipherSuite({
   kem: new DhkemX25519HkdfSha256(),

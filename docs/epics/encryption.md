@@ -130,7 +130,7 @@ browser and in Node, at a cost that was measured.
 - better-auth's origin and CSRF checks, its rate limits and `confirmPassword`'s count are unchanged
 - `pnpm e2e` passes on each database
 
-#### 📋 16.4 — Keys and formats `[parallel]`
+#### ⏳ 16.4 — Keys and formats `[parallel]`
 
 **Goal:** `@sovereignfs/crypto` makes, wraps and opens every key and record of RFC 0005, and encrypts a document in chunks, with a test
 for each way a record must be refused.

@@ -261,7 +261,7 @@ cryptographer's review of the RFC. The workstream holds both as gates.
 | —       | 1        | The specifications                                                     | ✅     | [16.1](docs/epics/encryption.md)  |
 | —       | 2        | The password derivation                                                | ⏳     | [16.2](docs/epics/encryption.md)  |
 | —       | 3        | Signing in with a derived value                                        | 📋     | [16.3](docs/epics/encryption.md)  |
-| —       | 4        | Keys and formats `[parallel]`                                          | 📋     | [16.4](docs/epics/encryption.md)  |
+| —       | 4        | Keys and formats `[parallel]`                                          | ⏳     | [16.4](docs/epics/encryption.md)  |
 | —       | 5        | A locked state and the recovery kit, in the design system `[parallel]` | 📋     | [16.5](docs/epics/encryption.md)  |
 | —       | 6        | Core's vault and the recovery kit                                      | 📋     | [16.6](docs/epics/encryption.md)  |
 | —       | 7        | Staying unlocked until the session ends                                | 📋     | [16.7](docs/epics/encryption.md)  |

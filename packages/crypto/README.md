@@ -124,7 +124,10 @@ choice was made with the goal owner (2026-11-16) on what each audit actually cov
   Argon2id, HKDF) and none of this package's code: `pnpm --filter @sovereignfs/crypto vectors`. The
   tests compare this package against them, and run both Argon2ids on random inputs.
 - **In a browser**, the timing page checks libsodium against the same vectors before it times
-  anything. The Node tests run in CI; the browser check is run by opening the page.
+  anything, and, where it has `crypto.subtle` (on `localhost` or over https), runs **browser checks**:
+  the derivation's vectors, RFC 9180's HPKE vector, and round trips of the records, the kit and
+  the content, with their refusals. The Node tests run in CI; the browser checks are run by opening
+  the page. All of them held in Chromium 156 on the development Mac.
 
 ### HPKE: written here, over WebCrypto
 
@@ -160,6 +163,13 @@ cut short (even at a chunk's edge), lengthened, reordered or changed in any byte
 reader is given each chunk once it is authenticated, before the end: only a stream that ends
 without an error is the whole document. `encryptBytes` does the same for a small value, such as a
 file's name and type.
+
+### The vault and remembered keys
+
+`Vault` is an interface only: what core's vault (task 16.6) and an app's own (task 16.13) both
+provide, so the same records live in either. `rememberKey` is how an app's page notices a changed
+signing key: it remembers the first key it sees for a person, and calls a different one `changed`,
+storing nothing, until the person using the page accepts it.
 
 ### What "cannot be exported" means
 

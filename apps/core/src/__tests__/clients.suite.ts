@@ -624,6 +624,84 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
     });
   });
 
+  describe('encryption (core-app §5.6)', () => {
+    const keyReturn = 'https://notes.example/auth/keys';
+
+    it('is allowed by a key return address, which brings the keys scope with it', async () => {
+      const { registry, asOwner } = await instance();
+      const { client } = await registry.register(asOwner, settings({ keyReturnUri: keyReturn }));
+      expect(client.keyReturnUri).toBe(keyReturn);
+      expect(client.scopes).toContain('keys');
+      expect((await registry.get(asOwner, client.clientId)).keyReturnUri).toBe(keyReturn);
+      const row = await rowOf(client.clientId);
+      expect(String(row?.scopes)).toContain('keys');
+    });
+
+    it('is off without one: the keys scope is never held, even when asked for', async () => {
+      const { registry, asOwner } = await instance();
+      const { client } = await registry.register(
+        asOwner,
+        settings({ scopes: ['openid', 'profile', 'keys'] }),
+      );
+      expect(client.keyReturnUri).toBeUndefined();
+      expect(client.scopes).toEqual(['openid', 'profile']);
+    });
+
+    it('is switched off by clearing the address, which takes the scope away, and on again by setting it', async () => {
+      const { registry, asOwner } = await instance();
+      const { client } = await registry.register(asOwner, settings({ keyReturnUri: keyReturn }));
+      const off = await registry.update(asOwner, client.clientId, { keyReturnUri: '' });
+      expect(off.keyReturnUri).toBeUndefined();
+      expect(off.scopes).not.toContain('keys');
+      // Something else changed later keeps it off.
+      expect(
+        (await registry.update(asOwner, client.clientId, { name: 'Notes 2' })).scopes,
+      ).not.toContain('keys');
+      const on = await registry.update(asOwner, client.clientId, { keyReturnUri: keyReturn });
+      expect(on.scopes).toContain('keys');
+    });
+
+    it('refuses a key return address that is not one, beside its field, and on production http', async () => {
+      const { registry, asOwner } = await instance({ development: false });
+      for (const address of ['not an address', 'http://notes.example/auth/keys']) {
+        const error = (await refused(() =>
+          registry.register(asOwner, settings({ keyReturnUri: address })),
+        )) as ClientRegistryError;
+        expect(error.code).toBe('invalid');
+        expect(error.problems.map((problem) => problem.field)).toEqual(['keyReturnUri']);
+      }
+    });
+
+    it('is set by sovereign-admin apps ensure with --key-return, and the same ensure keeps it', async () => {
+      const { registry, asOwner } = await instance();
+      const argv = [
+        'apps',
+        'ensure',
+        'notes',
+        '--name',
+        'Notes',
+        '--redirect',
+        REDIRECT,
+        '--key-return',
+        keyReturn,
+        '--json',
+      ];
+      const log: string[] = [];
+      const out: string[] = [];
+      const output = {
+        out: (line: string) => out.push(line),
+        log: (line: string) => log.push(line),
+      };
+      expect(await runAdmin(argv, registry, systemActor(), output)).toBe(0);
+      const { clientId } = JSON.parse(out[0] as string) as { clientId: string };
+      const app = await registry.get(asOwner, clientId);
+      expect(app.keyReturnUri).toBe(keyReturn);
+      expect(app.scopes).toContain('keys');
+      expect(await runAdmin(argv, registry, systemActor(), output)).toBe(0);
+      expect(log.join('\n')).toContain('kept app notes');
+    });
+  });
+
   describe('changing an app', () => {
     it('changes what is given and leaves the rest', async () => {
       const { registry, asOwner } = await instance();

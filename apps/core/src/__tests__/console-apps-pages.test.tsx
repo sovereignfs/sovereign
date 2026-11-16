@@ -41,6 +41,7 @@ const app = (id: string, extra: Partial<ClientView> = {}): ClientView => ({
   postLogoutRedirectUris: [],
   backchannelLogoutUri: undefined,
   accountDeletedUri: undefined,
+  keyReturnUri: undefined,
   endSession: false,
   scopes: ['openid', 'profile'],
   appScopes: [],

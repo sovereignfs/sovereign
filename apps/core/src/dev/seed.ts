@@ -130,6 +130,7 @@ export function sampleApp(baseUrl: string): RegisterInput {
     postLogoutRedirectUris: [],
     backchannelLogoutUri: '',
     accountDeletedUri: '',
+    keyReturnUri: '',
     scopes: [...DEFAULT_SCOPES],
     appScopes: [],
     trusted: false,

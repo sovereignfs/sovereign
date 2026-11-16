@@ -120,6 +120,7 @@ describe('what an app form sends, as the registry takes it', () => {
       postLogoutRedirectUris: ['https://notes.example/bye', 'https://notes.example/out'],
       backchannelLogoutUri: 'https://notes.example/logout',
       accountDeletedUri: 'https://notes.example/gone',
+      keyReturnUri: '',
       endSession: true,
       scopes: ['openid', 'email'],
       appScopes: [],

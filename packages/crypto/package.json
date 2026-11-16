@@ -26,8 +26,9 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit",
-    "vectors": "tsx scripts/password-vectors.ts"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p timing",
+    "vectors": "tsx scripts/password-vectors.ts",
+    "timing": "tsx scripts/timing.ts"
   },
   "dependencies": {
     "@sovereignfs/config": "workspace:*",
@@ -37,6 +38,7 @@
     "@noble/hashes": "catalog:",
     "@sovereignfs/tsconfig": "workspace:*",
     "@types/node": "catalog:",
+    "tsup": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:"
   }

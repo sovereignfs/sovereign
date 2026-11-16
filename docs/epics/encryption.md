@@ -61,7 +61,7 @@ an RFC.
 - No specification says a password reaches core
 - `pnpm docs:check-links` and `pnpm format:check` pass; no code changes
 
-#### ⏳ 16.2 — The password derivation
+#### ✅ 16.2 — The password derivation
 
 **Goal:** One function turns a password, an address and an instance's id into the sign-in value and the unlock key, the same in a
 browser and in Node, at a cost that was measured.

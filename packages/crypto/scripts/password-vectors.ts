@@ -24,12 +24,12 @@ interface Case {
 
 const sequence = (length: number, start: number) =>
   Uint8Array.from({ length }, (_, i) => (start + i) & 0xff);
-const full = { version: 1, memoryBytes: 64 * 1024 * 1024, passes: 3 };
+const full = { version: 1, memoryBytes: 19 * 1024 * 1024, passes: 3 };
 const quick = { version: 9, memoryBytes: 1024 * 1024, passes: 1 };
 
 const cases: Case[] = [
   {
-    name: 'plain, at the starting cost',
+    name: 'plain, at the cost in use',
     password: 'correct horse battery staple',
     address: 'ada@example.com',
     instanceId: sequence(32, 0),

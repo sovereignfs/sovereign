@@ -182,9 +182,11 @@ while the page is open, and not another app's.
 
 ### The cost
 
-The derivation starts at RFC 0005 §1.4's **64 MiB and 3 passes** (`PASSWORD_DERIVATION`). It is
-fixed by timing it on real phones: about one second on an ordinary phone, two at most on a slow
-one; if slower, memory comes down before passes, never below 19 MiB and 2 passes.
+The derivation is **19 MiB and 3 passes** (`PASSWORD_DERIVATION`, version 1). It was fixed by timing
+it on a real phone, by RFC 0005 §1.4's rule: about one second on an ordinary phone, two at most on a
+slow one, memory lowered before passes, never below 19 MiB and 2 passes. RFC 0005 started at 64 MiB,
+which took 3.4 s on an iPhone 15 Pro; 19 MiB and 3 passes took about one second there. A slower phone
+may take up to about two.
 
 ```bash
 pnpm --filter @sovereignfs/crypto timing
@@ -196,5 +198,5 @@ works over plain http; the rest of a derivation costs well under a millisecond.
 | Device                                   | Browser          | 64 MiB · 3 | 48 MiB · 3 | 32 MiB · 3 | 19 MiB · 3 | 19 MiB · 2 |
 | ---------------------------------------- | ---------------- | ---------- | ---------- | ---------- | ---------- | ---------- |
 | The development Mac (8 cores), for scale | Chromium 156     | 120 ms     | 90 ms      | 60 ms      | 37 ms      | 26 ms      |
-| An ordinary phone                        | not yet measured |            |            |            |            |            |
+| iPhone 15 Pro (4 cores), ordinary        | Safari, iOS 18.7 | 3401 ms    | 2575 ms    | 1738 ms    | 1027 ms    | 678 ms     |
 | A slow phone                             | not yet measured |            |            |            |            |            |

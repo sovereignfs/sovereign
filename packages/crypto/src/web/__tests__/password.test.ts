@@ -25,8 +25,8 @@ const id = (seed: number) => Uint8Array.from({ length: 32 }, (_, i) => (seed + i
 const quick = { version: 9, memoryBytes: 1024 * 1024, passes: 1 };
 
 describe('the password derivation (RFC 0005 §1.1)', () => {
-  it('starts at 64 MiB and 3 passes, and never below the minimum', () => {
-    expect(PASSWORD_DERIVATION).toEqual({ version: 1, memoryBytes: 64 * 1024 * 1024, passes: 3 });
+  it('is 19 MiB and 3 passes, as measured, and never below the minimum', () => {
+    expect(PASSWORD_DERIVATION).toEqual({ version: 1, memoryBytes: 19 * 1024 * 1024, passes: 3 });
     expect(PASSWORD_DERIVATION.memoryBytes).toBeGreaterThanOrEqual(MINIMUM_COST.memoryBytes);
     expect(PASSWORD_DERIVATION.passes).toBeGreaterThanOrEqual(MINIMUM_COST.passes);
   });

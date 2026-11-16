@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.98.0 · **Last updated:** 2026-11-16
+**Version:** 0.99.0 · **Last updated:** 2026-11-16
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -253,13 +253,13 @@ Epic [15](docs/epics/core-services.md)
 [RFC 0005](docs/rfcs/0005-end-to-end-encryption.md) (Accepted) · [research 0008](docs/research/0008-end-to-end-encryption.md) · epic
 [16](docs/epics/encryption.md) · workstream [0003](docs/workstreams/0003-encryption.md)
 
-Two tasks wait on someone outside the work: 16.3 on the cost of the password derivation being measured on real phones, and 16.6 on a
-cryptographer's review of the RFC. The workstream holds both as gates.
+The cost of the password derivation is measured. The goal owner had the work from 16.6 on built before a cryptographer's review of
+the RFC, which is still to come.
 
 | Version | Priority | Task                                                                   | Status | Epic task                         |
 | ------- | -------- | ---------------------------------------------------------------------- | ------ | --------------------------------- |
 | —       | 1        | The specifications                                                     | ✅     | [16.1](docs/epics/encryption.md)  |
-| —       | 2        | The password derivation                                                | ⏳     | [16.2](docs/epics/encryption.md)  |
+| 0.99.0  | 2        | The password derivation                                                | ✅     | [16.2](docs/epics/encryption.md)  |
 | —       | 3        | Signing in with a derived value                                        | 📋     | [16.3](docs/epics/encryption.md)  |
 | 0.98.0  | 4        | Keys and formats `[parallel]`                                          | ✅     | [16.4](docs/epics/encryption.md)  |
 | 0.98.0  | 5        | A locked state and the recovery kit, in the design system `[parallel]` | ✅     | [16.5](docs/epics/encryption.md)  |

@@ -25,12 +25,12 @@ export interface PasswordDerivation extends Argon2Cost {
 }
 
 /**
- * The derivation in use. The starting cost of RFC 0005 §1.4, 64 MiB and 3 passes, until it is measured on real phones (the
- * README's table). The cost is the same for every account on every instance; changing it is a new version.
+ * The derivation in use: 19 MiB and 3 passes, measured on an iPhone 15 Pro at about one second (RFC 0005 §1.4; the README's
+ * table). The cost is the same for every account on every instance; changing it is a new version.
  */
 export const PASSWORD_DERIVATION: PasswordDerivation = {
   version: 1,
-  memoryBytes: 64 * 1024 * 1024,
+  memoryBytes: 19 * 1024 * 1024,
   passes: 3,
 };
 

@@ -5,9 +5,9 @@ not, where we are least sure, and what we would like back. It can be read withou
 
 ## What is asked
 
-A review of a **design document**, before anything that stores keys is built. The library that makes every stored format exists
-(`packages/crypto/src/web`, with tests and frozen vectors of each format) and may be read beside the RFC; nothing uses it yet, and
-nothing stores a key.
+A review of a **design document**. The goal owner chose to have the feature built before the review, so the review may be read
+against the code as well; a finding that changes a stored format becomes a new suite beside the old. The library that makes every stored format is
+`packages/crypto/src/web`, with tests and frozen vectors of each format.
 
 - **To read:** RFC 0005 (about 380 lines). [Research 0008](../research/0008-end-to-end-encryption.md) explains why it is shaped as
   it is, and is optional.
@@ -67,6 +67,7 @@ Each is recorded in the RFC under "Settled in review".
 - **Argon2id is libsodium's WebAssembly build** (`libsodium-wrappers-sumo`). No browser Argon2id was found to be fully audited:
   libsodium's C library was audited in 2017 with password hashing in scope, Argon2id reviewed as a diff; its WebAssembly build was
   not. libsodium fixes one lane and a **16-byte salt**, so the salt is the first 16 bytes of the RFC's SHA-256.
+- **The Argon2id cost is 19 MiB and 3 passes**, about one second on an iPhone 15 Pro (64 MiB took 3.4 s).
 - **The Argon2id output is held as a WebCrypto key that cannot be exported** until the unlock key is made, since the unlock key's
   salt is given only after signing in.
 

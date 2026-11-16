@@ -156,6 +156,21 @@ Manifest 3 only. An app with `"storage": true` keeps the files people upload in 
   its files elsewhere and they are not in the backup.
 - It MUST delete a person's files when it is told their account was deleted (§4).
 
+### 2.8 `encryption`
+
+Manifest 4 only. Specified, not built: no toolkit reads manifest 4 yet ([core-app §5](../docs/specs/core-app.md), task 16.9). An app
+that keeps what people give it encrypted so the server cannot read it says so:
+
+```
+"encryption": { "return": "/auth/keys" }
+```
+
+- `return` is a path, held to the rules of `signIn`'s paths (§2.1). The CLI joins it to the app's address as its **key return
+  address**, where core sends a person back with the app's key (core-app §5.7).
+- It needs `signIn`. An app with no `signIn` keeps its own keys and declares nothing.
+- The operator is shown it when the app is added, as `scopes` are; allowing it gives the app the `keys` scope (core-app §5.6).
+- It MUST follow what core-app §5.9 says an encrypted app does.
+
 ---
 
 ### 2.6 `core`
@@ -244,3 +259,9 @@ Everything an app is given (§3, including `PORT`) and everything it must do (§
 Manifest 3 is [`schemas/app-manifest-v3.schema.json`](schemas/app-manifest-v3.schema.json). It is manifest 2 and one more field, `storage`
 (§2.7), and nothing else. A toolkit that reads 3 reads 1 and 2 as it did, and a toolkit that reads only 1 and 2 refuses a manifest 3 and
 names the version that reads it.
+
+### 5.3 Manifest 4
+
+Specified, not built. Manifest 4 will be `schemas/app-manifest-v4.schema.json`: manifest 3 and one more field, `encryption` (§2.8), and
+nothing else. A toolkit that reads 4 reads 1 to 3 as it did, and a toolkit that reads only 1 to 3 refuses a manifest 4 and names the
+version that reads it.

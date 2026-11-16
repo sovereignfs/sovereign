@@ -318,6 +318,20 @@ const notice = await verifyLogoutToken(request, { coreUrl, clientId, seen });
 
 ---
 
+### 9.3 Key release
+
+Specified, not built ([core-app §5.7](core-app.md), task 16.10). For an app whose manifest has `encryption`, the SDK gets the app's key
+from core once in each browser session:
+
+- In the browser, when the app's page has no key, it makes a key pair that cannot be exported and a `state`, keeps both, and sends the
+  person to core's `/keys/release` with the public half.
+- At the key return address it reads the answer from the fragment, removes the fragment from the address before anything else runs,
+  and makes every check of core-app §5.7, refusing anything else. The `state` and its key are used once.
+- It keeps the key as core-app §5.4 keeps the account key, with the session's secret held beside the app's own session, so the app's
+  session ending, by back-channel logout or otherwise, leaves nothing that opens.
+- It needs `@sovereignfs/crypto`, which is then published.
+- The two calls of core-app §5.7 join §8's capabilities when the contract has them.
+
 ## 10. From the legacy SDK
 
 Every namespace of the legacy `sdk` object:
@@ -404,3 +418,4 @@ of its own; an app catalogue.
 | 2026-10-31 | §9, §8, §10: `handleAccountDeleted`, the app's part of account-deletion fan-out (core-app §4.5); legacy `portability` waits for export. Not built.                                                                  |
 | 2026-10-31 | §5.1, §9.1: built. A token store MAY have `delete(sub)`; `nextAuth` takes `onAccountDeleted` and mounts `/auth/account-deleted`; the fake core makes `accountDeletedToken`.                                         |
 | 2026-11-02 | §9.2: `verifyLogoutToken` and `verifyAccountDeletedToken`, the rules of §9.1 for an app whose sessions are not the SDK's, with `seen` required: [RFC 0003](../rfcs/0003-apps-of-their-own.md). Built in task 14.11. |
+| 2026-11-16 | §9.3: key release, specified and not built (core-app §5.7).                                                                                                                                                         |

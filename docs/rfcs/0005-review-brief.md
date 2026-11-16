@@ -56,6 +56,18 @@ the promise can be raised later without changing what is stored.
 - **Staying unlocked (§5).** A key kept in the browser is wrapped by a device key that cannot be exported and by a secret the server
   holds for that session and deletes with it.
 
+## Decided since the RFC was accepted
+
+Each is recorded in the RFC under "Settled in review".
+
+- **The salt** is made from a random id the instance publishes, not its address, so that an instance can move (§1.1).
+- **The reset page is told the account's address** by core, since it holds only the token and the derivation needs the address.
+- **Argon2id is libsodium's WebAssembly build** (`libsodium-wrappers-sumo`). No browser Argon2id was found to be fully audited:
+  libsodium's C library was audited in 2017 with password hashing in scope, Argon2id reviewed as a diff; its WebAssembly build was
+  not. libsodium fixes one lane and a **16-byte salt**, so the salt is the first 16 bytes of the RFC's SHA-256.
+- **The Argon2id output is held as a WebCrypto key that cannot be exported** until the unlock key is made, since the unlock key's
+  salt is given only after signing in.
+
 ## Where we are least sure
 
 In the order we would like them looked at.

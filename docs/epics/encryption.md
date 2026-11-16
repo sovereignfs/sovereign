@@ -74,7 +74,9 @@ browser and in Node, at a cost that was measured.
   package's README; one is built here only if none fits
 - `@sovereignfs/crypto`: a browser-safe entry point (no `node:` import) beside the server's, with `derivePassword` (RFC 0005 §1.1: the
   salt, NFKC, one Argon2id run, the two HKDF outputs, `svp1.` and its shape check) running unchanged in Node
-- test vectors checked in, RFC 9106's among them; a vector made in Node opens in a browser test and the reverse
+- test vectors checked in, made by a second implementation (noble-hashes) that is itself checked against RFC 9106 §5.3, whose
+  own vector needs four lanes, a secret and associated data that libsodium does not take; the vectors are checked in a browser by
+  the timing page
 - a timing page that runs the derivation at a chosen cost and shows how long it took, to open on real phones
 - the cost written as a constant with the measurements beside it, by the rule of RFC 0005 §1.4
 

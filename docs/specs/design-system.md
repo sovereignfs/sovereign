@@ -177,8 +177,8 @@ stay experimental, which means they MAY be removed (§3), and an app SHOULD NOT 
 and comes with a migration note in [`docs/upgrade.md`](../upgrade.md). No other export is promoted to stable here: an export
 becomes stable when core or an app uses it and a task of its own lists it (§3), and none has been put forward.
 
-Two components are specified and not built (core-app §5, task 16.5), and are experimental when they come: **a locked state**, for a
-place this browser cannot open, saying what it is with a link to unlock that the consumer gives; and **the recovery kit**, the kit in
+Two components serve encryption (core-app §5) and are experimental: **`LockedState`**, for a
+place this browser cannot open, saying what it is with a link to unlock that the consumer gives; and **`RecoveryKit`**, the kit in
 groups with a way to print and to save it, and a confirmation that it was kept before going on.
 
 ## Changelog

@@ -49,5 +49,7 @@ export {
 } from './identity.js';
 export type { AppIdentity, OpenedIdentity, WrappedPair } from './identity.js';
 export { openDocumentKey, openEscrowWrap, sealEscrowWrap, shareDocumentKey } from './sharing.js';
+export { formatKit, kitKey, readKit } from './kit.js';
+export type { ReadKit } from './kit.js';
 export type { DocumentKeyTarget, SealedRecord, SharedKeyRecord } from './sharing.js';
 export { isSignInValue, signInValueVersion } from '../sign-in-value.js';

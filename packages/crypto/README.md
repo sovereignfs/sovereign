@@ -151,6 +151,16 @@ who shared it, and an escrow wrap. What binds them (associated data, HPKE `info`
 is `encodeFields`: a label first, then each field's length and bytes, so a byte cannot move from a
 person's `sub` into an app's client id and read the same.
 
+### Documents and files
+
+`encryptContent` and `decryptContent` work on streams, 64 KiB at a time (RFC 0005 §1.3): a fresh key
+for each blob from 32 random bytes in its header, the header (with the document's id and version)
+authenticated with every chunk, and the last chunk marked. A blob read under another id or version,
+cut short (even at a chunk's edge), lengthened, reordered or changed in any byte does not open. A
+reader is given each chunk once it is authenticated, before the end: only a stream that ends
+without an error is the whole document. `encryptBytes` does the same for a small value, such as a
+file's name and type.
+
 ### What "cannot be exported" means
 
 Keys are held as WebCrypto keys that cannot be exported, and a key's bytes exist only inside the

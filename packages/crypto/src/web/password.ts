@@ -85,8 +85,7 @@ export async function derivePassword(input: DerivePasswordInput): Promise<Derive
   password.fill(0);
   let secret: WebKey;
   try {
-    // The bytes themselves, not a copy, so that zeroing them below leaves none behind in this code.
-    secret = await crypto.subtle.importKey('raw', raw as Uint8Array<ArrayBuffer>, 'HKDF', false, [
+    secret = await crypto.subtle.importKey('raw', source(raw), 'HKDF', false, [
       'deriveBits',
       'deriveKey',
     ]);

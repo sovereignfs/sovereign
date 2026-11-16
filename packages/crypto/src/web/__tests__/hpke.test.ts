@@ -177,6 +177,18 @@ describe('HPKE, base mode (RFC 9180)', () => {
     });
   });
 
+  // RFC 9180 §7.1.4: a small-order public key gives an all-zero shared secret, which must be refused.
+  it.each([
+    ['all zeros', new Uint8Array(32)],
+    ['the point of order one', Uint8Array.of(1, ...new Uint8Array(31))],
+  ])('refuses a small-order public key: %s', async (_, publicKey) => {
+    await expect(seal(publicKey, utf8('x'), { info: utf8('i') })).rejects.toThrow(/not usable/);
+    const receiver = await recipient();
+    await expect(
+      open(receiver, { enc: publicKey, ciphertext: new Uint8Array(17) }, { info: utf8('i') }),
+    ).rejects.toThrow(/not usable/);
+  });
+
   it('makes a fresh ephemeral key for every seal', async () => {
     const receiver = await recipient();
     const one = await seal(receiver.publicKey, utf8('x'), { info: utf8('i') });

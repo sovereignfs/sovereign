@@ -85,17 +85,31 @@ const labeledExpand = (
   length: number,
 ) => expand(prk, concat(i2osp(length, 2), HPKE_V1, suite, utf8(label), info), length);
 
+/** RFC 9180 §7.1.4: an X25519 output of all zeros (a small-order public key) is refused, here and not left to WebCrypto. */
 async function dh(privateKey: WebKey, publicKey: Uint8Array): Promise<Uint8Array> {
-  const peer = await crypto.subtle.importKey(
-    'raw',
-    source(publicKey),
-    { name: 'X25519' },
-    true,
-    [],
-  );
-  return new Uint8Array(
-    await crypto.subtle.deriveBits({ name: 'X25519', public: peer }, privateKey, X25519_BYTES * 8),
-  );
+  const unusable = () =>
+    new Error('The Diffie-Hellman exchange failed: the public key is not usable.');
+  let output: Uint8Array;
+  try {
+    const peer = await crypto.subtle.importKey(
+      'raw',
+      source(publicKey),
+      { name: 'X25519' },
+      true,
+      [],
+    );
+    output = new Uint8Array(
+      await crypto.subtle.deriveBits(
+        { name: 'X25519', public: peer },
+        privateKey,
+        X25519_BYTES * 8,
+      ),
+    );
+  } catch {
+    throw unusable();
+  }
+  if (output.every((byte) => byte === 0)) throw unusable();
+  return output;
 }
 
 /** RFC 9180 §4.1: the shared secret from the Diffie-Hellman output and both public keys. */

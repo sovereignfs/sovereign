@@ -109,38 +109,53 @@ unlock    = HKDF(master, salt = the vault's random salt for this account, info =
 #### 1.2 Records
 
 Every record is JSON with `suite`, and every encryption has associated data that names what it is: its kind, the person's `sub`, and
-what it belongs to. A record moved to another person, another app or another document does not open.
+what it belongs to. A record moved to another person, another app or another document does not open. As built in
+`packages/crypto/src/web`, with frozen vectors of every format:
 
-| Record            | Encrypted with                             | Associated data                                   |
-| ----------------- | ------------------------------------------ | ------------------------------------------------- |
-| Account key wrap  | the unlock key, a passkey's key, the kit's | `account-wrap`, `sub`, the wrap's kind and id     |
-| Escrow wrap       | HPKE to the instance's escrow public key   | `escrow-wrap`, `sub`, the escrow key's id         |
-| App key           | the account key                            | `app-key`, `sub`, the app's client id             |
-| Identity privates | the app key                                | `identity`, `sub`, the app's client id            |
-| Document key      | HPKE to the reader's receiving key         | `document-key`, the document's id, reader's `sub` |
+- **Associated data, HPKE `info` and every signed message** are one encoding: a label (`sovereign/1/<kind>`), then each field as its
+  length in four bytes big-endian and its bytes. Without the lengths a byte could move from a `sub` into a client id and read the
+  same.
+- **A wrap** is `{ "suite": 1, "nonce", "ciphertext" }` (AES-256-GCM, a random 96-bit nonce); **a sealed key** is
+  `{ "suite": 1, "enc", "ciphertext" }` (HPKE), with `"signature"` when it is a shared document key. Every value is unpadded
+  base64url, and a record with another field, or a missing one, is refused.
+- **A private key is wrapped as PKCS#8**, and opened again as a key that cannot be exported.
+
+| Record            | Encrypted with                             | Associated data                                             |
+| ----------------- | ------------------------------------------ | ----------------------------------------------------------- |
+| Account key wrap  | the unlock key, a passkey's key, the kit's | `account-wrap`, `sub`, the wrap's kind and id               |
+| Escrow wrap       | HPKE to the instance's escrow public key   | `escrow-wrap`, `sub`, the escrow key's id                   |
+| App key           | the account key                            | `app-key`, `sub`, the app's client id                       |
+| Account signing   | the account key                            | `account-signing`, `sub`                                    |
+| Identity privates | the app key                                | `identity`, `sub`, the app's client id, `receive` or `sign` |
+| Document key      | HPKE to the reader's receiving key         | `document-key`, the document's id, reader's `sub`           |
 
 - **A passkey's key** is `HKDF(PRF output, info = "sovereign/1/passkey-unlock")`. The PRF input is 32 random bytes made for that
   passkey and kept with its wrap: no input is shared between passkeys or people.
 - **The recovery kit** is 32 random bytes, and `HKDF(kit, info = "sovereign/1/kit")` is its key. It has full strength, so it needs
   no Argon2id. It is shown once, as **groups of four letters and digits** from an alphabet with no look-alikes (no `I`, `L`, `O` or
-  `U`), ending in a check group, so a mistyped kit is refused as mistyped and not as wrong. It reads the same in every language and
-  needs no word list. Typing it ignores case, spaces and hyphens.
+  `U`: Crockford's base32), ending in a check group, so a mistyped kit is refused as mistyped and not as wrong. Thirteen groups hold
+  the 256 bits, with four spare bits that are always zero; the fourteenth is the first 20 bits of SHA-256(`sovereign/1/kit-check` ‖
+  kit). It reads the same in every language and needs no word list. Typing it ignores case, spaces and hyphens, and reads `O` as `0`
+  and `I` and `L` as `1`, as Crockford's decoding does.
 - **A person's public keys are signed.** The account has one signing key. It signs each app's two public keys (one to receive, one
-  to sign) with the `sub` and the client id. A document key's record is signed by the person who shared it.
+  to sign) with the `sub` and the client id: `app-keys`, `sub`, client id, receiving key, signing key. A document key's record is
+  signed by the person who shared it with their signing key for the app, over `document-key-signature`, the document's id, the
+  reader's `sub`, `enc` and the ciphertext.
 
 #### 1.3 Documents and files
 
 ```
-header  = "SVE1" ‖ suite ‖ document id ‖ document version ‖ chunk size ‖ 32 random bytes
+header  = "SVE1" ‖ suite (1 byte) ‖ chunk size (4) ‖ version (4) ‖ id length (2) ‖ document id (UTF-8) ‖ 32 random bytes
 key     = HKDF(document key, salt = the header's random bytes, info = "sovereign/1/content")
-chunk i = AES-256-GCM(key, nonce = i as 11 bytes ‖ last?(1 byte), associated data = header)
+chunk i = AES-256-GCM(key, nonce = i in 11 bytes ‖ last (1 byte, 0 or 1), associated data = header)
 ```
 
 - **A key for each stored blob**, so counting nonces is safe and no two blobs share one.
 - **The header is authenticated with every chunk**: a blob returned under another document's id, or with a version other than the one
   the browser asked for, does not open. Which version is current is the app's to know; a server that returns an older, valid version
   when asked for "the latest" is not caught by this alone (a question put to the reviewer).
-- **The last chunk is marked**, so a file cut short does not open.
+- **The last chunk is marked**, and a reader holds a chunk back until it knows whether more follows, so a file cut short, even at a
+  chunk's edge, does not open. Every number is big-endian; a chunk is 64 KiB, and a reader takes at most 1 MiB.
 - A browser decrypts and shows a chunk at a time; a large file is never whole in memory.
 - The name, type and size a person sees are encrypted the same way, as one small value. The file store sees
   `application/octet-stream` and a length.

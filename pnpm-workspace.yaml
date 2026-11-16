@@ -76,6 +76,7 @@ catalog:
   react-email: ^6.11.13
   libsodium-wrappers-sumo: ^0.8.4
   '@noble/hashes': ^2.4.0
+  '@hpke/core': ^1.10.0
 
 # Storybook's packages must stay on one version, so they are one named catalog.
 catalogs:

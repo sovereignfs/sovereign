@@ -19,4 +19,6 @@ export type {
   PasswordDerivation,
   WebKey,
 } from './password.js';
+export { generateReceivingKey, open, publicKeyBytes, seal } from './hpke.js';
+export type { KeyPair, SealContext, Sealed } from './hpke.js';
 export { isSignInValue, signInValueVersion } from '../sign-in-value.js';

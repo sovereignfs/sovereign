@@ -126,6 +126,22 @@ choice was made with the goal owner (2026-11-16) on what each audit actually cov
 - **In a browser**, the timing page checks libsodium against the same vectors before it times
   anything. The Node tests run in CI; the browser check is run by opening the page.
 
+### HPKE: written here, over WebCrypto
+
+Sealing a key to a person is HPKE (RFC 9180), base mode, DHKEM(X25519, HKDF-SHA256), HKDF-SHA256,
+AES-256-GCM. No audited HPKE for a browser was found: `@hpke/core` (hpke-js) has no published audit
+and had a critical nonce-reuse flaw before 1.7.5 (CVE-2025-64767), and noble has no HPKE. So it is
+written here over WebCrypto, from RFC 9180 §4 and §5, in about a hundred lines:
+
+- Only single-shot `seal` and `open`: a fresh ephemeral key and sequence number 0 each time, so
+  there is no context to keep and no counter to get wrong.
+- It meets RFC 9180's printed vector (A.1.1, which uses AES-128-GCM; the AEAD is a parameter
+  inside, for that vector only), and agrees both ways with `@hpke/core` on AES-256-GCM, for which
+  RFC 9180 prints no X25519 vector. `@hpke/core` is a test dependency only.
+- The recipient's private key stays a WebCrypto key that cannot be exported. The X25519 output and
+  the secrets made from it are bytes in this code while it runs, and are overwritten before it
+  returns.
+
 ### The cost
 
 The derivation starts at RFC 0005 §1.4's **64 MiB and 3 passes** (`PASSWORD_DERIVATION`). It is

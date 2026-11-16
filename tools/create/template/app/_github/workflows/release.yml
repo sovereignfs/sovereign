@@ -1,0 +1,40 @@
+name: Release
+
+# Written by `npm create @sovereignfs sync`; do not edit it here (CONTRIBUTING.md, "Shared files"). When a promotion pull request titled
+# `Release vX.Y.Z` is merged, the workflow every app of the suite shares checks the title against the merged code and tags the merge
+# commit; this app's own publish workflow then builds and publishes that tag (RELEASING.md). A title without `Release` publishes nothing.
+on:
+  pull_request:
+    branches: [main]
+    types: [closed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Plan
+    permissions:
+      contents: write
+    uses: sovereignfs/sovereign/.github/workflows/app-release.yml@__WORKFLOWS_REF__
+    with:
+      directory: '__DIRECTORY__'
+      tag-prefix: '__TAG_PREFIX__'
+
+  publish:
+    name: Publish
+    needs: plan
+    if: needs.plan.outputs.tag != ''
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+    uses: ./.github/workflows/publish.yml
+    with:
+      tag: ${{ needs.plan.outputs.tag }}
+    secrets: inherit

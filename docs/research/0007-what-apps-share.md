@@ -2,7 +2,7 @@
 
 |                   |                                                                                                                                                                                                                                                     |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**        | Recommended; for review                                                                                                                                                                                                                             |
+| **Status**        | Recommended; the first slice settled (below)                                                                                                                                                                                                        |
 | **Date**          | November 2026                                                                                                                                                                                                                                       |
 | **Author**        | Claude Code                                                                                                                                                                                                                                         |
 | **Scope**         | The app repositories of the suite; [`tools/create`](../../tools/create) and its template; this repository's workflows, [CONTRIBUTING](../../CONTRIBUTING.md) and [AGENTS.md](../../AGENTS.md); [research 0004](0004-a-kit-for-apps-of-their-own.md) |
@@ -97,7 +97,7 @@ repositories.
    today.
 3. **B, for configuration:** publish `@sovereignfs/tsconfig`, `@sovereignfs/eslint-config` and `@sovereignfs/prettier-config`; this
    repository uses the same packages, so the configuration it is checked by is the one apps get.
-4. **D, for the files that must be files:** `create sync` and `sync --check`, writing from the template, so the template is the one source
+4. **D, for the files that must be files:** `create app sync` and `sync --check`, writing from the template, so the template is the one source
    of every shared file. `AGENTS.md`'s shared sections (the working conventions, the CI strategy, the commit rules, pnpm) become one text in
    the template, which this repository's own `AGENTS.md` also carries, held to it by a test.
 5. **The template becomes the full app**, as research 0004's last step says: the tusk family's repository (the deployment check, the three
@@ -115,17 +115,38 @@ documents (`DESIGN.md`, `ROADMAP.md`, its changelog, its manifest) anywhere but 
 - Generating `DESIGN.md`, `ROADMAP.md` or an app's own sections of `AGENTS.md`.
 - Converting the apps' Next.js code; that is research 0004.
 
-## To settle in review
+## Settled in review (15 November 2026)
 
-- Whether `sync` is a command of `@sovereignfs/create` or a tool of its own (`@sovereignfs/app`), and whether `sync --check` fails an app's
-  CI or only warns.
-- Whether the shared workflows are pinned by commit (safest, Dependabot moves them) or by a tag of their own (`workflows-vX.Y.Z`), readable
-  in a pull request.
-- Whether the apps move to the single release model one by one with their next change, or in one pass now, since their releases are blocked
-  until they do.
+For the first slice, the one release model (E) with its workflows shared (C):
+
+- **One pilot first:** tusk, the reference app, gets the change as one draft pull request; once it is reviewed, what the review changes is
+  made in the shared pieces and the template, and the other five apps and fjord's `clients/web` follow, each its own draft pull request.
+  (This replaces moving all six in one pass.)
+- **The release workflows are shared from this repository** (`app-promotion.yml`, `app-release.yml`, `app-publish.yml`), called by each
+  app at a **pinned commit** that Dependabot moves.
+- **Apps use this repository's changelog rule:** a version's section is written in the change that sets it, a test fails without it,
+  and it becomes the GitHub release's notes.
+- **The old release machinery is removed in the same change** (the library, its script and tests, the app's component file), and
+  `RELEASING.md` is rewritten for the new model.
+- **Each app's change is a draft pull request into its `develop`,** for review.
+- **fjord stays one repository; its web app (`clients/web`) takes the shared model,** without changing how fjord's other components build
+  and release. So the shared workflows take the directory an app is in and the prefix of its tag (`web-vX.Y.Z`), not only the
+  repository's root and `vX.Y.Z`. (Built: `sovereign.json` describes a repository's several components, so fjord moves whole, its CLI included.)
+
+- **`sync` is a command of `@sovereignfs/create`:** `npm create @sovereignfs app sync` writes an app's shared files from the template, and
+  `sync --check` reports when they have drifted. An app pins `@sovereignfs/create` among its development dependencies, so a sync writes what
+  that version's template holds, and Dependabot's move of the pin is where an app takes new shared files.
+- **`sync --check` fails an app's CI on drift** (assumed, not yet confirmed: recommended in review over a warning), unless the app lists the
+  file as its own (`"unmanaged": [...]` in its settings), so a local change is a decision written in the repository.
+- **Repository settings are code, never set in GitHub's interface, and no third-party app is used.** Each repository keeps its rulesets and
+  merge settings in a versioned file; `pnpm github:apply`, run under an owner's own `gh` sign-in, makes GitHub match it, and
+  `pnpm github:check` in CI, with the workflow's own token, fails when GitHub differs from it. No token is stored, since making one would be
+  a step in the interface.
 
 ## Changelog
 
-| Date       | Change         |
-| ---------- | -------------- |
-| 2026-11-15 | First version. |
+| Date       | Change                                                                                                                   |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------ |
+| 2026-11-15 | First version.                                                                                                           |
+| 2026-11-15 | The first slice settled in review: shared workflows pinned by commit, fjord's `clients/web` included.                    |
+| 2026-11-15 | A tusk pilot first; `sync` in `create`, with `--check`; repository settings as code, applied by an owner, checked in CI. |

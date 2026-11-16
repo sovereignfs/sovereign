@@ -190,7 +190,10 @@ describe('a file store', () => {
     forged.set('u', 'person-2');
     expect(files.signedFor(record.id, forged)).toBeUndefined();
     forged.set('u', SUB);
-    forged.set('signature', `${query.get('signature')?.slice(0, -1)}A`);
+    // A character in the middle, made certainly different: the last one holds only four bits, and swapping it for `A` left the
+    // signature unchanged whenever it already ended in `A`, one run in sixteen.
+    const real = query.get('signature') ?? '';
+    forged.set('signature', `${real.slice(0, 20)}${real[20] === 'A' ? 'B' : 'A'}${real.slice(21)}`);
     expect(files.signedFor(record.id, forged)).toBeUndefined();
     now += 301_000;
     expect(files.signedFor(record.id, query)).toBeUndefined();

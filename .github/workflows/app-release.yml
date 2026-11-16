@@ -1,0 +1,96 @@
+name: App release
+
+# Shared by every app of the suite (research 0007), called by the app's own .github/workflows/release.yml at a pinned commit of this
+# repository when a promotion pull request (develop -> main) is merged. A title that starts with `Release` is checked again against the
+# merged code, with the repository's own pinned @sovereignfs/create, and the merge commit is tagged with each version it names (an app's
+# one, or several components' from sovereign.json); the tags are the workflow's outputs, and the caller's release.yml then calls each
+# component's own publish workflow with its tag (a tag made with this run's token starts no workflow by itself). A title without
+# `Release` tags nothing.
+on:
+  workflow_call:
+    inputs:
+      directory:
+        description: The app's folder in its repository, where its package.json is; `.` for an app at the root.
+        type: string
+        required: false
+        default: '.'
+      tag-prefix:
+        description: What the app's tags start with before the `v`, such as `web-`; empty for `vX.Y.Z`.
+        type: string
+        required: false
+        default: ''
+    outputs:
+      tag:
+        description: The tag made on the merge commit when one version is released; empty otherwise.
+        value: ${{ jobs.plan.outputs.tag }}
+      tags:
+        description: The tag made for each component released, as JSON by component name (`{"web":"web-v1.2.0"}`); empty when nothing is.
+        value: ${{ jobs.plan.outputs.tags }}
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Plan and tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref == 'develop' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.title, 'Release')
+    permissions:
+      # To make the tag.
+      contents: write
+    outputs:
+      tag: ${{ steps.plan.outputs.tag }}
+      tags: ${{ steps.plan.outputs.tags }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - id: create
+        name: Find the app's @sovereignfs/create
+        env:
+          DIR: ${{ inputs.directory }}
+        run: |
+          # sovereign.json's `create` for a repository of several components; an app's devDependencies otherwise.
+          version="$(node -e "
+            const fs = require('node:fs'), path = require('node:path');
+            const several = path.join(process.cwd(), 'sovereign.json');
+            if (fs.existsSync(several)) console.log(JSON.parse(fs.readFileSync(several, 'utf8')).create ?? '');
+            else console.log(require(path.resolve(process.env.DIR, 'package.json')).devDependencies?.['@sovereignfs/create'] ?? '');
+          ")"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::@sovereignfs/create must be pinned to an exact version: in sovereign.json's create, or in $DIR/package.json's devDependencies (it is \"$version\")."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - id: plan
+        name: Check the title against the merged code
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          DIR: ${{ inputs.directory }}
+          PREFIX: ${{ inputs.tag-prefix }}
+          CREATE: ${{ steps.create.outputs.version }}
+        run: npm exec --yes --package="@sovereignfs/create@$CREATE" -- create app release check --dir "$DIR" --prefix "$PREFIX" --github-output
+
+      - name: Tag the merge commit
+        if: steps.plan.outputs.tags != '{}'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAGS: ${{ steps.plan.outputs.tags }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          while IFS= read -r tag; do
+            gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$tag" -f "sha=$MERGE_SHA" --silent
+            echo "Tagged $tag on $MERGE_SHA."
+          done < <(node -e 'for (const t of Object.values(JSON.parse(process.argv[1]))) console.log(t)' "$TAGS")

@@ -310,12 +310,17 @@ will only ever be hosted. An app that must also run alone is started from Tusk's
 
 ## 12. Releasing and hosting
 
-**Release**: changes collect under `[Unreleased]`; `scripts/release.sh check | prepare | propose | tag | verify X.Y.Z`. `prepare`
-makes the version commit on `develop`; it reaches `main` through the promotion pull request (merged with a merge commit, §13); `tag`
-waits for CI on that pull request, pushes `vX.Y.Z` on the merge commit, and the publish workflow builds `linux/amd64` and `linux/arm64` on native runners, joins them, attests provenance, pulls
-the published image and boots it, then writes the release page. The first time, make the package public in the organisation's
-Packages settings. Semver for an app: a patch has no migration and no setting change; a minor may (forward-only); pre-1.0 a break is
-a minor marked **breaking**.
+**Release**: the one release model every app shares (research 0007; the app's `RELEASING.md`). A version is set on `develop` with its
+`CHANGELOG.md` section; a promotion pull request into `main` titled `Release vX.Y.Z` is checked (the title against the code, the commits'
+trailers, the shared files) and, merged with a merge commit, tags `vX.Y.Z` and calls the app's publish workflow, which builds and publishes
+the image and makes the GitHub release from the changelog. There is no release script. The first time, make the package public in the
+organisation's Packages settings. Semver for an app: a patch has no migration and no setting change; a minor may (forward-only); pre-1.0
+a break is a minor marked **breaking**.
+
+**Shared files**: `npm create @sovereignfs app sync` writes the release workflows, `.github/repository.json`, `CONTRIBUTING.md`,
+`RELEASING.md`, `CLAUDE.md` and the shared section of `AGENTS.md` from the template of the `@sovereignfs/create` the app pins, and the
+promotion check fails when one has drifted ([operator-cli §2.3](specs/operator-cli.md)). Repository settings are applied with
+`app settings apply`, never in GitHub's interface.
 
 **Host it** from an instance repository:
 

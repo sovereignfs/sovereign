@@ -98,13 +98,45 @@ It MUST meet [`contracts/app-manifest.md`](../../contracts/app-manifest.md), and
 - an image that does not run as root, listens on `PORT` and is configured by its environment alone;
 - one port, the manifest's `port`, that `npm run dev`, `npm start` and `<PREFIX>_URL` in `.env.example` are made with, so the app runs on
   a developer's machine where the instance will run it;
-- a workflow, `.github/workflows/publish.yml`, that on a `vX.Y.Z` tag builds that image for linux/amd64 and linux/arm64, with the
-  arguments `sovereign-manifest docker-args` prints, and publishes it to `ghcr.io/<owner>/<repository>` tagged `X.Y.Z`, which is where `sv app add --git` looks for it
-  (§4.2.1).
+- a workflow, `.github/workflows/publish.yml`, that builds that image for linux/amd64 and linux/arm64, with the arguments
+  `sovereign-manifest docker-args` prints, publishes it to `ghcr.io/<owner>/<repository>` tagged `X.Y.Z`, which is where `sv app add
+--git` looks for it (§4.2.1), and makes the version's GitHub release from its `CHANGELOG.md` section; it runs on a `vX.Y.Z` tag, and
+  is called by `.github/workflows/release.yml` when a promotion titled `Release vX.Y.Z` is merged;
+- the shared files of §2.3, as `app sync` would write them, and `@sovereignfs/create` pinned exactly among its development dependencies,
+  with its settings for them under `sovereign` in `package.json` (`tagPrefix`, `requiredChecks`, `unmanaged`).
 
 `create` writes the files, runs `git init`, resolves the lockfile, makes the first commit on `main`, and creates and checks out
 `develop`, the branch work lands on (the app's `CONTRIBUTING.md`: `main` takes release pull requests). It MUST NOT install or build, and it
 writes nothing outside the folder. The versions it writes are held by a test to the packages of this repository.
+
+The words `sync`, `release`, `commits` and `settings` cannot name an app: they are the commands of §2.3.
+
+### 2.3 An app's shared files and checks
+
+Every app of the suite carries the same release workflows, settings and guides ([research 0007](../research/0007-what-apps-share.md)),
+from the template of the `@sovereignfs/create` it pins, through commands it runs as `npm create @sovereignfs app …`:
+
+| Command                        | Does                                                                                                                                                  |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app sync [--dir D]`           | Writes the app's shared files from the template, filled with its values; an `AGENTS.md` keeps all but its shared section                              |
+| `app sync --check [--dir D]`   | Writes nothing; exits 1 when a shared file differs from the template (JSON by content), naming each; a file under `sovereign.unmanaged` is left alone |
+| `app release check --title T`  | Holds a promotion title to the app (`[--dir D] [--prefix P] [--github-output]`): `vX.Y.Z`, or `Release vX.Y.Z` for a version not tagged, with notes   |
+| `app release notes VERSION`    | Prints the version's `CHANGELOG.md` section, the GitHub release's notes                                                                               |
+| `app commits check BASE..HEAD` | Exits 1 when a commit in the range carries an agent trailer that names a model                                                                        |
+| `app settings apply` / `check` | Makes GitHub's settings and rulesets match `.github/repository.json` (`--prune` also removes a ruleset it lacks), or exits 1 naming each difference   |
+
+The shared files are `.github/workflows/promotion.yml` and `release.yml`, which call `app-promotion.yml` and `app-release.yml` in
+sovereignfs/sovereign at the commit this version of `create` names; `.github/workflows/sync-develop.yml`; `.github/repository.json`;
+`CLAUDE.md`; and the sections of `CONTRIBUTING.md`, `RELEASING.md` and `AGENTS.md` between `<!-- sovereign:shared:begin -->` and
+`<!-- sovereign:shared:end -->`. Workflows and settings go to the repository's root, the documents to the app's folder, so an app in a
+folder of a larger repository (with a `tagPrefix` such as `web-`) is served too.
+
+A repository that releases several things (fjord: a Rust CLI and a web app) lists them in `sovereign.json` at its root instead of an
+app's `package.json`: its `name`, the `create` version it pins, its `requiredChecks` and `unmanaged` files, and its `components`, each with
+a `name`, the `version` file (a `package.json`, or a `Cargo.toml`, read at `[workspace.package]` then `[package]`), a `tagPrefix`, a
+`changelog` and a `publish` workflow. A promotion's title then names one or more of their versions by tag (`Release fjord-cli-v0.6.0,
+web-v0.6.0`); the release tags each and calls each one's publish workflow, from a `release.yml` that `app sync` generates from the list;
+the documents are at the root.
 
 ### 2.1 What an instance repository holds
 
@@ -925,3 +957,5 @@ with a DNS provider's module, which the stock image does not carry.
 | 2026-11-08 | `npm create @sovereignfs app` takes `--port N` (asked when there is a terminal, otherwise 3100), and writes the one port into the manifest, the `dev` and `start` scripts and `.env.example` (§2, §2.2).                                                                                                                                                                                                                                                                                                                |
 | 2026-11-15 | §2.2: `npm create @sovereignfs app` makes the first commit on `main`, creates and checks out `develop`, and writes a `CONTRIBUTING.md` with the develop/main workflow; the template's publish workflow refuses a tag whose commit is not on `main`.                                                                                                                                                                                                                                                                     |
 | 2026-11-15 | §2.2: an app made by `npm create @sovereignfs app` is named `@sovereignfs/<name>` in its `package.json`, which stays `private`.                                                                                                                                                                                                                                                                                                                                                                                         |
+| 2026-11-15 | §2.2, §2.3: an app's shared files and the `app sync`, `release`, `commits` and `settings` commands; its publish workflow is called on a merged `Release` promotion.                                                                                                                                                                                                                                                                                                                                                     |
+| 2026-11-15 | §2.3: a repository of several components, described in `sovereign.json`, is served by the same commands and shared workflows.                                                                                                                                                                                                                                                                                                                                                                                           |

@@ -1,3 +1,5 @@
+import pkg from '../package.json' with { type: 'json' };
+
 /**
  * The versions an app made by `npm create @sovereignfs app` depends on. The two Sovereign packages are ranges that include the release
  * this one was made with; a test holds them to the packages in this repository, so they cannot drift from what the template was
@@ -26,3 +28,12 @@ export const APP_DEV_DEPENDENCIES = {
   '@types/react-dom': '^19.3.0',
   typescript: '~6.0.3',
 } as const;
+
+/** This package's own version, which an app pins exactly so `sync` and the shared workflows run the same checks for everyone. */
+export const CREATE_VERSION: string = pkg.version;
+
+/**
+ * The commit of sovereignfs/sovereign whose shared workflows (`app-promotion.yml`, `app-release.yml`) an app calls. Moved here, by a
+ * commit of its own, when they change; an app takes it with its next `npm create @sovereignfs sync`.
+ */
+export const SHARED_WORKFLOWS_REF = 'ef1ddb5f623ba702fc34c8769b4b2f98c6f61ed8';

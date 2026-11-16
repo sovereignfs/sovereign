@@ -11,10 +11,16 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
   workflow_call:
+    inputs:
+      ref:
+        description: The tag to check, when publish.yml is called for a release; empty for what triggered the run.
+        type: string
+        required: false
+        default: ''
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-${{ inputs.ref || github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && inputs.ref == '' }}
 
 permissions:
   contents: read
@@ -25,11 +31,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     # A draft pull request runs nothing; marking it ready for review runs it.
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    # A release run (`ref` given) always runs.
+    if: inputs.ref != '' || github.event_name != 'pull_request' || github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ inputs.ref }}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24

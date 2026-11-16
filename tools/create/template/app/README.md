@@ -12,6 +12,10 @@ stands. It is a starting point: a notes page, to show the pieces. Change it into
 | `Dockerfile`                                          | One image, not root, on the manifest's port. Its label and port are made from the manifest when it is built                                  |
 | `.github/workflows/publish.yml`                       | On a `vX.Y.Z` tag of a commit on `main`, builds the image for amd64 and arm64 and publishes it to `ghcr.io/<owner>/<repository>`             |
 | `CONTRIBUTING.md`                                     | How work lands on `develop` and is released to `main` (below)                                                                                |
+| `RELEASING.md`, `CHANGELOG.md`                        | How a version is released (a promotion titled `Release vX.Y.Z`), and each version's notes                                                    |
+| `AGENTS.md`, `CLAUDE.md`                              | The conventions for agents: the app's own sections, and one shared by every app of the suite                                                 |
+| `.github/repository.json`                             | The repository's merge settings and rulesets, as code (`npm create @sovereignfs app settings apply`)                                         |
+| `.github/workflows/promotion.yml`, `release.yml`      | The promotion check and the release on merge, which call the workflows every app shares                                                      |
 | `.github/workflows/ci.yml`, `.githooks/pre-push`      | The checks: CI for pull requests into `main` and release tags only, the pre-push hook for everything else                                    |
 | `.github/workflows/sync-develop.yml`                  | After a promotion into `main` is merged, fast-forwards `develop` to the merge commit                                                         |
 | `app/auth/[action]/route.ts`                          | Sign-in, sign-out, core's back-channel logout, and core's notice that a person deleted their account                                         |
@@ -26,7 +30,7 @@ stands. It is a starting point: a notes page, to show the pieces. Change it into
 
 Work lands on `develop`, committed directly or merged from a feature branch; `main` is what is released, protected, and changed only by a
 pull request from `develop` titled with its version, merged with a merge commit, which is tagged `vX.Y.Z` when that version is published. `npm create @sovereignfs app`
-made both branches and left you on `develop`. [CONTRIBUTING.md](CONTRIBUTING.md) has the whole workflow, and how to protect `main` on
+made both branches and left you on `develop`. [CONTRIBUTING.md](CONTRIBUTING.md) has the whole workflow, the shared files `npm create @sovereignfs app sync` keeps, and how `main` is protected on
 GitHub.
 
 ## Build and host it

@@ -2,7 +2,10 @@
 
 How work gets into `develop`, and from there into `main`. It is the workflow of
 [Sovereign](https://github.com/sovereignfs/sovereign/blob/main/CONTRIBUTING.md) itself, so an app made with
-`npm create @sovereignfs app` is worked on the same way.
+`npm create @sovereignfs app` is worked on the same way. The sections above and below the shared one are this app's own (how to set it
+up, how it is planned); the shared one is written by `npm create @sovereignfs app sync` and is the same in every app of the suite.
+
+<!-- sovereign:shared:begin -->
 
 ## Branches
 
@@ -37,50 +40,61 @@ commit; fix commit messages before they reach `develop`, which is never rewritte
 
 ## Continuous integration
 
-CI (`.github/workflows/ci.yml`: typecheck, the manifest check, the build) runs only where a change is about to reach what is
-released:
+CI runs only where a change is about to reach what is released:
 
 - on a pull request into `main` that is not a draft (the promotion from `develop`); marking a draft ready for review runs it;
-- on each release tag, before the image is built (`.github/workflows/publish.yml` calls it);
+- before each release is published (the publish workflow runs the checks on the tagged commit);
 - by hand, for any branch: **Actions → CI → Run workflow**.
 
 It never runs on a push to `develop` or a feature branch, nor on a pull request into `develop`, so runner time is not spent on every
-commit. Those are checked on your machine instead: `npm install` turns on the versioned hooks in `.githooks/`, and the pre-push hook runs
-`npm run verify` (typecheck and the manifest check) before anything is pushed. This is the CI strategy of every Sovereign app.
+commit. Those are checked on your machine instead: where the repository has versioned hooks in `.githooks/` (an app's `npm install` turns
+them on), the pre-push hook runs its checks (`npm run verify`) before anything is pushed. This is the CI strategy of every repository of
+the suite.
 
 ## Promoting `develop` into `main`
 
-1. Set the new version in `package.json` on `develop` (semver: a fix is a patch, a feature a minor, a break a major).
-2. Open a pull request from `develop` into `main`. Its title is the version, **`vX.Y.Z`**, or **`Release vX.Y.Z`** when that version
-   will be tagged and published once it is merged; not every version is. The body lists what it carries.
-3. Merge it with **a merge commit**, the one place a merge commit is used; the merge commit takes the pull request's title.
-   `develop` is never rewritten, so it stays an ancestor of `main` and the next pull request shows only what is new.
-4. To publish, tag the merge commit and push the tag, which builds and publishes the image (`.github/workflows/publish.yml`):
+`main` changes only through a promotion pull request from `develop`, merged with **a merge commit**, the one place a merge commit is
+used; `develop` is never rewritten, so it stays an ancestor of `main` and the next promotion shows only what is new. Its title is the
+version, **`vX.Y.Z`**, or **`Release vX.Y.Z`** when merging it is to publish that version, which [RELEASING.md](RELEASING.md) describes:
+there is no release script, and no tag to push by hand.
 
-   ```bash
-   git switch main && git pull
-   git tag vX.Y.Z && git push origin vX.Y.Z
-   ```
-
-   A tag is not a branch, so `main`'s protection does not stop it; the workflow refuses a tag whose commit is not on `main`, or whose
-   version is not the one in `package.json`.
+The **Promotion** check, which `main` requires, holds the title to the code, refuses a commit whose agent trailer names a model, and
+fails when a shared file differs from the template (below). Editing the title runs it again.
 
 Once the promotion is merged, `.github/workflows/sync-develop.yml` moves `develop` forward to the merge commit. It is a fast-forward,
 never a rewrite (`develop` is already in the merge commit's history), so `develop` is not shown as behind `main` and the release tags are
 in its history. If a commit reached `develop` after the merge, the run leaves `develop` as it is and says so; pull before you start new
 work either way.
 
-## Setting it up on GitHub
+## Shared files
 
-Once the repository is on GitHub, push both branches and protect `main`:
+Some files are the same in every app of the suite and are written, not edited: `.github/workflows/promotion.yml`, `release.yml` and
+`sync-develop.yml`, `.github/repository.json`, `CLAUDE.md`, and the shared sections of this file, `RELEASING.md` and `AGENTS.md`. They come
+from the template of the version of `@sovereignfs/create` that `package.json` pins:
+
+```bash
+npm create @sovereignfs app sync           # write them from the pinned version's template
+npm create @sovereignfs app sync --check   # say which differ, and fail; the Promotion check runs this
+```
+
+To change one, change it in the template, in [sovereignfs/sovereign](https://github.com/sovereignfs/sovereign), and take it here by moving
+the pin and running `sync`. A file this app keeps as its own is listed in `package.json` under `sovereign.unmanaged`, by its path from the
+repository's root, and the check then leaves it alone.
+
+## Repository settings
+
+The repository's merge settings and its rulesets (what `main` and `develop` allow, and the checks `main` requires) are code, in
+`.github/repository.json`, and are never set in GitHub's interface. Once the repository is on GitHub, push both branches and apply them,
+signed in with `gh` as an owner of the repository:
 
 ```bash
 git push -u origin main develop
+npm create @sovereignfs app settings apply   # make GitHub match .github/repository.json
+npm create @sovereignfs app settings check   # say what differs, and fail
 ```
 
-Then, in **Settings → Rules → Rulesets**, add a ruleset for the default branch `main` that requires a pull request before merging, allows
-merge commits, and blocks force pushes and deletion, with the Repository admin role allowed to bypass it. Add a second ruleset for `develop`
-that blocks deletion and force pushes, with no one allowed to bypass it: GitHub's "Automatically delete head branches" setting would
-otherwise delete `develop` when a promotion is merged, and it leaves a branch alone when its deletion is blocked. In **Settings → General → Pull
-Requests**, keep merge commits and rebase merging allowed, and set the default merge commit message to the pull request's title and
-description, so the merge commit reads `vX.Y.Z` or `Release vX.Y.Z`.
+`main` takes changes only by pull request, merged with a merge commit, and requires the Promotion check and the checks under
+`sovereign.requiredChecks` in `package.json` (`requiredChecks` in `sovereign.json` for a repository of several components); `develop` can never be deleted or force-pushed, so merging a promotion (which would
+otherwise delete its head branch) leaves it in place. A change to the settings is a commit like any other, applied after it lands.
+
+<!-- sovereign:shared:end -->

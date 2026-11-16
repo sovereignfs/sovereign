@@ -5,6 +5,27 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.12.0; earlier versions are in the repository's
 history and tags.
 
+## [0.14.0] - 2026-11-15
+
+### Added
+
+- `npm create @sovereignfs app sync` writes an app's shared files from this version's template (its release workflows, repository
+  settings, contributing and release guides, `CLAUDE.md`, and the shared section of `AGENTS.md`), and `app sync --check` fails when one has
+  drifted; a file listed under `sovereign.unmanaged` is the app's own.
+- `app release check` and `app release notes` for the one release model (a promotion titled `Release vX.Y.Z` publishes on merge), and
+  `app commits check` for agent trailers: what the workflows every app shares (in sovereignfs/sovereign) run.
+- `app settings apply` and `app settings check` keep a repository's settings and rulesets as code, in `.github/repository.json`;
+  what a workflow's token cannot read (some merge settings, who may bypass a ruleset) is reported as not checked, never as a difference.
+- A repository that releases several components (such as a Rust CLI and a web app) describes them in `sovereign.json` at its root: each
+  one's version file (`package.json` or `Cargo.toml`), tag prefix, changelog and publish workflow. A promotion title names any of their
+  versions, the release tags each and calls each one's publish workflow, and `app sync` generates that release workflow.
+- A new app carries all of these, pins `@sovereignfs/create`, and has a `CHANGELOG.md`; its publish workflow is called on a merged
+  `Release` promotion and makes the GitHub release.
+
+### Changed
+
+- `sync`, `release`, `commits` and `settings` cannot name a new app.
+
 ## [0.13.0] - 2026-11-15
 
 0.12.1 was never released; its fixes are part of this version.

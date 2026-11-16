@@ -12,6 +12,7 @@ import {
   type CreateIo,
   type Exec,
 } from './create.js';
+import { runTool, TOOL_COMMANDS } from './tools.js';
 
 const exec: Exec = (command, args, options) =>
   new Promise((resolve) => {
@@ -44,7 +45,18 @@ const io: CreateIo = {
 
 async function main(): Promise<number> {
   try {
-    const request = readRequest(process.argv.slice(2), process.env);
+    const argv = process.argv.slice(2);
+    // The commands an app's repository runs once it exists (research 0007): `app sync`, `app release …`, `app commits …`,
+    // `app settings …`. Their words cannot name an app, so `app sync` is never read as making an app called sync.
+    if (argv[0] === 'app' && (TOOL_COMMANDS as readonly string[]).includes(argv[1] ?? '')) {
+      return await runTool(argv.slice(1), {
+        io: { ...io, out: (line) => process.stdout.write(`${line}\n`) },
+        exec,
+        cwd: process.cwd(),
+        env: process.env,
+      });
+    }
+    const request = readRequest(argv, process.env);
     let { kind, dir } = request;
     if (kind === undefined) {
       if (!io.interactive)

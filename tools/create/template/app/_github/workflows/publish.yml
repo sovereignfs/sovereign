@@ -1,11 +1,14 @@
 name: Publish
 
-# Builds this app's image when a version tag is pushed, and publishes it to GitHub's container registry as ghcr.io/<owner>/<repository>
-# tagged X.Y.Z, which is where `sv app add --git` looks for it (operator-cli §4.2.1):
+# Builds this app's image and publishes it to GitHub's container registry as ghcr.io/<owner>/<repository> tagged X.Y.Z, which is where
+# `sv app add --git` looks for it (operator-cli §4.2.1), then makes the version's GitHub release from its CHANGELOG.md section. The
+# release workflow (release.yml) calls it with the tag when a promotion titled `Release vX.Y.Z` is merged (RELEASING.md); a tag pushed by
+# hand starts it too:
 #
 #   git tag v1.0.0 && git push origin v1.0.0
 #
-# Nothing is published unless the checks in ci.yml pass on the tagged commit and that commit is on `main`.
+# Nothing is published unless the checks in ci.yml pass on the tagged commit, that commit is on `main`, and the version has a changelog
+# section.
 #
 # The image carries the manifest as its label and is built to listen on the manifest's port, both made from sovereign.manifest.json by
 # @sovereignfs/manifest, so the manifest is written once.
@@ -13,31 +16,44 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_call:
+    inputs:
+      tag:
+        description: The tag to publish, such as v1.2.0; it exists already, on the promotion's merge commit.
+        type: string
+        required: true
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   # The app's checks (ci.yml) on the tagged commit, before anything is built or published.
   validate:
     uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ inputs.tag }}
 
   image:
     needs: validate
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 0
+          ref: ${{ inputs.tag }}
 
       # A release is the merge commit of a pull request from `develop` into `main` (CONTRIBUTING.md), never a commit of `develop` or of a
       # branch that was tagged by mistake.
       - name: Check the tagged commit is on main
         run: |
           git fetch --no-tags origin main
-          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+          if ! git merge-base --is-ancestor HEAD origin/main; then
             echo "The tagged commit is not on main; refusing to publish." >&2
             exit 1
           fi
@@ -49,14 +65,21 @@ jobs:
 
       # The tag names the version, so it has to be the one the package says. The image is tagged X.Y.Z, without the v.
       - id: version
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          expected="${GITHUB_REF_NAME#v}"
+          expected="${TAG#v}"
           actual="$(node -p "require('./package.json').version")"
           if [ "$actual" != "$expected" ]; then
-            echo "The tag $GITHUB_REF_NAME expects version $expected, but package.json says $actual." >&2
+            echo "The tag $TAG expects version $expected, but package.json says $actual." >&2
             exit 1
           fi
           echo "version=$expected" >> "$GITHUB_OUTPUT"
+
+      # The release notes are the version's CHANGELOG.md section (RELEASING.md); a version without one is not published.
+      - run: npx create app release notes "$TAG" > /dev/null
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
 
       # Fails the build on a manifest an instance would refuse.
       - run: npx sovereign-manifest check
@@ -82,3 +105,29 @@ jobs:
           tags: ${{ steps.image.outputs.name }}:${{ steps.version.outputs.version }}
           labels: ${{ steps.manifest.outputs.labels }}
           build-args: ${{ steps.manifest.outputs.build-args }}
+
+  # The GitHub release for the tag, with the version's CHANGELOG.md section as its notes. Run again, it replaces the notes.
+  release:
+    needs: image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.tag }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          npx create app release notes "$TAG" > notes.md
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file notes.md
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" --notes-file notes.md
+          fi

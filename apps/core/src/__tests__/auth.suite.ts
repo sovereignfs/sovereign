@@ -1,3 +1,4 @@
+import { isSignInValue } from '@sovereignfs/crypto';
 /**
  * Core's sign-in against a real database, through better-auth's HTTP handler: the same entry the
  * route handler uses, so a request here is a request from a browser minus the network. It is one
@@ -19,6 +20,7 @@ import {
   call,
   freshAddress,
   freshEmail,
+  signInValueOf,
   Jar,
   makeAuth,
   PASSWORD,
@@ -215,91 +217,91 @@ export function authSuite(createDatabase: () => Promise<TestDatabase>): void {
     });
   });
 
-  describe('the password policy, enforced by the server', () => {
-    const strict = {
-      SV_AUTH_PASSWORD_MIN_LENGTH: '12',
-      SV_AUTH_PASSWORD_REQUIRE_UPPERCASE: 'true',
-      SV_AUTH_PASSWORD_REQUIRE_NUMBER: 'true',
-      SV_AUTH_PASSWORD_REQUIRE_SYMBOL: 'true',
-    };
-
+  // Core never receives a password (core-app §5.2): the browser checks the policy and sends a sign-in value derived from the
+  // password. The server can check only that what arrived is one, on every path that stores a password.
+  describe('a password is never received, only a sign-in value', () => {
     it.each([
-      ['too short', 'Ab1!'],
-      ['no uppercase letter', 'lowercase-only-1!'],
-      ['no number', 'Lowercase-only-!!'],
-      ['no symbol', 'Lowercase0nly1234'],
-    ])('refuses a password with %s, with no account made', async (_why, password) => {
-      const { reply } = await signUp(makeAuth(db, strict), { password });
+      ['a password', 'correct horse battery'],
+      ['a value of the wrong length', `svp1.${'A'.repeat(42)}`],
+      ['no version', `svp.${'A'.repeat(43)}`],
+    ])('refuses %s at sign-up, with no account made', async (_why, password) => {
+      const { reply } = await signUp(makeAuth(db), { password });
       expect(reply.status).toBe(400);
-      expect(reply.body.code).toBe('PASSWORD_DOES_NOT_MEET_POLICY');
-      expect(reply.body.message).toMatch(/^The password must /);
+      expect(reply.body.code).toBe('PASSWORD_NOT_DERIVED');
       expect(await count('users')).toBe(0);
       expect(await count('accounts')).toBe(0);
       expect(await count('sessions')).toBe(0);
     });
 
-    it('accepts a password that meets every rule', async () => {
-      const { reply } = await signUp(makeAuth(db, strict), { password: 'Correct-horse-9-battery' });
+    it('accepts a sign-in value, and stores only its hash', async () => {
+      const { reply } = await signUp(makeAuth(db), { password: PASSWORD });
       expect(reply.status).toBe(200);
+      const stored = String((await db.run('select password from accounts')).rows[0]?.password);
+      expect(stored).not.toContain(PASSWORD);
     });
 
-    it('applies the shortest length by default, and the longest always', async () => {
-      const a = auth();
-      const short = await signUp(a, { password: 'a'.repeat(7) });
-      expect(short.reply.body.code).toBe('PASSWORD_DOES_NOT_MEET_POLICY');
-      const long = await signUp(a, { password: 'a'.repeat(129) });
-      expect(long.reply.body.code).toBe('PASSWORD_DOES_NOT_MEET_POLICY');
-      expect((await signUp(a, { password: 'a'.repeat(8) })).reply.status).toBe(200);
-      expect((await signUp(a, { password: 'a'.repeat(128) })).reply.status).toBe(200);
-    });
-
-    it('says every rule that was broken, in one sentence', async () => {
-      const { reply } = await signUp(makeAuth(db, strict), { password: 'short' });
-      expect(reply.body.message).toBe(
-        'The password must be at least 12 characters long and include an uppercase letter and include a number and include a symbol.',
-      );
-    });
-
-    it('holds when a password is changed, so a weak one cannot be set after a strong sign-up', async () => {
-      const a = makeAuth(db, strict);
-      const good = 'Correct-horse-9-battery';
-      const { jar, email } = await signUp(a, { password: good });
+    it('holds when a password is changed: what is not a sign-in value is not set, and the old one still works', async () => {
+      const a = makeAuth(db);
+      const { jar, email } = await signUp(a, { password: PASSWORD });
       const reply = await call(a, 'POST', '/change-password', {
         jar,
-        body: { currentPassword: good, newPassword: 'weak', revokeOtherSessions: false },
+        body: { currentPassword: PASSWORD, newPassword: 'weak', revokeOtherSessions: false },
       });
       expect(reply.status).toBe(400);
-      expect(reply.body.code).toBe('PASSWORD_DOES_NOT_MEET_POLICY');
-      // The old password still works; the weak one never did.
+      expect(reply.body.code).toBe('PASSWORD_NOT_DERIVED');
       expect(
-        (await call(a, 'POST', '/sign-in/email', { body: { email, password: good } })).status,
+        (await call(a, 'POST', '/sign-in/email', { body: { email, password: PASSWORD } })).status,
       ).toBe(200);
-      expect(
-        (await call(a, 'POST', '/sign-in/email', { body: { email, password: 'weak' } })).status,
-      ).toBe(401);
     });
 
     it('holds on every path that stores a password, because it is checked where the hash is made', async () => {
       // Sign-up, reset, change and a server-side set all store what this function returns.
-      const { password } = await await makeAuth(db, strict).$context;
-      await expect(password.hash('weak')).rejects.toMatchObject({
-        body: { code: 'PASSWORD_DOES_NOT_MEET_POLICY' },
+      const { password } = await makeAuth(db).$context;
+      await expect(password.hash('Correct-horse-9-battery')).rejects.toMatchObject({
+        body: { code: 'PASSWORD_NOT_DERIVED' },
       });
-      const hash = await password.hash('Correct-horse-9-battery');
-      expect(await password.verify({ hash, password: 'Correct-horse-9-battery' })).toBe(true);
-      expect(await password.verify({ hash, password: 'Correct-horse-9-batterz' })).toBe(false);
+      const value = signInValueOf('another');
+      const hash = await password.hash(value);
+      expect(await password.verify({ hash, password: value })).toBe(true);
+      expect(await password.verify({ hash, password: PASSWORD })).toBe(false);
     });
 
     it('holds when the server itself sets a password, as the Console will', async () => {
-      const a = makeAuth(db, strict);
-      const { jar } = await signUp(a, { password: 'Correct-horse-9-battery' });
+      const a = makeAuth(db);
+      const { jar } = await signUp(a, { password: PASSWORD });
       await expect(
         a.api.setPassword({
-          // Long enough for better-auth's own check: only core's policy can refuse this one.
-          body: { newPassword: 'longenoughbutlowercase' },
+          body: { newPassword: 'longenoughbutnotderived' },
           headers: new Headers({ cookie: jar.header() ?? '', origin: BASE_URL }),
         }),
-      ).rejects.toMatchObject({ body: { code: 'PASSWORD_DOES_NOT_MEET_POLICY' } });
+      ).rejects.toMatchObject({ body: { code: 'PASSWORD_NOT_DERIVED' } });
+    });
+
+    it('answers a sign-up with a password alike, whether or not the address has an account', async () => {
+      const a = makeAuth(db, { SV_AUTH_REQUIRE_EMAIL_VERIFICATION: 'true' });
+      const { email } = await signUp(makeAuth(db), { password: PASSWORD });
+      const known = await signUp(a, { email, password: 'correct horse battery' });
+      const unknown = await signUp(a, { password: 'correct horse battery' });
+      expect(known.reply.status).toBe(400);
+      expect(known.reply.body).toEqual(unknown.reply.body);
+      expect(known.reply.body.code).toBe('PASSWORD_NOT_DERIVED');
+    });
+
+    it('answers a sign-in with a password as it answers a wrong one, whether or not the address has an account', async () => {
+      const a = makeAuth(db);
+      const { email } = await signUp(a, { password: PASSWORD });
+      const known = await call(a, 'POST', '/sign-in/email', {
+        body: { email, password: 'correct horse battery' },
+      });
+      const unknown = await call(a, 'POST', '/sign-in/email', {
+        body: { email: freshEmail(), password: 'correct horse battery' },
+      });
+      const wrong = await call(a, 'POST', '/sign-in/email', {
+        body: { email, password: signInValueOf('wrong') },
+      });
+      expect([known.status, unknown.status, wrong.status]).toEqual([401, 401, 401]);
+      expect(known.body).toEqual(wrong.body);
+      expect(unknown.body).toEqual(wrong.body);
     });
   });
 
@@ -534,55 +536,91 @@ export function authSuite(createDatabase: () => Promise<TestDatabase>): void {
       expect(fixtures.length).toBeGreaterThan(0);
     });
 
-    describe.each(fixtures)('written by better-auth $fixture.betterAuth', ({ fixture }) => {
-      const open = () => makeAuth(db, { SV_AUTH_SECRET: fixture.secret });
+    // An account whose password was stored before passwords were derived in the browser (core-app §5.2): its password can no
+    // longer sign in, and is refused exactly as a wrong one is; everything else it had still reads.
+    describe.each(fixtures.filter(({ fixture }) => !isSignInValue(fixture.password)))(
+      'written by better-auth $fixture.betterAuth, before sign-in values',
+      ({ fixture }) => {
+        const open = () => makeAuth(db, { SV_AUTH_SECRET: fixture.secret });
 
-      beforeEach(async () => {
-        await loadFixture(db, fixture);
-      });
-
-      it('still signs the person in with the password they chose', async () => {
-        const jar = new Jar();
-        const reply = await call(open(), 'POST', '/sign-in/email', {
-          jar,
-          body: { email: fixture.email, password: fixture.password },
+        beforeEach(async () => {
+          await loadFixture(db, fixture);
         });
-        expect(reply.status).toBe(200);
-        expect(reply.body.user?.email).toBe(fixture.email);
-        expect(jar.get(SESSION_COOKIE)).toBeTruthy();
-      });
 
-      it('still refuses a wrong password', async () => {
-        const reply = await call(open(), 'POST', '/sign-in/email', {
-          body: { email: fixture.email, password: `${fixture.password}x` },
+        it('refuses the old password exactly as a wrong one, so the person sets it again by a reset', async () => {
+          const old = await call(open(), 'POST', '/sign-in/email', {
+            body: { email: fixture.email, password: fixture.password },
+          });
+          const wrong = await call(open(), 'POST', '/sign-in/email', {
+            body: { email: fixture.email, password: PASSWORD },
+          });
+          expect(old.status).toBe(401);
+          expect(old.body).toEqual(wrong.body);
         });
-        expect(reply.status).toBe(401);
-      });
 
-      it('still recognises the session that was already open, from its signed cookie', async () => {
-        const jar = new Jar();
-        const [name = '', ...value] = fixture.cookie.split('=');
-        jar.absorb([`${name}=${value.join('=')}`]);
-        const reply = await call(open(), 'GET', '/get-session', { jar });
-        expect(reply.status).toBe(200);
-        expect(signedInAs(reply)?.email).toBe(fixture.email);
-      });
-
-      it('leaves the old session open when the person signs in again, and leaves the hash alone', async () => {
-        const before = await db.run('select password from accounts');
-        await call(open(), 'POST', '/sign-in/email', {
-          body: { email: fixture.email, password: fixture.password },
+        it('still recognises the session that was already open, from its signed cookie', async () => {
+          const jar = new Jar();
+          const [name = '', ...value] = fixture.cookie.split('=');
+          jar.absorb([`${name}=${value.join('=')}`]);
+          const reply = await call(open(), 'GET', '/get-session', { jar });
+          expect(reply.status).toBe(200);
+          expect(signedInAs(reply)?.email).toBe(fixture.email);
         });
-        expect(await count('sessions')).toBe(fixture.tables.sessions.length + 1);
-        const after = await db.run('select password from accounts');
-        expect(after.rows).toEqual(before.rows);
-      });
+      },
+    );
 
-      it('lets someone else sign up beside them', async () => {
-        const { reply } = await signUp(open());
-        expect(reply.status).toBe(200);
-        expect(await count('users')).toBe(fixture.tables.users.length + 1);
-      });
-    });
+    describe.each(fixtures.filter(({ fixture }) => isSignInValue(fixture.password)))(
+      'written by better-auth $fixture.betterAuth',
+      ({ fixture }) => {
+        const open = () => makeAuth(db, { SV_AUTH_SECRET: fixture.secret });
+
+        beforeEach(async () => {
+          await loadFixture(db, fixture);
+        });
+
+        it('still signs the person in with the password they chose', async () => {
+          const jar = new Jar();
+          const reply = await call(open(), 'POST', '/sign-in/email', {
+            jar,
+            body: { email: fixture.email, password: fixture.password },
+          });
+          expect(reply.status).toBe(200);
+          expect(reply.body.user?.email).toBe(fixture.email);
+          expect(jar.get(SESSION_COOKIE)).toBeTruthy();
+        });
+
+        it('still refuses a wrong password', async () => {
+          const reply = await call(open(), 'POST', '/sign-in/email', {
+            body: { email: fixture.email, password: `${fixture.password}x` },
+          });
+          expect(reply.status).toBe(401);
+        });
+
+        it('still recognises the session that was already open, from its signed cookie', async () => {
+          const jar = new Jar();
+          const [name = '', ...value] = fixture.cookie.split('=');
+          jar.absorb([`${name}=${value.join('=')}`]);
+          const reply = await call(open(), 'GET', '/get-session', { jar });
+          expect(reply.status).toBe(200);
+          expect(signedInAs(reply)?.email).toBe(fixture.email);
+        });
+
+        it('leaves the old session open when the person signs in again, and leaves the hash alone', async () => {
+          const before = await db.run('select password from accounts');
+          await call(open(), 'POST', '/sign-in/email', {
+            body: { email: fixture.email, password: fixture.password },
+          });
+          expect(await count('sessions')).toBe(fixture.tables.sessions.length + 1);
+          const after = await db.run('select password from accounts');
+          expect(after.rows).toEqual(before.rows);
+        });
+
+        it('lets someone else sign up beside them', async () => {
+          const { reply } = await signUp(open());
+          expect(reply.status).toBe(200);
+          expect(await count('users')).toBe(fixture.tables.users.length + 1);
+        });
+      },
+    );
   });
 }

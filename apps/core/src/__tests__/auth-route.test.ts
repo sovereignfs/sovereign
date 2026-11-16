@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { PASSWORD } from './auth-harness';
 
 const APP_ROOT = path.join(import.meta.dirname, '../..');
 const ORIGIN = 'http://localhost:3000';
@@ -43,7 +44,7 @@ describe('the /api/auth route', () => {
         body: JSON.stringify({
           name: 'Ada Lovelace',
           email: 'ada@sovereign.local',
-          password: 'correct horse battery',
+          password: PASSWORD,
           agreedToTerms: true,
         }),
       }),
@@ -62,7 +63,7 @@ describe('the /api/auth route', () => {
     );
   });
 
-  it('refuses a weak password with the reason', async () => {
+  it('refuses a password, which only a sign-in value may stand for', async () => {
     const { POST } = await import('../../app/api/auth/[...all]/route');
     const response = await POST(
       request('/sign-up/email', {
@@ -70,15 +71,14 @@ describe('the /api/auth route', () => {
         body: JSON.stringify({
           name: 'Weak',
           email: 'weak@sovereign.local',
-          password: 'short',
+          password: 'short, and not a sign-in value',
           agreedToTerms: true,
         }),
       }),
     );
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({
-      code: 'PASSWORD_DOES_NOT_MEET_POLICY',
-      message: expect.stringContaining('at least 8 characters'),
+      code: 'PASSWORD_NOT_DERIVED',
     });
   });
 
@@ -98,7 +98,7 @@ describe('the /api/auth route', () => {
         body: JSON.stringify({
           name: 'Ada',
           email: 'ada2@sovereign.local',
-          password: 'correct horse battery',
+          password: PASSWORD,
           agreedToTerms: true,
         }),
       }),

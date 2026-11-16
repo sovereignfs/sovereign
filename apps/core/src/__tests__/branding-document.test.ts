@@ -35,6 +35,22 @@ describe('the branding document', () => {
     expectMatchesContract('getInstanceBranding', 200, mail);
   });
 
+  it('carries the instance id a browser derives sign-in values from, and matches the contract', () => {
+    const instanceId = Buffer.alloc(32, 7).toString('base64url');
+    const document = brandingDocument(
+      PLAIN_IDENTITY,
+      'https://core.sovereign.local',
+      {},
+      instanceId,
+    );
+    expect(document.instanceId).toBe(instanceId);
+    expectMatchesContract('getInstanceBranding', 200, document);
+    // One that is not 32 bytes of base64url is not what the contract promises.
+    expect(() =>
+      expectMatchesContract('getInstanceBranding', 200, { ...document, instanceId: 'short' }),
+    ).toThrow();
+  });
+
   it('gives the pictures as absolute addresses on the instance, versions and all', () => {
     const document = brandingDocument(
       {

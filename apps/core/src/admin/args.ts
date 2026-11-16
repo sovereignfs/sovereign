@@ -32,6 +32,7 @@ export type Command =
   | { name: 'remove'; key: string }
   | { name: 'restored'; json: boolean }
   | { name: 'seed'; local: boolean; json: boolean }
+  | { name: 'reset-link'; email: string }
   | { name: 'deletions-export' }
   | { name: 'deletions-apply'; file: string | undefined }
   | { name: 'deletions-resend'; key: string; since: string };
@@ -49,6 +50,7 @@ export const USAGE = `Usage:
   sovereign-admin apps remove KEY
   sovereign-admin instance restored [--json]
   sovereign-admin seed [--local] [--json]
+  sovereign-admin accounts reset-link EMAIL
   sovereign-admin instance deletions export
   sovereign-admin instance deletions apply [FILE]
   sovereign-admin instance deletions resend --app KEY --since TIME`;
@@ -127,6 +129,16 @@ export function parse(argv: string[]): Command {
     if (rest.length > 0) throw new UsageError('seed takes no argument');
     return { name: 'seed', local: flags.switches.has('local'), json: flags.switches.has('json') };
   }
+  if (group === 'accounts') {
+    if (verb !== 'reset-link') {
+      throw new UsageError(
+        verb === undefined ? 'a command is needed' : `unknown accounts command ${verb}`,
+      );
+    }
+    const { rest } = flagsOf(words, NONE);
+    if (rest.length !== 1) throw new UsageError('reset-link needs exactly one EMAIL');
+    return { name: 'reset-link', email: rest[0] as string };
+  }
   if (group === 'instance') {
     if (verb === 'deletions') {
       const [what, ...more] = words;
@@ -160,7 +172,7 @@ export function parse(argv: string[]): Command {
     if (rest.length > 0) throw new UsageError('restored takes no argument');
     return { name: 'restored', json: flags.switches.has('json') };
   }
-  if (group !== 'apps') throw new UsageError('the groups are apps, instance and seed');
+  if (group !== 'apps') throw new UsageError('the groups are apps, accounts, instance and seed');
   switch (verb) {
     case 'ensure': {
       const { rest, flags } = flagsOf(words, ALL);

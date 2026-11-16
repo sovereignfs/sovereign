@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+// The derivation has its own vectors (packages/crypto); here it stands in with a value that shows what it was made from.
+vi.mock('../auth/derive', () => ({
+  signInValue: async (password: string, address: string) => `derived:${password}:${address}`,
+}));
 
 const enable = vi.fn();
 const disable = vi.fn();
@@ -53,13 +57,22 @@ const click = (name: string | RegExp) => fireEvent.click(screen.getByRole('butto
 
 describe('the two-factor panel, while it is off', () => {
   it('says it is off and offers to turn it on', () => {
-    render(<TwoFactorPanel enabled={false} issuer="Sovereign" verified />);
+    render(
+      <TwoFactorPanel address="ada@sovereign.local" enabled={false} issuer="Sovereign" verified />,
+    );
     expect(screen.getByText('Two-factor sign-in is off')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Turn on' })).toBeTruthy();
   });
 
   it('asks for the address to be verified first, and offers nothing it would be refused', () => {
-    render(<TwoFactorPanel enabled={false} issuer="Sovereign" verified={false} />);
+    render(
+      <TwoFactorPanel
+        address="ada@sovereign.local"
+        enabled={false}
+        issuer="Sovereign"
+        verified={false}
+      />,
+    );
     expect(screen.getByText(/Verify your email address before turning on/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Turn on' })).toBeNull();
   });
@@ -69,12 +82,17 @@ describe('the two-factor panel, while it is off', () => {
       data: { method: 'totp', totpURI: URI, backupCodes: CODES },
       error: null,
     });
-    render(<TwoFactorPanel enabled={false} issuer="Our Place" verified />);
+    render(
+      <TwoFactorPanel address="ada@sovereign.local" enabled={false} issuer="Our Place" verified />,
+    );
     click('Turn on');
     type('Password', 'correct horse battery');
     click('Continue');
     expect(await screen.findByText('Set up your authenticator app')).toBeTruthy();
-    expect(enable).toHaveBeenCalledWith({ password: 'correct horse battery', issuer: 'Our Place' });
+    expect(enable).toHaveBeenCalledWith({
+      password: 'derived:correct horse battery:ada@sovereign.local',
+      issuer: 'Our Place',
+    });
     expect(screen.getByRole('img', { name: /QR code/ })).toBeTruthy();
     expect(screen.getByText('GEZD GNBV GY3T QOJQ')).toBeTruthy();
   });
@@ -85,7 +103,9 @@ describe('the two-factor panel, while it is off', () => {
       error: null,
     });
     verifyTotp.mockResolvedValue({ data: {}, error: null });
-    render(<TwoFactorPanel enabled={false} issuer="Sovereign" verified />);
+    render(
+      <TwoFactorPanel address="ada@sovereign.local" enabled={false} issuer="Sovereign" verified />,
+    );
     click('Turn on');
     type('Password', 'correct horse battery');
     click('Continue');
@@ -109,7 +129,9 @@ describe('the two-factor panel, while it is off', () => {
       error: null,
     });
     verifyTotp.mockResolvedValue({ data: null, error: { status: 401, code: 'INVALID_CODE' } });
-    render(<TwoFactorPanel enabled={false} issuer="Sovereign" verified />);
+    render(
+      <TwoFactorPanel address="ada@sovereign.local" enabled={false} issuer="Sovereign" verified />,
+    );
     click('Turn on');
     type('Password', 'correct horse battery');
     click('Continue');
@@ -125,7 +147,9 @@ describe('the two-factor panel, while it is off', () => {
       data: null,
       error: { status: 400, code: 'INVALID_PASSWORD' },
     });
-    render(<TwoFactorPanel enabled={false} issuer="Sovereign" verified />);
+    render(
+      <TwoFactorPanel address="ada@sovereign.local" enabled={false} issuer="Sovereign" verified />,
+    );
     click('Turn on');
     type('Password', 'wrong');
     click('Continue');
@@ -134,7 +158,9 @@ describe('the two-factor panel, while it is off', () => {
   });
 
   it('can be cancelled before anything is sent', () => {
-    render(<TwoFactorPanel enabled={false} issuer="Sovereign" verified />);
+    render(
+      <TwoFactorPanel address="ada@sovereign.local" enabled={false} issuer="Sovereign" verified />,
+    );
     click('Turn on');
     click('Cancel');
     expect(screen.getByText('Two-factor sign-in is off')).toBeTruthy();
@@ -144,7 +170,7 @@ describe('the two-factor panel, while it is off', () => {
 
 describe('the two-factor panel, while it is on', () => {
   it('says it is on, with ways to get new backup codes or turn it off', () => {
-    render(<TwoFactorPanel enabled issuer="Sovereign" verified />);
+    render(<TwoFactorPanel address="ada@sovereign.local" enabled issuer="Sovereign" verified />);
     expect(screen.getByText('Two-factor sign-in is on')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Get new backup codes' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Turn off' })).toBeTruthy();
@@ -152,29 +178,33 @@ describe('the two-factor panel, while it is on', () => {
 
   it('shows new backup codes after the password is given, and says the old ones stop working', async () => {
     generateBackupCodes.mockResolvedValue({ data: { backupCodes: CODES }, error: null });
-    render(<TwoFactorPanel enabled issuer="Sovereign" verified />);
+    render(<TwoFactorPanel address="ada@sovereign.local" enabled issuer="Sovereign" verified />);
     click('Get new backup codes');
     expect(screen.getByText(/old backup codes will stop working/)).toBeTruthy();
     type('Password', 'correct horse battery');
     click('Get new codes');
     expect(await screen.findByText('Your new backup codes')).toBeTruthy();
-    expect(generateBackupCodes).toHaveBeenCalledWith({ password: 'correct horse battery' });
+    expect(generateBackupCodes).toHaveBeenCalledWith({
+      password: 'derived:correct horse battery:ada@sovereign.local',
+    });
     for (const code of CODES) expect(screen.getByText(code)).toBeTruthy();
   });
 
   it('turns off after the password is given, and reloads to show what the server holds', async () => {
     disable.mockResolvedValue({ data: { status: true }, error: null });
-    render(<TwoFactorPanel enabled issuer="Sovereign" verified />);
+    render(<TwoFactorPanel address="ada@sovereign.local" enabled issuer="Sovereign" verified />);
     click('Turn off');
     type('Password', 'correct horse battery');
     fireEvent.click(screen.getAllByRole('button', { name: 'Turn off' })[0] as HTMLElement);
     await waitFor(() => expect(reload).toHaveBeenCalled());
-    expect(disable).toHaveBeenCalledWith({ password: 'correct horse battery' });
+    expect(disable).toHaveBeenCalledWith({
+      password: 'derived:correct horse battery:ada@sovereign.local',
+    });
   });
 
   it('does not reload, and says why, when the password is wrong', async () => {
     disable.mockResolvedValue({ data: null, error: { status: 400, code: 'INVALID_PASSWORD' } });
-    render(<TwoFactorPanel enabled issuer="Sovereign" verified />);
+    render(<TwoFactorPanel address="ada@sovereign.local" enabled issuer="Sovereign" verified />);
     click('Turn off');
     type('Password', 'wrong');
     fireEvent.click(screen.getAllByRole('button', { name: 'Turn off' })[0] as HTMLElement);
@@ -184,7 +214,7 @@ describe('the two-factor panel, while it is on', () => {
 
   it('says to wait when the limit is reached', async () => {
     generateBackupCodes.mockResolvedValue({ data: null, error: { status: 429 } });
-    render(<TwoFactorPanel enabled issuer="Sovereign" verified />);
+    render(<TwoFactorPanel address="ada@sovereign.local" enabled issuer="Sovereign" verified />);
     click('Get new backup codes');
     type('Password', 'x');
     click('Get new codes');

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { Database } from '@sovereignfs/database';
 import { createAuth, type Auth } from '../auth/auth';
 import type { AuthMail } from '../auth/mail';
@@ -7,7 +8,15 @@ import { config } from '../config';
 
 export const BASE_URL = 'http://localhost:3000';
 export const SECRET = 'a-secret-that-is-long-enough-to-pass-validation';
-export const PASSWORD = 'correct horse battery';
+/**
+ * A sign-in value standing for a password (core-app §5.2). Core never receives a password, only the value a browser derives from
+ * it, and checks no more than its shape; tests that go through core's API send one of these, made from a label, without running
+ * the derivation.
+ */
+export const signInValueOf = (label: string): string =>
+  `svp1.${createHash('sha256').update(label).digest('base64url')}`;
+
+export const PASSWORD = signInValueOf('correct horse battery');
 
 // Verification is off here so the sign-in tests need no mail; `verification.suite.ts` turns it on.
 const BASE_ENV = {

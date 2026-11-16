@@ -30,4 +30,20 @@ before that is recorded.
 
 ## Core
 
-No migration notes yet.
+### 0.100.0
+
+- **Core never receives a password, and every account made before this sets its password again.** The browser now sends a sign-in
+  value derived from the password, the address and the instance id ([core-app §5.2](specs/core-app.md)), so a password stored by an
+  earlier core no longer signs anyone in. Before you upgrade:
+  1. Take a backup (`./sv backup`).
+  2. Make sure mail works, so each person can use **Forgot password**. Where it does not, an operator makes a reset link for an
+     account on the server with `sovereign-admin accounts reset-link EMAIL` (in core's container) and gives it to the person; it works
+     once, for an hour.
+
+  Each person, after the upgrade, sets their password through the reset link and signs in as before. Passkeys keep working. Core
+  makes the instance id when it first starts, and its log says how many accounts were made before.
+
+- **Signing in needs JavaScript**, and takes about a second longer, while the browser derives the value.
+- **The password policy is checked in the browser**, in the same words. The server checks only that what it receives is a sign-in
+  value (`PASSWORD_NOT_DERIVED` otherwise); a client of your own that posts a password to core's sign-in endpoints must derive it
+  with `@sovereignfs/crypto/web` first.

@@ -196,8 +196,10 @@ each: `docs/architecture-rules.md`.
   ask for the password instead.
 - **A better-auth bump is verified against a populated store, never only a
   fresh one** (captures in `apps/core/src/__tests__/fixtures/auth-store`).
-- **The password policy is enforced where the hash is made** (`policedHash`),
-  and better-auth's origin and CSRF checks are never switched off.
+- **Core never receives a password** (core-app §5.2): every form sends the sign-in value the
+  browser derives (`src/auth/derive.ts`), the policy is checked there, and the hash function
+  (`policedHash`) refuses anything else; signing in with anything else is answered as a wrong
+  password, before any lookup. better-auth's origin and CSRF checks are never switched off.
 - **Registration is enforced in better-auth's `user.create.before` hook,** which
   every account passes through: invite-only fails closed, the first account is
   the one made when no account exists, the owner is held by a unique index, and

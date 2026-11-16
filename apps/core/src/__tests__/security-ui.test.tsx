@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+// The derivation has its own vectors (packages/crypto); here it stands in with a value that shows what it was made from.
+vi.mock('../auth/derive', () => ({
+  signInValue: async (password: string, address: string) => `derived:${password}:${address}`,
+}));
 
 const changePassword = vi.fn();
 vi.mock('../auth/client', () => ({
@@ -37,12 +41,24 @@ describe('the change password form', () => {
 
   it('sends both passwords and asks for every other session to end, then says so', async () => {
     changePassword.mockResolvedValue({ data: {}, error: null });
-    render(<ChangePasswordForm />);
+    render(
+      <ChangePasswordForm
+        address="ada@sovereign.local"
+        policy={{
+          minLength: 8,
+          maxLength: 128,
+          requireUppercase: false,
+          requireLowercase: false,
+          requireNumber: false,
+          requireSymbol: false,
+        }}
+      />,
+    );
     submit();
     expect(await screen.findByText(/signed out everywhere else/)).toBeTruthy();
     expect(changePassword).toHaveBeenCalledWith({
-      currentPassword: 'correct horse battery',
-      newPassword: 'a different long passphrase',
+      currentPassword: 'derived:correct horse battery:ada@sovereign.local',
+      newPassword: 'derived:a different long passphrase:ada@sovereign.local',
       revokeOtherSessions: true,
     });
     expect((screen.getByLabelText(/^Current password/) as HTMLInputElement).value).toBe('');
@@ -54,7 +70,19 @@ describe('the change password form', () => {
       data: null,
       error: { status: 400, code: 'INVALID_PASSWORD' },
     });
-    render(<ChangePasswordForm />);
+    render(
+      <ChangePasswordForm
+        address="ada@sovereign.local"
+        policy={{
+          minLength: 8,
+          maxLength: 128,
+          requireUppercase: false,
+          requireLowercase: false,
+          requireNumber: false,
+          requireSymbol: false,
+        }}
+      />,
+    );
     submit();
     expect((await screen.findByRole('alert')).textContent).toContain(
       'current password is not right',
@@ -73,7 +101,19 @@ describe('the change password form', () => {
         message: 'The password must include a number.',
       },
     });
-    render(<ChangePasswordForm />);
+    render(
+      <ChangePasswordForm
+        address="ada@sovereign.local"
+        policy={{
+          minLength: 8,
+          maxLength: 128,
+          requireUppercase: false,
+          requireLowercase: false,
+          requireNumber: false,
+          requireSymbol: false,
+        }}
+      />,
+    );
     submit();
     expect(await screen.findByText('The password must include a number.')).toBeTruthy();
     expect(screen.queryByText(/signed out everywhere else/)).toBeNull();
@@ -81,7 +121,19 @@ describe('the change password form', () => {
 
   it('says to wait when the limit is reached, and plainly for anything else', async () => {
     changePassword.mockResolvedValueOnce({ data: null, error: { status: 429 } });
-    render(<ChangePasswordForm />);
+    render(
+      <ChangePasswordForm
+        address="ada@sovereign.local"
+        policy={{
+          minLength: 8,
+          maxLength: 128,
+          requireUppercase: false,
+          requireLowercase: false,
+          requireNumber: false,
+          requireSymbol: false,
+        }}
+      />,
+    );
     submit();
     expect(await screen.findByText(/Too many attempts/)).toBeTruthy();
     changePassword.mockResolvedValueOnce({

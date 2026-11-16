@@ -2,6 +2,7 @@
 
 import { startTransition, useActionState, useState } from 'react';
 import { Alert, Button, ConfirmDialog, FormField, Input, Select } from '@sovereignfs/ui';
+import { signInValue } from '../../../src/auth/derive';
 import type { TransferTarget } from '../../../src/roles/ownership';
 import { transferOwnershipAction, type TransferResult } from './actions';
 import styles from './ownership.module.css';
@@ -10,7 +11,14 @@ import styles from './ownership.module.css';
  * Hands the instance to an admin. Nothing is sent until the owner has chosen, typed their password and confirmed in
  * a question that names who will own it. The password stays in the box if the server refuses it.
  */
-export function TransferForm({ targets }: { targets: TransferTarget[] }) {
+export function TransferForm({
+  targets,
+  address,
+}: {
+  targets: TransferTarget[];
+  /** The owner's own address, which the password's sign-in value is made from (core-app §5.2). */
+  address: string;
+}) {
   const [target, setTarget] = useState('');
   const [newRole, setNewRole] = useState('platform:admin');
   const [password, setPassword] = useState('');
@@ -21,12 +29,20 @@ export function TransferForm({ targets }: { targets: TransferTarget[] }) {
   );
   const chosen = targets.find((candidate) => candidate.id === target);
 
+  const [preparing, setPreparing] = useState<string | undefined>();
   const send = () => {
+    setPreparing(undefined);
     const form = new FormData();
     form.set('target', target);
     form.set('newRole', newRole);
-    form.set('password', password);
-    startTransition(() => act(form));
+    // What is sent is made from the password, which never leaves the browser (core-app §5.2).
+    void signInValue(password, address).then(
+      (value) => {
+        form.set('password', value);
+        startTransition(() => act(form));
+      },
+      () => setPreparing('This page could not get ready. Reload it and try again.'),
+    );
   };
 
   return (
@@ -95,7 +111,7 @@ export function TransferForm({ targets }: { targets: TransferTarget[] }) {
         confirmLabel={pending ? 'Handing over…' : 'Hand over ownership'}
         destructive
         pending={pending}
-        error={state && !state.ok ? state.error : undefined}
+        error={preparing ?? (state && !state.ok ? state.error : undefined)}
         onConfirm={send}
       />
     </form>

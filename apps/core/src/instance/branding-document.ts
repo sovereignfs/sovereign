@@ -25,6 +25,8 @@ export function brandingDocument(
   baseUrl: string,
   /** Whether this instance can send mail, which is what makes `email` a capability (core-app §4.2). */
   served: { email?: boolean } = {},
+  /** The instance id every sign-in value is made from (core-app §5.2), when it is known. */
+  instanceId?: string,
 ): InstanceBranding {
   const origin = new URL(baseUrl).origin;
   const absolute = (path: string | undefined) => (path ? new URL(path, origin).toString() : null);
@@ -37,5 +39,6 @@ export function brandingDocument(
       versions: [...SERVED_API.versions],
       capabilities: [...SERVED_API.capabilities, ...(served.email ? (['email'] as const) : [])],
     },
+    ...(instanceId ? { instanceId } : {}),
   };
 }

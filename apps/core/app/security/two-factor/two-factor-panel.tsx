@@ -4,6 +4,7 @@ import { type FormEvent, useState } from 'react';
 import { Alert, Button, FormField, Input, QrCode } from '@sovereignfs/ui';
 import { encode } from 'uqr';
 import { authClient } from '../../../src/auth/client';
+import { signInValue } from '../../../src/auth/derive';
 import styles from '../security.module.css';
 
 type Action = 'enable' | 'regenerate' | 'disable';
@@ -26,10 +27,13 @@ export function TwoFactorPanel({
   enabled,
   issuer,
   verified,
+  address,
 }: {
   enabled: boolean;
   issuer: string;
   verified: boolean;
+  /** The account's address, which the password's sign-in value is made from (core-app §5.2). */
+  address: string;
 }) {
   const [stage, setStage] = useState<Stage>({ kind: 'idle' });
 
@@ -38,6 +42,7 @@ export function TwoFactorPanel({
       <PasswordStep
         action={stage.action}
         issuer={issuer}
+        address={address}
         onCancel={() => setStage({ kind: 'idle' })}
         onEnrolment={(uri, codes) => setStage({ kind: 'confirm', uri, codes })}
         onCodes={(codes) => setStage({ kind: 'codes', codes, heading: 'Your new backup codes' })}
@@ -122,12 +127,14 @@ const TITLES: Record<Action, { heading: string; hint: string; submit: string; pe
 function PasswordStep({
   action,
   issuer,
+  address,
   onCancel,
   onEnrolment,
   onCodes,
 }: {
   action: Action;
   issuer: string;
+  address: string;
   onCancel: () => void;
   onEnrolment: (uri: string, codes: string[]) => void;
   onCodes: (codes: string[]) => void;
@@ -141,8 +148,15 @@ function PasswordStep({
     event.preventDefault();
     setPending(true);
     setError(undefined);
+    let value: string;
+    try {
+      value = await signInValue(password, address);
+    } catch {
+      setPending(false);
+      return setError('This page could not get ready. Reload it and try again.');
+    }
     if (action === 'enable') {
-      const result = await authClient.twoFactor.enable({ password, issuer });
+      const result = await authClient.twoFactor.enable({ password: value, issuer });
       setPending(false);
       if (result.error) return setError(problemWith(result.error));
       const data = result.data;
@@ -150,12 +164,12 @@ function PasswordStep({
       return onEnrolment(data.totpURI, data.backupCodes);
     }
     if (action === 'regenerate') {
-      const result = await authClient.twoFactor.generateBackupCodes({ password });
+      const result = await authClient.twoFactor.generateBackupCodes({ password: value });
       setPending(false);
       if (result.error) return setError(problemWith(result.error));
       return onCodes(result.data?.backupCodes ?? []);
     }
-    const result = await authClient.twoFactor.disable({ password });
+    const result = await authClient.twoFactor.disable({ password: value });
     if (result.error) {
       setPending(false);
       return setError(problemWith(result.error));

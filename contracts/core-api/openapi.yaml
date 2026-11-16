@@ -672,6 +672,13 @@ components:
         favicon:
           type: [string, 'null']
           format: uri
+        instanceId:
+          type: string
+          pattern: '^[A-Za-z0-9_-]{43}$'
+          description: |
+            32 random bytes, base64url, made once by the instance and never changed. A browser makes a person's sign-in value
+            from it, the address and the password, so that the password never reaches core. A core older than this field does
+            not publish it.
         api:
           type: object
           additionalProperties: false

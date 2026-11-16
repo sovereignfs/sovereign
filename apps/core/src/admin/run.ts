@@ -21,6 +21,8 @@ export type InstanceOperations = {
   resendDeletions(clientId: string, since: number): Promise<Resent>;
   /** Seeds a development or staging instance (core-app §3.15.1). `local` also requires core's address to be on this machine. */
   seed(options: { local: boolean }): Promise<SeedReport>;
+  /** A reset link for the account with this address, or `undefined` when there is none (core-app §5.2). */
+  resetLink(email: string): Promise<string | undefined>;
 };
 
 /** Where the command writes: what it answers on `out`, and a line for each write on `log`, never a secret. */
@@ -160,6 +162,20 @@ export async function runAdmin(
             `app ${report.app.key}\tclient id: ${report.app.clientId}\tredirect: ${report.app.redirect}`,
           );
         }
+        return 0;
+      }
+      case 'reset-link': {
+        if (!instance) throw new Error('the instance operations were not given to sovereign-admin');
+        const link = await instance.resetLink(command.email);
+        if (link === undefined) {
+          log(`sovereign-admin: there is no account with the address ${command.email}`);
+          return 1;
+        }
+        // The link is the answer, given once; the log says only that one was made.
+        log(
+          `sovereign-admin: made a reset link for ${command.email}, which works once, for an hour`,
+        );
+        out(link);
         return 0;
       }
       case 'deletions-export': {

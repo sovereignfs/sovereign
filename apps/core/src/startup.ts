@@ -44,6 +44,26 @@ export async function migrateDatabaseOrExit(): Promise<void> {
 }
 
 /**
+ * Makes the instance id if there is none (core-app §5.2), once the database is up to date. An instance with accounts and no id is
+ * one upgraded from before sign-in values, and its people set their passwords again: that is said once, here.
+ */
+export async function ensureInstanceIdOrExit(): Promise<void> {
+  try {
+    const { ensureInstanceId } = await import('./instance/instance-id');
+    await ensureInstanceId(await getDatabase(), (accounts) =>
+      console.warn(
+        `\nThis instance's ${accounts} account(s) were made before passwords were derived in the browser. Each signs in again ` +
+          'only after setting its password through a reset link (docs/upgrade.md).\n',
+      ),
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'unknown error';
+    console.error(`\nCore could not read or make its instance id: ${message}\n`);
+    process.exit(1);
+  }
+}
+
+/**
  * Warns, once, when email cannot be sent. It never stops core: core-app §3.14 wants a warning at
  * start-up and a clear failure from any flow that needs mail, not a refusal to start.
  */

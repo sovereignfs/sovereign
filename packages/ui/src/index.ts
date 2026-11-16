@@ -115,6 +115,14 @@ export type {
 } from './components/MobileAppsDrawer/MobileAppsDrawer';
 export { EmptyState } from './components/EmptyState/EmptyState';
 export type { EmptyStateProps } from './components/EmptyState/EmptyState';
+export { LockedState } from './components/LockedState/LockedState';
+export type { LockedReason, LockedStateProps } from './components/LockedState/LockedState';
+export {
+  RecoveryKit,
+  recoveryKitFileName,
+  recoveryKitFileText,
+} from './components/RecoveryKit/RecoveryKit';
+export type { RecoveryKitProps } from './components/RecoveryKit/RecoveryKit';
 export { OfflineGate } from './components/OfflineGate/OfflineGate';
 export type { OfflineGateProps } from './components/OfflineGate/OfflineGate';
 export { DeviceOnlyGate } from './components/DeviceOnlyGate/DeviceOnlyGate';

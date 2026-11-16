@@ -15,6 +15,8 @@ import { CardTile, CardTileGrid, NewCardTile } from '../components/CardTile/Card
 import { Dialog } from '../components/Dialog/Dialog';
 import { Drawer } from '../components/Drawer/Drawer';
 import { EmptyState } from '../components/EmptyState/EmptyState';
+import { LockedState } from '../components/LockedState/LockedState';
+import { RecoveryKit } from '../components/RecoveryKit/RecoveryKit';
 import { OfflineGate } from '../components/OfflineGate/OfflineGate';
 import { DeviceOnlyGate } from '../components/DeviceOnlyGate/DeviceOnlyGate';
 import { DeviceStorageKeyGate } from '../components/DeviceStorageKeyGate/DeviceStorageKeyGate';
@@ -1907,7 +1909,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
         <section style={{ marginBottom: 'var(--sv-space-12)' }}>
           <SectionHeader
             title="Component gallery"
-            subtitle="All 77 components — click each story in the sidebar for the full API, variants, and controls."
+            subtitle="All 79 components — click each story in the sidebar for the full API, variants, and controls."
           />
 
           <div style={{ marginBottom: 'var(--sv-space-6)' }}>
@@ -2843,6 +2845,32 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               usage="The mobile 'Apps' bottom sheet: a 3-column tile grid matching the runtime shell's own Apps drawer exactly (56px icon tiles, radius 14px). No header row — Drawer's own grab handle plus swipe-down/scrim-tap dismissal are enough. The tile list is supplied by the consumer via `items` — e.g. installed plugins for the shell, or a plugin's own sections for its own launcher button."
             >
               <MobileAppsDrawerDemo />
+            </ComponentCard>
+
+            {/* LockedState */}
+            <ComponentCard
+              name="LockedState"
+              importLine="import { LockedState } from '@sovereignfs/ui';"
+              usage="What an encrypted app shows where this browser cannot open something: reason locked (with the app's Unlock link) or removed (sharing stopped, optionally naming who). Built on EmptyState; the action comes from the consumer. Experimental."
+            >
+              <LockedState
+                reason="locked"
+                appName="Notes"
+                action={<ButtonLink href="#unlock">Unlock</ButtonLink>}
+              />
+            </ComponentCard>
+
+            {/* RecoveryKit */}
+            <ComponentCard
+              name="RecoveryKit"
+              importLine="import { RecoveryKit } from '@sovereignfs/ui';"
+              usage="The recovery kit, shown once at set-up: fourteen groups, Print and Save as a file, and Continue held off until the person says they kept it. Takes the kit's text; never the bytes. Experimental."
+            >
+              <RecoveryKit
+                kit="000G-40R4-0M30-E209-185G-R38E-1W81-24GK-2GAH-C5RR-34D1-P70X-3RFG-K7Q2"
+                instanceName="Rohr"
+                onContinue={() => {}}
+              />
             </ComponentCard>
 
             {/* EmptyState */}

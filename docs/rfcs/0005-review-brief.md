@@ -5,7 +5,9 @@ not, where we are least sure, and what we would like back. It can be read withou
 
 ## What is asked
 
-A review of a **design document**, before anything that stores keys is built. No code exists yet.
+A review of a **design document**, before anything that stores keys is built. The library that makes every stored format exists
+(`packages/crypto/src/web`, with tests and frozen vectors of each format) and may be read beside the RFC; nothing uses it yet, and
+nothing stores a key.
 
 - **To read:** RFC 0005 (about 380 lines). [Research 0008](../research/0008-end-to-end-encryption.md) explains why it is shaped as
   it is, and is optional.

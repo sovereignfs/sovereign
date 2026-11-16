@@ -1833,8 +1833,9 @@ Built by task 16.6. Core keeps, for each account, what opens its keys, and can o
 - **Setting up** happens in the browser the first time a person signs in after this ships, or at sign-up: the account key and the
   signing key are made there and wrapped by the unlock key, and the **recovery kit** is shown. Nothing else is shown until the person
   confirms they kept the kit. A person who leaves first is shown it again.
-- **The recovery kit** is 32 random bytes, written as groups of four letters and digits from an alphabet with no `I`, `L`, `O` or `U`,
-  ending in a check group. A mistyped kit is refused as mistyped. Typing it ignores case, spaces and hyphens. It is shown once.
+- **The recovery kit** is 32 random bytes, written as groups of four letters and digits from an alphabet with no `I`, `L`, `O` or `U`
+  (Crockford's base32), ending in a check group. A mistyped kit is refused as mistyped. Typing it ignores case, spaces and hyphens,
+  and reads `O` as `0` and `I` and `L` as `1`. It is shown once.
 - **Unlocking** with the password happens in the browser: the account key opens or it does not. Nothing is sent to check it.
 - **Changing the password** sends the new sign-in value and the account key wrapped by the new unlock key in one request, applied
   together or not at all.

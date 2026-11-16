@@ -53,6 +53,19 @@ describe('what a hosted app is registered as', () => {
     expect(args['--account-deleted']).toEqual(['https://notes.sovereign.local/gone']);
   });
 
+  it('gives core the key return address a manifest 4 names, and none without one', () => {
+    const encrypted = flags(
+      hostedClient(
+        suite,
+        'notes',
+        app,
+        manifest({ manifest: 4, encryption: { return: '/auth/keys' } }),
+      ),
+    );
+    expect(encrypted['--key-return']).toEqual(['https://notes.sovereign.local/auth/keys']);
+    expect(flags(hostedClient(suite, 'notes', app, manifest()))['--key-return']).toBeUndefined();
+  });
+
   it('has the launcher the manifest gives, changed by what the operator wrote and nothing else', () => {
     const plain = flags(
       hostedClient(

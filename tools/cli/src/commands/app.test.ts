@@ -103,6 +103,24 @@ describe('sv app add', () => {
     expect(done.text).toContain('trusted: people are not asked about it');
   });
 
+  it('says plainly that an app which keeps its people’s data encrypted gets their keys', async () => {
+    await withNotes({
+      images: {
+        [NOTES_IMAGE]: {
+          manifest: manifestOf({
+            manifest: 4,
+            prefix: 'notes',
+            generate: ['NOTES_AUTH_SECRET'],
+            encryption: { return: '/auth/keys' },
+          }),
+        },
+      },
+    });
+    const done = await sv(world, 'app', 'add', 'notes', '--image', NOTES_IMAGE, '--yes');
+    expect(done.text).toContain('keeps what people give it encrypted');
+    expect(done.text).toContain('Not yet reviewed or audited');
+  });
+
   it('asks before it adds, and does nothing when the answer is no or there is nobody to ask', async () => {
     await withNotes();
     const refusedAtLast = await sv(world, 'app', 'add', 'notes', '--image', NOTES_IMAGE);

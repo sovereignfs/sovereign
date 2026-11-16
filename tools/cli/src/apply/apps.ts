@@ -95,6 +95,11 @@ export function hostedClient(
     ...(signIn.accountDeleted
       ? ['--account-deleted', absolute(suite, name, signIn.accountDeleted)]
       : []),
+    // An app that keeps its people's data encrypted (manifest 4): core sends a person back here with the app's key, and gives it the
+    // keys scope (contracts/app-manifest.md §2.8, core-app §5.6).
+    ...('encryption' in manifest && manifest.encryption
+      ? ['--key-return', absolute(suite, name, manifest.encryption.return)]
+      : []),
     '--scope',
     ...signIn.scopes,
     // A hosted app is the operator's own: people are not asked about it, and it may ask for roles (contracts/app-manifest.md §2.1).

@@ -182,6 +182,11 @@ async function add(ctx: Context, argv: string[]): Promise<void> {
   ctx.io.err(`${manifest.name} (${name}) at https://${name}.${suite.domain}`);
   if (manifest.signIn) {
     ctx.io.err(`  asks to sign people in with: ${manifest.signIn.scopes.join(', ')}`);
+    if ('encryption' in manifest && manifest.encryption) {
+      ctx.io.err(
+        '  It keeps what people give it encrypted, so this server cannot read it: core will give it each person’s key for it. Not yet reviewed or audited.',
+      );
+    }
     if (manifest.signIn.scopes.includes('roles')) {
       ctx.io.err(
         '  It will be told whether each person is an admin or the owner, and it is trusted: people are not asked about it.',

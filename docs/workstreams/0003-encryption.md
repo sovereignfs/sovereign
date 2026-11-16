@@ -1,6 +1,6 @@
 # Workstream 0003 — Encryption the server cannot read
 
-**Status:** ⏳ In Progress (leg 1 done)\
+**Status:** ⏳ In Progress (leg 1 done; leg 2 built, waiting at its gate)\
 **Date:** November 2026\
 **Author:** Claude Code, for kasunben\
 **Goal owner:** kasunben\
@@ -299,3 +299,4 @@ files after the run and find no plaintext.
 | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0.1     | Nov 2026 | Initial draft                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | 0.2     | Nov 2026 | Leg 1 done (16.1, no version): core-app §5 specifies keys, not built, with an acceptance list (§5.10); §2 and §3.16 say so. The reset page is given the account's address (a decision taken with the goal owner); the manifest's `encryption` (§2.8, manifest 4), sdk §9.3, operator-cli §9.5 and the design system's two components are specified, not built. RFC 0005 is worded to what is designed on versions and on a reader of the server's memory. Run on the planning branch, not a branch of its own, at the goal owner's request. |
+| 0.3     | Nov 2026 | Leg 2 built, not complete (16.2): `@sovereignfs/crypto/web` with the derivation, Argon2id from libsodium's sumo build (chosen with the goal owner, since no browser Argon2id is fully audited; the salt is cut to libsodium's 16 bytes), vectors from noble-hashes, and the timing page, checked in a browser on the development Mac. Waiting at the gate: the cost is measured on phones before 16.2 is done and leg 3 starts.                                                                                                             |

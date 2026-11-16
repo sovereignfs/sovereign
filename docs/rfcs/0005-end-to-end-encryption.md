@@ -62,15 +62,15 @@ promised against an operator who changes the code a server sends.
 
 One for each job. All but the first are in WebCrypto, so keys can be held as keys that cannot be exported.
 
-| Job                               | Algorithm                                                                   |
-| --------------------------------- | --------------------------------------------------------------------------- |
-| A secret from a password          | Argon2id, 64 MiB, 3 passes, 1 lane, 32 bytes out (RFC 9106)                 |
-| One secret into several           | HKDF-SHA-256, with a different `info` for each purpose                      |
-| Encrypting a key or a small value | AES-256-GCM, a random 96-bit nonce, the record's context as associated data |
-| Encrypting a document or a file   | AES-256-GCM in chunks of 64 KiB (§1.3)                                      |
-| Encrypting a key to a person      | HPKE (RFC 9180), base mode: X25519, HKDF-SHA-256, AES-256-GCM               |
-| Signing                           | Ed25519                                                                     |
-| A secret from a passkey           | The WebAuthn PRF extension's output, through HKDF                           |
+| Job                               | Algorithm                                                                                 |
+| --------------------------------- | ----------------------------------------------------------------------------------------- |
+| A secret from a password          | Argon2id, 64 MiB, 3 passes, 1 lane, 16-byte salt, 32 bytes out (RFC 9106), from libsodium |
+| One secret into several           | HKDF-SHA-256, with a different `info` for each purpose                                    |
+| Encrypting a key or a small value | AES-256-GCM, a random 96-bit nonce, the record's context as associated data               |
+| Encrypting a document or a file   | AES-256-GCM in chunks of 64 KiB (§1.3)                                                    |
+| Encrypting a key to a person      | HPKE (RFC 9180), base mode: X25519, HKDF-SHA-256, AES-256-GCM                             |
+| Signing                           | Ed25519                                                                                   |
+| A secret from a passkey           | The WebAuthn PRF extension's output, through HKDF                                         |
 
 - **Suite 1** is this table. Every stored record names its suite, so a second one (a post-quantum key wrap, say) is read beside it.
 - **Argon2id is WebAssembly**, built into `@sovereignfs/crypto` and served from the app's own origin, never fetched from another
@@ -84,7 +84,7 @@ One for each job. All but the first are in WebCrypto, so keys can be held as key
 
 ```
 address   = the sign-in address, trimmed and in lower case
-salt      = SHA-256("sovereign/1/password" ‖ instance id ‖ address)
+salt      = first 16 bytes of SHA-256("sovereign/1/password" ‖ instance id ‖ address)
 master    = Argon2id(NFKC(password), salt)
 sign-in   = "svp1." ‖ base64url( HKDF(master, info = "sovereign/1/sign-in") )
 unlock    = HKDF(master, salt = the vault's random salt for this account, info = "sovereign/1/unlock")
@@ -103,7 +103,8 @@ unlock    = HKDF(master, salt = the vault's random salt for this account, info =
 - **A server that gives a wrong id** makes signing in fail and learns nothing it could not learn by sending altered code. What is
   given up, against a salt made from the address bar, is that a copy of the site at another address can ask for the real instance's
   id and so collect values that work on it: no worse than a password typed into such a copy today, and no better.
-- **`master` is dropped as soon as both values are made.**
+- **`master` is held only as a WebCrypto key that cannot be exported**, its bytes overwritten as soon as it is imported, and is
+  dropped once the unlock key is made: that needs the vault's salt, which core gives only after signing in.
 
 #### 1.2 Records
 
@@ -395,6 +396,10 @@ Each step is useful by itself and is a task or a few.
 - **The timing page is the first piece of step 1**, not built before this is accepted.
 - **The reset page is given the account's address** by core when it is rendered (§2), settled after acceptance on 2026-11-16, over
   asking the person to type it or putting it in the link.
+- **Argon2id is libsodium's** (`libsodium-wrappers-sumo`), decided with the goal owner on 2026-11-16 when no browser Argon2id was
+  found to be fully audited: libsodium's C library was audited in 2017 with password hashing in scope, and its WebAssembly build was
+  not. libsodium takes a 16-byte salt, so the salt is the first 16 bytes of its SHA-256 (§1.1). The reasons and sources are in the
+  package's README.
 - **The salt is made from an instance id, not the instance's address** (§1.1), settled after acceptance, on 2026-11-16: with the
   address, an instance that moved would have locked everyone out of their accounts and their data.
 - **Step 2 is built before the design review, and step 3 is not.** Core never receiving a password is worth having at once, and

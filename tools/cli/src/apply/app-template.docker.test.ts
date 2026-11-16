@@ -107,6 +107,8 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
         '@sovereignfs/ui...',
         '--filter',
         '@sovereignfs/storage...',
+        '--filter',
+        '@sovereignfs/create',
         'build',
       ],
       { cwd: root, stdio: 'ignore' },
@@ -118,7 +120,7 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
     });
     const vendor = path.join(app, 'vendor');
     mkdirSync(vendor);
-    for (const name of ['sdk', 'ui', 'manifest', 'config', 'storage']) {
+    for (const name of ['sdk', 'ui', 'manifest', 'config', 'storage', 'create']) {
       execFileSync(
         'pnpm',
         ['--filter', `@sovereignfs/${name}`, 'pack', '--pack-destination', vendor],
@@ -137,6 +139,7 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
       ['config', 'dependencies'],
       ['storage', 'dependencies'],
       ['manifest', 'devDependencies'],
+      ['create', 'devDependencies'],
     ] as const) {
       pkg[field][`@sovereignfs/${name}`] =
         `file:./vendor/${tarballs.find((file) => file.startsWith(`sovereignfs-${name}-`)) as string}`;

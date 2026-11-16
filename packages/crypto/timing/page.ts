@@ -63,11 +63,18 @@ async function run(): Promise<void> {
     median.className = slowest.className = 'n';
     median.textContent = '…';
     const times: number[] = [];
-    for (let i = 0; i < RUNS; i += 1) {
-      await pause();
-      const start = performance.now();
-      await argon2id(password, salt, cost);
-      times.push(performance.now() - start);
+    try {
+      for (let i = 0; i < RUNS; i += 1) {
+        await pause();
+        const start = performance.now();
+        await argon2id(password, salt, cost);
+        times.push(performance.now() - start);
+      }
+    } catch (error) {
+      // Most likely the memory: a phone that cannot give this much fails here, which is a result in itself.
+      median.textContent = slowest.textContent = 'failed';
+      lines.push(`${cost.memoryBytes / MiB} MiB  ${cost.passes}  failed: ${String(error)}`);
+      continue;
     }
     times.sort((a, b) => a - b);
     const [mid, max] = [times[1] ?? 0, times[RUNS - 1] ?? 0].map((ms) => `${Math.round(ms)} ms`);

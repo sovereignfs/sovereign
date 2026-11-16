@@ -67,6 +67,20 @@ describe('the password derivation (RFC 0005 §1.1)', () => {
     20_000,
   );
 
+  // RFC 9106's own Argon2id vector (§5.3) has four lanes, a secret and associated data, none of which libsodium takes. It is
+  // checked against noble-hashes, which made the vectors above: RFC 9106, then noble-hashes, then this package.
+  it('rests on a second implementation that meets RFC 9106 §5.3', () => {
+    const tag = nobleArgon2id(new Uint8Array(32).fill(1), new Uint8Array(16).fill(2), {
+      t: 3,
+      m: 32,
+      p: 4,
+      dkLen: 32,
+      key: new Uint8Array(8).fill(3),
+      personalization: new Uint8Array(12).fill(4),
+    });
+    expect(hex(tag)).toBe('0d640df58d78766c08c037a34a8b53c9d01ef0452d75b65eb52520e96b01e659');
+  });
+
   it('agrees with noble-hashes on Argon2id for random passwords and salts', async () => {
     for (let round = 0; round < 8; round += 1) {
       const password = crypto.getRandomValues(new Uint8Array(1 + round * 7));

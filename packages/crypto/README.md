@@ -118,6 +118,8 @@ choice was made with the goal owner (2026-11-16) on what each audit actually cov
 
 ### Checking it
 
+- **RFC 9106's own Argon2id vector** (§5.3) uses four lanes, a secret and associated data, which
+  libsodium does not take, so it is checked against noble-hashes instead, in the tests.
 - **Vectors** in `src/web/__tests__/password-vectors.json` are made by noble-hashes (SHA-256,
   Argon2id, HKDF) and none of this package's code: `pnpm --filter @sovereignfs/crypto vectors`. The
   tests compare this package against them, and run both Argon2ids on random inputs.

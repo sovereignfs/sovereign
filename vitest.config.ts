@@ -20,6 +20,10 @@ export default defineConfig({
       source('api-client', './packages/api-client/src/index.ts'),
       source('config', './packages/config/src/index.ts'),
       source('crypto', './packages/crypto/src/index.ts'),
+      {
+        find: /^@sovereignfs\/crypto\/web$/,
+        replacement: fileURLToPath(new URL('./packages/crypto/src/web/index.ts', import.meta.url)),
+      },
       source('database', './packages/database/src/index.ts'),
       source('mailer', './packages/mailer/src/index.ts'),
       source('manifest', './packages/manifest/src/index.ts'),

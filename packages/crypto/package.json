@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Field encryption for Sovereign: authenticated encryption with a key ring and lazy re-encryption on rotation.",
+  "description": "Encryption for Sovereign: field encryption on the server, and the keys of RFC 0005 in a browser (`/web`).",
   "license": "MPL-2.0",
   "sideEffects": false,
   "engines": {
@@ -13,6 +13,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./web": {
+      "types": "./dist/web/index.d.ts",
+      "default": "./dist/web/index.js"
     }
   },
   "files": [
@@ -22,14 +26,18 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "vectors": "tsx scripts/password-vectors.ts"
   },
   "dependencies": {
-    "@sovereignfs/config": "workspace:*"
+    "@sovereignfs/config": "workspace:*",
+    "libsodium-wrappers-sumo": "catalog:"
   },
   "devDependencies": {
+    "@noble/hashes": "catalog:",
     "@sovereignfs/tsconfig": "workspace:*",
     "@types/node": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:"
   }
 }

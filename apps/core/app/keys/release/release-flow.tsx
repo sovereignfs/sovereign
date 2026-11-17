@@ -6,11 +6,14 @@ import { Alert, Button, Input, RecoveryKit } from '@sovereignfs/ui';
 import { deriveForSignIn } from '../../../src/auth/derive';
 import type { ReleaseRequest } from '../../../src/keys/release';
 import {
+  escrowAccepted,
+  isEscrowPending,
   isKitPending,
   isUnlocked,
   kitKept,
   releaseKey,
   unlockWithAnyPasskey,
+  unlockWithKitTyped,
   unlockWithPasswordAgain,
 } from '../../../src/keys/session';
 import { AuthField } from '../../(auth)/auth-field';
@@ -21,6 +24,7 @@ type Step =
   | { kind: 'confirm' }
   | { kind: 'unlock' }
   | { kind: 'kit'; kit: Uint8Array; text: string }
+  | { kind: 'escrow' }
   | { kind: 'failed' };
 
 /**
@@ -55,6 +59,10 @@ export function ReleaseFlow({
     if (await isKitPending()) {
       const kit = newKey();
       setStep({ kind: 'kit', kit, text: await formatKit(kit) });
+      return;
+    }
+    if (await isEscrowPending()) {
+      setStep({ kind: 'escrow' });
       return;
     }
     const released = await releaseKey(target);
@@ -102,6 +110,17 @@ export function ReleaseFlow({
       />
     );
   }
+  if (step.kind === 'escrow') {
+    return (
+      <EscrowNotice
+        instanceName={instanceName}
+        onContinue={async () => {
+          if (await escrowAccepted()) await proceed();
+          else setStep({ kind: 'failed' });
+        }}
+      />
+    );
+  }
   if (step.kind === 'failed') {
     return (
       <Alert variant="error">
@@ -131,8 +150,13 @@ function Unlock({
   const [error, setError] = useState<string | undefined>();
   const [pending, setPending] = useState<'password' | 'passkey' | undefined>();
   const [passkeys, setPasskeys] = useState(false);
+  const [withKit, setWithKit] = useState(false);
   // Known only in the browser, so it is read after the first render, never during it.
   useEffect(() => setPasskeys(typeof window.PublicKeyCredential === 'function'), []);
+
+  if (withKit) {
+    return <KitUnlock email={email} onUnlocked={onUnlocked} onCancel={() => setWithKit(false)} />;
+  }
 
   async function withPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -196,6 +220,99 @@ function Unlock({
           {pending === 'passkey' ? 'Waiting for your device…' : 'Use a passkey'}
         </Button>
       ) : null}
+      <Button
+        type="button"
+        variant="ghost"
+        className={styles.submit}
+        onClick={() => setWithKit(true)}
+      >
+        Use your recovery kit
+      </Button>
+    </form>
+  );
+}
+
+/**
+ * Unlocking with the recovery kit (core-app §5.3): after a password reset, or a recovery through escrow, the password the person signed
+ * in with no longer opens their data. The kit does, and the password is given its way in again, so it unlocks from then on.
+ */
+function KitUnlock({
+  email,
+  onUnlocked,
+  onCancel,
+}: {
+  email: string;
+  onUnlocked: () => void;
+  onCancel: () => void;
+}) {
+  const [kit, setKit] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | undefined>();
+  const [pending, setPending] = useState(false);
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPending(true);
+    setError(undefined);
+    try {
+      const { secret } = await deriveForSignIn(password, email);
+      const result = await unlockWithKitTyped(kit, secret);
+      if (result === 'unlocked') {
+        onUnlocked();
+        return;
+      }
+      setError(
+        result === 'mistyped'
+          ? 'That kit has a typing mistake. Check each group and try again.'
+          : 'That kit doesn’t unlock your encrypted data. Check you have the newest one.',
+      );
+    } catch {
+      setError('This page couldn’t get ready. Reload it and try again.');
+    }
+    setPending(false);
+  }
+
+  return (
+    <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
+      <p className={styles.lead}>
+        Type your recovery kit, and the password you sign in with now. From then on, your password
+        unlocks your encrypted data again.
+      </p>
+      {error ? <Alert variant="error">{error}</Alert> : null}
+      <AuthField label="Recovery kit" hint="Fourteen groups of four letters and numbers.">
+        {(control) => (
+          <Input
+            {...control}
+            name="kit"
+            autoComplete="off"
+            spellCheck={false}
+            required
+            disabled={pending}
+            value={kit}
+            onChange={(event) => setKit(event.target.value)}
+          />
+        )}
+      </AuthField>
+      <AuthField label="Password">
+        {(control) => (
+          <Input
+            {...control}
+            type="password"
+            name="password"
+            autoComplete="current-password"
+            required
+            disabled={pending}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+        )}
+      </AuthField>
+      <Button type="submit" className={styles.submit} loading={pending}>
+        {pending ? 'Unlocking…' : 'Unlock'}
+      </Button>
+      <Button type="button" variant="ghost" className={styles.submit} onClick={onCancel}>
+        Back
+      </Button>
     </form>
   );
 }
@@ -227,6 +344,36 @@ function KeepKit({
           void onKept();
         }}
       />
+    </div>
+  );
+}
+
+/** Told once, before the person's data is covered by escrow (core-app §5.8): the owner can now recover it. */
+function EscrowNotice({
+  instanceName,
+  onContinue,
+}: {
+  instanceName: string;
+  onContinue: () => Promise<void>;
+}) {
+  const [continuing, setContinuing] = useState(false);
+  return (
+    <div className={styles.form}>
+      <p className={styles.lead}>
+        The owner of {instanceName} has turned on recovery. From now on, they can recover your
+        encrypted data if you lose your password, your passkeys and your recovery kit.
+      </p>
+      <p className={styles.lead}>You can see this at any time on your Security page.</p>
+      <Button
+        className={styles.submit}
+        loading={continuing}
+        onClick={() => {
+          setContinuing(true);
+          void onContinue();
+        }}
+      >
+        {continuing ? 'Continuing…' : 'Continue'}
+      </Button>
     </div>
   );
 }

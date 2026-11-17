@@ -255,6 +255,38 @@ Everyone is **signed out** of core and of every app, by design, so that a restor
 backup. People deleted since the backup stay deleted when the same machine is restored. Restoring onto a new machine cannot know of them,
 and says so.
 
+## Encrypted data, and recovering it
+
+Apps that use encryption keep what people store so that the server cannot read it, not even with the database, a backup or
+`sovereign-admin` (core-app §5). Each person's data opens with their password, a passkey that unlocks, or their **recovery kit**, which
+they are shown the first time they open such an app. This is not yet reviewed by a cryptographer or audited.
+
+**A password reset gives back the account, not the data.** After a reset by email (or `sovereign-admin accounts reset-link EMAIL`), the
+person signs in with their new password and their encrypted data stays locked until they unlock it with a passkey that unlocks or their
+kit; from then on the new password unlocks again. **Without recovery, someone who loses their password, every passkey and their kit has
+lost their encrypted data for good**, and nobody, you included, can open it.
+
+**Recovery (escrow) is off unless the owner turns it on**, and turning it on means the owner can open everyone's encrypted data on this
+instance, which is why each person is told before they are covered. To turn it on, on your own machine:
+
+```bash
+./sv key escrow --out /path/outside/the/repository/escrow.key
+```
+
+It writes the escrow key's private half there (or shows it once in a terminal, with no `--out`) and prints one line starting
+`sv-escrow-1`. Keep the private half offline, apart from this machine and the server: it is never on the server or in a backup. Then, as
+the owner, paste the line into the Console, **Settings, Recovery of encrypted data**. Each person is told, and covered, the next time they
+open an app that uses encryption; the page says how many are not covered yet. Turning it off leaves those already covered covered.
+
+To recover someone who lost everything, with core's container (`docker compose exec core …` on the server):
+
+1. `sovereign-admin accounts escrow-record EMAIL > record.json`, and copy `record.json` to your machine.
+2. `./sv key escrow open --key escrow.key --out kit.json record.json` shows their **new recovery kit** once, for you to give them by a
+   channel you trust, and writes `kit.json`.
+3. Copy `kit.json` back, then `sovereign-admin accounts put-kit EMAIL kit.json`, and give them a reset link
+   (`sovereign-admin accounts reset-link EMAIL`). Delete `record.json` and `kit.json`.
+4. They set a password, sign in, and unlock with the new kit. Their password unlocks from then on.
+
 ## Going back
 
 ```bash

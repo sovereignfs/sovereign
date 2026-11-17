@@ -438,6 +438,9 @@ Each step is useful by itself and is a task or a few.
   must be the return address's origin, or the person is asked first. Without it, a site could send a signed-in person to the
   release page with a public key of its own, and the answer, sealed to that key, would be safe only for as long as nothing on the
   app's page read the fragment before the SDK removed it. A question for the review.
+- **A person is told before escrow covers them** (§6), changed while building on 2026-11-17: the escrow way in is added when they
+  continue past a notice at their next encrypted app, not silently at their next unlock. The escrow key is pasted into the Console by
+  the owner, since the toolkit holds no account to send it with.
 - **Step 2 is built before the design review, and step 3 is not.** Core never receiving a password is worth having at once, and
   what the review might change in it costs little: the number after `svp` names the whole derivation and not only its cost, so a
   derivation the review replaces is moved from at each person's next sign-in, as a change of cost is (§1.4), with no second reset.

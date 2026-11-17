@@ -11,6 +11,7 @@ import { AccountManager } from '../accounts/manage';
 import { AccountStates } from '../accounts/states';
 import { migrateCore } from '../db/migrate';
 import { ensureInstanceId } from '../instance/instance-id';
+import { escrowRecordFor, putKitFor } from '../keys/escrow-admin';
 import { KeyVault, VaultError } from '../keys/vault';
 import { makeAuth, PASSWORD, signUp } from './auth-harness';
 
@@ -315,6 +316,43 @@ export function keyVaultSuite(createDatabase: () => Promise<TestDatabase>): void
       await vault.setUp(id, ACCOUNT, [{ way: 'password', id: 'p', record: wrap('p') }]);
       await db.run("delete from instance_settings where key = 'instance_id'");
       await expect(ensureInstanceId(db)).rejects.toThrow(/must not be made again/);
+    });
+  });
+
+  describe('a recovery through escrow (core-app §5.8)', () => {
+    it('hands the operator the escrow way in, and stores the new kit only for the account it was made for', async () => {
+      const vault = new KeyVault(db);
+      const ada = await person();
+      const grace = await person();
+      const email = String(
+        (await db.run('select email from users where id = ?', [ada.id])).rows[0]?.email,
+      );
+      expect(await escrowRecordFor(db, email)).toBeUndefined();
+      await vault.setUp(ada.id, ACCOUNT, [
+        { way: 'password', id: 'p', record: wrap('p') },
+        { way: 'escrow', id: 'escrowkey01', record: wrap('sealed') },
+      ]);
+      expect(JSON.parse((await escrowRecordFor(db, email)) ?? '{}')).toEqual({
+        sub: ada.id,
+        escrowKeyId: 'escrowkey01',
+        record: JSON.parse(wrap('sealed')),
+      });
+      expect(await escrowRecordFor(db, 'nobody@sovereign.local')).toBeUndefined();
+
+      await expect(
+        putKitFor(db, email, JSON.stringify({ sub: grace.id, record: JSON.parse(wrap('k')) })),
+      ).rejects.toThrow('another account');
+      await expect(putKitFor(db, email, 'not json')).rejects.toThrow();
+      expect(
+        await putKitFor(
+          db,
+          email,
+          JSON.stringify({ sub: ada.id, record: JSON.parse(wrap('kit')) }),
+        ),
+      ).toBe(true);
+      const read = await vault.read(ada.id);
+      expect(read.account?.kitConfirmed).toBe(true);
+      expect(read.waysIn.find((w) => w.way === 'kit')?.record).toBe(wrap('kit'));
     });
   });
 }

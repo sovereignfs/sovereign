@@ -460,5 +460,49 @@ export function instanceManageSuite(createDatabase: () => Promise<TestDatabase>)
         value: 'mail.sovereign.local',
       });
     });
+
+    describe('recovery of encrypted data (core-app §5.8)', () => {
+      const LINE = `sv-escrow-1.${'A'.repeat(11)}.${'B'.repeat(43)}`;
+
+      it('is the owner’s alone to turn on and off, and takes only the line sv key escrow prints', async () => {
+        expect(await refused(() => manager().setEscrow(admin, LINE))).toBe('forbidden');
+        expect(await refused(() => manager().setEscrow(person, LINE))).toBe('forbidden');
+        expect(await refused(() => manager().setEscrow(owner, 'age1notakey'))).toBe('invalid');
+        await manager().setEscrow(owner, ` ${LINE} `);
+        expect((await manager().escrowUncovered(owner)).line).toBe(LINE);
+        expect(await refused(() => manager().escrowUncovered(admin))).toBe('forbidden');
+        await manager().setEscrow(owner, undefined);
+        expect(await manager().escrowUncovered(owner)).toEqual({ line: undefined, uncovered: 0 });
+      });
+
+      it('counts the accounts with keys and no escrow way in for the key in force', async () => {
+        await db.run('delete from key_wraps');
+        await db.run('delete from key_accounts');
+        await db.run('delete from users');
+        for (const id of ['a', 'b', 'c']) {
+          await db.run(
+            "insert into users (id, name, email, email_verified, role, created_at, updated_at) values (?, ?, ?, ?, 'platform:user', ?, ?)",
+            [
+              id,
+              id,
+              `${id}@sovereign.local`,
+              db.family === 'postgres' ? true : 1,
+              db.family === 'postgres' ? new Date(1) : 1,
+              db.family === 'postgres' ? new Date(1) : 1,
+            ],
+          );
+          await db.run(
+            'insert into key_accounts (user_id, suite, unlock_salt, signing_public, signing_private, kit_confirmed, created_at) values (?, 1, ?, ?, ?, 0, 1)',
+            [id, 's', 'p', '{}'],
+          );
+        }
+        await db.run(
+          "insert into key_wraps (user_id, way, wrap_id, record, created_at) values ('a', 'escrow', ?, '{}', 1), ('b', 'escrow', 'an-old-key0', '{}', 1)",
+          ['A'.repeat(11)],
+        );
+        await manager().setEscrow(owner, LINE);
+        expect((await manager().escrowUncovered(owner)).uncovered).toBe(2);
+      });
+    });
   });
 }

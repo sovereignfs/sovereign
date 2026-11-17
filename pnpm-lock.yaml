@@ -608,6 +608,9 @@ importers:
 
   tools/cli:
     devDependencies:
+      '@sovereignfs/crypto':
+        specifier: workspace:*
+        version: link:../../packages/crypto
       '@sovereignfs/manifest':
         specifier: workspace:*
         version: link:../../packages/manifest

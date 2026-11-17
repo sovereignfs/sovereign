@@ -33,6 +33,8 @@ export type Command =
   | { name: 'restored'; json: boolean }
   | { name: 'seed'; local: boolean; json: boolean }
   | { name: 'reset-link'; email: string }
+  | { name: 'escrow-record'; email: string }
+  | { name: 'put-kit'; email: string; file: string | undefined }
   | { name: 'deletions-export' }
   | { name: 'deletions-apply'; file: string | undefined }
   | { name: 'deletions-resend'; key: string; since: string };
@@ -51,6 +53,8 @@ export const USAGE = `Usage:
   sovereign-admin instance restored [--json]
   sovereign-admin seed [--local] [--json]
   sovereign-admin accounts reset-link EMAIL
+  sovereign-admin accounts escrow-record EMAIL
+  sovereign-admin accounts put-kit EMAIL [FILE]
   sovereign-admin instance deletions export
   sovereign-admin instance deletions apply [FILE]
   sovereign-admin instance deletions resend --app KEY --since TIME`;
@@ -130,14 +134,19 @@ export function parse(argv: string[]): Command {
     return { name: 'seed', local: flags.switches.has('local'), json: flags.switches.has('json') };
   }
   if (group === 'accounts') {
-    if (verb !== 'reset-link') {
-      throw new UsageError(
-        verb === undefined ? 'a command is needed' : `unknown accounts command ${verb}`,
-      );
-    }
     const { rest } = flagsOf(words, NONE);
-    if (rest.length !== 1) throw new UsageError('reset-link needs exactly one EMAIL');
-    return { name: 'reset-link', email: rest[0] as string };
+    if (verb === 'reset-link' || verb === 'escrow-record') {
+      if (rest.length !== 1) throw new UsageError(`${verb} needs exactly one EMAIL`);
+      return { name: verb, email: rest[0] as string };
+    }
+    if (verb === 'put-kit') {
+      if (rest.length < 1 || rest.length > 2)
+        throw new UsageError('put-kit needs an EMAIL, and one FILE or standard input');
+      return { name: 'put-kit', email: rest[0] as string, file: rest[1] };
+    }
+    throw new UsageError(
+      verb === undefined ? 'a command is needed' : `unknown accounts command ${verb}`,
+    );
   }
   if (group === 'instance') {
     if (verb === 'deletions') {

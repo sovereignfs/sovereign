@@ -10,6 +10,19 @@ vi.mock('../auth', () => ({
   getAuth: () => Promise.resolve({ api: { listPasskeys: () => listPasskeys() as unknown } }),
 }));
 vi.mock('../database', () => ({ getDatabase: () => Promise.resolve({}) }));
+const vault = vi.fn();
+vi.mock('../keys/vault', () => ({
+  KeyVault: class {
+    read() {
+      return vault() as unknown;
+    }
+  },
+}));
+const escrowLine = vi.fn();
+vi.mock('../settings', () => ({
+  SETTINGS: { escrowPublicKey: { key: 'escrow.public_key' } },
+  getSettings: () => Promise.resolve({ value: () => escrowLine() as unknown }),
+}));
 vi.mock('../auth/settings', () => ({
   getAuthSettings: () => ({
     passwordPolicy: {
@@ -39,6 +52,8 @@ const user = (extra: Record<string, unknown> = {}) => ({
 });
 
 beforeEach(() => {
+  vault.mockReset().mockResolvedValue({ waysIn: [] });
+  escrowLine.mockReset().mockResolvedValue(undefined);
   getSession.mockReset().mockResolvedValue(null);
   listPasskeys.mockReset().mockResolvedValue([]);
   listSessions.mockReset().mockResolvedValue([
@@ -103,5 +118,19 @@ describe('the security page', () => {
   it('is drawn with the design system and carries no inline styling of its own', async () => {
     getSession.mockResolvedValue(user());
     expect(renderToStaticMarkup(await SecurityPage())).not.toMatch(/<style|style="/);
+  });
+
+  it('says who can open the person’s encrypted data, only to someone who has some', async () => {
+    getSession.mockResolvedValue(user());
+    expect(renderToStaticMarkup(await SecurityPage())).not.toContain('Encrypted data');
+    vault.mockResolvedValue({ account: { kitConfirmed: true }, waysIn: [] });
+    expect(renderToStaticMarkup(await SecurityPage())).toContain('Recovery is off');
+    escrowLine.mockResolvedValue(`sv-escrow-1.${'A'.repeat(11)}.${'B'.repeat(43)}`);
+    expect(renderToStaticMarkup(await SecurityPage())).toContain('the next time you open an app');
+    vault.mockResolvedValue({
+      account: { kitConfirmed: true },
+      waysIn: [{ way: 'escrow', id: 'A'.repeat(11), record: '{}' }],
+    });
+    expect(renderToStaticMarkup(await SecurityPage())).toContain('can recover your encrypted data');
   });
 });

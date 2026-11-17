@@ -84,3 +84,119 @@ describe('sv key recovery', () => {
     expect(again.text).toContain('no recovery key');
   });
 });
+
+describe('sv key escrow (operator-cli §9.5)', () => {
+  it('writes the private half outside the repository, and prints the line the owner pastes into the Console', async () => {
+    world = makeWorld();
+    await setUpWorld(world);
+    const target = path.join(outside(), 'escrow.key');
+    const done = await sv(world, 'key', 'escrow', '--out', target);
+    expect(done.code).toBe(0);
+    expect(statSync(target).mode & 0o777).toBe(0o600);
+    const kept = readFileSync(target, 'utf8');
+    const line = /sv-escrow-1\.[A-Za-z0-9_-]{11}\.[A-Za-z0-9_-]{43}/.exec(done.text)?.[0];
+    expect(line).toBeDefined();
+    expect(kept).toContain(`# public key: ${line}`);
+    expect(kept).toMatch(/^SV-ESCROW-SECRET-1\./m);
+    // The private half is in the file alone, never in what the command printed, and nothing in the repository changed.
+    const secret = /^SV-ESCROW-SECRET-1\.\S+/m.exec(kept)?.[0] ?? 'x';
+    expect(done.text).not.toContain(secret);
+    expect(done.text).toContain('Console');
+  });
+
+  it('refuses to write it inside the repository, over a file, or with no terminal and no --out', async () => {
+    world = makeWorld();
+    await setUpWorld(world);
+    expect(
+      (await sv(world, 'key', 'escrow', '--out', path.join(world.root, 'escrow.key'))).code,
+    ).toBe(2);
+    expect(existsSync(path.join(world.root, 'escrow.key'))).toBe(false);
+    expect((await sv(world, 'key', 'escrow')).text).toContain('--out');
+  });
+
+  it('opens a person’s escrow way in offline and makes a new kit whose way in opens the same account key', async () => {
+    const crypto = await import('@sovereignfs/crypto/web');
+    world = makeWorld({ interactive: true });
+    await setUpWorld(world);
+    const dir = outside();
+    const keyPath = path.join(dir, 'escrow.key');
+    const made = await sv(world, 'key', 'escrow', '--out', keyPath);
+    const line = /sv-escrow-1\.\S+/.exec(made.text)?.[0] ?? '';
+    const escrowKey = await crypto.parseEscrowKey(line);
+    if (!escrowKey) throw new Error('no escrow key');
+
+    // What a person's browser sealed when they were covered, as sovereign-admin accounts escrow-record gives it.
+    const accountKey = crypto.newKey();
+    const record = await crypto.sealEscrowWrap({
+      accountKey,
+      sub: 'ada',
+      escrowKeyId: escrowKey.id,
+      escrowPublicKey: escrowKey.publicKey,
+    });
+    const recordPath = path.join(dir, 'record.json');
+    const { writeFileSync } = await import('node:fs');
+    writeFileSync(recordPath, JSON.stringify({ sub: 'ada', escrowKeyId: escrowKey.id, record }));
+    const outPath = path.join(dir, 'kit.json');
+
+    const opened = await sv(
+      world,
+      'key',
+      'escrow',
+      'open',
+      '--key',
+      keyPath,
+      '--out',
+      outPath,
+      recordPath,
+    );
+    expect(opened.code).toBe(0);
+    const kitText =
+      /([0-9A-HJKMNP-TV-Z]{4}-){13}[0-9A-HJKMNP-TV-Z]{4}/.exec(opened.text)?.[0] ?? '';
+    const kit = await crypto.readKit(kitText);
+    if (!kit.ok) throw new Error('no kit');
+    const written = JSON.parse(readFileSync(outPath, 'utf8')) as { sub: string; record: unknown };
+    expect(written.sub).toBe('ada');
+    expect(statSync(outPath).mode & 0o777).toBe(0o600);
+    expect(
+      await crypto.unwrapSecret(
+        await crypto.kitKey(kit.kit),
+        written.record,
+        crypto.accountWrapData('ada', 'kit'),
+      ),
+    ).toEqual(accountKey);
+    expect(opened.text).toContain('put-kit');
+  });
+
+  it('refuses a way in made for another escrow key', async () => {
+    const crypto = await import('@sovereignfs/crypto/web');
+    world = makeWorld({ interactive: true });
+    await setUpWorld(world);
+    const dir = outside();
+    const keyPath = path.join(dir, 'escrow.key');
+    await sv(world, 'key', 'escrow', '--out', keyPath);
+    const recordPath = path.join(dir, 'record.json');
+    const { writeFileSync } = await import('node:fs');
+    writeFileSync(
+      recordPath,
+      JSON.stringify({
+        sub: 'ada',
+        escrowKeyId: 'anotherkey0',
+        record: { suite: 1, enc: 'x', ciphertext: 'y' },
+      }),
+    );
+    void crypto;
+    const refused = await sv(
+      world,
+      'key',
+      'escrow',
+      'open',
+      '--key',
+      keyPath,
+      '--out',
+      path.join(dir, 'kit.json'),
+      recordPath,
+    );
+    expect(refused.code).toBe(2);
+    expect(refused.text).toContain('another escrow key');
+  });
+});

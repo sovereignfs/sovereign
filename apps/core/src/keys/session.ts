@@ -20,9 +20,12 @@ import {
 } from './release';
 import {
   addPasskeyWayIn,
+  coverEscrowNow,
+  escrowPending,
   finishNewPassword,
   keptAccountKey,
   prepareNewPassword,
+  unlockWithKit,
   unlockWithPasskey,
   unlockWithPassword,
   type PreparedChange,
@@ -143,3 +146,14 @@ export const isKitPending = async () => (await quietly(() => kitPending(actions)
 /** The kit was kept: give it its way in. */
 export const kitKept = async (kit: Uint8Array) =>
   (await quietly(() => keepKit(kit, actions, keyStore()))) ?? false;
+
+/** Unlocks with the recovery kit, and gives the password the person signed in with its way in again (core-app §5.3). */
+export const unlockWithKitTyped = async (typed: string, password: WebKey) =>
+  (await quietly(() => unlockWithKit(typed, password, actions, keyStore()))) ?? 'locked';
+
+/** Whether the person is to be told escrow is on before their data is covered by it (core-app §5.8). */
+export const isEscrowPending = async () => (await quietly(() => escrowPending(actions))) ?? false;
+
+/** The person was told: add the escrow way in. */
+export const escrowAccepted = async () =>
+  (await quietly(() => coverEscrowNow(actions, keyStore()))) ?? false;

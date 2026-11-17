@@ -113,3 +113,30 @@ export async function resetSmtpAction(_previous: SettingsResult | null): Promise
     return said(error);
   }
 }
+
+/** Turns recovery (escrow) on with the line `sv key escrow` printed (core-app §5.8). The owner's alone. */
+export async function saveEscrowAction(
+  _previous: SettingsResult | null,
+  form: FormData,
+): Promise<SettingsResult> {
+  const session = await requireCapability('instance:configure-secrets');
+  try {
+    await (await getInstanceManager()).setEscrow(session.user, text(form.get('escrowKey')));
+    return saved(
+      'Recovery is on. Each person is told, and covered, the next time they open an encrypted app.',
+    );
+  } catch (error) {
+    return said(error);
+  }
+}
+
+/** Turns recovery off. What it already covered stays covered: the owner's offline key still opens it. */
+export async function clearEscrowAction(_previous: SettingsResult | null): Promise<SettingsResult> {
+  const session = await requireCapability('instance:configure-secrets');
+  try {
+    await (await getInstanceManager()).setEscrow(session.user, undefined);
+    return saved('Recovery is off for anyone not yet covered.');
+  } catch (error) {
+    return said(error);
+  }
+}

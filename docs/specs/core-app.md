@@ -1860,6 +1860,9 @@ none of it.
 - **A reset by email** leaves the `password` way in stale: the new password does not open it, and nothing depends on a hook to remove
   it. The reset page says so to an account that has keys, before the reset: the account comes back, its encrypted data does not,
   until a passkey that unlocks (§5.5), the kit, or escrow (§5.8) opens it. Then the new password is given its way in.
+- **Unlocking with the kit**: the unlock step of key release offers "Use your recovery kit", which asks for the kit and the password the
+  person signs in with now. The kit opens the account key; the password is given a new way in and the ones that no longer open are
+  removed, so the password unlocks again from then on. A mistyped kit is told apart from one that is not this account's.
 - **Signing in** with a password the server has just accepted sets the keys up or opens them, and nothing else does: a way in is never
   made from a password the server has not accepted. Across the second step (§3.4.1) the password's secret waits in the browser, once,
   for ten minutes at most, as a key that cannot be exported.
@@ -1946,14 +1949,19 @@ Built (tasks 16.10, 16.11). Core's OpenID Connect provider is unchanged.
 
 ### 5.8 Escrow
 
-Built by task 16.12. Off unless the owner turns it on.
+Built (task 16.12). Off unless the owner turns it on.
 
 - `sv key escrow` makes a key pair on the operator's machine, keeps the private half there (as `sv key recovery` does, operator-cli
-  §9.4) and gives core the public half as an instance setting, changed only by `InstanceManager` with the owner-only
-  `instance:configure-secrets`.
-- From then, each person's browser adds an escrow way in when it is next unlocked, and their Security page says that the owner can
-  recover their data. A person not yet covered is shown as such to the owner.
-- `sv key escrow open` opens one person's account key offline and wraps it for a new kit, which the person uses once to get back in.
+  §9.4) and prints the public half as one line. The owner pastes it into the Console (Settings, Recovery of encrypted data): an instance
+  setting, changed only by `InstanceManager` with the owner-only `instance:configure-secrets`, checked for its shape there.
+- **A person is told before they are covered.** The next time they open an app that uses encryption, key release (§5.7) says the owner
+  can now recover their data, and only when they continue does their browser add the escrow way in: the account key sealed with HPKE to
+  the escrow key, bound to the `sub` and the escrow key's id. Unlocking alone covers nobody. Their Security page says whether recovery
+  is on, and whether they are covered; the Console tells the owner how many accounts are not covered yet.
+- Turning it off stops new ways in; those made before stay, since the key that opens them is the owner's, offline.
+- **Recovering someone**: `sovereign-admin accounts escrow-record EMAIL` gives the escrow way in; `sv key escrow open` opens the
+  account key offline and wraps it for a new kit; `sovereign-admin accounts put-kit EMAIL` stores the kit's way in, refusing one made
+  for another account; the person sets a password through a reset link and unlocks with the kit (§5.3). Core opens nothing.
 
 ### 5.9 What an encrypted app must do
 
@@ -2064,3 +2072,4 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-17 | §5.5: passkeys that unlock are built. Changed from the spec: the PRF input is one per instance and each passkey has its own HKDF salt instead, since a discoverable sign-in cannot be given an input per passkey; a passkey's way in names one of the person's own passkeys and is not read once the passkey is gone; the page offers to let a passkey unlock, and asks a device that gives the output only on use for one more touch.                                                                                                                                                                                                                                                                                        |
 | 2026-11-17 | §5.7: key release is built: what the person sees, and the answer's format; the page sends no referrer. The kit is shown there, at the first encrypted app.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | 2026-11-17 | §5.7: sharing is built: the two key calls in the Core API, behind their guard, `404` alike for anyone without keys for the app, and `keys` among the capabilities.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 2026-11-17 | §5.8: escrow is built, turned on in the Console by the owner; a person is told before they are covered, not covered silently at the next unlock. §5.3: unlocking with the kit, which gives the current password its way in again, built here as escrow recovery ends in it.                                                                                                                                                                                                                                                                                                                                                                                                                                                   |

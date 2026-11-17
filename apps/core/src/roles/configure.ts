@@ -4,6 +4,7 @@ import {
   CAPABILITIES,
   DEFAULT_MATRIX,
   can,
+  grantable,
   type Capability,
   type EditableRole,
   type Matrix,
@@ -18,6 +19,7 @@ export type CapabilityChangeErrorCode =
   | 'invalid-role'
   | 'unknown-capability'
   | 'owner-only'
+  | 'operator-only'
   | 'invalid-grant';
 
 export class CapabilityChangeError extends Error {
@@ -60,6 +62,12 @@ function check(change: CapabilityChange): Checked {
   }
   if (typeof granted !== 'boolean') {
     throw new CapabilityChangeError('invalid-grant', 'A capability is either given or taken away.');
+  }
+  if (granted && !grantable(role, known)) {
+    throw new CapabilityChangeError(
+      'operator-only',
+      'That capability is for those who run the instance and cannot be given to users.',
+    );
   }
   return { role, capability: known, granted };
 }

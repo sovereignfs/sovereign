@@ -1,7 +1,14 @@
 import type { Executor } from '@sovereignfs/database';
 import { getDatabase } from '../database';
 import { ROLE_ADMIN, ROLE_USER } from '../auth/roles';
-import { CAPABILITIES, DEFAULT_MATRIX, type Capability, type Matrix } from './capabilities';
+import {
+  CAPABILITIES,
+  DEFAULT_MATRIX,
+  grantable,
+  type Capability,
+  type EditableRole,
+  type Matrix,
+} from './capabilities';
 
 /** One stored difference from the default matrix. */
 export type Override = { role: string; capability: string; granted: boolean };
@@ -9,8 +16,8 @@ export type Override = { role: string; capability: string; granted: boolean };
 /**
  * The matrix in force: the default in code with the owner's saved differences applied (core-app
  * §3.2.3). Only the admin and user rows can differ, and only for capabilities that exist and are not
- * owner-only; a stored row that says anything else is ignored, so a mistaken or tampered table cannot
- * hand an owner-only capability to another role. It never changes the default it starts from.
+ * owner-only (nor operator-only, for users); a stored row that says anything else is ignored, so a mistaken or
+ * tampered table cannot hand those out. It never changes the default it starts from.
  */
 export function applyOverrides(defaults: Matrix, overrides: readonly Override[]): Matrix {
   const admin = new Set(defaults[ROLE_ADMIN]);
@@ -20,7 +27,7 @@ export function applyOverrides(defaults: Matrix, overrides: readonly Override[])
     const row = Object.hasOwn(rows, role) ? rows[role] : undefined;
     if (!row || !Object.hasOwn(CAPABILITIES, capability)) continue;
     const known = capability as Capability;
-    if (CAPABILITIES[known].ownerOnly) continue;
+    if (!grantable(role as EditableRole, known)) continue;
     if (granted) row.add(known);
     else row.delete(known);
   }

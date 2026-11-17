@@ -232,11 +232,16 @@ them.
 - Owner-only capabilities (`instance:configure-secrets`, `role:assign`,
   `capability:configure`, `ownership:transfer`) MUST NOT be granted to any
   other role.
+- Operator-only capabilities (`console:access`) MUST NOT be granted to
+  `platform:user`: the Console, its tile on the launcher and what the launcher
+  tells about the instance are for the owner and, while the matrix gives it,
+  admins. The owner MAY take it from admins.
 - A change to the matrix MUST reach accounts that are already signed in within
   the session cookie cache lifetime (§3.5).
 - The owner's edits are stored as differences from the default, for the admin
   and user rows only, and nothing else can be stored: the owner's row, a role
-  or capability that does not exist, and an owner-only capability are refused,
+  or capability that does not exist, an owner-only capability, and an
+  operator-only one given to users are refused,
   and a request with any one of them saves nothing. A change that only restates
   the default removes the stored difference, so a matrix nobody edited has no
   rows and a capability added to core later reaches everyone as its default
@@ -253,7 +258,8 @@ listed for, or opens for, anyone else.
 
 - **Permissions** lists every capability in words, never by its name in code, with
   a box for admins and a box for users. A capability only the owner may hold is
-  listed with no boxes, marked "Only the owner". Nothing is saved until the owner
+  listed with no boxes, marked "Only the owner"; an operator-only one has a box for
+  admins and none for users, marked "Not for users". Nothing is saved until the owner
   saves the whole table, and what is saved is what was shown: every box the owner
   may edit is sent, ticked or not, so an owner-only capability or an unknown role
   in a forged request is never reached. The page is read from the database, not
@@ -2088,3 +2094,4 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-17 | §1.3, §3.8: the Console is reached from its tile on the launcher, now the last tile after the apps operators added ("Add an app" is the first), and is no longer in the avatar's menu; the launcher's line no longer names the person.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | 2026-11-17 | §3.8: a person who may open the Console reads, at the foot of the launcher, the platform and core versions, the database, Node's version and the uptime; no one else is sent them.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 2026-11-17 | §3.10: every Console page but its own has one way back, to the page above it, drawn by the frame; on a wide screen only a page beneath a section has it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 2026-11-17 | §3.2.2, §3.2.3: `console:access` is operator-only: never granted to `platform:user`, whatever the matrix says, so the Console, its launcher tile and the instance details line are for the owner and admins only.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |

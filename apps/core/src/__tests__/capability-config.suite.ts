@@ -165,6 +165,17 @@ export function capabilityConfigSuite(createDatabase: () => Promise<TestDatabase
       },
     );
 
+    it('giving users the Console, which is only for those who run the instance', async () => {
+      expect(
+        await refused(() =>
+          changeCapabilities(db, owner, [
+            { role: ROLE_USER, capability: 'console:access', granted: true },
+          ]),
+        ),
+      ).toBe('operator-only');
+      expect(await rows()).toEqual([]);
+    });
+
     it('editing the owner’s row, which is fixed', async () => {
       expect(
         await refused(() =>

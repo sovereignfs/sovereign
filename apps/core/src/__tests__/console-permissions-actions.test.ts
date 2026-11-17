@@ -150,6 +150,17 @@ describe('saving the matrix', () => {
     expect(revalidatePath).toHaveBeenCalledWith('/console', 'layout');
   });
 
+  it('does not give users the Console, even when the form says to', async () => {
+    signedInAs('owner', ROLE_OWNER);
+    const ticks = await defaults();
+    ticks.push(['grant', 'platform:user|console:access']);
+    expect(await matrix.saveMatrixAction(null, form(ticks))).toEqual({
+      ok: true,
+      message: 'Nothing was different.',
+    });
+    expect(await overrides()).toEqual([]);
+  });
+
   it('takes effect at once for the checks that follow', async () => {
     signedInAs('owner', ROLE_OWNER);
     const { getCapabilityMatrix } = await import('../roles/matrix');

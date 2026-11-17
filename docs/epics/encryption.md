@@ -432,7 +432,7 @@ needs unlocking.
 - No guide uses the word "zero-knowledge", and each says the feature is not yet audited
 - `pnpm e2e` passes on each database
 
-#### 📋 16.15 — The recovery kit says what escrow changes
+#### ✅ 16.15 — The recovery kit says what escrow changes
 
 **Goal:** A person on an instance with escrow is never told that nobody else can get their data back.
 
@@ -456,7 +456,7 @@ needs unlocking.
 - With escrow off, the wording is as it is now
 - A test renders both and fails if the escrow wording is shown without escrow
 
-#### 📋 16.16 — The vault of an app with no core, in an entry of its own
+#### ✅ 16.16 — The vault of an app with no core, in an entry of its own
 
 **Goal:** An app that gets its key from core loads no password derivation, and an app with no core imports its vault from one place.
 

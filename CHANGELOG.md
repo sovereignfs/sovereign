@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.108.0] - 2026-11-17
+
+### Changed
+
+- On an instance whose owner turned on recovery, the recovery kit no longer says that nobody else can get a person's encrypted data
+  back: it says the kit is their own way back, and that the owner can also recover it. Without recovery, it says what it said before.
+
 ## [0.107.0] - 2026-11-17
 
 ### Added

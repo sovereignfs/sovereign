@@ -1,6 +1,6 @@
 # Workstream 0004 — Encryption follow-ups
 
-**Status:** 📋 Planned\
+**Status:** ⏳ In Progress (leg 1 done)\
 **Date:** November 2026\
 **Author:** Claude Code, for kasunben\
 **Goal owner:** kasunben\
@@ -18,8 +18,8 @@ as well as their notes; and the vault of an app with no core is shown to work in
 
 ## Definition of done
 
-- [ ] `16.15` — The recovery kit says what escrow changes
-- [ ] `16.16` — The vault of an app with no core, in an entry of its own
+- [x] `16.15` — The recovery kit says what escrow changes
+- [x] `16.16` — The vault of an app with no core, in an entry of its own
 - [ ] `16.17` — Encrypted files in the template
 - [ ] `16.18` — An app with no core, in a browser
 - [ ] Every guide still says the feature is not yet audited, and none says more than RFC 0005 promises
@@ -123,7 +123,8 @@ already shows the flow in Node; this one shows it with a real browser's IndexedD
 
 ## Changelog
 
-| Version | Date     | Change                                                                                                                                                           |
-| ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | Nov 2026 | Initial draft, from the follow-ups found while building workstream 0003: the kit under escrow, `localVault`'s entry, encrypted files, a no-core app in a browser |
-| 0.2     | Nov 2026 | The decisions confirmed as written by the goal owner.                                                                                                            |
+| Version | Date     | Change                                                                                                                                                                             |
+| ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | Nov 2026 | Initial draft, from the follow-ups found while building workstream 0003: the kit under escrow, `localVault`'s entry, encrypted files, a no-core app in a browser                   |
+| 0.2     | Nov 2026 | The decisions confirmed as written by the goal owner.                                                                                                                              |
+| 0.3     | Nov 2026 | Leg 1 done: the kit says what escrow changes; `localVault` in `@sovereignfs/sdk/local-vault`, built apart so `/keys` reaches no libsodium (platform 0.108.0, sdk 2.6.0, ui 0.98.0) |

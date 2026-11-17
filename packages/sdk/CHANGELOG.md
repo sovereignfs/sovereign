@@ -5,6 +5,14 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 2.1.0; earlier versions are in the repository's
 history and tags.
 
+## [2.6.0] - 2026-11-17
+
+### Changed
+
+- `localVault`, for an app with no core, is imported from `@sovereignfs/sdk/local-vault`, a browser entry of its own, and no longer
+  from `@sovereignfs/sdk/keys` (sdk §9.5, §12). No published version had it in `/keys`. An app that gets its key from core no longer
+  loads any of the password derivation: `/keys` reaches no file of libsodium, and `/local-vault` loads it only when a key is derived.
+
 ## [2.5.0] - 2026-11-17
 
 ### Added

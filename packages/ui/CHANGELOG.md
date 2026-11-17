@@ -5,6 +5,14 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.96.0; earlier versions are in the repository's
 history and tags.
 
+## [0.98.0] - 2026-11-17
+
+### Added
+
+- `RecoveryKit` takes `ownerCanRecover`: when the instance's owner turned on recovery, the kit, and the file it saves, say it is the
+  person's own way back and that the owner can also recover their data, instead of saying nobody else can. Off by default, which keeps
+  today's words.
+
 ## [0.97.0] - 2026-11-16
 
 ### Added

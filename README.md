@@ -107,6 +107,8 @@ rules; [`AGENTS.md`](AGENTS.md) has the same conventions written for AI agents.
 - [`docs/connecting-an-app.md`](docs/connecting-an-app.md) and
   [`docs/using-the-sdk.md`](docs/using-the-sdk.md) — connecting any app to core,
   and a JavaScript app's way to sign people in and call it.
+- [`docs/encrypting-an-app.md`](docs/encrypting-an-app.md) — keeping people's data so that
+  someone who reads the server cannot read it: what is promised, and the rules (not yet audited).
 - [`docs/development-workflow.md`](docs/development-workflow.md) — how a task
   is started, built and finished.
 - [`docs/architecture-rules.md`](docs/architecture-rules.md) — the hard rules,

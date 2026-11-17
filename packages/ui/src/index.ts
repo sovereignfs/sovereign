@@ -124,6 +124,20 @@ export {
 } from './components/RecoveryKit/RecoveryKit';
 export type { RecoveryKitProps } from './components/RecoveryKit/RecoveryKit';
 export { OfflineGate } from './components/OfflineGate/OfflineGate';
+export {
+  InstallHint,
+  InstallPrompt,
+  isInstalledDisplay,
+  useInstallPrompt,
+} from './components/InstallPrompt/InstallPrompt';
+export type {
+  InstallHintProps,
+  InstallKind,
+  InstallPromptProps,
+  UseInstallPrompt,
+} from './components/InstallPrompt/InstallPrompt';
+export { UpdateNotice } from './components/UpdateNotice/UpdateNotice';
+export type { UpdateNoticeProps } from './components/UpdateNotice/UpdateNotice';
 export type { OfflineGateProps } from './components/OfflineGate/OfflineGate';
 export { DeviceOnlyGate } from './components/DeviceOnlyGate/DeviceOnlyGate';
 export type { DeviceOnlyGateProps } from './components/DeviceOnlyGate/DeviceOnlyGate';

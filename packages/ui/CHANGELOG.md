@@ -5,6 +5,17 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.96.0; earlier versions are in the repository's
 history and tags.
 
+## [0.100.0] - 2026-11-18
+
+### Added
+
+- `InstallPrompt`: offers to install the site as an app where the device allows it, and renders nothing anywhere else. Where the
+  browser fires `beforeinstallprompt` it shows **Install**, which opens the browser's own prompt; on an iPhone or iPad it says how
+  (Share, then Add to Home Screen). Nothing shows in an installed window, and **Not now** is remembered on the device. With it,
+  `InstallHint` (what it shows), `useInstallPrompt` and `isInstalledDisplay`.
+- `UpdateNotice`: a quiet notice, fixed at the bottom of the window, that a new version of the app is ready, with **Reload** and,
+  optionally, **Later**. The consumer shows it while a service worker waits and decides what Reload does.
+
 ## [0.99.0] - 2026-11-17
 
 ### Added

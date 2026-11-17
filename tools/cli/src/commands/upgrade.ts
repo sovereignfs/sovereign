@@ -10,6 +10,7 @@ import { RELEASE } from '../release.js';
 import { SuiteFile, readLock, writeLock } from '../suite/files.js';
 import { refreshedLock } from '../suite/lock.js';
 import { DEPLOY_WORKFLOW, pinnedWorkflowVersion, repinWorkflow } from '../suite/workflow.js';
+import { newestPublishedCore } from '../core-version.js';
 
 const PACKAGE = '@sovereignfs/cli';
 
@@ -125,6 +126,9 @@ async function finish(ctx: Context): Promise<void> {
     );
   }
 
+  // Core moves to the newest published release this toolkit supports, as sv setup chooses one (operator-cli §10.1 step 2): never older
+  // than the core it was made for, and never backward. Offline, it is the one it was made for.
+  const newestCore = await newestPublishedCore(ctx.registry, (message) => ctx.io.err(message));
   const changes: string[] = [];
   const change = (doc: Document, said: string[]) => {
     let schema: number = before.schema;
@@ -135,9 +139,9 @@ async function finish(ctx: Context): Promise<void> {
       said.push(...migration.apply(doc), `suite.yml: schema ${schema} → ${migration.to}`);
       schema = migration.to;
     }
-    if (gt(RELEASE.newestCore, before.core.version)) {
-      doc.setIn(['core', 'version'], RELEASE.newestCore);
-      said.push(`core: ${before.core.version} → ${RELEASE.newestCore}`);
+    if (gt(newestCore, before.core.version)) {
+      doc.setIn(['core', 'version'], newestCore);
+      said.push(`core: ${before.core.version} → ${newestCore}`);
     }
   };
   const next = file.preview((doc) => change(doc, changes));

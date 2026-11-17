@@ -3,6 +3,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { inc } from 'semver';
 import { parse } from 'yaml';
+import { Failed } from '../errors.js';
 import { RELEASE } from '../release.js';
 import { NOTES_IMAGE, sv, setUpWorld } from '../testing/commands.js';
 import { makeWorld, manifestOf, type World } from '../testing/world.js';
@@ -16,8 +17,11 @@ afterEach(() => world.cleanup());
 const read = (name: string) => readFileSync(path.join(world.root, name), 'utf8');
 const suite = () => parse(read('suite.yml')) as Suite;
 const lock = () => parse(read('suite.lock')) as Lock;
-const ready = async () => {
-  world = makeWorld({ images: { [NOTES_IMAGE]: { manifest: manifestOf() } } });
+const ready = async (coreTags?: string[] | Error) => {
+  world = makeWorld({
+    images: { [NOTES_IMAGE]: { manifest: manifestOf() } },
+    ...(coreTags ? { coreTags } : {}),
+  });
   await setUpWorld(world, '--deploy', 'ssh');
   await sv(world, 'app', 'add', 'notes', '--image', NOTES_IMAGE, '--yes');
 };
@@ -29,7 +33,7 @@ const pinTo = (version: string) =>
   );
 /** Makes the repository look as it does after a release: an older core and the previous toolkit in the lock. */
 function atAnOlderRelease() {
-  const text = read('suite.yml').replace(`version: ${RELEASE.newestCore}`, 'version: 0.60.0');
+  const text = read('suite.yml').replace(/^( {2}version: )\d+\.\d+\.\d+$/m, '$10.60.0');
   writeFileSync(path.join(world.root, 'suite.yml'), text);
   const locked = read('suite.lock')
     .replace(
@@ -57,6 +61,28 @@ describe('sv upgrade --finish', () => {
     expect(done.text).toContain(`core: 0.60.0 → ${RELEASE.newestCore}`);
     expect(done.text).toContain('toolkit: 0.0.9');
     expect(done.text).toContain('App versions and database.version are not moved');
+  });
+
+  it('moves core to the newest published core it supports, newer than the one it was made for, as sv setup does', async () => {
+    const newer = inc(RELEASE.newestCore, 'patch') as string;
+    await ready([RELEASE.newestCore, newer, '1.0.0', 'latest']);
+    pinTo(RELEASE.version);
+    atAnOlderRelease();
+    const done = await sv(world, 'upgrade', '--finish');
+    expect(done.code).toBe(0);
+    expect(suite().core.version).toBe(newer);
+    expect(lock().images.core.ref).toBe(`ghcr.io/sovereignfs/sovereign:${newer}`);
+    expect(done.text).toContain(`core: 0.60.0 → ${newer}`);
+  });
+
+  it('moves core to the one it was made for when the registry cannot be asked, and says why', async () => {
+    await ready(new Failed('Could not reach ghcr.io: offline.'));
+    pinTo(RELEASE.version);
+    atAnOlderRelease();
+    const done = await sv(world, 'upgrade', '--finish');
+    expect(done.code).toBe(0);
+    expect(suite().core.version).toBe(RELEASE.newestCore);
+    expect(done.text).toContain('Could not look up the newest core');
   });
 
   it('moves the pin of the workflow that deploys from GitHub with the toolkit, and leaves one that calls something else', async () => {
@@ -89,10 +115,11 @@ describe('sv upgrade --finish', () => {
   it('never takes core backward', async () => {
     await ready();
     pinTo(RELEASE.version);
-    const text = read('suite.yml').replace(`version: ${RELEASE.newestCore}`, 'version: 0.99.0');
+    const ahead = inc(RELEASE.newestCore, 'minor') as string;
+    const text = read('suite.yml').replace(`version: ${RELEASE.newestCore}`, `version: ${ahead}`);
     writeFileSync(path.join(world.root, 'suite.yml'), text);
     const done = await sv(world, 'upgrade', '--finish');
-    expect(suite().core.version).toBe('0.99.0');
+    expect(suite().core.version).toBe(ahead);
     expect(done.code).toBe(0);
     // The lock follows the file it was edited under; core's version is not touched.
     expect(done.text).not.toMatch(/^ {2}core: /m);

@@ -12,7 +12,7 @@ export const RELEASE = {
   /** The core versions it can deploy, as an npm-style range. */
   core: '>=0.49.0 <1.0.0',
   /** The newest core it was made for, which `sv setup` writes. */
-  newestCore: '0.97.0',
+  newestCore: '0.108.0',
   /** The app manifest versions it reads: every one `@sovereignfs/manifest` does, since old images stay published. */
   manifests: [...supportedVersions],
   images: {

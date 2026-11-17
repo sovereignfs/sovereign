@@ -218,7 +218,7 @@ git diff
 ```
 
 `upgrade` moves the repository to the newest release of the toolkit, or `--to vX.Y.Z`. It changes the toolkit's version in
-`package.json`, core's version in `suite.yml` to the one that release was made for, and `suite.lock`, and nothing else: your apps and
+`package.json`, core's version in `suite.yml` to the newest published core that release supports (never backward), and `suite.lock`, and nothing else: your apps and
 your database version stay where they are. Read the diff, then deploy it like any other change. A dependency bot may open the
 `package.json` change for you; run `./sv upgrade --finish` on it to complete it.
 

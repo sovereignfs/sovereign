@@ -275,7 +275,7 @@ do.
 - A passkey must still be user-verified, at both ceremonies
 - Signing in with a passkey that cannot unlock ends in a working session and a prompt, never an error
 
-#### ⏳ 16.9 — Manifest 4, and allowing an app to use encryption `[parallel]`
+#### ✅ 16.9 — Manifest 4, and allowing an app to use encryption `[parallel]`
 
 **Goal:** An app says it uses encryption, and an operator allows it, the way an app's scopes are shown and given today.
 
@@ -302,7 +302,7 @@ do.
 - Switching encryption off for an app changes what it may ask for next and nothing that is stored
 - A toolkit that reads only 1 to 3 refuses a manifest 4 and names the version that reads it
 
-#### 📋 16.10 — Key release
+#### ✅ 16.10 — Key release
 
 **Goal:** An app's page gets the app's key from core's page, once for each browser session, and the person sees nothing unless the browser
 needs unlocking.

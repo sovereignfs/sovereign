@@ -19,6 +19,9 @@ type Manifest = {
   scope: string;
   display: string;
   icons: { src: string; sizes: string; type: string; purpose: string }[];
+  launch_handler: { client_mode: string[] };
+  shortcuts: { url: string; icons: { src: string }[] }[];
+  screenshots: { src: string; sizes: string; type: string; form_factor: string }[];
 };
 
 /**
@@ -50,6 +53,21 @@ test('the manifest is public, parses, and names the instance, its start and its 
     const served = await get(icon.src);
     expect(served.status, icon.src).toBe(200);
     expect(served.headers.get('content-type'), icon.src).toBe(icon.type);
+  }
+});
+
+test('the manifest carries what a fuller install needs, and every picture it names is served', async () => {
+  const manifest = (await (await get('/manifest.webmanifest')).json()) as Manifest;
+  expect(manifest.launch_handler.client_mode).toEqual(['focus-existing', 'auto']);
+  expect(manifest.shortcuts.map((shortcut) => shortcut.url)).toEqual(['/', '/profile']);
+  expect(manifest.screenshots.map((shot) => shot.form_factor).sort()).toEqual(['narrow', 'wide']);
+  for (const src of [
+    ...manifest.screenshots.map((shot) => shot.src),
+    ...manifest.shortcuts.flatMap((shortcut) => shortcut.icons.map((icon) => icon.src)),
+  ]) {
+    const served = await get(src);
+    expect(served.status, src).toBe(200);
+    expect(served.headers.get('content-type'), src).toBe('image/png');
   }
 });
 

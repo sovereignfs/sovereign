@@ -14,6 +14,45 @@ export const MANIFEST_ICONS = [
   { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
 ] as const;
 
+/**
+ * How an installed core is opened again (RFC 0001 A1): a window already open is brought forward rather than a second
+ * one started; `auto` is the fallback for a browser that knows no other value.
+ */
+export const LAUNCH_HANDLER = { client_mode: ['focus-existing', 'auto'] } as const;
+
+/**
+ * The shortcuts an installed core's icon offers (RFC 0001 A1): only pages every signed-in person has, so the manifest
+ * still says nothing about who asks. The Console is not one: who may enter it depends on a role.
+ */
+export const MANIFEST_SHORTCUTS = [
+  { name: 'Your apps', short_name: 'Apps', url: '/' },
+  { name: 'Your account', short_name: 'Account', url: '/profile' },
+].map((shortcut) => ({
+  ...shortcut,
+  icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+}));
+
+/**
+ * The pictures a browser's install sheet shows (RFC 0001 A1): the sign-in page with the default branding, one for a
+ * phone and one for a wide screen. They are served with the icons, from code (`src/branding/screenshots.ts`).
+ */
+export const MANIFEST_SCREENSHOTS = [
+  {
+    src: '/icons/screenshot-narrow.png',
+    sizes: '540x1170',
+    type: 'image/png',
+    form_factor: 'narrow',
+    label: 'Signing in',
+  },
+  {
+    src: '/icons/screenshot-wide.png',
+    sizes: '1280x800',
+    type: 'image/png',
+    form_factor: 'wide',
+    label: 'Signing in',
+  },
+] as const;
+
 /** A name short enough for under an icon: the first twelve characters, cut at a space when there is one. */
 export function shortName(name: string): string {
   const trimmed = name.trim();

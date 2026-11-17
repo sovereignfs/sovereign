@@ -4,6 +4,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // The derivation has its own vectors (packages/crypto); here it stands in with a value that shows what it was made from.
 vi.mock('../auth/derive', () => ({
   signInValue: async (password: string, address: string) => `derived:${password}:${address}`,
+  deriveForSignIn: async (password: string, address: string) => ({
+    signIn: `derived:${password}:${address}`,
+    secret: {},
+  }),
+}));
+// The keys are set up and opened by the vault's own tests (keys-unlock, key-vault); here they stand aside.
+vi.mock('../keys/session', () => ({
+  afterPasswordAccepted: async () => undefined,
+  handOverSecret: async () => undefined,
+  afterSecondStep: async () => undefined,
+  dropHandOver: async () => undefined,
+  beforePasswordChange: async () => undefined,
+  afterPasswordChange: async () => undefined,
+  forgetKeys: async () => undefined,
 }));
 
 const changePassword = vi.fn();

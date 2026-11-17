@@ -36,6 +36,15 @@ export async function ensureInstanceId(
   const existing = await readInstanceId(database);
   if (existing) return existing;
   const accounts = Number((await database.run('select count(*) as n from users')).rows[0]?.n ?? 0);
+  // Keys were made with an id that is gone: a new one would leave every way in by a password unopenable. Stop instead.
+  const vaults = Number(
+    (await database.run('select count(*) as n from key_accounts')).rows[0]?.n ?? 0,
+  );
+  if (vaults > 0) {
+    throw new Error(
+      'There is no instance id, but keys were made with one. It must not be made again: restore the instance_id row of instance_settings from a backup.',
+    );
+  }
   const id = randomBytes(BYTES).toString('base64url');
   await database.run(
     'insert into instance_settings (key, value, encrypted, updated_at) values (?, ?, 0, ?) on conflict (key) do nothing',

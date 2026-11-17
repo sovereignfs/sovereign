@@ -338,9 +338,20 @@ async function removeAccount(tx: Executor, id: string): Promise<void> {
     'notifications',
     'notification_settings',
     'token_revocations',
+    // The key vault (core-app §5.3): with these gone, everything encrypted for the person is unreadable, in every backup too.
+    'key_apps',
+    'key_wraps',
+    'key_accounts',
     'sessions',
     'accounts',
   ]) {
+    // A session's secret goes with its session, named here rather than left to a cascade, which not every database keeps.
+    if (table === 'sessions') {
+      await tx.run(
+        'delete from key_session_secrets where session_id in (select id from sessions where user_id = ?)',
+        [id],
+      );
+    }
     await tx.run(`delete from ${table} where user_id = ?`, [id]);
   }
   await tx.run('update invites set invited_by = null where invited_by = ?', [id]);

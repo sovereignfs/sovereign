@@ -3,7 +3,9 @@
 import { type FormEvent, useState } from 'react';
 import { Alert, Button, FormField, Input } from '@sovereignfs/ui';
 import { authClient } from '../../src/auth/client';
-import { signInValue } from '../../src/auth/derive';
+import { deriveForSignIn } from '../../src/auth/derive';
+import { afterPasswordChange, beforePasswordChange } from '../../src/keys/session';
+import type { WebKey } from '@sovereignfs/crypto/web';
 import {
   passwordPolicyMessage,
   passwordProblems,
@@ -38,19 +40,25 @@ export function ChangePasswordForm({
     setPending(true);
     let currentValue: string;
     let nextValue: string;
+    let currentSecret: WebKey;
+    let nextSecret: WebKey;
     try {
-      currentValue = await signInValue(current, address);
-      nextValue = await signInValue(next, address);
+      ({ signIn: currentValue, secret: currentSecret } = await deriveForSignIn(current, address));
+      ({ signIn: nextValue, secret: nextSecret } = await deriveForSignIn(next, address));
     } catch {
       setPending(false);
       setError('This page could not get ready. Reload it and try again.');
       return;
     }
+    // The keys are wrapped for the new password beside the old before the change, and the old wrap goes after it, so the keys
+    // never stop opening with whichever password the account has (core-app §5.3).
+    const prepared = await beforePasswordChange(currentSecret, nextSecret);
     const result = await authClient.changePassword({
       currentPassword: currentValue,
       newPassword: nextValue,
       revokeOtherSessions: true,
     });
+    await afterPasswordChange(prepared, !result.error);
     setPending(false);
     if (result.error) {
       setError(messageFor(result.error));

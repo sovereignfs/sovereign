@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { UserMenu, type UserMenuItem } from '@sovereignfs/ui';
 import { authClient } from '../src/auth/client';
+import { forgetKeys } from '../src/keys/session';
 
 /**
  * The person's avatar in the header, and the menu it opens: their account, the Console for an operator, and
@@ -23,6 +24,8 @@ export function AccountMenu({
 
   async function signOut() {
     setSigningOut(true);
+    // This browser forgets the keys it kept for the session (core-app §5.4); the session's end makes them unopenable anyway.
+    await forgetKeys();
     await authClient.signOut();
     // A full navigation, so nothing of the session is left in the page.
     window.location.assign('/sign-in?signedout=1');

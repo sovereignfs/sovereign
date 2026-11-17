@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../../src/auth/client';
+import { afterSecondStep } from '../../../../src/keys/session';
 import { continuationUrl, isContinuation } from '../../../../src/auth/oauth-continuation';
 import { AuthError, AuthNotice } from '../../auth-notice';
 import { AuthField } from '../../auth-field';
@@ -57,6 +58,8 @@ export function TwoFactorForm({ returnTo }: { returnTo: string }) {
       else setError(problem.message);
       return;
     }
+    // The password the first step accepted left its secret: the keys are opened with it now (core-app §5.3).
+    await afterSecondStep();
     // A full navigation, so the next page is rendered with the new session cookie. An app's sign-in goes
     // back to the app.
     window.location.assign(continuationUrl(result.data) ?? returnTo);

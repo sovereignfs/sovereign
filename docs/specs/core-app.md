@@ -1832,7 +1832,8 @@ Built (task 16.3), on every instance, in §3.3.2, §3.3.4, §3.5 and §3.15.1.
 
 ### 5.3 The vault
 
-Built by task 16.6. Core keeps, for each account, what opens its keys, and can open none of it.
+Built (task 16.6), apart from the kit's page, which comes with §5.7. Core keeps, for each account, what opens its keys, and can open
+none of it.
 
 | Kept            | What                                                                                                                              |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------- |
@@ -1852,18 +1853,24 @@ Built by task 16.6. Core keeps, for each account, what opens its keys, and can o
   (Crockford's base32), ending in a check group. A mistyped kit is refused as mistyped. Typing it ignores case, spaces and hyphens,
   and reads `O` as `0` and `I` and `L` as `1`. It is shown once.
 - **Unlocking** with the password happens in the browser: the account key opens or it does not. Nothing is sent to check it.
-- **Changing the password** sends the new sign-in value and the account key wrapped by the new unlock key in one request, applied
-  together or not at all.
-- **A reset by email** removes the `password` way in, and the reset page, the kit page and an operator's reset each say so before it
-  happens: the account comes back, its encrypted data does not, until a passkey that unlocks (§5.5), the kit, or escrow (§5.8) opens
-  it. Then the new password is given its way in.
+- **Changing the password** cannot share a transaction with better-auth's, so it holds this instead: the account key is wrapped for
+  the new password beside the old wrap, the password is changed, and then the old wrap goes (or the new one, if the change was
+  refused). The current password must open the old wrap first. At every moment the keys open with whichever password the account
+  has.
+- **A reset by email** leaves the `password` way in stale: the new password does not open it, and nothing depends on a hook to remove
+  it. The reset page says so to an account that has keys, before the reset: the account comes back, its encrypted data does not,
+  until a passkey that unlocks (§5.5), the kit, or escrow (§5.8) opens it. Then the new password is given its way in.
+- **Signing in** with a password the server has just accepted sets the keys up or opens them, and nothing else does: a way in is never
+  made from a password the server has not accepted. Across the second step (§3.4.1) the password's secret waits in the browser, once,
+  for ten minutes at most, as a key that cannot be exported.
 - **Deleting an account** removes all of it in the transaction that deletes the account (§3.3.6), so everything encrypted for that
   person is unreadable, backups included.
 - **Only core's own pages** read and write the vault, through server actions for the session's own account. Apps read what §5.7 says.
 
 ### 5.4 Staying unlocked
 
-Built by task 16.7.
+Built (task 16.7). A session's secret is given only through a check that the session is live and the account's own, not trusted to a
+cascade; deleting an account deletes the secrets of its sessions in its transaction.
 
 - A browser stays unlocked until its session ends. A reload or a new tab asks nothing.
 - A key is kept in the browser's IndexedDB wrapped twice: by a device key that cannot be exported, and by a key made from the
@@ -2032,3 +2039,4 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-16 | §5: keys, encryption the server cannot read, specified and not built (RFC 0005, epic 16, workstream 0003): signing in with a derived value and an instance id, the vault and the recovery kit, staying unlocked, passkeys that unlock, apps that use encryption, key release and sharing, escrow, and an acceptance list; §2 and §3.16 say so.                                                                                                                                                                                                                                                                                                                                                                                |
 | 2026-11-16 | §5.6, §3.6.2, §3.7.1: apps that use encryption are built, with one setting where §5.6 had two: the key return address, which the `keys` scope follows.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | 2026-11-16 | §5.2, §3.3.2, §3.5: signing in with a derived value is built: core never receives a password, the policy is checked in the browser, the instance id is made at start-up (an upgraded instance says so) and read from the instance document, and `sovereign-admin accounts reset-link` makes a reset link without mail.                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 2026-11-17 | §5.3, §5.4: the vault and staying unlocked are built. A password change wraps the key for the new password beside the old and drops the old after, since it cannot share better-auth's transaction; a reset leaves the password's way in stale rather than depend on a hook.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |

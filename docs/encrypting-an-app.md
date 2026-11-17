@@ -20,6 +20,13 @@ core-app §5; what the SDK gives an app is sdk §9.3 to §9.5.
   turned recovery (escrow) on, in which case the owner can open everyone's data. Both are said to people by core; an app that runs
   with no core says it itself.
 
+## Starting from the template
+
+`npm create @sovereignfs app <name> --encryption` makes an app that already does all of this for its notes: key release, a key for
+each note sealed to each reader, sharing through the Directory, a changed key shown before anything is sealed to it, a new key when a
+reader is removed, and the account-deleted notice. Its `ENCRYPTION.md` says what it protects. Files stay unencrypted, and the page
+says so.
+
 ## Which shape is yours
 
 - **Signing in through core** (the app template's shape). The operator allows the app to use encryption: the manifest's `encryption`

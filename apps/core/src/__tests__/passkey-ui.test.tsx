@@ -36,7 +36,7 @@ const session = {
 vi.mock('../keys/session', () => ({
   ...session,
   afterPasswordAccepted: vi.fn(),
-  dropHandOver: vi.fn(),
+  startAfresh: vi.fn(),
   handOverSecret: vi.fn(),
 }));
 vi.mock('../auth/derive', () => ({

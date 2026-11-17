@@ -8,7 +8,7 @@ import { deriveForSignIn } from '../../../src/auth/derive';
 import {
   afterPasskeyAccepted,
   afterPasswordAccepted,
-  dropHandOver,
+  startAfresh,
   handOverSecret,
 } from '../../../src/keys/session';
 import { prfExtension, prfOutput } from '../../../src/keys/passkey';
@@ -42,8 +42,8 @@ export function SignInForm({
   const [pending, setPending] = useState(false);
 
   useEffect(() => setPasskeysSupported(typeof window.PublicKeyCredential === 'function'), []);
-  // A sign-in that starts again starts afresh: a password's secret left waiting for a second step is dropped.
-  useEffect(() => void dropHandOver(), []);
+  // A sign-in starts afresh: a password's secret left waiting for a second step is dropped, and with no session, kept keys too.
+  useEffect(() => void startAfresh(), []);
 
   async function signInWithPasskey() {
     setPasskeyPending(true);

@@ -74,8 +74,20 @@ export const afterSecondStep = () =>
     return secret ? unlockWithPassword(secret, actions, keyStore()) : undefined;
   });
 
-/** A sign-in page that loads again starts afresh: a hand-over nobody took is dropped. */
-export const dropHandOver = () => quietly(() => keyStore().dropHandOver());
+/**
+ * A sign-in page that loads starts afresh (core-app §5.4): a hand-over nobody took is dropped, and when there is no session, what this
+ * browser kept is forgotten. It opens nothing without the session's secret, which went with the session; a page that finds none
+ * deletes it. Someone signed in who is asked to sign in again (an app's `prompt=login`) keeps theirs.
+ */
+export const startAfresh = () =>
+  quietly(async () => {
+    const kept = keyStore();
+    await kept.dropHandOver();
+    if (!(await kept.holds())) return;
+    // With no session the action is refused (it requires one): either way, there is no secret to keep the key with.
+    const secret = await actions.sessionSecret().catch(() => undefined);
+    if (!secret?.ok || !secret.value) await kept.forget();
+  });
 
 /** Before a password change: the new password's way in, beside the old ones. */
 export const beforePasswordChange = (current: WebKey, next: WebKey) =>

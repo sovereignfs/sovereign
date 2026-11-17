@@ -2,7 +2,10 @@ import { derivePassword } from '@sovereignfs/crypto/web';
 import { describe, expect, it } from 'vitest';
 import { KeyStore, memoryBackend } from '../keys/keystore';
 import {
+  addPasskeyWayIn,
   finishNewPassword,
+  keptAccountKey,
+  unlockWithPasskey,
   prepareNewPassword,
   unlockWithPassword,
   type VaultActions,
@@ -27,7 +30,7 @@ function fakeVault() {
         kitConfirmed: boolean;
       }
     | undefined;
-  const waysIn = new Map<string, { way: string; id: string; record: string }>();
+  const waysIn = new Map<string, { way: string; id: string; record: string; prfSalt?: string }>();
   const state = { session: b64(bytes(1)) as string | undefined };
   const actions: VaultActions = {
     read: async () => ({
@@ -183,5 +186,65 @@ describe('changing the password', () => {
       await prepareNewPassword(await secretOf('wrong'), await secretOf('b'), vault.actions),
     ).toBeUndefined();
     expect(vault.waysIn()).toHaveLength(1);
+  });
+});
+
+describe('passkeys that unlock (core-app §5.5)', () => {
+  async function unlockedBrowser() {
+    const vault = fakeVault();
+    const store = new KeyStore(memoryBackend());
+    await unlockWithPassword(await secretOf('pw'), vault.actions, store);
+    return { vault, store, key: await keptAccountKey(vault.actions, store) };
+  }
+
+  it('gives a passkey a way in from an unlocked browser, which opens the same key on another', async () => {
+    const { vault, store, key } = await unlockedBrowser();
+    expect(await addPasskeyWayIn('cred', bytes(9), vault.actions, store)).toBe(true);
+    const way = vault.waysIn().find((w) => w.way === 'passkey');
+    expect(way?.id).toBe('cred');
+    expect(way?.prfSalt).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    // Nothing of the PRF output is stored: only the wrap and the salt.
+    expect(JSON.stringify(vault.waysIn())).not.toContain(b64(bytes(9)));
+
+    vault.state.session = b64(bytes(2));
+    const elsewhere = new KeyStore(memoryBackend());
+    expect(await unlockWithPasskey('cred', bytes(9), vault.actions, elsewhere)).toBe('unlocked');
+    expect(await elsewhere.open(bytes(2))).toEqual(key);
+  });
+
+  it('makes a new salt for every passkey', async () => {
+    const { vault, store } = await unlockedBrowser();
+    await addPasskeyWayIn('one', bytes(9), vault.actions, store);
+    await addPasskeyWayIn('two', bytes(9), vault.actions, store);
+    const salts = vault.waysIn().flatMap((w) => (w.prfSalt ? [w.prfSalt] : []));
+    expect(new Set(salts).size).toBe(2);
+  });
+
+  it('stays locked for a passkey with no way in, another passkey’s output, or another passkey’s way in', async () => {
+    const { vault, store } = await unlockedBrowser();
+    await addPasskeyWayIn('cred', bytes(9), vault.actions, store);
+    const fresh = () => new KeyStore(memoryBackend());
+    expect(await unlockWithPasskey('other', bytes(9), vault.actions, fresh())).toBe('locked');
+    expect(await unlockWithPasskey('cred', bytes(8), vault.actions, fresh())).toBe('locked');
+    expect(await unlockWithPasskey('cred', new Uint8Array(16), vault.actions, fresh())).toBe(
+      'locked',
+    );
+    // A way in moved to another credential id does not open: the id is bound into the wrap.
+    const way = vault.waysIn().find((w) => w.way === 'passkey');
+    await vault.actions.putWayIn({
+      way: 'passkey',
+      id: 'moved',
+      record: way?.record ?? '',
+      prfSalt: way?.prfSalt ?? '',
+    });
+    expect(await unlockWithPasskey('moved', bytes(9), vault.actions, fresh())).toBe('locked');
+  });
+
+  it('gives no way in from a locked browser', async () => {
+    const { vault } = await unlockedBrowser();
+    expect(
+      await addPasskeyWayIn('cred', bytes(9), vault.actions, new KeyStore(memoryBackend())),
+    ).toBe(false);
+    expect(vault.waysIn().some((w) => w.way === 'passkey')).toBe(false);
   });
 });

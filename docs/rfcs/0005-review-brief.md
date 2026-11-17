@@ -68,6 +68,8 @@ Each is recorded in the RFC under "Settled in review".
   libsodium's C library was audited in 2017 with password hashing in scope, Argon2id reviewed as a diff; its WebAssembly build was
   not. libsodium fixes one lane and a **16-byte salt**, so the salt is the first 16 bytes of the RFC's SHA-256.
 - **The Argon2id cost is 19 MiB and 3 passes**, about one second on an iPhone 15 Pro (64 MiB took 3.4 s).
+- **The PRF input is one per instance, the salt one per passkey** (§1.2): a random input per passkey cannot be given to a
+  discoverable sign-in.
 - **The Argon2id output is held as a WebCrypto key that cannot be exported** until the unlock key is made, since the unlock key's
   salt is given only after signing in.
 
@@ -106,8 +108,10 @@ In the order we would like them looked at.
    client the server does not deliver?
 7. **Staying unlocked (§5).** Does wrapping twice give what is claimed: nothing that opens once the session has ended, and nothing
    for the server alone?
-8. **Passkeys (§1.2, §4 step 3).** A random PRF input for each passkey, the output through HKDF, and an unlock ceremony whose answer
-   is checked nowhere but by whether the account key opens.
+8. **Passkeys (§1.2, §4 step 3).** One PRF input for every passkey of an instance, since a discoverable sign-in cannot be given one per
+   passkey; the output through HKDF with a random salt for each passkey; and an unlock ceremony whose answer is checked nowhere but by
+   whether the account key opens, with the page reading the user-verified flag itself. Does a public, shared input lose anything
+   against a random one per passkey, given a page under the same relying party id can ask any passkey for its output?
 9. **Escrow and the recovery kit (§1.2, §6).** Whether anything about them weakens an account that does not use escrow.
 10. **What is missing.** The design has no way to replace an account key or a signing key after a compromise, and puts off
     post-quantum key wrapping, although wrapped document keys sit on a server for years. Which of these should not wait?

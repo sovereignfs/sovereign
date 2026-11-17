@@ -655,7 +655,7 @@ export const keyWraps = sqliteTable(
     /** Which one of it: a passkey's credential id, the escrow key's id, or a password wrap's own id. */
     wrapId: text('wrap_id').notNull(),
     record: text('record').notNull(),
-    prfInput: text('prf_input'),
+    prfSalt: text('prf_salt'),
     createdAt: integer('created_at').notNull(),
   },
   (table) => [primaryKey({ columns: [table.userId, table.way, table.wrapId] })],

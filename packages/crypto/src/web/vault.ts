@@ -29,8 +29,8 @@ export type WayInRecord =
       readonly way: 'passkey';
       /** The passkey's credential id. */
       readonly id: string;
-      /** base64url, 32 bytes: the PRF input made for this passkey, never shared with another. */
-      readonly prfInput: string;
+      /** base64url, 32 bytes: the HKDF salt made for this passkey, never shared with another (RFC 0005 §1.2). */
+      readonly prfSalt: string;
       readonly record: WrapRecord;
     }
   | {

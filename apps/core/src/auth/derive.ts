@@ -10,7 +10,7 @@ import { derivePassword, fromBase64Url, type WebKey } from '@sovereignfs/crypto/
 let instanceId: Promise<Uint8Array> | undefined;
 
 /** The instance id, read once from the instance document, which carries it for any client (core-app §5.2). */
-function readInstanceId(): Promise<Uint8Array> {
+export function readInstanceId(): Promise<Uint8Array> {
   instanceId ??= fetch('/.well-known/sovereign-instance', { cache: 'no-store' })
     .then(async (response) => {
       if (!response.ok) throw new Error('The instance document could not be read.');

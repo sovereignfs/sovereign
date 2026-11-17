@@ -129,8 +129,11 @@ what it belongs to. A record moved to another person, another app or another doc
 | Identity privates | the app key                                | `identity`, `sub`, the app's client id, `receive` or `sign` |
 | Document key      | HPKE to the reader's receiving key         | `document-key`, the document's id, reader's `sub`           |
 
-- **A passkey's key** is `HKDF(PRF output, info = "sovereign/1/passkey-unlock")`. The PRF input is 32 random bytes made for that
-  passkey and kept with its wrap: no input is shared between passkeys or people.
+- **A passkey's key** is `HKDF(PRF output, salt, info = "sovereign/1/passkey-unlock")`. The salt is 32 random bytes made for that
+  passkey and kept with its wrap: nothing that goes into the key is shared between passkeys or people. The PRF input is one per
+  instance, `SHA-256("sovereign/1/passkey-prf" ‖ instance id)`: signing in with a passkey is discoverable, so the page does not know
+  whose passkey will answer, and WebAuthn takes an input per credential (`evalByCredential`) only with a list of credentials. The
+  output differs for every passkey anyway, since each holds its own secret.
 - **The recovery kit** is 32 random bytes, and `HKDF(kit, info = "sovereign/1/kit")` is its key. It has full strength, so it needs
   no Argon2id. It is shown once, as **groups of four letters and digits** from an alphabet with no look-alikes (no `I`, `L`, `O` or
   `U`: Crockford's base32), ending in a check group, so a mistyped kit is refused as mistyped and not as wrong. Thirteen groups hold
@@ -211,8 +214,10 @@ Core stores wrapped keys and public keys. It can open none of them.
   unreadable, in every backup too.
 - **Setting up** happens the first time a person signs in after this ships, in the browser: the account key and signing key are
   made, wrapped by the unlock key, and the recovery kit is shown and must be confirmed before going on.
-- **A passkey gets its wrap when it is added**, which needs an unlocked browser, and loses it when it is removed. The passkey page
-  marks those that unlock and warns before the last way in but the password is removed.
+- **A passkey gets its wrap when it is added**, which needs an unlocked browser, and loses it when it is removed: the server deletes it
+  after the passkey, and a wrap whose passkey is gone is never read. A device that gives the PRF output only when the passkey is
+  used is asked for one more touch, answered nowhere. The passkey page marks those that unlock, offers to let one that does not
+  (asking for the password first on a locked browser), and warns before one that unlocks is removed.
 - **A changed password** sends the new sign-in value and the re-wrapped account key in one request, applied together or not at all.
 - **A reset by email** removes the `password` wrap. The next sign-in finds none and asks for a passkey that unlocks, the kit, or, on
   an instance with escrow, says to ask the owner. Once unlocked, the new password gets its wrap.
@@ -424,6 +429,11 @@ Each step is useful by itself and is a task or a few.
   package's README.
 - **The salt is made from an instance id, not the instance's address** (§1.1), settled after acceptance, on 2026-11-16: with the
   address, an instance that moved would have locked everyone out of their accounts and their data.
+- **The PRF input is one per instance, and the salt one per passkey** (§1.2), changed while building on 2026-11-17: a random input
+  for each passkey cannot be given to a discoverable sign-in, so the passkey would have unlocked only with a second touch. What each
+  passkey has of its own moved from the PRF input to the HKDF salt. A page on another origin under the same relying party id could
+  ask a passkey for the same output, but opens nothing without the wrap, which only the account's own session is given. A question
+  for the review.
 - **Step 2 is built before the design review, and step 3 is not.** Core never receiving a password is worth having at once, and
   what the review might change in it costs little: the number after `svp` names the whole derivation and not only its cost, so a
   derivation the review replaces is moved from at each person's next sign-in, as a change of cost is (§1.4), with no second reset.

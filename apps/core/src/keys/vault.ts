@@ -25,7 +25,7 @@ export interface VaultWayIn {
   readonly id: string;
   /** The record, as JSON. */
   readonly record: string;
-  readonly prfInput?: string | undefined;
+  readonly prfSalt?: string | undefined;
 }
 
 export interface VaultApp {
@@ -78,7 +78,7 @@ function checkWayIn(wayIn: VaultWayIn): VaultWayIn {
     way: wayIn.way,
     id: wayIn.id,
     record: checkRecord(wayIn.record, 'The way in'),
-    ...(wayIn.way === 'passkey' ? { prfInput: base64url32(wayIn.prfInput, 'The PRF input') } : {}),
+    ...(wayIn.way === 'passkey' ? { prfSalt: base64url32(wayIn.prfSalt, 'The passkey salt') } : {}),
   };
 }
 
@@ -101,14 +101,15 @@ export class KeyVault {
     ).rows[0];
     const waysIn = (
       await this.#database.run(
-        'select way, wrap_id, record, prf_input from key_wraps where user_id = ? order by created_at, wrap_id',
+        // A passkey's way in is read only while the passkey is there: one removed by any route opens nothing afterwards.
+        "select way, wrap_id, record, prf_salt from key_wraps w where user_id = ? and (way <> 'passkey' or exists (select 1 from passkeys p where p.user_id = w.user_id and p.credential_id = w.wrap_id)) order by created_at, wrap_id",
         [userId],
       )
     ).rows.map((wrap) => ({
       way: String(wrap.way) as VaultWay,
       id: String(wrap.wrap_id),
       record: String(wrap.record),
-      ...(wrap.prf_input ? { prfInput: String(wrap.prf_input) } : {}),
+      ...(wrap.prf_salt ? { prfSalt: String(wrap.prf_salt) } : {}),
     }));
     if (!row) return { waysIn };
     return {
@@ -156,11 +157,19 @@ export class KeyVault {
     });
   }
 
-  /** Adds or replaces one way in. The account must be set up. */
+  /** Adds or replaces one way in. The account must be set up, and a passkey's way in must name one of the account's passkeys. */
   async putWayIn(userId: string, wayIn: VaultWayIn): Promise<void> {
     const checked = checkWayIn(wayIn);
     await this.#database.transaction(async (tx) => {
       await this.#requireAccount(tx, userId);
+      if (checked.way === 'passkey') {
+        const own = await tx.run('select 1 from passkeys where user_id = ? and credential_id = ?', [
+          userId,
+          checked.id,
+        ]);
+        if (own.rows.length === 0)
+          throw new VaultError('invalid', 'That is not one of your passkeys.');
+      }
       await tx.run('delete from key_wraps where user_id = ? and way = ? and wrap_id = ?', [
         userId,
         checked.way,
@@ -170,7 +179,10 @@ export class KeyVault {
     });
   }
 
-  /** Removes one way in. It refuses to remove the last way in by a password or a passkey, which would leave only the kit. */
+  /**
+   * Removes one way in. Nothing stops the last one going: a password change adds the new password's way in before it removes the old,
+   * and a passkey's goes with the passkey, while the password's stays for as long as the account has a password.
+   */
   async removeWayIn(userId: string, way: VaultWay, id: string): Promise<boolean> {
     return this.#database.transaction(async (tx) => {
       const { rowsAffected } = await tx.run(
@@ -179,6 +191,15 @@ export class KeyVault {
       );
       return rowsAffected > 0;
     });
+  }
+
+  /** Removes the ways in of passkeys the account no longer has, after a passkey is removed (core-app §5.5). */
+  async dropRemovedPasskeys(userId: string): Promise<number> {
+    const { rowsAffected } = await this.#database.run(
+      "delete from key_wraps where user_id = ? and way = 'passkey' and wrap_id not in (select credential_id from passkeys where user_id = ?)",
+      [userId, userId],
+    );
+    return rowsAffected;
   }
 
   /** Stores the kit's way in and marks the kit confirmed, together. A kit confirmed again replaces the one before. */
@@ -274,8 +295,8 @@ export class KeyVault {
     now: number,
   ): Promise<void> {
     await tx.run(
-      'insert into key_wraps (user_id, way, wrap_id, record, prf_input, created_at) values (?, ?, ?, ?, ?, ?)',
-      [userId, wayIn.way, wayIn.id, wayIn.record, wayIn.prfInput ?? null, now],
+      'insert into key_wraps (user_id, way, wrap_id, record, prf_salt, created_at) values (?, ?, ?, ?, ?, ?)',
+      [userId, wayIn.way, wayIn.id, wayIn.record, wayIn.prfSalt ?? null, now],
     );
   }
 }

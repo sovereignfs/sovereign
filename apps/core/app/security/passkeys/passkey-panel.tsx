@@ -3,22 +3,43 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { Alert, Button, FormField, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../src/auth/client';
+import { deriveForSignIn } from '../../../src/auth/derive';
+import { prfEnabled, prfExtension, prfOutput } from '../../../src/keys/passkey';
+import {
+  givePasskeyWayIn,
+  isUnlocked,
+  letPasskeyUnlock,
+  unlockWithPasswordAgain,
+} from '../../../src/keys/session';
 import { passkeyProblem } from '../../(auth)/messages';
 import styles from '../security.module.css';
 
 export type PasskeyRow = {
   id: string;
+  /** WebAuthn's id for it, which its way into the person's keys is named by. */
+  credentialId: string;
   name: string | null;
   /** An ISO date, or null when it was not recorded. */
   createdAt: string | null;
   /** Whether the device syncs it between the person's devices. */
   synced: boolean;
+  /** Whether it also unlocks the person's encrypted data (core-app §5.5). */
+  unlocks: boolean;
 };
+
+/** What the panel needs to let a passkey unlock, given only when the person has keys. */
+export type PasskeyKeys = { rpId: string; email: string };
 
 const reload = () => window.location.reload();
 
 /** Adding, naming and removing passkeys. The page reloads after a change, so it shows what the server holds. */
-export function PasskeyPanel({ passkeys }: { passkeys: PasskeyRow[] }) {
+export function PasskeyPanel({
+  passkeys,
+  keys,
+}: {
+  passkeys: PasskeyRow[];
+  keys?: PasskeyKeys | undefined;
+}) {
   // Known only in the browser, so it is read after the first render, never during it.
   const [supported, setSupported] = useState<boolean | undefined>();
   useEffect(() => setSupported(typeof window.PublicKeyCredential === 'function'), []);
@@ -31,33 +52,49 @@ export function PasskeyPanel({ passkeys }: { passkeys: PasskeyRow[] }) {
       {passkeys.length > 0 ? (
         <ul className={styles.passkeys}>
           {passkeys.map((passkey) => (
-            <PasskeyItem key={passkey.id} passkey={passkey} />
+            <PasskeyItem key={passkey.id} passkey={passkey} keys={keys} />
           ))}
         </ul>
       ) : null}
       {supported === false ? (
         <Alert variant="warning">This browser cannot make passkeys. Try another one.</Alert>
       ) : (
-        <AddPasskey />
+        <AddPasskey keys={keys} />
       )}
     </div>
   );
 }
 
-function AddPasskey() {
+function AddPasskey({ keys }: { keys?: PasskeyKeys | undefined }) {
   const [name, setName] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [pending, setPending] = useState(false);
+  const [again, setAgain] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
     setError(undefined);
-    const result = await authClient.passkey.addPasskey({ name: name.trim() || undefined });
+    const extensions = keys ? await prfExtension().catch(() => undefined) : undefined;
+    const result = await authClient.passkey.addPasskey({
+      name: name.trim() || undefined,
+      ...(extensions ? { extensions, returnWebAuthnResponse: true } : {}),
+    });
     if (result?.error) {
       setPending(false);
       setError(passkeyProblem(result.error));
       return;
+    }
+    // Added. While this browser is unlocked it also gets its way in (core-app §5.5): from the output the device gave now, or, from a
+    // device that gives it only when the passkey is used, from one more touch. Nothing here stops the passkey being added.
+    if (keys && result && 'webauthn' in result) {
+      const id = result.webauthn.response.id;
+      const output = prfOutput(result.webauthn.clientExtensionResults);
+      if (output) await givePasskeyWayIn(id, output);
+      else if (prfEnabled(result.webauthn.clientExtensionResults) && (await isUnlocked())) {
+        setAgain(true);
+        await letPasskeyUnlock(keys.rpId, id);
+      }
     }
     reload();
   }
@@ -78,15 +115,15 @@ function AddPasskey() {
       </FormField>
       <div className={styles.row}>
         <Button type="submit" loading={pending}>
-          {pending ? 'Waiting for your device…' : 'Add a passkey'}
+          {again ? 'Use it once more…' : pending ? 'Waiting for your device…' : 'Add a passkey'}
         </Button>
       </div>
     </form>
   );
 }
 
-function PasskeyItem({ passkey }: { passkey: PasskeyRow }) {
-  const [mode, setMode] = useState<'view' | 'rename' | 'remove'>('view');
+function PasskeyItem({ passkey, keys }: { passkey: PasskeyRow; keys?: PasskeyKeys | undefined }) {
+  const [mode, setMode] = useState<'view' | 'rename' | 'remove' | 'unlock'>('view');
   const [name, setName] = useState(passkey.name ?? '');
   const [error, setError] = useState<string | undefined>();
   const [pending, setPending] = useState(false);
@@ -116,7 +153,30 @@ function PasskeyItem({ passkey }: { passkey: PasskeyRow }) {
     reload();
   }
 
+  async function letItUnlock() {
+    if (!keys) return;
+    setPending(true);
+    setError(undefined);
+    // Its way in wraps the keys this browser holds open; a browser that holds none asks for the password first.
+    if (!(await isUnlocked())) {
+      setPending(false);
+      setMode('unlock');
+      return;
+    }
+    if (await letPasskeyUnlock(keys.rpId, passkey.credentialId)) {
+      reload();
+      return;
+    }
+    setPending(false);
+    setError('This passkey can’t unlock your encrypted data. It still signs you in.');
+  }
+
   const title = passkey.name?.trim() || 'Passkey';
+  const unlockNote = keys
+    ? passkey.unlocks
+      ? ' Also unlocks your encrypted data.'
+      : ' Doesn’t unlock your encrypted data.'
+    : '';
   return (
     <li className={styles.passkey}>
       {error ? <Alert variant="error">{error}</Alert> : null}
@@ -149,19 +209,42 @@ function PasskeyItem({ passkey }: { passkey: PasskeyRow }) {
             <p className={styles.footer}>
               {passkey.createdAt ? `Added ${formatDate(passkey.createdAt)}. ` : ''}
               {passkey.synced ? 'Synced between your devices.' : 'Stays on one device.'}
+              {unlockNote}
             </p>
           </div>
-          {mode === 'remove' ? (
-            <div className={styles.row}>
-              <Button variant="destructive" loading={pending} onClick={() => void remove()}>
-                Remove {title}
-              </Button>
-              <Button variant="ghost" onClick={() => setMode('view')}>
-                Keep it
-              </Button>
+          {mode === 'unlock' && keys ? (
+            <UnlockFirst
+              email={keys.email}
+              onUnlocked={() => {
+                setMode('view');
+                void letItUnlock();
+              }}
+              onCancel={() => setMode('view')}
+            />
+          ) : mode === 'remove' ? (
+            <div className={styles.form}>
+              {passkey.unlocks ? (
+                <Alert variant="warning">
+                  This passkey also unlocks your encrypted data. Once it’s removed, unlock with your
+                  password or another passkey.
+                </Alert>
+              ) : null}
+              <div className={styles.row}>
+                <Button variant="destructive" loading={pending} onClick={() => void remove()}>
+                  Remove {title}
+                </Button>
+                <Button variant="ghost" onClick={() => setMode('view')}>
+                  Keep it
+                </Button>
+              </div>
             </div>
           ) : (
             <div className={styles.row}>
+              {keys && !passkey.unlocks ? (
+                <Button variant="secondary" loading={pending} onClick={() => void letItUnlock()}>
+                  Let it unlock
+                </Button>
+              ) : null}
               <Button variant="secondary" onClick={() => setMode('rename')}>
                 Rename
               </Button>
@@ -173,6 +256,65 @@ function PasskeyItem({ passkey }: { passkey: PasskeyRow }) {
         </>
       )}
     </li>
+  );
+}
+
+/** The password, asked for again to unlock this browser before a passkey is given its way in. */
+function UnlockFirst({
+  email,
+  onUnlocked,
+  onCancel,
+}: {
+  email: string;
+  onUnlocked: () => void;
+  onCancel: () => void;
+}) {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | undefined>();
+  const [pending, setPending] = useState(false);
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPending(true);
+    setError(undefined);
+    try {
+      // Opened in the browser alone: nothing is sent but what reads the person's own wrapped keys.
+      const { secret } = await deriveForSignIn(password, email);
+      if (await unlockWithPasswordAgain(secret)) {
+        onUnlocked();
+        return;
+      }
+      setError('That password doesn’t unlock your encrypted data. Check it and try again.');
+    } catch {
+      setError('This page couldn’t get ready. Reload it and try again.');
+    }
+    setPending(false);
+  }
+
+  return (
+    <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
+      {error ? <Alert variant="error">{error}</Alert> : null}
+      <FormField label="Your password" hint="To unlock this device first.">
+        {(field) => (
+          <Input
+            {...field}
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+        )}
+      </FormField>
+      <div className={styles.row}>
+        <Button type="submit" loading={pending} disabled={!password}>
+          {pending ? 'Unlocking…' : 'Unlock'}
+        </Button>
+        <Button type="button" variant="ghost" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </form>
   );
 }
 

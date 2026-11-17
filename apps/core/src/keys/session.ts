@@ -7,9 +7,13 @@ import {
   setUpVaultAction,
 } from '../../app/keys/actions';
 import { indexedDbBackend, KeyStore } from './keystore';
+import { localPasskeyCeremony } from './passkey';
 import {
+  addPasskeyWayIn,
   finishNewPassword,
+  keptAccountKey,
   prepareNewPassword,
+  unlockWithPasskey,
   unlockWithPassword,
   type PreparedChange,
   type VaultActions,
@@ -69,3 +73,49 @@ export const afterPasswordChange = (prepared: PreparedChange | undefined, accept
 
 /** Signing out: this browser forgets what it kept. */
 export const forgetKeys = () => quietly(() => keyStore().forget());
+
+/** After signing in with a passkey that answered the PRF extension: open the keys with its way in, if it has one (core-app §5.5). */
+export const afterPasskeyAccepted = (credentialId: string, output: Uint8Array) =>
+  quietly(() => unlockWithPasskey(credentialId, output, actions, keyStore()));
+
+/** Whether this browser holds the person's keys open for this session. */
+export const isUnlocked = async (): Promise<boolean> =>
+  (await quietly(async () => {
+    const key = await keptAccountKey(actions, keyStore());
+    key?.fill(0);
+    return key !== undefined;
+  })) ?? false;
+
+/** A passkey just added answered the extension: give it its way in, while this browser is unlocked. */
+export const givePasskeyWayIn = (credentialId: string, output: Uint8Array) =>
+  quietly(() => addPasskeyWayIn(credentialId, output, actions, keyStore()));
+
+/**
+ * Lets a passkey the person already has unlock: a ceremony with that passkey alone, whose answer is sent nowhere, then its way in.
+ * `true` once it unlocks.
+ */
+export const letPasskeyUnlock = async (rpId: string, credentialId: string): Promise<boolean> =>
+  (await quietly(async () => {
+    const answer = await localPasskeyCeremony(rpId, [credentialId]);
+    return answer?.credentialId === credentialId
+      ? addPasskeyWayIn(credentialId, answer.output, actions, keyStore())
+      : false;
+  })) ?? false;
+
+/** Unlocks a browser already signed in with any passkey that unlocks: a ceremony whose answer is sent nowhere (core-app §5.5). */
+export const unlockWithAnyPasskey = async (rpId: string): Promise<boolean> =>
+  (await quietly(async () => {
+    const answer = await localPasskeyCeremony(rpId);
+    if (!answer) return false;
+    return (
+      (await unlockWithPasskey(answer.credentialId, answer.output, actions, keyStore())) ===
+      'unlocked'
+    );
+  })) ?? false;
+
+/** Unlocks a browser already signed in with the password, asked for again (core-app §5.3). */
+export const unlockWithPasswordAgain = async (secret: WebKey): Promise<boolean> =>
+  (await quietly(async () => {
+    const result = await unlockWithPassword(secret, actions, keyStore());
+    return result === 'unlocked' || result === 'set-up';
+  })) ?? false;

@@ -26,8 +26,8 @@ as well as their notes; and the vault of an app with no core is shown to work in
 
 ## Decisions locked
 
-Proposed on 2026-11-17, from what building workstream 0003 showed; the goal owner confirms or changes them before leg 1 starts.
-Once confirmed, an agent running a leg does not reopen them; one that finds a decision cannot be built as
+Proposed on 2026-11-17, from what building workstream 0003 showed, and confirmed as written by the goal owner the same day. An agent
+running a leg does not reopen them; one that finds a decision cannot be built as
 written stops and says so.
 
 | Decision                        | Choice                                                                                                          | Rejected alternative and why                                                                                                     |
@@ -126,3 +126,4 @@ already shows the flow in Node; this one shows it with a real browser's IndexedD
 | Version | Date     | Change                                                                                                                                                           |
 | ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0.1     | Nov 2026 | Initial draft, from the follow-ups found while building workstream 0003: the kit under escrow, `localVault`'s entry, encrypted files, a no-core app in a browser |
+| 0.2     | Nov 2026 | The decisions confirmed as written by the goal owner.                                                                                                            |

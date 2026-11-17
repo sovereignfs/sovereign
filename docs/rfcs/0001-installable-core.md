@@ -1,13 +1,13 @@
 # RFC 0001 — An installable core (PWA)
 
-|                |                                                                                                                                                                                                                             |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**     | Accepted; partially implemented (the manifest, metadata, service worker and app icons; the device checks of task 11.3 are parked, not run). Amendment 1 (a fuller install, and opening installed apps) proposed, for review |
-| **Date**       | October 2026                                                                                                                                                                                                                |
-| **Author**     | Claude Code, for review                                                                                                                                                                                                     |
-| **Scope**      | `apps/core`: a web app manifest, a service worker, an offline page, mobile metadata; `docs/specs/core-app.md` §1.3, §3.5                                                                                                    |
-| **Tasks**      | [Epic 11](../epics/pwa.md)                                                                                                                                                                                                  |
-| **Supersedes** | Nothing. The established Sovereign app had a PWA (manifest, Workbox, offline page, Apple splash images); core has none                                                                                                      |
+|                |                                                                                                                                                                                                                                      |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Status**     | Accepted; partially implemented (the manifest, metadata, service worker and app icons; the device checks of task 11.3 are parked, not run). Amendment 1 (a fuller install, and opening installed apps) accepted, not yet implemented |
+| **Date**       | October 2026                                                                                                                                                                                                                         |
+| **Author**     | Claude Code, for review                                                                                                                                                                                                              |
+| **Scope**      | `apps/core`: a web app manifest, a service worker, an offline page, mobile metadata; `docs/specs/core-app.md` §1.3, §3.5                                                                                                             |
+| **Tasks**      | [Epic 11](../epics/pwa.md)                                                                                                                                                                                                           |
+| **Supersedes** | Nothing. The established Sovereign app had a PWA (manifest, Workbox, offline page, Apple splash images); core has none                                                                                                               |
 
 ## Summary
 
@@ -252,7 +252,7 @@ Accepted as proposed, with the open questions answered as leaned:
 
 ## Amendment 1 — a fuller install, and opening installed apps (November 2026)
 
-**Status:** proposed, for review. **Research:** [0010](../research/0010-opening-installed-apps.md). **Tasks:** 11.5 to 11.10 in
+**Status:** accepted (November 2026); the device run of A5 (task 11.8) decides whether A5 stands. **Research:** [0010](../research/0010-opening-installed-apps.md). **Tasks:** 11.5 to 11.10 in
 [epic 11](../epics/pwa.md); the apps' side is 11.11 to 11.13, sequenced by [workstream 0006](../workstreams/0006-pwa.md).
 
 The design above made core installable and stopped there on purpose. Once people install core and their apps side by side, two of

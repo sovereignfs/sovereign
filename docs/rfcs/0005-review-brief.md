@@ -84,6 +84,10 @@ In the order we would like them looked at.
    - The signature is checked against a signing key the app's page remembers from first use. On the first release a lying server is
      not caught, and a new browser starts again from nothing. Is there a better anchor that needs no screen for comparing
      fingerprints, such as keeping what was remembered encrypted in the vault?
+     While building it we found that the request's public key is the asker's to choose, so a site sending a signed-in person to the
+     release page gets an answer sealed to its own key, safe only while nothing on the app's page reads the fragment. Release is now
+     silent only when the `Referer` is the app's origin, and asks otherwise. Is that enough, or should the page always ask?
+
 2. **The password derivation (§1.1, §1.4).**
    - The server sees the sign-in value in memory, before it hashes it. Someone who reads that memory can guess passwords against it
      at Argon2id's cost alone, and a right guess gives the unlock key too. Is one Argon2id run with an HKDF split the right shape, or

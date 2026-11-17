@@ -1914,13 +1914,22 @@ add` says so, and `sv apply` registers the app's key return address (`sovereign-
 
 ### 5.7 Key release and sharing
 
-Built by tasks 16.10 and 16.11. Core's OpenID Connect provider is unchanged.
+Key release is built (task 16.10); sharing is built by task 16.11. Core's OpenID Connect provider is unchanged.
 
 - **Key release** (RFC 0005 §4). An app's page that has no key for this browser session sends the browser to
   `/keys/release?client_id=…&return_to=…&request=…&state=…`. Core's page requires a session; checks that the app exists, is on, may use
   encryption, and that `return_to` is its key return address exactly, and answers anything else with the page that is not there;
   unlocks if it must; makes the app's keys on a person's first time in it; and returns the app's key sealed to `request`, signed by
-  the account, in the address fragment. It is rendered per request, never cached and never framed.
+  the account, in the address fragment. It is rendered per request, never cached and never framed, and sends no referrer.
+- **Silently only when the app asked.** A request whose `Referer` is not the return address's origin is asked about first ("Continue
+  to …"): a site that sent the person here with a public key of its own would otherwise get an answer it could open, if anything on
+  the app's page read the fragment before the SDK removed it.
+- **What the person sees**: "Opening…" and nothing else when the browser is unlocked, the kit kept and the app asked. A locked browser asks for the
+  password or a passkey, both checked in the browser alone (§5.5). At the first encrypted app the kit is shown and must be kept
+  (§5.3). The answer names the account's signing public key, so an app's page that has never seen it can remember it.
+- **The answer** is HPKE (§1 of RFC 0005) of `{ app key, sub, client id, state, time, signing public key }` with the client id, the
+  return address and the `state` as `info`, and an Ed25519 signature over the encapsulated key and ciphertext:
+  `return_to#sv_key=<enc>.<ciphertext>&sv_sig=<signature>&state=<state>`, all base64url.
 - **What an app's page checks**: that the answer opens with the key it made for this request, names this app and the `state` it kept,
   is for the person signed in to it, is under two minutes old, and is signed by the signing key it remembers for that person, or the
   first it sees. Anything else is refused. The `state` and its key are used once.
@@ -2049,3 +2058,4 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-16 | §5.2, §3.3.2, §3.5: signing in with a derived value is built: core never receives a password, the policy is checked in the browser, the instance id is made at start-up (an upgraded instance says so) and read from the instance document, and `sovereign-admin accounts reset-link` makes a reset link without mail.                                                                                                                                                                                                                                                                                                                                                                                                        |
 | 2026-11-17 | §5.3, §5.4: the vault and staying unlocked are built. A password change wraps the key for the new password beside the old and drops the old after, since it cannot share better-auth's transaction; a reset leaves the password's way in stale rather than depend on a hook.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | 2026-11-17 | §5.5: passkeys that unlock are built. Changed from the spec: the PRF input is one per instance and each passkey has its own HKDF salt instead, since a discoverable sign-in cannot be given an input per passkey; a passkey's way in names one of the person's own passkeys and is not read once the passkey is gone; the page offers to let a passkey unlock, and asks a device that gives the output only on use for one more touch.                                                                                                                                                                                                                                                                                        |
+| 2026-11-17 | §5.7: key release is built: what the person sees, and the answer's format; the page sends no referrer. The kit is shown there, at the first encrypted app.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |

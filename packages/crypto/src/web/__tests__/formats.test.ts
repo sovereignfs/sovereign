@@ -88,7 +88,7 @@ describe('suite 1, as stored', () => {
   it('opens an escrow wrap', async () => {
     const privateKey = await crypto.subtle.importKey(
       'pkcs8',
-      bytes(frozen.escrow.privateKeyPkcs8),
+      bytes(frozen.escrow.privateKeyPkcs8) as Uint8Array<ArrayBuffer>,
       { name: 'X25519' },
       false,
       ['deriveBits'],

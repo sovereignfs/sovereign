@@ -38,4 +38,6 @@ export const LABEL = {
   appKeysSignature: 'sovereign/1/app-keys',
   documentKey: 'sovereign/1/document-key',
   documentKeySignature: 'sovereign/1/document-key-signature',
+  keyRelease: 'sovereign/1/key-release',
+  keyReleaseSignature: 'sovereign/1/key-release-signature',
 } as const;

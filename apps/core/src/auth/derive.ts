@@ -1,4 +1,4 @@
-import { derivePassword, fromBase64Url } from '@sovereignfs/crypto/web';
+import { derivePassword, fromBase64Url, type WebKey } from '@sovereignfs/crypto/web';
 
 /**
  * What a browser sends where it used to send a password (core-app §5.2): the sign-in value, derived here from the password, the
@@ -34,10 +34,20 @@ function readInstanceId(): Promise<Uint8Array> {
 const nextPaint = () =>
   new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
 
-/** The sign-in value for this password and address. */
-export async function signInValue(password: string, address: string): Promise<string> {
+/**
+ * The sign-in value for this password and address, and the secret it was made from, which opens the person's keys once the server
+ * has accepted the value (core-app §5.3). The secret is a key that cannot be exported; it never leaves the browser.
+ */
+export async function deriveForSignIn(
+  password: string,
+  address: string,
+): Promise<{ signIn: string; secret: WebKey }> {
   const id = await readInstanceId();
   await nextPaint();
-  const { signIn } = await derivePassword({ password, address, instanceId: id });
-  return signIn;
+  return derivePassword({ password, address, instanceId: id });
+}
+
+/** The sign-in value alone, where nothing is opened afterwards. */
+export async function signInValue(password: string, address: string): Promise<string> {
+  return (await deriveForSignIn(password, address)).signIn;
 }

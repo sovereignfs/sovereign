@@ -4,7 +4,9 @@ import Link from 'next/link';
 import { type FormEvent, useEffect, useState } from 'react';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../src/auth/client';
-import { signInValue } from '../../../src/auth/derive';
+import { deriveForSignIn } from '../../../src/auth/derive';
+import { afterPasswordAccepted, dropHandOver, handOverSecret } from '../../../src/keys/session';
+import type { WebKey } from '@sovereignfs/crypto/web';
 import { continuationUrl, isContinuation } from '../../../src/auth/oauth-continuation';
 import { DEACTIVATED, passkeyProblem } from '../messages';
 import { AuthError, AuthNotice } from '../auth-notice';
@@ -34,6 +36,8 @@ export function SignInForm({
   const [pending, setPending] = useState(false);
 
   useEffect(() => setPasskeysSupported(typeof window.PublicKeyCredential === 'function'), []);
+  // A sign-in that starts again starts afresh: a password's secret left waiting for a second step is dropped.
+  useEffect(() => void dropHandOver(), []);
 
   async function signInWithPasskey() {
     setPasskeyPending(true);
@@ -56,9 +60,10 @@ export function SignInForm({
     setError(undefined);
     setUnverified(false);
     let value: string;
+    let secret: WebKey;
     try {
       // The password never leaves the browser: what is sent is made from it (core-app §5.2).
-      value = await signInValue(password, email);
+      ({ signIn: value, secret } = await deriveForSignIn(password, email));
     } catch {
       setPending(false);
       setError('This page could not get ready to sign you in. Reload it and try again.');
@@ -86,6 +91,8 @@ export function SignInForm({
     }
     // The password was right but a second step is asked for: no session exists yet.
     if (result.data && 'twoFactorRedirect' in result.data && result.data.twoFactorRedirect) {
+      // The password's secret waits for the second step, which unlocks the person's keys with it (core-app §5.3).
+      await handOverSecret(secret);
       // An app's request goes along, so the second step can carry on with it.
       const search = window.location.search;
       window.location.assign(
@@ -95,6 +102,8 @@ export function SignInForm({
       );
       return;
     }
+    // The keys are set up the first time, or opened, silently (core-app §5.3); nothing about them stops signing in.
+    await afterPasswordAccepted(secret);
     // A full navigation, so the next page is rendered with the new session cookie.
     window.location.assign(continuationUrl(result.data) ?? returnTo);
   }

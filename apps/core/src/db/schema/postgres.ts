@@ -548,3 +548,68 @@ export const oauthClientAssertions = pgTable('oauth_client_assertions', {
   id: text('id').primaryKey(),
   expiresAt: date('expires_at').notNull(),
 });
+
+/**
+ * The key vault (core-app §5.3): what opens a person's keys, which core keeps and can open none of. Records are the JSON of
+ * `@sovereignfs/crypto/web` (a wrap, a sealed key, a wrapped pair), stored as text. Every table is deleted with the account, in the
+ * transaction that deletes it (`AccountManager`).
+ */
+export const keyAccounts = pgTable('key_accounts', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  suite: integer('suite').notNull(),
+  /** base64url, 32 bytes: the salt of the unlock key, given only to the account's own session. */
+  unlockSalt: text('unlock_salt').notNull(),
+  /** The account's signing key: its public half, and its private half wrapped by the account key. */
+  signingPublic: text('signing_public').notNull(),
+  signingPrivate: text('signing_private').notNull(),
+  /** 1 once the person confirmed they kept their recovery kit; the kit itself is never kept. */
+  kitConfirmed: integer('kit_confirmed').notNull().default(0),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+});
+
+/** One way into the account key: the password, a passkey (with its PRF input), the kit, or escrow. */
+export const keyWraps = pgTable(
+  'key_wraps',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    way: text('way').notNull(),
+    /** Which one of it: a passkey's credential id, the escrow key's id, or a password wrap's own id. */
+    wrapId: text('wrap_id').notNull(),
+    record: text('record').notNull(),
+    prfInput: text('prf_input'),
+    createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.way, table.wrapId] })],
+);
+
+/** A person's keys for one app: the app key wrapped by the account key, the app's two key pairs, and the account's signature. */
+export const keyApps = pgTable(
+  'key_apps',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    clientId: text('client_id').notNull(),
+    appKey: text('app_key').notNull(),
+    identity: text('identity').notNull(),
+    signature: text('signature').notNull(),
+    createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.clientId] })],
+);
+
+/**
+ * For each session, 32 random bytes that half-open what a browser keeps unlocked (core-app §5.4). Given only to a live session of
+ * its own, and gone with it.
+ */
+export const keySessionSecrets = pgTable('key_session_secrets', {
+  sessionId: text('session_id')
+    .primaryKey()
+    .references(() => sessions.id, { onDelete: 'cascade' }),
+  secret: text('secret').notNull(),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+});

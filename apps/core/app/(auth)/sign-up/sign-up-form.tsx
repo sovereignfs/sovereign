@@ -4,7 +4,9 @@ import Link from 'next/link';
 import { type FormEvent, useState } from 'react';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../src/auth/client';
-import { signInValue } from '../../../src/auth/derive';
+import { deriveForSignIn } from '../../../src/auth/derive';
+import { afterPasswordAccepted } from '../../../src/keys/session';
+import type { WebKey } from '@sovereignfs/crypto/web';
 import {
   passwordPolicyMessage,
   passwordProblems,
@@ -59,8 +61,9 @@ export function SignUpForm({
     }
     setPending(true);
     let value: string;
+    let secret: WebKey;
     try {
-      value = await signInValue(password, email);
+      ({ signIn: value, secret } = await deriveForSignIn(password, email));
     } catch {
       setPending(false);
       setError('This page could not get ready. Reload it and try again.');
@@ -86,6 +89,8 @@ export function SignUpForm({
       setWaitingFor(email);
       return;
     }
+    // Signed in at once: the keys are set up now, silently (core-app §5.3).
+    await afterPasswordAccepted(secret);
     // A full navigation, so the next page is rendered with the new session cookie.
     window.location.assign(returnTo);
   }

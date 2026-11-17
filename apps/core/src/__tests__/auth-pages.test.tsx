@@ -33,6 +33,8 @@ vi.mock('../auth/reset-link', () => ({
   resetLinkAddress: (_auth: unknown, token: string) => resetLinkAddress(token) as unknown,
 }));
 vi.mock('../auth', () => ({ getAuth: () => Promise.resolve({}) }));
+const addressHasKeys = vi.fn(async () => false);
+vi.mock('../keys/vault', () => ({ addressHasKeys: () => addressHasKeys() as unknown }));
 
 async function pages(env: Record<string, string> = {}) {
   vi.resetModules();
@@ -274,6 +276,23 @@ describe('the reset-password page', () => {
     // Whose password is set: the new sign-in value is made from it (core-app §5.2).
     expect(html).toContain('For ada@sovereign.local');
     expect(html).not.toContain('tok');
+  });
+
+  it('says what a reset does to encrypted data, only to someone who has keys', async () => {
+    resetLinkAddress.mockResolvedValue('ada@sovereign.local');
+    const { reset } = await pages();
+    addressHasKeys.mockResolvedValueOnce(false);
+    const plain = await renderServer(
+      await reset({ searchParams: Promise.resolve({ token: 'tok' }) }),
+    );
+    expect(plain).not.toContain('recovery kit');
+    addressHasKeys.mockResolvedValueOnce(true);
+    const keyed = await renderServer(
+      await reset({ searchParams: Promise.resolve({ token: 'tok' }) }),
+    );
+    expect(keyed).toContain('stays locked after a reset');
+    expect(keyed).toContain('recovery kit');
+    resetLinkAddress.mockReset();
   });
 
   it('names nobody and offers a new link when the token does not work any more', async () => {

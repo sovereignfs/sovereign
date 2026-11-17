@@ -1,13 +1,13 @@
 # RFC 0001 — An installable core (PWA)
 
-|                |                                                                                                                                            |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Status**     | Accepted; partially implemented (the manifest, metadata, service worker and app icons; the device checks of task 11.3 are parked, not run) |
-| **Date**       | October 2026                                                                                                                               |
-| **Author**     | Claude Code, for review                                                                                                                    |
-| **Scope**      | `apps/core`: a web app manifest, a service worker, an offline page, mobile metadata; `docs/specs/core-app.md` §1.3, §3.5                   |
-| **Tasks**      | [Epic 11](../epics/pwa.md)                                                                                                                 |
-| **Supersedes** | Nothing. The established Sovereign app had a PWA (manifest, Workbox, offline page, Apple splash images); core has none                     |
+|                |                                                                                                                                                                                                                             |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**     | Accepted; partially implemented (the manifest, metadata, service worker and app icons; the device checks of task 11.3 are parked, not run). Amendment 1 (a fuller install, and opening installed apps) proposed, for review |
+| **Date**       | October 2026                                                                                                                                                                                                                |
+| **Author**     | Claude Code, for review                                                                                                                                                                                                     |
+| **Scope**      | `apps/core`: a web app manifest, a service worker, an offline page, mobile metadata; `docs/specs/core-app.md` §1.3, §3.5                                                                                                    |
+| **Tasks**      | [Epic 11](../epics/pwa.md)                                                                                                                                                                                                  |
+| **Supersedes** | Nothing. The established Sovereign app had a PWA (manifest, Workbox, offline page, Apple splash images); core has none                                                                                                      |
 
 ## Summary
 
@@ -249,3 +249,79 @@ Accepted as proposed, with the open questions answered as leaned:
 4. **Worker and `strict-dynamic`:** settled by the browser test of task 11.2: Chromium registers the worker with and
    without `worker-src` (the fallback to `script-src` does not refuse it there). The directive stays, explicit, for the
    browsers that follow the fallback strictly.
+
+## Amendment 1 — a fuller install, and opening installed apps (November 2026)
+
+**Status:** proposed, for review. **Research:** [0010](../research/0010-opening-installed-apps.md). **Tasks:** 11.5 to 11.10 in
+[epic 11](../epics/pwa.md); the apps' side is 11.11 to 11.13, sequenced by [workstream 0006](../workstreams/0006-pwa.md).
+
+The design above made core installable and stopped there on purpose. Once people install core and their apps side by side, two of
+its "not now" decisions cost more than they save: a tile in an installed core opens an app in a browser view over core's window,
+with an address bar, when the app is installed as an app of its own; and nothing tells a person that core can be installed, or
+that a new version has arrived. This amendment reopens those, and only those. The rules that bound the worker (no page of a person
+stored, an allow-list, no offline use of signed-in pages) are unchanged.
+
+### A1. The manifest gains members that do not vary by person
+
+| Member           | Value                                                                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `id`             | `/`, unchanged, now a fixed value the tests hold: changing it would orphan every existing install                               |
+| `launch_handler` | `{ client_mode: ['focus-existing', 'auto'] }`: opening core again brings its window forward rather than a second one            |
+| `shortcuts`      | The launcher and the person's account only: pages every signed-in person has, so the manifest still says nothing about who asks |
+| `screenshots`    | One narrow and one wide, of the sign-in page with the default branding, for the richer install sheet on Android and desktop     |
+| `categories`     | `['productivity', 'utilities']`                                                                                                 |
+| `lang`, `dir`    | `en`, `ltr`, as the pages are                                                                                                   |
+
+The design's reason for "no shortcuts" (which pages exist depends on a role) is kept by naming only pages that exist for everyone;
+the Console is not a shortcut.
+
+### A2. An install hint (open question 3, answered differently)
+
+Where the browser fires `beforeinstallprompt`, the Account pages offer **Install this app**, which calls the browser's own prompt.
+On an iPhone or iPad in Safari, which has no prompt, the same place says how: Share, then Add to Home Screen. Nothing is shown in an
+installed core, and a dismissal is remembered on the device only. The component is built in `@sovereignfs/ui` (DS-first), so apps
+can use it.
+
+### A3. A new version is announced, not swapped silently
+
+The worker stops calling `skipWaiting` on install. A page that sees a waiting worker shows a quiet notice, "A new version of
+_instance_ is ready", with **Reload**, which tells the worker to take over and reloads once it has. A page with nothing on it to lose
+(the launcher) may take the new version on its next navigation without asking. The notice is a design-system component.
+
+### A4. Apple splash images stay out
+
+Unchanged, and now for a stronger reason: since iOS 26 every Home Screen site opens as a web app and falls back to the manifest's
+`background_color` and the icon, which is what core shows.
+
+### A5. §6 rewritten: an installed core opens installed apps where the device allows
+
+When a tile for an app is clicked in an installed core (`display-mode` `standalone`, `minimal-ui` or `window-controls-overlay`), it
+opens the app's launch address in a new top-level context (`target="_blank"`, `noopener`) instead of the same window. In a browser
+tab it opens in the same tab, as before. The decision is made when the tile is clicked, in its handler, never in render or a state
+initializer, so every person gets the same markup ([architecture rules](../architecture-rules.md): no browser globals in render, no
+navigation decision forked by viewport).
+
+- **Desktop Chrome and Edge** hand such a navigation to the app when it is installed and declares `launch_handler` and
+  `handle_links: 'preferred'` (research 0010, finding 2). **Android Chrome** does the same through the installed app's intent filters
+  (finding 3); an `intent:` address is held in reserve if a device shows the plain link is not handed over.
+- **iPhone, iPad and macOS Safari** cannot open another installed web app from a link (findings 4 and 5). The new context is a Safari
+  view or the default browser, which closes back to core; no worse than today, and the deployment guide says so plainly.
+- Core learns nothing new about an app: the launch address it already holds is all a tile needs. What an app must declare is in
+  `contracts/app-manifest.md`'s guidance and in `@sovereignfs/pwa`'s manifest builder, not in the Sovereign manifest.
+
+This is first seen on devices with a throwaway pair of pages (task 11.8) before any tile changes; if no platform hands the link over,
+A5 is withdrawn and §6 stays as written.
+
+### A6. Shortcuts may name a native app
+
+A shortcut keeps its `https` address, which is what a browser opens, and may gain a second, optional **open in app** address in a
+native app's scheme (`spotify:`, `obsidian://`), used when the shortcut is opened from an installed core or a phone. The scheme is
+checked against a pattern and a list of refused schemes (`javascript`, `data`, `vbscript`, `file`, `blob`, `about`, `intent`, and
+`http`/`https`, which belong in the main address), with no control characters and a length cap; the tile falls back to the main
+address when nothing handles it. A schema change for every dialect, and a security check before it ships.
+
+### A7. What apps share
+
+The manifest builder, the service worker's allow-list pattern, the registration component and the metadata helpers that core and
+seven apps each carry a copy of move into a new published package, `@sovereignfs/pwa`, which the app template depends on. Core keeps
+its own worker for now: its rules and tests are its own, and adopting the package is a later, separate change.

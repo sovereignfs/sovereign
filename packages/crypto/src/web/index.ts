@@ -72,3 +72,15 @@ export type {
 export type { ReadKit } from './kit.js';
 export type { DocumentKeyTarget, SealedRecord, SharedKeyRecord } from './sharing.js';
 export { isSignInValue, signInValueVersion } from '../sign-in-value.js';
+export { indexedDbBackend, KeyStore, memoryBackend } from './keystore.js';
+export type { KeyStoreBackend } from './keystore.js';
+export {
+  isReleaseState,
+  newReleaseState,
+  openRelease,
+  RELEASE_MAX_AGE_MS,
+  ReleaseError,
+  sealRelease,
+  STATE_BYTES,
+} from './release.js';
+export type { ReleaseAnswer, ReleaseRefusal, ReleaseTarget } from './release.js';

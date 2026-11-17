@@ -307,6 +307,9 @@ importers:
       '@sovereignfs/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@sovereignfs/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       '@sovereignfs/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
@@ -503,6 +506,9 @@ importers:
       '@sovereignfs/config':
         specifier: workspace:*
         version: link:../config
+      '@sovereignfs/crypto':
+        specifier: workspace:*
+        version: link:../crypto
       '@sovereignfs/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig

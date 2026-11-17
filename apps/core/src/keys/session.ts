@@ -1,6 +1,9 @@
 import type { WebKey } from '@sovereignfs/crypto/web';
 import {
+  confirmKitAction,
+  putAppKeysAction,
   putWayInAction,
+  readAppKeysAction,
   readVaultAction,
   removeWayInAction,
   sessionSecretAction,
@@ -8,6 +11,13 @@ import {
 } from '../../app/keys/actions';
 import { indexedDbBackend, KeyStore } from './keystore';
 import { localPasskeyCeremony } from './passkey';
+import {
+  keepKit,
+  kitPending,
+  releaseToApp,
+  type ReleaseActions,
+  type ReleaseRequest,
+} from './release';
 import {
   addPasskeyWayIn,
   finishNewPassword,
@@ -26,14 +36,17 @@ import {
  */
 
 let store: KeyStore | undefined;
-const keyStore = () => (store ??= new KeyStore(indexedDbBackend()));
+const keyStore = () => (store ??= new KeyStore(indexedDbBackend('sovereign-keys')));
 
-const actions: VaultActions = {
+const actions: VaultActions & ReleaseActions = {
   read: () => readVaultAction(),
   setUp: (account, waysIn) => setUpVaultAction(account, waysIn),
   putWayIn: (wayIn) => putWayInAction(wayIn),
   removeWayIn: (way, id) => removeWayInAction(way, id),
   sessionSecret: () => sessionSecretAction(),
+  readApp: (clientId) => readAppKeysAction(clientId),
+  putApp: (app) => putAppKeysAction(app),
+  confirmKit: (record) => confirmKitAction(record),
 };
 
 const quietly = async <T>(run: () => Promise<T>): Promise<T | undefined> => {
@@ -119,3 +132,14 @@ export const unlockWithPasswordAgain = async (secret: WebKey): Promise<boolean> 
     const result = await unlockWithPassword(secret, actions, keyStore());
     return result === 'unlocked' || result === 'set-up';
   })) ?? false;
+
+/** Releases an app's key to the page that asked (core-app §5.7). */
+export const releaseKey = async (target: ReleaseRequest) =>
+  (await quietly(() => releaseToApp(target, actions, keyStore()))) ?? 'failed';
+
+/** Whether the person has still to keep their recovery kit. */
+export const isKitPending = async () => (await quietly(() => kitPending(actions))) ?? false;
+
+/** The kit was kept: give it its way in. */
+export const kitKept = async (kit: Uint8Array) =>
+  (await quietly(() => keepKit(kit, actions, keyStore()))) ?? false;

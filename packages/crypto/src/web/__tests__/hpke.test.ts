@@ -90,7 +90,7 @@ describe('HPKE, base mode (RFC 9180)', () => {
       {
         recipientPublicKey: await crypto.subtle.importKey(
           'raw',
-          mine.publicKey,
+          mine.publicKey as Uint8Array<ArrayBuffer>,
           { name: 'X25519' },
           true,
           [],

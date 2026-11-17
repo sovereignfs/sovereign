@@ -173,6 +173,25 @@ export class Auth {
     return (await this.#find(request))?.session ?? null;
   }
 
+  /**
+   * The session's half of what keeps the app key in the browser (RFC 0005 §5, sdk §9.2): 32 random bytes, made the first time a page
+   * of this session asks and kept with the session, so they go when it ends, however it ends. `null` with no session. Only the app's
+   * own pages are given it, through `/auth/key-secret`.
+   */
+  async keySecret(request: Request): Promise<{ sub: string; secret: string } | null> {
+    const found = await this.#find(request);
+    if (!found) return null;
+    const kept = found.record.data.keySecret;
+    if (typeof kept === 'string') return { sub: found.session.sub, secret: kept };
+    const secret = newId();
+    await this.#o.sessionStore.set(
+      found.id,
+      { ...found.record, data: { ...found.record.data, keySecret: secret } },
+      found.session.expiresAt,
+    );
+    return { sub: found.session.sub, secret };
+  }
+
   /** The current session, or `NotAuthenticatedError`. */
   async requireSession(request: Request): Promise<Session> {
     const session = await this.getSession(request);

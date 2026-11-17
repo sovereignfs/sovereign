@@ -29,7 +29,8 @@
       "default": "./src/index.ts"
     },
     "./testing": "./src/testing/index.ts",
-    "./next": "./src/next/index.ts"
+    "./next": "./src/next/index.ts",
+    "./keys": "./src/keys.ts"
   },
   "publishConfig": {
     "access": "public",
@@ -46,6 +47,10 @@
       "./testing": {
         "types": "./dist/testing.d.ts",
         "default": "./dist/testing.js"
+      },
+      "./keys": {
+        "types": "./dist/keys.d.ts",
+        "default": "./dist/keys.js"
       }
     }
   },
@@ -74,6 +79,7 @@
   "devDependencies": {
     "@sovereignfs/api-client": "workspace:*",
     "@sovereignfs/config": "workspace:*",
+    "@sovereignfs/crypto": "workspace:*",
     "@sovereignfs/tsconfig": "workspace:*",
     "@types/node": "catalog:",
     "@types/react": "catalog:",

@@ -60,7 +60,11 @@ describe('the password derivation (RFC 0005 §1.1)', () => {
         ['decrypt'],
       );
       const iv = new Uint8Array(12);
-      const sealed = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, unlock, utf8('opened'));
+      const sealed = await crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv },
+        unlock,
+        utf8('opened') as Uint8Array<ArrayBuffer>,
+      );
       const opened = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, expected, sealed);
       expect(new TextDecoder().decode(opened)).toBe('opened');
     },

@@ -73,7 +73,8 @@ export const sv = createSovereign({ prefix: 'NOTES' });
 ## 3. Server only
 
 The package's browser entry MUST throw on import, saying that the SDK runs on a server. A page that needs something from core asks
-its own server. The one exception is the instance document, which is public and which a page MAY fetch directly.
+its own server. The exceptions are the instance document, which is public and which a page MAY fetch directly, and `/keys` (§9.3),
+which is for pages and holds no token.
 
 ---
 
@@ -320,16 +321,24 @@ const notice = await verifyLogoutToken(request, { coreUrl, clientId, seen });
 
 ### 9.3 Key release
 
-Specified, not built ([core-app §5.7](core-app.md), task 16.10). For an app whose manifest has `encryption`, the SDK gets the app's key
-from core once in each browser session:
+Built ([core-app §5.7](core-app.md), task 16.10). For an app whose manifest has `encryption`, the SDK gets the app's key from core once
+in each browser session, through `@sovereignfs/sdk/keys`, the one entry a page imports (§3):
 
-- In the browser, when the app's page has no key, it makes a key pair that cannot be exported and a `state`, keeps both, and sends the
-  person to core's `/keys/release` with the public half.
-- At the key return address it reads the answer from the fragment, removes the fragment from the address before anything else runs,
-  and makes every check of core-app §5.7, refusing anything else. The `state` and its key are used once.
-- It keeps the key as core-app §5.4 keeps the account key, with the session's secret held beside the app's own session, so the app's
-  session ending, by back-channel logout or otherwise, leaves nothing that opens.
-- It needs `@sovereignfs/crypto`, which is then published.
+- **`appKeys({ core, clientId, returnTo })`** gives `open()`, `unlock()`, `receive()` and `forget()`.
+- **`open()`** gives the app key, as a WebCrypto key that cannot be exported, while this browser holds it for the app's session;
+  otherwise `{ state: 'locked' }`, and the page shows `LockedState` from `@sovereignfs/ui` with `unlock()` as its action.
+- **`unlock()`** makes a key pair that cannot be exported and a `state`, keeps both in IndexedDB, and sends the person to core's
+  `/keys/release` with the public half. Core releases silently only when the browser names the app's origin as the referrer, so an
+  app's pages keep a referrer policy that sends the origin (the browsers' default); with `no-referrer` the person is asked each time.
+- **`receive()`**, at the key return address, reads the answer from the fragment, removes the fragment from the address before
+  anything else, and makes every check of core-app §5.7, refusing anything else with its reason. The `state` and its key are used
+  once; a request not answered in ten minutes is dropped. The first signing key it is given for a person is remembered, and an
+  answer signed by another is refused.
+- **It keeps the key** as core-app §5.4 keeps the account key: wrapped by a device key and by the session's key secret, which the
+  app's server makes on the first ask and keeps with the app's own session (`auth.keySecret(request)`, served by `nextAuth` at
+  `/auth/key-secret` to the app's own pages only). The app's session ending, by back-channel logout or otherwise, leaves nothing
+  that opens.
+- `@sovereignfs/crypto` stays private and is bundled into the entry, as `@sovereignfs/api-client` is.
 - The two calls of core-app §5.7 join §8's capabilities when the contract has them.
 
 ## 10. From the legacy SDK
@@ -380,7 +389,7 @@ Every namespace of the legacy `sdk` object:
 - The package is MPL-2.0, like the other packages, so an app under any licence can use it.
 - It depends on `@sovereignfs/api-client` and `openid-client`, and runs on Node's supported versions, and on any server runtime that
   has `fetch` and Web Crypto.
-- Its entry points are the root, `/next` and `/testing`.
+- Its entry points are the root, `/next`, `/testing` and `/keys`, the one a browser imports (§9.3).
 - It has its own `sdk-vX.Y.Z` tag ([`docs/releasing.md`](../releasing.md)).
 - Its first release is `2.0.0`. The legacy SDK (§10) was published under the same name up to `1.25.0`, and npm will not make a lower
   version `latest`. A version of the legacy SDK is not an earlier release of this one.
@@ -419,3 +428,4 @@ of its own; an app catalogue.
 | 2026-10-31 | §5.1, §9.1: built. A token store MAY have `delete(sub)`; `nextAuth` takes `onAccountDeleted` and mounts `/auth/account-deleted`; the fake core makes `accountDeletedToken`.                                         |
 | 2026-11-02 | §9.2: `verifyLogoutToken` and `verifyAccountDeletedToken`, the rules of §9.1 for an app whose sessions are not the SDK's, with `seen` required: [RFC 0003](../rfcs/0003-apps-of-their-own.md). Built in task 14.11. |
 | 2026-11-16 | §9.3: key release, specified and not built (core-app §5.7).                                                                                                                                                         |
+| 2026-11-17 | §9.3: key release built, in the `/keys` entry, with `auth.keySecret` and `nextAuth`'s `/auth/key-secret`; §3 and §12 name the entry. `@sovereignfs/crypto` is bundled rather than published.                        |

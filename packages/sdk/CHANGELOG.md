@@ -5,6 +5,15 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 2.1.0; earlier versions are in the repository's
 history and tags.
 
+## [2.4.0] - 2026-11-17
+
+### Added
+
+- `@sovereignfs/sdk/vault`, for the server of an app that runs with no Sovereign server: `AppVault`, the tables it needs for SQLite,
+  sqld and PostgreSQL (`vaultMigrations`), `vaultRoute` for its pages, and `newSessionSecret` to keep with each session (sdk §9.5).
+- `localVault()` in `@sovereignfs/sdk/keys`: the same app key, unlocked at the app's own sign-in (or with a passphrase), with the
+  recovery kit, and kept until the app's session ends. No request carries a password or a passphrase. `formatKit` for the kit.
+
 ## [2.3.0] - 2026-11-17
 
 ### Added

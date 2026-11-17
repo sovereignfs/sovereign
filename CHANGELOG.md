@@ -5,6 +5,18 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.106.0] - 2026-11-17
+
+### Added
+
+- An app that runs with no Sovereign server can keep its people's data encrypted the same way, in a vault of its own: unlocked at
+  its own sign-in, or with a passphrase when its sign-in is another provider's, with a recovery kit, and staying unlocked until its
+  session ends (`@sovereignfs/sdk` 2.4.0, sdk §9.5). Its records are the ones core keeps. Not yet audited.
+
+### Changed
+
+- Core's pages unlock a person's keys with the routine that apps with no core use too. Nothing a person sees changes.
+
 ## [0.105.0] - 2026-11-17
 
 ### Added

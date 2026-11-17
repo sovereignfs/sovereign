@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.105.0 · **Last updated:** 2026-11-17
+**Version:** 0.106.0 · **Last updated:** 2026-11-17
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -270,5 +270,5 @@ the RFC, which is still to come.
 | 0.103.0 | 10       | Key release                                                            | ✅     | [16.10](docs/epics/encryption.md) |
 | 0.104.0 | 11       | Sharing between people                                                 | ✅     | [16.11](docs/epics/encryption.md) |
 | 0.105.0 | 12       | Escrow `[parallel]`                                                    | ✅     | [16.12](docs/epics/encryption.md) |
-| —       | 13       | A vault for an app with no core `[parallel]`                           | 📋     | [16.13](docs/epics/encryption.md) |
+| 0.106.0 | 13       | A vault for an app with no core `[parallel]`                           | ✅     | [16.13](docs/epics/encryption.md) |
 | —       | 14       | An encrypted app, end to end                                           | 📋     | [16.14](docs/epics/encryption.md) |

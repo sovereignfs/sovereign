@@ -13,6 +13,15 @@
 import {
   fromBase64Url,
   generateReceivingKey,
+  newKey,
+  openAppIdentity,
+  openDocumentKey,
+  publicKeyFrom,
+  shareDocumentKey,
+  verifyAppKeys,
+  type OpenedIdentity,
+  type SharedKeyRecord,
+  type WrapRecord,
   importWrappingKey,
   indexedDbBackend,
   KeyStore,
@@ -26,7 +35,27 @@ import {
   type WebKey,
 } from '@sovereignfs/crypto/web';
 
-export type { ReleaseRefusal } from '@sovereignfs/crypto/web';
+export type { OpenedIdentity, ReleaseRefusal, SharedKeyRecord } from '@sovereignfs/crypto/web';
+
+/** A person's public keys for this app, as `sv.as(person).keys.person(sub)` gives them (the Core API's `PersonKeys`). */
+export type PersonKeys = {
+  readonly sub: string;
+  readonly receivingKey: string;
+  readonly signingKey: string;
+  readonly signature: string;
+  readonly accountSigningKey: string;
+};
+
+/** The person's own keys, as `sv.as(person).keys.me()` gives them (the Core API's `MyKeys`). */
+export type MyKeys = PersonKeys & {
+  readonly wrapped: { readonly receive: WrapRecord; readonly sign: WrapRecord };
+};
+
+/** A person whose keys verified, and whose account's signing key is the one this browser remembers for them. */
+export type CheckedPerson = PersonKeys & { readonly checked: true };
+
+/** Why a person's keys were not taken: their signature does not verify, or their account's signing key changed (sdk §9.4). */
+export type PersonRefusal = 'signature' | 'changed';
 
 export type AppKeysOptions = {
   /** Core's address, the instance's: `https://id.example.com`. */
@@ -92,6 +121,22 @@ export function appKeys(options: AppKeysOptions) {
     const secret = typeof body.secret === 'string' ? fromBase64Url(body.secret) : undefined;
     if (typeof body.sub !== 'string' || secret?.length !== 32) return undefined;
     return { sub: body.sub, secret };
+  }
+
+  /**
+   * Checks a person's keys (sdk §9.4): their account signed them, and that account's signing key is the one this browser remembers
+   * for the person, or, the first time, is remembered. A changed one is refused until `trustChanged` says to go on: that is what
+   * makes a key the server swapped visible.
+   */
+  async function checkPerson(
+    person: PersonKeys,
+  ): Promise<{ ok: true; person: CheckedPerson } | { ok: false; reason: PersonRefusal }> {
+    if (!(await signedByAccount(person, options.clientId)))
+      return { ok: false, reason: 'signature' };
+    const remembered = (await backend.get(SIGNER(person.sub))) as string | undefined;
+    if (remembered === undefined) await backend.set(SIGNER(person.sub), person.accountSigningKey);
+    else if (remembered !== person.accountSigningKey) return { ok: false, reason: 'changed' };
+    return { ok: true, person: { ...person, checked: true } };
   }
 
   return {
@@ -179,7 +224,91 @@ export function appKeys(options: AppKeysOptions) {
 
     /** Forgets the kept app key: signing out of the app. */
     forget: () => store.forget(),
+
+    checkPerson,
+
+    /** The person using the app said to go on with a person whose key changed: remember the new one. */
+    async trustChanged(person: PersonKeys): Promise<void> {
+      if (!(await signedByAccount(person, options.clientId))) {
+        throw new TypeError('These keys are not signed by their account.');
+      }
+      await backend.set(SIGNER(person.sub), person.accountSigningKey);
+    },
+
+    /**
+     * The person's own two key pairs for this app, opened with the app key: checked as `checkPerson` checks anyone's, so a server that
+     * swapped them is refused here too.
+     */
+    async identity(
+      key: WebKey,
+      me: MyKeys,
+    ): Promise<{ ok: true; identity: OpenedIdentity } | { ok: false; reason: PersonRefusal }> {
+      const checked = await checkPerson(me);
+      if (!checked.ok) return checked;
+      const identity = await openAppIdentity(
+        key,
+        {
+          receive: { publicKey: me.receivingKey, privateKey: me.wrapped.receive },
+          sign: { publicKey: me.signingKey, privateKey: me.wrapped.sign },
+        },
+        me.sub,
+        options.clientId,
+      );
+      return { ok: true, identity };
+    },
+
+    /** A new document key: 32 random bytes. Made again at the next write after a reader is removed (RFC 0005 §8). */
+    newDocumentKey: (): Uint8Array => newKey(),
+
+    /** Seals a document key to a reader for one document, signed with the person's own signing key for this app. */
+    share(input: {
+      readonly documentKey: Uint8Array;
+      readonly documentId: string;
+      readonly to: CheckedPerson;
+      readonly identity: OpenedIdentity;
+    }): Promise<SharedKeyRecord> {
+      return shareDocumentKey({
+        documentKey: input.documentKey,
+        target: { documentId: input.documentId, readerSub: input.to.sub },
+        readerReceivingKey: publicKeyFrom(input.to.receivingKey),
+        sharerSigningKey: input.identity.sign.privateKey,
+      });
+    },
+
+    /**
+     * Opens a document key shared with the person: the sharer's signature first, then the person's receiving key. The caller
+     * overwrites the bytes once it has made the content key.
+     */
+    openShared(input: {
+      readonly record: unknown;
+      readonly documentId: string;
+      readonly me: { readonly sub: string };
+      readonly from: CheckedPerson;
+      readonly identity: OpenedIdentity;
+    }): Promise<Uint8Array> {
+      return openDocumentKey({
+        record: input.record,
+        target: { documentId: input.documentId, readerSub: input.me.sub },
+        reader: input.identity.receive,
+        sharerSigningPublicKey: publicKeyFrom(input.from.signingKey),
+      });
+    },
   };
+}
+
+/** Whether a person's two public keys for this app carry their account's signature. */
+async function signedByAccount(person: PersonKeys, clientId: string): Promise<boolean> {
+  try {
+    return await verifyAppKeys(
+      publicKeyFrom(person.accountSigningKey),
+      person.sub,
+      clientId,
+      { receive: publicKeyFrom(person.receivingKey), sign: publicKeyFrom(person.signingKey) },
+      person.signature,
+    );
+  } catch {
+    return false;
+  }
 }
 
 export type AppKeys = ReturnType<typeof appKeys>;

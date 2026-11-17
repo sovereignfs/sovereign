@@ -4,6 +4,7 @@ export type {
   FakeCore,
   FakeCoreOptions,
   FakeEmail,
+  FakeKeys,
   FakeNotification,
   FakePerson,
   Failure,

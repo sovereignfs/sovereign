@@ -44,10 +44,22 @@ export interface NotificationsApi {
   dismissAll(): Promise<Answer<'dismissAllNotifications'>>;
 }
 
+/**
+ * The person's keys and other people's public keys for this app (sdk §8, core-app §5.7): what the app's page needs to share a
+ * document and to open one shared with the person. Needs the `keys` scope. Public keys and wrapped keys only.
+ */
+export interface KeysApi {
+  /** The person's own keys for this app; a `CoreApiError` with status 404 until they have opened it once. */
+  me(): Promise<Answer<'getMyKeys'>>;
+  /** Another person's public keys for this app; a 404 when they have not opened it. */
+  person(sub: string): Promise<Answer<'getPersonKeys'>>;
+}
+
 /** What an app can do as a person. */
 export interface PersonClient {
   readonly directory: DirectoryApi;
   readonly notifications: NotificationsApi;
+  readonly keys: KeysApi;
 }
 
 /** What an app can do as itself, with no person (sdk §4): tell a person something. */
@@ -136,6 +148,8 @@ const CAPABILITY: Partial<Record<Name, string>> = {
   searchDirectoryUsers: 'directory',
   resolveDirectoryUsers: 'directory',
   findDirectoryUserByEmail: 'directory',
+  getMyKeys: 'keys',
+  getPersonKeys: 'keys',
   sendNotification: 'notifications',
   sendEmail: 'email',
   logActivity: 'activity',
@@ -219,6 +233,11 @@ export function createSovereign(options: SovereignOptions): Sovereign {
     findUserByEmail: (query) => execute(actor, 'findDirectoryUserByEmail', { query }),
   });
 
+  const keys = (actor: ActorKey): KeysApi => ({
+    me: () => execute(actor, 'getMyKeys', undefined),
+    person: (sub) => execute(actor, 'getPersonKeys', { params: { sub } }),
+  });
+
   const notifications = (actor: ActorKey): NotificationsApi => ({
     list: (query) => execute(actor, 'listNotifications', query === undefined ? {} : { query }),
     markRead: (id) => execute(actor, 'markNotificationRead', { params: { id } }),
@@ -238,7 +257,11 @@ export function createSovereign(options: SovereignOptions): Sovereign {
         );
       }
       const actor: ActorKey = { kind: 'person', sub: person.sub };
-      return { directory: directory(actor), notifications: notifications(actor) };
+      return {
+        directory: directory(actor),
+        notifications: notifications(actor),
+        keys: keys(actor),
+      };
     },
     app: {
       notifications: {

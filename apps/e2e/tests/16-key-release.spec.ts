@@ -163,3 +163,118 @@ test('§5.10.5: an app receives its own key and never another’s; a release rep
 
   await joined.context.close();
 });
+
+/** A person's keys for an app as the Core API answers them (`getMyKeys`), read from what core keeps. */
+async function myKeysOf(sub: string, clientId: string) {
+  const database = await openDatabase();
+  try {
+    const row = (
+      await database.run(
+        'select a.identity, a.signature, k.signing_public from key_apps a join key_accounts k on k.user_id = a.user_id where a.user_id = ? and a.client_id = ?',
+        [sub, clientId],
+      )
+    ).rows[0];
+    const identity = JSON.parse(String(row?.identity)) as {
+      receive: { publicKey: string; privateKey: { suite: 1; nonce: string; ciphertext: string } };
+      sign: { publicKey: string; privateKey: { suite: 1; nonce: string; ciphertext: string } };
+    };
+    return {
+      sub,
+      receivingKey: identity.receive.publicKey,
+      signingKey: identity.sign.publicKey,
+      signature: String(row?.signature),
+      accountSigningKey: String(row?.signing_public),
+      wrapped: { receive: identity.receive.privateKey, sign: identity.sign.privateKey },
+    };
+  } finally {
+    await database.close();
+  }
+}
+
+/**
+ * Sharing (core-app §5.7, RFC 0005 §3.1): with the keys core's pages made for three people, the first shares a document key with the
+ * second, who opens it; the third cannot; a public key the server changed is refused in the browser.
+ */
+test('§5.10.6: a person shares a document with a second, who opens it; a third cannot; a public key the server changed is refused', async ({
+  browser,
+}) => {
+  const operator = await newPerson(browser);
+  await signIn(operator.page, owner, '/console/apps');
+  const returnTo = `${MINIMAL_URL}/keys/album`;
+  const album = await registerApp(operator.page, {
+    name: 'Album',
+    launchUrl: `${MINIMAL_URL}/album`,
+    redirectUri: `${MINIMAL_URL}/album/callback`,
+    kind: 'public',
+    scopes: [],
+    keyReturnUri: returnTo,
+  });
+
+  // Each person opens the app once, which is when core makes their keys for it, and their page gets the app key.
+  const opened = [];
+  for (const name of ['Sana', 'Tomas', 'Uri']) {
+    const who = person(name);
+    const joined = await join(browser, operator.page, who);
+    const sub = await subOf(who.email);
+    const page = appPage(album.id, returnTo, sub);
+    page.bar.hash = await release(joined.page, page, returnTo);
+    expect((await page.keys.receive()).ok).toBe(true);
+    const key = await page.keys.open();
+    if (key.state !== 'open') throw new Error('locked');
+    const identity = await page.keys.identity(key.key, await myKeysOf(sub, album.id));
+    if (!identity.ok) throw new Error(identity.reason);
+    opened.push({ sub, page, identity: identity.identity, keys: await myKeysOf(sub, album.id) });
+    await joined.context.close();
+  }
+  await operator.context.close();
+  const [sana, tomas, uri] = opened as [
+    (typeof opened)[number],
+    (typeof opened)[number],
+    (typeof opened)[number],
+  ];
+
+  // Sana shares with Tomas, having checked his keys.
+  const toTomas = await sana.page.keys.checkPerson(tomas.keys);
+  if (!toTomas.ok) throw new Error(toTomas.reason);
+  const documentKey = sana.page.keys.newDocumentKey();
+  const record = await sana.page.keys.share({
+    documentKey,
+    documentId: 'photo-1',
+    to: toTomas.person,
+    identity: sana.identity,
+  });
+
+  // Tomas opens it.
+  const fromSana = await tomas.page.keys.checkPerson(sana.keys);
+  if (!fromSana.ok) throw new Error(fromSana.reason);
+  expect(
+    await tomas.page.keys.openShared({
+      record,
+      documentId: 'photo-1',
+      me: tomas.keys,
+      from: fromSana.person,
+      identity: tomas.identity,
+    }),
+  ).toEqual(documentKey);
+
+  // Uri, who was not shared with, cannot.
+  const uriFromSana = await uri.page.keys.checkPerson(sana.keys);
+  if (!uriFromSana.ok) throw new Error(uriFromSana.reason);
+  await expect(
+    uri.page.keys.openShared({
+      record,
+      documentId: 'photo-1',
+      me: uri.keys,
+      from: uriFromSana.person,
+      identity: uri.identity,
+    }),
+  ).rejects.toThrow();
+
+  // A server that gives Uri's receiving key as Tomas's is refused before anything is sealed to it.
+  expect(
+    await sana.page.keys.checkPerson({ ...tomas.keys, receivingKey: uri.keys.receivingKey }),
+  ).toEqual({
+    ok: false,
+    reason: 'signature',
+  });
+});

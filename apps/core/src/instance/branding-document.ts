@@ -8,7 +8,7 @@ import type { InstanceIdentity } from './identity';
  */
 export const SERVED_API = {
   versions: ['v1'],
-  capabilities: ['directory', 'notifications', 'activity'],
+  capabilities: ['directory', 'notifications', 'activity', 'keys'],
 } as const satisfies {
   versions: readonly string[];
   capabilities: readonly string[];

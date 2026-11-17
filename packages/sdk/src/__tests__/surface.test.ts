@@ -66,6 +66,37 @@ describe('every method of the capabilities (sdk §8) is checked against the cont
     );
   });
 
+  const KEY = (n: number) => Buffer.alloc(32, n).toString('base64url');
+  const WRAP = { suite: 1 as const, nonce: 'n', ciphertext: 'c' };
+  core.setKeys('u1', {
+    receivingKey: KEY(1),
+    signingKey: KEY(2),
+    signature: 'A'.repeat(86),
+    accountSigningKey: KEY(3),
+    wrapped: { receive: WRAP, sign: WRAP },
+  });
+  const keys = sv.as({ sub: 'u1' }).keys;
+
+  it('keys.me is getMyKeys', async () => {
+    expect(await keys.me()).toMatchObject({
+      sub: 'u1',
+      receivingKey: KEY(1),
+      wrapped: { receive: WRAP },
+    });
+  });
+
+  it('keys.person is getPersonKeys, public keys only, and a 404 for someone without keys for the app', async () => {
+    const person = await keys.person('u1');
+    expect(person).toEqual({
+      sub: 'u1',
+      receivingKey: KEY(1),
+      signingKey: KEY(2),
+      signature: 'A'.repeat(86),
+      accountSigningKey: KEY(3),
+    });
+    await expect(keys.person('u2')).rejects.toMatchObject({ status: 404, code: 'not_found' });
+  });
+
   it('instance.getBranding is getInstanceBranding', async () => {
     expect((await sv.instance.getBranding()).url).toBe(core.url);
   });
@@ -75,6 +106,8 @@ describe('every method of the capabilities (sdk §8) is checked against the cont
       'searchDirectoryUsers',
       'resolveDirectoryUsers',
       'findDirectoryUserByEmail',
+      'getMyKeys',
+      'getPersonKeys',
       'getInstanceBranding',
       'sendNotification',
       'listNotifications',

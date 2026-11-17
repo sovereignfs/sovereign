@@ -39,6 +39,8 @@ tags:
     description: Emailing a person without being given their address. Planned.
   - name: Activity
     description: A person's own record of what apps did for them. Planned.
+  - name: Keys
+    description: The public keys a person's browser needs to share something with another person in an app (core-app §5.7).
   - name: Instance
     description: What the instance looks like.
 paths:
@@ -518,6 +520,71 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/TooManyRequests'
+  /api/v1/keys/me:
+    get:
+      operationId: getMyKeys
+      tags: [Keys]
+      summary: The caller's own keys for this app
+      description: |
+        The signed-in person's two key pairs for the app the token was issued to: the public halves, the account's signature over
+        them, the account's signing public key, and the private halves **wrapped by the app key**, which only the person's
+        browser holds (core-app §5.7). Nothing here lets a server read anything. `404` until the person has opened the app once
+        on a browser, which is when their keys for it are made.
+      security:
+        - bearer: [keys]
+      responses:
+        '200':
+          description: The caller's keys for this app.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MyKeys'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/v1/keys/people/{sub}:
+    get:
+      operationId: getPersonKeys
+      tags: [Keys]
+      summary: Another person's public keys for this app
+      description: |
+        Another person's public keys for the app the token was issued to, the signature their account made over them, and that
+        account's signing public key, so the caller's browser can check them before it seals a document key to them (RFC 0005
+        §3.1). Public keys only. `404` when there is no such person, the account is deactivated, or they have not opened the app:
+        the three are not told apart.
+      security:
+        - bearer: [keys]
+      parameters:
+        - name: sub
+          in: path
+          required: true
+          description: The person's `sub`.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 255
+      responses:
+        '200':
+          description: Their public keys for this app.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonKeys'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
   /.well-known/sovereign-instance:
     get:
       operationId: getInstanceBranding
@@ -598,6 +665,69 @@ components:
         count:
           type: integer
           minimum: 0
+    PersonKeys:
+      type: object
+      additionalProperties: false
+      required: [sub, receivingKey, signingKey, signature, accountSigningKey]
+      properties:
+        sub:
+          type: string
+        receivingKey:
+          $ref: '#/components/schemas/PublicKey'
+        signingKey:
+          $ref: '#/components/schemas/PublicKey'
+        signature:
+          type: string
+          pattern: '^[A-Za-z0-9_-]{86}$'
+          description: |
+            The account's Ed25519 signature, base64url, over `sovereign/1/app-keys`, the `sub`, the app's client id and the two public
+            keys (RFC 0005 §1.2). A browser refuses keys whose signature does not verify with `accountSigningKey`.
+        accountSigningKey:
+          $ref: '#/components/schemas/PublicKey'
+    MyKeys:
+      type: object
+      additionalProperties: false
+      required: [sub, receivingKey, signingKey, signature, accountSigningKey, wrapped]
+      description: The caller's `PersonKeys`, and their private halves.
+      properties:
+        sub:
+          type: string
+        receivingKey:
+          $ref: '#/components/schemas/PublicKey'
+        signingKey:
+          $ref: '#/components/schemas/PublicKey'
+        signature:
+          type: string
+          pattern: '^[A-Za-z0-9_-]{86}$'
+        accountSigningKey:
+          $ref: '#/components/schemas/PublicKey'
+        wrapped:
+          type: object
+          additionalProperties: false
+          required: [receive, sign]
+          description: The private halves, each wrapped by the app key, which no server holds.
+          properties:
+            receive:
+              $ref: '#/components/schemas/WrapRecord'
+            sign:
+              $ref: '#/components/schemas/WrapRecord'
+    PublicKey:
+      type: string
+      pattern: '^[A-Za-z0-9_-]{43}$'
+      description: A 32-byte X25519 or Ed25519 public key, base64url.
+    WrapRecord:
+      type: object
+      additionalProperties: false
+      required: [suite, nonce, ciphertext]
+      description: A secret encrypted with AES-256-GCM under a key the browser holds (RFC 0005 §1.2).
+      properties:
+        suite:
+          type: integer
+          const: 1
+        nonce:
+          type: string
+        ciphertext:
+          type: string
     ErrorResponse:
       type: object
       additionalProperties: false
@@ -697,7 +827,7 @@ components:
               type: array
               items:
                 type: string
-                enum: [directory, notifications, email, activity]
+                enum: [directory, notifications, email, activity, keys]
               description: |
                 The groups of calls served, such as `directory`. A capability is listed when every call of it is
                 served.

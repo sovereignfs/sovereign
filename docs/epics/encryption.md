@@ -382,7 +382,7 @@ needs unlocking.
 - Turning escrow on is shown to a person before their data is covered by it
 - A person recovered through escrow gets back in with the new kit and sets a password
 
-#### 📋 16.13 — A vault for an app with no core `[parallel]`
+#### ✅ 16.13 — A vault for an app with no core `[parallel]`
 
 **Goal:** An app that runs alone encrypts the same way, with its own sign-in unlocking its own vault.
 

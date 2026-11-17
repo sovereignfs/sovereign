@@ -5,6 +5,8 @@ import {
   fromBase64Url,
   importWrappingKey,
   newKey,
+  PASSKEY_BYTES,
+  passkeyKey,
   toBase64Url,
   unwrapSecret,
   wrapSecret,
@@ -32,14 +34,18 @@ export interface VaultActions {
         signingPrivate: string;
         kitConfirmed: boolean;
       };
-      waysIn: { way: string; id: string; record: string; prfInput?: string }[];
+      waysIn: { way: string; id: string; record: string; prfSalt?: string }[];
     }>
   >;
   setUp(
     account: { suite: number; unlockSalt: string; signingPublic: string; signingPrivate: string },
     waysIn: { way: 'password'; id: string; record: string }[],
   ): Promise<Result>;
-  putWayIn(wayIn: { way: 'password'; id: string; record: string }): Promise<Result>;
+  putWayIn(
+    wayIn:
+      | { way: 'password'; id: string; record: string }
+      | { way: 'passkey'; id: string; record: string; prfSalt: string },
+  ): Promise<Result>;
   removeWayIn(way: 'password', id: string): Promise<Result<boolean>>;
   sessionSecret(): Promise<Result<string | undefined>>;
 }
@@ -186,4 +192,85 @@ export async function finishNewPassword(
 ): Promise<void> {
   const remove = accepted ? prepared.previous : [prepared.added];
   for (const id of remove) await actions.removeWayIn('password', id);
+}
+
+/** The account key this browser kept for this session, or `undefined` when it is locked. The caller overwrites the bytes. */
+export async function keptAccountKey(
+  actions: VaultActions,
+  store: KeyStore,
+): Promise<Uint8Array | undefined> {
+  if (!(await store.holds())) return undefined;
+  const secret = await actions.sessionSecret();
+  const bytes = secret.ok && secret.value ? fromBase64Url(secret.value) : undefined;
+  return bytes?.length === 32 ? store.open(bytes) : undefined;
+}
+
+/**
+ * After a passkey answered the PRF extension (core-app §5.5): opens the account key with that passkey's way in and keeps it for this
+ * session. `'locked'` when the passkey has no way in (added before it could unlock, or one that does not answer the extension), or its
+ * way in does not open: the person is asked for the password when something needs unlocking.
+ */
+export async function unlockWithPasskey(
+  credentialId: string,
+  prfOutput: Uint8Array,
+  actions: VaultActions,
+  store: KeyStore,
+): Promise<Exclude<Unlocked, 'set-up'>> {
+  if (prfOutput.length !== PASSKEY_BYTES) return 'locked';
+  const read = await actions.read();
+  if (!read.ok || !read.value.account) return 'locked';
+  const { sub, waysIn } = read.value;
+  const wayIn = waysIn.find((each) => each.way === 'passkey' && each.id === credentialId);
+  const salt = wayIn?.prfSalt ? fromBase64Url(wayIn.prfSalt) : undefined;
+  if (!wayIn || salt?.length !== PASSKEY_BYTES) return 'locked';
+  let accountKey: Uint8Array;
+  try {
+    accountKey = await unwrapSecret(
+      await passkeyKey(prfOutput, salt),
+      JSON.parse(wayIn.record),
+      accountWrapData(sub, 'passkey', credentialId),
+    );
+  } catch {
+    return 'locked';
+  }
+  try {
+    await keepFor(actions, store, accountKey);
+    return 'unlocked';
+  } finally {
+    accountKey.fill(0);
+  }
+}
+
+/**
+ * Gives a passkey its way in (core-app §5.5): the account key, kept by this browser, wrapped by a key from the passkey's PRF output
+ * and a salt made for it. `false` when this browser is locked, so there is no account key to wrap.
+ */
+export async function addPasskeyWayIn(
+  credentialId: string,
+  prfOutput: Uint8Array,
+  actions: VaultActions,
+  store: KeyStore,
+): Promise<boolean> {
+  if (prfOutput.length !== PASSKEY_BYTES) return false;
+  const read = await actions.read();
+  if (!read.ok || !read.value.account) return false;
+  const accountKey = await keptAccountKey(actions, store);
+  if (!accountKey) return false;
+  try {
+    const salt = crypto.getRandomValues(new Uint8Array(PASSKEY_BYTES));
+    const record = await wrapSecret(
+      await passkeyKey(prfOutput, salt),
+      accountKey,
+      accountWrapData(read.value.sub, 'passkey', credentialId),
+    );
+    const put = await actions.putWayIn({
+      way: 'passkey',
+      id: credentialId,
+      record: JSON.stringify(record),
+      prfSalt: toBase64Url(salt),
+    });
+    return put.ok;
+  } finally {
+    accountKey.fill(0);
+  }
 }

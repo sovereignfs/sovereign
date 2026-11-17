@@ -1120,8 +1120,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "prf_input": {
-          "name": "prf_input",
+        "prf_salt": {
+          "name": "prf_salt",
           "type": "text",
           "primaryKey": false,
           "notNull": false

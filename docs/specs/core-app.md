@@ -1882,14 +1882,22 @@ cascade; deleting an account deletes the secrets of its sessions in its transact
 
 ### 5.5 Passkeys that unlock
 
-Changes §3.4.2. Built by task 16.8.
+Changes §3.4.2. Built (task 16.8).
 
-- A passkey added while the browser is unlocked gets its own way in: a random input for the WebAuthn PRF extension, made for that
-  passkey, and the extension's output through HKDF. Removing the passkey removes it.
-- Signing in with such a passkey unlocks with the same touch. The extension's output never leaves the browser.
-- A passkey that does not answer the extension signs in as before, and the person is asked for their password when something needs
-  unlocking.
-- `/security/passkeys` marks the passkeys that unlock, and warns before one is removed.
+- Every passkey ceremony of core's pages asks for the WebAuthn PRF extension, with one input for the instance (made from its id): a
+  discoverable sign-in cannot be given one per passkey. better-auth's client leaves the extension's results out of what it sends, so
+  the output never leaves the browser.
+- A passkey added while the browser is unlocked gets its own way in: its output through HKDF, with a random salt made for that
+  passkey. A device that gives the output only when the passkey is used is asked for one more touch, whose answer is sent nowhere.
+  The way in names the passkey, and a person can give a way in only to their own. Removing the passkey removes it, and one whose
+  passkey is gone is never read.
+- Signing in with such a passkey unlocks with the same touch.
+- A passkey that does not answer the extension signs in as before, and the browser stays locked: the person is asked for their
+  password when something needs unlocking.
+- A browser already signed in is unlocked by a passkey through a ceremony whose answer is sent nowhere; the page checks itself that
+  the passkey was unlocked on the device, as core's hooks do for every answer sent to them.
+- `/security/passkeys` marks the passkeys that unlock and offers to let one that does not (asking for the password first when the
+  browser is locked), and warns before one that unlocks is removed.
 
 ### 5.6 Apps that use encryption
 
@@ -2040,3 +2048,4 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-16 | §5.6, §3.6.2, §3.7.1: apps that use encryption are built, with one setting where §5.6 had two: the key return address, which the `keys` scope follows.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | 2026-11-16 | §5.2, §3.3.2, §3.5: signing in with a derived value is built: core never receives a password, the policy is checked in the browser, the instance id is made at start-up (an upgraded instance says so) and read from the instance document, and `sovereign-admin accounts reset-link` makes a reset link without mail.                                                                                                                                                                                                                                                                                                                                                                                                        |
 | 2026-11-17 | §5.3, §5.4: the vault and staying unlocked are built. A password change wraps the key for the new password beside the old and drops the old after, since it cannot share better-auth's transaction; a reset leaves the password's way in stale rather than depend on a hook.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 2026-11-17 | §5.5: passkeys that unlock are built. Changed from the spec: the PRF input is one per instance and each passkey has its own HKDF salt instead, since a discoverable sign-in cannot be given an input per passkey; a passkey's way in names one of the person's own passkeys and is not read once the passkey is gone; the page offers to let a passkey unlock, and asks a device that gives the output only on use for one more touch.                                                                                                                                                                                                                                                                                        |

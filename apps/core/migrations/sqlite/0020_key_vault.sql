@@ -32,7 +32,7 @@ CREATE TABLE `key_wraps` (
 	`way` text NOT NULL,
 	`wrap_id` text NOT NULL,
 	`record` text NOT NULL,
-	`prf_input` text,
+	`prf_salt` text,
 	`created_at` integer NOT NULL,
 	PRIMARY KEY(`user_id`, `way`, `wrap_id`),
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade

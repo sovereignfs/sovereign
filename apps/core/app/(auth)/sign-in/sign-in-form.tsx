@@ -5,7 +5,13 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../src/auth/client';
 import { deriveForSignIn } from '../../../src/auth/derive';
-import { afterPasswordAccepted, dropHandOver, handOverSecret } from '../../../src/keys/session';
+import {
+  afterPasskeyAccepted,
+  afterPasswordAccepted,
+  dropHandOver,
+  handOverSecret,
+} from '../../../src/keys/session';
+import { prfExtension, prfOutput } from '../../../src/keys/passkey';
 import type { WebKey } from '@sovereignfs/crypto/web';
 import { continuationUrl, isContinuation } from '../../../src/auth/oauth-continuation';
 import { DEACTIVATED, passkeyProblem } from '../messages';
@@ -43,11 +49,21 @@ export function SignInForm({
     setPasskeyPending(true);
     setError(undefined);
     setUnverified(false);
-    const result = await authClient.signIn.passkey();
+    // The PRF extension's output unlocks with the same touch; better-auth's client keeps it from the server (core-app §5.5). A page
+    // that cannot read the instance document still signs in, without it.
+    const extensions = await prfExtension().catch(() => undefined);
+    const result = await authClient.signIn.passkey({
+      ...(extensions ? { extensions } : {}),
+      returnWebAuthnResponse: true,
+    });
     if (result?.error) {
       setPasskeyPending(false);
       setError(passkeyProblem(result.error));
       return;
+    }
+    if ('webauthn' in result) {
+      const output = prfOutput(result.webauthn.clientExtensionResults);
+      if (output) await afterPasskeyAccepted(result.webauthn.response.id, output);
     }
     // A full navigation, so the next page is rendered with the new session cookie. An app's sign-in goes
     // back to the app; anything else goes where the person was headed.

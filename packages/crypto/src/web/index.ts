@@ -50,6 +50,7 @@ export {
 export type { AppIdentity, OpenedIdentity, WrappedPair } from './identity.js';
 export { openDocumentKey, openEscrowWrap, sealEscrowWrap, shareDocumentKey } from './sharing.js';
 export { formatKit, kitKey, readKit } from './kit.js';
+export { PASSKEY_BYTES, passkeyKey, passkeyPrfInput } from './passkey.js';
 export {
   CHUNK_BYTES,
   decryptBytes,

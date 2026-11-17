@@ -41,6 +41,7 @@ export function keyVaultSuite(createDatabase: () => Promise<TestDatabase>): void
   beforeEach(async () => {
     for (const table of [
       'key_session_secrets',
+      'passkeys',
       'key_apps',
       'key_wraps',
       'key_accounts',
@@ -61,6 +62,21 @@ export function keyVaultSuite(createDatabase: () => Promise<TestDatabase>): void
     const user = (await db.run('select id from users where email = ?', [email])).rows[0];
     const session = (await db.run('select id from sessions where user_id = ?', [user?.id])).rows[0];
     return { id: String(user?.id), sessionId: String(session?.id) };
+  }
+
+  /** A passkey of `userId`'s, as better-auth stores one. */
+  async function addPasskey(userId: string, credentialId: string) {
+    await db.run(
+      'insert into passkeys (id, public_key, user_id, credential_id, counter, device_type, backed_up) values (?, ?, ?, ?, 0, ?, ?)',
+      [
+        `pk-${credentialId}`,
+        'key',
+        userId,
+        credentialId,
+        'singleDevice',
+        db.family === 'postgres' ? false : 0,
+      ],
+    );
   }
 
   describe('an account', () => {
@@ -116,18 +132,19 @@ export function keyVaultSuite(createDatabase: () => Promise<TestDatabase>): void
       const vault = new KeyVault(db);
       const { id } = await person();
       await vault.setUp(id, ACCOUNT, [{ way: 'password', id: 'old', record: wrap('old') }]);
+      await addPasskey(id, 'cred');
       await vault.putWayIn(id, { way: 'password', id: 'new', record: wrap('new') });
       await vault.putWayIn(id, {
         way: 'passkey',
         id: 'cred',
         record: wrap('pk'),
-        prfInput: B64(9),
+        prfSalt: B64(9),
       });
       await vault.putWayIn(id, {
         way: 'passkey',
         id: 'cred',
         record: wrap('pk2'),
-        prfInput: B64(8),
+        prfSalt: B64(8),
       });
       expect((await vault.read(id)).waysIn.map((w) => `${w.way}:${w.id}`).sort()).toEqual([
         'passkey:cred',
@@ -136,10 +153,57 @@ export function keyVaultSuite(createDatabase: () => Promise<TestDatabase>): void
       ]);
       expect((await vault.read(id)).waysIn.find((w) => w.way === 'passkey')).toMatchObject({
         record: wrap('pk2'),
-        prfInput: B64(8),
+        prfSalt: B64(8),
       });
       expect(await vault.removeWayIn(id, 'password', 'old')).toBe(true);
       expect(await vault.removeWayIn(id, 'password', 'old')).toBe(false);
+    });
+
+    it("for a passkey name one of the account's own passkeys, and go when it goes", async () => {
+      const vault = new KeyVault(db);
+      const ada = await person();
+      const grace = await person();
+      await vault.setUp(ada.id, ACCOUNT, [{ way: 'password', id: 'p', record: wrap('p') }]);
+      await addPasskey(grace.id, 'graces');
+      await expect(
+        vault.putWayIn(ada.id, {
+          way: 'passkey',
+          id: 'graces',
+          record: wrap('x'),
+          prfSalt: B64(3),
+        }),
+      ).rejects.toMatchObject({ code: 'invalid' });
+      await expect(
+        vault.putWayIn(ada.id, { way: 'passkey', id: 'none', record: wrap('x'), prfSalt: B64(3) }),
+      ).rejects.toMatchObject({ code: 'invalid' });
+
+      await addPasskey(ada.id, 'one');
+      await addPasskey(ada.id, 'two');
+      await vault.putWayIn(ada.id, {
+        way: 'passkey',
+        id: 'one',
+        record: wrap('1'),
+        prfSalt: B64(4),
+      });
+      await vault.putWayIn(ada.id, {
+        way: 'passkey',
+        id: 'two',
+        record: wrap('2'),
+        prfSalt: B64(5),
+      });
+      await db.run('delete from passkeys where credential_id = ?', ['one']);
+      // Read without it at once, whatever removed the passkey, and deleted when asked.
+      expect((await vault.read(ada.id)).waysIn.map((w) => `${w.way}:${w.id}`)).toEqual([
+        'password:p',
+        'passkey:two',
+      ]);
+      expect(await vault.dropRemovedPasskeys(ada.id)).toBe(1);
+      expect(await vault.dropRemovedPasskeys(ada.id)).toBe(0);
+      expect(
+        (await db.run("select wrap_id from key_wraps where way = 'passkey'")).rows.map(
+          (r) => r.wrap_id,
+        ),
+      ).toEqual(['two']);
     });
 
     it('need an account that is set up', async () => {

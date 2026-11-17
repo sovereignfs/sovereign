@@ -3,6 +3,7 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { passkey } from '@better-auth/passkey';
 import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/api';
+import { KeyVault } from '../keys/vault';
 import { hashPassword } from 'better-auth/crypto';
 import { twoFactor } from 'better-auth/plugins/two-factor';
 import * as postgresSchema from '../db/schema/postgres';
@@ -331,6 +332,13 @@ export function createAuth(
           message: "Email isn't set up on this instance, so this can't be done yet.",
           code: 'EMAIL_NOT_AVAILABLE',
         });
+      }),
+      // A passkey removed takes its way into the person's keys with it (core-app §5.5). Reading the vault already leaves out a way
+      // in whose passkey is gone; this deletes it.
+      after: createAuthMiddleware(async (ctx) => {
+        if (ctx.path !== '/passkey/delete-passkey') return;
+        const session = await getSessionFromCtx(ctx);
+        if (session) await new KeyVault(database).dropRemovedPasskeys(session.user.id);
       }),
     },
     // The JWT plugin's own `/token` hands any session a signed JWT. Core signs nothing for a session: only

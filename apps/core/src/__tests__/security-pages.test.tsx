@@ -10,9 +10,20 @@ vi.mock('../instance/service', () => ({
 }));
 vi.mock('../auth/session', () => ({ getSession: () => getSession() as unknown }));
 vi.mock('next/headers', () => ({ headers: () => Promise.resolve(new Headers()) }));
+const readVault = vi.fn();
 vi.mock('../auth', () => ({
   getAuth: () => Promise.resolve({ api: { listPasskeys: () => listPasskeys() as unknown } }),
+  getAuthSettings: () => ({ webauthn: { rpId: 'sovereign.local' } }),
 }));
+vi.mock('../database', () => ({ getDatabase: () => Promise.resolve({}) }));
+vi.mock('../keys/vault', () => ({
+  KeyVault: class {
+    read(userId: string) {
+      return readVault(userId) as unknown;
+    }
+  },
+}));
+vi.mock('../keys/session', () => ({}));
 vi.mock('../settings', () => ({
   SETTINGS: { instanceName: { key: 'instance.name' } },
   getSettings: () => Promise.resolve({ value: () => Promise.resolve('Our Place') }),
@@ -35,6 +46,7 @@ const user = (extra: Record<string, unknown> = {}) => ({
 beforeEach(() => {
   getSession.mockReset().mockResolvedValue(null);
   listPasskeys.mockReset().mockResolvedValue([]);
+  readVault.mockReset().mockResolvedValue({ waysIn: [] });
 });
 
 describe('the two-factor settings page', () => {
@@ -135,5 +147,28 @@ describe('the passkeys page', () => {
   it('is drawn with the design system and carries no inline styling or scripts of its own', async () => {
     getSession.mockResolvedValue(user());
     expect(await renderServer(await PasskeysPage())).not.toMatch(/<script|<style|style="/);
+  });
+
+  it('says which passkeys unlock, read from the session’s own account, only to someone with keys', async () => {
+    getSession.mockResolvedValue(user());
+    const passkey = (id: string, name: string) => ({
+      id,
+      name,
+      createdAt: null,
+      backedUp: false,
+      publicKey: 'k',
+      credentialID: `cred-${id}`,
+    });
+    listPasskeys.mockResolvedValue([passkey('p1', 'Phone'), passkey('p2', 'Key')]);
+    expect(await renderServer(await PasskeysPage())).not.toContain('unlock');
+
+    readVault.mockResolvedValue({
+      account: { suite: 1 },
+      waysIn: [{ way: 'passkey', id: 'cred-p1', record: '{}' }],
+    });
+    const html = await renderServer(await PasskeysPage());
+    expect(readVault).toHaveBeenCalledWith('u1');
+    expect(html).toContain('Also unlocks your encrypted data');
+    expect(html).toContain('Doesn’t unlock your encrypted data');
   });
 });

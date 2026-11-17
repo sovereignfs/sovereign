@@ -29,7 +29,7 @@ CREATE TABLE "key_wraps" (
 	"way" text NOT NULL,
 	"wrap_id" text NOT NULL,
 	"record" text NOT NULL,
-	"prf_input" text,
+	"prf_salt" text,
 	"created_at" bigint NOT NULL,
 	CONSTRAINT "key_wraps_user_id_way_wrap_id_pk" PRIMARY KEY("user_id","way","wrap_id")
 );

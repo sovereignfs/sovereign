@@ -259,7 +259,12 @@ and says so.
 
 Apps that use encryption keep what people store so that the server cannot read it, not even with the database, a backup or
 `sovereign-admin` (core-app §5). Each person's data opens with their password, a passkey that unlocks, or their **recovery kit**, which
-they are shown the first time they open such an app. This is not yet reviewed by a cryptographer or audited.
+they are shown the first time they open such an app. **Not yet audited:** neither a cryptographer's review nor a code audit has been
+done.
+
+What it protects against is someone who reads the server: a stolen disk, database or backup. It does **not** protect against whoever runs
+the server, you included, since apps' pages come from it and changed code would get everything at the next unlock. The server still sees
+who has keys for which app, who shares with whom, sizes and times.
 
 **A password reset gives back the account, not the data.** After a reset by email (or `sovereign-admin accounts reset-link EMAIL`), the
 person signs in with their new password and their encrypted data stays locked until they unlock it with a passkey that unlocks or their

@@ -433,6 +433,7 @@ instance.
 | Core's API                              | [`contracts/core-api/`](../contracts/core-api)                                                                                                                    |
 | The SDK                                 | [`using-the-sdk.md`](using-the-sdk.md), [`specs/sdk.md`](specs/sdk.md)                                                                                            |
 | Sign-in through core (any language)     | [`connecting-an-app.md`](connecting-an-app.md)                                                                                                                    |
+| People's data, encrypted                | [`encrypting-an-app.md`](encrypting-an-app.md), RFC 0005                                                                                                          |
 | The design system                       | [`design-system.md`](design-system.md), [`specs/design-system.md`](specs/design-system.md), the [Storybook](https://sovereignfs.github.io/storybook/)             |
 | The operator's toolkit                  | [`specs/operator-cli.md`](specs/operator-cli.md), [`deploying.md`](deploying.md), [`operating.md`](operating.md)                                                  |
 | Releasing Sovereign's packages          | [`releasing.md`](releasing.md)                                                                                                                                    |

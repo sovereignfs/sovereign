@@ -163,6 +163,23 @@ network is down. Nothing needs setting up beyond what sign-in already needs.
 - To upgrade, pull a newer image and `docker compose up -d`. Migrations are applied at start-up, and only forward.
   Pin the database server images (they are pinned in the compose files) and upgrade them on purpose.
 
+## Encrypted data
+
+Every instance signs people in so that core never receives a password: each browser derives a value from it (core-app §5.2), so a page
+that signs in needs JavaScript, and a moment longer. Apps the operator allows to use encryption keep what people store so that someone
+who reads the server cannot read it: a copy of its disk, its database or a backup holds ciphertext and wrapped keys, never a key or a
+password (core-app §5, RFC 0005).
+
+- **What is not protected:** anything against whoever runs the server, since the pages come from it and changed code would get
+  everything at the next unlock; and who has keys for which app, who shares with whom, sizes and times, which the server sees.
+- **Not yet audited:** neither a cryptographer's review nor a code audit has been done. Say so to the people on your instance if you
+  describe the feature to them.
+- **Keep the instance id.** It is in every account's sign-in value and keys, made once and kept in the database: a restore brings it
+  back, and an instance that lost it while accounts remain will not make a new one. Back the database up as above, and never edit
+  `instance_settings`.
+- What a password reset does to encrypted data, the recovery kit, and recovery (escrow) are in [Operating](operating.md), "Encrypted
+  data, and recovering it".
+
 ## Development
 
 `pnpm dev` starts core from source on `:3000`. When `apps/core/.env` chooses sqld, it first starts the persistent sqld

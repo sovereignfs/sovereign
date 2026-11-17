@@ -405,7 +405,7 @@ needs unlocking.
 - An app with no core and an app with one store the same records
 - The app's server never receives a password or a passphrase
 
-#### 📋 16.14 — An encrypted app, end to end
+#### ✅ 16.14 — An encrypted app, end to end
 
 **Goal:** The whole path is shown to work from a browser, an app's author has a guide, and nothing says more than is true.
 

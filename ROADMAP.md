@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.106.0 · **Last updated:** 2026-11-17
+**Version:** 0.107.0 · **Last updated:** 2026-11-17
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -254,7 +254,8 @@ Epic [15](docs/epics/core-services.md)
 [16](docs/epics/encryption.md) · workstream [0003](docs/workstreams/0003-encryption.md)
 
 The cost of the password derivation is measured. The goal owner had the work from 16.6 on built before a cryptographer's review of
-the RFC, which is still to come.
+the RFC, which is still to come. Every task is built; the review and a code audit are still to come, and until then every guide says
+the feature is not yet audited.
 
 | Version | Priority | Task                                                                   | Status | Epic task                         |
 | ------- | -------- | ---------------------------------------------------------------------- | ------ | --------------------------------- |
@@ -271,4 +272,4 @@ the RFC, which is still to come.
 | 0.104.0 | 11       | Sharing between people                                                 | ✅     | [16.11](docs/epics/encryption.md) |
 | 0.105.0 | 12       | Escrow `[parallel]`                                                    | ✅     | [16.12](docs/epics/encryption.md) |
 | 0.106.0 | 13       | A vault for an app with no core `[parallel]`                           | ✅     | [16.13](docs/epics/encryption.md) |
-| —       | 14       | An encrypted app, end to end                                           | 📋     | [16.14](docs/epics/encryption.md) |
+| 0.107.0 | 14       | An encrypted app, end to end                                           | ✅     | [16.14](docs/epics/encryption.md) |

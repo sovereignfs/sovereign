@@ -1,0 +1,21 @@
+{
+  "manifest": 4,
+  "prefix": "__PREFIX_LOWER__",
+  "name": "__TITLE__",
+  "description": "Notes kept encrypted in the browser, as a starting point for an app on a Sovereign instance",
+  "port": 3100,
+  "health": "/api/health",
+  "launch": "/",
+  "signIn": {
+    "redirect": ["/auth/callback"],
+    "postLogout": ["/"],
+    "backChannel": "/auth/backchannel-logout",
+    "accountDeleted": "/auth/account-deleted",
+    "scopes": ["openid", "profile", "email", "offline_access", "directory"]
+  },
+  "encryption": { "return": "/keys/return" },
+  "database": { "pooling": "transaction" },
+  "storage": true,
+  "generate": ["__PREFIX___AUTH_SECRET"],
+  "core": ">=0.68.0 <1.0.0"
+}

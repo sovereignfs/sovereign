@@ -23,7 +23,13 @@ function guides(): string[] {
   const template = readdirSync(path.join(root, 'tools/create/template/app'))
     .filter((name) => name.endsWith('.md'))
     .map((name) => `tools/create/template/app/${name}`);
-  return ['README.md', ...top, ...readmes, ...template];
+  return [
+    'README.md',
+    ...top,
+    ...readmes,
+    ...template,
+    'tools/create/template/encryption/ENCRYPTION.md',
+  ];
 }
 
 /** The guides that describe the feature to an operator or an app's author. */
@@ -32,6 +38,7 @@ const DESCRIBING = [
   'docs/operating.md',
   'docs/building-an-app.md',
   'docs/encrypting-an-app.md',
+  'tools/create/template/encryption/ENCRYPTION.md',
 ];
 
 describe('the guides on encryption', () => {

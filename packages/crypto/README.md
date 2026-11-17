@@ -166,10 +166,25 @@ file's name and type.
 
 ### The vault and remembered keys
 
-`Vault` is an interface only: what core's vault (task 16.6) and an app's own (task 16.13) both
-provide, so the same records live in either. `rememberKey` is how an app's page notices a changed
+`Vault` describes, as types, the records a vault holds; core's vault (task 16.6) and an app's own
+(`@sovereignfs/crypto/vault`, task 16.13) each store exactly those, in the same columns, so the
+same records live in either (a test moves one's rows into the other and opens them). `rememberKey` is how an app's page notices a changed
 signing key: it remembers the first key it sees for a person, and calls a different one `changed`,
 storing nothing, until the person using the page accepts it.
+
+**Unlocking** (`unlock.ts`) is one routine for both hosts: set up at the first sign-in, open with a
+password (or a passphrase, `derivePassphrase`, kept as the password's way in), a passkey or the kit,
+keep the key for the session, and open an app's key (`openAppKey`). Each host passes in the calls to
+its own server; core's pages and `localVault` in `@sovereignfs/sdk/keys` both use it.
+
+## An app's own vault: `@sovereignfs/crypto/vault`
+
+Server-only. `AppVault` keeps the same records as core's vault on an app's own database, for an app
+that runs with no core (sdk §9.5): its tables come from `vaultMigrations(family)` and are recorded
+apart from the app's migrations (`VAULT_MIGRATIONS_TABLE`). It needs only `run` and `transaction`,
+which `@sovereignfs/database` has, so the SDK bundles it with no database driver. Its vault id is
+made once and refused, never remade, when accounts exist without it (`VaultIdLost`). The checks a
+vault makes before it stores anything (`checkRecord`, `checkWayIn`, …) are shared with core's.
 
 ### What "cannot be exported" means
 

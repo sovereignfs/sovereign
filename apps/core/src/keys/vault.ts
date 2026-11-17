@@ -1,4 +1,12 @@
 import { randomBytes } from 'node:crypto';
+import {
+  checkBase64Url32 as base64url32,
+  checkClientId,
+  checkRecord,
+  checkSignature,
+  checkWayIn as checkStoredWayIn,
+  VaultError,
+} from '@sovereignfs/crypto/vault';
 import type { Database } from '@sovereignfs/database';
 
 /**
@@ -9,7 +17,7 @@ import type { Database } from '@sovereignfs/database';
 
 /** The ways into the account key core keeps. */
 export type VaultWay = 'password' | 'passkey' | 'kit' | 'escrow';
-const WAYS: ReadonlySet<string> = new Set<VaultWay>(['password', 'passkey', 'kit', 'escrow']);
+const WAYS: ReadonlySet<VaultWay> = new Set<VaultWay>(['password', 'passkey', 'kit', 'escrow']);
 
 export interface VaultAccount {
   readonly suite: number;
@@ -35,51 +43,10 @@ export interface VaultApp {
   readonly signature: string;
 }
 
-export class VaultError extends Error {
-  override name = 'VaultError';
-  constructor(
-    readonly code: 'exists' | 'not-set-up' | 'invalid',
-    message: string,
-  ) {
-    super(message);
-  }
-}
-
-/** A record is JSON of at most a few kilobytes: anything else is refused before it is stored. */
-function checkRecord(text: unknown, what: string): string {
-  if (typeof text !== 'string' || text.length === 0 || text.length > 8192) {
-    throw new VaultError('invalid', `${what} is not a record.`);
-  }
-  try {
-    const value: unknown = JSON.parse(text);
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new Error();
-  } catch {
-    throw new VaultError('invalid', `${what} is not a record.`);
-  }
-  return text;
-}
-
-const base64url32 = (value: unknown, what: string): string => {
-  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(value)) {
-    throw new VaultError('invalid', `${what} is not 32 bytes of base64url.`);
-  }
-  return value;
-};
+export { VaultError };
 
 function checkWayIn(wayIn: VaultWayIn): VaultWayIn {
-  if (!WAYS.has(wayIn.way)) throw new VaultError('invalid', 'That is not a way in.');
-  if (typeof wayIn.id !== 'string' || wayIn.id.length > 512) {
-    throw new VaultError('invalid', 'That way in has no usable id.');
-  }
-  if (wayIn.way === 'passkey' && !wayIn.id) {
-    throw new VaultError('invalid', 'A passkey way in names its passkey.');
-  }
-  return {
-    way: wayIn.way,
-    id: wayIn.id,
-    record: checkRecord(wayIn.record, 'The way in'),
-    ...(wayIn.way === 'passkey' ? { prfSalt: base64url32(wayIn.prfSalt, 'The passkey salt') } : {}),
-  };
+  return checkStoredWayIn(wayIn, WAYS);
 }
 
 export class KeyVault {
@@ -233,14 +200,10 @@ export class KeyVault {
 
   /** Stores the account's keys for an app, the first time it is opened. Refused when they exist. */
   async putApp(userId: string, app: VaultApp): Promise<void> {
-    if (typeof app.clientId !== 'string' || !app.clientId || app.clientId.length > 255) {
-      throw new VaultError('invalid', 'That is not an app.');
-    }
+    checkClientId(app.clientId);
     checkRecord(app.appKey, 'The app key');
     checkRecord(app.identity, 'The app keys');
-    if (typeof app.signature !== 'string' || !/^[A-Za-z0-9_-]{86}$/.test(app.signature)) {
-      throw new VaultError('invalid', 'That is not a signature.');
-    }
+    checkSignature(app.signature);
     await this.#database.transaction(async (tx) => {
       await this.#requireAccount(tx, userId);
       const found = await tx.run('select 1 from key_apps where user_id = ? and client_id = ?', [

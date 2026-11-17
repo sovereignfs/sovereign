@@ -30,7 +30,8 @@
     },
     "./testing": "./src/testing/index.ts",
     "./next": "./src/next/index.ts",
-    "./keys": "./src/keys.ts"
+    "./keys": "./src/keys.ts",
+    "./vault": "./src/vault.ts"
   },
   "publishConfig": {
     "access": "public",
@@ -51,6 +52,10 @@
       "./keys": {
         "types": "./dist/keys.d.ts",
         "default": "./dist/keys.js"
+      },
+      "./vault": {
+        "types": "./dist/vault.d.ts",
+        "default": "./dist/vault.js"
       }
     }
   },
@@ -80,6 +85,7 @@
     "@sovereignfs/api-client": "workspace:*",
     "@sovereignfs/config": "workspace:*",
     "@sovereignfs/crypto": "workspace:*",
+    "@sovereignfs/database": "workspace:*",
     "@sovereignfs/tsconfig": "workspace:*",
     "@types/node": "catalog:",
     "@types/react": "catalog:",

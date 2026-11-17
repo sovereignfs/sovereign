@@ -3,7 +3,7 @@
   "version": "0.5.0",
   "private": true,
   "type": "module",
-  "description": "Encryption for Sovereign: field encryption on the server, and the keys of RFC 0005 in a browser (`/web`).",
+  "description": "Encryption for Sovereign: field encryption on the server, the keys of RFC 0005 in a browser (`/web`), and the vault of an app with no core (`/vault`).",
   "license": "MPL-2.0",
   "sideEffects": false,
   "engines": {
@@ -17,6 +17,10 @@
     "./web": {
       "types": "./dist/web/index.d.ts",
       "default": "./dist/web/index.js"
+    },
+    "./vault": {
+      "types": "./dist/vault/index.d.ts",
+      "default": "./dist/vault/index.js"
     }
   },
   "files": [
@@ -38,6 +42,7 @@
   "devDependencies": {
     "@hpke/core": "catalog:",
     "@noble/hashes": "catalog:",
+    "@sovereignfs/database": "workspace:*",
     "@sovereignfs/tsconfig": "workspace:*",
     "@types/node": "catalog:",
     "tsup": "catalog:",

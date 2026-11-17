@@ -247,6 +247,33 @@ describe.skipIf(!DIALECTS.includes(dialect ?? ''))(`the database interface (${di
       }
     });
 
+    it('keeps a second set of migrations in a table of its own, so neither history sees the other', async () => {
+      const fresh = await createTestDatabase();
+      const database = await fresh.open();
+      try {
+        await migrate(database, migrations());
+        const theirs: Migration = {
+          name: '0000_vault',
+          sql: 'create table vault_things (id integer primary key)',
+        };
+        const result = await migrate(database, [theirs], { table: 'sv_key_migrations' });
+        expect(result.applied).toEqual(['0000_vault']);
+        // Each set is checked against its own history only: neither is "lost" from the other's folder.
+        expect((await migrate(database, migrations())).applied).toEqual([]);
+        expect(
+          (await migrate(database, [theirs], { table: 'sv_key_migrations' })).alreadyApplied,
+        ).toEqual(['0000_vault']);
+        const own = await database.run('select name from sv_key_migrations');
+        expect(own.rows.map((r) => r.name)).toEqual(['0000_vault']);
+        await expect(migrate(database, [theirs], { table: 'bad name' })).rejects.toThrow(
+          /identifier/,
+        );
+      } finally {
+        await database.close();
+        await fresh.cleanup();
+      }
+    });
+
     it('leaves nothing behind when a migration fails half way', async () => {
       const fresh = await createTestDatabase();
       const database = await fresh.open();

@@ -383,6 +383,9 @@ importers:
       '@noble/hashes':
         specifier: 'catalog:'
         version: 2.4.0
+      '@sovereignfs/database':
+        specifier: workspace:*
+        version: link:../database
       '@sovereignfs/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
@@ -509,6 +512,9 @@ importers:
       '@sovereignfs/crypto':
         specifier: workspace:*
         version: link:../crypto
+      '@sovereignfs/database':
+        specifier: workspace:*
+        version: link:../database
       '@sovereignfs/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig

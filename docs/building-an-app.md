@@ -268,6 +268,37 @@ its own") when hosting it:
 - Tokens and secrets never appear in an error, a log, a URL or the browser.
 - A `Secret` from `@sovereignfs/config` prints as `[redacted]`; reveal it only where it is used.
 
+### People's data, encrypted, with no core
+
+An app can keep what people give it so that nobody who reads its server, disk or backups can read it (RFC 0005; not yet audited, and
+it promises nothing against whoever runs the server, since the page's code comes from there). With core, the operator allows it and
+the SDK gets the app's key from core ([using the SDK](using-the-sdk.md), sdk §9.3). **With no core**, the app keeps the keys in a vault
+of its own (sdk §9.5), the same records core keeps, so the person's keys can move to core later:
+
+1. **Tables.** Run `vaultMigrations(db.family)` from `@sovereignfs/sdk/vault` at start-up beside your own, recorded apart:
+   `migrate(db, vaultMigrations(db.family), { table: VAULT_MIGRATIONS_TABLE })`, or the same SQL through your own migration tool.
+   The vault needs a database with `run(sql, args)` (`?` placeholders, answering `{ rows, rowsAffected }`) and `transaction(fn)`:
+   wrap your driver in those two if it is not `@sovereignfs/database`.
+2. **The server.** One `AppVault` over your database. Render `await vault.vaultId()` into your sign-in and sign-up pages. Mount
+   `vaultRoute(vault, { origin: <P>_URL })` at `/auth/vault`, passing the `sub` from your session. Keep `newSessionSecret()` with each session and answer
+   `/auth/key-secret` with `{ sub, secret }` to your own pages; delete it with the session. Add `vault.deleteAccount(sub, tx)` to
+   the function that deletes a person.
+3. **Signing in.** Your sign-in, sign-up, reset and change forms send `localVault(…).derive(password, address).signIn` where they
+   sent the password, so your server never receives one; better-auth hashes it as it would a password. Check the password policy in
+   the browser, before deriving. Then call `afterSignIn(secret)`. Argon2id runs as WebAssembly: the pages that derive need
+   `'wasm-unsafe-eval'` in `script-src` (and never `'unsafe-eval'`).
+4. **Sign-in that is someone else's** (your app trusts another provider and has no password): ask for a passphrase once a session
+   exists and call `unlockWithPassphrase(passphrase, sub)`. Say plainly that a forgotten passphrase loses the data unless the kit is
+   kept.
+5. **The kit.** While `kitPending()`, show `RecoveryKit` from `@sovereignfs/ui` with `formatKit` of 32 random bytes, and
+   `keepKit(kit)` once the person has kept it. After a reset, `unlockWithKit(typed, secret)` opens the keys and gives the new password
+   its way in.
+6. **Using the key.** `open()` gives the app key or `locked`, as with core: show `LockedState`, whose action asks for the password or
+   passphrase again. Keep nothing of a document in a notification, an activity entry or mail (RFC 0005 §8). An app made from the
+   template that encrypts a document end to end is task 16.14, not yet built.
+
+Passkeys that unlock, escrow and sharing with other people need core, and are not offered with no core.
+
 ## 10. Interface
 
 From [`specs/design-system.md`](specs/design-system.md) and [the guide](design-system.md):

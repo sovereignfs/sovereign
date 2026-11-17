@@ -36,7 +36,11 @@ describe.skipIf(!runnable)('the server receiving a deployment against the real D
   const lines: string[] = [];
 
   beforeAll(async () => {
-    execFileSync('pnpm', ['--filter', '@sovereignfs/cli', 'build'], { cwd: root, stdio: 'ignore' });
+    // With the packages it bundles (`...`): `sv key` bundles @sovereignfs/crypto, whose built files a fresh checkout lacks.
+    execFileSync('pnpm', ['--filter', '@sovereignfs/cli...', 'build'], {
+      cwd: root,
+      stdio: 'ignore',
+    });
     execFileSync('docker', ['build', '--quiet', '--tag', image, path.join(root, 'tools/cli')], {
       stdio: 'ignore',
     });

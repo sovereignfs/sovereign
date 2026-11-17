@@ -1,6 +1,7 @@
 /**
  * `localVault()` — the keys of an app that runs with no core, in its pages (sdk §9.5, RFC 0005 §4's last paragraph). Browser only,
- * exported from `@sovereignfs/sdk/keys`. There is no key release: the page unlocks the app's own vault at the app's own sign-in, with
+ * the SDK's `@sovereignfs/sdk/local-vault` entry, apart from `/keys` so that an app that gets its key from core never loads the password
+ * derivation (Argon2id, libsodium's WebAssembly). There is no key release: the page unlocks the app's own vault at the app's own sign-in, with
  * the routine core's pages use (`@sovereignfs/crypto/web`), and keeps the account key until the app's session ends (RFC 0005 §5).
  *
  * The app's server answers two routes: `vaultRoute` from `@sovereignfs/sdk/vault` (`/auth/vault`), and the session's secret

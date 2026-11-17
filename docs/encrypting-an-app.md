@@ -33,7 +33,8 @@ says so.
   (manifest 4) names the key return address, and `sv app add` registers it. The page gets the app's key from core once each browser
   session, with `appKeys` from `@sovereignfs/sdk/keys` (sdk §9.3), and shares with other people of the instance through core's `keys`
   calls (sdk §9.4). Passkeys that unlock, the recovery kit and escrow are core's, and work for every encrypted app.
-- **With no core.** The app keeps the keys in a vault of its own (sdk §9.5): see [Building an app](building-an-app.md), "People's
+- **With no core.** The app keeps the keys in a vault of its own (sdk §9.5), with `localVault` from `@sovereignfs/sdk/local-vault` in its
+  pages and `vaultRoute` from `@sovereignfs/sdk/vault` on its server: see [Building an app](building-an-app.md), "People's
   data, encrypted, with no core". It unlocks at the app's own sign-in, or with a passphrase when its sign-in is another provider's,
   and offers the kit. Passkeys that unlock, escrow and sharing need core.
 

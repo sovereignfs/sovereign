@@ -283,7 +283,8 @@ of its own (sdk §9.5), the same records core keeps, so the person's keys can mo
    `vaultRoute(vault, { origin: <P>_URL })` at `/auth/vault`, passing the `sub` from your session. Keep `newSessionSecret()` with each session and answer
    `/auth/key-secret` with `{ sub, secret }` to your own pages; delete it with the session. Add `vault.deleteAccount(sub, tx)` to
    the function that deletes a person.
-3. **Signing in.** Your sign-in, sign-up, reset and change forms send `localVault(…).derive(password, address).signIn` where they
+3. **Signing in.** Import `localVault` from `@sovereignfs/sdk/local-vault` in those pages (not `/keys`, which an app with core uses and
+   which carries no password derivation). Your sign-in, sign-up, reset and change forms send `localVault(…).derive(password, address).signIn` where they
    sent the password, so your server never receives one; better-auth hashes it as it would a password. Check the password policy in
    the browser, before deriving. Then call `afterSignIn(secret)`. Argon2id runs as WebAssembly: the pages that derive need
    `'wasm-unsafe-eval'` in `script-src` (and never `'unsafe-eval'`).

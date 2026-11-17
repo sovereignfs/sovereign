@@ -9,7 +9,8 @@
  *
  * - `encryptContent`, `decryptContent`, `encryptBytes` and `decryptBytes`, with `importDocumentKey`, are a document and its name and
  *   type, encrypted with its document key in RFC 0005 §1.3's format.
- * - `localVault()` is the same app key for an app that runs with no core (sdk §9.5): its own vault, unlocked at its own sign-in.
+ * - An app that runs with no core gets its key from `localVault()` in `@sovereignfs/sdk/local-vault` (sdk §9.5), an entry of its own so
+ *   that this one never loads the password derivation.
  *
  * The app key is kept as core keeps the account key: wrapped by a device key and by the app session's own secret, which the app's
  * server holds (`/auth/key-secret`) and deletes with the session. Nothing of a release is in any request to a server.
@@ -50,8 +51,6 @@ export {
   importDocumentKey,
 } from '@sovereignfs/crypto/web';
 export type { ContentTarget } from '@sovereignfs/crypto/web';
-export { localVault } from './local-vault.js';
-export type { LocalVault, LocalVaultOptions } from './local-vault.js';
 
 /** A person's public keys for this app, as `sv.as(person).keys.person(sub)` gives them (the Core API's `PersonKeys`). */
 export type PersonKeys = {

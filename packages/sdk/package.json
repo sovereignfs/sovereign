@@ -31,6 +31,7 @@
     "./testing": "./src/testing/index.ts",
     "./next": "./src/next/index.ts",
     "./keys": "./src/keys.ts",
+    "./local-vault": "./src/local-vault.ts",
     "./vault": "./src/vault.ts"
   },
   "publishConfig": {
@@ -53,6 +54,10 @@
         "types": "./dist/keys.d.ts",
         "default": "./dist/keys.js"
       },
+      "./local-vault": {
+        "types": "./dist/local-vault/local-vault.d.ts",
+        "default": "./dist/local-vault/local-vault.js"
+      },
       "./vault": {
         "types": "./dist/vault.d.ts",
         "default": "./dist/vault.js"
@@ -66,7 +71,7 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsup",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

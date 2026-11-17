@@ -332,7 +332,7 @@ const notice = await verifyLogoutToken(request, { coreUrl, clientId, seen });
 ### 9.3 Key release
 
 Built ([core-app §5.7](core-app.md), task 16.10). For an app whose manifest has `encryption`, the SDK gets the app's key from core once
-in each browser session, through `@sovereignfs/sdk/keys`, the one entry a page imports (§3):
+in each browser session, through `@sovereignfs/sdk/keys`, the entry a page imports (§3):
 
 - **`appKeys({ core, clientId, returnTo })`** gives `open()`, `unlock()`, `receive()` and `forget()`.
 - **`open()`** gives the app key, as a WebCrypto key that cannot be exported, while this browser holds it for the app's session;
@@ -393,7 +393,8 @@ vault (core-app §5.3), made by the same routine in the browser, so a person's k
 - **The session's secret** is the app's to keep with its own session (`newSessionSecret()`), served to its own pages at
   `/auth/key-secret` as `{ sub, secret }`. With the session gone, what a browser kept opens nothing. There is no table of them.
 - **Deleting a person** is `vault.deleteAccount(sub, tx)`, on the transaction that deletes the person in the app.
-- **In the page, `localVault({ clientId, vaultId })`** from `@sovereignfs/sdk/keys`. `derive(password, address)` gives the sign-in
+- **In the page, `localVault({ clientId, vaultId })`** from `@sovereignfs/sdk/local-vault`, a browser entry of its own so that `/keys`
+  never loads the password derivation (libsodium's WebAssembly), which `/local-vault` loads only when a key is derived. `derive(password, address)` gives the sign-in
   value the app's own sign-in takes where it took the password, and a secret; `afterSignIn(secret)` sets the keys up or opens them.
   An app whose sign-in is someone else's asks for a passphrase: `unlockWithPassphrase(passphrase, sub)`, kept as the password's way
   in. `open()` gives the app key or `{ state: 'locked' }`, as §9.3's does; `kitPending()`, `keepKit(kit)` and `unlockWithKit(typed,
@@ -450,8 +451,9 @@ Every namespace of the legacy `sdk` object:
 - The package is MPL-2.0, like the other packages, so an app under any licence can use it.
 - It depends on `@sovereignfs/api-client` and `openid-client`, and runs on Node's supported versions, and on any server runtime that
   has `fetch` and Web Crypto.
-- Its entry points are the root, `/next`, `/testing`, `/keys`, the one a browser imports (§9.3), and `/vault`, an app's own vault on
-  its server (§9.5).
+- Its entry points are the root, `/next`, `/testing`, `/keys` and `/local-vault`, the two a browser imports (§9.3; §9.5 for an app
+  with no core), and `/vault`, an app's own vault on its server (§9.5). `/keys` reaches no file of libsodium; `pnpm packages:check`
+  fails when it does.
 - It has its own `sdk-vX.Y.Z` tag ([`docs/releasing.md`](../releasing.md)).
 - Its first release is `2.0.0`. The legacy SDK (§10) was published under the same name up to `1.25.0`, and npm will not make a lower
   version `latest`. A version of the legacy SDK is not an earlier release of this one.
@@ -493,3 +495,4 @@ of its own; an app catalogue.
 | 2026-11-17 | §9.3: key release built, in the `/keys` entry, with `auth.keySecret` and `nextAuth`'s `/auth/key-secret`; §3 and §12 name the entry. `@sovereignfs/crypto` is bundled rather than published.                        |
 | 2026-11-17 | §8: `keys.me` and `keys.person`; §9.4: sharing, built, in the `/keys` entry.                                                                                                                                        |
 | 2026-11-17 | §9.5: an app with no core, built: `/vault` (`AppVault`, `vaultMigrations`, `vaultRoute`, `newSessionSecret`) and `localVault` in `/keys`; §12 names the entry.                                                      |
+| 2026-11-17 | §9.5, §12: `localVault` moves to `@sovereignfs/sdk/local-vault`, an entry of its own, before any release carried it in `/keys`; `/keys` no longer reaches libsodium.                                                |

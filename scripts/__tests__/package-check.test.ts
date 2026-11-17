@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { tarballProblems, type PackedManifest } from '../lib/package-check';
+import {
+  entryGraph,
+  sdkEntryProblems,
+  tarballProblems,
+  type PackedManifest,
+} from '../lib/package-check';
 
 const manifest = (overrides: Partial<PackedManifest> = {}): PackedManifest => ({
   name: '@sovereignfs/thing',
@@ -261,5 +266,80 @@ describe('tarballProblems for a tool that is run and not imported', () => {
     expect(tarballProblems(tool(), [...toolFiles, 'package/src/main.ts'], facts)).toContain(
       'src/main.ts is in the tarball: source files do not ship',
     );
+  });
+});
+
+const SODIUM_CHUNK = 'dist/local-vault/libsodium-wrappers-ABC.js';
+const exportsOf = {
+  './keys': { types: './dist/keys.d.ts', default: './dist/keys.js' },
+  './local-vault': {
+    types: './dist/local-vault/local-vault.d.ts',
+    default: './dist/local-vault/local-vault.js',
+  },
+};
+const reader = (built: Record<string, string>) => (file: string) => built[file];
+
+// The SDK as this release builds it: /keys and /local-vault apart, libsodium loaded only by import().
+const goodBuild = {
+  'dist/keys.js': 'import { open } from "./chunk-A.js";\nimport "./chunk-B.js";\nexport { open };',
+  'dist/chunk-A.js': 'export const open = () => 1;',
+  'dist/chunk-B.js': '',
+  'dist/local-vault/local-vault.js':
+    'import "./chunk-C.js";\nlet loading;\nfunction sodium() { loading ??= import("./libsodium-wrappers-ABC.js"); }',
+  'dist/local-vault/chunk-C.js': '',
+  [SODIUM_CHUNK]: '/* libsodium */',
+};
+
+describe('entryGraph', () => {
+  it('tells what is loaded at once from what is loaded only when called', () => {
+    const { loaded, deferred } = entryGraph('dist/local-vault/local-vault.js', reader(goodBuild));
+    expect([...loaded].sort()).toEqual([
+      'dist/local-vault/chunk-C.js',
+      'dist/local-vault/local-vault.js',
+    ]);
+    expect([...deferred]).toEqual([SODIUM_CHUNK]);
+  });
+
+  it('follows export … from and ../ paths', () => {
+    const { loaded } = entryGraph(
+      'dist/a/x.js',
+      reader({ 'dist/a/x.js': 'export { y } from "../y.js";', 'dist/y.js': '' }),
+    );
+    expect(loaded.has('dist/y.js')).toBe(true);
+  });
+});
+
+describe('sdkEntryProblems', () => {
+  it('finds nothing wrong with the entries built apart', () => {
+    expect(sdkEntryProblems(exportsOf, reader(goodBuild))).toEqual([]);
+  });
+
+  it('fails when /keys reaches a chunk that names libsodium, as when localVault was in /keys', () => {
+    const built = {
+      ...goodBuild,
+      'dist/chunk-A.js':
+        'export const open = () => 1;\nfunction sodium() { return import("./libsodium-wrappers-ABC.js"); }',
+      'dist/libsodium-wrappers-ABC.js': '/* libsodium */',
+    };
+    expect(sdkEntryProblems(exportsOf, reader(built))).toEqual([
+      expect.stringContaining('/keys reaches libsodium'),
+    ]);
+  });
+
+  it('fails when /local-vault loads libsodium at once', () => {
+    const built = {
+      ...goodBuild,
+      'dist/local-vault/local-vault.js': 'import "./libsodium-wrappers-ABC.js";',
+    };
+    expect(sdkEntryProblems(exportsOf, reader(built))).toEqual([
+      expect.stringContaining('loads libsodium at once'),
+      '/local-vault does not load libsodium when a key is derived',
+    ]);
+  });
+
+  it('fails when either entry is missing', () => {
+    expect(sdkEntryProblems({ './keys': './dist/keys.js' }, reader(goodBuild))).toEqual([
+      '/local-vault has no built file',
+    ]);
   });
 });

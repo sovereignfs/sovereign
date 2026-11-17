@@ -337,7 +337,8 @@ boots every setup from nothing, and as an instance would host it.
 
 **The app template.** `npm create @sovereignfs app <name> --port <N>` makes a hosted app that runs as it stands (manifest, Dockerfile,
 publish workflow, health route, config, migrations, SDK sign-in). It is **core-only and PostgreSQL-only**, so it suits an app that
-will only ever be hosted. An app that must also run alone is started from Tusk's structure instead.
+will only ever be hosted. An app that must also run alone is started from Tusk's structure instead. With `--encryption`, its notes are
+encrypted in the browser and shared between people of the instance ([Encrypting an app's data](encrypting-an-app.md)).
 
 ## 12. Releasing and hosting
 

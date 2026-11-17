@@ -5,6 +5,16 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.105.0] - 2026-11-17
+
+### Added
+
+- A person who reset their password unlocks their encrypted data with their recovery kit, and their new password unlocks it from then
+  on (core-app §5.3).
+- Recovery of encrypted data (escrow), off unless the owner turns it on in the Console with a key made by `sv key escrow` (core-app
+  §5.8). Each person is told before they are covered, and their Security page says whether recovery is on; the Console says how many
+  people are not covered yet. `sovereign-admin accounts escrow-record` and `put-kit` carry a recovery through, with the key offline.
+
 ## [0.104.0] - 2026-11-17
 
 ### Added

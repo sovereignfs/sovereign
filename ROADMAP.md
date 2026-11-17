@@ -99,14 +99,24 @@ be argued before anything is built.
 
 ### M4 — Core installs as an app (PWA)
 
-[RFC 0001](docs/rfcs/0001-installable-core.md) (Accepted) · epic [11](docs/epics/pwa.md)
+[RFC 0001](docs/rfcs/0001-installable-core.md) (Accepted; amendment 1 proposed) · [research 0010](docs/research/0010-opening-installed-apps.md) ·
+epic [11](docs/epics/pwa.md) · workstream [0006](docs/workstreams/0006-pwa.md)
 
-| Version | Priority | Task                                            | Status | Epic task                 |
-| ------- | -------- | ----------------------------------------------- | ------ | ------------------------- |
-| 0.45.0  | 1        | Manifest, icons and mobile metadata             | ✅     | [11.1](docs/epics/pwa.md) |
-| 0.46.0  | 2        | Service worker and offline page                 | ✅     | [11.2](docs/epics/pwa.md) |
-| —       | 3        | Standalone polish, guide and checks             | 🚧     | [11.3](docs/epics/pwa.md) |
-| 0.47.0  | 4        | Icons from the instance's own logo `[parallel]` | ✅     | [11.4](docs/epics/pwa.md) |
+| Version | Priority | Task                                            | Status | Epic task                  |
+| ------- | -------- | ----------------------------------------------- | ------ | -------------------------- |
+| 0.45.0  | 1        | Manifest, icons and mobile metadata             | ✅     | [11.1](docs/epics/pwa.md)  |
+| 0.46.0  | 2        | Service worker and offline page                 | ✅     | [11.2](docs/epics/pwa.md)  |
+| —       | 3        | Standalone polish, guide and checks             | 🚧     | [11.3](docs/epics/pwa.md)  |
+| 0.47.0  | 4        | Icons from the instance's own logo `[parallel]` | ✅     | [11.4](docs/epics/pwa.md)  |
+| —       | 5        | Manifest members that do not vary by person     | 📋     | [11.5](docs/epics/pwa.md)  |
+| —       | 6        | Install this app `[parallel]`                   | 📋     | [11.6](docs/epics/pwa.md)  |
+| —       | 7        | A new version, announced `[parallel]`           | 📋     | [11.7](docs/epics/pwa.md)  |
+| —       | 8        | Opening installed apps, seen on devices         | 📋     | [11.8](docs/epics/pwa.md)  |
+| —       | 9        | `@sovereignfs/pwa`                              | 📋     | [11.11](docs/epics/pwa.md) |
+| —       | 10       | The app template installs                       | 📋     | [11.12](docs/epics/pwa.md) |
+| —       | 11       | The deployed apps, audited and fixed            | 📋     | [11.13](docs/epics/pwa.md) |
+| —       | 12       | Tiles open installed apps                       | 📋     | [11.9](docs/epics/pwa.md)  |
+| —       | 13       | Shortcuts that open a native app                | 📋     | [11.10](docs/epics/pwa.md) |
 
 ### M5 — Core can be deployed
 

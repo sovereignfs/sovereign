@@ -19,3 +19,8 @@ export const Default: Story = {
 export const Continuing: Story = {
   args: { kit, instanceName: 'Rohr', onContinue: () => {}, continuing: true },
 };
+
+/** The instance's owner turned on recovery (escrow): the kit is the person's own way back, and not the only one. */
+export const OwnerCanRecover: Story = {
+  args: { kit, instanceName: 'Rohr', onContinue: () => {}, ownerCanRecover: true },
+};

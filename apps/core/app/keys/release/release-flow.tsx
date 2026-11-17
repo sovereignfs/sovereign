@@ -7,6 +7,7 @@ import { deriveForSignIn } from '../../../src/auth/derive';
 import type { ReleaseRequest } from '../../../src/keys/release';
 import {
   escrowAccepted,
+  isEscrowOn,
   isEscrowPending,
   isKitPending,
   isUnlocked,
@@ -23,7 +24,7 @@ type Step =
   | { kind: 'checking' }
   | { kind: 'confirm' }
   | { kind: 'unlock' }
-  | { kind: 'kit'; kit: Uint8Array; text: string }
+  | { kind: 'kit'; kit: Uint8Array; text: string; ownerCanRecover: boolean }
   | { kind: 'escrow' }
   | { kind: 'failed' };
 
@@ -58,7 +59,12 @@ export function ReleaseFlow({
     }
     if (await isKitPending()) {
       const kit = newKey();
-      setStep({ kind: 'kit', kit, text: await formatKit(kit) });
+      setStep({
+        kind: 'kit',
+        kit,
+        text: await formatKit(kit),
+        ownerCanRecover: await isEscrowOn(),
+      });
       return;
     }
     if (await isEscrowPending()) {
@@ -101,6 +107,7 @@ export function ReleaseFlow({
         appName={appName}
         instanceName={instanceName}
         text={step.text}
+        ownerCanRecover={step.ownerCanRecover}
         onKept={async () => {
           const kept = await kitKept(step.kit);
           step.kit.fill(0);
@@ -321,23 +328,28 @@ function KeepKit({
   appName,
   instanceName,
   text,
+  ownerCanRecover,
   onKept,
 }: {
   appName: string;
   instanceName: string;
   text: string;
+  /** Escrow is on (core-app §5.8): the kit is the person's own way back, not the only one. */
+  ownerCanRecover: boolean;
   onKept: () => Promise<void>;
 }) {
   const [continuing, setContinuing] = useState(false);
   return (
     <div className={styles.form}>
       <p className={styles.lead}>
-        Before {appName} opens, keep your recovery kit. If you forget your password and lose your
-        passkeys, it’s the only way back to what you keep encrypted.
+        {ownerCanRecover
+          ? `Before ${appName} opens, keep your recovery kit. If you forget your password and lose your passkeys, it’s your own way back to what you keep encrypted.`
+          : `Before ${appName} opens, keep your recovery kit. If you forget your password and lose your passkeys, it’s the only way back to what you keep encrypted.`}
       </p>
       <RecoveryKit
         kit={text}
         instanceName={instanceName}
+        ownerCanRecover={ownerCanRecover}
         continuing={continuing}
         onContinue={() => {
           setContinuing(true);

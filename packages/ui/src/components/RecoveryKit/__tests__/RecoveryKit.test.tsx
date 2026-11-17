@@ -77,4 +77,24 @@ describe('RecoveryKit', () => {
     expect(text).toContain('the only way back to your encrypted data');
     expect(recoveryKitFileName('  ')).toBe('sovereign-recovery-kit.txt');
   });
+
+  it('says nobody else can get the data back only when the owner cannot recover it', () => {
+    render(<RecoveryKit kit={KIT} instanceName="Rohr" onContinue={() => {}} />);
+    expect(screen.getByText(/Nobody else can get it back/)).toBeTruthy();
+    expect(screen.queryByText(/can also recover it/)).toBeNull();
+    cleanup();
+
+    render(<RecoveryKit kit={KIT} instanceName="Rohr" onContinue={() => {}} ownerCanRecover />);
+    expect(screen.getByText(/The owner of Rohr has turned on recovery/)).toBeTruthy();
+    expect(screen.queryByText(/Nobody else/)).toBeNull();
+    expect(screen.queryByText(/only way back/)).toBeNull();
+  });
+
+  it('writes the file the same way: the only way back without recovery, not with it', () => {
+    expect(recoveryKitFileText(KIT, 'Rohr', true)).not.toContain('only way back');
+    expect(recoveryKitFileText(KIT, 'Rohr', true)).toContain(
+      'The owner of Rohr can also recover it',
+    );
+    expect(recoveryKitFileText(KIT, 'Rohr', false)).not.toContain('can also recover');
+  });
 });

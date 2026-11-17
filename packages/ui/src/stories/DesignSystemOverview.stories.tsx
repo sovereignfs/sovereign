@@ -2864,7 +2864,7 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
             <ComponentCard
               name="RecoveryKit"
               importLine="import { RecoveryKit } from '@sovereignfs/ui';"
-              usage="The recovery kit, shown once at set-up: fourteen groups, Print and Save as a file, and Continue held off until the person says they kept it. Takes the kit's text; never the bytes. Experimental."
+              usage="The recovery kit, shown once at set-up: fourteen groups, Print and Save as a file, and Continue held off until the person says they kept it. Takes the kit's text; never the bytes. ownerCanRecover, when the instance's owner turned on recovery, says the kit is not the only way back. Experimental."
             >
               <RecoveryKit
                 kit="000G-40R4-0M30-E209-185G-R38E-1W81-24GK-2GAH-C5RR-34D1-P70X-3RFG-K7Q2"

@@ -166,6 +166,16 @@ export const unlockWithKitTyped = async (typed: string, password: WebKey) =>
 /** Whether the person is to be told escrow is on before their data is covered by it (core-app §5.8). */
 export const isEscrowPending = async () => (await quietly(() => escrowPending(actions))) ?? false;
 
+/**
+ * Whether the instance's owner turned on recovery (core-app §5.8), covered or not: the recovery kit then says it is not the only way
+ * back (§5.3). `false` when it cannot be read, which shows the kit's words without escrow; the escrow notice that follows still tells.
+ */
+export const isEscrowOn = async () =>
+  (await quietly(async () => {
+    const read = await actions.read();
+    return read.ok && read.value.escrow !== undefined;
+  })) ?? false;
+
 /** The person was told: add the escrow way in. */
 export const escrowAccepted = async () =>
   (await quietly(() => coverEscrowNow(actions, keyStore()))) ?? false;

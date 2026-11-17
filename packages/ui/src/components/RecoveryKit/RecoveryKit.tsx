@@ -14,6 +14,11 @@ export interface RecoveryKitProps {
   onContinue: () => void;
   /** True while what Continue started is running: the button says so and cannot be pressed again. */
   continuing?: boolean;
+  /**
+   * True when the instance's owner turned on recovery (escrow, core-app §5.8): the kit is then the person's own way back, and not the
+   * only one. Leave it off otherwise; the kit then says that nobody else can get the data back.
+   */
+  ownerCanRecover?: boolean;
   className?: string;
 }
 
@@ -28,13 +33,19 @@ export function recoveryKitFileName(instanceName: string): string {
 }
 
 /** What the saved file holds. */
-export function recoveryKitFileText(kit: string, instanceName: string): string {
+export function recoveryKitFileText(
+  kit: string,
+  instanceName: string,
+  ownerCanRecover = false,
+): string {
   return [
     `Recovery kit for ${instanceName}`,
     '',
     kit,
     '',
-    'Keep this somewhere safe. If you forget your password and have no passkey, it is the only way back to your encrypted data.',
+    ownerCanRecover
+      ? `Keep this somewhere safe. If you forget your password and have no passkey, it is your own way back to your encrypted data. The owner of ${instanceName} can also recover it.`
+      : 'Keep this somewhere safe. If you forget your password and have no passkey, it is the only way back to your encrypted data.',
     '',
   ].join('\n');
 }
@@ -49,6 +60,7 @@ export function RecoveryKit({
   instanceName,
   onContinue,
   continuing = false,
+  ownerCanRecover = false,
   className,
 }: RecoveryKitProps) {
   const [kept, setKept] = useState(false);
@@ -56,7 +68,9 @@ export function RecoveryKit({
 
   const save = () => {
     const url = URL.createObjectURL(
-      new Blob([recoveryKitFileText(kit, instanceName)], { type: 'text/plain;charset=utf-8' }),
+      new Blob([recoveryKitFileText(kit, instanceName, ownerCanRecover)], {
+        type: 'text/plain;charset=utf-8',
+      }),
     );
     const link = document.createElement('a');
     link.href = url;
@@ -73,11 +87,19 @@ export function RecoveryKit({
       <h2 id="recovery-kit-heading" className={styles.heading}>
         Save your recovery kit
       </h2>
-      <p className={styles.explain}>
-        If you forget your password and have no passkey, this kit is the only way back to your
-        encrypted data. Nobody else can get it back for you, not even this service&rsquo;s
-        operators.
-      </p>
+      {ownerCanRecover ? (
+        <p className={styles.explain}>
+          If you forget your password and have no passkey, this kit is your own way back to your
+          encrypted data. The owner of {instanceName} has turned on recovery, so they can also
+          recover it for you.
+        </p>
+      ) : (
+        <p className={styles.explain}>
+          If you forget your password and have no passkey, this kit is the only way back to your
+          encrypted data. Nobody else can get it back for you, not even this service&rsquo;s
+          operators.
+        </p>
+      )}
       <div className={styles.printable}>
         <p className={styles.printTitle}>Recovery kit for {instanceName}</p>
         <ol className={styles.groups} aria-label="Your recovery kit, in groups of four">

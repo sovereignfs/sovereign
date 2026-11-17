@@ -112,7 +112,18 @@ Roboto, Helvetica, Arial, sans-serif`. A page or component names a family only
   colour of the light theme, and the Sovereign mark as 192 and 512 pixel icons
   and a maskable one (`/icons/icon-192.png`, `/icons/icon-512.png`,
   `/icons/icon-maskable-512.png`, served with no session), or the operator's own
-  app icons when they have set them (§3.12). Every page tells a
+  app icons when they have set them (§3.12). The manifest also carries what a
+  fuller install needs, none of it varying by who asks (RFC 0001 A1): a fixed `id`
+  of `/` (a browser knows an installed app by it), a launch handler that brings a
+  window already open forward rather than starting another, shortcuts to the
+  launcher and the account page only (pages every signed-in person has; never the
+  Console), a narrow and a wide picture of the sign-in page for the install sheet
+  (`/icons/screenshot-narrow.png`, `/icons/screenshot-wide.png`, served with the
+  icons), its categories, and its language. Where the device allows it, the
+  account pages offer to install core (RFC 0001 A2): the browser's own prompt
+  where it has one, the words for Add to Home Screen on an iPhone or iPad, nothing
+  in an installed window, and nothing again on a device where the person said
+  "Not now". Every page tells a
   device how to meet its screen: it runs to the edges (`viewport-fit: cover`),
   what matters stays clear of a notch and a home bar by the safe-area insets, a
   strip of the page's colour holds the status bar of an installed app so that a
@@ -529,8 +540,12 @@ passkeys), subject to §3.2.1. The account holder is told by email.
   again; it needs no script and names no instance. The worker is served by core
   with the same hardening headers as every response, under a policy that names
   `worker-src 'self'`, is fetched afresh on every
-  start so a change is live on the next visit, and registers only in production
-  over https (or `localhost`). Nothing signed-in works offline.
+  start and whenever a page comes back into view, and registers only in production
+  over https (or `localhost`). A new version is announced, not swapped in silently
+  (RFC 0001 A3): a new worker waits while an older one controls the pages, a page
+  says "A new version of _instance_ is ready" with **Reload** and **Later**, and
+  Reload asks the waiting worker to take over (the one message the worker accepts)
+  and reloads once it has. Nothing signed-in works offline.
 - Requests are accepted only from core's own origin and the origins in
   `SV_AUTH_TRUSTED_ORIGINS`.
 - `SV_AUTH_SECRET` is required (at least 32 characters, or read from
@@ -2118,3 +2133,4 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-17 | §3.10: every Console page but its own has one way back, to the page above it, drawn by the frame; on a wide screen only a page beneath a section has it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 2026-11-17 | §3.2.2, §3.2.3: `console:access` is operator-only: never granted to `platform:user`, whatever the matrix says, so the Console, its launcher tile and the instance details line are for the owner and admins only.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | 2026-11-17 | §3.8, §3.8.1: shortcuts, tiles for any site that sign nobody in: for everyone from the Console, or a person's own from Shortcuts; one dashed "Add" tile; apps and shortcuts together by name; every tile icon in greys.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 2026-11-18 | §1.3, §3.5: a fuller install (RFC 0001 amendment 1): the manifest's fixed `id`, launch handler, shortcuts to pages everyone has, screenshots, categories and language; an offer to install on the account pages; a new version announced with Reload instead of swapped in silently.                                                                                                                                                                                                                                                                                                                                                                                                                                          |

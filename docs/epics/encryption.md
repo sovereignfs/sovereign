@@ -357,7 +357,7 @@ needs unlocking.
 - A reader who was removed cannot open what is written afterwards
 - The two calls return public keys and wrapped keys only
 
-#### 📋 16.12 — Escrow `[parallel]`
+#### ✅ 16.12 — Escrow `[parallel]`
 
 **Goal:** An instance whose owner turns escrow on can recover a person's data offline, and every person on it is told so.
 

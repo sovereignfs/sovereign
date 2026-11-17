@@ -5,6 +5,14 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.12.0; earlier versions are in the repository's
 history and tags.
 
+## [0.16.0] - 2026-11-17
+
+### Added
+
+- `sv key escrow` makes the key that lets an instance's owner recover people's encrypted data, keeps its private half off the server,
+  and prints the line to paste into the Console; `sv key escrow open` recovers one person offline with a new recovery kit (operator-cli
+  §9.5).
+
 ## [0.15.0] - 2026-11-16
 
 ### Added

@@ -19,6 +19,14 @@ export const APP_DEPENDENCIES = {
   'react-dom': '^19.3.1',
 } as const;
 
+/**
+ * What an app made with `--encryption` needs on top: the SDK release whose `/keys` encrypts a document (sdk §9.4). Held to this
+ * repository's SDK by the same test.
+ */
+export const ENCRYPTION_DEPENDENCIES = {
+  '@sovereignfs/sdk': '^2.5.0',
+} as const;
+
 export const APP_DEV_DEPENDENCIES = {
   // Makes the image's label and port from the manifest, and checks the manifest (`sovereign-manifest`).
   '@sovereignfs/manifest': '^0.3.0',

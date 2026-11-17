@@ -1,13 +1,14 @@
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { CreateError, DEFAULT_APP_PORT, checkEmpty, type CreateIo, type Exec } from './create.js';
-import { fill, TEMPLATE, targetOf } from './fill.js';
+import { ENCRYPTION_TEMPLATE, fill, TEMPLATE, targetOf } from './fill.js';
 import { TOOL_COMMANDS } from './commands.js';
 import { DEFAULT_REQUIRED_CHECKS, repositorySettings } from './settings-file.js';
 import {
   APP_DEPENDENCIES,
   APP_DEV_DEPENDENCIES,
   CREATE_VERSION,
+  ENCRYPTION_DEPENDENCIES,
   SHARED_WORKFLOWS_REF,
 } from './versions.js';
 
@@ -61,7 +62,11 @@ async function* walk(dir: string, base = dir): AsyncGenerator<string> {
 }
 
 /** The `package.json` of a new app. */
-export function appPackageJson(names: AppNames, port: number = DEFAULT_APP_PORT): string {
+export function appPackageJson(
+  names: AppNames,
+  port: number = DEFAULT_APP_PORT,
+  options: { encryption?: boolean } = {},
+): string {
   return `${JSON.stringify(
     {
       // Every app of the suite is named in the @sovereignfs scope. It is private, so the name claims nothing on npm.
@@ -82,7 +87,9 @@ export function appPackageJson(names: AppNames, port: number = DEFAULT_APP_PORT)
         // Turns the versioned hooks on for whoever installs; harmless where there is no repository (the image's build).
         prepare: 'git config core.hooksPath .githooks || true',
       },
-      dependencies: APP_DEPENDENCIES,
+      dependencies: options.encryption
+        ? { ...APP_DEPENDENCIES, ...ENCRYPTION_DEPENDENCIES }
+        : APP_DEPENDENCIES,
       // `@sovereignfs/create` is pinned exactly: `npm create @sovereignfs sync` and the shared workflows run this version (research 0007).
       devDependencies: { ...APP_DEV_DEPENDENCIES, '@sovereignfs/create': CREATE_VERSION },
       // What the shared files need of this app: its tag prefix, the checks its main requires, and any shared file it keeps as its own.
@@ -98,30 +105,34 @@ export async function writeApp(
   target: string,
   names: AppNames,
   port: number = DEFAULT_APP_PORT,
+  options: { encryption?: boolean } = {},
 ): Promise<string[]> {
   await checkEmpty(target);
-  const written: string[] = [];
+  const written = new Set<string>();
   const values = { names, port, workflowsRef: SHARED_WORKFLOWS_REF, directory: '.', tagPrefix: '' };
   const replace = (text: string) => fill(text, values);
 
-  for await (const file of walk(TEMPLATE)) {
-    const out = targetOf(file);
-    const target_ = path.join(target, out);
-    await mkdir(path.dirname(target_), { recursive: true });
-    let text = replace(await readFile(path.join(TEMPLATE, file), 'utf8'));
-    // The template's manifest stays valid JSON (it is formatted and checked as such), so its port is a number and not a placeholder.
-    if (out === 'sovereign.manifest.json') text = text.replace(/"port": \d+/, `"port": ${port}`);
-    if (out === path.join('.github', 'repository.json'))
-      text = repositorySettings(text, DEFAULT_REQUIRED_CHECKS);
-    // A hook runs only when it is executable.
-    await writeFile(target_, text, {
-      mode: out.startsWith(`.githooks${path.sep}`) ? 0o755 : 0o644,
-    });
-    written.push(out);
-  }
-  await writeFile(path.join(target, 'package.json'), appPackageJson(names, port));
-  written.push('package.json');
-  return written.sort();
+  // With `--encryption`, its files are written over the app's: the same names replace, new ones are added.
+  const sources = [TEMPLATE, ...(options.encryption ? [ENCRYPTION_TEMPLATE] : [])];
+  for (const source of sources)
+    for await (const file of walk(source)) {
+      const out = targetOf(file);
+      const target_ = path.join(target, out);
+      await mkdir(path.dirname(target_), { recursive: true });
+      let text = replace(await readFile(path.join(source, file), 'utf8'));
+      // The template's manifest stays valid JSON (it is formatted and checked as such), so its port is a number and not a placeholder.
+      if (out === 'sovereign.manifest.json') text = text.replace(/"port": \d+/, `"port": ${port}`);
+      if (out === path.join('.github', 'repository.json'))
+        text = repositorySettings(text, DEFAULT_REQUIRED_CHECKS);
+      // A hook runs only when it is executable.
+      await writeFile(target_, text, {
+        mode: out.startsWith(`.githooks${path.sep}`) ? 0o755 : 0o644,
+      });
+      written.add(out);
+    }
+  await writeFile(path.join(target, 'package.json'), appPackageJson(names, port, options));
+  written.add('package.json');
+  return [...written].sort();
 }
 
 /**
@@ -129,7 +140,7 @@ export async function writeApp(
  * as it stands. The files, `git init`, the lockfile, the first commit on `main`, and `develop` checked out. It does not install or build.
  */
 export async function createApp(
-  request: { dir: string; port?: number },
+  request: { dir: string; port?: number; encryption?: boolean },
   io: CreateIo,
   exec: Exec,
   cwd: string,
@@ -137,8 +148,10 @@ export async function createApp(
   const target = path.resolve(cwd, request.dir);
   const names = namesOf(target);
   const port = request.port ?? DEFAULT_APP_PORT;
-  const written = await writeApp(target, names, port);
-  io.err(`Wrote the files of ${names.name}, on port ${port}.`);
+  const written = await writeApp(target, names, port, { encryption: request.encryption ?? false });
+  io.err(
+    `Wrote the files of ${names.name}, on port ${port}${request.encryption ? ', with its notes encrypted' : ''}.`,
+  );
 
   const step = async (label: string, command: string, args: string[], hint: string) => {
     const done = await exec(command, args, { cwd: target });

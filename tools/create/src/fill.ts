@@ -8,6 +8,10 @@ import type { AppNames } from './app.js';
 
 /** Where the template is, beside `dist/` once built and beside `src/` when tested. */
 export const TEMPLATE = fileURLToPath(new URL('../template/app', import.meta.url));
+/** What `--encryption` writes over the app's files: the notes encrypted in the browser (RFC 0005), shared through core. */
+export const ENCRYPTION_TEMPLATE = fileURLToPath(
+  new URL('../template/encryption', import.meta.url),
+);
 
 /** The files and folders npm would not keep under their own names, and the names they are made with. */
 export const RENAMED: Record<string, string> = {

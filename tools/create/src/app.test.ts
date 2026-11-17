@@ -8,7 +8,7 @@ import { satisfies } from 'semver';
 import { afterEach, describe, expect, it } from 'vitest';
 import { appPackageJson, createApp, namesOf, writeApp } from './app.js';
 import { CreateError, DEFAULT_APP_PORT, type CreateIo, type Exec } from './create.js';
-import { APP_DEPENDENCIES, APP_DEV_DEPENDENCIES } from './versions.js';
+import { APP_DEPENDENCIES, APP_DEV_DEPENDENCIES, ENCRYPTION_DEPENDENCIES } from './versions.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const dirs: string[] = [];
@@ -401,6 +401,135 @@ describe('the files an app keeps for people', () => {
     expect(readme).toContain("## People's files");
     expect(readme).toContain('docker compose up --build');
     expect(readme).toContain('`"storage": false`');
+  });
+});
+
+describe('an app made with --encryption', () => {
+  const made = async () => {
+    const target = path.join(temp(), 'my-notes');
+    await writeApp(target, namesOf(target), DEFAULT_APP_PORT, { encryption: true });
+    return target;
+  };
+
+  it('meets manifest 4, with its key return address, the Directory for sharing, and the core that has them', async () => {
+    const target = await made();
+    const manifest = JSON.parse(read(target, 'sovereign.manifest.json')) as {
+      manifest: number;
+      encryption: { return: string };
+      signIn: { scopes: string[] };
+      core: string;
+    };
+    const ajv = new Ajv2020({ allErrors: true, strict: false });
+    addFormats(ajv);
+    const validate = ajv.compile(
+      JSON.parse(
+        readFileSync(path.join(root, 'contracts/schemas/app-manifest-v4.schema.json'), 'utf8'),
+      ),
+    );
+    expect(validate(manifest), JSON.stringify(validate.errors)).toBe(true);
+    expect(manifest.manifest).toBe(4);
+    expect(manifest.encryption).toEqual({ return: '/keys/return' });
+    expect(existsSync(path.join(target, 'app/keys/return/page.tsx'))).toBe(true);
+    // Sharing finds people in the Directory; `keys` is not asked for, it comes with `encryption` once the operator allows it (§2.8).
+    expect(manifest.signIn.scopes).toEqual(
+      expect.arrayContaining(['openid', 'offline_access', 'directory']),
+    );
+    expect(manifest.signIn.scopes).not.toContain('keys');
+    // The SDK asks only for what it is told: without these, the Directory and the keys calls are refused.
+    expect(read(target, 'lib/sovereign.ts')).toContain(
+      "scopes: ['openid', 'profile', 'email', 'offline_access', 'directory', 'keys']",
+    );
+    expect(manifest.core.startsWith('>=0.68.0')).toBe(true);
+  });
+
+  it('depends on the SDK whose keys entry encrypts a document, which this repository satisfies', async () => {
+    const target = await made();
+    const pkg = JSON.parse(read(target, 'package.json')) as {
+      dependencies: Record<string, string>;
+    };
+    expect(pkg.dependencies['@sovereignfs/sdk']).toBe(ENCRYPTION_DEPENDENCIES['@sovereignfs/sdk']);
+    const sdk = (
+      JSON.parse(readFileSync(path.join(root, 'packages/sdk/package.json'), 'utf8')) as {
+        version: string;
+      }
+    ).version;
+    expect(satisfies(sdk, ENCRYPTION_DEPENDENCIES['@sovereignfs/sdk'])).toBe(true);
+  });
+
+  it('writes its own files over the app’s, with the names put in and nothing of the template left', async () => {
+    const target = await made();
+    for (const file of [
+      'app/notes.tsx',
+      'app/keys/return/received.tsx',
+      'lib/notes.ts',
+      'lib/keys.ts',
+      'app/api/notes/route.ts',
+      'app/api/notes/[id]/route.ts',
+      'app/api/people/route.ts',
+      'app/api/people/[sub]/keys/route.ts',
+      'app/api/me/keys/route.ts',
+      'ENCRYPTION.md',
+    ])
+      expect(existsSync(path.join(target, file)), file).toBe(true);
+    for (const file of all(target)) {
+      expect(read(target, file), file).not.toMatch(
+        /__(PREFIX|PREFIX_LOWER|NAME|TITLE|PORT)__|\*\*TITLE\*\*/,
+      );
+    }
+    expect(read(target, 'lib/keys.ts')).toContain("required('MYNOTES_CORE_CLIENT_ID')");
+    expect(read(target, 'ENCRYPTION.md').split('\n')[0]).toBe('# Encryption in My Notes');
+  });
+
+  it('keeps no column a note’s text could be in, and renders nothing of a note on the server', async () => {
+    const target = await made();
+    const migration = read(target, 'migrations/001_init.sql');
+    const notes = migration.slice(migration.indexOf('CREATE TABLE notes'));
+    expect(notes.slice(0, notes.indexOf(');'))).not.toMatch(/\b(title|text|body)\s+text\b/);
+    expect(notes).toMatch(/body\s+bytea/);
+    const page = read(target, 'app/page.tsx');
+    expect(page).not.toContain('notes()');
+    expect(page).not.toContain('FROM notes');
+    // What the page encrypts and opens, it does with the SDK's keys entry, in the browser.
+    expect(read(target, 'app/notes.tsx').startsWith("'use client';")).toBe(true);
+  });
+
+  it('changes notes only from the app’s own pages, for someone signed in, and names the person in every statement', async () => {
+    const target = await made();
+    const route = read(target, 'app/api/notes/[id]/route.ts');
+    for (const method of ['PUT', 'DELETE']) {
+      const body = route.slice(route.indexOf(`export async function ${method}`));
+      expect(body.indexOf('refuseCrossOrigin(request)'), method).toBeGreaterThan(-1);
+      expect(body.indexOf('refuseCrossOrigin(request)')).toBeLessThan(body.indexOf('getSession()'));
+    }
+    for (const file of [
+      'app/api/notes/route.ts',
+      'app/api/people/route.ts',
+      'app/api/people/[sub]/keys/route.ts',
+      'app/api/me/keys/route.ts',
+    ]) {
+      expect(read(target, file), file).toContain('auth().getSession()');
+      expect(read(target, file), file).toContain('unauthorised()');
+    }
+    const store = read(target, 'lib/notes.ts');
+    expect(store).toContain('DELETE FROM notes WHERE id = $1 AND owner = $2');
+    expect(store).toContain('WHERE notes.owner = EXCLUDED.owner');
+    expect(store).toContain('r.reader = $1');
+  });
+
+  it('deletes a person’s notes and the keys sealed to them when their account is deleted', async () => {
+    const target = await made();
+    const auth = read(target, 'lib/auth.ts');
+    expect(auth).toContain('await notes().deleteAll(sub)');
+    expect(auth).toContain('await files().removeAll(sub)');
+    expect(read(target, 'lib/notes.ts')).toContain('OR reader = $1');
+  });
+
+  it('is not written without the option', async () => {
+    const target = path.join(temp(), 'my-notes');
+    await writeApp(target, namesOf(target));
+    expect(existsSync(path.join(target, 'app/notes.tsx'))).toBe(false);
+    expect(existsSync(path.join(target, 'ENCRYPTION.md'))).toBe(false);
+    expect(JSON.parse(read(target, 'sovereign.manifest.json')).manifest).toBe(3);
   });
 });
 

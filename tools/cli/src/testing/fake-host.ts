@@ -53,6 +53,10 @@ export class FakeDocker {
   wontStart = new Set<string>();
   /** The user each image runs as (`Config.User`), by image; `node` when a test does not say. */
   imageUsers: Record<string, string> = {};
+  /** Images the server does not have until they are pulled, as a new core's is on an upgrade; `image inspect` fails for them. */
+  notPulled = new Set<string>();
+  /** The images pulled, in order. */
+  pulled: string[] = [];
   /** The folders of people's files made in `sovereign-data`, with the owner each was given. */
   filesFolders = new Map<string, string>();
   /** What each `instance deletions resend` was asked: `--app NAME --since TIME`. */
@@ -161,8 +165,21 @@ export class FakeDocker {
         return ok('');
       }
     }
+    if (command === 'pull') {
+      const image = rest[rest.length - 1] as string;
+      this.pulled.push(image);
+      this.notPulled.delete(image);
+      return ok('');
+    }
     if (command === 'image' && rest[0] === 'inspect' && rest.includes('{{.Config.User}}')) {
       const image = rest[rest.length - 1] as string;
+      if (this.notPulled.has(image)) {
+        return {
+          code: 1,
+          stdout: '',
+          stderr: `Error response from daemon: No such image: ${image}`,
+        };
+      }
       const key = Object.keys(this.imageUsers).find(
         (name) => image === name || image.startsWith(`${name}@`),
       );

@@ -119,9 +119,19 @@ describe('can', () => {
   it('gives another role the rest exactly as the matrix does', () => {
     const others = ALL_CAPABILITIES.filter((capability) => !CAPABILITIES[capability].ownerOnly);
     for (const capability of others) {
-      expect(can(ROLE_USER, capability, everything)).toBe(true);
+      expect(can(ROLE_ADMIN, capability, everything)).toBe(true);
+      expect(can(ROLE_ADMIN, capability, nothing)).toBe(false);
+      expect(can(ROLE_USER, capability, everything)).toBe(!CAPABILITIES[capability].operatorOnly);
       expect(can(ROLE_USER, capability, nothing)).toBe(false);
     }
+  });
+
+  it('never gives the user role the Console, whatever the matrix says, and gives it to admins only when the matrix does', () => {
+    expect(CAPABILITIES['console:access'].operatorOnly).toBe(true);
+    expect(can(ROLE_USER, 'console:access', everything)).toBe(false);
+    expect(can(ROLE_ADMIN, 'console:access', everything)).toBe(true);
+    expect(can(ROLE_ADMIN, 'console:access', nothing)).toBe(false);
+    expect(can(ROLE_OWNER, 'console:access', nothing)).toBe(true);
   });
 
   it.each([undefined, null, '', 'owner', 'platform:superuser', 'PLATFORM:OWNER', 0, {}, []])(

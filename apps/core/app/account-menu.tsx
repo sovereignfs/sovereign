@@ -6,19 +6,17 @@ import { authClient } from '../src/auth/client';
 import { forgetKeys } from '../src/keys/session';
 
 /**
- * The person's avatar in the header, and the menu it opens: their account, the Console for an operator, and
- * signing out. The avatar is their picture, or their initials until they have one.
+ * The person's avatar in the header, and the menu it opens: their account and signing out. An operator reaches
+ * the Console from its tile on the launcher. The avatar is their picture, or their initials until they have one.
  */
 export function AccountMenu({
   name,
   email,
   avatarUrl,
-  operator,
 }: {
   name: string;
   email: string;
   avatarUrl: string | undefined;
-  operator: boolean;
 }) {
   const [, setSigningOut] = useState(false);
 
@@ -33,9 +31,6 @@ export function AccountMenu({
 
   const items: UserMenuItem[] = [
     { label: 'Account', icon: 'user', href: '/profile' },
-    ...(operator
-      ? [{ label: 'Console', icon: 'layout-dashboard', href: '/console' } satisfies UserMenuItem]
-      : []),
     { label: 'Sign out', icon: 'log-out', onSelect: () => void signOut() },
   ];
 

@@ -688,3 +688,28 @@ export const keySessionSecrets = sqliteTable('key_session_secrets', {
   secret: text('secret').notNull(),
   createdAt: integer('created_at').notNull(),
 });
+
+/**
+ * Launcher shortcuts (core-app §3.8.1): a name, an address and an icon, opened in a new tab. A shortcut is not an
+ * app: it never signs anyone in and is never a client. `owner_id` is empty for one shown to everyone, which an
+ * operator added; otherwise it is the person whose own it is, and it goes with their account. The icon is a picked
+ * symbol from the design system or an uploaded picture, judged by its bytes, never both. Times are milliseconds.
+ */
+export const launcherShortcuts = sqliteTable(
+  'launcher_shortcuts',
+  {
+    id: text('id').primaryKey(),
+    ownerId: text('owner_id').references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    url: text('url').notNull(),
+    description: text('description'),
+    iconSymbol: text('icon_symbol'),
+    iconType: text('icon_type'),
+    iconBytes: sqliteBytes('icon_bytes'),
+    iconSize: integer('icon_size'),
+    iconVersion: text('icon_version'),
+    createdAt: integer('created_at').notNull(),
+    createdBy: text('created_by'),
+  },
+  (table) => [index('launcher_shortcuts_owner_idx').on(table.ownerId)],
+);

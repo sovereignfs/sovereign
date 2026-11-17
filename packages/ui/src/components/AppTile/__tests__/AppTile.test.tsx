@@ -26,4 +26,25 @@ describe('AppTile', () => {
     expect(container.querySelector('[class*="tags"]')).toBeNull();
     expect(screen.getByText('pic').parentElement?.getAttribute('aria-hidden')).toBe('true');
   });
+
+  it('opens another site in a new tab, tells it nothing of where it came from, and says so', () => {
+    render(<AppTile icon={null} name="Drive" href="https://drive.proton.me" external />);
+    const link = screen.getByRole('link');
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(link.textContent).toContain('(opens in a new tab)');
+  });
+
+  it('opens in the same tab unless it is external', () => {
+    render(<AppTile icon={null} name="Notes" href="/launch" />);
+    expect(screen.getByRole('link').getAttribute('target')).toBeNull();
+    expect(screen.getByRole('link').textContent).not.toContain('new tab');
+  });
+
+  it('marks the tile monochrome when asked, so its picture is drawn in greys', () => {
+    const { container, rerender } = render(<AppTile icon={null} name="Notes" monochrome />);
+    expect(container.firstElementChild?.className).toContain('monochrome');
+    rerender(<AppTile icon={null} name="Notes" />);
+    expect(container.firstElementChild?.className).not.toContain('monochrome');
+  });
 });

@@ -2,14 +2,11 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ROLE_ADMIN, ROLE_OWNER, ROLE_USER } from '../auth/roles';
-import { DEFAULT_MATRIX } from '../roles/capabilities';
 
 const getSession = vi.fn();
 vi.mock('../auth/session', () => ({ getSession: () => getSession() as unknown }));
 const signOut = vi.fn();
 vi.mock('../auth/client', () => ({ authClient: { signOut: () => signOut() as unknown } }));
-const matrix = vi.fn();
-vi.mock('../roles/matrix', () => ({ getCapabilityMatrix: () => matrix() as unknown }));
 const apps = vi.fn();
 const list = vi.fn();
 vi.mock('../notifications', () => ({
@@ -44,7 +41,6 @@ const menuLinks = () =>
 beforeEach(() => {
   getSession.mockReset();
   signOut.mockReset();
-  matrix.mockReset().mockResolvedValue(DEFAULT_MATRIX);
   identity.mockReset().mockResolvedValue({ name: 'Acme' });
   apps.mockReset().mockResolvedValue([]);
   list.mockReset().mockResolvedValue([]);
@@ -107,7 +103,7 @@ describe('the header every signed-in page has', () => {
     ).toBe('/api/avatars/u1?v=1');
   });
 
-  it('opens a menu with who they are, their account and signing out, and no Console for an ordinary person', async () => {
+  it('opens a menu with who they are, their account and signing out, and no Console', async () => {
     as(ROLE_USER);
     await draw();
     openMenu();
@@ -119,26 +115,14 @@ describe('the header every signed-in page has', () => {
     ]);
   });
 
-  it('adds the Console for an operator, between their account and signing out', async () => {
+  it('has no Console for an operator either: they reach it from the launcher', async () => {
     for (const role of [ROLE_ADMIN, ROLE_OWNER]) {
       as(role);
       await draw();
       openMenu();
-      expect(menuLinks().map(([label]) => label)).toEqual(['Account', 'Console', 'Sign out']);
-      expect(menuLinks()[1]?.[1]).toBe('/console');
+      expect(menuLinks().map(([label]) => label)).toEqual(['Account', 'Sign out']);
       cleanup();
     }
-  });
-
-  it('judges the Console by the matrix in force, not by the role’s name', async () => {
-    as(ROLE_ADMIN);
-    matrix.mockResolvedValue({
-      [ROLE_ADMIN]: new Set(['profile:manage', 'launcher:access']),
-      [ROLE_USER]: new Set(['profile:manage', 'launcher:access']),
-    });
-    await draw();
-    openMenu();
-    expect(menuLinks().map(([label]) => label)).toEqual(['Account', 'Sign out']);
   });
 
   it('ends the session, then goes to sign-in saying so, with a full navigation', async () => {

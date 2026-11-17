@@ -19,6 +19,7 @@ describe("core's schemas", () => {
       'twoFactors',
       'passkeys',
       'avatars',
+      'launcherShortcuts',
       'capabilityOverrides',
       'jwks',
       'oauthClients',

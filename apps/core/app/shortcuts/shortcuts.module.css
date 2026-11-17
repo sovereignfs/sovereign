@@ -1,0 +1,156 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sv-space-3);
+  flex-wrap: wrap;
+  margin-top: var(--sv-space-4);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--sv-font-size-2xl);
+  font-weight: var(--sv-font-weight-semibold);
+}
+
+.lead {
+  margin: 0;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-md);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+}
+
+/* The fields on the left and the tile as it will look on the right; on a phone the tile comes after the fields. */
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 40rem) 260px;
+  gap: var(--sv-space-8);
+  align-items: start;
+}
+
+@media (max-width: 767px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+}
+
+.icon {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sv-space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.icon > :last-child {
+  align-self: stretch;
+}
+
+.legend {
+  margin-bottom: var(--sv-space-2);
+  padding: 0;
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+}
+
+.preview {
+  position: sticky;
+  top: var(--sv-space-4);
+}
+
+.picture {
+  display: block;
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.hint {
+  margin: 0;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-sm);
+}
+
+.error {
+  margin: 0;
+  color: var(--sv-color-error-text);
+  font-size: var(--sv-font-size-sm);
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  flex-wrap: wrap;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-lg);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+  padding: var(--sv-space-3) var(--sv-space-4);
+}
+
+.item + .item {
+  border-top: 1px solid var(--sv-color-border);
+}
+
+.itemIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface-sunken);
+  filter: grayscale(1);
+}
+
+.itemText {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.itemName {
+  font-weight: var(--sv-font-weight-medium);
+}
+
+.itemUrl {
+  overflow: hidden;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

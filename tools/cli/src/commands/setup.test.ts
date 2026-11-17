@@ -6,6 +6,9 @@ import { sv, setUpWorld } from '../testing/commands.js';
 import { makeWorld, type World } from '../testing/world.js';
 import type { Lock, Suite } from '../suite/types.js';
 import { RELEASE } from '../release.js';
+
+/** Releases newer than the core this toolkit was made for, so the test holds whatever that is: `.10` after `.2` checks they compare as numbers. */
+const NEXT_MINOR = `0.${Number(RELEASE.newestCore.split('.')[1]) + 1}`;
 import { Failed } from '../errors.js';
 
 let world: World;
@@ -46,11 +49,13 @@ describe('sv setup', () => {
   });
 
   it('starts the instance on the newest core that is published and supported, and pins that image', async () => {
-    world = makeWorld({ coreTags: [RELEASE.newestCore, '0.99.3', '0.99.10', '1.0.0', 'latest'] });
+    world = makeWorld({
+      coreTags: [RELEASE.newestCore, `${NEXT_MINOR}.3`, `${NEXT_MINOR}.10`, '1.0.0', 'latest'],
+    });
     const done = await setUpWorld(world);
-    expect((parse(read('suite.yml')) as Suite).core.version).toBe('0.99.10');
+    expect((parse(read('suite.yml')) as Suite).core.version).toBe(`${NEXT_MINOR}.10`);
     expect((parse(read('suite.lock')) as Lock).images.core.ref).toBe(
-      `${RELEASE.images.core}:0.99.10`,
+      `${RELEASE.images.core}:${NEXT_MINOR}.10`,
     );
     expect(done.text).not.toContain('Could not look up');
   });

@@ -5,6 +5,17 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.12.0; earlier versions are in the repository's
 history and tags.
 
+## [0.17.1] - 2026-11-17
+
+### Fixed
+
+- `sv deploy` no longer stops on an upgrade of core with “Reading the image’s user failed: No such image”: the image whose user it reads
+  (core's new one, or a new app's) is pulled first when the server does not have it yet. Until now, the way round was to pull it on the
+  server by hand and deploy again.
+- `sv upgrade` moves core to the newest published release the toolkit supports, as `sv setup` chooses one, never backward; it moved it only
+  to the core the toolkit was made for, which in 0.17.0 was still 0.97.0, so an upgrade left core where it was. Offline, it moves it to that
+  one, and says why. This release was made for core 0.108.0.
+
 ## [0.17.0] - 2026-11-17
 
 ### Added

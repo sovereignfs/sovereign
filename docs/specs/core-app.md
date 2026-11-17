@@ -87,8 +87,9 @@ Roboto, Helvetica, Arial, sans-serif`. A page or component names a family only
   has the same header. On the left, the instance's mark (its logo, or the first
   letter of its name in a badge, a little larger than on the sign-in pages) and
   its name, which lead home. On the right, the person's avatar (their picture, or
-  their initials), which opens a menu with who they are, their account, the
-  Console for an operator, and sign out. No page is a dead end, and none repeats
+  their initials), which opens a menu with who they are, their account and sign
+  out; an operator reaches the Console from its tile on the launcher, where the
+  name leads. No page is a dead end, and none repeats
   the header's links of its own. The pages before sign-in show the instance's
   mark above their title, so a person can tell whose sign-in it is.
 - An address that leads nowhere, and a page that fails, show a page of the same
@@ -231,11 +232,16 @@ them.
 - Owner-only capabilities (`instance:configure-secrets`, `role:assign`,
   `capability:configure`, `ownership:transfer`) MUST NOT be granted to any
   other role.
+- Operator-only capabilities (`console:access`) MUST NOT be granted to
+  `platform:user`: the Console, its tile on the launcher and what the launcher
+  tells about the instance are for the owner and, while the matrix gives it,
+  admins. The owner MAY take it from admins.
 - A change to the matrix MUST reach accounts that are already signed in within
   the session cookie cache lifetime (§3.5).
 - The owner's edits are stored as differences from the default, for the admin
   and user rows only, and nothing else can be stored: the owner's row, a role
-  or capability that does not exist, and an owner-only capability are refused,
+  or capability that does not exist, an owner-only capability, and an
+  operator-only one given to users are refused,
   and a request with any one of them saves nothing. A change that only restates
   the default removes the stored difference, so a matrix nobody edited has no
   rows and a capability added to core later reaches everyone as its default
@@ -252,7 +258,8 @@ listed for, or opens for, anyone else.
 
 - **Permissions** lists every capability in words, never by its name in code, with
   a box for admins and a box for users. A capability only the owner may hold is
-  listed with no boxes, marked "Only the owner". Nothing is saved until the owner
+  listed with no boxes, marked "Only the owner"; an operator-only one has a box for
+  admins and none for users, marked "Not for users". Nothing is saved until the owner
   saves the whole table, and what is saved is what was shown: every box the owner
   may edit is sent, ticked or not, so an owner-only capability or an unknown role
   in a forged request is never reached. The page is read from the database, not
@@ -898,8 +905,8 @@ message`), 2 when the command line is wrong or core is not configured, and 3 whe
 ### 3.8 Launcher
 
 - The launcher is core's `/` for signed-in people with `launcher:access`.
-- It lists every enabled client with "show in launcher" on: icon, name and
-  description, with search by name.
+- It lists every enabled client with "show in launcher" on, and the person's
+  shortcuts (§3.8.1): icon, name and description, with search by name.
 - Choosing an app opens its launch URL in the same tab, as an ordinary link,
   so a person can still open it in a new tab themselves. The app then signs
   the person in through core; because the person already has a session, this
@@ -908,7 +915,7 @@ message`), 2 when the command line is wrong or core is not configured, and 3 whe
   not access control:** an app that should be restricted decides that itself,
   for example from the `roles` claim.
 - The page has the instance's name and logo, a way to each of the person's
-  own account pages (and the Console, for an operator), and one tile for each
+  own account pages, and one tile for each
   app: a link, so it works with the keyboard and opens in a new tab on request.
   Search matches the app's name, whatever the case, and says so when nothing
   matches. An app with no launch address has nothing to open and is not listed.
@@ -916,20 +923,47 @@ message`), 2 when the command line is wrong or core is not configured, and 3 whe
   account links.
 - A tile is an `AppTile`: the icon in a rounded box, the name, the description, and beneath a divider what kind of app it is. Core's
   own apps are **platform** apps and every app an operator added is a **Sovereign** app. For a person with `console:access` the
-  Console is a platform app and the first tile; it is not in the registry, is found by search like any other, and is shown to no one
+  Console is a platform app and the last tile, after the apps operators added; it is not in the registry, is found by search like any other, and is shown to no one
   else. Tiles are the size of the earlier launcher's, in a grid whose columns are at least 260px; the heading and its line are on the
-  left and the search on the right (stacked on a phone). A person who may add apps (`client:manage`) has a dashed "Add an app" tile
-  after the others, which is not shown while searching; anyone else, with no app yet, is told whom to ask.
+  left and the search on the right (stacked on a phone). The first tile is a dashed "Add", not shown while searching: for a person who
+  may add apps (`client:manage`) it leads to a choice (`/launcher/add`) of a shortcut of their own, a shortcut for everyone or an app
+  that signs in here; for anyone else, straight to a shortcut of their own. Then the apps and shortcuts together in name order, then
+  the Console. Every tile's icon is drawn in greys (`AppTile`'s `monochrome`), so pictures from elsewhere look like one set.
+- At the foot, a person with `console:access` reads what the instance runs, in one muted line:
+  "Sovereign 0.108.0 / 0.70.0 (Core) · PostgreSQL · Node 24.15 · up 3 days" (the platform version, core's own,
+  the database, Node's major and minor version, and how long this core process has run, in its largest whole
+  unit). Anyone else is not sent it: naming versions to everyone would tell an attacker what to try, which is why
+  the health endpoint says only up or down.
 - A tile's icon is the address an operator gave, or a drawn one from the name
   when there is none or it will not load. Only this page may load pictures from
   other addresses (`https`, and `http` on `localhost` on a development
   instance); every other page keeps to core's own, since a picture cannot run
   script but should still not be loadable from anywhere.
-- With no apps, an operator who may add apps is offered to add the first one,
-  and anyone else is told to ask whoever runs the instance.
+- With no apps or shortcuts, an operator who may add apps is offered to add the
+  first one, and anyone else to add a shortcut of their own.
 - Only the fields of a tile leave the server for the launcher: name,
   description, icon address and launch address. It is a read of what the person
   is meant to see and is not the registry, which needs `client:manage` (§3.7.3).
+
+#### 3.8.1 Shortcuts
+
+A **shortcut** is a tile for any site: a name, an address, an optional line
+about it and an icon. It is **not an app**: it signs nobody in, is never a
+client, and nothing about it reaches the registry or the provider, so core stays
+generic. It is kept in `launcher_shortcuts`, written only by `ShortcutManager`.
+
+- **For everyone:** added, changed and removed in the Console, on Apps (`/console/apps/shortcuts/…`), by a person with
+  `client:manage`; every person with `launcher:access` sees it, tagged **shortcut**.
+- **A person's own:** added, changed and removed on the account page **Shortcuts** (`/shortcuts`) by anyone with
+  `launcher:access`; seen by nobody else, tagged **yours**. The owner is always the session's account, never an id from the
+  request: another person's shortcut, or one that does not exist, is "not found" (and a page that is not there). A person keeps
+  up to 50. They are deleted with the account, in its one transaction; those for everyone stay with the instance.
+- **The address** follows the rule for an app's addresses (§3.7.1): `https`, or `http` on `localhost` only on a development
+  instance; no user name or password, no fragment. The tile opens it in a new tab with `rel="noopener noreferrer"` and says so.
+- **The icon** is one of three: a letter drawn from the name; an icon picked from a curated set of the design system's outline
+  icons; or an uploaded picture of at most 256 KB, judged by its bytes (PNG, JPEG or WebP as they are, an SVG rebuilt by
+  `sanitiseSvg`). A picture is kept in core and served from `/api/shortcuts/<id>/icon?v=<version>` to a signed-in person with
+  `launcher:access` who may see the shortcut, privately cached, with `nosniff` and a sandbox; it is never fetched from the site.
 
 ### 3.9 Directory API
 
@@ -1065,7 +1099,10 @@ enter is shown a page that is not there, not one that says what is missing.
 Every page checks again for itself, since the frame is not rendered again when
 someone moves between its pages, and every action checks its own capability. On
 a wide screen the sections are a list beside the page; on a phone the Console's
-own page lists them and every other page has a way back to it. A section is
+own page lists them. Every other page has one way back, to the page above it
+("Add an app" to Apps, Apps to the Console), drawn by the frame and never by the
+page; on a wide screen, where the list already leads to each section, only a page
+beneath a section has it. A section is
 listed only when its page exists. Operators reach the Console from the home page.
 
 ### 3.11 Identity pages
@@ -2076,3 +2113,8 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-17 | §5.7: sharing is built: the two key calls in the Core API, behind their guard, `404` alike for anyone without keys for the app, and `keys` among the capabilities.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 2026-11-17 | §5.8: escrow is built, turned on in the Console by the owner; a person is told before they are covered, not covered silently at the next unlock. §5.3: unlocking with the kit, which gives the current password its way in again, built here as escrow recovery ends in it.                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-11-17 | §5.3: the recovery kit says what escrow changes: with escrow on it is the person's own way back, and the owner can also recover their data.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-11-17 | §1.3, §3.8: the Console is reached from its tile on the launcher, now the last tile after the apps operators added ("Add an app" is the first), and is no longer in the avatar's menu; the launcher's line no longer names the person.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 2026-11-17 | §3.8: a person who may open the Console reads, at the foot of the launcher, the platform and core versions, the database, Node's version and the uptime; no one else is sent them.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 2026-11-17 | §3.10: every Console page but its own has one way back, to the page above it, drawn by the frame; on a wide screen only a page beneath a section has it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 2026-11-17 | §3.2.2, §3.2.3: `console:access` is operator-only: never granted to `platform:user`, whatever the matrix says, so the Console, its launcher tile and the instance details line are for the owner and admins only.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 2026-11-17 | §3.8, §3.8.1: shortcuts, tiles for any site that sign nobody in: for everyone from the Console, or a person's own from Shortcuts; one dashed "Add" tile; apps and shortcuts together by name; every tile icon in greys.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |

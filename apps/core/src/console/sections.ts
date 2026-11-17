@@ -113,3 +113,25 @@ export function activeSection(
   }
   return best?.id;
 }
+
+/**
+ * Where a Console page's one way back leads (core-app §3.10): a page beneath a section goes back to that section
+ * ("Add an app" to Apps), a section's own page to the Console, and the Console itself has none. A page beneath no
+ * section the person may open goes back to the Console.
+ */
+export function parentPage(
+  pathname: string,
+  sections: readonly Pick<ConsoleSection, 'href' | 'label'>[],
+): { href: string; label: string } | undefined {
+  if (pathname === '/console') return undefined;
+  const overview = { href: '/console', label: 'Console' };
+  let best: Pick<ConsoleSection, 'href' | 'label'> | undefined;
+  for (const section of sections) {
+    if (section.href === '/console') continue;
+    if (pathname === section.href || pathname.startsWith(`${section.href}/`)) {
+      if (!best || section.href.length > best.href.length) best = section;
+    }
+  }
+  if (!best || best.href === pathname) return overview;
+  return { href: best.href, label: best.label };
+}

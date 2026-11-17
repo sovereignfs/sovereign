@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { LauncherApp } from '../clients/launcher';
+import type { LauncherShortcut } from '../../app/launcher';
 
 vi.mock('next/link', () => ({
   default: ({ children, ...props }: React.ComponentProps<'a'>) => <a {...props}>{children}</a>,
@@ -20,6 +21,18 @@ const app = (name: string, extra: Partial<LauncherApp> = {}): LauncherApp => ({
   ...extra,
 });
 const APPS = [app('Calendar', { description: 'Plan the week' }), app('Notes'), app('Photos')];
+const shortcut = (name: string, extra: Partial<LauncherShortcut> = {}): LauncherShortcut => ({
+  id: `s-${name.toLowerCase()}`,
+  name,
+  description: undefined,
+  url: `https://${name.toLowerCase()}.example`,
+  icon: undefined,
+  own: false,
+  ...extra,
+});
+/** The tiles that open something: every link but the dashed "Add". */
+const opening = () =>
+  screen.getAllByRole('link').filter((link) => !link.className.includes('ghost'));
 
 describe('the launcher', () => {
   it('shows every app as a link to its launch address, in the same tab', () => {
@@ -65,7 +78,7 @@ describe('the launcher', () => {
     expect(screen.getByRole('link', { name: /Notes/ })).toBeTruthy();
     expect(screen.queryByRole('link', { name: /Calendar/ })).toBeNull();
     fireEvent.change(search, { target: { value: '' } });
-    expect(screen.getAllByRole('link')).toHaveLength(3);
+    expect(opening()).toHaveLength(3);
   });
 
   it('searches by name, not by description', () => {
@@ -80,21 +93,21 @@ describe('the launcher', () => {
     expect(screen.getByRole('status').textContent).toBe('No app is called “zzz”.');
   });
 
-  it('has no search box when there is nothing to search, and says what to do', () => {
+  it('has no search box when there is nothing to search, and lets an operator choose what to add', () => {
     render(<Launcher title="Apps" subtitle="Choose an app." apps={[]} canAddApps />);
     expect(screen.queryByRole('searchbox')).toBeNull();
-    expect(screen.getByRole('link', { name: 'Add an app' }).getAttribute('href')).toBe(
-      '/console/apps/new',
-    );
+    expect(screen.getByRole('link', { name: 'Add' }).getAttribute('href')).toBe('/launcher/add');
   });
 
-  it('does not send someone who cannot add apps to a page that is not there for them', () => {
+  it('sends someone who cannot add apps to a shortcut of their own, never to a page that is not there for them', () => {
     render(<Launcher title="Apps" subtitle="Choose an app." apps={[]} canAddApps={false} />);
-    expect(screen.queryByRole('link')).toBeNull();
-    expect(screen.getByText(/Ask whoever runs it/)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Add a shortcut' }).getAttribute('href')).toBe(
+      '/shortcuts/new',
+    );
+    expect(screen.queryByRole('link', { name: /console/i })).toBeNull();
   });
 
-  it('has the Console first, as a platform app, for an operator, and marks every other tile as a Sovereign app', () => {
+  it('has the Console after the apps, as a platform app, for an operator, and marks every other tile as a Sovereign app', () => {
     render(
       <Launcher
         title="Apps"
@@ -104,11 +117,11 @@ describe('the launcher', () => {
         canOpenConsole
       />,
     );
-    const links = screen.getAllByRole('link');
+    const links = opening();
     expect(links).toHaveLength(4);
-    expect(links[0]?.getAttribute('href')).toBe('/console');
-    expect(links[0]?.textContent).toContain('Console');
-    expect(links[0]?.textContent).toContain('platform');
+    expect(links[3]?.getAttribute('href')).toBe('/console');
+    expect(links[3]?.textContent).toContain('Console');
+    expect(links[3]?.textContent).toContain('platform');
     expect(screen.getAllByText('sovereign')).toHaveLength(3);
     expect(screen.getAllByText('platform')).toHaveLength(1);
   });
@@ -136,25 +149,22 @@ describe('the launcher', () => {
       <Launcher title="Apps" subtitle="Choose an app." apps={[]} canAddApps canOpenConsole />,
     );
     expect(screen.getByRole('link', { name: /Console/ })).toBeTruthy();
-    expect(screen.getByRole('link', { name: /Add an app/ }).getAttribute('href')).toBe(
-      '/console/apps/new',
-    );
+    expect(screen.getByRole('link', { name: /^Add/ }).getAttribute('href')).toBe('/launcher/add');
   });
 
-  it('offers adding an app as a dashed tile after the others, only to those who may, and not while searching', () => {
+  it('offers adding as a dashed first tile, to an operator a choice and to anyone else a shortcut, and not while searching', () => {
     const { rerender } = render(
       <Launcher title="Apps" subtitle="Choose an app." apps={APPS} canAddApps />,
     );
     const links = screen.getAllByRole('link');
     expect(links).toHaveLength(4);
-    expect(links[3]?.textContent).toContain('Add an app');
-    expect(links[3]?.className).toContain('ghost');
-    expect(links[3]?.textContent).toContain('sovereign');
+    expect(links[0]?.className).toContain('ghost');
+    expect(links[0]?.getAttribute('href')).toBe('/launcher/add');
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'not' } });
-    expect(screen.queryByRole('link', { name: /Add an app/ })).toBeNull();
-    rerender(<Launcher title="Apps" subtitle="Choose an app." apps={APPS} canAddApps={false} />);
+    expect(screen.queryByRole('link', { name: /^Add/ })).toBeNull();
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: '' } });
-    expect(screen.queryByRole('link', { name: /Add an app/ })).toBeNull();
+    rerender(<Launcher title="Apps" subtitle="Choose an app." apps={APPS} canAddApps={false} />);
+    expect(screen.getAllByRole('link')[0]?.getAttribute('href')).toBe('/shortcuts/new');
   });
 
   it('puts the heading and its line beside the search, and shows no search when there is nothing to search', () => {
@@ -167,5 +177,122 @@ describe('the launcher', () => {
     rerender(<Launcher title="Apps" subtitle="You are signed in." apps={[]} canAddApps={false} />);
     expect(screen.getByRole('heading', { name: 'Apps' })).toBeTruthy();
     expect(screen.queryByRole('searchbox')).toBeNull();
+  });
+});
+
+describe('the order of the tiles', () => {
+  it('is "Add", then the apps and shortcuts together by name, then the Console', () => {
+    render(
+      <Launcher
+        title="Apps"
+        subtitle="Choose an app."
+        apps={APPS}
+        shortcuts={[shortcut('Drive'), shortcut('Mail', { own: true })]}
+        canAddApps
+        canOpenConsole
+      />,
+    );
+    const names = screen
+      .getAllByRole('link')
+      .map((link) => link.querySelector('[class*="name"]')?.firstChild?.textContent)
+      .filter((name) => name !== undefined);
+    expect(names).toEqual(['Add', 'Calendar', 'Drive', 'Mail', 'Notes', 'Photos', 'Console']);
+  });
+});
+
+describe('a shortcut', () => {
+  it('opens its site in a new tab, telling it nothing of where it came from', () => {
+    render(
+      <Launcher
+        title="Apps"
+        subtitle="Choose an app."
+        apps={[]}
+        shortcuts={[shortcut('Drive')]}
+        canAddApps={false}
+      />,
+    );
+    const link = screen.getByRole('link', { name: /Drive/ });
+    expect(link.getAttribute('href')).toBe('https://drive.example');
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(link.textContent).toContain('shortcut');
+  });
+
+  it('says it is the person’s own, and offers to manage them, only when they have one', () => {
+    const { rerender } = render(
+      <Launcher
+        title="Apps"
+        subtitle="Choose an app."
+        apps={[]}
+        shortcuts={[shortcut('Drive', { own: true })]}
+        canAddApps={false}
+      />,
+    );
+    expect(screen.getByRole('link', { name: /Drive/ }).textContent).toContain('yours');
+    expect(screen.getByRole('link', { name: 'Manage your shortcuts' }).getAttribute('href')).toBe(
+      '/shortcuts',
+    );
+    rerender(
+      <Launcher
+        title="Apps"
+        subtitle="Choose an app."
+        apps={[]}
+        shortcuts={[shortcut('Drive')]}
+        canAddApps={false}
+      />,
+    );
+    expect(screen.queryByRole('link', { name: 'Manage your shortcuts' })).toBeNull();
+  });
+
+  it('draws its icon from the set, its picture from core, or a letter', () => {
+    render(
+      <Launcher
+        title="Apps"
+        subtitle="Choose an app."
+        apps={[]}
+        shortcuts={[
+          shortcut('Drive', { icon: { kind: 'symbol', symbol: 'hard-drive' } }),
+          shortcut('Mail', { icon: { kind: 'image', path: '/api/shortcuts/s-mail/icon?v=1' } }),
+          shortcut('Notes'),
+        ]}
+        canAddApps={false}
+      />,
+    );
+    const mail = screen.getByRole('link', { name: /Mail/ });
+    expect(mail.querySelector('img')?.getAttribute('src')).toBe('/api/shortcuts/s-mail/icon?v=1');
+    expect(screen.getByRole('link', { name: /Drive/ }).querySelector('svg')).toBeTruthy();
+    expect(screen.getByLabelText('Notes').textContent).toBe('NO');
+  });
+
+  it('is found by search, like an app', () => {
+    render(
+      <Launcher
+        title="Apps"
+        subtitle="Choose an app."
+        apps={APPS}
+        shortcuts={[shortcut('Drive')]}
+        canAddApps={false}
+      />,
+    );
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'dri' } });
+    expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
+      'https://drive.example',
+    ]);
+  });
+});
+
+describe('every icon', () => {
+  it('is drawn in greys, apps, shortcuts and the Console alike', () => {
+    render(
+      <Launcher
+        title="Apps"
+        subtitle="Choose an app."
+        apps={APPS}
+        shortcuts={[shortcut('Drive')]}
+        canAddApps
+        canOpenConsole
+      />,
+    );
+    for (const link of opening()) expect(link.className).toContain('monochrome');
   });
 });

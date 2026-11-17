@@ -69,6 +69,12 @@ describe('applyOverrides', () => {
     expect(can(ROLE_OWNER, 'user:manage', matrix)).toBe(true);
   });
 
+  it('ignores a stored row that gives users the Console', () => {
+    const matrix = applyOverrides(DEFAULT_MATRIX, [row(ROLE_USER, 'console:access', true)]);
+    expect(matrix[ROLE_USER].has('console:access')).toBe(false);
+    expect(can(ROLE_USER, 'console:access', matrix)).toBe(false);
+  });
+
   it('lets a later row for the same cell win', () => {
     const matrix = applyOverrides(DEFAULT_MATRIX, [
       row(ROLE_USER, 'user:view', true),

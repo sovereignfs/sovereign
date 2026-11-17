@@ -118,12 +118,12 @@ describe('the theme a person chooses', () => {
 });
 
 describe('the Appearance choice in Preferences', () => {
-  it('offers light, dark and system, and shows the one in force', async () => {
+  it('offers system, light and dark, and shows the one in force', async () => {
     system('light');
     localStorage.setItem(THEME_KEY, 'dark');
     render(<AppearanceChoice />);
     const radios = await screen.findAllByRole('radio');
-    expect(radios.map((radio) => radio.textContent)).toEqual(['Light', 'Dark', 'System']);
+    expect(radios.map((radio) => radio.textContent)).toEqual(['System', 'Light', 'Dark']);
     expect(screen.getByRole('radio', { name: 'Dark' }).getAttribute('aria-checked')).toBe('true');
     expect(screen.getByRole('radiogroup', { name: 'Appearance' })).toBeTruthy();
   });

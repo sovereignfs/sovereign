@@ -40,6 +40,11 @@
   color: var(--sv-color-text-primary);
 }
 
+/* Every picture in the same greys: a remote icon's colours, or a drawn letter's, are not the tile's to choose. */
+.monochrome .icon {
+  filter: grayscale(1);
+}
+
 .name {
   max-width: 100%;
   font-size: var(--sv-font-size-md);
@@ -97,4 +102,21 @@
     color: var(--sv-color-text-primary);
     background: var(--sv-color-surface-sunken);
   }
+}
+
+/* Beside the name of a tile that opens another site in a new tab. */
+.external {
+  margin-left: var(--sv-space-1);
+  color: var(--sv-color-text-muted);
+  vertical-align: -0.1em;
+}
+
+/* Said to assistive tech, not shown. */
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

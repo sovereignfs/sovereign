@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { requireCapability } from '../../../src/auth/authorize';
 import { ROLE_ADMIN, ROLE_USER } from '../../../src/auth/roles';
 import { getDatabase } from '../../../src/database';
-import { ALL_CAPABILITIES, CAPABILITIES } from '../../../src/roles/capabilities';
+import { ALL_CAPABILITIES, CAPABILITIES, grantable } from '../../../src/roles/capabilities';
 import {
   CapabilityChangeError,
   changeCapabilities,
@@ -40,7 +40,8 @@ export async function saveMatrixAction(
   const changes: CapabilityChange[] = [];
   for (const capability of ALL_CAPABILITIES) {
     if (CAPABILITIES[capability].ownerOnly) continue;
-    for (const role of [ROLE_ADMIN, ROLE_USER]) {
+    for (const role of [ROLE_ADMIN, ROLE_USER] as const) {
+      if (!grantable(role, capability)) continue;
       changes.push({ role, capability, granted: ticked.has(`${role}|${capability}`) });
     }
   }

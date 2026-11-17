@@ -99,6 +99,30 @@ describe('the Console on a wide screen', () => {
   });
 });
 
+describe('the way back on a wide screen', () => {
+  it('is there beneath a section, to that section, and not on a section the list already shows', () => {
+    pathname = '/console/accounts/abc';
+    const { rerender } = render(
+      <ConsoleShell sections={sections}>
+        <p>the page</p>
+      </ConsoleShell>,
+    );
+    const main = screen.getByText('the page').parentElement as HTMLElement;
+    expect(within(main).getByRole('link', { name: 'Accounts' }).getAttribute('href')).toBe(
+      '/console/accounts',
+    );
+    pathname = '/console/accounts';
+    rerender(
+      <ConsoleShell sections={sections}>
+        <p>the page</p>
+      </ConsoleShell>,
+    );
+    expect(
+      within(screen.getByText('the page').parentElement as HTMLElement).queryByRole('link'),
+    ).toBeNull();
+  });
+});
+
 describe('the Console on a phone', () => {
   beforeEach(() => viewport(true));
 
@@ -125,6 +149,19 @@ describe('the Console on a phone', () => {
       '/console',
     );
     expect(screen.queryByRole('navigation', { name: 'Console sections' })).toBeNull();
+  });
+
+  it('gives a page beneath a section one way back, to that section, and none to the Console', async () => {
+    pathname = '/console/accounts/abc';
+    render(
+      <ConsoleShell sections={sections}>
+        <p>the page</p>
+      </ConsoleShell>,
+    );
+    expect((await screen.findByRole('link', { name: 'Accounts' })).getAttribute('href')).toBe(
+      '/console/accounts',
+    );
+    expect(screen.getAllByRole('link')).toHaveLength(1);
   });
 
   it('has no index at all when there is nothing but the Console’s own page', async () => {

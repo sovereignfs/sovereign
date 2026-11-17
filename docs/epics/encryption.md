@@ -12,7 +12,8 @@
 reasoning behind it. The tasks here build it in the RFC's order: the specifications; the password derivation and signing in with a derived
 value, which every instance gets; the library's keys and formats; core's vault; key release to an app; sharing; escrow; and the same for
 an app with no core. Tasks 16.15 to 16.18 are follow-ups found while building it, sequenced by
-[workstream 0004](../workstreams/0004-encryption-follow-ups.md).
+[workstream 0004](../workstreams/0004-encryption-follow-ups.md). Tasks 16.19 to 16.23 encrypt the files people keep in core itself, from
+[research 0009](../research/0009-encrypted-files-in-core.md), sequenced by [workstream 0005](../workstreams/0005-encrypted-files-in-core.md).
 
 Two things stop the work until someone outside it answers, and [workstream 0003](../workstreams/0003-encryption.md) holds both as gates:
 
@@ -525,4 +526,121 @@ nobody who reads the server.
 **Review checklist:**
 
 - Each step runs in Chromium through the built SDK, not the library's source
+- `pnpm e2e` passes on each database
+
+#### 📋 16.19 — The Files page says what it protects
+
+**Goal:** Nothing core shows or documents says that the files a person keeps in core are encrypted while they are not.
+
+**Priority:** 19.
+
+**Deliverables:**
+
+- the Files page's words say that files are private to the person and stored as they were sent, with no word suggesting the server cannot
+  read them (core-app §4.6)
+- `docs/operating.md` and `docs/deploying.md` say, beside what encrypted apps protect, that core's files are not encrypted
+- core-app §4.6 and §5.1 say the same
+
+**Dependencies:** none
+
+**Spec reference:** core-app §4.6, §5.1; [research 0009](../research/0009-encrypted-files-in-core.md) finding 3, option A
+
+**Review checklist:**
+
+- No screen or guide says or implies that core's files are encrypted
+- The words follow `sv-ui-design` and say "private", never "zero-knowledge" or "encrypted"
+
+#### 📋 16.20 — A recovery kit for everyone, from the Security page
+
+**Goal:** Anyone can keep their recovery kit at any time, not only when an encrypted app first asks for its key.
+
+**Priority:** 20.
+
+**Deliverables:**
+
+- the Security page offers the kit to a person who has not kept one, with `RecoveryKit` (and `ownerCanRecover` when escrow is on), and says
+  when they have
+- key release still shows the kit to a person who has not kept one by the time an encrypted app asks (core-app §5.3), and never twice
+- one kit per account, as now: keeping it from either place gives the account its kit way in and marks it kept
+- core-app §5.3 says where the kit is offered; the change replaces the 2026-11-16 decision to show it only at key release
+
+**Dependencies:** 16.15
+
+**Spec reference:** core-app §5.3, §5.8; RFC 0005 §6
+
+**Review checklist:**
+
+- Keeping the kit on the Security page, then opening an encrypted app, shows no kit
+- A kit kept on the Security page unlocks after a reset by email, as one kept at key release does
+- No sign-in or other page is blocked by the kit
+
+#### 📋 16.21 — Core's own files, designed
+
+**Goal:** The design for encrypting the files people keep in core is settled, reviewed and specified before anything is built.
+
+**Priority:** 21.
+
+**Deliverables:**
+
+- RFC 0005 amended with a section for core's own content ([research 0009](../research/0009-encrypted-files-in-core.md), option B): a files
+  key per person, wrapped by the account key under an id no app can register; a document key per file; RFC 0005 §1.3's format; the
+  record's marks; the content security policy for `blob:` images on the Files page alone; moving existing files; the acceptance items
+- its non-goals made precise: account data stays readable, content does not
+- core-app §4.6 and §5 specified from it, marked not built; the review brief updated so the cryptographer reads this section too
+
+**Dependencies:** 16.19, 16.20
+
+**Spec reference:** core-app §4.6, §5; RFC 0005 §1.3, §3, §6
+
+**Review checklist:**
+
+- Research 0009's "To settle in the RFC" list is each answered
+- The goal owner accepts the amendment
+
+#### 📋 16.22 — Core's files encrypted in the browser
+
+**Goal:** A file a person uploads to core is encrypted in their browser, and nobody who reads the server can read it, its name or its type.
+
+**Priority:** 22.
+
+**Deliverables:**
+
+- the Files page encrypts each new upload as a stream in RFC 0005 §1.3's chunks, and its name, type and size as one value, under a
+  document key wrapped by the person's files key; the store keeps `application/octet-stream` with a length, so quotas count what is stored
+- downloads are decrypted a chunk at a time; an image is shown from a `blob:` address; a locked browser shows `LockedState` and the unlock
+- before the first encrypted upload, the page says that a reset by email gives back the account and not the files unless the kit was kept
+  or the owner turned on recovery
+- core-app §4.6 and §5 marked built; `docs/operating.md` says what a reset now does to files
+
+**Dependencies:** 16.21
+
+**Spec reference:** core-app §4.6, §5; RFC 0005 (the amendment of 16.21)
+
+**Review checklist:**
+
+- A file larger than one chunk uploads and downloads without being whole in memory
+- The stored file and its record hold no plaintext of a file, its name or its type
+- A file cut short, or returned under another id or version, does not open
+- After a reset by email, files open only with the kit, or through escrow when it is on
+
+#### 📋 16.23 — Existing files moved, and the acceptance items
+
+**Goal:** Files kept before encryption are encrypted by the person's own browser, and the whole is shown to work on every database.
+
+**Priority:** 23.
+
+**Deliverables:**
+
+- on a visit after the kit is kept, the Files page encrypts each plain file under a new id and deletes the plain one, saying how far it
+  has got; one interrupted by an ended session resumes without a file lost or kept twice; until then the page says which files are plain
+- `apps/e2e`: the amendment's acceptance items, each a named test, on SQLite, PostgreSQL and sqld
+- the guides updated: what is encrypted in core, and that it is not yet audited
+
+**Dependencies:** 16.22
+
+**Spec reference:** core-app §4.6, §5; RFC 0005 (the amendment of 16.21)
+
+**Review checklist:**
+
+- A move cut off at any file and run again ends with every file encrypted once and none lost
 - `pnpm e2e` passes on each database

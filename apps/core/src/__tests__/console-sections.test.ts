@@ -4,6 +4,7 @@ import { DEFAULT_MATRIX, type Capability, type Matrix } from '../roles/capabilit
 import {
   CONSOLE_SECTIONS,
   activeSection,
+  parentPage,
   visibleSections,
   type ConsoleSection,
 } from '../console/sections';
@@ -124,4 +125,35 @@ describe('which section a page belongs to', () => {
       expect(activeSection(pathname, sections)).toBeUndefined();
     },
   );
+});
+
+describe('the way back from a Console page', () => {
+  const sections = [
+    { href: '/console', label: 'Overview' },
+    { href: '/console/apps', label: 'Apps' },
+    { href: '/console/accounts', label: 'Accounts' },
+  ];
+
+  it('leads from a page beneath a section to that section', () => {
+    expect(parentPage('/console/apps/new', sections)).toEqual({
+      href: '/console/apps',
+      label: 'Apps',
+    });
+    expect(parentPage('/console/accounts/abc', sections)).toEqual({
+      href: '/console/accounts',
+      label: 'Accounts',
+    });
+  });
+
+  it('leads from a section to the Console, and from the Console nowhere', () => {
+    expect(parentPage('/console/apps', sections)).toEqual({ href: '/console', label: 'Console' });
+    expect(parentPage('/console', sections)).toBeUndefined();
+  });
+
+  it('leads to the Console from a page beneath no section the person may open', () => {
+    expect(parentPage('/console/settings/mail', sections)).toEqual({
+      href: '/console',
+      label: 'Console',
+    });
+  });
 });

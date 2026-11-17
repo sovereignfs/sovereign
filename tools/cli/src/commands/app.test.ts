@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { inc } from 'semver';
 import { afterEach, describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import type { Lock, Suite } from '../suite/types.js';
+import { RELEASE } from '../release.js';
 import { NOTES_IMAGE, setUpWorld, sv } from '../testing/commands.js';
 import { kioskOf, makeWorld, manifest2Of, manifestOf, type World } from '../testing/world.js';
 
@@ -149,7 +151,11 @@ describe('sv app add', () => {
     ).toContain('no io.github.sovereignfs.app-manifest label');
     world.cleanup();
 
-    await withNotes({ images: { [NOTES_IMAGE]: { manifest: manifestOf({ core: '>=0.99.0' }) } } });
+    await withNotes({
+      images: {
+        [NOTES_IMAGE]: { manifest: manifestOf({ core: `>=${inc(RELEASE.newestCore, 'minor')}` }) },
+      },
+    });
     expect((await sv(world, 'app', 'add', 'notes', '--image', NOTES_IMAGE, '--yes')).code).toBe(2);
     world.cleanup();
 

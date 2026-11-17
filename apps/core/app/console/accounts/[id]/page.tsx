@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Avatar, Card, CopyButton, StatusBadge } from '@sovereignfs/ui';
 import { getAccount } from '../../../../src/accounts';
@@ -34,9 +33,6 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className={styles.page}>
-      <Link className={styles.back} href="/console/accounts">
-        ‹ Accounts
-      </Link>
       <div className={styles.summary}>
         <Avatar name={account.name} size="lg" />
         <div>

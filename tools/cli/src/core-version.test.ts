@@ -3,6 +3,9 @@ import { newestPublishedCore } from './core-version.js';
 import { Failed } from './errors.js';
 import { RELEASE } from './release.js';
 
+/** Releases newer than the core this toolkit was made for, so the test holds whatever that is: `.10` after `.2` checks they compare as numbers. */
+const NEXT_MINOR = `0.${Number(RELEASE.newestCore.split('.')[1]) + 1}`;
+
 const listing = (tags: string[] | Error) => ({
   tags: async () => {
     if (tags instanceof Error) throw tags;
@@ -16,14 +19,14 @@ describe('the core a new instance starts on', () => {
     const tags = [
       '0.79.0',
       RELEASE.newestCore,
-      '0.99.2',
-      '0.99.10',
+      `${NEXT_MINOR}.2`,
+      `${NEXT_MINOR}.10`,
       '1.0.0',
       'latest',
       '0.100.0-rc.1',
     ];
     // 1.0.0 is outside the supported range, `latest` is no version, and a pre-release is not a release.
-    expect(await newestPublishedCore(listing(tags), (m) => said.push(m))).toBe('0.99.10');
+    expect(await newestPublishedCore(listing(tags), (m) => said.push(m))).toBe(`${NEXT_MINOR}.10`);
     expect(said).toEqual([]);
   });
 

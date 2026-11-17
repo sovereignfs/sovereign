@@ -311,6 +311,8 @@ describe('a deployment that stops', () => {
           args[0] === 'inspect' ||
           (args[0] === 'network' && args[1] === 'inspect') ||
           (args[0] === 'volume' && args[1] === 'inspect') ||
+          // Whether the server has an image yet: a "no" pulls it.
+          (args[0] === 'image' && args[1] === 'inspect') ||
           args.includes('node') ||
           args.includes('cat');
         expect(probe, args[0]).toBe(true);

@@ -55,3 +55,9 @@
     width: auto;
   }
 }
+
+/* A quiet way to one's own shortcuts, under the grid. */
+.manage {
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-sm);
+}

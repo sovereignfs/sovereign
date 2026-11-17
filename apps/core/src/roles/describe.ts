@@ -75,6 +75,8 @@ export type MatrixRow = {
   description: string;
   /** Held by the owner alone: shown, and never given to another role. */
   ownerOnly: boolean;
+  /** For those who run the instance: given to admins or not, and never to users. */
+  operatorOnly: boolean;
   admin: boolean;
   user: boolean;
   /** What the code grants by default, for showing what the owner changed. */
@@ -88,6 +90,7 @@ export function describeMatrix(matrix: Matrix): MatrixRow[] {
     capability,
     ...CAPABILITY_TEXT[capability],
     ownerOnly: CAPABILITIES[capability].ownerOnly,
+    operatorOnly: CAPABILITIES[capability].operatorOnly,
     admin: matrix[ROLE_ADMIN].has(capability),
     user: matrix[ROLE_USER].has(capability),
     adminDefault: DEFAULT_MATRIX[ROLE_ADMIN].has(capability),

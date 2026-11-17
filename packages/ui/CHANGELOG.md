@@ -5,6 +5,15 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.96.0; earlier versions are in the repository's
 history and tags.
 
+## [0.99.0] - 2026-11-17
+
+### Added
+
+- `AppTile` takes `external`: with `href`, the tile opens the address in a new tab with `rel="noopener noreferrer"`, and shows a
+  small external-link mark beside the name and says "(opens in a new tab)" to assistive tech. Off by default.
+- `AppTile` takes `monochrome`: the picture is drawn in shades of grey, so icons that come from elsewhere look like one set. Off by
+  default.
+
 ## [0.98.0] - 2026-11-17
 
 ### Added

@@ -60,6 +60,16 @@ describe('the matrix editor', () => {
     expect(within(ownerOnly).getByText('Only the owner')).toBeTruthy();
   });
 
+  it('offers the Console to admins only, with no box for users', () => {
+    render(<MatrixEditor rows={rows()} />);
+    const row = screen
+      .getByText(rows().find((r) => r.capability === 'console:access')?.label ?? '')
+      .closest('li') as HTMLElement;
+    expect(within(row).getByRole('checkbox', { name: 'Admins' })).toBeTruthy();
+    expect(within(row).queryByRole('checkbox', { name: 'Users' })).toBeNull();
+    expect(within(row).getByText('Not for users')).toBeTruthy();
+  });
+
   it('sends every box that is ticked, and only those, with the change that was made', async () => {
     saveMatrix.mockResolvedValue({ ok: true, message: 'One change is saved. It applies at once.' });
     render(<MatrixEditor rows={rows()} />);

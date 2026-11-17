@@ -7,14 +7,16 @@ import { join, newPerson, signIn } from '../support/ui';
 
 const owner = person('Olive');
 
+/**
+ * The ids of the apps that hold a key for the person, sorted here: an `order by` would sort in the database's collation, which on
+ * PostgreSQL (en_US) is not JavaScript's code-unit order, so random ids that differ in case came back in another order.
+ */
 async function appKeyRows(sub: string): Promise<string[]> {
   const database = await openDatabase();
   try {
-    return (
-      await database.run('select client_id from key_apps where user_id = ? order by client_id', [
-        sub,
-      ])
-    ).rows.map((row) => String(row.client_id));
+    return (await database.run('select client_id from key_apps where user_id = ?', [sub])).rows
+      .map((row) => String(row.client_id))
+      .sort();
   } finally {
     await database.close();
   }

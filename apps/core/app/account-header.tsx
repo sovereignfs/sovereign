@@ -1,8 +1,6 @@
 import Link from 'next/link';
 import { getSession } from '../src/auth/session';
 import { getInstanceIdentity } from '../src/instance/service';
-import { can } from '../src/roles/capabilities';
-import { getCapabilityMatrix } from '../src/roles/matrix';
 import { getNotificationService } from '../src/notifications';
 import { AccountMenu } from './account-menu';
 import { NotificationsBell } from './notifications-bell';
@@ -11,15 +9,14 @@ import { BrandMark } from './brand-mark';
 
 /**
  * The bar every signed-in page has: the instance's mark and name on the left, which lead home, and on the right
- * the person's avatar, whose menu holds their account, the Console for an operator, and sign out. It is the one
- * way between the apps, the account pages and the Console, so none of them is a dead end. Nothing is drawn for
+ * the person's avatar, whose menu holds their account and sign out. The mark leads home, where an operator finds
+ * the Console's tile, so none of the apps, the account pages or the Console is a dead end. Nothing is drawn for
  * someone who is not signed in; the page's own guard decides what they see instead.
  */
 export async function AccountHeader({ bordered = false }: { bordered?: boolean }) {
   const session = await getSession();
   if (!session) return null;
-  const [identity, matrix] = await Promise.all([getInstanceIdentity(), getCapabilityMatrix()]);
-  const operator = can(session.user.role, 'console:access', matrix);
+  const identity = await getInstanceIdentity();
   // The bell is there when an app can write to this person or has: an instance whose apps send nothing does not clutter the bar.
   const notifications = await getNotificationService();
   const hasNotifications =
@@ -38,7 +35,6 @@ export async function AccountHeader({ bordered = false }: { bordered?: boolean }
           name={session.user.name}
           email={session.user.email}
           avatarUrl={session.user.image ?? undefined}
-          operator={operator}
         />
       </div>
     </header>

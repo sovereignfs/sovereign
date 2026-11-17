@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { CopyButton, StatusBadge } from '@sovereignfs/ui';
@@ -28,9 +27,6 @@ export default async function AppPage({ params }: { params: Promise<{ id: string
 
   return (
     <div className={styles.page}>
-      <Link className={styles.back} href="/console/apps">
-        ‹ Apps
-      </Link>
       <div className={styles.titleRow}>
         <h1 className={styles.heading}>{app.name}</h1>
         {app.enabled ? (

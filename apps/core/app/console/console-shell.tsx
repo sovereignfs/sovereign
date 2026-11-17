@@ -11,7 +11,7 @@ import {
   type NavListGroup,
   type NavListItem,
 } from '@sovereignfs/ui';
-import { activeSection } from '../../src/console/sections';
+import { activeSection, parentPage } from '../../src/console/sections';
 import styles from './console.module.css';
 
 type Section = NavListItem & { group?: string };
@@ -36,8 +36,10 @@ function groupsOf(sections: readonly Section[], activeId: string | undefined): N
 
 /**
  * The Console beside its page: on a wide screen a list of the sections down the side; on a phone the list is
- * the first page (the Console's own page, which lists each section with what it is for), and every other page has
- * a way back to it, as a settings app does. `sections` are only those the person may open.
+ * the first page (the Console's own page, which lists each section with what it is for). Every other page has one
+ * way back, to the page above it, as a settings app does: "Add an app" to Apps, Apps to the Console. On a wide
+ * screen the list already leads to each section, so only a page beneath a section has it. The pages draw no way
+ * back of their own. `sections` are only those the person may open.
  */
 export function ConsoleShell({
   sections,
@@ -48,7 +50,15 @@ export function ConsoleShell({
 }) {
   const pathname = usePathname();
   const activeId = activeSection(pathname, sections);
-  const atOverview = pathname === '/console';
+  const parent = parentPage(pathname, sections);
+  const back = parent ? (
+    <Link href={parent.href} className={styles.back}>
+      <Icon name="chevron-left" size="sm" aria-hidden />
+      {parent.label}
+    </Link>
+  ) : null;
+  // A section's own page is already in the list down the side, so on a wide screen it needs no way back.
+  const beneathSection = parent !== undefined && parent.href !== '/console';
 
   return (
     <ResponsiveSurface
@@ -64,18 +74,16 @@ export function ConsoleShell({
                 renderLink={renderLink}
               />
             </div>
-            <div className={styles.main}>{children}</div>
+            <div className={styles.main}>
+              {beneathSection ? <div className={styles.backRow}>{back}</div> : null}
+              {children}
+            </div>
           </ThreeColumnLayout>
         </div>
       }
       mobile={
         <div className={styles.mobileFrame}>
-          {atOverview ? null : (
-            <Link href="/console" className={styles.back}>
-              <Icon name="chevron-left" size="sm" aria-hidden />
-              Console
-            </Link>
-          )}
+          {back}
           {children}
         </div>
       }

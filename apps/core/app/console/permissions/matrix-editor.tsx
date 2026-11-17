@@ -13,7 +13,8 @@ const ROLES = [
 
 /**
  * What the admin and user roles may do. The owner always holds everything, so the owner has no boxes; what only
- * the owner may hold is listed with its boxes locked. Nothing is saved until the owner saves the whole table.
+ * the owner may hold is listed with its boxes locked, and what is only for those who run the instance has no box
+ * for users. Nothing is saved until the owner saves the whole table.
  */
 export function MatrixEditor({ rows }: { rows: MatrixRow[] }) {
   const [held, setHeld] = useState(
@@ -82,6 +83,13 @@ export function MatrixEditor({ rows }: { rows: MatrixRow[] }) {
               ) : (
                 ROLES.map((r) => {
                   const value = `${r.id}|${row.capability}`;
+                  if (row.operatorOnly && r.key === 'user') {
+                    return (
+                      <span key={r.id} className={styles.locked}>
+                        Not for users
+                      </span>
+                    );
+                  }
                   return (
                     <Checkbox
                       key={r.id}

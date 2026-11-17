@@ -17,12 +17,18 @@ signed-in page, offers no offline use, and adds no dependency or file to the
 image. The tasks are in the order they are worth doing; the first two are
 useful alone.
 
+Amendment 1 to the RFC adds 11.5 to 11.13: manifest members that do not vary by person, an install
+hint, an announced update, tiles that open the person's installed apps where the device allows, shortcuts
+that name a native app, and the shared `@sovereignfs/pwa` package that the app template and the deployed
+apps use.
+
 ## Related
 
 - [docs/rfcs/0001-installable-core.md](../rfcs/0001-installable-core.md): the design, the alternatives, the open questions
 - [docs/specs/core-app.md](../specs/core-app.md): §1.3 (the interface), §3.5 (sessions and security), §3.13 (instance branding)
 - [docs/architecture-rules.md](../architecture-rules.md): _the service worker never stores a per-user page_
 - Epic 8's instance settings (task 8.4) hold the favicon and logos that 11.4 would build icons from
+- [docs/research/0010-opening-installed-apps.md](../research/0010-opening-installed-apps.md) and [workstream 0006](../workstreams/0006-pwa.md): amendment 1
 
 ## Tasks
 
@@ -187,3 +193,212 @@ dependency and the image is unchanged. The manifest and an iPhone's home-screen 
 Sovereign icons.
 
 **Not here:** anything for an instance that has set no logo.
+
+### Amendment 1: a fuller install, opening installed apps, and the apps' side
+
+[RFC 0001 amendment 1](../rfcs/0001-installable-core.md#amendment-1--a-fuller-install-and-opening-installed-apps-november-2026)
+and [research 0010](../research/0010-opening-installed-apps.md). The order and the gates are in
+[workstream 0006](../workstreams/0006-pwa.md). 11.11 to 11.13 change the template and the app repositories; core is unchanged by them.
+
+#### 📋 11.5 — Manifest members that do not vary by person
+
+**Goal:** Core's manifest carries what a fuller install needs, still the same for everyone.
+
+**Deliverables:**
+
+- `launch_handler`, `shortcuts` (the launcher and the account page only), `screenshots` (one narrow, one wide, served like the
+  icons), `categories`, `lang` and `dir` in `app/manifest.ts` (RFC 0001 A1); spec §1.3 updated first
+- `id: '/'` held by a test, with the reason (changing it orphans every install)
+- The screenshots shipped as code like the icons, so no file is added to the image
+
+**Dependencies:** 11.3 (its doc corrections; the device rows can follow)
+
+**Spec reference:** §1.3; RFC 0001 A1
+
+**Review checklist:**
+
+- The manifest parses and every address it names is served with no session; nothing in it varies by request
+- Chrome's installability check passes and its install sheet shows the screenshots
+
+**Not here:** shortcuts that depend on a role, such as the Console.
+
+#### 📋 11.6 — Install this app `[parallel]`
+
+**Goal:** A person learns that core can be installed, from the place they manage their account.
+
+**Deliverables:**
+
+- An install hint component in `@sovereignfs/ui` (a story, a gallery entry): the browser's prompt where `beforeinstallprompt`
+  fires, Share → Add to Home Screen words on iPhone and iPad Safari, nothing in an installed window; dismissal kept on the device
+- Used on the Account pages (RFC 0001 A2); a `ui` minor bump
+
+**Dependencies:** 11.5
+
+**Spec reference:** §1.3; RFC 0001 A2
+
+**Review checklist:**
+
+- No browser global is read in render or a state initializer; the component renders nothing until the browser says it can install
+- Installed, it shows nothing; dismissed, it stays dismissed on that device only
+
+**Not here:** a hint anywhere but the Account pages.
+
+#### 📋 11.7 — A new version, announced `[parallel]`
+
+**Goal:** A new release reaches an open window without throwing away what a person was doing.
+
+**Deliverables:**
+
+- The worker waits instead of `skipWaiting` on install, and takes over when a page tells it to (a message), then `clients.claim()`
+- An update notice in `@sovereignfs/ui` (a story, a gallery entry) and the registration component showing it when a worker waits;
+  **Reload** activates it and reloads once `controllerchange` fires (RFC 0001 A3)
+- The acceptance test of 11.2 extended: a changed worker waits, the notice appears, Reload brings the new one
+
+**Dependencies:** 11.2
+
+**Spec reference:** §3.5; RFC 0001 A3
+
+**Review checklist:**
+
+- The previous cache is still deleted on activation; nothing new is cached
+- A page with no notice shown still gets the new worker on the next start
+
+**Not here:** background or periodic updates.
+
+#### 📋 11.8 — Opening installed apps, seen on devices
+
+**Goal:** What each platform does with a link from an installed core to another installed app is observed, not assumed.
+
+**Deliverables:**
+
+- A throwaway pair of installable pages on two https hosts (not shipped in any image), the target declaring `id`, `launch_handler`
+  and `handle_links`; links same-tab, `target="_blank"` and `window.open`
+- Run on desktop Chrome and Edge, Android Chrome, an iPhone and macOS Safari, target installed and not; the results recorded in
+  research 0010, and RFC 0001 A5 confirmed, narrowed or withdrawn
+
+**Dependencies:** none. Needs a person with the devices.
+
+**Spec reference:** RFC 0001 A5; research 0010
+
+**Review checklist:**
+
+- Every cell of the matrix is filled with what was seen, with the browser and OS versions
+
+**Not here:** any change to core.
+
+#### 📋 11.9 — Tiles open installed apps
+
+**Goal:** In an installed core, a tile opens the installed app where the device allows; in a browser tab nothing changes.
+
+**Deliverables:**
+
+- `AppTile` takes the consumer's click behaviour (still framework-agnostic); a `ui` minor bump, a story for the variant
+- The launcher's app tiles decide at click time: an installed display mode opens the launch address in a new top-level context
+  (`noopener`), a browser tab keeps the same-tab navigation (RFC 0001 A5); the `intent:` fallback only if 11.8 showed Android needs it
+- Spec §1.3 and the deployment guide's "Apps open outside the window" rewritten, including what iPhone and Safari do
+
+**Dependencies:** 11.8 (A5 confirmed), 11.12 (apps declare what the handoff needs)
+
+**Spec reference:** §1.3; RFC 0001 A5
+
+**Review checklist:**
+
+- Rendered markup is identical in a tab and installed; `matchMedia` is read only in the click handler
+- Acceptance: in a browser context a tile navigates the same tab; with the display mode emulated as standalone it opens a new page
+
+**Not here:** detecting whether an app is installed.
+
+#### 📋 11.10 — Shortcuts that open a native app
+
+**Goal:** A shortcut can name a native app, and opens it from an installed core or a phone.
+
+**Deliverables:**
+
+- An optional open-in-app address on shortcuts, for every dialect (schema, migrations, the parity test), checked by its own
+  function beside `urlProblem` (the pattern, the refused schemes, no control characters, a length cap; RFC 0001 A6)
+- The shortcut forms and the Console's shared shortcuts take it; the tile opens it at click time and falls back to the main address
+- Contract and spec updates where shortcuts are described; `sv-security-check`
+
+**Dependencies:** 11.9
+
+**Spec reference:** §1.3; RFC 0001 A6
+
+**Review checklist:**
+
+- A table test of accepted and refused addresses, including every refused scheme in upper and mixed case
+- The main address stays `https`-only; nothing renders the open-in-app address as an `href` in a browser tab
+
+**Not here:** opening a native app from an app tile.
+
+#### 📋 11.11 — `@sovereignfs/pwa`
+
+**Goal:** What core and seven apps each copy (the manifest, the worker's allow-list, its registration, the metadata) is one
+published package.
+
+**Deliverables:**
+
+- `packages/pwa`, published (`docs/releasing.md`, `packages:check`, a changelog section with the first version), working with no
+  core present: a manifest builder that always sets `id`, `scope`, `start_url`, standalone display, icons with a maskable one,
+  light and dark colours, `launch_handler` and `handle_links`; the worker's source from options (an allow-list of built files,
+  fonts, icons and a person-free `/shell`, the build id as the cache's version, its own offline page, the A3 update flow); the
+  `/sw.js` route's headers; a registration component; Next `metadata`/`viewport` helpers (`appleWebApp`, the apple-touch icon,
+  `theme-color` for each scheme, `viewportFit: 'cover'`); the `worker-src` and `manifest-src` directives
+- The worker's request decision as a plain function with a table test, as core's is
+
+**Dependencies:** 11.7 (the update flow it carries), research 0010 (what the manifest declares)
+
+**Spec reference:** RFC 0001 A7; `docs/architecture-rules.md` (the worker never stores a per-user page)
+
+**Review checklist:**
+
+- The tarball holds only the built files and the README; types resolve for ESM consumers
+- No page of a person can enter the cache: the decision function's table says so
+
+**Not here:** core adopting the package (a later task).
+
+#### 📋 11.12 — The app template installs `[parallel]`
+
+**Goal:** An app made by `npm create @sovereignfs` installs, says it is offline, and is ready to be opened from core.
+
+**Deliverables:**
+
+- The template depends on `@sovereignfs/pwa`: `app/manifest.ts`, `app/sw.js/route.ts`, the registration in the layout, the layout's
+  `viewport` and `metadata`, placeholder icons (192, 512, maskable 512, apple-touch 180, an SVG) and a `/shell` page;
+  `sovereign.manifest.json` names the icon
+- A nonce-based content security policy in a `proxy.ts`, with `worker-src 'self'` and `manifest-src 'self'` (the template has none)
+- `tools/create/src/app.test.ts` asserts each of them; a `create` version bump; `docs/building-an-app.md` gains a section on
+  installing, replacing the one line in §10
+
+**Dependencies:** 11.11
+
+**Spec reference:** RFC 0001 A7; `docs/building-an-app.md`
+
+**Review checklist:**
+
+- A generated app builds, its manifest parses, its worker registers and the install check passes, in the browser
+- The CSP has no `'unsafe-inline'` in `script-src`
+
+**Not here:** moving the deployed apps (11.13).
+
+#### 📋 11.13 — The deployed apps, audited and fixed
+
+**Goal:** Every deployed app installs well and can be opened from core.
+
+**Deliverables:**
+
+- One change per app repository (fjord-web, tusk, ledger, shopper, tally, wallet, waymark), on its own version: a manifest `id`
+  (`/`, seen first on a device to keep an existing install), `launch_handler` and `handle_links`, `appleWebApp` where missing
+  (ledger, shopper, tally), `theme-color` per scheme (shopper), a `/shell` offline page (ledger), one `theme_color` convention
+- Each app moved to `@sovereignfs/pwa` where it fits, in the same change or a following one
+- The audit's findings, per app, recorded in this task's notes
+
+**Dependencies:** 11.11; 11.8 for what the handoff needs
+
+**Spec reference:** RFC 0001 A5, A7
+
+**Review checklist:**
+
+- Each app's own tests and its offline acceptance test pass; Chrome's install check passes for each
+- An app installed before the change is still the same installed app after it
+
+**Not here:** the planned apps (foundry, loom, papertrail, haven), which start from the template.

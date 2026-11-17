@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.12.0; earlier versions are in the repository's
 history and tags.
 
+## [0.17.0] - 2026-11-17
+
+### Added
+
+- `npm create @sovereignfs app <dir> --encryption` makes an app whose notes are encrypted in the browser and shared between people of
+  the instance (operator-cli §2), with an `ENCRYPTION.md` that says what it protects and that it is not yet audited.
+
 ## [0.16.0] - 2026-11-17
 
 ### Added

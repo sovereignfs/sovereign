@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 2.1.0; earlier versions are in the repository's
 history and tags.
 
+## [2.5.0] - 2026-11-17
+
+### Added
+
+- `encryptContent`, `decryptContent`, `encryptBytes`, `decryptBytes`, `importDocumentKey` and `ContentTarget` in
+  `@sovereignfs/sdk/keys`: a document, and its name and type, encrypted with its document key in RFC 0005 §1.3's format (sdk §9.4).
+
 ## [2.4.0] - 2026-11-17
 
 ### Added

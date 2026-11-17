@@ -5,6 +5,20 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.107.0] - 2026-11-17
+
+### Added
+
+- Every item of core's encryption acceptance list (core-app §5.10) is shown by a named test, run on every database: among them, that a
+  session ended elsewhere leaves nothing that opens, and that the instance's database and an app's stored files hold no plaintext of a
+  document, its name or its type. Not yet audited.
+- Encrypting an app's data, a guide for an app's author; Deploying and Operating say what is and is not protected.
+
+### Fixed
+
+- A sign-in page with no session forgets the encryption keys a browser kept for the session that ended, as it should; they could no
+  longer be opened, but stayed in the browser.
+
 ## [0.106.0] - 2026-11-17
 
 ### Added

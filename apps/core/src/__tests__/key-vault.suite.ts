@@ -4,7 +4,26 @@
  */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Database } from '@sovereignfs/database';
+import {
+  AppVault,
+  newSessionSecret,
+  VAULT_MIGRATIONS_TABLE,
+  vaultMigrations,
+} from '@sovereignfs/crypto/vault';
+import {
+  derivePassword,
+  formatKit,
+  KeyStore,
+  keepKit,
+  keptAccountKey,
+  memoryBackend,
+  openAppKey,
+  unlockWithKit,
+  unlockWithPassword,
+  type AppKeyActions,
+  type KitActions,
+} from '@sovereignfs/crypto/web';
+import { migrate, type Database } from '@sovereignfs/database';
 import type { TestDatabase } from '@sovereignfs/database/testing';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AccountManager } from '../accounts/manage';
@@ -14,6 +33,12 @@ import { ensureInstanceId } from '../instance/instance-id';
 import { escrowRecordFor, putKitFor } from '../keys/escrow-admin';
 import { KeyVault, VaultError } from '../keys/vault';
 import { makeAuth, PASSWORD, signUp } from './auth-harness';
+
+/** The value, or a failed test: a test reads what it just wrote. */
+function defined<T>(value: T | undefined | null): T {
+  if (value === undefined || value === null) throw new Error('expected a value');
+  return value;
+}
 
 const MIGRATIONS = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../migrations');
 const B64 = (byte: number) => Buffer.alloc(32, byte).toString('base64url');
@@ -34,6 +59,7 @@ export function keyVaultSuite(createDatabase: () => Promise<TestDatabase>): void
     target = await createDatabase();
     db = await target.open();
     await migrateCore(db, MIGRATIONS);
+    await migrate(db, vaultMigrations(db.family), { table: VAULT_MIGRATIONS_TABLE });
   });
   afterAll(async () => {
     await db.close().catch(() => undefined);
@@ -41,6 +67,9 @@ export function keyVaultSuite(createDatabase: () => Promise<TestDatabase>): void
   });
   beforeEach(async () => {
     for (const table of [
+      'sv_key_apps',
+      'sv_key_wraps',
+      'sv_key_accounts',
       'key_session_secrets',
       'passkeys',
       'key_apps',
@@ -354,5 +383,105 @@ export function keyVaultSuite(createDatabase: () => Promise<TestDatabase>): void
       expect(read.account?.kitConfirmed).toBe(true);
       expect(read.waysIn.find((w) => w.way === 'kit')?.record).toBe(wrap('kit'));
     });
+  });
+
+  describe('an app with no core (sdk §9.5)', () => {
+    /** The shared routine's calls onto either vault: the same records cross the same functions. */
+    function actions(
+      host: {
+        read(): Promise<unknown>;
+        setUp(account: never, waysIn: never): Promise<void>;
+        putWayIn(wayIn: never): Promise<void>;
+        removeWayIn(id: string): Promise<unknown>;
+        app(clientId: string): Promise<unknown>;
+        putApp(app: never): Promise<void>;
+        confirmKit(record: string): Promise<void>;
+      },
+      secret: string,
+    ): AppKeyActions & KitActions {
+      const ok = async (work: () => Promise<unknown>) => {
+        try {
+          return { ok: true as const, value: (await work()) as never };
+        } catch (error) {
+          return { ok: false as const, error: String(error) };
+        }
+      };
+      return {
+        read: () => ok(() => host.read()),
+        setUp: (account, waysIn) => ok(() => host.setUp(account as never, waysIn as never)),
+        putWayIn: (wayIn) => ok(() => host.putWayIn(wayIn as never)),
+        removeWayIn: (_way, id) => ok(() => host.removeWayIn(id)),
+        sessionSecret: async () => ({ ok: true, value: secret }),
+        readApp: (clientId) => ok(() => host.app(clientId)),
+        putApp: (app) => ok(() => host.putApp(app as never)),
+        confirmKit: (record) => ok(() => host.confirmKit(record)),
+      };
+    }
+
+    it('stores the same records as core: an app vault’s rows open through core’s vault, password, kit and app key', async () => {
+      const { id: sub, sessionId } = await person();
+      const core = new KeyVault(db);
+      const coreSecret = (await core.sessionSecret(sessionId, sub)) as string;
+      const app = new AppVault(db);
+      const appHost = {
+        read: () => app.read(sub),
+        setUp: (a: never, w: never) => app.setUp(sub, a, w),
+        putWayIn: (w: never) => app.putWayIn(sub, w),
+        removeWayIn: (id: string) => app.removeWayIn(sub, 'password', id),
+        app: (c: string) => app.app(sub, c),
+        putApp: (a: never) => app.putApp(sub, a),
+        confirmKit: (r: string) => app.confirmKit(sub, r),
+      };
+      const coreHost = {
+        read: async () => ({ sub, ...(await core.read(sub)) }),
+        setUp: (a: never, w: never) => core.setUp(sub, a, w),
+        putWayIn: (w: never) => core.putWayIn(sub, w),
+        removeWayIn: (id: string) => core.removeWayIn(sub, 'password', id),
+        app: (c: string) => core.app(sub, c),
+        putApp: (a: never) => core.putApp(sub, a),
+        confirmKit: (r: string) => core.confirmKit(sub, r),
+      };
+      const { secret } = await derivePassword({
+        password: PASSWORD,
+        address: 'ada@example.org',
+        instanceId: new Uint8Array(32).fill(7),
+      });
+
+      // In the app with no core: set up, the kit kept, the app's keys made.
+      const inApp = actions(appHost, newSessionSecret());
+      const store = new KeyStore(memoryBackend());
+      expect(await unlockWithPassword(secret, inApp, store)).toBe('set-up');
+      const kit = crypto.getRandomValues(new Uint8Array(32));
+      expect(await keepKit(kit, inApp, store)).toBe(true);
+      const accountKey = (await keptAccountKey(inApp, store)) as Uint8Array;
+      const signing = defined((await app.read(sub)).account).signingPrivate;
+      const appKey = (await openAppKey(accountKey, sub, signing, 'notes', inApp)) as Uint8Array;
+
+      // The rows, moved as they are into core's vault.
+      const moved = await app.read(sub);
+      const { kitConfirmed: _kept, ...account } = defined(moved.account);
+      await core.setUp(
+        sub,
+        account,
+        moved.waysIn.filter((w) => w.way === 'password'),
+      );
+      await core.confirmKit(sub, defined(moved.waysIn.find((w) => w.way === 'kit')).record);
+      await core.putApp(sub, defined(await app.app(sub, 'notes')));
+      const byWay = (ways: readonly { way: string }[]) =>
+        [...ways].sort((a, b) => a.way.localeCompare(b.way));
+      expect(byWay((await core.read(sub)).waysIn)).toEqual(byWay(moved.waysIn));
+
+      // Core's own flow opens them: the password, then the kit, and the same app key.
+      const inCore = actions(coreHost, coreSecret);
+      const coreStore = new KeyStore(memoryBackend());
+      expect(await unlockWithPassword(secret, inCore, coreStore)).toBe('unlocked');
+      const opened = (await keptAccountKey(inCore, coreStore)) as Uint8Array;
+      expect(Buffer.from(opened)).toEqual(Buffer.from(accountKey));
+      const sameAppKey = await openAppKey(opened, sub, signing, 'notes', inCore);
+      expect(Buffer.from(defined(sameAppKey))).toEqual(Buffer.from(appKey));
+      expect(
+        await unlockWithKit(await formatKit(kit), secret, inCore, new KeyStore(memoryBackend())),
+      ).toBe('unlocked');
+    }, 60_000);
   });
 }

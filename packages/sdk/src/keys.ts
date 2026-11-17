@@ -7,6 +7,8 @@
  * - `receive()`, on the page at that address, takes core's answer from the fragment (removed from the address before anything else),
  *   opens it with the private key made for the request, checks it, and keeps the app key until the app's session ends.
  *
+ * - `localVault()` is the same app key for an app that runs with no core (sdk §9.5): its own vault, unlocked at its own sign-in.
+ *
  * The app key is kept as core keeps the account key: wrapped by a device key and by the app session's own secret, which the app's
  * server holds (`/auth/key-secret`) and deletes with the session. Nothing of a release is in any request to a server.
  */
@@ -36,6 +38,9 @@ import {
 } from '@sovereignfs/crypto/web';
 
 export type { OpenedIdentity, ReleaseRefusal, SharedKeyRecord } from '@sovereignfs/crypto/web';
+export { formatKit } from '@sovereignfs/crypto/web';
+export { localVault } from './local-vault.js';
+export type { LocalVault, LocalVaultOptions } from './local-vault.js';
 
 /** A person's public keys for this app, as `sv.as(person).keys.person(sub)` gives them (the Core API's `PersonKeys`). */
 export type PersonKeys = {

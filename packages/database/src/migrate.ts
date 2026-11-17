@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { assertIdentifier } from './identifiers.js';
 import type { Database, Executor } from './types.js';
 
 /** One migration: a name (its file name without `.sql`) and its SQL. */
@@ -48,14 +49,23 @@ export type MigrateResult = {
   alreadyApplied: string[];
 };
 
+export type MigrateOptions = {
+  /**
+   * The table that records what ran, `sv_migrations` unless named. A set of migrations that a package ships for an app's database
+   * (the vault's, sdk §9.5) keeps its own, so its history and the app's never meet: each set is checked only against itself.
+   */
+  table?: string;
+};
+
 export class MigrationError extends Error {
   override name = 'MigrationError';
 }
 
-async function recorded(executor: Executor): Promise<{ name: string; checksum: string }[]> {
-  const { rows } = await executor.run(
-    `select name, checksum from ${MIGRATIONS_TABLE} order by name`,
-  );
+async function recorded(
+  executor: Executor,
+  table: string,
+): Promise<{ name: string; checksum: string }[]> {
+  const { rows } = await executor.run(`select name, checksum from ${table} order by name`);
   return rows.map((row) => ({ name: String(row.name), checksum: String(row.checksum) }));
 }
 
@@ -79,7 +89,10 @@ function advisoryKey(name: string): string {
 export async function migrate(
   database: Database,
   migrations: readonly Migration[],
+  options: MigrateOptions = {},
 ): Promise<MigrateResult> {
+  const table = options.table ?? MIGRATIONS_TABLE;
+  assertIdentifier(table);
   const names = migrations.map((m) => m.name);
   if (new Set(names).size !== names.length)
     throw new MigrationError('Two migrations have the same name.');
@@ -90,10 +103,10 @@ export async function migrate(
     // and held while the migrations run on others. (That is why the pool needs two.)
     const client = await database.pool.connect();
     try {
-      const key = advisoryKey(MIGRATIONS_TABLE);
+      const key = advisoryKey(table);
       await client.query('select pg_advisory_lock($1::bigint)', [key]);
       try {
-        return await applyAll(database, ordered);
+        return await applyAll(database, ordered, table);
       } finally {
         await client.query('select pg_advisory_unlock($1::bigint)', [key]);
       }
@@ -101,16 +114,20 @@ export async function migrate(
       client.release();
     }
   }
-  return applyAll(database, ordered);
+  return applyAll(database, ordered, table);
 }
 
-async function applyAll(database: Database, ordered: readonly Migration[]): Promise<MigrateResult> {
+async function applyAll(
+  database: Database,
+  ordered: readonly Migration[],
+  table: string,
+): Promise<MigrateResult> {
   const timestamp = database.family === 'postgres' ? 'bigint' : 'integer';
   await database.run(
-    `create table if not exists ${MIGRATIONS_TABLE} (name text primary key, checksum text not null, applied_at ${timestamp} not null)`,
+    `create table if not exists ${table} (name text primary key, checksum text not null, applied_at ${timestamp} not null)`,
   );
 
-  const history = await recorded(database);
+  const history = await recorded(database, table);
   verifyHistory(history, ordered);
 
   const result: MigrateResult = { applied: [], alreadyApplied: history.map((h) => h.name) };
@@ -119,15 +136,14 @@ async function applyAll(database: Database, ordered: readonly Migration[]): Prom
     if (done.has(migration.name)) continue;
     const ran = await database.transaction(async (tx) => {
       // Re-checked inside the transaction: another instance may have just applied it.
-      const again = await tx.run(`select name from ${MIGRATIONS_TABLE} where name = ?`, [
-        migration.name,
-      ]);
+      const again = await tx.run(`select name from ${table} where name = ?`, [migration.name]);
       if (again.rows.length > 0) return false;
       for (const statement of statementsOf(migration)) await tx.run(statement);
-      await tx.run(
-        `insert into ${MIGRATIONS_TABLE} (name, checksum, applied_at) values (?, ?, ?)`,
-        [migration.name, checksum(migration), Date.now()],
-      );
+      await tx.run(`insert into ${table} (name, checksum, applied_at) values (?, ?, ?)`, [
+        migration.name,
+        checksum(migration),
+        Date.now(),
+      ]);
       return true;
     });
     if (ran) result.applied.push(migration.name);

@@ -365,6 +365,40 @@ Built (core-app §5.7, RFC 0005 §3.1, task 16.11), in `@sovereignfs/sdk/keys`, 
   those who remain (RFC 0005 §8); what a removed reader already read cannot be taken back, and the app says so.
 - Document keys are the app's to keep, beside its documents.
 
+### 9.5 An app with no core
+
+Built (RFC 0005 §4's last paragraph, [RFC 0003](../rfcs/0003-apps-of-their-own.md), task 16.13). An app that runs with no core keeps
+its people's keys in a vault of its own, on its own database, and unlocks it at its own sign-in. It stores the same records as core's
+vault (core-app §5.3), made by the same routine in the browser, so a person's keys can later move to core's vault and open there.
+
+- **On the server, `@sovereignfs/sdk/vault`:** `new AppVault(database)` over any database with `run` and `transaction`, as
+  `@sovereignfs/database` has; its tables are `vaultMigrations(family)` (`sqlite` for a SQLite file and sqld, `postgres`), recorded
+  apart from the app's own migrations (`migrate(db, vaultMigrations(db.family), { table: VAULT_MIGRATIONS_TABLE })`, or the app's
+  own tool). It keeps a person's account keys, the account key wrapped for the password (or passphrase) and the kit, and their keys
+  for the app, under the app's own `sub` for the person and its manifest `prefix` as the client id. It opens nothing. Passkeys that
+  unlock and escrow need core and are refused.
+- **The vault id** (`await vault.vaultId()`) stands where core's instance id stands in the password derivation: 32 random bytes,
+  made the first time and never again. It is refused, not remade, when accounts exist and it does not.
+- **`vaultRoute(vault, { origin })`** is the one route the page calls (`/auth/vault` unless moved): `GET` reads the person's
+  records, `POST` applies one change, only when its `Origin` is `origin`, the app's public address (`<PREFIX>_URL`; never the
+  request's own URL, which a proxy may rewrite), and the browser does not call it cross-site. The app passes the `sub` from its own
+  session, never from the request.
+- **Its database** is any with `run(sql, args)` taking `?` placeholders and answering `{ rows, rowsAffected }`, and
+  `transaction(fn)`; `@sovereignfs/database` is one, and an app on another driver wraps its own in those two calls.
+- **Argon2id is WebAssembly**, so the pages that derive (sign-in, sign-up, reset, change, the passphrase) need `'wasm-unsafe-eval'`
+  in `script-src`, as core's do (core-app §5.2); never `'unsafe-eval'`.
+- **The session's secret** is the app's to keep with its own session (`newSessionSecret()`), served to its own pages at
+  `/auth/key-secret` as `{ sub, secret }`. With the session gone, what a browser kept opens nothing. There is no table of them.
+- **Deleting a person** is `vault.deleteAccount(sub, tx)`, on the transaction that deletes the person in the app.
+- **In the page, `localVault({ clientId, vaultId })`** from `@sovereignfs/sdk/keys`. `derive(password, address)` gives the sign-in
+  value the app's own sign-in takes where it took the password, and a secret; `afterSignIn(secret)` sets the keys up or opens them.
+  An app whose sign-in is someone else's asks for a passphrase: `unlockWithPassphrase(passphrase, sub)`, kept as the password's way
+  in. `open()` gives the app key or `{ state: 'locked' }`, as §9.3's does; `kitPending()`, `keepKit(kit)` and `unlockWithKit(typed,
+secret)` are the kit, as core's pages do it; `prepareChange` and `finishChange` a password change. No request carries a password,
+  a passphrase or a key that opens anything.
+- **Not here:** sharing with another person needs their public keys, which only core serves (§9.4); an app with no core shares
+  nothing yet.
+
 ## 10. From the legacy SDK
 
 Every namespace of the legacy `sdk` object:
@@ -413,7 +447,8 @@ Every namespace of the legacy `sdk` object:
 - The package is MPL-2.0, like the other packages, so an app under any licence can use it.
 - It depends on `@sovereignfs/api-client` and `openid-client`, and runs on Node's supported versions, and on any server runtime that
   has `fetch` and Web Crypto.
-- Its entry points are the root, `/next`, `/testing` and `/keys`, the one a browser imports (§9.3).
+- Its entry points are the root, `/next`, `/testing`, `/keys`, the one a browser imports (§9.3), and `/vault`, an app's own vault on
+  its server (§9.5).
 - It has its own `sdk-vX.Y.Z` tag ([`docs/releasing.md`](../releasing.md)).
 - Its first release is `2.0.0`. The legacy SDK (§10) was published under the same name up to `1.25.0`, and npm will not make a lower
   version `latest`. A version of the legacy SDK is not an earlier release of this one.
@@ -454,3 +489,4 @@ of its own; an app catalogue.
 | 2026-11-16 | §9.3: key release, specified and not built (core-app §5.7).                                                                                                                                                         |
 | 2026-11-17 | §9.3: key release built, in the `/keys` entry, with `auth.keySecret` and `nextAuth`'s `/auth/key-secret`; §3 and §12 name the entry. `@sovereignfs/crypto` is bundled rather than published.                        |
 | 2026-11-17 | §8: `keys.me` and `keys.person`; §9.4: sharing, built, in the `/keys` entry.                                                                                                                                        |
+| 2026-11-17 | §9.5: an app with no core, built: `/vault` (`AppVault`, `vaultMigrations`, `vaultRoute`, `newSessionSecret`) and `localVault` in `/keys`; §12 names the entry.                                                      |

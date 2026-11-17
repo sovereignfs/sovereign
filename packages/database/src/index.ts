@@ -18,7 +18,7 @@ export {
   readMigrations,
   STATEMENT_BREAKPOINT,
 } from './migrate.js';
-export type { Migration, MigrateResult } from './migrate.js';
+export type { Migration, MigrateOptions, MigrateResult } from './migrate.js';
 export { assertIdentifier, MAX_IDENTIFIER_BYTES, toNumber } from './identifiers.js';
 export {
   postgresBytes,

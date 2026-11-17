@@ -86,3 +86,26 @@ export {
 export type { ReleaseAnswer, ReleaseRefusal, ReleaseTarget } from './release.js';
 export { escrowKeyId, formatEscrowKey, looksLikeEscrowKey, parseEscrowKey } from './escrow.js';
 export type { EscrowKey } from './escrow.js';
+export {
+  addPasskeyWayIn,
+  coverEscrowNow,
+  derivePassphrase,
+  escrowPending,
+  finishNewPassword,
+  keepKit,
+  keptAccountKey,
+  kitPending,
+  openAppKey,
+  prepareNewPassword,
+  unlockWithKit,
+  unlockWithPasskey,
+  unlockWithPassword,
+} from './unlock.js';
+export type {
+  AppKeyActions,
+  DerivePassphraseInput,
+  KitActions,
+  PreparedChange,
+  Unlocked,
+  VaultActions,
+} from './unlock.js';

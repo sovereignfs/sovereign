@@ -24,6 +24,12 @@ export default defineConfig({
         find: /^@sovereignfs\/crypto\/web$/,
         replacement: fileURLToPath(new URL('./packages/crypto/src/web/index.ts', import.meta.url)),
       },
+      {
+        find: /^@sovereignfs\/crypto\/vault$/,
+        replacement: fileURLToPath(
+          new URL('./packages/crypto/src/vault/index.ts', import.meta.url),
+        ),
+      },
       source('database', './packages/database/src/index.ts'),
       source('mailer', './packages/mailer/src/index.ts'),
       source('manifest', './packages/manifest/src/index.ts'),

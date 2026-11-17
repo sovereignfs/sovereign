@@ -3,10 +3,25 @@
 import { type FormEvent, useState } from 'react';
 import { Alert, Button, FormField, Input } from '@sovereignfs/ui';
 import { authClient } from '../../src/auth/client';
+import { deriveForSignIn } from '../../src/auth/derive';
+import { afterPasswordChange, beforePasswordChange } from '../../src/keys/session';
+import type { WebKey } from '@sovereignfs/crypto/web';
+import {
+  passwordPolicyMessage,
+  passwordProblems,
+  type PasswordPolicy,
+} from '../../src/auth/password-policy';
 import styles from './security.module.css';
 
 /** Changing the password asks for the current one, and ends every other session. */
-export function ChangePasswordForm() {
+export function ChangePasswordForm({
+  address,
+  policy,
+}: {
+  /** The account's address, which both values are made from (core-app §5.2). */
+  address: string;
+  policy: PasswordPolicy;
+}) {
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [error, setError] = useState<string | undefined>();
@@ -15,14 +30,35 @@ export function ChangePasswordForm() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setPending(true);
     setError(undefined);
     setDone(false);
+    const problems = passwordProblems(next, policy);
+    if (problems.length > 0) {
+      setError(passwordPolicyMessage(problems));
+      return;
+    }
+    setPending(true);
+    let currentValue: string;
+    let nextValue: string;
+    let currentSecret: WebKey;
+    let nextSecret: WebKey;
+    try {
+      ({ signIn: currentValue, secret: currentSecret } = await deriveForSignIn(current, address));
+      ({ signIn: nextValue, secret: nextSecret } = await deriveForSignIn(next, address));
+    } catch {
+      setPending(false);
+      setError('This page could not get ready. Reload it and try again.');
+      return;
+    }
+    // The keys are wrapped for the new password beside the old before the change, and the old wrap goes after it, so the keys
+    // never stop opening with whichever password the account has (core-app §5.3).
+    const prepared = await beforePasswordChange(currentSecret, nextSecret);
     const result = await authClient.changePassword({
-      currentPassword: current,
-      newPassword: next,
+      currentPassword: currentValue,
+      newPassword: nextValue,
       revokeOtherSessions: true,
     });
+    await afterPasswordChange(prepared, !result.error);
     setPending(false);
     if (result.error) {
       setError(messageFor(result.error));

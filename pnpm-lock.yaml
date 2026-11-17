@@ -15,9 +15,15 @@ catalogs:
     '@eslint/js':
       specifier: ^10.0.1
       version: 10.0.1
+    '@hpke/core':
+      specifier: ^1.10.0
+      version: 1.10.1
     '@libsql/client':
       specifier: ^0.18.0
       version: 0.18.0
+    '@noble/hashes':
+      specifier: ^2.4.0
+      version: 2.4.0
     '@playwright/test':
       specifier: ^1.65.1
       version: 1.65.1
@@ -69,6 +75,9 @@ catalogs:
     jsdom:
       specifier: ^30.1.3
       version: 30.1.3
+    libsodium-wrappers-sumo:
+      specifier: ^0.8.4
+      version: 0.8.4
     lint-staged:
       specifier: ^17.6.0
       version: 17.6.0
@@ -292,9 +301,15 @@ importers:
       '@sovereignfs/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@sovereignfs/crypto':
+        specifier: workspace:*
+        version: link:../../packages/crypto
       '@sovereignfs/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@sovereignfs/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       '@sovereignfs/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
@@ -358,13 +373,31 @@ importers:
       '@sovereignfs/config':
         specifier: workspace:*
         version: link:../config
+      libsodium-wrappers-sumo:
+        specifier: 'catalog:'
+        version: 0.8.4
     devDependencies:
+      '@hpke/core':
+        specifier: 'catalog:'
+        version: 1.10.1
+      '@noble/hashes':
+        specifier: 'catalog:'
+        version: 2.4.0
+      '@sovereignfs/database':
+        specifier: workspace:*
+        version: link:../database
       '@sovereignfs/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.2
+      tsup:
+        specifier: 'catalog:'
+        version: 9.0.0(jiti@2.7.0)(postcss@8.5.23)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1)
+      tsx:
+        specifier: 'catalog:'
+        version: 4.23.15
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -476,6 +509,12 @@ importers:
       '@sovereignfs/config':
         specifier: workspace:*
         version: link:../config
+      '@sovereignfs/crypto':
+        specifier: workspace:*
+        version: link:../crypto
+      '@sovereignfs/database':
+        specifier: workspace:*
+        version: link:../database
       '@sovereignfs/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
@@ -575,6 +614,9 @@ importers:
 
   tools/cli:
     devDependencies:
+      '@sovereignfs/crypto':
+        specifier: workspace:*
+        version: link:../../packages/crypto
       '@sovereignfs/manifest':
         specifier: workspace:*
         version: link:../../packages/manifest
@@ -1448,6 +1490,14 @@ packages:
 
   '@hexagon/base64@1.1.28':
     resolution: {integrity: sha512-lhqDEAvWixy3bZ+UOYbPwUbBkwBq5C1LAJ/xPC8Oi+lL54oyakv/npbA0aU2hgCsx/1NUd4IBvV03+aUBWxerw==}
+
+  '@hpke/common@1.13.0':
+    resolution: {integrity: sha512-PqaJR89RWJQmt/WOGuBLrcrtXtEMbWu91XIbxDjKDTDgKvqvhlxOzQ9BAf9a0Q+yqqbTtQ0pK6KUyVi2WMehbA==}
+    engines: {node: '>=16.0.0'}
+
+  '@hpke/core@1.10.1':
+    resolution: {integrity: sha512-VZOk0rHC4vPsbW/fIRz7Q2IviSl0+9dRhP9yi/PmkKVKjj4vZDs1ufkN47twBFLZmiw37YFtTqBrxKAI7dlOrg==}
+    engines: {node: '>=16.0.0'}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -3829,6 +3879,12 @@ packages:
     resolution: {integrity: sha512-7QZxpPX25pga1WiMueduWxmrHMVBFrZPH6ZUaozGYa/H98JH6NVBSET3qVw+4NxzoraIW7rJ81YxSU9IalvCpg==}
     engines: {node: '>=20.0.0'}
 
+  libsodium-sumo@0.8.4:
+    resolution: {integrity: sha512-TMtHShQfVVsaxDygyapvUC3o7YsPgXa/hRWeIgzyFz6w5k/1hirGptCxp1U7XwW3rCskaTTYKgV10v86UiGgNw==}
+
+  libsodium-wrappers-sumo@0.8.4:
+    resolution: {integrity: sha512-ql7hcgulKZ3ekfa2DGAogcCKsWU0diA/0nArz1CFzh93WQdb46/Kj18ka/Hifq6uA3Ush34Pc6vU/6HXeRwUkg==}
+
   libsql@0.5.29:
     resolution: {integrity: sha512-8lMP8iMgiBzzoNbAPQ59qdVcj6UaE/Vnm+fiwX4doX4Narook0a4GPKWBEv+CR8a1OwbfkgL18uBfBjWdF0Fzg==}
     cpu: [x64, arm64, wasm32, arm]
@@ -5663,6 +5719,12 @@ snapshots:
       '@noble/hashes': 2.4.0
 
   '@hexagon/base64@1.1.28': {}
+
+  '@hpke/common@1.13.0': {}
+
+  '@hpke/core@1.10.1':
+    dependencies:
+      '@hpke/common': 1.13.0
 
   '@humanfs/core@0.19.2':
     dependencies:
@@ -7891,6 +7953,12 @@ snapshots:
       libqp: 3.0.1
 
   libqp@3.0.1: {}
+
+  libsodium-sumo@0.8.4: {}
+
+  libsodium-wrappers-sumo@0.8.4:
+    dependencies:
+      libsodium-sumo: 0.8.4
 
   libsql@0.5.29:
     dependencies:

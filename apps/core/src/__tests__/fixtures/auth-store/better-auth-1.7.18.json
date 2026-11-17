@@ -2,22 +2,22 @@
   "betterAuth": "1.7.18",
   "secret": "a-secret-that-is-long-enough-to-pass-validation",
   "email": "captured@sovereign.local",
-  "password": "correct horse battery",
-  "cookie": "better-auth.session_token=hBdBfWX9m5QzhEzsImxgEHctyHEm5hHM.9UR%2B%2B7xnCPBGscTl9gYhBYlCQpPjSPfjinw00pFpjZI%3D",
+  "password": "svp1.kCjqDRXeyqNbLaIcApCvOxpboKMKWRkG-JtQdOIJ6nI",
+  "cookie": "better-auth.session_token=elIccj8EPQDhYIl3tjXkB7c7wlXPrbZF.EtZVop18gtPjPQx%2Fc8KcIDSFNEPxjzMu0dpISDIYHyQ%3D",
   "tables": {
     "users": [
       {
-        "id": "UutRyA9rP3FeShzeuKgZva9xXVI7hPVc",
+        "id": "E1F3y0mkGLsrEOFvlt4QJC6m8wdElbks",
         "name": "Captured Person",
         "email": "captured@sovereign.local",
         "email_verified": false,
         "image": null,
-        "created_at": 1794736197758,
-        "updated_at": 1794736197758,
+        "created_at": 1794856051816,
+        "updated_at": 1794856051816,
         "role": "platform:owner",
         "timezone": null,
         "agreed_to_terms": 1,
-        "terms_accepted_at": 1794736197758,
+        "terms_accepted_at": 1794856051816,
         "terms_version": "0864d4362d07166e2c2323f6078297b7ef437619f0ce68639e0a4d64134d3d87",
         "two_factor_enabled": 0,
         "deactivated_at": null,
@@ -26,31 +26,31 @@
     ],
     "accounts": [
       {
-        "id": "IlQZwSUVn5kbHBcO6knvrmWvBmLslVUc",
-        "account_id": "UutRyA9rP3FeShzeuKgZva9xXVI7hPVc",
+        "id": "RkHGdrZO6FviiyNd2mVQvJKuxjRcRAOY",
+        "account_id": "E1F3y0mkGLsrEOFvlt4QJC6m8wdElbks",
         "provider_id": "credential",
-        "user_id": "UutRyA9rP3FeShzeuKgZva9xXVI7hPVc",
+        "user_id": "E1F3y0mkGLsrEOFvlt4QJC6m8wdElbks",
         "access_token": null,
         "refresh_token": null,
         "id_token": null,
         "access_token_expires_at": null,
         "refresh_token_expires_at": null,
         "scope": null,
-        "password": "c2f697e9afe48259381c8de0fe40a39a:ccdacebfff229b10b687f32debe01b1e5c91f6700f738a62b28ca49855641de9fb52efe9d738ffe389959ad6021a5dc3502fded28c7e75fea6f0abffaa7e933b",
-        "created_at": 1794736197760,
-        "updated_at": 1794736197760
+        "password": "cad512d677e845c1ed555c3550c54100:a854814627f5478e650d14c7f9e6eb67ed7221682f557b90530bf0857368817d348d5feb1af1cd10414e91479e239987be9f9036518514bba83aad91346be307",
+        "created_at": 1794856051817,
+        "updated_at": 1794856051817
       }
     ],
     "sessions": [
       {
-        "id": "WJFsth70v7Rq43kMp3vxm45xT57jGP2E",
+        "id": "0elcFeR0fUS3IgWrjC3A2cg3uaJiBmat",
         "expires_at": 4102444800000,
-        "token": "hBdBfWX9m5QzhEzsImxgEHctyHEm5hHM",
-        "created_at": 1794736197760,
-        "updated_at": 1794736197760,
+        "token": "elIccj8EPQDhYIl3tjXkB7c7wlXPrbZF",
+        "created_at": 1794856051818,
+        "updated_at": 1794856051818,
         "ip_address": "198.51.100.1",
         "user_agent": "",
-        "user_id": "UutRyA9rP3FeShzeuKgZva9xXVI7hPVc"
+        "user_id": "E1F3y0mkGLsrEOFvlt4QJC6m8wdElbks"
       }
     ]
   }

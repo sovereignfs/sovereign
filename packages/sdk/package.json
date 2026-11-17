@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/sdk",
-  "version": "2.1.0",
+  "version": "2.6.0",
   "type": "module",
   "description": "How a JavaScript app's server talks to the Sovereign server it signs people in with: tokens, failure, version support.",
   "license": "MPL-2.0",
@@ -29,7 +29,10 @@
       "default": "./src/index.ts"
     },
     "./testing": "./src/testing/index.ts",
-    "./next": "./src/next/index.ts"
+    "./next": "./src/next/index.ts",
+    "./keys": "./src/keys.ts",
+    "./local-vault": "./src/local-vault.ts",
+    "./vault": "./src/vault.ts"
   },
   "publishConfig": {
     "access": "public",
@@ -46,6 +49,18 @@
       "./testing": {
         "types": "./dist/testing.d.ts",
         "default": "./dist/testing.js"
+      },
+      "./keys": {
+        "types": "./dist/keys.d.ts",
+        "default": "./dist/keys.js"
+      },
+      "./local-vault": {
+        "types": "./dist/local-vault/local-vault.d.ts",
+        "default": "./dist/local-vault/local-vault.js"
+      },
+      "./vault": {
+        "types": "./dist/vault.d.ts",
+        "default": "./dist/vault.js"
       }
     }
   },
@@ -56,7 +71,7 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsup",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -74,6 +89,8 @@
   "devDependencies": {
     "@sovereignfs/api-client": "workspace:*",
     "@sovereignfs/config": "workspace:*",
+    "@sovereignfs/crypto": "workspace:*",
+    "@sovereignfs/database": "workspace:*",
     "@sovereignfs/tsconfig": "workspace:*",
     "@types/node": "catalog:",
     "@types/react": "catalog:",

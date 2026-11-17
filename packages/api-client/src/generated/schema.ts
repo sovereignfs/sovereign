@@ -20,6 +20,50 @@ export type NotificationCount = {
   count: number;
 };
 
+export type PersonKeys = {
+  sub: string;
+  receivingKey: PublicKey;
+  signingKey: PublicKey;
+  /**
+   * The account's Ed25519 signature, base64url, over `sovereign/1/app-keys`, the `sub`, the app's client id and the two public
+   * keys (RFC 0005 §1.2). A browser refuses keys whose signature does not verify with `accountSigningKey`.
+   */
+  signature: string;
+  accountSigningKey: PublicKey;
+};
+
+/**
+ * The caller's `PersonKeys`, and their private halves.
+ */
+export type MyKeys = {
+  sub: string;
+  receivingKey: PublicKey;
+  signingKey: PublicKey;
+  signature: string;
+  accountSigningKey: PublicKey;
+  /**
+   * The private halves, each wrapped by the app key, which no server holds.
+   */
+  wrapped: {
+    receive: WrapRecord;
+    sign: WrapRecord;
+  };
+};
+
+/**
+ * A 32-byte X25519 or Ed25519 public key, base64url.
+ */
+export type PublicKey = string;
+
+/**
+ * A secret encrypted with AES-256-GCM under a key the browser holds (RFC 0005 §1.2).
+ */
+export type WrapRecord = {
+  suite: number;
+  nonce: string;
+  ciphertext: string;
+};
+
 export type ErrorResponse = {
   /**
    * What kind of failure, for a program to act on.
@@ -74,6 +118,12 @@ export type InstanceBranding = {
   };
   favicon: string | null;
   /**
+   * 32 random bytes, base64url, made once by the instance and never changed. A browser makes a person's sign-in value
+   * from it, the address and the password, so that the password never reaches core. A core older than this field does
+   * not publish it.
+   */
+  instanceId?: string;
+  /**
    * What this core serves, so an app can tell a capability it lacks from a failure. A core that does not
    * publish this field serves the Directory and the instance document, and nothing else.
    */
@@ -86,6 +136,6 @@ export type InstanceBranding = {
      * The groups of calls served, such as `directory`. A capability is listed when every call of it is
      * served.
      */
-    capabilities: ('directory' | 'notifications' | 'email' | 'activity')[];
+    capabilities: ('directory' | 'notifications' | 'email' | 'activity' | 'keys')[];
   };
 };

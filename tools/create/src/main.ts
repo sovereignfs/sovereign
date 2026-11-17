@@ -92,8 +92,10 @@ async function main(): Promise<number> {
         const answer = await io.ask(`Which port should it listen on? (${DEFAULT_APP_PORT})`);
         port = answer === '' ? DEFAULT_APP_PORT : parsePort(answer);
       }
-      await createApp({ dir, port }, io, exec, process.cwd());
+      await createApp({ dir, port, encryption: request.encryption }, io, exec, process.cwd());
     } else {
+      if (request.encryption)
+        throw new CreateError('--encryption is for an app.', 2, 'Make an app with it instead.');
       if (request.port !== undefined)
         throw new CreateError(
           '--port is for an app.',

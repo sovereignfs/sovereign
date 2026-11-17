@@ -4,6 +4,7 @@ import { getConfig } from '../../../src/config';
 import { getDatabase } from '../../../src/database';
 import { brandingDocument } from '../../../src/instance/branding-document';
 import { loadIdentity } from '../../../src/instance/identity';
+import { ensureInstanceId } from '../../../src/instance/instance-id';
 import { getMailForAppsService } from '../../../src/mail';
 import { getSettings } from '../../../src/settings';
 
@@ -22,7 +23,8 @@ export async function GET(request: Request): Promise<Response> {
   const identity = await loadIdentity(settings, new BrandingStore(database), config.url);
   // Email is listed while the instance can send it, so an app can tell a lack of mail from a failure (core-app §4.2).
   const email = await (await getMailForAppsService()).available();
-  const body = JSON.stringify(brandingDocument(identity, config.url, { email }));
+  const instanceId = await ensureInstanceId(database);
+  const body = JSON.stringify(brandingDocument(identity, config.url, { email }, instanceId));
   const etag = `"${createHash('sha256').update(body).digest('hex').slice(0, 16)}"`;
   const headers = {
     etag,

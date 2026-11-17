@@ -48,5 +48,14 @@ export type Manifest3 = Omit<Manifest2, 'manifest'> & {
   storage?: boolean;
 };
 
+/**
+ * Manifest 4 (§2): manifest 3, and `encryption`, which says the app keeps what people give it encrypted so the server cannot read it,
+ * and where core returns a person with the app's key (§2.8, core-app §5.6).
+ */
+export type Manifest4 = Omit<Manifest3, 'manifest'> & {
+  manifest: 4;
+  encryption?: { return: string };
+};
+
 /** A manifest, of any version this package reads. */
-export type Manifest = Manifest1 | Manifest2 | Manifest3;
+export type Manifest = Manifest1 | Manifest2 | Manifest3 | Manifest4;

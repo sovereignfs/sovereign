@@ -177,9 +177,14 @@ stay experimental, which means they MAY be removed (§3), and an app SHOULD NOT 
 and comes with a migration note in [`docs/upgrade.md`](../upgrade.md). No other export is promoted to stable here: an export
 becomes stable when core or an app uses it and a task of its own lists it (§3), and none has been put forward.
 
+Two components serve encryption (core-app §5) and are experimental: **`LockedState`**, for a
+place this browser cannot open, saying what it is with a link to unlock that the consumer gives; and **`RecoveryKit`**, the kit in
+groups with a way to print and to save it, and a confirmation that it was kept before going on.
+
 ## Changelog
 
 | Date       | Change                                                                                                                                                                                                                                                                 |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-10-30 | First draft. Breaking changes are a minor bump until `1.0.0`, and everything is experimental unless listed as stable.                                                                                                                                                  |
 | 2026-10-30 | §6.2: focus is trapped and returned by a modal overlay, and a non-modal one takes none. §9: the audit test. §10: nothing the checks can read is left, the three exports that look specific to one app are named, and `NavTabs` and `SplitPane` use the one breakpoint. |
+| 2026-11-16 | §10: a locked state and the recovery kit, specified and not built (core-app §5).                                                                                                                                                                                       |

@@ -4,9 +4,11 @@ import type {
   DirectoryUser,
   DirectoryUserStatus,
   InstanceBranding,
+  MyKeys,
   Notification,
   NotificationCategory,
   NotificationCount,
+  PersonKeys,
 } from './schema';
 
 /** What each operation takes and answers with. */
@@ -38,6 +40,20 @@ export interface Operations {
   getInstanceBranding: {
     request: undefined;
     response: InstanceBranding;
+  };
+  /**
+   * The caller's own keys for this app
+   */
+  getMyKeys: {
+    request: undefined;
+    response: MyKeys;
+  };
+  /**
+   * Another person's public keys for this app
+   */
+  getPersonKeys: {
+    request: { params: { sub: string } };
+    response: PersonKeys;
   };
   /**
    * The notifications this app sent a person
@@ -193,6 +209,18 @@ export const operations = {
     method: 'GET',
     path: '/.well-known/sovereign-instance',
     scopes: undefined,
+    safeToRepeat: true,
+  },
+  getMyKeys: {
+    method: 'GET',
+    path: '/api/v1/keys/me',
+    scopes: ['keys'],
+    safeToRepeat: true,
+  },
+  getPersonKeys: {
+    method: 'GET',
+    path: '/api/v1/keys/people/{sub}',
+    scopes: ['keys'],
     safeToRepeat: true,
   },
   listNotifications: {

@@ -38,12 +38,13 @@ import {
   signedInAs,
   signUp,
   type Reply,
+  signInValueOf,
 } from './auth-harness';
 
 const MIGRATIONS = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../migrations');
 const SESSION_COOKIE = 'better-auth.session_token';
 const HOUR = 60 * 60 * 1000;
-const NEW_PASSWORD = 'a different long passphrase';
+const NEW_PASSWORD = signInValueOf('a different long passphrase');
 const SMTP = {
   SV_SMTP_HOST: 'smtp.sovereign.local',
   SV_SMTP_FROM: 'Sovereign <no-reply@core.sovereign.local>',
@@ -657,14 +658,14 @@ export function verificationSuite(createDatabase: () => Promise<TestDatabase>): 
       }
     });
 
-    it('refuses a password that breaks the policy and keeps the link for another try', async () => {
+    it('refuses what is not a sign-in value and keeps the link for another try', async () => {
       const { auth, settled, email } = await accountWithPassword();
       await requestReset(auth, email);
       await settled();
       const token = tokenOf(linkIn(transport.last));
       const weak = await complete(auth, token, 'x');
       expect(weak.status).toBe(400);
-      expect(weak.body.code).toBe('PASSWORD_DOES_NOT_MEET_POLICY');
+      expect(weak.body.code).toBe('PASSWORD_NOT_DERIVED');
       expect((await complete(auth, token)).status).toBe(200);
     });
 

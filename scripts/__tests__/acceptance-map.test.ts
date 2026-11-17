@@ -53,3 +53,35 @@ describe('Phase 1 acceptance (core-app §3.17)', () => {
     for (const title of titles) expect(items).toContain(title);
   });
 });
+
+/** The numbered items of core-app §5.10, the keys' acceptance list. */
+function keyItems(): string[] {
+  const spec = read('docs/specs/core-app.md');
+  const section = spec.slice(spec.indexOf('### 5.10 This is done when'));
+  const end = section.indexOf('\n---');
+  const body = end === -1 ? section : section.slice(0, end);
+  return [...body.matchAll(/^(\d+)\. /gm)].map((match) => match[1] as string);
+}
+
+const keyTitles = readdirSync(path.join(root, 'apps/e2e/tests'))
+  .filter((file) => file.endsWith('.spec.ts'))
+  .flatMap((file) => [
+    ...read(`apps/e2e/tests/${file}`).matchAll(/test\(\s*[`'"](§5\.10\.(\d+))[:\s]/g),
+  ])
+  .map((match) => match[2] as string);
+
+describe('Keys acceptance (core-app §5.10)', () => {
+  const items = keyItems();
+
+  it('reads the items from the spec', () => {
+    expect(items.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it.each(items)('item %s has a test of its own, named for it', (item) => {
+    expect(keyTitles).toContain(item);
+  });
+
+  it('names no item that the spec does not have', () => {
+    for (const title of keyTitles) expect(items).toContain(title);
+  });
+});

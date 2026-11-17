@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { SignInError } from '../errors';
 import type { Session } from '../session';
 import type { Sovereign } from '../sovereign';
+import { trimTrailingSlashes } from '../slashes.js';
 
 export type NextAuthOptions = {
   /** Where the route is mounted. It must match the SDK's `redirectPath` (`/auth/callback`) and `postLogoutPath`. `/auth` unless changed. */
@@ -19,8 +20,8 @@ export type NextAuthOptions = {
 type RouteHandler = (request: Request) => Promise<Response>;
 
 /**
- * Binds the SDK's sign-in to Next.js (sdk §9): the route handlers for `/auth/login`, `/auth/callback`, `/auth/logout` and
- * `/auth/backchannel-logout` (and `/auth/account-deleted` when `onAccountDeleted` is given), and the session as a Server Component, route or action reads it. Mount the handlers once:
+ * Binds the SDK's sign-in to Next.js (sdk §9): the route handlers for `/auth/login`, `/auth/callback`, `/auth/logout`,
+ * `/auth/key-secret` (for `@sovereignfs/sdk/keys`, sdk §9.2) and `/auth/backchannel-logout` (and `/auth/account-deleted` when `onAccountDeleted` is given), and the session as a Server Component, route or action reads it. Mount the handlers once:
  *
  *   // app/auth/[action]/route.ts
  *   export const { GET, POST } = nextAuth(sv).handlers;
@@ -28,7 +29,7 @@ type RouteHandler = (request: Request) => Promise<Response>;
  * `next` is an optional peer dependency of the SDK, and this is the only entry that uses it.
  */
 export function nextAuth(sv: Sovereign, options: NextAuthOptions = {}) {
-  const base = (options.basePath ?? '/auth').replace(/\/+$/, '');
+  const base = trimTrailingSlashes(options.basePath ?? '/auth');
   const errorPath = options.errorPath ?? '/?error=signin';
 
   const go = (url: string, setCookies: string[], status = 303): Response => {
@@ -39,7 +40,7 @@ export function nextAuth(sv: Sovereign, options: NextAuthOptions = {}) {
 
   const actionOf = (request: Request): string => {
     const path = new URL(request.url).pathname;
-    return path.startsWith(`${base}/`) ? path.slice(base.length + 1).replace(/\/+$/, '') : '';
+    return path.startsWith(`${base}/`) ? trimTrailingSlashes(path.slice(base.length + 1)) : '';
   };
 
   const GET: RouteHandler = async (request) => {
@@ -48,6 +49,18 @@ export function nextAuth(sv: Sovereign, options: NextAuthOptions = {}) {
         const returnTo = new URL(request.url).searchParams.get('returnTo') ?? undefined;
         const step = await sv.auth.beginSignIn(returnTo ? { returnTo } : {});
         return go(step.url, step.setCookies, 302);
+      }
+      case 'key-secret': {
+        // The app's own pages only: a browser says where a request comes from, and a request from another site is refused.
+        const site = request.headers.get('sec-fetch-site');
+        if (site !== null && site !== 'same-origin') {
+          return new Response('Not found', { status: 404 });
+        }
+        const found = await sv.auth.keySecret(request);
+        return new Response(JSON.stringify(found ?? { error: 'not_signed_in' }), {
+          status: found ? 200 : 401,
+          headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+        });
       }
       case 'callback': {
         try {

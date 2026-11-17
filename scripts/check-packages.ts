@@ -10,7 +10,7 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { tarballProblems, type PackedManifest } from './lib/package-check';
+import { sdkEntryProblems, tarballProblems, type PackedManifest } from './lib/package-check';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const packagesDir = path.join(root, 'packages');
@@ -79,6 +79,17 @@ try {
       kind,
       binHeads,
     });
+    if (manifest.name === '@sovereignfs/sdk') {
+      // What each browser entry loads, read from the tarball as npm would install it (sdk §12).
+      const read = (file: string) =>
+        files.includes(`package/${file}`)
+          ? execFileSync('tar', ['-xzOf', tarball, `package/${file}`], {
+              encoding: 'utf8',
+              maxBuffer: 64 * 1024 * 1024,
+            })
+          : undefined;
+      problems.push(...sdkEntryProblems(manifest.exports, read));
+    }
     execFileSync('pnpm', ['publish', '--dry-run', '--no-git-checks'], { cwd: dir, stdio: 'pipe' });
 
     if (problems.length > 0) {

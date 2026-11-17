@@ -100,6 +100,21 @@ export const SETTINGS = {
     problem: (value) =>
       value === '' || value.length > 1024 ? 'must be 1-1024 characters' : undefined,
   }),
+  /**
+   * The escrow public key (core-app §5.8), the line `sv key escrow` prints: set, every person's browser adds an escrow way in at its
+   * next unlock. Only the owner sets it (`instance:configure-secrets`); it is public, so it is not stored as a secret.
+   */
+  escrowPublicKey: define<string>({
+    key: 'escrow.public_key',
+    kind: 'string',
+    secret: false,
+    fromEnvironment: () => undefined,
+    builtin: undefined,
+    problem: (value) =>
+      /^sv-escrow-1\.[A-Za-z0-9_-]{11}\.[A-Za-z0-9_-]{43}$/.test(value)
+        ? undefined
+        : 'must be the line `sv key escrow` printed, starting sv-escrow-1',
+  }),
 } as const;
 
 export type SettingName = keyof typeof SETTINGS;

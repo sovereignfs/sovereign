@@ -66,6 +66,34 @@ describe('the Next.js adapter (sdk §9)', () => {
     expect((await next.requireSession()).sub).toBe('u1');
   });
 
+  it('gives the session’s key secret to the app’s own pages only, the same each time, and none without a session (sdk §9.2)', async () => {
+    const { core, handlers } = setup();
+    const login = await handlers.GET(at('/auth/login'));
+    const back = core.authorize(login.headers.get('location') as string, 'u1');
+    const callback = await handlers.GET(
+      at(new URL(back).pathname + new URL(back).search, { headers: { cookie: cookiesOf(login) } }),
+    );
+    const cookie = cookiesOf(callback);
+    const ask = (site?: string) =>
+      handlers.GET(
+        at('/auth/key-secret', {
+          headers: { cookie, ...(site ? { 'sec-fetch-site': site } : {}) },
+        }),
+      );
+
+    const first = await ask('same-origin');
+    expect(first.status).toBe(200);
+    expect(first.headers.get('cache-control')).toBe('no-store');
+    const body = (await first.json()) as { sub: string; secret: string };
+    expect(body.sub).toBe('u1');
+    expect(body.secret).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(((await (await ask()).json()) as { secret: string }).secret).toBe(body.secret);
+
+    expect((await ask('cross-site')).status).toBe(404);
+    expect((await ask('same-site')).status).toBe(404);
+    expect((await handlers.GET(at('/auth/key-secret'))).status).toBe(401);
+  });
+
   it('sends a failed sign-in back to the app, not to an error page of ours', async () => {
     const { handlers } = setup();
     const reply = await handlers.GET(at('/auth/callback?code=x&state=y'));

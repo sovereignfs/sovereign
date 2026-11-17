@@ -50,8 +50,14 @@ smoke() {
     docker compose "$@" logs core >&2
     fail "$name is not healthy: $health"
   }
+  # Core never receives a password (core-app §5.2): what is sent is the sign-in value, made from its published instance id.
+  curl -s "$SV_URL/.well-known/sovereign-instance" | grep -q '"instanceId":"[A-Za-z0-9_-]\{43\}"' \
+    || fail "$name: the instance document has no instance id"
+  local value
+  value="$(pnpm exec tsx scripts/sign-in-value.ts "$SV_URL" owner@sovereign.local "$PASSWORD")" \
+    || fail "$name: no sign-in value could be made"
   role="$(curl -s -X POST "$SV_URL/api/auth/sign-up/email" -H 'content-type: application/json' -H "origin: $SV_URL" \
-    -d "{\"name\":\"Smoke Owner\",\"email\":\"owner@sovereign.local\",\"password\":\"$PASSWORD\",\"agreedToTerms\":true}" \
+    -d "{\"name\":\"Smoke Owner\",\"email\":\"owner@sovereign.local\",\"password\":\"$value\",\"agreedToTerms\":true}" \
     | sed -n 's/.*"role":"\([^"]*\)".*/\1/p')"
   [ "$role" = platform:owner ] || fail "$name: the first account is not the owner ($role)"
   docker compose "$@" exec -T core node -e \
@@ -92,9 +98,37 @@ admin_smoke() {
   grep -q '"skipped":false' <<<"$applied" || fail "$name: the first apply was skipped: $applied"
   printf '%s' "$exported" | docker compose "$@" exec -T core sovereign-admin instance deletions apply 2>/dev/null \
     | grep -q '"skipped":true' || fail "$name: the same deletions were applied twice"
+  # A reset link with no mail (core-app §5.2): one for the owner, none for an address with no account.
+  docker compose "$@" exec -T core sovereign-admin accounts reset-link owner@sovereign.local 2>/dev/null \
+    | grep -q "^$SV_URL/reset-password?token=" || fail "$name: sovereign-admin made no reset link"
+  docker compose "$@" exec -T core sovereign-admin accounts reset-link nobody@sovereign.local >/dev/null 2>&1 \
+    && fail "$name: sovereign-admin made a reset link for nobody"
+  return 0
+}
+
+# The seed derives each account's sign-in value inside the image, with the bundled libsodium (core-app §3.15.1, §5.2): a
+# development instance is seeded, and its owner signs in with a value made outside it.
+seed_smoke() {
+  echo "== seeding a development instance"
+  printf 'SV_AUTH_REQUIRE_EMAIL_VERIFICATION=false\nSV_ENVIRONMENT=development\n' > .env
+  docker compose "$@" up -d
+  for _ in $(seq 1 60); do
+    [ "$(curl -s -o /dev/null -w '%{http_code}' "$SV_URL/api/health")" = 200 ] && break
+    sleep 2
+  done
+  local seeded value status
+  seeded="$(docker compose "$@" exec -T core sovereign-admin seed --json 2>/dev/null)" || fail "the seed failed"
+  grep -q '"email":"owner@sovereign.local"' <<<"$seeded" || fail "the seed made no owner: $seeded"
+  value="$(pnpm exec tsx scripts/sign-in-value.ts "$SV_URL" owner@sovereign.local sovereign-dev-password)"
+  status="$(curl -s -o /dev/null -w '%{http_code}' -X POST "$SV_URL/api/auth/sign-in/email" -H 'content-type: application/json' \
+    -H "origin: $SV_URL" -d "{\"email\":\"owner@sovereign.local\",\"password\":\"$value\"}")"
+  [ "$status" = 200 ] || fail "the seeded owner could not sign in ($status)"
+  docker compose "$@" down -v
+  printf 'SV_AUTH_REQUIRE_EMAIL_VERIFICATION=false\n' > .env
 }
 
 smoke "sqld" -f docker-compose.yml
 smoke "PostgreSQL" -f docker-compose.yml -f docker-compose.postgres.yml
 smoke "a SQLite file" -f docker-compose.sqlite.yml
+seed_smoke -f docker-compose.sqlite.yml
 echo "== all three boot from the documented variables"

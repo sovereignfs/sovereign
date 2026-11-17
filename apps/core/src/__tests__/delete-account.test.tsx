@@ -2,6 +2,10 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+// The derivation has its own vectors (packages/crypto); here it stands in with a value that shows what it was made from.
+vi.mock('../auth/derive', () => ({
+  signInValue: async (password: string, address: string) => `derived:${password}:${address}`,
+}));
 import { ROLE_ADMIN, ROLE_OWNER, ROLE_USER } from '../auth/roles';
 import { AccountActionError } from '../accounts/manage';
 import { DEFAULT_MATRIX } from '../roles/capabilities';
@@ -192,7 +196,7 @@ describe('the form', () => {
   };
 
   it('cannot be sent without a password, and asks before sending anything', () => {
-    render(<DeleteForm />);
+    render(<DeleteForm address="ada@sovereign.local" />);
     const button = screen.getByRole('button', { name: 'Delete my account…' }) as HTMLButtonElement;
     expect(button.disabled).toBe(true);
     fireEvent.change(screen.getByLabelText(/Your password/), { target: { value: 'pw' } });
@@ -207,12 +211,12 @@ describe('the form', () => {
   it('sends the password once confirmed, and keeps the question open for a wrong one', async () => {
     confirm.mockResolvedValue('wrong');
     signedInAs('me', ROLE_USER);
-    render(<DeleteForm />);
+    render(<DeleteForm address="ada@sovereign.local" />);
     fireEvent.change(screen.getByLabelText(/Your password/), { target: { value: 'guess' } });
     fireEvent.click(screen.getByRole('button', { name: 'Delete my account…' }));
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Delete my account' }));
     expect(await within(dialog()).findByText('That password is not right.')).toBeTruthy();
-    expect(confirm.mock.calls[0]?.[3]).toBe('guess');
+    expect(confirm.mock.calls[0]?.[3]).toBe('derived:guess:ada@sovereign.local');
     expect(dialog().hasAttribute('open')).toBe(true);
     expect((screen.getByLabelText(/Your password/) as HTMLInputElement).value).toBe('guess');
     await waitFor(() => expect(deleteSelf).not.toHaveBeenCalled());

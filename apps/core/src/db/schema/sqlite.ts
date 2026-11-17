@@ -623,3 +623,68 @@ export const avatars = sqliteTable('avatars', {
   version: text('version').notNull(),
   updatedAt: sqliteTimestampMs('updated_at').notNull(),
 });
+
+/**
+ * The key vault (core-app §5.3): what opens a person's keys, which core keeps and can open none of. Records are the JSON of
+ * `@sovereignfs/crypto/web` (a wrap, a sealed key, a wrapped pair), stored as text. Every table is deleted with the account, in the
+ * transaction that deletes it (`AccountManager`).
+ */
+export const keyAccounts = sqliteTable('key_accounts', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  suite: integer('suite').notNull(),
+  /** base64url, 32 bytes: the salt of the unlock key, given only to the account's own session. */
+  unlockSalt: text('unlock_salt').notNull(),
+  /** The account's signing key: its public half, and its private half wrapped by the account key. */
+  signingPublic: text('signing_public').notNull(),
+  signingPrivate: text('signing_private').notNull(),
+  /** 1 once the person confirmed they kept their recovery kit; the kit itself is never kept. */
+  kitConfirmed: integer('kit_confirmed').notNull().default(0),
+  createdAt: integer('created_at').notNull(),
+});
+
+/** One way into the account key: the password, a passkey (with its PRF input), the kit, or escrow. */
+export const keyWraps = sqliteTable(
+  'key_wraps',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    way: text('way').notNull(),
+    /** Which one of it: a passkey's credential id, the escrow key's id, or a password wrap's own id. */
+    wrapId: text('wrap_id').notNull(),
+    record: text('record').notNull(),
+    prfSalt: text('prf_salt'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.way, table.wrapId] })],
+);
+
+/** A person's keys for one app: the app key wrapped by the account key, the app's two key pairs, and the account's signature. */
+export const keyApps = sqliteTable(
+  'key_apps',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    clientId: text('client_id').notNull(),
+    appKey: text('app_key').notNull(),
+    identity: text('identity').notNull(),
+    signature: text('signature').notNull(),
+    createdAt: integer('created_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.clientId] })],
+);
+
+/**
+ * For each session, 32 random bytes that half-open what a browser keeps unlocked (core-app §5.4). Given only to a live session of
+ * its own, and gone with it.
+ */
+export const keySessionSecrets = sqliteTable('key_session_secrets', {
+  sessionId: text('session_id')
+    .primaryKey()
+    .references(() => sessions.id, { onDelete: 'cascade' }),
+  secret: text('secret').notNull(),
+  createdAt: integer('created_at').notNull(),
+});

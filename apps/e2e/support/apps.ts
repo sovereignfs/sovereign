@@ -1,4 +1,7 @@
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { createRemoteJWKSet, decodeProtectedHeader, jwtVerify, type JWTPayload } from 'jose';
 import * as oidc from 'openid-client';
 import { CORE_URL, freshAddress, MINIMAL_PORT, RP_PORT, RP_URL } from './env';
@@ -316,11 +319,40 @@ function relyingParty(): Server {
 
 export type MinimalSeen = { callbacks: string[] };
 
+/**
+ * Where the minimal app keeps the documents its pages store: what an encrypted app's server holds on disk, which §5.10.8 reads after
+ * the run. Only ciphertext ever arrives here; the app's server has no key.
+ */
+export const MINIMAL_DOCUMENTS = path.join(tmpdir(), `sovereign-e2e-documents-${MINIMAL_PORT}`);
+
+/** Stores or returns a document's bytes, as they were sent: `/documents/<id>`, the id letters, digits and hyphens. */
+async function documents(request: IncomingMessage, response: ServerResponse, id: string) {
+  if (!/^[a-z0-9-]{1,64}$/.test(id)) return void response.writeHead(404).end();
+  const file = path.join(MINIMAL_DOCUMENTS, id);
+  if (request.method === 'PUT') {
+    const chunks: Buffer[] = [];
+    for await (const chunk of request) chunks.push(chunk as Buffer);
+    mkdirSync(MINIMAL_DOCUMENTS, { recursive: true });
+    writeFileSync(file, Buffer.concat(chunks));
+    return void response.writeHead(204).end();
+  }
+  try {
+    const body = readFileSync(file);
+    response.writeHead(200, { 'content-type': 'application/octet-stream' }).end(body);
+  } catch {
+    response.writeHead(404).end();
+  }
+}
+
 function minimalClient(): Server {
   const seen: MinimalSeen = { callbacks: [] };
   return createServer((request, response) => {
     const url = new URL(request.url ?? '/', `http://localhost:${MINIMAL_PORT}`);
     if (url.pathname === '/__last') return json(response, seen);
+    if (url.pathname.startsWith('/documents/')) {
+      void documents(request, response, url.pathname.slice('/documents/'.length));
+      return;
+    }
     if (url.pathname === '/callback') seen.callbacks.push(url.href);
     return page(response, `<h1>Minimal</h1><p id="path">${url.pathname}</p>`);
   });
@@ -331,8 +363,10 @@ export async function startApps(): Promise<() => Promise<void>> {
   const servers = [relyingParty(), minimalClient()];
   await listen(servers[0] as Server, RP_PORT);
   await listen(servers[1] as Server, MINIMAL_PORT);
+  rmSync(MINIMAL_DOCUMENTS, { recursive: true, force: true });
   return async () => {
     await Promise.all(servers.map(close));
+    rmSync(MINIMAL_DOCUMENTS, { recursive: true, force: true });
   };
 }
 

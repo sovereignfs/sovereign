@@ -1,6 +1,33 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+// The derivation has its own vectors (packages/crypto); here it stands in with a value that shows what it was made from.
+vi.mock('../auth/derive', () => ({
+  signInValue: async (password: string, address: string) => `derived:${password}:${address}`,
+  deriveForSignIn: async (password: string, address: string) => ({
+    signIn: `derived:${password}:${address}`,
+    secret: {},
+  }),
+}));
+// The keys are set up and opened by the vault's own tests (keys-unlock, key-vault); here they stand aside.
+vi.mock('../keys/session', () => ({
+  afterPasswordAccepted: async () => undefined,
+  handOverSecret: async () => undefined,
+  afterSecondStep: async () => undefined,
+  startAfresh: async () => undefined,
+  beforePasswordChange: async () => undefined,
+  afterPasswordChange: async () => undefined,
+  forgetKeys: async () => undefined,
+}));
+
+const POLICY = {
+  minLength: 8,
+  maxLength: 128,
+  requireUppercase: false,
+  requireLowercase: false,
+  requireNumber: false,
+  requireSymbol: false,
+};
 
 const signIn = vi.fn();
 const signUp = vi.fn();
@@ -51,7 +78,8 @@ describe('the sign-in form', () => {
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/settings'));
     expect(signIn).toHaveBeenCalledWith({
       email: 'ada@sovereign.local',
-      password: 'correct horse battery',
+      // What is sent is made from the password and the address, never the password (core-app §5.2).
+      password: 'derived:correct horse battery:ada@sovereign.local',
     });
   });
 
@@ -99,7 +127,7 @@ describe('the sign-up form', () => {
   };
 
   it('will not send the sign-up until the terms are accepted, and says why', () => {
-    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" policy={POLICY} />);
     type('Name', 'Ada Lovelace');
     type('Email', 'ada@sovereign.local');
     type('Password', 'correct horse battery');
@@ -110,7 +138,7 @@ describe('the sign-up form', () => {
   });
 
   it('links to both documents, in a new tab so the form is not lost', () => {
-    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" policy={POLICY} />);
     for (const [name, href] of [
       ['Terms of Service', '/tos'],
       ['Privacy Policy', '/privacy'],
@@ -123,7 +151,7 @@ describe('the sign-up form', () => {
   });
 
   it('will not send the sign-up when the two passwords differ, and says so', () => {
-    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" policy={POLICY} />);
     type('Name', 'Ada Lovelace');
     type('Email', 'ada@sovereign.local');
     type('Password', 'correct horse battery');
@@ -135,19 +163,26 @@ describe('the sign-up form', () => {
   });
 
   it('shows the password rules beside the field', () => {
-    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="At least 12 characters." />);
+    render(
+      <SignUpForm
+        instanceName="Acme"
+        returnTo="/"
+        passwordHint="At least 12 characters."
+        policy={POLICY}
+      />,
+    );
     expect(screen.getByText('At least 12 characters.')).toBeTruthy();
   });
 
   it('sends the name, email and password, then goes where the person was headed', async () => {
     signUp.mockResolvedValue({ data: { token: 'abc' }, error: null });
-    render(<SignUpForm instanceName="Acme" returnTo="/settings" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/settings" passwordHint="" policy={POLICY} />);
     fill();
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/settings'));
     expect(signUp).toHaveBeenCalledWith({
       name: 'Ada Lovelace',
       email: 'ada@sovereign.local',
-      password: 'correct horse battery',
+      password: 'derived:correct horse battery:ada@sovereign.local',
       agreedToTerms: true,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       callbackURL: '/sign-in?returnTo=%2Fsettings',
@@ -163,7 +198,7 @@ describe('the sign-up form', () => {
         message: 'The password must include a number.',
       },
     });
-    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" policy={POLICY} />);
     fill();
     expect(await screen.findByText('The password must include a number.')).toBeTruthy();
     expect(assign).not.toHaveBeenCalled();
@@ -171,7 +206,7 @@ describe('the sign-up form', () => {
 
   it('suggests signing in when the address already has an account', async () => {
     signUp.mockResolvedValue({ data: null, error: { status: 422, code: 'USER_ALREADY_EXISTS' } });
-    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" policy={POLICY} />);
     fill();
     expect(await screen.findByText(/already exists/)).toBeTruthy();
   });
@@ -181,7 +216,7 @@ describe('the sign-up form', () => {
       data: null,
       error: { status: 422, code: 'INVITE_REQUIRED', message: 'Sign-up needs an invitation.' },
     });
-    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" policy={POLICY} />);
     fill();
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain('no valid invitation for this email address');
@@ -198,7 +233,7 @@ describe('the sign-up form', () => {
         message: 'SQLITE_CONSTRAINT: users.email',
       },
     });
-    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" policy={POLICY} />);
     fill();
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain('could not be created');
@@ -351,7 +386,7 @@ describe('the sign-up form, while the address is not verified', () => {
 
   it('points to the inbox when the server made no session, and asks for the link to land on sign-in', async () => {
     signUp.mockResolvedValue({ data: { token: null, user: {} }, error: null });
-    render(<SignUpForm instanceName="Acme" returnTo="/settings" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/settings" passwordHint="" policy={POLICY} />);
     fill();
     expect(await screen.findByText(/We have sent a link to ada@sovereign.local/)).toBeTruthy();
     expect(screen.queryByLabelText(/^Password/)).toBeNull();
@@ -365,7 +400,7 @@ describe('the sign-up form, while the address is not verified', () => {
   it('asks for a new link on request', async () => {
     signUp.mockResolvedValue({ data: { token: null, user: {} }, error: null });
     sendVerificationEmail.mockResolvedValue({ data: { status: true }, error: null });
-    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" policy={POLICY} />);
     fill();
     fireEvent.click(await screen.findByRole('button', { name: 'Send a new link' }));
     expect(await screen.findByText(/A new link is on its way/)).toBeTruthy();
@@ -377,7 +412,7 @@ describe('the sign-up form, while the address is not verified', () => {
 
   it('goes straight on when the server signed the person in', async () => {
     signUp.mockResolvedValue({ data: { token: 'abc', user: {} }, error: null });
-    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" policy={POLICY} />);
     fill();
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/'));
   });
@@ -387,21 +422,21 @@ describe('the sign-up form, while the address is not verified', () => {
       data: null,
       error: { status: 400, code: 'TERMS_NOT_ACCEPTED', message: 'You must accept the terms.' },
     });
-    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" policy={POLICY} />);
     fill();
     expect(await screen.findByText('You must accept the terms.')).toBeTruthy();
   });
 
   it('says so, plainly, when the browser’s time zone is refused', async () => {
     signUp.mockResolvedValue({ data: null, error: { status: 400, code: 'INVALID_TIMEZONE' } });
-    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" policy={POLICY} />);
     fill();
     expect((await screen.findByRole('alert')).textContent).toContain('time zone');
   });
 
   it('says when email is not set up, instead of a vague failure', async () => {
     signUp.mockResolvedValue({ data: null, error: { status: 503, code: 'EMAIL_NOT_AVAILABLE' } });
-    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" />);
+    render(<SignUpForm instanceName="Acme" returnTo="/" passwordHint="" policy={POLICY} />);
     fill();
     expect((await screen.findByRole('alert')).textContent).toContain("Email isn't set up");
   });
@@ -451,34 +486,48 @@ describe('the reset-password form', () => {
 
   it('sends the token with the new password, then goes to sign-in', async () => {
     resetPassword.mockResolvedValue({ data: { status: true }, error: null });
-    render(<ResetPasswordForm token="tok123" passwordHint="At least 8 characters." />);
+    render(
+      <ResetPasswordForm
+        token="tok123"
+        address="ada@sovereign.local"
+        passwordHint="At least 8 characters."
+        policy={POLICY}
+      />,
+    );
     expect(screen.getByText('At least 8 characters.')).toBeTruthy();
     submit();
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/sign-in?reset=1'));
     expect(resetPassword).toHaveBeenCalledWith({
-      newPassword: 'a different long passphrase',
+      newPassword: 'derived:a different long passphrase:ada@sovereign.local',
       token: 'tok123',
     });
   });
 
-  it('shows the server’s own words when the password breaks the rules, and keeps the form', async () => {
-    resetPassword.mockResolvedValue({
-      data: null,
-      error: {
-        status: 400,
-        code: 'PASSWORD_DOES_NOT_MEET_POLICY',
-        message: 'The password must include a number.',
-      },
-    });
-    render(<ResetPasswordForm token="tok123" passwordHint="" />);
+  it('holds the password to the policy itself, sends nothing, and keeps the form', async () => {
+    render(
+      <ResetPasswordForm
+        token="tok123"
+        address="ada@sovereign.local"
+        passwordHint=""
+        policy={{ ...POLICY, minLength: 1, requireNumber: true }}
+      />,
+    );
     submit('weak');
     expect(await screen.findByText('The password must include a number.')).toBeTruthy();
+    expect(resetPassword).not.toHaveBeenCalled();
     expect(assign).not.toHaveBeenCalled();
     expect((screen.getByLabelText(/^New password/) as HTMLInputElement).value).toBe('weak');
   });
 
   it('does not send the new password when the two differ, and says so', () => {
-    render(<ResetPasswordForm token="tok123" passwordHint="" />);
+    render(
+      <ResetPasswordForm
+        token="tok123"
+        address="ada@sovereign.local"
+        passwordHint=""
+        policy={POLICY}
+      />,
+    );
     submit('a different long passphrase', 'another long passphrase');
     expect(screen.getByRole('alert').textContent).toContain('do not match');
     expect(resetPassword).not.toHaveBeenCalled();
@@ -486,7 +535,14 @@ describe('the reset-password form', () => {
 
   it('says the link is no longer good, and where to ask for another', async () => {
     resetPassword.mockResolvedValue({ data: null, error: { status: 400, code: 'INVALID_TOKEN' } });
-    render(<ResetPasswordForm token="old" passwordHint="" />);
+    render(
+      <ResetPasswordForm
+        token="old"
+        address="ada@sovereign.local"
+        passwordHint=""
+        policy={POLICY}
+      />,
+    );
     submit();
     expect(await screen.findByText(/expired or was already used/)).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Request a new link' }).getAttribute('href')).toBe(

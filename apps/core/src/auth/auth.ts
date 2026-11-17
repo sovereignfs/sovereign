@@ -3,13 +3,14 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { passkey } from '@better-auth/passkey';
 import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/api';
+import { KeyVault } from '../keys/vault';
 import { hashPassword } from 'better-auth/crypto';
 import { twoFactor } from 'better-auth/plugins/two-factor';
 import * as postgresSchema from '../db/schema/postgres';
 import * as sqliteSchema from '../db/schema/sqlite';
 import { hasValidInvite, markInvitesAccepted } from '../invites';
 import { advancedCookieOptions } from './cookies';
-import { passwordPolicyMessage, passwordProblems, type PasswordPolicy } from './password-policy';
+import { isSignInValue } from '@sovereignfs/crypto';
 import type { AuthMail } from './mail';
 import { isFirstAccount, type RegistrationPolicy } from './registration';
 import { oidcPlugins } from '../oauth/provider';
@@ -69,19 +70,17 @@ function adapterFor(database: Database) {
 }
 
 /**
- * better-auth stores a password only by hashing it, whichever way it got there: sign-up, a reset, a
- * change, or a server-side `setPassword` that no HTTP route reaches (and that no request hook can
- * see, because it has no path). So the policy is checked in the hash function: a password that
- * breaks it is refused with the reason, and nothing is stored. The hash itself is better-auth's own,
- * so existing accounts keep working.
+ * better-auth stores a password only by hashing it, whichever way it got there: sign-up, a reset, a change, or a server-side
+ * `setPassword` that no HTTP route reaches. Core never receives a password (core-app §5.2): what arrives is a sign-in value the
+ * browser derived from it, so this is where anything else is refused, and nothing is stored. The policy cannot be checked here,
+ * since the password is not here: the browser checks it before deriving. The hash itself is better-auth's own.
  */
-function policedHash(policy: PasswordPolicy) {
+function policedHash() {
   return async (password: string) => {
-    const problems = passwordProblems(password, policy);
-    if (problems.length > 0) {
+    if (!isSignInValue(password)) {
       throw new APIError('BAD_REQUEST', {
-        message: passwordPolicyMessage(problems),
-        code: 'PASSWORD_DOES_NOT_MEET_POLICY',
+        message: 'A password must be sent as the sign-in value the page makes from it.',
+        code: 'PASSWORD_NOT_DERIVED',
       });
     }
     return hashPassword(password);
@@ -247,7 +246,7 @@ export function createAuth(
       // says it all, in one sentence. These only keep an absurdly long body from reaching it.
       minPasswordLength: 1,
       maxPasswordLength: BODY_LIMIT,
-      password: { hash: policedHash(settings.passwordPolicy) },
+      password: { hash: policedHash() },
       autoSignIn: true,
       requireEmailVerification: settings.requireEmailVerification,
       // A reset link works once and for an hour, and completing it ends every session.
@@ -284,6 +283,29 @@ export function createAuth(
             code: 'TRUST_DEVICE_NOT_OFFERED',
           });
         }
+        // Signing in with anything but a sign-in value is refused before any account is looked up, with the answer a wrong
+        // password gets. Left to the route, an unknown address would reach the hash (better-auth hashes there to even out the
+        // time) and be refused differently from a known one, which would tell who has an account (core-app §5.2).
+        // The same for signing up: an address that has an account is answered before anything is hashed, and an unknown one
+        // would reach the hash and be refused there, differently (core-app §5.2).
+        if (
+          ctx.path === '/sign-up/email' &&
+          !isSignInValue((ctx.body as { password?: unknown })?.password)
+        ) {
+          throw new APIError('BAD_REQUEST', {
+            message: 'A password must be sent as the sign-in value the page makes from it.',
+            code: 'PASSWORD_NOT_DERIVED',
+          });
+        }
+        if (
+          ctx.path === '/sign-in/email' &&
+          !isSignInValue((ctx.body as { password?: unknown })?.password)
+        ) {
+          throw new APIError('UNAUTHORIZED', {
+            message: 'Invalid email or password',
+            code: 'INVALID_EMAIL_OR_PASSWORD',
+          });
+        }
         // Two-factor is for an address that has been shown to be the person's. An unverified
         // account that turned it on could later follow a verification link, which opens a session
         // without a second step.
@@ -310,6 +332,13 @@ export function createAuth(
           message: "Email isn't set up on this instance, so this can't be done yet.",
           code: 'EMAIL_NOT_AVAILABLE',
         });
+      }),
+      // A passkey removed takes its way into the person's keys with it (core-app §5.5). Reading the vault already leaves out a way
+      // in whose passkey is gone; this deletes it.
+      after: createAuthMiddleware(async (ctx) => {
+        if (ctx.path !== '/passkey/delete-passkey') return;
+        const session = await getSessionFromCtx(ctx);
+        if (session) await new KeyVault(database).dropRemovedPasskeys(session.user.id);
       }),
     },
     // The JWT plugin's own `/token` hands any session a signed JWT. Core signs nothing for a session: only

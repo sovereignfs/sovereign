@@ -14,6 +14,8 @@ import { Pictures } from './pictures';
 import { RegistrationForm } from './registration-form';
 import styles from './settings.module.css';
 import { SmtpForm } from './smtp-form';
+import { EscrowForm } from './escrow-form';
+import { getInstanceManager } from '../../../src/instance/service';
 
 export const metadata: Metadata = { title: 'Settings' };
 
@@ -31,6 +33,9 @@ export default async function SettingsPage() {
   const instance = await describeInstance(settings, new BrandingStore(database), {
     withMail: canSeeMail,
   });
+  const escrow = canSeeMail
+    ? await (await getInstanceManager()).escrowUncovered(session.user)
+    : undefined;
 
   return (
     <div className={styles.page}>
@@ -93,6 +98,17 @@ export default async function SettingsPage() {
           <SmtpForm smtp={instance.smtp} encryptionReady={getFieldCipher() !== undefined} />
         ) : (
           <p className={styles.hint}>Only the owner can see or change how email is sent.</p>
+        )}
+      </section>
+
+      <section className={styles.section} aria-labelledby="recovery-heading">
+        <h2 id="recovery-heading" className={styles.subheading}>
+          Recovery of encrypted data
+        </h2>
+        {escrow ? (
+          <EscrowForm line={escrow.line} uncovered={escrow.uncovered} />
+        ) : (
+          <p className={styles.hint}>Only the owner can see or change recovery.</p>
         )}
       </section>
     </div>

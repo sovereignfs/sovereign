@@ -15,7 +15,7 @@ describe('the branding document', () => {
       url: 'https://core.sovereign.local',
       logo: { light: null, dark: null },
       favicon: null,
-      api: { versions: ['v1'], capabilities: ['directory', 'notifications', 'activity'] },
+      api: { versions: ['v1'], capabilities: ['directory', 'notifications', 'activity', 'keys'] },
     });
     expectMatchesContract('getInstanceBranding', 200, document);
   });
@@ -24,15 +24,37 @@ describe('the branding document', () => {
     const { api } = brandingDocument(PLAIN_IDENTITY, 'https://core.sovereign.local');
     expect(api).toEqual(SERVED_API);
     // Every capability named is one the contract describes, so the list cannot promise what is not there.
-    expect(api.capabilities).toEqual(['directory', 'notifications', 'activity']);
+    expect(api.capabilities).toEqual(['directory', 'notifications', 'activity', 'keys']);
   });
 
   it('lists email only while the instance can send mail, so an app can tell no mail from a failure', () => {
     const none = brandingDocument(PLAIN_IDENTITY, 'https://core.sovereign.local', { email: false });
     expect(none.api?.capabilities).not.toContain('email');
     const mail = brandingDocument(PLAIN_IDENTITY, 'https://core.sovereign.local', { email: true });
-    expect(mail.api?.capabilities).toEqual(['directory', 'notifications', 'activity', 'email']);
+    expect(mail.api?.capabilities).toEqual([
+      'directory',
+      'notifications',
+      'activity',
+      'keys',
+      'email',
+    ]);
     expectMatchesContract('getInstanceBranding', 200, mail);
+  });
+
+  it('carries the instance id a browser derives sign-in values from, and matches the contract', () => {
+    const instanceId = Buffer.alloc(32, 7).toString('base64url');
+    const document = brandingDocument(
+      PLAIN_IDENTITY,
+      'https://core.sovereign.local',
+      {},
+      instanceId,
+    );
+    expect(document.instanceId).toBe(instanceId);
+    expectMatchesContract('getInstanceBranding', 200, document);
+    // One that is not 32 bytes of base64url is not what the contract promises.
+    expect(() =>
+      expectMatchesContract('getInstanceBranding', 200, { ...document, instanceId: 'short' }),
+    ).toThrow();
   });
 
   it('gives the pictures as absolute addresses on the instance, versions and all', () => {

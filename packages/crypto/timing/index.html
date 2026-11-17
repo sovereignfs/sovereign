@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Password derivation timing and checks</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, sans-serif;
+      }
+      body {
+        margin: 0 auto;
+        max-width: 40rem;
+        padding: 1rem;
+        line-height: 1.5;
+      }
+      button {
+        font: inherit;
+        padding: 0.6rem 1rem;
+        margin: 0.25rem 0.25rem 0.25rem 0;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 1rem 0;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 0.3rem 0.5rem;
+        border-bottom: 1px solid #8884;
+      }
+      td.n {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+        padding: 0.75rem;
+        border: 1px solid #8886;
+        border-radius: 6px;
+      }
+      .ok {
+        color: #1a7f37;
+      }
+      .bad {
+        color: #cf222e;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Password derivation timing</h1>
+    <p>
+      How long Argon2id takes on this device at each cost, for choosing the cost of RFC 0005 §1.4:
+      about one second on an ordinary phone, two at most on a slow one, memory lowered before
+      passes, never below 19 MiB and 2 passes.
+    </p>
+    <p>Keep this tab in front and the screen on while it runs. Each cost runs three times.</p>
+    <p id="check">Checking libsodium against the vectors…</p>
+    <h2>Browser checks</h2>
+    <p>The vectors and round trips the Node tests run, in this browser.</p>
+    <ul id="checks">
+      <li>Waiting…</li>
+    </ul>
+    <button id="run" type="button" disabled>Run</button>
+    <table>
+      <thead>
+        <tr>
+          <th>Memory</th>
+          <th>Passes</th>
+          <th>Median</th>
+          <th>Slowest</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p>To record the result, copy this and send it back:</p>
+    <pre id="report">Not run yet.</pre>
+    <script type="module" src="/page.js"></script>
+  </body>
+</html>

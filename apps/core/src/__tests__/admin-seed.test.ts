@@ -49,6 +49,9 @@ describe('sovereign-admin seed: what it says', () => {
         exportDeletions: () => Promise.resolve(''),
         applyDeletions: () => Promise.reject(new Error('unused')),
         resendDeletions: () => Promise.reject(new Error('unused')),
+        resetLink: () => Promise.reject(new Error('unused')),
+        escrowRecord: () => Promise.reject(new Error('unused')),
+        putKit: () => Promise.reject(new Error('unused')),
         seed: (options) => {
           asked.push(options);
           return seed(options);

@@ -11,6 +11,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { createServer } from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { derivePassword, fromBase64Url } from '@sovereignfs/crypto/web';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const docker = (...args: string[]) => spawnSync('docker', args, { encoding: 'utf8' });
@@ -97,10 +98,19 @@ describe.skipIf(!runnable)('people’s files against the real core image', () =>
         accounts: { created: { email: string; password: string }[] };
       }
     ).accounts.created.find((entry) => entry.email.startsWith('user@'));
+    // Core never receives a password (core-app §5.2): it is sent the sign-in value a browser derives with the instance's id.
+    const instance = (await (await fetch(`${base}/.well-known/sovereign-instance`)).json()) as {
+      instanceId: string;
+    };
+    const { signIn } = await derivePassword({
+      password: account?.password ?? '',
+      address: account?.email ?? '',
+      instanceId: fromBase64Url(instance.instanceId) as Uint8Array,
+    });
     const reply = await fetch(`${base}/api/auth/sign-in/email`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', origin: base },
-      body: JSON.stringify({ email: account?.email, password: account?.password }),
+      body: JSON.stringify({ email: account?.email, password: signIn }),
     });
     expect(reply.status).toBe(200);
     return reply.headers

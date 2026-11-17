@@ -176,7 +176,13 @@ describe('the instance document', () => {
   it('lists email while the instance can send mail', async () => {
     const reply = await instance.GET(new Request(`${ORIGIN}/.well-known/sovereign-instance`));
     const body = (await reply.json()) as { api: { capabilities: string[] } };
-    expect(body.api.capabilities).toEqual(['directory', 'notifications', 'activity', 'email']);
+    expect(body.api.capabilities).toEqual([
+      'directory',
+      'notifications',
+      'activity',
+      'keys',
+      'email',
+    ]);
     expectMatchesContract('getInstanceBranding', 200, body);
   });
 });

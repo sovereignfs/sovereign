@@ -163,7 +163,8 @@ jobs:
       - run: pnpm packages:check
 
   # The image the operator runs, built from the Dockerfile, and each documented compose setup booted from it:
-  # sqld, PostgreSQL and a SQLite file (scripts/docker-smoke.sh). Docker is on the runner; nothing is installed.
+  # sqld, PostgreSQL and a SQLite file (scripts/docker-smoke.sh). Docker is on the runner; the workspace is installed for the one
+  # script the smoke test runs outside the image, which makes the sign-in value a browser would send (scripts/sign-in-value.ts).
   image:
     name: Docker image
     runs-on: ubuntu-latest
@@ -175,6 +176,7 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
+      - uses: ./.github/actions/setup
       - run: bash scripts/docker-smoke.sh
 
   # The operator CLI's `sv apply` against the real Docker (operator-cli §6): core built from this repository, PostgreSQL and

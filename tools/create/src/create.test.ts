@@ -67,6 +67,7 @@ describe('what npm create was asked', () => {
       kind: 'instance',
       dir: 'my-instance',
       remote: undefined,
+      encryption: false,
     });
     expect(read(['instance', 'x', '--remote', 'git@sovereign.local:me/x.git']).remote).toBe(
       'git@sovereign.local:me/x.git',
@@ -97,8 +98,20 @@ describe('what npm create was asked', () => {
     expect(() => read(['app', 'a', '--port'])).toThrow(CreateError);
   });
 
+  it('may ask for an app with encrypted notes, from the arguments or from what npm kept for itself', () => {
+    expect(read(['app', 'a', '--encryption']).encryption).toBe(true);
+    expect(read(['app', 'a'], { npm_config_encryption: 'true' }).encryption).toBe(true);
+    expect(read(['app', 'a'], { npm_config_encryption: 'false' }).encryption).toBe(false);
+    expect(read(['app', 'a']).encryption).toBe(false);
+  });
+
   it('is nothing to go on when there is no word, and says what is wrong with an odd option or too many words', () => {
-    expect(read([])).toEqual({ kind: undefined, dir: undefined, remote: undefined });
+    expect(read([])).toEqual({
+      kind: undefined,
+      dir: undefined,
+      remote: undefined,
+      encryption: false,
+    });
     expect(() => read(['instance', 'a', 'b'])).toThrow('Too many arguments');
     expect(() => read(['instance', 'a', '--force'])).toThrow(CreateError);
   });

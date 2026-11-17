@@ -1,0 +1,87 @@
+{
+  "note": "Made once by scripts/format-vectors.ts from fixed keys. Opened by the tests; never regenerated to make one pass.",
+  "keys": {
+    "unlockKey": "EBESExQVFhcYGRobHB0eHyAhIiMkJSYnKCkqKywtLi8",
+    "accountKey": "MDEyMzQ1Njc4OTo7PD0-P0BBQkNERUZHSElKS0xNTk8",
+    "appKey": "UFFSU1RVVldYWVpbXF1eX2BhYmNkZWZnaGlqa2xtbm8",
+    "documentKey": "cHFyc3R1dnd4eXp7fH1-f4CBgoOEhYaHiImKi4yNjo8",
+    "kit": "kJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq8"
+  },
+  "sub": "ada",
+  "clientId": "notes",
+  "passwordWrap": {
+    "suite": 1,
+    "nonce": "Tmhg0dx0-TERMoah",
+    "ciphertext": "IK-ARRHBMTdy7kWYkDNULV2x82An782DnTkUFostyi8ivk4cW-c_ON4OyKXnJqkj"
+  },
+  "kit": {
+    "text": "J28S-54WM-JPB9-F64S-KADS-S7CY-KYGA-38N3-MJJT-D9X8-N6NA-QB5D-NTQG-Z5CG",
+    "wrap": {
+      "suite": 1,
+      "nonce": "NnJnIlA_0OWTeiOB",
+      "ciphertext": "Ff4RoTwwOita9rMFw60F0Z0nEG7g0cqx-OJkgG0oSldceLiHbiR3ECoUjxZcZlrP"
+    }
+  },
+  "appKeyWrap": {
+    "suite": 1,
+    "nonce": "pPv2SsPw5npuI8P8",
+    "ciphertext": "J_16lj5w6FAl69ACi3gSk9_T7S4sQglhdQLqecOScjzV1tBryjtejgZcI_Af6IlC"
+  },
+  "accountSigning": {
+    "publicKey": "Tkk2gqwrxXxb7v2SPn_m0B3wKAQt2D0Pdzh5Et_a_jY",
+    "privateKey": {
+      "suite": 1,
+      "nonce": "xxAxSYspeec9ERUR",
+      "ciphertext": "ZQWCt5YWRmwCO1GGzAkZtowcPQrsCqUGyvzn1gHARFwuW214WPpiyd8H28qDkDlM_EvfFdaf4Nmf3FXnDsjlOw"
+    }
+  },
+  "identity": {
+    "receive": {
+      "publicKey": "N1VWjdpK5gSasH0xQbXTV5rdWftF7lG5zTF4a7bO5wI",
+      "privateKey": {
+        "suite": 1,
+        "nonce": "DvVT1KZ0y7plF_vO",
+        "ciphertext": "UWB1j3Y5yibygatYlOXQHf-u_WQVFUrsgByfISBg6Epu1JGWKKiTFGZfjrTUP528qRLEvLOKofxTPRwt5UqreA"
+      }
+    },
+    "sign": {
+      "publicKey": "ty-5uRkM_LfiEyRTcNFjy6WCb9ygi86OTopzzokT6ns",
+      "privateKey": {
+        "suite": 1,
+        "nonce": "mrbSItOU1kU1O7F6",
+        "ciphertext": "ujlTMDK57TJib3x_1hkn2S03xAru3Kjl1tTbYBffkILjPEMjq7keEvQsmAzRnSJtIEUiCV876zFuqFCCrGWfVA"
+      }
+    }
+  },
+  "appKeysSignature": "Ei9tMXx92magPsNW8ldwsZ7EHve2KWMfkL1r7QHxu7O2yJMSTeh4uyuMLmnYCp0qvGYtzELNrsywwfkBEY71BA",
+  "documentKey": {
+    "target": {
+      "documentId": "doc-1",
+      "readerSub": "ada"
+    },
+    "record": {
+      "suite": 1,
+      "enc": "s7Vv7V9convt6nWjrqjh_pUgTWY46WjIA-N6jCcJLQw",
+      "ciphertext": "OGsz4Vonf-MSDIx-SqTVn_18kYB0va9X1TMTrKUthAku1IBQCfYyfr3m1g40pK53",
+      "signature": "0JTfbDEqXZZaWwT7EoE-Rq-sK-00lwdPgeQ8UB-gYB3ykpV5hEItA2sfgFXo3TupCYRTYHB_ahA_kLswJ9PoCA"
+    }
+  },
+  "escrow": {
+    "keyId": "escrow-1",
+    "publicKey": "5qcx-mOUN7NTF4hRoGmVbx5p-yDB4bgoJ1R52MF16jc",
+    "privateKeyPkcs8": "MC4CAQAwBQYDK2VuBCIEIJhm3IAqwD2BM_VKS7sHN3GKWBZoebKR7oWR3AteoxtR",
+    "record": {
+      "suite": 1,
+      "enc": "ZfcrHgHmERVQfTRZUVn7o3wDDoDPfBi0PAf99yUsTmE",
+      "ciphertext": "6WM_w4fzyOMLMBOEIcAoktW215r8hPBKnIuQHTz-iizwSsjF_f9fXNvAjXmmFq9J"
+    }
+  },
+  "content": {
+    "target": {
+      "documentId": "doc-1",
+      "version": 7
+    },
+    "plaintext": "QSBkb2N1bWVudCBmcm96ZW4gaW4gaXRzIGZvcm1hdCwgdG8gYmUgb3BlbmVkIGJ5IGV2ZXJ5IGxhdGVyIHZlcnNpb24gb2YgdGhpcyBjb2RlLg",
+    "blob": "U1ZFMQEAAQAAAAAABwAFZG9jLTHqpr5aQwFYyghLTW5JhEPzp-Dsfq1PKHHs0rJPYwYHVIb6YNwr4r-uwTBN4ZLSwTdx8Lu42-2xPAYU0c8DsXapqKtCzlDZFRq2IIn-_zEXUvNruzdaE17jgmmt194uhkT30ld1RiKqVyI-Ty0mmbvjfSKZNJZrZ-PacEoQg3bkMlC-"
+  }
+}

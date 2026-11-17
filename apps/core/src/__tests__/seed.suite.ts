@@ -23,6 +23,7 @@ import {
   seedAccounts,
   seedInstance,
 } from '../dev/seed';
+import { serverSignInValue } from '../auth/derive-server';
 import { passwordProblems } from '../auth/password-policy';
 import { urlProblem } from '../clients/validate';
 import type { RegisterInput } from '../clients/registry';
@@ -88,13 +89,20 @@ export function seedSuite(createDatabase: () => Promise<TestDatabase>): void {
     for (const account of SEED_ACCOUNTS) {
       const reply = await call(auth, 'POST', '/sign-in/email', {
         jar: new Jar(),
-        body: { email: account.email, password: 'a-password-for-the-test' },
+        // As a browser would send it: the sign-in value made from the password (core-app §5.2).
+        body: {
+          email: account.email,
+          password: await serverSignInValue(db, 'a-password-for-the-test', account.email),
+        },
       });
       expect(reply.status, account.email).toBe(200);
     }
     const wrong = await call(auth, 'POST', '/sign-in/email', {
       jar: new Jar(),
-      body: { email: SEED_ACCOUNTS[0]?.email, password: DEFAULT_SEED_PASSWORD },
+      body: {
+        email: SEED_ACCOUNTS[0]?.email,
+        password: await serverSignInValue(db, DEFAULT_SEED_PASSWORD, SEED_ACCOUNTS[0]?.email ?? ''),
+      },
     });
     expect(wrong.status).toBeGreaterThanOrEqual(400);
   });
@@ -195,10 +203,10 @@ export function seedSuite(createDatabase: () => Promise<TestDatabase>): void {
         local: false,
         ...extra,
       });
-    const signIn = (email: string, password: string) =>
+    const signIn = async (email: string, password: string) =>
       call(makeAuth(db, {}, INVITE_ONLY), 'POST', '/sign-in/email', {
         jar: new Jar(),
-        body: { email, password },
+        body: { email, password: await serverSignInValue(db, password, email) },
       });
 
     it.each(['production', 'Production', '', 'test', 'dev'])(

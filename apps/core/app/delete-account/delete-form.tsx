@@ -2,6 +2,7 @@
 
 import { startTransition, useActionState, useState } from 'react';
 import { Button, ConfirmDialog, FormField, Input } from '@sovereignfs/ui';
+import { signInValue } from '../../src/auth/derive';
 import { deleteAccountAction, type DeleteResult } from './actions';
 import styles from '../security/security.module.css';
 
@@ -9,7 +10,7 @@ import styles from '../security/security.module.css';
  * Deletes the person's own account. The password is held here, so a wrong one leaves it in the box, and nothing is
  * sent until they have read, in a question of its own, what will be lost.
  */
-export function DeleteForm() {
+export function DeleteForm({ address }: { address: string }) {
   const [password, setPassword] = useState('');
   const [open, setOpen] = useState(false);
   const [state, act, pending] = useActionState<DeleteResult | null, FormData>(
@@ -17,10 +18,18 @@ export function DeleteForm() {
     null,
   );
 
+  const [preparing, setPreparing] = useState<string | undefined>();
   const send = () => {
+    setPreparing(undefined);
     const form = new FormData();
-    form.set('password', password);
-    startTransition(() => act(form));
+    // What is sent is made from the password, which never leaves the browser (core-app §5.2).
+    void signInValue(password, address).then(
+      (value) => {
+        form.set('password', value);
+        startTransition(() => act(form));
+      },
+      () => setPreparing('This page could not get ready. Reload it and try again.'),
+    );
   };
 
   return (
@@ -59,7 +68,7 @@ export function DeleteForm() {
         confirmLabel={pending ? 'Deleting…' : 'Delete my account'}
         destructive
         pending={pending}
-        error={state && !state.ok ? state.error : undefined}
+        error={preparing ?? (state && !state.ok ? state.error : undefined)}
         onConfirm={send}
       />
     </form>

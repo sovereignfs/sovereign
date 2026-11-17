@@ -5,6 +5,29 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.12.0; earlier versions are in the repository's
 history and tags.
 
+## [0.17.0] - 2026-11-17
+
+### Added
+
+- `npm create @sovereignfs app <dir> --encryption` makes an app whose notes are encrypted in the browser and shared between people of
+  the instance (operator-cli §2), with an `ENCRYPTION.md` that says what it protects and that it is not yet audited.
+
+## [0.16.0] - 2026-11-17
+
+### Added
+
+- `sv key escrow` makes the key that lets an instance's owner recover people's encrypted data, keeps its private half off the server,
+  and prints the line to paste into the Console; `sv key escrow open` recovers one person offline with a new recovery kit (operator-cli
+  §9.5).
+
+## [0.15.0] - 2026-11-16
+
+### Added
+
+- Manifest 4: `sv app add` says when an app keeps its people's data encrypted (not yet reviewed or audited), and `sv apply` gives
+  core the app's key return address, which lets it use encryption. Needs a core that knows `--key-return`.
+- An app made by `npm create @sovereignfs app` depends on `@sovereignfs/manifest` 0.3, and on `@sovereignfs/ui` 0.97.
+
 ## [0.14.0] - 2026-11-15
 
 ### Added

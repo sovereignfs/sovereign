@@ -34,6 +34,8 @@ export type Request = {
   remote: string | undefined;
   /** The port an app listens on, everywhere it is written (§2.2). Absent means the default, or ask. */
   port: number | undefined;
+  /** An app whose notes are encrypted in the browser (`--encryption`, operator-cli §2.2). */
+  encryption: boolean;
 };
 
 /**
@@ -63,6 +65,7 @@ export function readRequest(argv: readonly string[], env: NodeJS.ProcessEnv): Re
   let kind: Request['kind'];
   let remote: string | undefined;
   let port: string | undefined;
+  let encryption = false;
   const words: string[] = [];
   for (let i = 0; i < argv.length; i += 1) {
     const word = argv[i] as string;
@@ -72,11 +75,12 @@ export function readRequest(argv: readonly string[], env: NodeJS.ProcessEnv): Re
     else if (word.startsWith('--remote=')) remote = word.slice('--remote='.length);
     else if (word === '--port') port = argv[++i] ?? '';
     else if (word.startsWith('--port=')) port = word.slice('--port='.length);
+    else if (word === '--encryption') encryption = true;
     else if (word.startsWith('--'))
       throw new CreateError(
         `There is no option ${word}.`,
         2,
-        'Use: npm create @sovereignfs instance <folder> [--remote URL], or app <folder> [--port N]',
+        'Use: npm create @sovereignfs instance <folder> [--remote URL], or app <folder> [--port N] [--encryption]',
       );
     else words.push(word);
   }
@@ -99,7 +103,16 @@ export function readRequest(argv: readonly string[], env: NodeJS.ProcessEnv): Re
     env.npm_config_port === undefined || env.npm_config_port === ''
       ? undefined
       : env.npm_config_port;
-  return { kind, dir: words[0], remote, port: port === undefined ? undefined : parsePort(port) };
+  // npm keeps `--encryption` before `--` for itself too, and hands it over as npm_config_encryption.
+  const flag = env.npm_config_encryption;
+  if (flag !== undefined && flag !== '' && flag !== 'false') encryption = true;
+  return {
+    kind,
+    dir: words[0],
+    remote,
+    port: port === undefined ? undefined : parsePort(port),
+    encryption,
+  };
 }
 
 /** Whether `dir` can be made into an instance: absent, or empty. Anything else is refused, and nothing is written. */

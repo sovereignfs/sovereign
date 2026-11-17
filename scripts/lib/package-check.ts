@@ -157,3 +157,75 @@ export function tarballProblems(
   }
   return problems;
 }
+
+/** The files an entry loads: `loaded` at once (static imports), `deferred` only when called (`import()`), each a path in the package. */
+export function entryGraph(
+  entry: string,
+  read: (file: string) => string | undefined,
+): { loaded: Set<string>; deferred: Set<string> } {
+  const loaded = new Set<string>();
+  const deferred = new Set<string>();
+  const visit = (file: string, into: Set<string>) => {
+    if (loaded.has(file) || into.has(file)) return;
+    const text = read(file);
+    if (text === undefined) return;
+    into.add(file);
+    const dir = file.includes('/') ? file.slice(0, file.lastIndexOf('/') + 1) : '';
+    const resolve = (spec: string) => new URL(spec, `file:///${dir}`).pathname.replace(/^\//, '');
+    // `import … from "./x.js"`, `export … from "./x.js"` and `import "./x.js"`: loaded with the file.
+    for (const match of text.matchAll(
+      /\bfrom\s*["'](\.{1,2}\/[^"']+)["']|^\s*import\s*["'](\.{1,2}\/[^"']+)["']/gm,
+    ))
+      visit(resolve((match[1] ?? match[2]) as string), into);
+    for (const match of text.matchAll(/\bimport\(\s*["'](\.{1,2}\/[^"']+)["']\s*\)/g))
+      visit(resolve(match[1] as string), into === loaded ? deferred : into);
+  };
+  visit(entry, loaded);
+  return { loaded, deferred };
+}
+
+const SODIUM = /libsodium/;
+const namesSodium = (file: string, read: (file: string) => string | undefined) =>
+  SODIUM.test(file) || SODIUM.test(read(file) ?? '');
+
+/**
+ * The SDK's two browser entries (sdk §12): `/keys`, which every app that gets its key from core loads, reaches no file that names
+ * libsodium; `/local-vault` loads libsodium only when a key is derived, never at once. `exports` is the packed manifest's.
+ */
+export function sdkEntryProblems(
+  exports: PackedManifest['exports'],
+  read: (file: string) => string | undefined,
+): string[] {
+  const problems: string[] = [];
+  const target = (subpath: string) => {
+    const value = (exports as Record<string, unknown> | undefined)?.[subpath];
+    const file =
+      typeof value === 'string' ? value : (value as { default?: string } | undefined)?.default;
+    return file?.replace(/^\.\//, '');
+  };
+
+  const keys = target('./keys');
+  if (!keys || read(keys) === undefined) problems.push('/keys has no built file');
+  else {
+    const { loaded, deferred } = entryGraph(keys, read);
+    const named = [...loaded, ...deferred].filter((file) => namesSodium(file, read));
+    if (named.length > 0)
+      problems.push(
+        `/keys reaches libsodium, which only /local-vault may load: ${named.join(', ')}`,
+      );
+  }
+
+  const local = target('./local-vault');
+  if (!local || read(local) === undefined) problems.push('/local-vault has no built file');
+  else {
+    const { loaded, deferred } = entryGraph(local, read);
+    const atOnce = [...loaded].filter((file) => SODIUM.test(file));
+    if (atOnce.length > 0)
+      problems.push(
+        `/local-vault loads libsodium at once, not when a key is derived: ${atOnce.join(', ')}`,
+      );
+    if (![...deferred].some((file) => SODIUM.test(file)))
+      problems.push('/local-vault does not load libsodium when a key is derived');
+  }
+  return problems;
+}

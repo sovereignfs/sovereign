@@ -15,6 +15,8 @@ export type NewApp = {
   secretIn?: 'header' | 'body';
   /** How the app's ID tokens are signed. EdDSA unless said. */
   idTokenAlgorithm?: 'EdDSA' | 'RS256';
+  /** Where key release sends a person back: set, the app may use encryption (core-app §5.6). */
+  keyReturnUri?: string;
 };
 
 const SCOPE_LABEL: Record<string, string> = {
@@ -45,6 +47,7 @@ export async function registerApp(
   if (app.secretIn) {
     await page.getByLabel('How the app sends its secret').selectOption(app.secretIn);
   }
+  if (app.keyReturnUri) await page.getByLabel('Key return address').fill(app.keyReturnUri);
   if (app.idTokenAlgorithm) {
     await page.getByLabel('How tokens are signed').selectOption(app.idTokenAlgorithm);
   }

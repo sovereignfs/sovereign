@@ -29,3 +29,17 @@ export const freshAddress = (): string => `198.51.100.${nextAddress++ % 250}`;
  */
 export const pastTheSecond = (): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, 1100));
+
+/**
+ * What a browser sends for `password` and `address` (core-app §5.2): the sign-in value derived from them and the instance id,
+ * which the instance document publishes. For a request the suite makes itself, outside a page.
+ */
+export async function signInValueFor(password: string, address: string): Promise<string> {
+  const { derivePassword, fromBase64Url } = await import('@sovereignfs/crypto/web');
+  const document = (await (await fetch(`${CORE_URL}/.well-known/sovereign-instance`)).json()) as {
+    instanceId?: string;
+  };
+  const instanceId = fromBase64Url(document.instanceId ?? '');
+  if (instanceId?.length !== 32) throw new Error('The instance document has no instance id.');
+  return (await derivePassword({ password, address, instanceId })).signIn;
+}

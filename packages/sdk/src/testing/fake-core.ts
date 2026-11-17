@@ -99,6 +99,18 @@ export type FakeActivity = {
 /** One request the fake received, with nothing secret in it. `status` is 0 when it was never answered. */
 export type Received = { method: string; path: string; status: number };
 
+/** A person's keys for the app, as the Core API's `getMyKeys` answers. */
+export type FakeKeys = {
+  receivingKey: string;
+  signingKey: string;
+  signature: string;
+  accountSigningKey: string;
+  wrapped: {
+    receive: { suite: 1; nonce: string; ciphertext: string };
+    sign: { suite: 1; nonce: string; ciphertext: string };
+  };
+};
+
 export type FakeCore = {
   /** The instance's address, to give `createSovereign` as `coreUrl`. */
   readonly url: string;
@@ -114,6 +126,11 @@ export type FakeCore = {
   readonly activityRecorded: readonly FakeActivity[];
   /** Adds a person to the Directory. */
   addPerson(person: FakePerson): void;
+  /**
+   * Gives a person keys for this app, as core's key release makes them on their first time in it (the Core API's `MyKeys`). Until
+   * then the key calls answer `404` for them, as core does.
+   */
+  setKeys(sub: string, keys: FakeKeys): void;
   /** Signs a person in, and returns the refresh token an app would have stored for them. */
   signIn(sub: string): string;
   /** Makes the next requests fail. `times` limits how many (default: until `heal`). */
@@ -205,10 +222,14 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
   const api =
     'api' in options
       ? options.api
-      : { versions: ['v1'], capabilities: ['directory', 'notifications', 'email', 'activity'] };
+      : {
+          versions: ['v1'],
+          capabilities: ['directory', 'notifications', 'email', 'activity', 'keys'],
+        };
   const appTokens = options.appTokens ?? true;
 
   const people = new Map<string, Person>();
+  const keysOf = new Map<string, FakeKeys>();
   /** Codes core has given for a sign-in, and the core sessions those made. */
   const codes = new Map<
     string,
@@ -633,6 +654,35 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
     return problem(404, 'not_found', 'There is no such route.');
   };
 
+  /** The key calls (core-app §5.7): public keys, and the caller's own wrapped; `404` for anyone without keys for the app. */
+  const keysApi = (request: Request, path: URL): Response => {
+    const who = bearer(request);
+    if (who instanceof Response) return who;
+    if (who.kind !== 'person') {
+      return problem(403, 'insufficient_scope', 'The token does not carry the keys scope.');
+    }
+    if (request.method !== 'GET') return problem(404, 'not_found', 'There is no such route.');
+    const noKeys = () =>
+      problem(
+        404,
+        'not_found',
+        'That person has not opened this app, so they have no keys for it.',
+      );
+    if (path.pathname === '/api/v1/keys/me') {
+      const mine = keysOf.get(who.sub);
+      return mine && people.get(who.sub)?.active !== false
+        ? json({ sub: who.sub, ...mine })
+        : noKeys();
+    }
+    const match = /^\/api\/v1\/keys\/people\/([^/]+)$/.exec(path.pathname);
+    if (!match) return problem(404, 'not_found', 'There is no such route.');
+    const sub = decodeURIComponent(match[1] as string);
+    const theirs = keysOf.get(sub);
+    if (!theirs || people.get(sub)?.active === false) return noKeys();
+    const { wrapped: _wrapped, ...publicKeys } = theirs;
+    return json({ sub, ...publicKeys });
+  };
+
   const handle = async (
     request: Request,
     signal: AbortSignal | null | undefined,
@@ -701,6 +751,10 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
       const answer = await notificationsApi(request, path);
       return failure?.kind === 'lost-answer' ? hang(signal) : answer;
     }
+    if (path.pathname.startsWith('/api/v1/keys/')) {
+      const answer = keysApi(request, path);
+      return failure?.kind === 'lost-answer' ? hang(signal) : answer;
+    }
     if (path.pathname.startsWith('/api/v1/')) {
       const answer = await directory(request, path);
       return failure?.kind === 'lost-answer' ? hang(signal) : answer;
@@ -763,6 +817,10 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
         picture: person.picture ?? null,
         active: person.active ?? true,
       });
+    },
+    setKeys(sub, keys) {
+      if (!people.has(sub)) people.set(sub, { sub, name: sub, picture: null, active: true });
+      keysOf.set(sub, keys);
     },
     signIn(sub) {
       if (!people.has(sub)) people.set(sub, { sub, name: sub, picture: null, active: true });

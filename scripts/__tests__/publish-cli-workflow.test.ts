@@ -85,7 +85,7 @@ describe('the toolkit release workflow', () => {
   });
 
   it('builds the toolkit before the image copies it in, for both architectures, by version and as latest, with no cache', () => {
-    expect(workflow.indexOf('pnpm --filter @sovereignfs/cli build')).toBeLessThan(
+    expect(workflow.indexOf('pnpm --filter "@sovereignfs/cli..." build')).toBeLessThan(
       workflow.indexOf('docker/build-push-action'),
     );
     expect(workflow).toContain('context: tools/cli');

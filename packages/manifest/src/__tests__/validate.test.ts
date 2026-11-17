@@ -160,3 +160,44 @@ describe('manifest 3', () => {
     ).toContain('made by the instance');
   });
 });
+
+describe('manifest 4', () => {
+  const manifest4Of = (change: Record<string, unknown> = {}) => ({
+    ...manifest2Of(),
+    manifest: 4,
+    storage: true,
+    encryption: { return: '/auth/keys' },
+    ...change,
+  });
+
+  it('accepts encryption with a return path, and storage as manifest 3 does', () => {
+    expect(problemsOf(manifest4Of())).toEqual([]);
+    expect(problemsOf(manifest4Of({ encryption: undefined }))).toEqual([]);
+  });
+
+  it('takes encryption only from version 4', () => {
+    expect(validate({ ...manifest2Of(), manifest: 3, encryption: { return: '/k' } }).ok).toBe(
+      false,
+    );
+  });
+
+  it('needs signIn for encryption', () => {
+    const { signIn: _signIn, core: _core, ...withoutSignIn } = manifest4Of();
+    expect(JSON.stringify(problemsOf(withoutSignIn))).toContain('signIn');
+  });
+
+  it.each([
+    ['no return', {}],
+    ['a host', { return: 'https://notes.example/auth/keys' }],
+    ['no leading slash', { return: 'auth/keys' }],
+    ['a way up', { return: '/a/../keys' }],
+    ['a query', { return: '/keys?x=1' }],
+    ['a field of its own', { return: '/keys', key: 'x' }],
+  ])('refuses an encryption with %s', (_, encryption) => {
+    expect(problemsOf(manifest4Of({ encryption })).length).toBeGreaterThan(0);
+  });
+
+  it('keeps manifest 3’s rules for storage', () => {
+    expect(problemsOf(manifest4Of({ data: ['/data/s3/fjord'] }))[0]?.at).toBe('data.0');
+  });
+});

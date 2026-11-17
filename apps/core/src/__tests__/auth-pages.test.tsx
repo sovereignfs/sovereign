@@ -27,6 +27,14 @@ vi.mock('../invites/manage', () => ({
   lookupInvite: (...args: unknown[]) => lookupInvite(...args) as unknown,
 }));
 vi.mock('../database', () => ({ getDatabase: () => Promise.resolve({}) }));
+// The account a reset link belongs to (core-app §5.2): one token stands for a link that still works, any other for one that does not.
+const resetLinkAddress = vi.fn();
+vi.mock('../auth/reset-link', () => ({
+  resetLinkAddress: (_auth: unknown, token: string) => resetLinkAddress(token) as unknown,
+}));
+vi.mock('../auth', () => ({ getAuth: () => Promise.resolve({}) }));
+const addressHasKeys = vi.fn(async () => false);
+vi.mock('../keys/vault', () => ({ addressHasKeys: () => addressHasKeys() as unknown }));
 
 async function pages(env: Record<string, string> = {}) {
   vi.resetModules();
@@ -51,6 +59,8 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe('the sign-in page', () => {
+  // The first test here loads the auth pages and everything they import, which can pass five seconds when the whole suite runs
+  // at once; the rest reuse what it loaded.
   it('has one heading, an email field and a password field, and a way to sign up', async () => {
     const { signIn } = await pages();
     const html = await renderServer(await signIn({ searchParams: search() }));
@@ -59,7 +69,7 @@ describe('the sign-in page', () => {
     expect(html).toMatch(/<input[^>]*type="email"/);
     expect(html).toMatch(/<input[^>]*type="password"/);
     expect(html).toContain('href="/sign-up?returnTo=%2F"');
-  });
+  }, 20_000);
 
   it('carries the page the person was after through to the sign-up link', async () => {
     const { signIn } = await pages();
@@ -256,13 +266,44 @@ describe('the forgot-password page', () => {
 
 describe('the reset-password page', () => {
   it('asks for a new password when the link brought a token, and shows the rules', async () => {
+    resetLinkAddress.mockResolvedValueOnce('ada@sovereign.local');
     const { reset } = await pages({ SV_AUTH_PASSWORD_MIN_LENGTH: '12' });
     const html = await renderServer(
       await reset({ searchParams: Promise.resolve({ token: 'tok' }) }),
     );
     expect(html).toMatch(/<input[^>]*type="password"/);
     expect(html).toContain('At least 12 characters.');
+    // Whose password is set: the new sign-in value is made from it (core-app §5.2).
+    expect(html).toContain('For ada@sovereign.local');
     expect(html).not.toContain('tok');
+  });
+
+  it('says what a reset does to encrypted data, only to someone who has keys', async () => {
+    resetLinkAddress.mockResolvedValue('ada@sovereign.local');
+    const { reset } = await pages();
+    addressHasKeys.mockResolvedValueOnce(false);
+    const plain = await renderServer(
+      await reset({ searchParams: Promise.resolve({ token: 'tok' }) }),
+    );
+    expect(plain).not.toContain('recovery kit');
+    addressHasKeys.mockResolvedValueOnce(true);
+    const keyed = await renderServer(
+      await reset({ searchParams: Promise.resolve({ token: 'tok' }) }),
+    );
+    expect(keyed).toContain('stays locked after a reset');
+    expect(keyed).toContain('recovery kit');
+    resetLinkAddress.mockReset();
+  });
+
+  it('names nobody and offers a new link when the token does not work any more', async () => {
+    resetLinkAddress.mockResolvedValueOnce(undefined);
+    const { reset } = await pages();
+    const html = await renderServer(
+      await reset({ searchParams: Promise.resolve({ token: 'expired' }) }),
+    );
+    expect(html).not.toMatch(/<input/);
+    expect(html).not.toContain('@');
+    expect(html).toContain('expired or was already used');
   });
 
   it.each([

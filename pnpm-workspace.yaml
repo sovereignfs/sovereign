@@ -74,6 +74,9 @@ catalog:
   '@types/nodemailer': ^8.0.2
   '@react-email/render': ^2.3.1
   react-email: ^6.11.13
+  libsodium-wrappers-sumo: ^0.8.4
+  '@noble/hashes': ^2.4.0
+  '@hpke/core': ^1.10.0
 
 # Storybook's packages must stay on one version, so they are one named catalog.
 catalogs:
@@ -95,6 +98,16 @@ minimumReleaseAgeStrict: true
 peerDependencyRules:
   allowedVersions:
     'eslint-plugin-jsx-a11y>eslint': '10'
+
+# Advisories the audit (CI, dependency-audit.yml) passes over, each with why. Remove an entry as soon as a fixed release
+# exists: an `overrides` entry capped to the consumer's range is then the fix.
+# - GHSA-fc5q-39xc-vjpf (picomatch ReDoS on crafted extglobs, high): no release is fixed (4.0.7, the latest, is affected).
+#   picomatch is reached only by development tooling (lint-staged, typescript-eslint, tsup, vitest), never by what is
+#   published or the image (`pnpm audit --prod` finds nothing); the globs it matches are this repository's own, not
+#   anyone's input. Added 2026-11-17, with the goal owner's approval.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-fc5q-39xc-vjpf
 
 # pnpm blocks dependency build scripts by default; list the ones that must run.
 # esbuild (via tsx) needs its postinstall to link the platform binary.

@@ -10,7 +10,16 @@ import type { TestDatabase } from '@sovereignfs/database/testing';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { migrateCore } from '../db/migrate';
 import { endOtherSessions, endSession, listSessions } from '../sessions/sessions';
-import { call, freshAddress, Jar, makeAuth, PASSWORD, signedInAs, signUp } from './auth-harness';
+import {
+  call,
+  freshAddress,
+  Jar,
+  makeAuth,
+  PASSWORD,
+  signedInAs,
+  signInValueOf,
+  signUp,
+} from './auth-harness';
 
 const MIGRATIONS = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../migrations');
 const SESSION_COOKIE = 'better-auth.session_token';
@@ -202,7 +211,7 @@ export function sessionsSuite(createDatabase: () => Promise<TestDatabase>): void
         address: freshAddress(),
         body: {
           currentPassword: PASSWORD,
-          newPassword: 'a different long passphrase',
+          newPassword: signInValueOf('a different long passphrase'),
           revokeOtherSessions: true,
         },
       });
@@ -216,7 +225,10 @@ export function sessionsSuite(createDatabase: () => Promise<TestDatabase>): void
       const reply = await call(a, 'POST', '/change-password', {
         jar: laptop,
         address: freshAddress(),
-        body: { currentPassword: 'not it', newPassword: 'a different long passphrase' },
+        body: {
+          currentPassword: signInValueOf('not it'),
+          newPassword: signInValueOf('a different long passphrase'),
+        },
       });
       expect(reply.status).toBeGreaterThanOrEqual(400);
       const signIn = await call(a, 'POST', '/sign-in/email', {
@@ -226,7 +238,7 @@ export function sessionsSuite(createDatabase: () => Promise<TestDatabase>): void
       expect(signIn.status).toBe(200);
     });
 
-    it('holds the new password to the policy', async () => {
+    it('takes only a sign-in value as the new password', async () => {
       const { a, laptop } = await people();
       const reply = await call(a, 'POST', '/change-password', {
         jar: laptop,
@@ -234,7 +246,7 @@ export function sessionsSuite(createDatabase: () => Promise<TestDatabase>): void
         body: { currentPassword: PASSWORD, newPassword: 'x' },
       });
       expect(reply.status).toBe(400);
-      expect(reply.body.code).toBe('PASSWORD_DOES_NOT_MEET_POLICY');
+      expect(reply.body.code).toBe('PASSWORD_NOT_DERIVED');
     });
   });
 }

@@ -34,6 +34,9 @@ describe('sovereign-admin instance restored', () => {
             applyDeletions: () => Promise.reject(new Error('unused')),
             resendDeletions: () => Promise.reject(new Error('unused')),
             seed: () => Promise.reject(new Error('unused')),
+            resetLink: () => Promise.reject(new Error('unused')),
+            escrowRecord: () => Promise.reject(new Error('unused')),
+            putKit: () => Promise.reject(new Error('unused')),
           }
         : undefined,
     );
@@ -97,6 +100,9 @@ describe('sovereign-admin instance deletions', () => {
       Promise.resolve({ skipped: false, deletedAgain: 2, alreadyGone: 1, kept: 0, notices: 3 }),
     resendDeletions: () => Promise.resolve({ accounts: 4, notices: 2 }),
     seed: () => Promise.reject(new Error('unused')),
+    resetLink: () => Promise.reject(new Error('unused')),
+    escrowRecord: () => Promise.reject(new Error('unused')),
+    putKit: () => Promise.reject(new Error('unused')),
     ...extra,
   });
   const run = async (argv: string[], instance: InstanceOperations | undefined) => {
@@ -111,6 +117,56 @@ describe('sovereign-admin instance deletions', () => {
     );
     return { code, out, log };
   };
+
+  it('reads the escrow commands, and refuses them without their address', () => {
+    expect(parse(['accounts', 'escrow-record', 'ada@x.test'])).toEqual({
+      name: 'escrow-record',
+      email: 'ada@x.test',
+    });
+    expect(parse(['accounts', 'put-kit', 'ada@x.test'])).toEqual({
+      name: 'put-kit',
+      email: 'ada@x.test',
+      file: undefined,
+    });
+    expect(parse(['accounts', 'put-kit', 'ada@x.test', 'kit.json'])).toMatchObject({
+      file: 'kit.json',
+    });
+    expect(() => parse(['accounts', 'escrow-record'])).toThrow('needs exactly one EMAIL');
+    expect(() => parse(['accounts', 'put-kit'])).toThrow('needs an EMAIL');
+  });
+
+  it('gives the escrow way in on out, and says so on the log without it', async () => {
+    const done = await run(
+      ['accounts', 'escrow-record', 'ada@x.test'],
+      operations({ escrowRecord: () => Promise.resolve('{"sub":"ada"}') }),
+    );
+    expect(done).toMatchObject({ code: 0, out: ['{"sub":"ada"}'] });
+    expect(done.log.join('')).not.toContain('{"sub"');
+    expect(
+      (
+        await run(
+          ['accounts', 'escrow-record', 'x@x.test'],
+          operations({ escrowRecord: () => Promise.resolve(undefined) }),
+        )
+      ).code,
+    ).toBe(1);
+    expect(
+      (
+        await run(
+          ['accounts', 'put-kit', 'ada@x.test'],
+          operations({ putKit: () => Promise.resolve(true) }),
+        )
+      ).code,
+    ).toBe(0);
+    expect(
+      (
+        await run(
+          ['accounts', 'put-kit', 'x@x.test'],
+          operations({ putKit: () => Promise.resolve(false) }),
+        )
+      ).code,
+    ).toBe(1);
+  });
 
   it('reads resend, with the app and the time it needs', () => {
     expect(

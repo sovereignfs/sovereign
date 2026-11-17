@@ -152,7 +152,8 @@ Roboto, Helvetica, Arial, sans-serif`. A page or component names a family only
 | ----- | ----------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | **1** | Identity, sign-in server, app registration                                                      | Specified below                              |
 | 2     | Core services for apps: mail, notifications, activity, account-deletion fan-out, backups, files | Specified and built (§4); files on disk only |
-| Later | Groups and access policies, export, recovery kit, relay, and more                               | Not yet specified                            |
+| Keys  | Encryption the server cannot read: signing in with a derived value, the vault, the recovery kit | Specified (§5), not built                    |
+| Later | Groups and access policies, export, relay, and more                                             | Not yet specified                            |
 
 ---
 
@@ -306,12 +307,14 @@ listed for, or opens for, anyone else.
   same way.
 - Passwords follow the policy set by `SV_AUTH_PASSWORD_MIN_LENGTH` (default 8)
   and, each off by default, `SV_AUTH_PASSWORD_REQUIRE_UPPERCASE`,
-  `…_REQUIRE_LOWERCASE`, `…_REQUIRE_NUMBER` and `…_REQUIRE_SYMBOL`. The server
-  enforces the policy; the page only explains it.
-- The server enforces the policy on every path that stores a password: sign-up,
-  reset, change, and a server-side set. A password that breaks it is refused with
-  the reason (`PASSWORD_DOES_NOT_MEET_POLICY`) and nothing is stored. The longest
-  password is 128 characters.
+  `…_REQUIRE_LOWERCASE`, `…_REQUIRE_NUMBER` and `…_REQUIRE_SYMBOL`. Core never
+  receives a password (§5.2), so the policy is checked in the browser, before the
+  sign-in value is derived, with the reason in one sentence, and nothing is sent.
+- The server refuses, on every path that stores a password (sign-up, reset,
+  change, and a server-side set), anything that is not a sign-in value
+  (`PASSWORD_NOT_DERIVED`), and nothing is stored. Signing in with anything else
+  is answered as a wrong password is, before any account is looked up. The
+  longest password is 128 characters.
 - Repeated sign-in or sign-up attempts from one client address are refused with
   `429` and a `Retry-After`; the counters are kept in the database, so every
   instance shares them.
@@ -596,14 +599,15 @@ passkeys), subject to §3.2.1. The account holder is told by email.
 
 #### 3.6.2 Scopes and claims
 
-| Scope            | Claims or access                                                     |
-| ---------------- | -------------------------------------------------------------------- |
-| `openid`         | `sub`: stable, unique, never reused                                  |
-| `profile`        | `name`, `picture`, `locale`, `zoneinfo`                              |
-| `email`          | `email`, `email_verified`                                            |
-| `roles`          | `roles`: the account's platform roles. Trusted clients only (§3.6.4) |
-| `directory`      | Access to the Directory API (§3.9)                                   |
-| `offline_access` | A refresh token                                                      |
+| Scope            | Claims or access                                                                         |
+| ---------------- | ---------------------------------------------------------------------------------------- |
+| `openid`         | `sub`: stable, unique, never reused                                                      |
+| `profile`        | `name`, `picture`, `locale`, `zoneinfo`                                                  |
+| `email`          | `email`, `email_verified`                                                                |
+| `roles`          | `roles`: the account's platform roles. Trusted clients only (§3.6.4)                     |
+| `directory`      | Access to the Directory API (§3.9)                                                       |
+| `keys`           | Encryption the server cannot read (§5.6). Only an app with a key return address holds it |
+| `offline_access` | A refresh token                                                                          |
 
 A client receives only the scopes it is allowed (§3.7) and the user has
 granted (§3.6.4).
@@ -759,6 +763,7 @@ Operators with `client:manage` register clients in the Console.
 | Allowed scopes            | Any of §3.6.2; `roles` only when trusted                                                                                                                                                |
 | Trusted                   | Off by default                                                                                                                                                                          |
 | Enabled                   | On by default                                                                                                                                                                           |
+| Key return address        | Optional, `https` like a redirect address. Set, the app may use encryption the server cannot read and holds `keys` (§5.6)                                                               |
 | App scopes                | What a confidential app may do for itself (§3.6.6). None by default; a public app cannot have any                                                                                       |
 
 #### 3.7.2 Launcher entry
@@ -839,18 +844,21 @@ CLI calls it ([operator-cli §6](operator-cli.md)), and it is not run by hand.
 
 ```text
 sovereign-admin apps ensure KEY --name NAME --redirect URL ... [--post-logout URL ...]
-                [--back-channel URL] [--account-deleted URL] [--scope SCOPE ...] [--public] [--trusted]
+                [--back-channel URL] [--account-deleted URL] [--key-return URL] [--scope SCOPE ...] [--public] [--trusted]
                 [--launch-url URL] [--description TEXT] [--icon URL] [--hide] [--json]
 sovereign-admin apps list [--json]
 sovereign-admin apps rotate-secret KEY [--json]
 sovereign-admin apps remove KEY
 sovereign-admin instance restored [--json]
 sovereign-admin seed [--local] [--json]
+sovereign-admin accounts reset-link EMAIL
 ```
 
 - **It goes through the registry.** Every rule of §3.7 applies, with the same
   refusals, and it adds no second way to write a client. (`instance restored` writes
-  no client: it records a restore, §4.4.)
+  no client: it records a restore, §4.4. `accounts reset-link` writes none either: it
+  makes a reset link for an account when mail cannot be sent, §5.2, prints it once
+  and logs only that one was made, and exits 1 when there is no such account.)
 - **The managed key.** A client MAY have a key, which `ensure` uses to find it
   again on the next run. It is a DNS label, unique on the instance, set only here,
   and never shown to an app or a person using it. A client made in the Console
@@ -1376,7 +1384,7 @@ sign-in; changing
 an email address; editable email templates; theme presets, colours and text
 size preferences (a choice of light, dark or the system's is in Preferences, §3.11); mail, notification and activity APIs for apps; account
 deletion and export across apps; backups; end-to-end encryption and the
-recovery kit; push relay; built-in clients for native shells; provisioning
+recovery kit (specified in §5, not built); push relay; built-in clients for native shells; provisioning
 databases for apps, which the operator CLI does and core takes no part in
 ([operator-cli §6.4](operator-cli.md)).
 
@@ -1776,6 +1784,211 @@ people's files, through `@sovereignfs/storage`.
 - **Deleting an account** deletes the person's folder, once the deletion has committed, whoever deletes it and including a deletion a
   restore carries across (§4.5). A failure to delete it is logged and does not undo the deletion.
 
+## 5. Keys — encryption the server cannot read
+
+Specified, not built ([RFC 0005](../rfcs/0005-end-to-end-encryption.md), epic [16](../epics/encryption.md), run as
+[workstream 0003](../workstreams/0003-encryption.md)). Until a part is built, §3 describes core as it is; each part below names the
+sections it changes, and the task that builds it changes them.
+
+### 5.1 What is promised
+
+- Data an app encrypts this way cannot be read by anyone who **reads** the server: a copy of its disk, its database or a backup; the
+  hosting provider; an intruder or an operator who looks and changes nothing. Core never receives a password.
+- It is **not** promised against an operator, or an intruder, who changes the code core or an app sends: that code handles the keys.
+  Nothing core says to a person or an operator claims more, and none of it uses the word "zero-knowledge".
+- What the server still sees: who has keys for which app, who shares with whom, sizes and times. Core's own data (names, addresses,
+  roles) is not covered (§3.15).
+- Until a code audit, every guide and screen that describes this says it is not yet audited.
+
+### 5.2 Signing in with a derived value
+
+Built (task 16.3), on every instance, in §3.3.2, §3.3.4, §3.5 and §3.15.1.
+
+- **The instance id** is 32 random bytes that core makes once, at start-up when there is none, keeps as a setting, and MUST NOT make
+  again: it is never rewritten, two cores starting at once keep one, and a stored id that is not one stops core rather than be
+  replaced. An instance that has accounts and no id is one upgraded from before this: start-up says so, since those accounts set
+  their passwords again. It is in the instance document (§3.13) as `instanceId`, base64url, which is where core's own pages read
+  it.
+- **The browser derives two values** from the password, the address (trimmed, lower case) and the instance id, by one run of Argon2id
+  (RFC 0005 §1.1): the **sign-in value**, `svp1.` and 43 base64url characters, sent where the password was; and the **unlock key**,
+  which never leaves the browser. Every form that sets or asks for a password does this: sign-up, sign-in, accepting an invitation, the
+  reset, the change, and every place the password is asked again.
+- **Core never receives a password.** better-auth hashes the sign-in value as it hashed the password. The server refuses, wherever a
+  password is set, any value that is not the derivation's shape (`PASSWORD_NOT_DERIVED`).
+- **The policy is the browser's.** The page checks the policy of §3.3.2 before deriving, with the same words, and does not send a
+  password that breaks it. The server cannot check what it never receives; a person who goes round the page weakens their own account
+  only.
+- **The reset page** is told, when it is rendered, the address of the account its link belongs to, and shows it ("For …"). A link
+  that is not valid shows the address of no one.
+- **An operator makes a reset link** with `sovereign-admin accounts reset-link EMAIL` when mail cannot be sent: the link a mailed one
+  would be, working once, for an hour, printed once and never logged.
+- **The seed and `sovereign-admin`** derive in the same way, from the address and the instance id read from the database.
+- **The policy of §3.5** adds `'wasm-unsafe-eval'` to `script-src`, which allows WebAssembly to be compiled and nothing else.
+  `'unsafe-eval'` and `'unsafe-inline'` stay out.
+- **Accounts from before** cannot sign in with their old password, which is answered as a wrong one, and set it again through a reset
+  link, mailed or made by an operator. Core keeps no second way of signing in.
+- **The cost** of Argon2id is the same for every account on an instance, and the number after `svp` names the derivation with its
+  cost. A later change sends a value for each derivation in use, in one request, and stores the newest (RFC 0005 §1.4).
+
+### 5.3 The vault
+
+Built (task 16.6), apart from the kit's page, which comes with §5.7. Core keeps, for each account, what opens its keys, and can open
+none of it.
+
+| Kept            | What                                                                                                                              |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Account         | The suite, the unlock salt, the account's signing public key, and its private half wrapped                                        |
+| Ways in         | The account key, wrapped once for each: `password`, each `passkey`, the `kit`, and `escrow` when on                               |
+| Apps            | For each app the person has opened: the app key wrapped, its two public keys, their signature, and the two private halves wrapped |
+| Session secrets | For each session, 32 random bytes (§5.4), gone with the session                                                                   |
+
+- **Setting up** happens in the browser, silently, the first time a person signs in with their password after this ships, or at
+  sign-up: the account key and the signing key are made there and wrapped by the unlock key. Signing in says nothing about keys.
+- **The recovery kit** is shown the first time the person opens an encrypted app, on core's page that gives the app its key (§5.7),
+  and nothing more happens there until they confirm they kept it; only then is the kit's way in stored. Until they confirm, a new kit
+  is made each time it is shown: core keeps whether the kit was confirmed, never the kit. A person who never opens an encrypted app
+  is never shown one. (Decided with the goal owner on 2026-11-16, over showing it at the first sign-in, which would have put a
+  blocking screen in every sign-in, an app's included.) What the kit says depends on escrow (§5.8): without it, the kit is the only
+  way back and nobody else can get the data back; with it, the kit is the person's own way back and the owner can also recover it.
+  No screen tells a person on an instance with escrow that nobody else can.
+- **The recovery kit** is 32 random bytes, written as groups of four letters and digits from an alphabet with no `I`, `L`, `O` or `U`
+  (Crockford's base32), ending in a check group. A mistyped kit is refused as mistyped. Typing it ignores case, spaces and hyphens,
+  and reads `O` as `0` and `I` and `L` as `1`. It is shown once.
+- **Unlocking** with the password happens in the browser: the account key opens or it does not. Nothing is sent to check it.
+- **Changing the password** cannot share a transaction with better-auth's, so it holds this instead: the account key is wrapped for
+  the new password beside the old wrap, the password is changed, and then the old wrap goes (or the new one, if the change was
+  refused). The current password must open the old wrap first. At every moment the keys open with whichever password the account
+  has.
+- **A reset by email** leaves the `password` way in stale: the new password does not open it, and nothing depends on a hook to remove
+  it. The reset page says so to an account that has keys, before the reset: the account comes back, its encrypted data does not,
+  until a passkey that unlocks (§5.5), the kit, or escrow (§5.8) opens it. Then the new password is given its way in.
+- **Unlocking with the kit**: the unlock step of key release offers "Use your recovery kit", which asks for the kit and the password the
+  person signs in with now. The kit opens the account key; the password is given a new way in and the ones that no longer open are
+  removed, so the password unlocks again from then on. A mistyped kit is told apart from one that is not this account's.
+- **Signing in** with a password the server has just accepted sets the keys up or opens them, and nothing else does: a way in is never
+  made from a password the server has not accepted. Across the second step (§3.4.1) the password's secret waits in the browser, once,
+  for ten minutes at most, as a key that cannot be exported.
+- **Deleting an account** removes all of it in the transaction that deletes the account (§3.3.6), so everything encrypted for that
+  person is unreadable, backups included.
+- **Only core's own pages** read and write the vault, through server actions for the session's own account. Apps read what §5.7 says.
+
+### 5.4 Staying unlocked
+
+Built (task 16.7). A session's secret is given only through a check that the session is live and the account's own, not trusted to a
+cascade; deleting an account deletes the secrets of its sessions in its transaction.
+
+- A browser stays unlocked until its session ends. A reload or a new tab asks nothing.
+- A key is kept in the browser's IndexedDB wrapped twice: by a device key that cannot be exported, and by a key made from the
+  session's secret, which the server gives only to that session. A page that loads with a session unwraps it into memory as a key that
+  cannot be exported; a page with none deletes what was kept.
+- When a session ends, however it ends, its secret is deleted with it, so what a browser kept can never be opened again, whether or not
+  a page was open at the time.
+- The service worker (§3.5) never stores or sees any of it.
+
+### 5.5 Passkeys that unlock
+
+Changes §3.4.2. Built (task 16.8).
+
+- Every passkey ceremony of core's pages asks for the WebAuthn PRF extension, with one input for the instance (made from its id): a
+  discoverable sign-in cannot be given one per passkey. better-auth's client leaves the extension's results out of what it sends, so
+  the output never leaves the browser.
+- A passkey added while the browser is unlocked gets its own way in: its output through HKDF, with a random salt made for that
+  passkey. A device that gives the output only when the passkey is used is asked for one more touch, whose answer is sent nowhere.
+  The way in names the passkey, and a person can give a way in only to their own. Removing the passkey removes it, and one whose
+  passkey is gone is never read.
+- Signing in with such a passkey unlocks with the same touch.
+- A passkey that does not answer the extension signs in as before, and the browser stays locked: the person is asked for their
+  password when something needs unlocking.
+- A browser already signed in is unlocked by a passkey through a ceremony whose answer is sent nowhere; the page checks itself that
+  the passkey was unlocked on the device, as core's hooks do for every answer sent to them.
+- `/security/passkeys` marks the passkeys that unlock and offers to let one that does not (asking for the password first when the
+  browser is locked), and warns before one that unlocks is removed.
+
+### 5.6 Apps that use encryption
+
+Built (task 16.9), in §3.6.2 and §3.7.1.
+
+- An app says it uses encryption in its manifest (manifest 4, `contracts/app-manifest.md` §2.8), and the operator allows it: `sv app
+add` says so, and `sv apply` registers the app's key return address (`sovereign-admin apps ensure --key-return`). People are not
+  asked app by app: an app only ever receives its own key.
+- **One setting decides it, the key return address** (§3.7.1): `https`, checked like a redirect address, written only by
+  `ClientRegistry`, kept with the app's other settings core adds. An app may use encryption exactly when it has one.
+- **The scope `keys`** (§3.6.2) follows it: the registry gives an app `keys` when it has a key return address and takes it away when
+  the address is cleared, whatever was asked for. The Console shows the scope as following the address, never as a box to tick.
+- Clearing the address stops new releases and grants. It makes nothing stored readable or unreadable.
+
+### 5.7 Key release and sharing
+
+Built (tasks 16.10, 16.11). Core's OpenID Connect provider is unchanged.
+
+- **Key release** (RFC 0005 §4). An app's page that has no key for this browser session sends the browser to
+  `/keys/release?client_id=…&return_to=…&request=…&state=…`. Core's page requires a session; checks that the app exists, is on, may use
+  encryption, and that `return_to` is its key return address exactly, and answers anything else with the page that is not there;
+  unlocks if it must; makes the app's keys on a person's first time in it; and returns the app's key sealed to `request`, signed by
+  the account, in the address fragment. It is rendered per request, never cached and never framed, and sends no referrer.
+- **Silently only when the app asked.** A request whose `Referer` is not the return address's origin is asked about first ("Continue
+  to …"): a site that sent the person here with a public key of its own would otherwise get an answer it could open, if anything on
+  the app's page read the fragment before the SDK removed it.
+- **What the person sees**: "Opening…" and nothing else when the browser is unlocked, the kit kept and the app asked. A locked browser asks for the
+  password or a passkey, both checked in the browser alone (§5.5). At the first encrypted app the kit is shown and must be kept
+  (§5.3). The answer names the account's signing public key, so an app's page that has never seen it can remember it.
+- **The answer** is HPKE (§1 of RFC 0005) of `{ app key, sub, client id, state, time, signing public key }` with the client id, the
+  return address and the `state` as `info`, and an Ed25519 signature over the encapsulated key and ciphertext:
+  `return_to#sv_key=<enc>.<ciphertext>&sv_sig=<signature>&state=<state>`, all base64url.
+- **What an app's page checks**: that the answer opens with the key it made for this request, names this app and the `state` it kept,
+  is for the person signed in to it, is under two minutes old, and is signed by the signing key it remembers for that person, or the
+  first it sees. Anything else is refused. The `state` and its key are used once.
+- **Two calls** in the Core API, with a person's token carrying `keys`:
+  - `GET /api/v1/keys/me`: the caller's own public keys for this app, their signature, the private halves wrapped, and the account's
+    signing public key.
+  - `GET /api/v1/keys/people/{sub}`: another person's public keys for this app, their signature and that account's signing public key;
+    `404` when that person has not opened the app.
+    Both are behind their guard (a token with `keys`, counted per app and per person as the Directory is), act for the token's app only,
+    and answer `404` alike for no such person, a deactivated account, or someone who has not opened the app. `keys` is listed in the
+    instance document's capabilities.
+- **The app's page remembers** each person's account signing key and refuses a changed one until the person says to go on (sdk §9.4).
+- Document keys are the app's, beside its documents. Core's vault knows nothing of documents.
+
+### 5.8 Escrow
+
+Built (task 16.12). Off unless the owner turns it on.
+
+- `sv key escrow` makes a key pair on the operator's machine, keeps the private half there (as `sv key recovery` does, operator-cli
+  §9.4) and prints the public half as one line. The owner pastes it into the Console (Settings, Recovery of encrypted data): an instance
+  setting, changed only by `InstanceManager` with the owner-only `instance:configure-secrets`, checked for its shape there.
+- **A person is told before they are covered.** The next time they open an app that uses encryption, key release (§5.7) says the owner
+  can now recover their data, and only when they continue does their browser add the escrow way in: the account key sealed with HPKE to
+  the escrow key, bound to the `sub` and the escrow key's id. Unlocking alone covers nobody. Their Security page says whether recovery
+  is on, and whether they are covered; the Console tells the owner how many accounts are not covered yet.
+- Turning it off stops new ways in; those made before stay, since the key that opens them is the owner's, offline.
+- **Recovering someone**: `sovereign-admin accounts escrow-record EMAIL` gives the escrow way in; `sv key escrow open` opens the
+  account key offline and wraps it for a new kit; `sovereign-admin accounts put-kit EMAIL` stores the kit's way in, refusing one made
+  for another account; the person sets a password through a reset link and unlocks with the kit (§5.3). Core opens nothing.
+
+### 5.9 What an encrypted app must do
+
+- Put nothing of a document into a notification, an activity entry or mail it sends through core (§4.1–§4.3): core keeps their text.
+- Never show ciphertext. Show `LockedState` (design-system) where this browser cannot open something.
+- When a reader is removed, remove their document key and make a new document key at the next write, and say that what was already
+  read cannot be taken back.
+- Delete a person's document keys when told their account was deleted (§4.5).
+
+### 5.10 This is done when
+
+Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each database.
+
+1. No request of any password flow (sign-up, sign-in, invitation, reset, change, asking again) carries a password.
+2. A person signs up, keeps the kit, and opens an encrypted app in a second browser with the password alone, then with a passkey that
+   unlocks.
+3. A reset by email gives back the account and not the data; the kit gives back the data.
+4. A session ended from another browser leaves the first browser holding nothing that opens, with no page of it open at the time.
+5. An app receives its own key and never another's; a release replayed, sent to another app, or to a page that did not ask is refused.
+6. A person shares a document with a second, who opens it; a third cannot; a public key the server changed is refused.
+7. With escrow on, the owner recovers a person's data offline; with it off, no account has an escrow way in.
+8. The test instance's database, files and backup hold no plaintext of a document, its name or its type.
+
+---
+
 ## Changelog
 
 | Date       | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
@@ -1854,3 +2067,12 @@ people's files, through `@sovereignfs/storage`.
 | 2026-11-12 | §4.6: files a person keeps in core, through `@sovereignfs/storage` (RFC 0004); §3.2.2: `files:manage`, held by every role.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | 2026-11-12 | §4.5: `sovereign-admin instance deletions resend`, which tells one app again of the accounts deleted after its backup, for `sv restore --app`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | 2026-11-15 | §2: Phase 2 is built, files included (on disk only); the overview no longer says the deletion fan-out is not built.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 2026-11-16 | §5: keys, encryption the server cannot read, specified and not built (RFC 0005, epic 16, workstream 0003): signing in with a derived value and an instance id, the vault and the recovery kit, staying unlocked, passkeys that unlock, apps that use encryption, key release and sharing, escrow, and an acceptance list; §2 and §3.16 say so.                                                                                                                                                                                                                                                                                                                                                                                |
+| 2026-11-16 | §5.6, §3.6.2, §3.7.1: apps that use encryption are built, with one setting where §5.6 had two: the key return address, which the `keys` scope follows.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 2026-11-16 | §5.2, §3.3.2, §3.5: signing in with a derived value is built: core never receives a password, the policy is checked in the browser, the instance id is made at start-up (an upgraded instance says so) and read from the instance document, and `sovereign-admin accounts reset-link` makes a reset link without mail.                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 2026-11-17 | §5.3, §5.4: the vault and staying unlocked are built. A password change wraps the key for the new password beside the old and drops the old after, since it cannot share better-auth's transaction; a reset leaves the password's way in stale rather than depend on a hook.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 2026-11-17 | §5.5: passkeys that unlock are built. Changed from the spec: the PRF input is one per instance and each passkey has its own HKDF salt instead, since a discoverable sign-in cannot be given an input per passkey; a passkey's way in names one of the person's own passkeys and is not read once the passkey is gone; the page offers to let a passkey unlock, and asks a device that gives the output only on use for one more touch.                                                                                                                                                                                                                                                                                        |
+| 2026-11-17 | §5.7: key release is built: what the person sees, and the answer's format; the page sends no referrer. The kit is shown there, at the first encrypted app.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| 2026-11-17 | §5.7: sharing is built: the two key calls in the Core API, behind their guard, `404` alike for anyone without keys for the app, and `keys` among the capabilities.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 2026-11-17 | §5.8: escrow is built, turned on in the Console by the owner; a person is told before they are covered, not covered silently at the next unlock. §5.3: unlocking with the kit, which gives the current password its way in again, built here as escrow recovery ends in it.                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-11-17 | §5.3: the recovery kit says what escrow changes: with escrow on it is the person's own way back, and the owner can also recover their data.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |

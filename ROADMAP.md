@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.97.1 · **Last updated:** 2026-11-15
+**Version:** 0.108.0 · **Last updated:** 2026-11-17
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -247,3 +247,33 @@ Epic [15](docs/epics/core-services.md)
 | —       | 5        | Files in any S3-compatible store `[parallel]`                 | 📋     | [15.10](docs/epics/core-services.md) |
 | —       | 6        | Files in a repository the person connects                     | 🚧     | [15.11](docs/epics/core-services.md) |
 | 0.97.0  | 7        | Files on disk, end to end                                     | ✅     | [15.12](docs/epics/core-services.md) |
+
+### M15 — Apps keep what the server cannot read
+
+[RFC 0005](docs/rfcs/0005-end-to-end-encryption.md) (Accepted) · [research 0008](docs/research/0008-end-to-end-encryption.md) · epic
+[16](docs/epics/encryption.md) · workstream [0003](docs/workstreams/0003-encryption.md)
+
+The cost of the password derivation is measured. The goal owner had the work from 16.6 on built before a cryptographer's review of
+the RFC, which is still to come. Every task is built; the review and a code audit are still to come, and until then every guide says
+the feature is not yet audited.
+
+| Version | Priority | Task                                                                   | Status | Epic task                         |
+| ------- | -------- | ---------------------------------------------------------------------- | ------ | --------------------------------- |
+| —       | 1        | The specifications                                                     | ✅     | [16.1](docs/epics/encryption.md)  |
+| 0.99.0  | 2        | The password derivation                                                | ✅     | [16.2](docs/epics/encryption.md)  |
+| 0.100.0 | 3        | Signing in with a derived value                                        | ✅     | [16.3](docs/epics/encryption.md)  |
+| 0.98.0  | 4        | Keys and formats `[parallel]`                                          | ✅     | [16.4](docs/epics/encryption.md)  |
+| 0.98.0  | 5        | A locked state and the recovery kit, in the design system `[parallel]` | ✅     | [16.5](docs/epics/encryption.md)  |
+| 0.101.0 | 6        | Core's vault and the recovery kit                                      | ✅     | [16.6](docs/epics/encryption.md)  |
+| 0.101.0 | 7        | Staying unlocked until the session ends                                | ✅     | [16.7](docs/epics/encryption.md)  |
+| 0.102.0 | 8        | Passkeys that unlock `[parallel]`                                      | ✅     | [16.8](docs/epics/encryption.md)  |
+| 0.103.0 | 9        | Manifest 4, and allowing an app to use encryption `[parallel]`         | ✅     | [16.9](docs/epics/encryption.md)  |
+| 0.103.0 | 10       | Key release                                                            | ✅     | [16.10](docs/epics/encryption.md) |
+| 0.104.0 | 11       | Sharing between people                                                 | ✅     | [16.11](docs/epics/encryption.md) |
+| 0.105.0 | 12       | Escrow `[parallel]`                                                    | ✅     | [16.12](docs/epics/encryption.md) |
+| 0.106.0 | 13       | A vault for an app with no core `[parallel]`                           | ✅     | [16.13](docs/epics/encryption.md) |
+| 0.107.0 | 14       | An encrypted app, end to end                                           | ✅     | [16.14](docs/epics/encryption.md) |
+| 0.108.0 | 15       | The recovery kit says what escrow changes                              | ✅     | [16.15](docs/epics/encryption.md) |
+| 0.108.0 | 16       | The vault of an app with no core, in an entry of its own               | ✅     | [16.16](docs/epics/encryption.md) |
+| —       | 17       | Encrypted files in the template                                        | 📋     | [16.17](docs/epics/encryption.md) |
+| —       | 18       | An app with no core, in a browser                                      | 📋     | [16.18](docs/epics/encryption.md) |

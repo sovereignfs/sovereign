@@ -27,6 +27,12 @@ vi.mock('../../app/console/settings/actions', () => ({
   resetInviteOnlyAction: vi.fn(),
   saveSmtpAction: vi.fn(),
   resetSmtpAction: vi.fn(),
+  saveEscrowAction: vi.fn(),
+  clearEscrowAction: vi.fn(),
+}));
+vi.mock('../instance/service', () => ({
+  getInstanceManager: () =>
+    Promise.resolve({ escrowUncovered: () => Promise.resolve({ line: undefined, uncovered: 0 }) }),
 }));
 
 const { default: SettingsPage } = await import('../../app/console/settings/page');

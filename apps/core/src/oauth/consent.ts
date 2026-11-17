@@ -13,6 +13,7 @@ export const SCOPE_COPY: Readonly<Record<string, string>> = {
   offline_access: 'Stay signed in without asking you again',
   directory: 'Look up the other people on this instance',
   notifications: 'Read and clear the notifications it sent you',
+  keys: 'Keep what you give it encrypted, so only you and the people you share it with can read it',
 };
 
 /** What the page shows, and what it will answer with. */

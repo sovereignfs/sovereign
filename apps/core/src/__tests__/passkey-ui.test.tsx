@@ -11,7 +11,7 @@ vi.mock('../auth/client', () => ({
   authClient: {
     signIn: {
       email: (input: unknown) => signInEmail(input) as unknown,
-      passkey: () => signInPasskey() as unknown,
+      passkey: (input: unknown) => signInPasskey(input) as unknown,
     },
     passkey: {
       addPasskey: (input: unknown) => addPasskey(input) as unknown,
@@ -21,18 +21,54 @@ vi.mock('../auth/client', () => ({
   },
 }));
 
+const PRF = { prf: { eval: { first: new Uint8Array(32).fill(7) } } };
+vi.mock('../keys/passkey', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../keys/passkey')>()),
+  prfExtension: () => Promise.resolve(PRF),
+}));
+const session = {
+  afterPasskeyAccepted: vi.fn(),
+  givePasskeyWayIn: vi.fn(),
+  isUnlocked: vi.fn(),
+  letPasskeyUnlock: vi.fn(),
+  unlockWithPasswordAgain: vi.fn(),
+};
+vi.mock('../keys/session', () => ({
+  ...session,
+  afterPasswordAccepted: vi.fn(),
+  startAfresh: vi.fn(),
+  handOverSecret: vi.fn(),
+}));
+vi.mock('../auth/derive', () => ({
+  deriveForSignIn: () => Promise.resolve({ signIn: 'svp1.x', secret: 'secret' }),
+}));
+
 const { PasskeyPanel } = await import('../../app/security/passkeys/passkey-panel');
 const { SignInForm } = await import('../../app/(auth)/sign-in/sign-in-form');
 
 const assign = vi.fn();
 const reload = vi.fn();
 const rows = [
-  { id: 'p1', name: 'Work laptop', createdAt: '2026-10-01T09:00:00.000Z', synced: true },
-  { id: 'p2', name: null, createdAt: null, synced: false },
+  {
+    id: 'p1',
+    credentialId: 'c1',
+    name: 'Work laptop',
+    createdAt: '2026-10-01T09:00:00.000Z',
+    synced: true,
+    unlocks: true,
+  },
+  { id: 'p2', credentialId: 'c2', name: null, createdAt: null, synced: false, unlocks: false },
 ];
 
 beforeEach(() => {
-  for (const mock of [addPasskey, updatePasskey, deletePasskey, signInPasskey, signInEmail]) {
+  for (const mock of [
+    addPasskey,
+    updatePasskey,
+    deletePasskey,
+    signInPasskey,
+    signInEmail,
+    ...Object.values(session),
+  ]) {
     mock.mockReset();
   }
   assign.mockReset();
@@ -164,6 +200,141 @@ describe('the passkeys panel', () => {
     click('Remove Work laptop');
     expect((await screen.findByRole('alert')).textContent).toContain('could not be removed');
     expect(reload).not.toHaveBeenCalled();
+  });
+});
+
+describe('passkeys that unlock (core-app §5.5)', () => {
+  const KEYS = { rpId: 'sovereign.local', email: 'ada@sovereign.local' };
+  const out = new Uint8Array(32).fill(9).buffer;
+
+  it('says nothing about unlocking to someone with no keys', () => {
+    render(<PasskeyPanel passkeys={rows} />);
+    expect(screen.queryByText(/unlock/i)).toBeNull();
+  });
+
+  it('marks which passkeys unlock, and offers to let the others', () => {
+    render(<PasskeyPanel passkeys={rows} keys={KEYS} />);
+    expect(screen.getByText(/Also unlocks your encrypted data/)).toBeTruthy();
+    expect(screen.getByText(/Doesn’t unlock your encrypted data/)).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Let it unlock' })).toHaveLength(1);
+  });
+
+  it('warns before removing one that unlocks, and not one that does not', () => {
+    render(<PasskeyPanel passkeys={rows} keys={KEYS} />);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[0] as HTMLElement);
+    expect(screen.getByText(/This passkey also unlocks your encrypted data/)).toBeTruthy();
+    cleanup();
+    render(<PasskeyPanel passkeys={[rows[1] as (typeof rows)[number]]} keys={KEYS} />);
+    click('Remove');
+    expect(screen.queryByText(/This passkey also unlocks/)).toBeNull();
+  });
+
+  it('adds one asking for the PRF extension, and gives it its way in from the output', async () => {
+    addPasskey.mockResolvedValue({
+      data: { id: 'new' },
+      error: null,
+      webauthn: {
+        response: { id: 'cnew' },
+        clientExtensionResults: { prf: { results: { first: out } } },
+      },
+    });
+    render(<PasskeyPanel passkeys={[]} keys={KEYS} />);
+    click('Add a passkey');
+    await waitFor(() => expect(reload).toHaveBeenCalled());
+    expect(addPasskey).toHaveBeenCalledWith({
+      name: undefined,
+      extensions: PRF,
+      returnWebAuthnResponse: true,
+    });
+    expect(session.givePasskeyWayIn).toHaveBeenCalledWith('cnew', new Uint8Array(out));
+    expect(session.letPasskeyUnlock).not.toHaveBeenCalled();
+  });
+
+  it('asks a device that gives the output only on use for one more touch, while unlocked', async () => {
+    addPasskey.mockResolvedValue({
+      data: { id: 'new' },
+      error: null,
+      webauthn: { response: { id: 'cnew' }, clientExtensionResults: { prf: { enabled: true } } },
+    });
+    session.isUnlocked.mockResolvedValue(true);
+    render(<PasskeyPanel passkeys={[]} keys={KEYS} />);
+    click('Add a passkey');
+    await waitFor(() => expect(reload).toHaveBeenCalled());
+    expect(session.letPasskeyUnlock).toHaveBeenCalledWith('sovereign.local', 'cnew');
+  });
+
+  it('adds a passkey that cannot unlock as before, with nothing more asked', async () => {
+    addPasskey.mockResolvedValue({
+      data: { id: 'new' },
+      error: null,
+      webauthn: { response: { id: 'cnew' }, clientExtensionResults: {} },
+    });
+    render(<PasskeyPanel passkeys={[]} keys={KEYS} />);
+    click('Add a passkey');
+    await waitFor(() => expect(reload).toHaveBeenCalled());
+    expect(session.givePasskeyWayIn).not.toHaveBeenCalled();
+    expect(session.letPasskeyUnlock).not.toHaveBeenCalled();
+  });
+
+  it('lets one unlock on an unlocked browser', async () => {
+    session.isUnlocked.mockResolvedValue(true);
+    session.letPasskeyUnlock.mockResolvedValue(true);
+    render(<PasskeyPanel passkeys={rows} keys={KEYS} />);
+    click('Let it unlock');
+    await waitFor(() => expect(reload).toHaveBeenCalled());
+    expect(session.letPasskeyUnlock).toHaveBeenCalledWith('sovereign.local', 'c2');
+  });
+
+  it('asks a locked browser for the password first', async () => {
+    session.isUnlocked.mockResolvedValueOnce(false).mockResolvedValue(true);
+    session.unlockWithPasswordAgain.mockResolvedValue(true);
+    session.letPasskeyUnlock.mockResolvedValue(true);
+    render(<PasskeyPanel passkeys={rows} keys={KEYS} />);
+    click('Let it unlock');
+    fireEvent.change(await screen.findByLabelText(/^Your password/), {
+      target: { value: 'correct horse' },
+    });
+    click('Unlock');
+    await waitFor(() => expect(reload).toHaveBeenCalled());
+    expect(session.unlockWithPasswordAgain).toHaveBeenCalledWith('secret');
+    expect(session.letPasskeyUnlock).toHaveBeenCalledWith('sovereign.local', 'c2');
+  });
+
+  it('says so when the passkey cannot unlock, and that it still signs in', async () => {
+    session.isUnlocked.mockResolvedValue(true);
+    session.letPasskeyUnlock.mockResolvedValue(false);
+    render(<PasskeyPanel passkeys={rows} keys={KEYS} />);
+    click('Let it unlock');
+    expect((await screen.findByRole('alert')).textContent).toContain('It still signs you in');
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it('unlocks with the same touch at sign-in, from the output better-auth kept from the server', async () => {
+    signInPasskey.mockResolvedValue({
+      data: { session: {} },
+      error: null,
+      webauthn: {
+        response: { id: 'c1' },
+        clientExtensionResults: { prf: { results: { first: out } } },
+      },
+    });
+    render(<SignInForm instanceName="Acme" returnTo="/" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign in with a passkey' }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('/'));
+    expect(signInPasskey).toHaveBeenCalledWith({ extensions: PRF, returnWebAuthnResponse: true });
+    expect(session.afterPasskeyAccepted).toHaveBeenCalledWith('c1', new Uint8Array(out));
+  });
+
+  it('signs in with a passkey that gives no output, and opens nothing', async () => {
+    signInPasskey.mockResolvedValue({
+      data: { session: {} },
+      error: null,
+      webauthn: { response: { id: 'c1' }, clientExtensionResults: {} },
+    });
+    render(<SignInForm instanceName="Acme" returnTo="/" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign in with a passkey' }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('/'));
+    expect(session.afterPasskeyAccepted).not.toHaveBeenCalled();
   });
 });
 

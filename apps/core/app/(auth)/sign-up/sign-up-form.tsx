@@ -4,6 +4,14 @@ import Link from 'next/link';
 import { type FormEvent, useState } from 'react';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../src/auth/client';
+import { deriveForSignIn } from '../../../src/auth/derive';
+import { afterPasswordAccepted } from '../../../src/keys/session';
+import type { WebKey } from '@sovereignfs/crypto/web';
+import {
+  passwordPolicyMessage,
+  passwordProblems,
+  type PasswordPolicy,
+} from '../../../src/auth/password-policy';
 import { AuthError, AuthNotice } from '../auth-notice';
 import { AuthField } from '../auth-field';
 import { afterVerification } from '../messages';
@@ -13,11 +21,14 @@ import styles from '../auth.module.css';
 export function SignUpForm({
   returnTo,
   passwordHint,
+  policy,
   instanceName,
   invitedEmail,
 }: {
   returnTo: string;
   passwordHint: string;
+  /** Held here, since the server never sees the password to check it (core-app §5.2). */
+  policy: PasswordPolicy;
   instanceName: string;
   /** The address an invitation link was sent to; the field starts with it. */
   invitedEmail?: string | undefined;
@@ -43,12 +54,26 @@ export function SignUpForm({
       setError('Accept the Terms of Service and the Privacy Policy to create an account.');
       return;
     }
+    const problems = passwordProblems(password, policy);
+    if (problems.length > 0) {
+      setError(passwordPolicyMessage(problems));
+      return;
+    }
     setPending(true);
+    let value: string;
+    let secret: WebKey;
+    try {
+      ({ signIn: value, secret } = await deriveForSignIn(password, email));
+    } catch {
+      setPending(false);
+      setError('This page could not get ready. Reload it and try again.');
+      return;
+    }
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const result = await authClient.signUp.email({
       name,
       email,
-      password,
+      password: value,
       agreedToTerms: true,
       ...(timezone ? { timezone } : {}),
       callbackURL: afterVerification(returnTo),
@@ -64,6 +89,8 @@ export function SignUpForm({
       setWaitingFor(email);
       return;
     }
+    // Signed in at once: the keys are set up now, silently (core-app §5.3).
+    await afterPasswordAccepted(secret);
     // A full navigation, so the next page is rendered with the new session cookie.
     window.location.assign(returnTo);
   }

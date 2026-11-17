@@ -12,16 +12,24 @@ export const APP_DEPENDENCIES = {
   '@sovereignfs/config': '^0.1.0',
   '@sovereignfs/sdk': '^2.0.0',
   '@sovereignfs/storage': '^0.1.0',
-  '@sovereignfs/ui': '^0.96.1',
+  '@sovereignfs/ui': '^0.98.0',
   next: '^16.4.6',
   pg: '^8.23.1',
   react: '^19.3.1',
   'react-dom': '^19.3.1',
 } as const;
 
+/**
+ * What an app made with `--encryption` needs on top: the SDK release whose `/keys` encrypts a document (sdk §9.4). Held to this
+ * repository's SDK by the same test.
+ */
+export const ENCRYPTION_DEPENDENCIES = {
+  '@sovereignfs/sdk': '^2.5.0',
+} as const;
+
 export const APP_DEV_DEPENDENCIES = {
   // Makes the image's label and port from the manifest, and checks the manifest (`sovereign-manifest`).
-  '@sovereignfs/manifest': '^0.2.0',
+  '@sovereignfs/manifest': '^0.3.0',
   '@types/node': '^24.19.2',
   '@types/pg': '^8.23.1',
   '@types/react': '^19.3.0',

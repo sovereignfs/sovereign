@@ -163,6 +163,38 @@ export class InstanceManager {
     }
   }
 
+  /**
+   * Turns escrow on with the line `sv key escrow` printed, or off with `undefined` (core-app §5.8). The owner's alone. Escrow ways in
+   * made before it was turned off stay: the key that opens them is the owner's, offline, and removing them here would not take back
+   * a copy.
+   */
+  async setEscrow(actor: Actor, line: string | undefined): Promise<void> {
+    await this.#allow(actor, 'instance:configure-secrets');
+    if (line === undefined || line.trim() === '') {
+      await this.#settings.clear(SETTINGS.escrowPublicKey);
+      return;
+    }
+    const trimmed = line.trim();
+    const problem = SETTINGS.escrowPublicKey.problem(trimmed);
+    if (problem) throw new InstanceError('invalid', `The escrow key ${problem}.`);
+    await this.#settings.set(SETTINGS.escrowPublicKey, trimmed, actor.id);
+  }
+
+  /** How many accounts with keys have no escrow way in for the key in force: those a recovery could not yet reach. */
+  async escrowUncovered(actor: Actor): Promise<{ line: string | undefined; uncovered: number }> {
+    await this.#allow(actor, 'instance:configure-secrets');
+    const line = await this.#settings.value(SETTINGS.escrowPublicKey);
+    if (!line) return { line: undefined, uncovered: 0 };
+    const id = line.split('.')[1] ?? '';
+    const row = (
+      await this.#database.run(
+        "select count(*) as n from key_accounts k where not exists (select 1 from key_wraps w where w.user_id = k.user_id and w.way = 'escrow' and w.wrap_id = ?)",
+        [id],
+      )
+    ).rows[0];
+    return { line, uncovered: Number(row?.n ?? 0) };
+  }
+
   /** Forgets everything saved about email, so the `SV_SMTP_*` variables apply again. */
   async resetSmtp(actor: Actor): Promise<void> {
     await this.#allow(actor, 'instance:configure-secrets');

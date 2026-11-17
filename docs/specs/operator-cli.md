@@ -66,6 +66,9 @@ npm create @sovereignfs instance my-instance
 - `--port N` (or `npm_config_port`) names the port an app listens on (§2.2), a whole number from 1024 to 65535, since the image does
   not run as root. With no port it MUST ask when there is a terminal, and otherwise use **3100**, which is clear of core's 3000 and the
   first-party apps' (Fjord 3001, Tusk 3002), so a new app runs beside them on a developer's machine. `--port` with `instance` is refused.
+- `--encryption` (or `npm_config_encryption`) makes an app whose notes are encrypted in the browser (RFC 0005): manifest 4 with
+  `encryption`, the notes shared between people of the instance, and `ENCRYPTION.md` saying what is protected and that it is not yet
+  audited. It is written over the app's files, which are otherwise the same. `--encryption` with `instance` is refused.
 
 `instance` MUST, in order: write the files of §2.1, run `git init`, install the toolkit from the lockfile it wrote, add
 `--remote URL` as `origin` if given, and make the first commit. It MUST NOT push.
@@ -727,6 +730,22 @@ FILE` open them with it.
 
 ---
 
+### 9.5 An escrow key
+
+Built ([core-app §5.8](core-app.md), task 16.12). `sv key escrow [--out FILE]` makes an X25519 key pair for recovering people's
+encrypted data, and prints its public half as one line, `sv-escrow-1.<id>.<public key>`, for the owner to paste into the Console.
+
+- Its private half is shown or written as §9.4's recovery key is, under the same rules (once in a terminal; or `--out FILE`, `0600`,
+  outside the repository, never over a file), and MUST NOT reach the server, a backup or the instance repository.
+- **Turning escrow on is the owner's**, in the Console (core-app §5.8), where only the owner may change it; the toolkit holds no
+  account, so it does not send the key itself. Turning it off is the Console's too. Escrow ways in made before stay, and the Console
+  says so.
+- `sv key escrow open --key FILE --out FILE [RECORD]` opens one account's key offline, on the operator's machine, from the escrow way in
+  `sovereign-admin accounts escrow-record EMAIL` gave (RECORD, or standard input), and refuses one made for another escrow key. It makes
+  a new recovery kit, shows it once (it needs a terminal), and writes its way in to `--out` for
+  `sovereign-admin accounts put-kit EMAIL`, which stores it and marks the kit kept. The person then sets a password through a reset
+  link and unlocks with the kit.
+
 ## 10. Keeping up, and recovering
 
 ### 10.1 Upgrading
@@ -959,3 +978,6 @@ with a DNS provider's module, which the stock image does not carry.
 | 2026-11-15 | §2.2: an app made by `npm create @sovereignfs app` is named `@sovereignfs/<name>` in its `package.json`, which stays `private`.                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2026-11-15 | §2.2, §2.3: an app's shared files and the `app sync`, `release`, `commits` and `settings` commands; its publish workflow is called on a merged `Release` promotion.                                                                                                                                                                                                                                                                                                                                                     |
 | 2026-11-15 | §2.3: a repository of several components, described in `sovereign.json`, is served by the same commands and shared workflows.                                                                                                                                                                                                                                                                                                                                                                                           |
+| 2026-11-16 | §9.5: `sv key escrow`, specified and not built (core-app §5.8).                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 2026-11-17 | §9.5: `sv key escrow` and `sv key escrow open` built; turning escrow on and off is the owner's in the Console, since the toolkit holds no account, so there is no `--remove`.                                                                                                                                                                                                                                                                                                                                           |
+| 2026-11-17 | §2: `npm create @sovereignfs app` takes `--encryption`, for an app whose notes are encrypted in the browser and shared through core's keys.                                                                                                                                                                                                                                                                                                                                                                             |

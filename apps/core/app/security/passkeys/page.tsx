@@ -3,7 +3,9 @@ import Link from 'next/link';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { Card } from '@sovereignfs/ui';
-import { getAuth } from '../../../src/auth';
+import { getAuth, getAuthSettings } from '../../../src/auth';
+import { getDatabase } from '../../../src/database';
+import { KeyVault } from '../../../src/keys/vault';
 import { getSession } from '../../../src/auth/session';
 import styles from '../security.module.css';
 import { PasskeyPanel, type PasskeyRow } from './passkey-panel';
@@ -15,11 +17,18 @@ export default async function PasskeysPage() {
   const session = await getSession();
   if (!session) redirect('/sign-in?returnTo=%2Fsecurity%2Fpasskeys');
   const found = await (await getAuth()).api.listPasskeys({ headers: await headers() });
+  // Which passkeys unlock (core-app §5.5): those with a way into the person's keys. The session's own account, never another.
+  const vault = await new KeyVault(await getDatabase()).read(session.user.id);
+  const unlocking = new Set(
+    vault.waysIn.filter((wayIn) => wayIn.way === 'passkey').map((wayIn) => wayIn.id),
+  );
   const passkeys: PasskeyRow[] = found.map((passkey) => ({
     id: passkey.id,
+    credentialId: passkey.credentialID,
     name: passkey.name ?? null,
     createdAt: passkey.createdAt ? new Date(passkey.createdAt).toISOString() : null,
     synced: passkey.backedUp,
+    unlocks: unlocking.has(passkey.credentialID),
   }));
 
   return (
@@ -30,7 +39,14 @@ export default async function PasskeysPage() {
           A passkey lets you sign in with your fingerprint, face or device PIN instead of a
           password. Your password keeps working whatever you do here.
         </p>
-        <PasskeyPanel passkeys={passkeys} />
+        <PasskeyPanel
+          passkeys={passkeys}
+          keys={
+            vault.account
+              ? { rpId: getAuthSettings().webauthn.rpId, email: session.user.email }
+              : undefined
+          }
+        />
         <p className={styles.footer}>
           <Link className={styles.link} href="/security">
             Back to security

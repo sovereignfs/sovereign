@@ -15,6 +15,7 @@ export type Command =
         postLogout: string[];
         backChannel: string | undefined;
         accountDeleted: string | undefined;
+        keyReturn: string | undefined;
         scopes: string[];
         appScopes: string[];
         isPublic: boolean;
@@ -31,6 +32,9 @@ export type Command =
   | { name: 'remove'; key: string }
   | { name: 'restored'; json: boolean }
   | { name: 'seed'; local: boolean; json: boolean }
+  | { name: 'reset-link'; email: string }
+  | { name: 'escrow-record'; email: string }
+  | { name: 'put-kit'; email: string; file: string | undefined }
   | { name: 'deletions-export' }
   | { name: 'deletions-apply'; file: string | undefined }
   | { name: 'deletions-resend'; key: string; since: string };
@@ -41,13 +45,16 @@ export class UsageError extends Error {
 
 export const USAGE = `Usage:
   sovereign-admin apps ensure KEY --name NAME --redirect URL... [--post-logout URL...]
-                  [--back-channel URL] [--account-deleted URL] [--scope SCOPE...] [--app-scope SCOPE...] [--public] [--trusted]
+                  [--back-channel URL] [--account-deleted URL] [--key-return URL] [--scope SCOPE...] [--app-scope SCOPE...] [--public] [--trusted]
                   [--launch-url URL] [--description TEXT] [--icon URL] [--hide] [--json]
   sovereign-admin apps list [--json]
   sovereign-admin apps rotate-secret KEY [--json]
   sovereign-admin apps remove KEY
   sovereign-admin instance restored [--json]
   sovereign-admin seed [--local] [--json]
+  sovereign-admin accounts reset-link EMAIL
+  sovereign-admin accounts escrow-record EMAIL
+  sovereign-admin accounts put-kit EMAIL [FILE]
   sovereign-admin instance deletions export
   sovereign-admin instance deletions apply [FILE]
   sovereign-admin instance deletions resend --app KEY --since TIME`;
@@ -58,6 +65,7 @@ const VALUE = new Set([
   'since',
   'back-channel',
   'account-deleted',
+  'key-return',
   'launch-url',
   'description',
   'icon',
@@ -125,6 +133,21 @@ export function parse(argv: string[]): Command {
     if (rest.length > 0) throw new UsageError('seed takes no argument');
     return { name: 'seed', local: flags.switches.has('local'), json: flags.switches.has('json') };
   }
+  if (group === 'accounts') {
+    const { rest } = flagsOf(words, NONE);
+    if (verb === 'reset-link' || verb === 'escrow-record') {
+      if (rest.length !== 1) throw new UsageError(`${verb} needs exactly one EMAIL`);
+      return { name: verb, email: rest[0] as string };
+    }
+    if (verb === 'put-kit') {
+      if (rest.length < 1 || rest.length > 2)
+        throw new UsageError('put-kit needs an EMAIL, and one FILE or standard input');
+      return { name: 'put-kit', email: rest[0] as string, file: rest[1] };
+    }
+    throw new UsageError(
+      verb === undefined ? 'a command is needed' : `unknown accounts command ${verb}`,
+    );
+  }
   if (group === 'instance') {
     if (verb === 'deletions') {
       const [what, ...more] = words;
@@ -158,7 +181,7 @@ export function parse(argv: string[]): Command {
     if (rest.length > 0) throw new UsageError('restored takes no argument');
     return { name: 'restored', json: flags.switches.has('json') };
   }
-  if (group !== 'apps') throw new UsageError('the groups are apps, instance and seed');
+  if (group !== 'apps') throw new UsageError('the groups are apps, accounts, instance and seed');
   switch (verb) {
     case 'ensure': {
       const { rest, flags } = flagsOf(words, ALL);
@@ -177,6 +200,7 @@ export function parse(argv: string[]): Command {
           postLogout: flags.lists.get('post-logout') ?? [],
           backChannel: flags.values.get('back-channel'),
           accountDeleted: flags.values.get('account-deleted'),
+          keyReturn: flags.values.get('key-return'),
           scopes: flags.lists.get('scope') ?? [],
           appScopes: flags.lists.get('app-scope') ?? [],
           isPublic: flags.switches.has('public'),

@@ -86,7 +86,11 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
     coreImage = process.env.SV_TEST_CORE_IMAGE ?? 'sv-test-core:local';
     if (!process.env.SV_TEST_CORE_IMAGE)
       execFileSync('docker', ['build', '--tag', coreImage, root], { stdio: 'inherit' });
-    execFileSync('pnpm', ['--filter', '@sovereignfs/cli', 'build'], { cwd: root, stdio: 'ignore' });
+    // With the packages it bundles (`...`): `sv key` bundles @sovereignfs/crypto, whose built files a fresh checkout lacks.
+    execFileSync('pnpm', ['--filter', '@sovereignfs/cli...', 'build'], {
+      cwd: root,
+      stdio: 'ignore',
+    });
     cliImage = 'sv-test-cli:local';
     execFileSync('docker', ['build', '--quiet', '--tag', cliImage, path.join(root, 'tools/cli')], {
       stdio: 'ignore',

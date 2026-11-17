@@ -11,7 +11,8 @@
 [RFC 0005](../rfcs/0005-end-to-end-encryption.md) is the design, and [research 0008](../research/0008-end-to-end-encryption.md) the
 reasoning behind it. The tasks here build it in the RFC's order: the specifications; the password derivation and signing in with a derived
 value, which every instance gets; the library's keys and formats; core's vault; key release to an app; sharing; escrow; and the same for
-an app with no core.
+an app with no core. Tasks 16.15 to 16.18 are follow-ups found while building it, sequenced by
+[workstream 0004](../workstreams/0004-encryption-follow-ups.md).
 
 Two things stop the work until someone outside it answers, and [workstream 0003](../workstreams/0003-encryption.md) holds both as gates:
 
@@ -429,4 +430,99 @@ needs unlocking.
 - Every item of the acceptance list has a test with its number in the title
 - The server's database, files and backup of the test instance hold no plaintext of a document, its name or its type
 - No guide uses the word "zero-knowledge", and each says the feature is not yet audited
+- `pnpm e2e` passes on each database
+
+#### 📋 16.15 — The recovery kit says what escrow changes
+
+**Goal:** A person on an instance with escrow is never told that nobody else can get their data back.
+
+**Priority:** 15.
+
+**Deliverables:**
+
+- `RecoveryKit` in `@sovereignfs/ui` takes whether the instance can recover the person's data, and says so: without it, the kit is the only
+  way back and nobody else can get it back; with it, the kit is the way back the person holds, and the instance's owner can also recover
+  their data
+- core's key release page passes it when escrow is on for the instance (core-app §5.8)
+- the component's story shows both, and its Component Gallery entry
+
+**Dependencies:** 16.12
+
+**Spec reference:** core-app §5.3, §5.8; the design system's components for encrypted apps; RFC 0005 §6
+
+**Review checklist:**
+
+- With escrow on, no screen a person sees says nobody else can recover their data
+- With escrow off, the wording is as it is now
+- A test renders both and fails if the escrow wording is shown without escrow
+
+#### 📋 16.16 — The vault of an app with no core, in an entry of its own
+
+**Goal:** An app that gets its key from core loads no password derivation, and an app with no core imports its vault from one place.
+
+**Priority:** 16.
+
+**Deliverables:**
+
+- `localVault` moves from `@sovereignfs/sdk/keys` to `@sovereignfs/sdk/local-vault`, a browser entry of its own; `/keys` no longer
+  reaches the password derivation or libsodium
+- a test that fails when the built `/keys` names libsodium
+- sdk §9.5 and §12, Building an app and Encrypting an app's data name the new entry
+
+**Dependencies:** 16.13
+
+**Spec reference:** sdk §9.5, §12; `docs/releasing.md` (what the SDK bundles)
+
+**Review checklist:**
+
+- Done before the first SDK release that carries `localVault` is published, so no published version ever had it in `/keys`
+- The packed SDK's `/keys` chunk graph has no libsodium file, and `/local-vault` loads it only when a key is derived
+- `pnpm packages:check` passes
+
+#### 📋 16.17 — Encrypted files in the template
+
+**Goal:** An app made with `--encryption` keeps people's files as it keeps their notes: encrypted in the browser, shared, and opened by
+nobody who reads the server.
+
+**Priority:** 17.
+
+**Deliverables:**
+
+- the template's Files, with `--encryption`: each file encrypted in the browser in RFC 0005 §1.3's chunks as it is uploaded, its name,
+  type and size encrypted as one small value, its key sealed to each reader as a note's is, and opened a chunk at a time on download
+- the server keeps `application/octet-stream` and a length through `@sovereignfs/storage`; quotas count what is stored
+- sharing a file, and removing a reader, as a note does; the page stops saying files are not encrypted
+- `ENCRYPTION.md` and the tools/create tests updated; checked live against a built core as the notes were
+
+**Dependencies:** 16.14
+
+**Spec reference:** RFC 0005 §1.3, §8; operator-cli §2.2; `docs/keeping-files.md`
+
+**Review checklist:**
+
+- A file larger than one chunk uploads and downloads without being whole in memory
+- The stored file and the app's database hold no plaintext of a file, its name or its type
+- A file cut short, or returned under another id or version, does not open
+
+#### 📋 16.18 — An app with no core, in a browser
+
+**Goal:** The vault of an app with no core is shown to work in a real browser, as core's is.
+
+**Priority:** 18.
+
+**Deliverables:**
+
+- `apps/e2e`: a page of the test harness that uses `@sovereignfs/sdk/local-vault` against `vaultRoute` and an `AppVault` on the run's
+  database: sign up with a derived value and set up; open in a second browser with the password alone; a passphrase for a sign-in that is
+  someone else's; keep the kit and unlock with it after the password changed; a session ended leaves nothing that opens
+- no request of any of these carries a password or a passphrase
+- the database holds no plaintext of what the page encrypted
+
+**Dependencies:** 16.13, 16.16
+
+**Spec reference:** sdk §9.5; RFC 0005 §4 (its last paragraph), §5
+
+**Review checklist:**
+
+- Each step runs in Chromium through the built SDK, not the library's source
 - `pnpm e2e` passes on each database

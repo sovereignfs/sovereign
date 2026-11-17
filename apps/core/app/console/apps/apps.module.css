@@ -37,11 +37,6 @@
   font-size: var(--sv-font-size-md);
 }
 
-.back {
-  color: var(--sv-color-accent);
-  text-decoration: none;
-}
-
 .form {
   display: flex;
   flex-direction: column;

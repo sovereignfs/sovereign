@@ -39,6 +39,10 @@
   box-sizing: border-box;
 }
 
+.backRow {
+  margin-bottom: var(--sv-space-4);
+}
+
 .mobileFrame {
   display: flex;
   flex-direction: column;

@@ -273,3 +273,7 @@ the feature is not yet audited.
 | 0.105.0 | 12       | Escrow `[parallel]`                                                    | ✅     | [16.12](docs/epics/encryption.md) |
 | 0.106.0 | 13       | A vault for an app with no core `[parallel]`                           | ✅     | [16.13](docs/epics/encryption.md) |
 | 0.107.0 | 14       | An encrypted app, end to end                                           | ✅     | [16.14](docs/epics/encryption.md) |
+| —       | 15       | The recovery kit says what escrow changes                              | 📋     | [16.15](docs/epics/encryption.md) |
+| —       | 16       | The vault of an app with no core, in an entry of its own               | 📋     | [16.16](docs/epics/encryption.md) |
+| —       | 17       | Encrypted files in the template                                        | 📋     | [16.17](docs/epics/encryption.md) |
+| —       | 18       | An app with no core, in a browser                                      | 📋     | [16.18](docs/epics/encryption.md) |

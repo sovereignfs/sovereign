@@ -1,7 +1,15 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { DEFAULT_ICONS } from '../branding/default-icons';
-import { MANIFEST_ICONS, manifestIcons, shortName, THEME_COLORS } from '../pwa';
+import { SCREENSHOTS } from '../branding/screenshots';
+import {
+  MANIFEST_ICONS,
+  MANIFEST_SCREENSHOTS,
+  MANIFEST_SHORTCUTS,
+  manifestIcons,
+  shortName,
+  THEME_COLORS,
+} from '../pwa';
 
 const identity = vi.fn();
 vi.mock('../instance/service', () => ({ getInstanceIdentity: () => identity() as unknown }));
@@ -91,6 +99,48 @@ describe('the web app manifest', () => {
     for (const address of [made.start_url, made.scope, made.id]) expect(address).toBe('/');
     for (const icon of made.icons ?? []) expect(icon.src).toMatch(/^\/icons\//);
   });
+});
+
+describe('what a fuller install adds (RFC 0001 A1)', () => {
+  it('keeps the id it was installed by: a browser knows an installed app by it', async () => {
+    identity.mockResolvedValue({ name: 'Sovereign' });
+    expect((await manifest()).id).toBe('/');
+  });
+
+  it('brings a window already open forward rather than starting another', async () => {
+    identity.mockResolvedValue({ name: 'Sovereign' });
+    expect((await manifest()).launch_handler).toEqual({
+      client_mode: ['focus-existing', 'auto'],
+    });
+  });
+
+  it('offers shortcuts only to pages every signed-in person has; never the Console', async () => {
+    identity.mockResolvedValue({ name: 'Sovereign' });
+    const made = await manifest();
+    expect(made.shortcuts?.map((shortcut) => shortcut.url)).toEqual(['/', '/profile']);
+    expect(JSON.stringify(made)).not.toContain('/console');
+    for (const shortcut of MANIFEST_SHORTCUTS)
+      for (const icon of shortcut.icons)
+        expect(DEFAULT_ICONS[icon.src.replace('/icons/', '')]).toBeDefined();
+  });
+
+  it('says what it is, in which language', async () => {
+    identity.mockResolvedValue({ name: 'Sovereign' });
+    expect(await manifest()).toMatchObject({
+      categories: ['productivity', 'utilities'],
+      lang: 'en',
+      dir: 'ltr',
+    });
+  });
+
+  it.each(MANIFEST_SCREENSHOTS.map((shot) => [shot.form_factor, shot] as const))(
+    'shows a %s screenshot that is served as a PNG of the size it says',
+    (_factor, shot) => {
+      const served = SCREENSHOTS[shot.src.replace('/icons/', '')];
+      expect(served?.contentType).toBe('image/png');
+      expect(dimensions(served?.bytes ?? Buffer.alloc(24))).toBe(shot.sizes);
+    },
+  );
 });
 
 describe('the icons of an instance with its own app icon', () => {

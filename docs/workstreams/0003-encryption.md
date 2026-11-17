@@ -1,6 +1,6 @@
 # Workstream 0003 — Encryption the server cannot read
 
-**Status:** ⏳ In Progress (legs 1 to 5 done)\
+**Status:** ⏳ In Progress (legs 1 to 6 done)\
 **Date:** November 2026\
 **Author:** Claude Code, for kasunben\
 **Goal owner:** kasunben\
@@ -26,7 +26,7 @@ signs in through core sees no difference at all.
 - [x] `16.5` — A locked state and the recovery kit, in the design system
 - [x] `16.6` — Core's vault and the recovery kit
 - [x] `16.7` — Staying unlocked until the session ends
-- [ ] `16.8` — Passkeys that unlock
+- [x] `16.8` — Passkeys that unlock
 - [ ] `16.9` — Manifest 4, and allowing an app to use encryption
 - [ ] `16.10` — Key release
 - [ ] `16.11` — Sharing between people
@@ -306,3 +306,4 @@ files after the run and find no plaintext.
 | 0.6     | Nov 2026 | Leg 2 done (16.2, root 0.99.0, crypto 0.2.0): the goal owner timed an iPhone 15 Pro (64 MiB and 3 passes took 3.4 s), so the cost is 19 MiB and 3 passes (about one second), and the password vectors were made again at it. The goal owner waived the review as a gate for legs 5 to 11 (Decisions locked). The file store's flaky test is fixed (one run in sixteen, not sixty-four).                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | 0.7     | Nov 2026 | Leg 3 done (16.3, root 0.100.0, core 0.64.0), and 16.9 of leg 7 built ahead (manifest 0.3.0, toolkit 0.15.0): core never receives a password. Decided while building: the instance id is made at start-up when missing and an upgraded instance says so, rather than refuse to start (every existing instance has accounts and no id); core's pages read it from the instance document rather than each page being given it; `sovereign-admin accounts reset-link` gives a way back with no mail; signing in with anything but a sign-in value is refused before any lookup, since otherwise the dummy hash better-auth makes for an unknown address answered differently from a known one; one key return address decides encryption, where the spec had two settings.                                                                  |
 | 0.8     | Nov 2026 | Leg 5 done (16.6, 16.7; root 0.101.0, core 0.65.0), built ahead of the review at the goal owner's decision. Keys are set up silently at the first password sign-in and the kit is shown at the first encrypted app (the goal owner's choice), so the kit's page comes with key release. Changed from the spec: a password change wraps for the new password beside the old and drops the old after, since it cannot share better-auth's transaction; a reset leaves the password's way in stale instead of a hook removing it; the password's secret crosses the second step through IndexedDB, once; a session's secret is served only through a join on a live session, and deleting an account deletes the vault in its transaction rather than trusting cascades. Checked on SQLite and PostgreSQL, and in a real browser (§5.10.2). |
+| 0.9     | Nov 2026 | Leg 6 done (16.8; root 0.102.0, core 0.66.0, crypto 0.3.0). Changed from the spec, and put to the review: the PRF input is one per instance and the HKDF salt one per passkey, since WebAuthn takes an input per credential only with a list of credentials and core's passkey sign-in is discoverable; a random input per passkey would have needed a second touch. The installed passkey client was read first: it leaves extension results out of what it sends and returns them to the page. A passkey's way in must name one of the person's own passkeys, is not read once its passkey is gone, and is deleted by an after-hook on removal. The local ceremony reads the user-verified flag itself. Checked with Chromium's virtual authenticator, with and without PRF, and on SQLite and PostgreSQL.                             |

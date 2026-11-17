@@ -5,6 +5,16 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.102.0] - 2026-11-17
+
+### Added
+
+- Signing in with a passkey that can unlock opens a person's keys with the same touch (core-app §5.5). Its secret stays in the
+  browser: what is sent to core leaves it out.
+- A passkey added while the browser is unlocked can unlock too. The passkeys page says which passkeys unlock, offers to let one that
+  doesn't, and warns before one that unlocks is removed.
+- A passkey that can't unlock still signs in as before.
+
 ## [0.101.0] - 2026-11-17
 
 ### Added

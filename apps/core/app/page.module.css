@@ -19,3 +19,8 @@
 .link {
   color: var(--sv-color-accent);
 }
+
+/* What this instance runs, for an operator: a quiet line at the foot, after the tiles. */
+.details {
+  margin-top: var(--sv-space-8);
+}

@@ -13,6 +13,10 @@ const getLauncherApps = vi.fn();
 vi.mock('../clients', () => ({ getLauncherApps: () => getLauncherApps() as unknown }));
 // The header reads the session, the matrix and the instance itself; it is tested on its own (account-header.test.tsx).
 vi.mock('../../app/account-header', () => ({ AccountHeader: () => <header>the header</header> }));
+vi.mock('../config', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getConfig: () => ({ dbDialect: 'postgres' }),
+}));
 vi.mock('next/link', () => ({
   default: ({ children, ...props }: React.ComponentProps<'a'>) => <a {...props}>{children}</a>,
 }));
@@ -48,6 +52,25 @@ describe('the home page, which is the launcher', () => {
     expect(html).toContain('Choose an app to open it.');
     expect(html).not.toContain('Ada Lovelace');
     expect(html.indexOf('the header')).toBeLessThan(html.indexOf('>Apps</h1>'));
+  });
+
+  it('tells someone who may open the Console what this instance runs, at the foot', async () => {
+    for (const role of [ROLE_ADMIN, ROLE_OWNER]) {
+      as(role);
+      const html = renderToStaticMarkup(await Page());
+      expect(html).toMatch(
+        /Sovereign \d+\.\d+\.\d+ \/ \d+\.\d+\.\d+ \(Core\) · PostgreSQL · Node \d+\.\d+ · up \d+ \w+/,
+      );
+      expect(html.indexOf('(Core)')).toBeGreaterThan(html.indexOf('>Apps</h1>'));
+    }
+  });
+
+  it('tells nobody else what this instance runs', async () => {
+    as(ROLE_USER);
+    const html = renderToStaticMarkup(await Page());
+    expect(html).not.toContain('(Core)');
+    expect(html).not.toContain('PostgreSQL');
+    expect(html).not.toContain('Node ');
   });
 
   it('lists the apps, each an ordinary link to its launch address in the same tab', async () => {

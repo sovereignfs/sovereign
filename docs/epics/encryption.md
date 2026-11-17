@@ -246,7 +246,7 @@ page was open when it ended.
 - The session secret is given to its own session only, and never to another account's
 - The key in memory cannot be exported
 
-#### 📋 16.8 — Passkeys that unlock `[parallel]`
+#### ✅ 16.8 — Passkeys that unlock `[parallel]`
 
 **Goal:** Signing in with a passkey unlocks with the same touch where the passkey can, and a person always knows which of their passkeys
 do.
@@ -255,8 +255,8 @@ do.
 
 **Deliverables:**
 
-- adding a passkey, while unlocked, gives it a wrap (a random PRF input for that passkey, its output through HKDF); removing it removes
-  the wrap
+- adding a passkey, while unlocked, gives it a wrap (its PRF output through HKDF, with a random salt for that passkey); removing it
+  removes the wrap
 - signing in with a passkey asks for the PRF extension and unlocks from its result, which never reaches the server
 - unlocking an already signed-in browser with a passkey, by a ceremony whose answer is sent nowhere
 - a passkey that does not answer PRF still signs in, and the person is asked for the password when something needs unlocking
@@ -270,7 +270,8 @@ do.
 
 - A passkey added before this ships signs in as before
 - No request carries a PRF result
-- Two passkeys of one person have different PRF inputs
+- Two passkeys of one person have different salts, and so keys that do not open each other's way in (the PRF input is one per
+  instance: a discoverable sign-in cannot be given one per passkey)
 - A passkey must still be user-verified, at both ceremonies
 - Signing in with a passkey that cannot unlock ends in a working session and a prompt, never an error
 

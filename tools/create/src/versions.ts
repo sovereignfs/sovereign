@@ -12,7 +12,7 @@ export const APP_DEPENDENCIES = {
   '@sovereignfs/config': '^0.1.0',
   '@sovereignfs/sdk': '^2.0.0',
   '@sovereignfs/storage': '^0.1.0',
-  '@sovereignfs/ui': '^0.98.0',
+  '@sovereignfs/ui': '^0.99.0',
   next: '^16.4.6',
   pg: '^8.23.1',
   react: '^19.3.1',

@@ -729,15 +729,19 @@ FILE` open them with it.
 
 ### 9.5 An escrow key
 
-Specified, not built ([core-app §5.8](core-app.md), task 16.12). `sv key escrow` makes an X25519 key pair for recovering people's
-encrypted data, and gives core the public half as an instance setting.
+Built ([core-app §5.8](core-app.md), task 16.12). `sv key escrow [--out FILE]` makes an X25519 key pair for recovering people's
+encrypted data, and prints its public half as one line, `sv-escrow-1.<id>.<public key>`, for the owner to paste into the Console.
 
-- Its private half is shown or written as §9.4's recovery key is, under the same rules, and MUST NOT reach the server, a backup or the
-  instance repository.
-- `sv key escrow open --key FILE <account>` opens that account's key offline, on the operator's machine, and wraps it for a new
-  recovery kit, which the operator gives the person.
-- Turning escrow on is the owner's: the command refuses an operator whose account is not the owner's.
-- `sv key escrow --remove` takes the public half out of core. Escrow ways in made before stay, and the command MUST say so.
+- Its private half is shown or written as §9.4's recovery key is, under the same rules (once in a terminal; or `--out FILE`, `0600`,
+  outside the repository, never over a file), and MUST NOT reach the server, a backup or the instance repository.
+- **Turning escrow on is the owner's**, in the Console (core-app §5.8), where only the owner may change it; the toolkit holds no
+  account, so it does not send the key itself. Turning it off is the Console's too. Escrow ways in made before stay, and the Console
+  says so.
+- `sv key escrow open --key FILE --out FILE [RECORD]` opens one account's key offline, on the operator's machine, from the escrow way in
+  `sovereign-admin accounts escrow-record EMAIL` gave (RECORD, or standard input), and refuses one made for another escrow key. It makes
+  a new recovery kit, shows it once (it needs a terminal), and writes its way in to `--out` for
+  `sovereign-admin accounts put-kit EMAIL`, which stores it and marks the kit kept. The person then sets a password through a reset
+  link and unlocks with the kit.
 
 ## 10. Keeping up, and recovering
 
@@ -972,3 +976,4 @@ with a DNS provider's module, which the stock image does not carry.
 | 2026-11-15 | §2.2, §2.3: an app's shared files and the `app sync`, `release`, `commits` and `settings` commands; its publish workflow is called on a merged `Release` promotion.                                                                                                                                                                                                                                                                                                                                                     |
 | 2026-11-15 | §2.3: a repository of several components, described in `sovereign.json`, is served by the same commands and shared workflows.                                                                                                                                                                                                                                                                                                                                                                                           |
 | 2026-11-16 | §9.5: `sv key escrow`, specified and not built (core-app §5.8).                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 2026-11-17 | §9.5: `sv key escrow` and `sv key escrow open` built; turning escrow on and off is the owner's in the Console, since the toolkit holds no account, so there is no `--remove`.                                                                                                                                                                                                                                                                                                                                           |

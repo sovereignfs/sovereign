@@ -5,8 +5,11 @@ import {
   fromBase64Url,
   importWrappingKey,
   newKey,
+  kitKey,
   PASSKEY_BYTES,
   passkeyKey,
+  readKit,
+  sealEscrowWrap,
   toBase64Url,
   unwrapSecret,
   wrapSecret,
@@ -35,6 +38,7 @@ export interface VaultActions {
         kitConfirmed: boolean;
       };
       waysIn: { way: string; id: string; record: string; prfSalt?: string }[];
+      escrow?: { id: string; publicKey: string };
     }>
   >;
   setUp(
@@ -44,7 +48,8 @@ export interface VaultActions {
   putWayIn(
     wayIn:
       | { way: 'password'; id: string; record: string }
-      | { way: 'passkey'; id: string; record: string; prfSalt: string },
+      | { way: 'passkey'; id: string; record: string; prfSalt: string }
+      | { way: 'escrow'; id: string; record: string },
   ): Promise<Result>;
   removeWayIn(way: 'password', id: string): Promise<Result<boolean>>;
   sessionSecret(): Promise<Result<string | undefined>>;
@@ -64,6 +69,37 @@ async function keepFor(
   const secret = await actions.sessionSecret();
   const bytes = secret.ok && secret.value ? fromBase64Url(secret.value) : undefined;
   if (bytes?.length === 32) await store.keep(accountKey, bytes);
+}
+
+/**
+ * With escrow on (core-app §5.8), adds the escrow way in for the key in force when the account has none, so the owner can recover the
+ * person's data offline. Called once the person has been told (the release page's notice), never silently.
+ */
+async function coverEscrow(
+  read: {
+    sub: string;
+    waysIn: readonly { way: string; id: string }[];
+    escrow?: { id: string; publicKey: string };
+  },
+  accountKey: Uint8Array,
+  actions: VaultActions,
+): Promise<void> {
+  const escrow = read.escrow;
+  if (!escrow) return;
+  if (read.waysIn.some((wayIn) => wayIn.way === 'escrow' && wayIn.id === escrow.id)) return;
+  const publicKey = fromBase64Url(escrow.publicKey);
+  if (publicKey?.length !== 32) return;
+  try {
+    const record = await sealEscrowWrap({
+      accountKey,
+      sub: read.sub,
+      escrowKeyId: escrow.id,
+      escrowPublicKey: publicKey,
+    });
+    await actions.putWayIn({ way: 'escrow', id: escrow.id, record: JSON.stringify(record) });
+  } catch {
+    // The next unlock tries again.
+  }
 }
 
 /** Opens the account key with a password's unlock key, trying each password way in (two while a change is under way). */
@@ -242,6 +278,60 @@ export async function unlockWithPasskey(
 }
 
 /**
+ * Unlocks with the recovery kit (core-app §5.3): after a reset, or a recovery through escrow, when the password no longer opens the
+ * keys. The kit opens the account key, the browser keeps it, and the password the person signs in with now gets its way in in place of
+ * the ones that no longer open, so the password unlocks again from then on. `'mistyped'` for a kit that is not well formed, `'locked'`
+ * for one that is not this account's.
+ */
+export async function unlockWithKit(
+  typed: string,
+  password: WebKey,
+  actions: VaultActions,
+  store: KeyStore,
+): Promise<'unlocked' | 'locked' | 'mistyped'> {
+  const kit = await readKit(typed);
+  if (!kit.ok) return 'mistyped';
+  const read = await actions.read();
+  if (!read.ok || !read.value.account) return 'locked';
+  const { sub, account, waysIn } = read.value;
+  const wayIn = waysIn.find((each) => each.way === 'kit');
+  if (!wayIn) return 'locked';
+  let accountKey: Uint8Array;
+  try {
+    accountKey = await unwrapSecret(
+      await kitKey(kit.kit),
+      JSON.parse(wayIn.record),
+      accountWrapData(sub, 'kit'),
+    );
+  } catch {
+    return 'locked';
+  } finally {
+    kit.kit.fill(0);
+  }
+  try {
+    const salt = fromBase64Url(account.unlockSalt);
+    if (salt?.length === 32) {
+      const id = randomId();
+      const record = await wrapSecret(
+        await deriveUnlockKey(password, salt),
+        accountKey,
+        accountWrapData(sub, 'password', id),
+      );
+      const put = await actions.putWayIn({ way: 'password', id, record: JSON.stringify(record) });
+      if (put.ok) {
+        for (const old of waysIn.filter((each) => each.way === 'password')) {
+          await actions.removeWayIn('password', old.id);
+        }
+      }
+    }
+    await keepFor(actions, store, accountKey);
+    return 'unlocked';
+  } finally {
+    accountKey.fill(0);
+  }
+}
+
+/**
  * Gives a passkey its way in (core-app §5.5): the account key, kept by this browser, wrapped by a key from the passkey's PRF output
  * and a salt made for it. `false` when this browser is locked, so there is no account key to wrap.
  */
@@ -270,6 +360,28 @@ export async function addPasskeyWayIn(
       prfSalt: toBase64Url(salt),
     });
     return put.ok;
+  } finally {
+    accountKey.fill(0);
+  }
+}
+
+/** Whether escrow is on and this account has no escrow way in for the key in force: the person is to be told, then covered. */
+export async function escrowPending(actions: VaultActions): Promise<boolean> {
+  const read = await actions.read();
+  if (!read.ok || !read.value.account || !read.value.escrow) return false;
+  const id = read.value.escrow.id;
+  return !read.value.waysIn.some((wayIn) => wayIn.way === 'escrow' && wayIn.id === id);
+}
+
+/** Adds the escrow way in, with the account key this browser holds open. `false` when it is locked. */
+export async function coverEscrowNow(actions: VaultActions, store: KeyStore): Promise<boolean> {
+  const read = await actions.read();
+  if (!read.ok || !read.value.account) return false;
+  const accountKey = await keptAccountKey(actions, store);
+  if (!accountKey) return false;
+  try {
+    await coverEscrow(read.value, accountKey, actions);
+    return true;
   } finally {
     accountKey.fill(0);
   }

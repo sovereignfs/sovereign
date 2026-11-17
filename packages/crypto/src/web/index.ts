@@ -84,3 +84,5 @@ export {
   STATE_BYTES,
 } from './release.js';
 export type { ReleaseAnswer, ReleaseRefusal, ReleaseTarget } from './release.js';
+export { escrowKeyId, formatEscrowKey, looksLikeEscrowKey, parseEscrowKey } from './escrow.js';
+export type { EscrowKey } from './escrow.js';

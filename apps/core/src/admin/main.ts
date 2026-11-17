@@ -10,6 +10,7 @@ import {
 } from '../accounts/deletion-ledger';
 import { getAuth } from '../auth';
 import { makeResetLink } from '../auth/reset-link';
+import { escrowRecordFor, putKitFor } from '../keys/escrow-admin';
 import { getAuthSettings } from '../auth/settings';
 import { getClientRegistry } from '../clients';
 import { systemActor } from '../clients/system-actor';
@@ -76,6 +77,13 @@ async function main(): Promise<number> {
           });
         },
         resetLink: async (email) => makeResetLink(await getAuth(), email, getConfig().url),
+        escrowRecord: (email) => escrowRecordFor(database, email),
+        putKit: async (email, file) =>
+          putKitFor(
+            database,
+            email,
+            file === undefined ? await readStdin() : await readFile(file, 'utf8'),
+          ),
         applyDeletions: async (file) => {
           // No sending from here: the notices wait in the table, and core sends them when it starts.
           const manager = new AccountManager(database, new AccountStates(database), {

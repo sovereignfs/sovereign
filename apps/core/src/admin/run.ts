@@ -23,6 +23,10 @@ export type InstanceOperations = {
   seed(options: { local: boolean }): Promise<SeedReport>;
   /** A reset link for the account with this address, or `undefined` when there is none (core-app §5.2). */
   resetLink(email: string): Promise<string | undefined>;
+  /** The account's escrow way in, as JSON for `sv key escrow open`, or `undefined` with none (core-app §5.8). */
+  escrowRecord(email: string): Promise<string | undefined>;
+  /** Stores the way in of a new kit `sv key escrow open` made, from its JSON. `false` with no such account. */
+  putKit(email: string, file: string | undefined): Promise<boolean>;
 };
 
 /** Where the command writes: what it answers on `out`, and a line for each write on `log`, never a secret. */
@@ -176,6 +180,28 @@ export async function runAdmin(
           `sovereign-admin: made a reset link for ${command.email}, which works once, for an hour`,
         );
         out(link);
+        return 0;
+      }
+      case 'escrow-record': {
+        if (!instance) throw new Error('the instance operations were not given to sovereign-admin');
+        const record = await instance.escrowRecord(command.email);
+        if (record === undefined) {
+          log(`sovereign-admin: ${command.email} has no account, or no escrow way in`);
+          return 1;
+        }
+        log(
+          `sovereign-admin: gave the escrow way in of ${command.email}; only the escrow key opens it`,
+        );
+        out(record);
+        return 0;
+      }
+      case 'put-kit': {
+        if (!instance) throw new Error('the instance operations were not given to sovereign-admin');
+        if (!(await instance.putKit(command.email, command.file))) {
+          log(`sovereign-admin: there is no account with keys and the address ${command.email}`);
+          return 1;
+        }
+        log(`sovereign-admin: stored the new recovery kit's way in for ${command.email}`);
         return 0;
       }
       case 'deletions-export': {

@@ -2,7 +2,20 @@ import { derivePassword } from '@sovereignfs/crypto/web';
 import { describe, expect, it } from 'vitest';
 import { KeyStore, memoryBackend } from '../keys/keystore';
 import {
+  accountWrapData,
+  formatKit,
+  generateReceivingKey,
+  kitKey,
+  newKey,
+  openEscrowWrap,
+  publicKeyBytes,
+  wrapSecret,
+} from '@sovereignfs/crypto/web';
+import {
   addPasskeyWayIn,
+  coverEscrowNow,
+  escrowPending,
+  unlockWithKit,
   finishNewPassword,
   keptAccountKey,
   unlockWithPasskey,
@@ -31,11 +44,19 @@ function fakeVault() {
       }
     | undefined;
   const waysIn = new Map<string, { way: string; id: string; record: string; prfSalt?: string }>();
-  const state = { session: b64(bytes(1)) as string | undefined };
+  const state = {
+    session: b64(bytes(1)) as string | undefined,
+    escrow: undefined as { id: string; publicKey: string } | undefined,
+  };
   const actions: VaultActions = {
     read: async () => ({
       ok: true,
-      value: { sub: 'ada', ...(account ? { account } : {}), waysIn: [...waysIn.values()] },
+      value: {
+        sub: 'ada',
+        ...(account ? { account } : {}),
+        waysIn: [...waysIn.values()],
+        ...(state.escrow ? { escrow: state.escrow } : {}),
+      },
     }),
     setUp: async (made, ways) => {
       if (account) return { ok: false, error: 'exists' };
@@ -246,5 +267,80 @@ describe('passkeys that unlock (core-app §5.5)', () => {
       await addPasskeyWayIn('cred', bytes(9), vault.actions, new KeyStore(memoryBackend())),
     ).toBe(false);
     expect(vault.waysIn().some((w) => w.way === 'passkey')).toBe(false);
+  });
+});
+
+describe('the recovery kit (core-app §5.3)', () => {
+  async function withKit() {
+    const vault = fakeVault();
+    const first = new KeyStore(memoryBackend());
+    await unlockWithPassword(await secretOf('old'), vault.actions, first);
+    const key = (await first.open(bytes(1))) as Uint8Array;
+    const kit = newKey();
+    const record = await wrapSecret(await kitKey(kit), key, accountWrapData('ada', 'kit'));
+    await vault.actions.putWayIn({ way: 'kit' as never, id: '', record: JSON.stringify(record) });
+    return { vault, key, kit, text: await formatKit(kit) };
+  }
+
+  it('unlocks after a reset, and gives the new password its way in in place of the old', async () => {
+    const { vault, key, text } = await withKit();
+    const store = new KeyStore(memoryBackend());
+    // A reset: the new password no longer opens the keys.
+    expect(await unlockWithPassword(await secretOf('new'), vault.actions, store)).toBe('locked');
+    expect(
+      await unlockWithKit(text.toLowerCase(), await secretOf('new'), vault.actions, store),
+    ).toBe('unlocked');
+    expect(await store.open(bytes(1))).toEqual(key);
+    expect(vault.waysIn().filter((w) => w.way === 'password')).toHaveLength(1);
+    // From then on the new password unlocks, and the old one does not.
+    expect(
+      await unlockWithPassword(await secretOf('new'), vault.actions, new KeyStore(memoryBackend())),
+    ).toBe('unlocked');
+    expect(
+      await unlockWithPassword(await secretOf('old'), vault.actions, new KeyStore(memoryBackend())),
+    ).toBe('locked');
+  });
+
+  it('tells a mistyped kit from one that is not this account’s', async () => {
+    const { vault, text } = await withKit();
+    const store = new KeyStore(memoryBackend());
+    const typo = `${text.slice(0, 5)}${text[5] === 'A' ? 'B' : 'A'}${text.slice(6)}`;
+    expect(await unlockWithKit(typo, await secretOf('new'), vault.actions, store)).toBe('mistyped');
+    expect(
+      await unlockWithKit(await formatKit(newKey()), await secretOf('new'), vault.actions, store),
+    ).toBe('locked');
+    expect(vault.waysIn().filter((w) => w.way === 'password')).toHaveLength(1);
+  });
+});
+
+describe('escrow (core-app §5.8)', () => {
+  it('is pending only while escrow is on and the account is not covered, and covering needs an unlocked browser', async () => {
+    const vault = fakeVault();
+    const store = new KeyStore(memoryBackend());
+    await unlockWithPassword(await secretOf('pw'), vault.actions, store);
+    const key = await store.open(bytes(1));
+    expect(await escrowPending(vault.actions)).toBe(false);
+
+    const pair = await generateReceivingKey();
+    const publicKey = await publicKeyBytes(pair.publicKey);
+    vault.state.escrow = { id: 'escrow-one', publicKey: b64(publicKey) };
+    expect(await escrowPending(vault.actions)).toBe(true);
+    // Unlocking alone covers nobody: the person is told first.
+    await unlockWithPassword(await secretOf('pw'), vault.actions, new KeyStore(memoryBackend()));
+    expect(vault.waysIn().some((w) => w.way === 'escrow')).toBe(false);
+
+    expect(await coverEscrowNow(vault.actions, new KeyStore(memoryBackend()))).toBe(false);
+    expect(await coverEscrowNow(vault.actions, store)).toBe(true);
+    expect(await escrowPending(vault.actions)).toBe(false);
+    const record = vault.waysIn().find((w) => w.way === 'escrow');
+    // The owner's private key, offline, opens the account key.
+    expect(
+      await openEscrowWrap({
+        record: JSON.parse(record?.record ?? '{}'),
+        sub: 'ada',
+        escrowKeyId: 'escrow-one',
+        escrow: { privateKey: pair.privateKey, publicKey },
+      }),
+    ).toEqual(key);
   });
 });

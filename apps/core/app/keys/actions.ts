@@ -2,6 +2,7 @@
 
 import { requireCapability } from '../../src/auth/authorize';
 import { getDatabase } from '../../src/database';
+import { getSettings, SETTINGS } from '../../src/settings';
 import {
   KeyVault,
   VaultError,
@@ -30,14 +31,25 @@ async function attempt<T>(run: () => Promise<T>): Promise<VaultResult<T>> {
   }
 }
 
-/** The account's keys and ways in, and whose they are (the `sub` every record is bound to). */
+/**
+ * The account's keys and ways in, whose they are (the `sub` every record is bound to), and the escrow public key when the owner turned
+ * escrow on (core-app §5.8), so the browser can add the escrow way in when it next unlocks.
+ */
 export async function readVaultAction(): Promise<
-  VaultResult<{ sub: string; account?: VaultAccount; waysIn: VaultWayIn[] }>
+  VaultResult<{
+    sub: string;
+    account?: VaultAccount;
+    waysIn: VaultWayIn[];
+    escrow?: { id: string; publicKey: string };
+  }>
 > {
   const session = await requireCapability('profile:manage');
+  const line = await (await getSettings()).value(SETTINGS.escrowPublicKey);
+  const [, id, publicKey] = line?.split('.') ?? [];
   return attempt(async () => ({
     sub: session.user.id,
     ...(await (await vault()).read(session.user.id)),
+    ...(id && publicKey ? { escrow: { id, publicKey } } : {}),
   }));
 }
 

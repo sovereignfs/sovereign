@@ -99,7 +99,7 @@ be argued before anything is built.
 
 ### M4 — Core installs as an app (PWA)
 
-[RFC 0001](docs/rfcs/0001-installable-core.md) (Accepted; amendment 1 proposed) · [research 0010](docs/research/0010-opening-installed-apps.md) ·
+[RFC 0001](docs/rfcs/0001-installable-core.md) (Accepted, with amendment 1) · [research 0010](docs/research/0010-opening-installed-apps.md) ·
 epic [11](docs/epics/pwa.md) · workstream [0006](docs/workstreams/0006-pwa.md)
 
 | Version | Priority | Task                                            | Status | Epic task                  |

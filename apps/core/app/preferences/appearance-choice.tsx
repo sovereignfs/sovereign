@@ -6,13 +6,13 @@ import { readThemeChoice, setThemeChoice, type ThemeChoice } from '../../src/the
 import styles from '../security/security.module.css';
 
 const OPTIONS = [
+  { value: 'system', label: 'System' },
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
-  { value: 'system', label: 'System' },
 ] as const;
 
 /**
- * Light, dark, or whatever the system says, for core on this device. It applies as it is chosen and needs no saving:
+ * Whatever the system says (the default, so it comes first), light, or dark, for core on this device. It applies as it is chosen and needs no saving:
  * it is kept in this browser and goes nowhere else, so another device keeps its own.
  */
 export function AppearanceChoice() {

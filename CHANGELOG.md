@@ -5,6 +5,17 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.101.0] - 2026-11-17
+
+### Added
+
+- Each person's keys are set up silently the first time they sign in with their password, and opened by the password on any
+  browser (core-app §5.3). Core keeps only what opens them, wrapped, and opens none of it; deleting an account deletes it all.
+- A browser stays unlocked until its session ends (core-app §5.4): the key is kept wrapped by a device key and by the session's own
+  secret, so nothing it keeps opens once the session has ended. Signing out forgets it.
+- The reset page tells someone with keys that what apps keep encrypted stays locked after a reset, until a passkey or the recovery
+  kit opens it.
+
 ## [0.100.0] - 2026-11-16
 
 ### Changed

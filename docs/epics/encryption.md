@@ -186,7 +186,7 @@ for each way a record must be refused.
 - The kit can be read by a screen reader group by group, and printed on one page
 - `pnpm --filter @sovereignfs/ui typecheck` passes
 
-#### 📋 16.6 — Core's vault and the recovery kit
+#### ✅ 16.6 — Core's vault and the recovery kit
 
 **Goal:** A person who signs in has an account key, wrapped by their password and by a recovery kit they were shown, kept by core in a form
 core cannot open.
@@ -219,7 +219,7 @@ core cannot open.
 - Deleting an account leaves no row of it in the three tables
 - The schema parity test passes; `pnpm test:db` passes on each dialect
 
-#### 📋 16.7 — Staying unlocked until the session ends
+#### ✅ 16.7 — Staying unlocked until the session ends
 
 **Goal:** A reload or a new tab asks nothing, and a browser whose session has ended holds nothing that can be opened, whether or not a
 page was open when it ended.

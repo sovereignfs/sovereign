@@ -33,14 +33,12 @@ export default async function Page() {
             canAddApps={canAddApps}
             canOpenConsole={canOpenConsole}
             title="Apps"
-            subtitle={`You are signed in as ${session.user.name}. Choose an app to open it.`}
+            subtitle="Choose an app to open it."
           />
         ) : (
           <>
             <h1 className={styles.title}>Apps</h1>
-            <p className={styles.text}>
-              {`You are signed in as ${session.user.name}. You do not have access to the apps on this instance.`}
-            </p>
+            <p className={styles.text}>You do not have access to the apps on this instance.</p>
           </>
         )}
       </div>

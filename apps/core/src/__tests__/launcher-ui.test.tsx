@@ -94,7 +94,7 @@ describe('the launcher', () => {
     expect(screen.getByText(/Ask whoever runs it/)).toBeTruthy();
   });
 
-  it('has the Console first, as a platform app, for an operator, and marks every other tile as a Sovereign app', () => {
+  it('has the Console after the apps, as a platform app, for an operator, and marks every other tile as a Sovereign app', () => {
     render(
       <Launcher
         title="Apps"
@@ -106,9 +106,9 @@ describe('the launcher', () => {
     );
     const links = screen.getAllByRole('link');
     expect(links).toHaveLength(4);
-    expect(links[0]?.getAttribute('href')).toBe('/console');
-    expect(links[0]?.textContent).toContain('Console');
-    expect(links[0]?.textContent).toContain('platform');
+    expect(links[3]?.getAttribute('href')).toBe('/console');
+    expect(links[3]?.textContent).toContain('Console');
+    expect(links[3]?.textContent).toContain('platform');
     expect(screen.getAllByText('sovereign')).toHaveLength(3);
     expect(screen.getAllByText('platform')).toHaveLength(1);
   });
@@ -141,15 +141,15 @@ describe('the launcher', () => {
     );
   });
 
-  it('offers adding an app as a dashed tile after the others, only to those who may, and not while searching', () => {
+  it('offers adding an app as a dashed first tile, only to those who may, and not while searching', () => {
     const { rerender } = render(
       <Launcher title="Apps" subtitle="Choose an app." apps={APPS} canAddApps />,
     );
     const links = screen.getAllByRole('link');
     expect(links).toHaveLength(4);
-    expect(links[3]?.textContent).toContain('Add an app');
-    expect(links[3]?.className).toContain('ghost');
-    expect(links[3]?.textContent).toContain('sovereign');
+    expect(links[0]?.textContent).toContain('Add an app');
+    expect(links[0]?.className).toContain('ghost');
+    expect(links[0]?.textContent).toContain('sovereign');
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'not' } });
     expect(screen.queryByRole('link', { name: /Add an app/ })).toBeNull();
     rerender(<Launcher title="Apps" subtitle="Choose an app." apps={APPS} canAddApps={false} />);
@@ -167,5 +167,17 @@ describe('the launcher', () => {
     rerender(<Launcher title="Apps" subtitle="You are signed in." apps={[]} canAddApps={false} />);
     expect(screen.getByRole('heading', { name: 'Apps' })).toBeTruthy();
     expect(screen.queryByRole('searchbox')).toBeNull();
+  });
+});
+
+describe('the order of the tiles', () => {
+  it('is "Add an app", then the apps, then the Console', () => {
+    render(
+      <Launcher title="Apps" subtitle="Choose an app." apps={APPS} canAddApps canOpenConsole />,
+    );
+    const links = screen.getAllByRole('link');
+    expect(links).toHaveLength(5);
+    expect(links[0]?.textContent).toContain('Add an app');
+    expect(links[4]?.getAttribute('href')).toBe('/console');
   });
 });

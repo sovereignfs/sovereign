@@ -15,7 +15,7 @@ import {
 import type { LauncherApp } from '../src/clients/launcher';
 import styles from './launcher.module.css';
 
-/** Core's own app for operators, which is not a client in the registry: it opens in the same place, and is listed first. */
+/** Core's own app for operators, which is not a client in the registry: it opens in the same place, and is listed after the apps. */
 const CONSOLE = {
   id: 'console',
   name: 'Console',
@@ -38,8 +38,8 @@ const KIND = {
 } as const;
 
 /**
- * The apps a person can open, with search by name. An operator (`canOpenConsole`) also has the Console, a platform app, as the first
- * tile; every other tile is a Sovereign app. A tile is an ordinary link to the app's launch address in
+ * The apps a person can open, with search by name. An operator (`canOpenConsole`) also has the Console, a platform app, as the last
+ * tile; every other tile is a Sovereign app. Someone who may add apps has "Add an app" as the first tile. A tile is an ordinary link to the app's launch address in
  * the same tab, so the person can still open it in a new one themselves; the app then signs them in through core,
  * which completes without a prompt when they already have a session. The icon is the app's own, or a drawn
  * one from its name when there is none (or it will not load).
@@ -118,13 +118,14 @@ export function Launcher({
         </p>
       ) : (
         <CardTileGrid minTileWidth={260}>
-          {showConsole ? (
+          {addTile ? (
             <AppTile
-              href={CONSOLE.href}
-              name={CONSOLE.name}
-              description={CONSOLE.description}
-              icon={<Icon name="layout-dashboard" size="lg" aria-hidden={true} />}
-              tags={KIND.platform}
+              variant="ghost"
+              href="/console/apps/new"
+              name="Add an app"
+              description="Register one for this instance"
+              icon={<Icon name="plus" size="lg" aria-hidden={true} />}
+              tags={KIND.sovereign}
             />
           ) : null}
           {shown.map((app) => (
@@ -137,14 +138,13 @@ export function Launcher({
               tags={KIND.sovereign}
             />
           ))}
-          {addTile ? (
+          {showConsole ? (
             <AppTile
-              variant="ghost"
-              href="/console/apps/new"
-              name="Add an app"
-              description="Register one for this instance"
-              icon={<Icon name="plus" size="lg" aria-hidden={true} />}
-              tags={KIND.sovereign}
+              href={CONSOLE.href}
+              name={CONSOLE.name}
+              description={CONSOLE.description}
+              icon={<Icon name="layout-dashboard" size="lg" aria-hidden={true} />}
+              tags={KIND.platform}
             />
           ) : null}
         </CardTileGrid>

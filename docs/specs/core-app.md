@@ -87,8 +87,9 @@ Roboto, Helvetica, Arial, sans-serif`. A page or component names a family only
   has the same header. On the left, the instance's mark (its logo, or the first
   letter of its name in a badge, a little larger than on the sign-in pages) and
   its name, which lead home. On the right, the person's avatar (their picture, or
-  their initials), which opens a menu with who they are, their account, the
-  Console for an operator, and sign out. No page is a dead end, and none repeats
+  their initials), which opens a menu with who they are, their account and sign
+  out; an operator reaches the Console from its tile on the launcher, where the
+  name leads. No page is a dead end, and none repeats
   the header's links of its own. The pages before sign-in show the instance's
   mark above their title, so a person can tell whose sign-in it is.
 - An address that leads nowhere, and a page that fails, show a page of the same
@@ -908,7 +909,7 @@ message`), 2 when the command line is wrong or core is not configured, and 3 whe
   not access control:** an app that should be restricted decides that itself,
   for example from the `roles` claim.
 - The page has the instance's name and logo, a way to each of the person's
-  own account pages (and the Console, for an operator), and one tile for each
+  own account pages, and one tile for each
   app: a link, so it works with the keyboard and opens in a new tab on request.
   Search matches the app's name, whatever the case, and says so when nothing
   matches. An app with no launch address has nothing to open and is not listed.
@@ -916,10 +917,10 @@ message`), 2 when the command line is wrong or core is not configured, and 3 whe
   account links.
 - A tile is an `AppTile`: the icon in a rounded box, the name, the description, and beneath a divider what kind of app it is. Core's
   own apps are **platform** apps and every app an operator added is a **Sovereign** app. For a person with `console:access` the
-  Console is a platform app and the first tile; it is not in the registry, is found by search like any other, and is shown to no one
+  Console is a platform app and the last tile, after the apps operators added; it is not in the registry, is found by search like any other, and is shown to no one
   else. Tiles are the size of the earlier launcher's, in a grid whose columns are at least 260px; the heading and its line are on the
   left and the search on the right (stacked on a phone). A person who may add apps (`client:manage`) has a dashed "Add an app" tile
-  after the others, which is not shown while searching; anyone else, with no app yet, is told whom to ask.
+  first, before the apps, which is not shown while searching; anyone else, with no app yet, is told whom to ask.
 - A tile's icon is the address an operator gave, or a drawn one from the name
   when there is none or it will not load. Only this page may load pictures from
   other addresses (`https`, and `http` on `localhost` on a development
@@ -2076,3 +2077,4 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-17 | §5.7: sharing is built: the two key calls in the Core API, behind their guard, `404` alike for anyone without keys for the app, and `keys` among the capabilities.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 2026-11-17 | §5.8: escrow is built, turned on in the Console by the owner; a person is told before they are covered, not covered silently at the next unlock. §5.3: unlocking with the kit, which gives the current password its way in again, built here as escrow recovery ends in it.                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-11-17 | §5.3: the recovery kit says what escrow changes: with escrow on it is the person's own way back, and the owner can also recover their data.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-11-17 | §1.3, §3.8: the Console is reached from its tile on the launcher, now the last tile after the apps operators added ("Add an app" is the first), and is no longer in the avatar's menu; the launcher's line no longer names the person.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |

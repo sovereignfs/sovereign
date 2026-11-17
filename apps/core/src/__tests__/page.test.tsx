@@ -40,12 +40,13 @@ beforeEach(() => {
 });
 
 describe('the home page, which is the launcher', () => {
-  it('says what it is, in one level-one heading, and who is signed in, under the header', async () => {
+  it('says what it is, in one level-one heading, and not who is signed in, under the header', async () => {
     as(ROLE_USER);
     const html = renderToStaticMarkup(await Page());
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
     expect(html).toContain('>Apps</h1>');
-    expect(html).toContain('Ada Lovelace');
+    expect(html).toContain('Choose an app to open it.');
+    expect(html).not.toContain('Ada Lovelace');
     expect(html.indexOf('the header')).toBeLessThan(html.indexOf('>Apps</h1>'));
   });
 

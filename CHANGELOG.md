@@ -5,6 +5,15 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.104.0] - 2026-11-17
+
+### Added
+
+- People can share encrypted things with each other in an app (core-app §5.7). Two new Core API calls give a person's public keys
+  for the app, and the caller's own keys still locked by the app's key; nothing either returns lets a server read what is shared.
+- An app's page checks every person's keys against their account's signature, and refuses keys that changed until the person using
+  it says to go on.
+
 ## [0.103.0] - 2026-11-17
 
 ### Added

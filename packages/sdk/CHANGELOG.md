@@ -5,6 +5,14 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 2.1.0; earlier versions are in the repository's
 history and tags.
 
+## [2.3.0] - 2026-11-17
+
+### Added
+
+- `keys.me()` and `keys.person(sub)`, as a person: their own keys for the app, and another person's public keys (sdk §8).
+- Sharing in `@sovereignfs/sdk/keys`: `checkPerson`, `trustChanged`, `identity`, `share`, `openShared` and `newDocumentKey` (sdk §9.4).
+- The fake core answers the two key calls, given keys with `setKeys`.
+
 ## [2.2.0] - 2026-11-17
 
 ### Added

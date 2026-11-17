@@ -332,7 +332,7 @@ needs unlocking.
 - Core's OpenID Connect provider is unchanged, and an app that only signs in sees no difference
 - `/keys/release` is rendered per request, never cached and never framed
 
-#### 📋 16.11 — Sharing between people
+#### ✅ 16.11 — Sharing between people
 
 **Goal:** A person shares a document with another, and the other's browser opens it, with a swapped key refused.
 

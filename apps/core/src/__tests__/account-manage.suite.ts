@@ -37,6 +37,7 @@ const TABLES = [
   'oauth_resources',
   'jwks',
   'capability_overrides',
+  'launcher_shortcuts',
   'invites',
   'avatars',
   'passkeys',
@@ -443,9 +444,22 @@ export function accountManageSuite(createDatabase: () => Promise<TestDatabase>):
         ],
       );
 
+      // A shortcut of their own goes with them; one for everyone, which they added, is the instance's and stays.
+      for (const [id, owner] of [
+        ['s-own', pat],
+        ['s-shared', null],
+      ]) {
+        await db.run(
+          'insert into launcher_shortcuts (id, owner_id, name, url, created_at, created_by) values (?, ?, ?, ?, ?, ?)',
+          [id, owner, 'Drive', 'https://drive.proton.me', Date.now(), pat],
+        );
+      }
+
       await ctx.manager.delete(ctx.asAdmin, pat);
 
       expect(await getAccount(db, pat)).toBeUndefined();
+      expect(await count('launcher_shortcuts', 'where owner_id = ?', [pat])).toBe(0);
+      expect(await count('launcher_shortcuts')).toBe(1);
       for (const table of [
         'sessions',
         'accounts',

@@ -613,3 +613,23 @@ export const keySessionSecrets = pgTable('key_session_secrets', {
   secret: text('secret').notNull(),
   createdAt: bigint('created_at', { mode: 'number' }).notNull(),
 });
+
+/** Launcher shortcuts (core-app §3.8.1); see the SQLite schema for what each column is. */
+export const launcherShortcuts = pgTable(
+  'launcher_shortcuts',
+  {
+    id: text('id').primaryKey(),
+    ownerId: text('owner_id').references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    url: text('url').notNull(),
+    description: text('description'),
+    iconSymbol: text('icon_symbol'),
+    iconType: text('icon_type'),
+    iconBytes: postgresBytes('icon_bytes'),
+    iconSize: integer('icon_size'),
+    iconVersion: text('icon_version'),
+    createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+    createdBy: text('created_by'),
+  },
+  (table) => [index('launcher_shortcuts_owner_idx').on(table.ownerId)],
+);

@@ -148,6 +148,13 @@
       "when": 1794857923446,
       "tag": "0020_key_vault",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794951248901,
+      "tag": "0021_launcher_shortcuts",
+      "breakpoints": true
     }
   ]
 }

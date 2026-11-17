@@ -106,6 +106,7 @@ export function settingsSuite(createDatabase: () => Promise<TestDatabase>): void
         '0018_account_deletion_notices',
         '0019_deleted_accounts',
         '0020_key_vault',
+        '0021_launcher_shortcuts',
       ]);
     });
   });

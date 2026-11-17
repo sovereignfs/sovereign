@@ -354,6 +354,8 @@ async function removeAccount(tx: Executor, id: string): Promise<void> {
     }
     await tx.run(`delete from ${table} where user_id = ?`, [id]);
   }
+  // A person's own launcher shortcuts (core-app §3.8.1); those for everyone are the instance's, and stay.
+  await tx.run('delete from launcher_shortcuts where owner_id = ?', [id]);
   await tx.run('update invites set invited_by = null where invited_by = ?', [id]);
   await tx.run('delete from rate_limits where key = ?', [`confirm-password|${id}`]);
   await tx.run('delete from users where id = ?', [id]);

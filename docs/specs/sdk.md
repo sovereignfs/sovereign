@@ -364,6 +364,9 @@ Built (core-app §5.7, RFC 0005 §3.1, task 16.11), in `@sovereignfs/sdk/keys`, 
 - **`newDocumentKey()`** makes a document key. An app makes a new one at the next write after removing a reader, and seals it only to
   those who remain (RFC 0005 §8); what a removed reader already read cannot be taken back, and the app says so.
 - Document keys are the app's to keep, beside its documents.
+- **`encryptContent(contentKey, { documentId, version }, stream)`** and `decryptContent` encrypt a document in RFC 0005 §1.3's
+  chunks, as streams; **`encryptBytes`** and `decryptBytes` a small value whole (a name, a type, a size). `importDocumentKey` makes
+  the content key from a document key's bytes. A blob read under another id or version, or cut short, does not open.
 
 ### 9.5 An app with no core
 

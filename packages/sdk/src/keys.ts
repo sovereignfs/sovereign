@@ -7,6 +7,8 @@
  * - `receive()`, on the page at that address, takes core's answer from the fragment (removed from the address before anything else),
  *   opens it with the private key made for the request, checks it, and keeps the app key until the app's session ends.
  *
+ * - `encryptContent`, `decryptContent`, `encryptBytes` and `decryptBytes`, with `importDocumentKey`, are a document and its name and
+ *   type, encrypted with its document key in RFC 0005 §1.3's format.
  * - `localVault()` is the same app key for an app that runs with no core (sdk §9.5): its own vault, unlocked at its own sign-in.
  *
  * The app key is kept as core keeps the account key: wrapped by a device key and by the app session's own secret, which the app's
@@ -38,7 +40,16 @@ import {
 } from '@sovereignfs/crypto/web';
 
 export type { OpenedIdentity, ReleaseRefusal, SharedKeyRecord } from '@sovereignfs/crypto/web';
-export { formatKit } from '@sovereignfs/crypto/web';
+export {
+  CHUNK_BYTES,
+  decryptBytes,
+  decryptContent,
+  encryptBytes,
+  encryptContent,
+  formatKit,
+  importDocumentKey,
+} from '@sovereignfs/crypto/web';
+export type { ContentTarget } from '@sovereignfs/crypto/web';
 export { localVault } from './local-vault.js';
 export type { LocalVault, LocalVaultOptions } from './local-vault.js';
 

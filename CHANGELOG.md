@@ -5,6 +5,16 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.103.0] - 2026-11-17
+
+### Added
+
+- Apps can encrypt what they keep so the server can't read it (core-app §5.7). An app's pages get the app's own key from core once
+  each browser session, through `@sovereignfs/sdk/keys`, and keep it until the app's session ends. A person who is unlocked sees
+  only "Opening…"; a locked browser asks for the password or a passkey.
+- The recovery kit is shown, and must be kept, the first time a person opens an app that uses encryption.
+- An operator lets an app use encryption by giving it a key return address (built with the previous version, complete now).
+
 ## [0.102.0] - 2026-11-17
 
 ### Added

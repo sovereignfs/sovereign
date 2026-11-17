@@ -99,6 +99,16 @@ peerDependencyRules:
   allowedVersions:
     'eslint-plugin-jsx-a11y>eslint': '10'
 
+# Advisories the audit (CI, dependency-audit.yml) passes over, each with why. Remove an entry as soon as a fixed release
+# exists: an `overrides` entry capped to the consumer's range is then the fix.
+# - GHSA-fc5q-39xc-vjpf (picomatch ReDoS on crafted extglobs, high): no release is fixed (4.0.7, the latest, is affected).
+#   picomatch is reached only by development tooling (lint-staged, typescript-eslint, tsup, vitest), never by what is
+#   published or the image (`pnpm audit --prod` finds nothing); the globs it matches are this repository's own, not
+#   anyone's input. Added 2026-11-17, with the goal owner's approval.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-fc5q-39xc-vjpf
+
 # pnpm blocks dependency build scripts by default; list the ones that must run.
 # esbuild (via tsx) needs its postinstall to link the platform binary.
 # simple-git-hooks is declined: the root `prepare` script installs the git hooks

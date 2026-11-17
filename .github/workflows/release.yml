@@ -82,10 +82,14 @@ jobs:
       tag: ${{ needs.plan.outputs.image }}
       pr: ${{ github.event.pull_request.html_url }}
 
+  # After the packages: an app made by `create` installs the packages its template names from npm, and the toolkit's workflow
+  # checks they are there before it publishes anything (docs/releasing.md). With no package in the release, it runs alone.
   toolkit:
     name: Toolkit
-    needs: plan
-    if: needs.plan.outputs.cli != ''
+    needs: [plan, packages]
+    if: >-
+      !cancelled() && needs.plan.outputs.cli != '' &&
+      (needs.packages.result == 'success' || needs.packages.result == 'skipped')
     permissions:
       contents: write
       packages: write

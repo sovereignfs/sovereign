@@ -69,6 +69,12 @@ describe('the release workflow', () => {
     expect(release.match(/secrets: inherit/g)).toHaveLength(3);
   });
 
+  it('publishes the toolkit only once the packages its template names are out, or when the release has none', () => {
+    expect(release).toMatch(
+      /toolkit:\n {4}name: Toolkit\n {4}needs: \[plan, packages\]\n {4}if: >-\n {6}!cancelled\(\) && needs\.plan\.outputs\.cli != '' &&\n {6}\(needs\.packages\.result == 'success' \|\| needs\.packages\.result == 'skipped'\)/,
+    );
+  });
+
   it('publishes the design system’s Storybook from the tag ui was released at, once the packages are out', () => {
     expect(release).toContain('storybook: ${{ steps.plan.outputs.storybook }}');
     expect(release).toMatch(

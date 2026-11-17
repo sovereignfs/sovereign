@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { SignInError } from '../errors';
 import type { Session } from '../session';
 import type { Sovereign } from '../sovereign';
+import { trimTrailingSlashes } from '../slashes.js';
 
 export type NextAuthOptions = {
   /** Where the route is mounted. It must match the SDK's `redirectPath` (`/auth/callback`) and `postLogoutPath`. `/auth` unless changed. */
@@ -28,7 +29,7 @@ type RouteHandler = (request: Request) => Promise<Response>;
  * `next` is an optional peer dependency of the SDK, and this is the only entry that uses it.
  */
 export function nextAuth(sv: Sovereign, options: NextAuthOptions = {}) {
-  const base = (options.basePath ?? '/auth').replace(/\/+$/, '');
+  const base = trimTrailingSlashes(options.basePath ?? '/auth');
   const errorPath = options.errorPath ?? '/?error=signin';
 
   const go = (url: string, setCookies: string[], status = 303): Response => {
@@ -39,7 +40,7 @@ export function nextAuth(sv: Sovereign, options: NextAuthOptions = {}) {
 
   const actionOf = (request: Request): string => {
     const path = new URL(request.url).pathname;
-    return path.startsWith(`${base}/`) ? path.slice(base.length + 1).replace(/\/+$/, '') : '';
+    return path.startsWith(`${base}/`) ? trimTrailingSlashes(path.slice(base.length + 1)) : '';
   };
 
   const GET: RouteHandler = async (request) => {

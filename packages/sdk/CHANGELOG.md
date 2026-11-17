@@ -13,6 +13,11 @@ history and tags.
   from `@sovereignfs/sdk/keys` (sdk §9.5, §12). No published version had it in `/keys`. An app that gets its key from core no longer
   loads any of the password derivation: `/keys` reaches no file of libsodium, and `/local-vault` loads it only when a key is derived.
 
+### Fixed
+
+- Trailing slashes are dropped from core's address and the auth base path with an index scan, not a regular expression that was
+  quadratic on a long run of slashes (`appKeys`, the notice check, the Next.js handler).
+
 ## [2.5.0] - 2026-11-17
 
 ### Added

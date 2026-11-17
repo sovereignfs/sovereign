@@ -39,6 +39,7 @@ import {
   type ReleaseRefusal,
   type WebKey,
 } from '@sovereignfs/crypto/web';
+import { trimTrailingSlashes } from './slashes.js';
 
 export type { OpenedIdentity, ReleaseRefusal, SharedKeyRecord } from '@sovereignfs/crypto/web';
 export {
@@ -123,7 +124,7 @@ export function appKeys(options: AppKeysOptions) {
   const http = options.fetch ?? ((input, init) => globalThis.fetch(input, init));
   const where = () => options.location ?? globalThis.location;
   const now = options.now ?? Date.now;
-  const core = options.core.replace(/\/+$/, '');
+  const core = trimTrailingSlashes(options.core);
 
   /** The session's secret and whose session it is, from the app's own server, or `undefined` with no session. */
   async function sessionSecret(): Promise<{ sub: string; secret: Uint8Array } | undefined> {

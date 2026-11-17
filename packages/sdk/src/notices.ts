@@ -5,6 +5,7 @@ import {
   jwtVerify,
 } from 'jose';
 import { ConfigurationError, CoreUnavailableError, InvalidNoticeError } from './errors';
+import { trimTrailingSlashes } from './slashes.js';
 
 export const BACK_CHANNEL_EVENT = 'http://schemas.openid.net/event/backchannel-logout';
 export const ACCOUNT_DELETED_EVENT = 'urn:sovereignfs:event:account-deleted';
@@ -217,7 +218,7 @@ async function keysOf(coreUrl: string, fetchImpl: typeof fetch): Promise<NoticeK
   };
 
   // Appended to the issuer, as OpenID Connect Discovery §4 says: an issuer with a path keeps it (a leading slash would replace it).
-  const response = await get(`${coreUrl.replace(/\/+$/, '')}/.well-known/openid-configuration`, {
+  const response = await get(`${trimTrailingSlashes(coreUrl)}/.well-known/openid-configuration`, {
     headers: { accept: 'application/json' },
   });
   let document: { issuer?: unknown; jwks_uri?: unknown };

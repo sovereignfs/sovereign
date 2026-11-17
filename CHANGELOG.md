@@ -5,6 +5,28 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.109.0] - 2026-11-17
+
+### Added
+
+- Shortcuts: a launcher tile for any site, which opens it in a new tab and signs nobody in. An operator adds shortcuts for everyone
+  under the Console's Apps page; anyone with the launcher adds their own on the new Shortcuts account page, which nobody else sees.
+  The icon is a letter, an icon from a set, or an uploaded picture of up to 256 KB, kept in core.
+- The launcher's first tile is one dashed "Add": an operator chooses between a shortcut for themselves, one for everyone, and an app
+  that signs in here; anyone else adds a shortcut of their own.
+- At the foot of the launcher, the owner and admins read what the instance runs: the platform and core versions, the database, Node's
+  version and how long core has been up. Nobody else is sent it.
+
+### Changed
+
+- The launcher lists apps and shortcuts together in name order, with the Console last, and draws every tile's icon in greys. Its line
+  no longer names the person, who is already shown in the header.
+- The Console is reached from its tile on the launcher, and is no longer in the avatar's menu.
+- The Console can no longer be given to the user role in the permissions table: it, its tile and the details line are for the owner
+  and admins only.
+- A Console page on a phone has one way back, to the page above it, instead of two links one above the other.
+- Appearance offers System first, then Light and Dark.
+
 ## [0.108.0] - 2026-11-17
 
 ### Changed

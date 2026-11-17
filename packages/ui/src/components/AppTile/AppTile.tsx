@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Icon } from '../Icon/Icon';
 import styles from './AppTile.module.css';
 
 export interface AppTileProps {
@@ -14,6 +15,13 @@ export interface AppTileProps {
   href?: string;
   /** `ghost` is a dashed, flat tile for adding another one: the same size as the others, so it sits in the grid as an empty place. */
   variant?: 'solid' | 'ghost';
+  /**
+   * The link leads to another site: it opens in a new tab, without telling the site where it came from
+   * (`noopener noreferrer`), and the tile says so with a small mark beside the name and to assistive tech.
+   */
+  external?: boolean;
+  /** Draws the picture in shades of grey, so tiles whose icons come from elsewhere still look like one set. */
+  monochrome?: boolean;
   className?: string;
 }
 
@@ -28,9 +36,18 @@ export function AppTile({
   tags,
   href,
   variant = 'solid',
+  external = false,
+  monochrome = false,
   className,
 }: AppTileProps) {
-  const classes = [styles.tile, variant === 'ghost' && styles.ghost, href && styles.link, className]
+  const opensElsewhere = external && href !== undefined;
+  const classes = [
+    styles.tile,
+    variant === 'ghost' && styles.ghost,
+    href && styles.link,
+    monochrome && styles.monochrome,
+    className,
+  ]
     .filter(Boolean)
     .join(' ');
   const content = (
@@ -38,7 +55,15 @@ export function AppTile({
       <span className={styles.icon} aria-hidden="true">
         {icon}
       </span>
-      <span className={styles.name}>{name}</span>
+      <span className={styles.name}>
+        {name}
+        {opensElsewhere ? (
+          <>
+            <Icon name="external-link" size="sm" aria-hidden={true} className={styles.external} />
+            <span className={styles.hidden}> (opens in a new tab)</span>
+          </>
+        ) : null}
+      </span>
       {description ? (
         <span className={styles.description}>{description}</span>
       ) : (
@@ -53,7 +78,11 @@ export function AppTile({
     </>
   );
   return href ? (
-    <a className={classes} href={href}>
+    <a
+      className={classes}
+      href={href}
+      {...(opensElsewhere ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+    >
       {content}
     </a>
   ) : (

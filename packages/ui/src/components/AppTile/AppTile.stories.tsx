@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { Avatar } from '../Avatar/Avatar';
 import { Badge } from '../Badge/Badge';
 import { CardTileGrid } from '../CardTile/CardTile';
 import { Icon } from '../Icon/Icon';
@@ -34,6 +35,31 @@ export const Default: Story = {
         journal
       </Badge>
     ),
+  },
+};
+
+/** A tile for another site: it opens in a new tab and carries a small mark beside the name. */
+export const External: Story = {
+  args: {
+    href: 'https://example.com',
+    external: true,
+    name: 'Drive',
+    description: 'Files on another service',
+    icon: <Icon name="hard-drive" size="lg" aria-hidden={true} />,
+    tags: (
+      <Badge variant="mono" size="sm" uppercase={false}>
+        shortcut
+      </Badge>
+    ),
+  },
+};
+
+/** The picture in greys, so an icon from elsewhere matches the rest of the grid. */
+export const Monochrome: Story = {
+  args: {
+    href: '#',
+    monochrome: true,
+    icon: <Avatar name="Drive" size="md" />,
   },
 };
 

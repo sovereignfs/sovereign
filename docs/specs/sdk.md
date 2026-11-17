@@ -202,6 +202,16 @@ list `email`, and the call raises `NotSupportedError` without sending (§7). `ap
 the entry was kept. There is no call to read an entry, as the app or as a person: the record is the person's, read in core. A core that does
 not list `activity` raises `NotSupportedError` without sending.
 
+| Method        | Actor  | Scope  | Operation       |
+| ------------- | ------ | ------ | --------------- |
+| `keys.me`     | person | `keys` | `getMyKeys`     |
+| `keys.person` | person | `keys` | `getPersonKeys` |
+
+The key calls ([core-app §5.7](core-app.md)) give public keys and the person's own wrapped keys for the token's app, and nothing a server
+could read a document with. A person who has not opened the app is a `CoreApiError` with status `404`; the app says so, and may hold a
+share until they do. A core that does not list `keys` raises `NotSupportedError` without sending. The app's server hands what they give
+to its page, where `@sovereignfs/sdk/keys` checks and uses them (§9.4).
+
 Account-deletion fan-out runs the other way, from core to an app: it is specified in [core-app §4.5](core-app.md), and the app's part of it is `sv.auth.handleAccountDeleted` (§9).
 
 ---
@@ -339,7 +349,21 @@ in each browser session, through `@sovereignfs/sdk/keys`, the one entry a page i
   `/auth/key-secret` to the app's own pages only). The app's session ending, by back-channel logout or otherwise, leaves nothing
   that opens.
 - `@sovereignfs/crypto` stays private and is bundled into the entry, as `@sovereignfs/api-client` is.
-- The two calls of core-app §5.7 join §8's capabilities when the contract has them.
+
+### 9.4 Sharing
+
+Built (core-app §5.7, RFC 0005 §3.1, task 16.11), in `@sovereignfs/sdk/keys`, beside §9.3:
+
+- **`checkPerson(keys)`** takes what `keys.person` (or `keys.me`) gave: the account's signature must cover both public keys for this person
+  and app, and the account's signing key must be the one this browser remembers for the person (the first is remembered, and so is the
+  one key release names). A changed one is refused with `changed` until **`trustChanged(keys)`**, after the person using the app said to
+  go on; a signature that does not verify is refused with `signature`.
+- **`identity(appKey, me)`** checks the person's own keys the same way, then opens their two key pairs with the app key.
+- **`share({ documentKey, documentId, to, identity })`** seals a document key to a checked person for one document, signed with the
+  person's own signing key; **`openShared({ record, documentId, me, from, identity })`** checks the sharer's signature, then opens it.
+- **`newDocumentKey()`** makes a document key. An app makes a new one at the next write after removing a reader, and seals it only to
+  those who remain (RFC 0005 §8); what a removed reader already read cannot be taken back, and the app says so.
+- Document keys are the app's to keep, beside its documents.
 
 ## 10. From the legacy SDK
 
@@ -429,3 +453,4 @@ of its own; an app catalogue.
 | 2026-11-02 | §9.2: `verifyLogoutToken` and `verifyAccountDeletedToken`, the rules of §9.1 for an app whose sessions are not the SDK's, with `seen` required: [RFC 0003](../rfcs/0003-apps-of-their-own.md). Built in task 14.11. |
 | 2026-11-16 | §9.3: key release, specified and not built (core-app §5.7).                                                                                                                                                         |
 | 2026-11-17 | §9.3: key release built, in the `/keys` entry, with `auth.keySecret` and `nextAuth`'s `/auth/key-secret`; §3 and §12 name the entry. `@sovereignfs/crypto` is bundled rather than published.                        |
+| 2026-11-17 | §8: `keys.me` and `keys.person`; §9.4: sharing, built, in the `/keys` entry.                                                                                                                                        |

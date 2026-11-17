@@ -1914,7 +1914,7 @@ add` says so, and `sv apply` registers the app's key return address (`sovereign-
 
 ### 5.7 Key release and sharing
 
-Key release is built (task 16.10); sharing is built by task 16.11. Core's OpenID Connect provider is unchanged.
+Built (tasks 16.10, 16.11). Core's OpenID Connect provider is unchanged.
 
 - **Key release** (RFC 0005 §4). An app's page that has no key for this browser session sends the browser to
   `/keys/release?client_id=…&return_to=…&request=…&state=…`. Core's page requires a session; checks that the app exists, is on, may use
@@ -1938,6 +1938,10 @@ Key release is built (task 16.10); sharing is built by task 16.11. Core's OpenID
     signing public key.
   - `GET /api/v1/keys/people/{sub}`: another person's public keys for this app, their signature and that account's signing public key;
     `404` when that person has not opened the app.
+    Both are behind their guard (a token with `keys`, counted per app and per person as the Directory is), act for the token's app only,
+    and answer `404` alike for no such person, a deactivated account, or someone who has not opened the app. `keys` is listed in the
+    instance document's capabilities.
+- **The app's page remembers** each person's account signing key and refuses a changed one until the person says to go on (sdk §9.4).
 - Document keys are the app's, beside its documents. Core's vault knows nothing of documents.
 
 ### 5.8 Escrow
@@ -2059,3 +2063,4 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-17 | §5.3, §5.4: the vault and staying unlocked are built. A password change wraps the key for the new password beside the old and drops the old after, since it cannot share better-auth's transaction; a reset leaves the password's way in stale rather than depend on a hook.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | 2026-11-17 | §5.5: passkeys that unlock are built. Changed from the spec: the PRF input is one per instance and each passkey has its own HKDF salt instead, since a discoverable sign-in cannot be given an input per passkey; a passkey's way in names one of the person's own passkeys and is not read once the passkey is gone; the page offers to let a passkey unlock, and asks a device that gives the output only on use for one more touch.                                                                                                                                                                                                                                                                                        |
 | 2026-11-17 | §5.7: key release is built: what the person sees, and the answer's format; the page sends no referrer. The kit is shown there, at the first encrypted app.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| 2026-11-17 | §5.7: sharing is built: the two key calls in the Core API, behind their guard, `404` alike for anyone without keys for the app, and `keys` among the capabilities.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |

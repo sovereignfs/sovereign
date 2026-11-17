@@ -13,6 +13,7 @@ import {
   TableRow,
 } from '@sovereignfs/ui';
 import { getClientRegistry } from '../../../src/clients';
+import { getShortcutManager } from '../../../src/shortcuts';
 import { requireConsole } from '../../../src/console/guard';
 import { formatTime } from '../accounts/format';
 import styles from './apps.module.css';
@@ -27,18 +28,34 @@ function AddAppLink() {
   );
 }
 
+function AddShortcutLink() {
+  return (
+    <ButtonLink
+      href="/console/apps/shortcuts/new"
+      variant="secondary"
+      renderLink={(props) => <Link {...props} />}
+    >
+      Add a shortcut
+    </ButtonLink>
+  );
+}
+
 export default async function AppsPage() {
   const { session } = await requireConsole('client:manage', { returnTo: '/console/apps' });
   const registry = await getClientRegistry();
   const actor = { user: session.user, headers: await headers() };
   const apps = await registry.list(actor);
   const managed = await registry.managedClientIds(actor);
+  const shortcuts = await (await getShortcutManager()).list(session.user, 'shared');
 
   return (
     <div className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.heading}>Apps</h1>
-        <AddAppLink />
+        <div className={styles.buttons}>
+          <AddShortcutLink />
+          <AddAppLink />
+        </div>
       </div>
       <p className={styles.lead}>
         The apps people can sign in to with this instance. Add one here, then give the app its
@@ -88,6 +105,38 @@ export default async function AppsPage() {
                   <span className={styles.muted}>
                     {app.createdAt ? formatTime(app.createdAt.getTime()) : ''}
                   </span>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+
+      <h2 className={styles.subheading}>Shortcuts</h2>
+      <p className={styles.lead}>
+        Sites everyone opens from the launcher, in a new tab. A shortcut signs nobody in; people can
+        also add shortcuts of their own, which only they see.
+      </p>
+      {shortcuts.length === 0 ? (
+        <p className={styles.muted}>No shortcuts for everyone yet.</p>
+      ) : (
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableHeaderCell>Name</TableHeaderCell>
+              <TableHeaderCell>Address</TableHeaderCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {shortcuts.map((shortcut) => (
+              <TableRow key={shortcut.id}>
+                <TableCell>
+                  <Link className={styles.name} href={`/console/apps/shortcuts/${shortcut.id}`}>
+                    {shortcut.name}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <span className={styles.muted}>{shortcut.url}</span>
                 </TableCell>
               </TableRow>
             ))}

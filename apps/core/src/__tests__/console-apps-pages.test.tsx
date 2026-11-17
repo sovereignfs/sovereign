@@ -19,6 +19,12 @@ vi.mock('../clients', async (original) => ({
   ...(await original<typeof import('../clients')>()),
   getClientRegistry: () => Promise.resolve({ list, get, managedClientIds }),
 }));
+const listShortcuts = vi.fn();
+vi.mock('../shortcuts', async (original) => ({
+  ...(await original<typeof import('../shortcuts')>()),
+  getShortcutManager: () =>
+    Promise.resolve({ list: listShortcuts, forLauncher: listShortcuts, get: vi.fn() }),
+}));
 vi.mock('../../app/console/apps/actions', () => ({
   registerAppAction: vi.fn(),
   updateAppAction: vi.fn(),
@@ -70,6 +76,7 @@ const visible = (html: string) =>
   html.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]*>/g, ' ');
 
 beforeEach(() => {
+  listShortcuts.mockReset().mockResolvedValue([]);
   getSession.mockReset().mockResolvedValue(null);
   matrixInForce.mockReset().mockResolvedValue(DEFAULT_MATRIX);
   list.mockReset().mockResolvedValue([]);

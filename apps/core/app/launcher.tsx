@@ -13,6 +13,8 @@ import {
   Input,
 } from '@sovereignfs/ui';
 import type { LauncherApp } from '../src/clients/launcher';
+import type { ShortcutIcon as ShortcutIconValue } from '../src/shortcuts/manager';
+import { ShortcutIcon } from './shortcuts/shortcut-icon';
 import styles from './launcher.module.css';
 
 /** Core's own app for operators, which is not a client in the registry: it opens in the same place, and is listed after the apps. */
@@ -23,35 +25,53 @@ const CONSOLE = {
   href: '/console',
 } as const;
 
-/** What kind of app a tile is: core's own ones are platform apps, and every app an operator added is a Sovereign app. */
+const tag = (label: string) => (
+  <Badge variant="mono" size="sm" uppercase={false}>
+    {label}
+  </Badge>
+);
+
+/** What kind of thing a tile is: core's own apps are platform apps, an app an operator added is a Sovereign app, and a site is a shortcut. */
 const KIND = {
-  platform: (
-    <Badge variant="mono" size="sm" uppercase={false}>
-      platform
-    </Badge>
-  ),
-  sovereign: (
-    <Badge variant="mono" size="sm" uppercase={false}>
-      sovereign
-    </Badge>
-  ),
+  platform: tag('platform'),
+  sovereign: tag('sovereign'),
+  shortcut: tag('shortcut'),
+  yours: tag('yours'),
 } as const;
 
+/** A shortcut as the launcher shows it (core-app §3.8.1): `own` when it is the person's, which only they see. */
+export type LauncherShortcut = {
+  id: string;
+  name: string;
+  description: string | undefined;
+  url: string;
+  icon: ShortcutIconValue;
+  own: boolean;
+};
+
+type Tile =
+  | { kind: 'app'; id: string; name: string; app: LauncherApp }
+  | { kind: 'shortcut'; id: string; name: string; shortcut: LauncherShortcut };
+
 /**
- * The apps a person can open, with search by name. An operator (`canOpenConsole`) also has the Console, a platform app, as the last
- * tile; every other tile is a Sovereign app. Someone who may add apps has "Add an app" as the first tile. A tile is an ordinary link to the app's launch address in
- * the same tab, so the person can still open it in a new one themselves; the app then signs them in through core,
- * which completes without a prompt when they already have a session. The icon is the app's own, or a drawn
- * one from its name when there is none (or it will not load).
+ * The apps and shortcuts a person can open, with search by name: first a dashed "Add" tile (when not searching),
+ * then the apps and shortcuts together in name order, then, for an operator (`canOpenConsole`), the Console, a
+ * platform app. An app's tile is an ordinary link to its launch address in the same tab: the app signs the person in
+ * through core, which completes without a prompt when they already have a session. A shortcut is another site, so its
+ * tile opens a new tab and tells the site nothing of where it came from. Every icon is drawn in greys, so the grid is
+ * one set whatever the pictures' own colours.
  */
 export function Launcher({
   apps,
+  shortcuts = [],
   canAddApps,
   canOpenConsole = false,
   title,
   subtitle,
 }: {
   apps: LauncherApp[];
+  shortcuts?: LauncherShortcut[];
+  /** An operator who may add apps and shortcuts for everyone: "Add" lets them choose what to add. */
   canAddApps: boolean;
   canOpenConsole?: boolean;
   /** The page's heading and the line beneath it, which sit beside the search. */
@@ -61,9 +81,24 @@ export function Launcher({
   const [query, setQuery] = useState('');
   const needle = query.trim().toLowerCase();
   const matches = (name: string) => needle === '' || name.toLowerCase().includes(needle);
-  const shown = apps.filter((app) => matches(app.name));
+  const tiles: Tile[] = [
+    ...apps.map((app) => ({ kind: 'app' as const, id: app.id, name: app.name, app })),
+    ...shortcuts.map((shortcut) => ({
+      kind: 'shortcut' as const,
+      id: shortcut.id,
+      name: shortcut.name,
+      shortcut,
+    })),
+  ].sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+  const shown = tiles.filter((tile) => matches(tile.name));
   const showConsole = canOpenConsole && matches(CONSOLE.name);
-  const searchable = apps.length > 0 || canOpenConsole;
+  const searchable = tiles.length > 0 || canOpenConsole;
+  // Anyone with the launcher may add a shortcut of their own; an operator chooses between that, one for everyone, and an app.
+  const addHref = canAddApps ? '/launcher/add' : '/shortcuts/new';
+  const addDescription = canAddApps
+    ? 'An app, or a shortcut to a site'
+    : 'A shortcut to a site you use';
+  const hasOwn = shortcuts.some((shortcut) => shortcut.own);
 
   const heading = (
     <header className={styles.header}>
@@ -93,22 +128,19 @@ export function Launcher({
           heading="No apps yet"
           description={
             canAddApps
-              ? 'Add the first app and it appears here for everyone who can use the launcher.'
-              : 'When someone adds an app to this instance, it appears here. Ask whoever runs it.'
+              ? 'Add the first app or shortcut and it appears here for everyone who can use the launcher.'
+              : 'Add a shortcut to a site you use, and it appears here for you. Apps that sign you in are added by whoever runs this instance.'
           }
           action={
-            canAddApps ? (
-              <ButtonLink href="/console/apps/new" renderLink={(props) => <Link {...props} />}>
-                Add an app
-              </ButtonLink>
-            ) : undefined
+            <ButtonLink href={addHref} renderLink={(props) => <Link {...props} />}>
+              {canAddApps ? 'Add' : 'Add a shortcut'}
+            </ButtonLink>
           }
         />
       </div>
     );
   }
 
-  const addTile = canAddApps && needle === '';
   return (
     <div className={styles.launcher}>
       {heading}
@@ -118,26 +150,45 @@ export function Launcher({
         </p>
       ) : (
         <CardTileGrid minTileWidth={260}>
-          {addTile ? (
+          {needle === '' ? (
             <AppTile
               variant="ghost"
-              href="/console/apps/new"
-              name="Add an app"
-              description="Register one for this instance"
+              href={addHref}
+              name="Add"
+              description={addDescription}
               icon={<Icon name="plus" size="lg" aria-hidden={true} />}
-              tags={KIND.sovereign}
             />
           ) : null}
-          {shown.map((app) => (
-            <AppTile
-              key={app.id}
-              href={app.launchUrl}
-              name={app.name}
-              {...(app.description ? { description: app.description } : {})}
-              icon={<Avatar name={app.name} {...(app.icon ? { src: app.icon } : {})} size="md" />}
-              tags={KIND.sovereign}
-            />
-          ))}
+          {shown.map((tile) =>
+            tile.kind === 'app' ? (
+              <AppTile
+                key={`app-${tile.id}`}
+                href={tile.app.launchUrl}
+                name={tile.app.name}
+                {...(tile.app.description ? { description: tile.app.description } : {})}
+                icon={
+                  <Avatar
+                    name={tile.app.name}
+                    {...(tile.app.icon ? { src: tile.app.icon } : {})}
+                    size="md"
+                  />
+                }
+                tags={KIND.sovereign}
+                monochrome
+              />
+            ) : (
+              <AppTile
+                key={`shortcut-${tile.id}`}
+                href={tile.shortcut.url}
+                external
+                name={tile.shortcut.name}
+                {...(tile.shortcut.description ? { description: tile.shortcut.description } : {})}
+                icon={<ShortcutIcon shortcut={tile.shortcut} />}
+                tags={tile.shortcut.own ? KIND.yours : KIND.shortcut}
+                monochrome
+              />
+            ),
+          )}
           {showConsole ? (
             <AppTile
               href={CONSOLE.href}
@@ -145,13 +196,16 @@ export function Launcher({
               description={CONSOLE.description}
               icon={<Icon name="layout-dashboard" size="lg" aria-hidden={true} />}
               tags={KIND.platform}
+              monochrome
             />
           ) : null}
         </CardTileGrid>
       )}
-      {apps.length === 0 && needle === '' && !canAddApps ? (
+      {hasOwn && needle === '' ? (
         <p className={styles.none}>
-          When someone adds an app to this instance, it appears here. Ask whoever runs it.
+          <Link href="/shortcuts" className={styles.manage}>
+            Manage your shortcuts
+          </Link>
         </p>
       ) : null}
     </div>

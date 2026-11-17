@@ -17,6 +17,12 @@ vi.mock('../config', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   getConfig: () => ({ dbDialect: 'postgres' }),
 }));
+const listShortcuts = vi.fn();
+vi.mock('../shortcuts', async (original) => ({
+  ...(await original<typeof import('../shortcuts')>()),
+  getShortcutManager: () =>
+    Promise.resolve({ list: listShortcuts, forLauncher: listShortcuts, get: vi.fn() }),
+}));
 vi.mock('next/link', () => ({
   default: ({ children, ...props }: React.ComponentProps<'a'>) => <a {...props}>{children}</a>,
 }));
@@ -38,6 +44,7 @@ const as = (role: unknown) =>
 const links = (html: string) => [...html.matchAll(/<a [^>]*href="([^"]+)"/g)].map((m) => m[1]);
 
 beforeEach(() => {
+  listShortcuts.mockReset().mockResolvedValue([]);
   getSession.mockReset();
   matrix.mockReset().mockResolvedValue(DEFAULT_MATRIX);
   getLauncherApps.mockReset().mockResolvedValue([]);
@@ -121,16 +128,43 @@ describe('the home page, which is the launcher', () => {
     expect(renderToStaticMarkup(await Page())).not.toContain('href="/console"');
   });
 
-  it('invites an operator to add the first app, and tells anyone else whom to ask', async () => {
+  it('invites an operator to add an app or a shortcut, and anyone else a shortcut of their own', async () => {
     as(ROLE_ADMIN);
     const forOperator = renderToStaticMarkup(await Page());
-    expect(forOperator).toContain('Add an app');
-    expect(forOperator).toContain('href="/console/apps/new"');
+    expect(forOperator).toContain('href="/launcher/add"');
     as(ROLE_USER);
     const forPerson = renderToStaticMarkup(await Page());
     expect(forPerson).toContain('No apps yet');
-    expect(forPerson).toContain('Ask whoever runs it.');
+    expect(forPerson).toContain('href="/shortcuts/new"');
     expect(forPerson).not.toContain('/console/apps/new');
+    expect(forPerson).not.toContain('/launcher/add');
+  });
+
+  it('shows the shortcuts for everyone and the person’s own, asked for by the session’s id', async () => {
+    as(ROLE_USER);
+    listShortcuts.mockResolvedValue([
+      {
+        id: 's1',
+        ownerId: undefined,
+        name: 'Drive',
+        url: 'https://drive.example',
+        icon: undefined,
+        description: undefined,
+      },
+      {
+        id: 's2',
+        ownerId: 'u1',
+        name: 'Mail',
+        url: 'https://mail.example',
+        icon: undefined,
+        description: undefined,
+      },
+    ]);
+    const html = renderToStaticMarkup(await Page());
+    expect(listShortcuts).toHaveBeenCalledWith('u1');
+    expect(html).toContain('href="https://drive.example"');
+    expect(html).toContain('href="https://mail.example"');
+    expect(html).toContain('yours');
   });
 
   it('is drawn with the design system and carries no inline styling or scripts of its own', async () => {

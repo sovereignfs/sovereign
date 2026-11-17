@@ -10,6 +10,7 @@ const PAGES = [
   { label: 'Security', href: '/security' },
   { label: 'Preferences', href: '/preferences' },
   { label: 'Files', href: '/files' },
+  { label: 'Shortcuts', href: '/shortcuts' },
   { label: 'Connected apps', href: '/connected-apps' },
   { label: 'Activity', href: '/activity' },
   { label: 'Delete account', href: '/delete-account' },

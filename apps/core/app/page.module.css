@@ -24,3 +24,13 @@
 .details {
   margin-top: var(--sv-space-8);
 }
+
+/* The way back to the launcher from a page beneath it. */
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sv-space-1);
+  color: var(--sv-color-accent);
+  font-size: var(--sv-font-size-md);
+  text-decoration: none;
+}

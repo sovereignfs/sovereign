@@ -34,13 +34,13 @@ export async function ensureDataVolume(host: Host): Promise<void> {
  * root when it gives none.
  */
 export async function imageUser(host: Host, image: string): Promise<string> {
-  const inspected = await docker(host, 'Reading the image’s user', [
-    'image',
-    'inspect',
-    '--format',
-    '{{.Config.User}}',
-    image,
-  ]);
+  const inspect = ['image', 'inspect', '--format', '{{.Config.User}}', image];
+  // Read before anything has started the image, so on an upgrade the server does not have it yet: it is pulled first, by the digest it
+  // is pinned to. An image the server has is not pulled again.
+  if ((await host.docker(inspect)).code !== 0) {
+    await docker(host, `Pulling ${image}`, ['pull', image]);
+  }
+  const inspected = await docker(host, 'Reading the image’s user', inspect);
   const user = inspected.stdout.trim();
   if (user === '') return '0:0';
   if (NUMERIC_USER.test(user)) return user.includes(':') ? user : `${user}:${user}`;

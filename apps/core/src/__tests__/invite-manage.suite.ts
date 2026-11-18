@@ -299,6 +299,26 @@ export function inviteManageSuite(createDatabase: () => Promise<TestDatabase>): 
       const { manager, asOwner } = await instance();
       expect((await manager.create(asOwner, { email: 'a@sovereign.local' })).sent).toBe(false);
     });
+
+    it('records that the link went to the address only when the email was sent', async () => {
+      const emailedAt = async (id: string) =>
+        (await db.run('select emailed_at from invites where id = ?', [id])).rows[0]?.emailed_at;
+      const outcomes = [
+        () => Promise.resolve(true),
+        () => Promise.resolve(false),
+        () => Promise.reject(new Error('SMTP is down')),
+      ];
+      let next = 0;
+      const { manager, asOwner } = await instance({
+        send: () => (outcomes[next++] ?? (() => Promise.resolve(false)))(),
+      });
+      const sent = await manager.create(asOwner, { email: 'a@sovereign.local' });
+      expect(Number(await emailedAt(sent.invite.id))).toBe(NOW);
+      for (const email of ['b@sovereign.local', 'c@sovereign.local']) {
+        const { invite } = await manager.create(asOwner, { email });
+        expect(await emailedAt(invite.id)).toBeNull();
+      }
+    });
   });
 
   describe('listing', () => {

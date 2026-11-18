@@ -644,3 +644,20 @@ nobody who reads the server.
 
 - A move cut off at any file and run again ends with every file encrypted once and none lost
 - `pnpm e2e` passes on each database
+
+#### 📋 16.24 — Keys closed while core is locked
+
+**Goal:** While core is locked, the person's keys are closed too, and opening them needs the passkey or the password.
+
+**Deliverables:**
+
+- the key store drops the unwrapped account key when the session is locked; unlocking with a passkey reopens it from its PRF output,
+  and with the password from the password's secret
+
+**Dependencies:** 4.17
+
+**Spec reference:** core-app §5.4, §5.5; RFC 0006
+
+**Review checklist:**
+
+- Encrypted data cannot be read in a locked browser

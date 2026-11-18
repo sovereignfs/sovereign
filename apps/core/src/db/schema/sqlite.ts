@@ -285,6 +285,34 @@ export const activity = sqliteTable(
 );
 
 /**
+ * Telling an app that a person's session at core ended (OpenID Connect Back-Channel Logout, core-app §3.6.5): one row for each app and
+ * core session (`sid`), written when the session ends and kept until the app answers, or the notice is given up. Not tied to the account
+ * or the session, which may be gone. `state` is `pending`, `delivered` or `given_up`. Times are milliseconds since the epoch.
+ * `last_failure` is the kind of the last failure and never what the app said. `lease_until` stops two instances of core sending one
+ * notice at once. Written only by `src/oauth/logout-notices.ts`.
+ */
+export const logoutNotices = sqliteTable(
+  'logout_notices',
+  {
+    id: text('id').primaryKey(),
+    clientId: text('client_id').notNull(),
+    sub: text('sub').notNull(),
+    sid: text('sid').notNull(),
+    createdAt: integer('created_at').notNull(),
+    state: text('state').notNull(),
+    attempts: integer('attempts').notNull(),
+    nextAttemptAt: integer('next_attempt_at'),
+    leaseUntil: integer('lease_until'),
+    lastFailure: text('last_failure'),
+    doneAt: integer('done_at'),
+  },
+  (table) => [
+    index('logout_notices_due_idx').on(table.state, table.nextAttemptAt),
+    uniqueIndex('logout_notices_client_sid_idx').on(table.clientId, table.sid),
+  ],
+);
+
+/**
  * Telling an app that a person who used it deleted their account (core-app §4.5): one row for each app that must be told, written by
  * the deletion's own transaction and kept until the app answers. It is not tied to the account, which is gone; `sub` is never reused.
  * `state` is `pending`, `delivered`, `given_up` or `resolved`. Times are milliseconds since the epoch. `last_failure` is the kind of
@@ -543,6 +571,8 @@ export const oauthClientAssertions = sqliteTable('oauth_client_assertions', {
 /**
  * Invitations to sign up (core-app §3.10). An invite is for one email address, stored lower-case,
  * and is valid until it is used, cancelled or past `expires_at` (none: it does not expire).
+ * `emailed_at` is set once core has emailed the link to the address: a sign-up from that link has
+ * shown it reads the address, so it needs no second email to verify it (core-app §3.3.3).
  */
 export const invites = sqliteTable(
   'invites',
@@ -554,6 +584,7 @@ export const invites = sqliteTable(
     expiresAt: sqliteTimestampMs('expires_at'),
     acceptedAt: sqliteTimestampMs('accepted_at'),
     cancelledAt: sqliteTimestampMs('cancelled_at'),
+    emailedAt: sqliteTimestampMs('emailed_at'),
   },
   (table) => [index('invites_email_idx').on(table.email)],
 );

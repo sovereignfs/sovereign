@@ -169,6 +169,13 @@ export class InviteManager {
         `The invitation email failed: ${error instanceof Error ? error.message : 'unknown error'}`,
       );
     }
+    // Only an invitation that went to the address can stand in for verifying it (`inviteVouchesFor`).
+    if (sent) {
+      await this.#database.run('update invites set emailed_at = ? where id = ?', [
+        (this.#hooks.now ?? Date.now)(),
+        id,
+      ]);
+    }
     return { invite, sent };
   }
 

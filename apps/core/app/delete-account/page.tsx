@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { Alert, Card } from '@sovereignfs/ui';
-import { getSession } from '../../src/auth/session';
+import { requireSignedIn } from '../../src/auth/require-signed-in';
 import { ROLE_OWNER } from '../../src/auth/roles';
 import styles from '../security/security.module.css';
 import { DeleteForm } from './delete-form';
@@ -11,8 +10,7 @@ export const metadata: Metadata = { title: 'Delete account' };
 
 export default async function DeleteAccountPage() {
   // The proxy turns away a request with no session cookie; this is the check that counts.
-  const session = await getSession();
-  if (!session) redirect('/sign-in?returnTo=%2Fdelete-account');
+  const session = await requireSignedIn('/delete-account');
   const owner = session.user.role === ROLE_OWNER;
 
   return (

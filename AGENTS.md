@@ -310,6 +310,8 @@ each: `docs/architecture-rules.md`.
   shown inline, the person from the session in every call, and each app's container mounting its own folder of `sovereign-data` alone.
 - **Every Console page calls `requireConsole` itself** (a test fails when one does
   not), and answers someone who may not enter with a page that is not there.
+  **Every other signed-in page calls `requireSignedIn`** (or `sessionFor`), never
+  `getSession` and a redirect by hand (a test fails when one does).
 - **A client is written only by `ClientRegistry`** (validation, the provider's
   secret hashing, its adapter for core's fields; the provider's own write routes
   are off), and every method needs `client:manage`.
@@ -317,6 +319,10 @@ each: `docs/architecture-rules.md`.
   ended through better-auth's endpoints, never by deleting its row** (the row's
   tokens would stay alive and no app would be told). Remove access is
   `removeAccess`, the provider's consent-deleting endpoints are off.
+- **Logout notices are core's alone, and kept:** an app's back-channel address
+  lives in core's metadata, never the provider's field (the provider would send
+  its own, once); every notice is a row in `logout_notices`, sent again only
+  after a failure that may be temporary.
 - **`roles` is for trusted clients only** (stripped from the request, not offered
   at consent, withheld from tokens), and the consent page believes only what the
   provider signed.

@@ -250,7 +250,14 @@ pointing here.
   checks the request's origin. Remove access, deleting an app and deleting an account delete them in the same transaction.
 - **An account-deleted notice is sent until the app answers, and only the table remembers it** (`DeletionDelivery`, core-app §4.5). What
   is due is read from the table at start-up and every minute, an attempt is claimed with a lease, the result is written only while the
-  notice is still pending, and what the app said is never read or logged. The logout notice is still sent once.
+  notice is still pending, and what the app said is never read or logged.
+- **Logout notices are core's alone, and kept** (`src/oauth/logout-notices.ts`, core-app §3.6.5). An app's back-channel address is kept
+  in core's metadata for the app (`metadata.backchannelLogoutUri`), never in the provider's `backchannelLogoutUri` field: the provider
+  sends its own notice, once, to any client with that field set, so a value there means two senders. `ClientRegistry` writes it, and
+  `moveBackchannelAddresses` moves one kept there before, at start-up. Every notice is a row in `logout_notices`, one per app and `sid`,
+  read before the session goes (deleting a session clears the tokens' link to it) and written after it has gone, or in the
+  deactivation's or deletion's own transaction. It is sent again only after a failure that may be temporary, as the specification
+  asks, with a lease per attempt and a new token each time.
 - **Every deletion is remembered for 90 days, so a restore can delete the account again** (`deleted_accounts`, `deletion-ledger.ts`, core-app
   §4.5). `export` and `apply` carry the `sub`s across; an export is applied once, an owner is never deleted by it, and the file holds
   nothing of a person but the `sub`.
@@ -453,6 +460,15 @@ pointing here.
   someone moves between the pages beneath it, so a test fails when a Console
   `page.tsx` or `layout.tsx` does not call it. The navigation lists a section
   only when its page exists and the role holds its capability.
+- **Every other page that needs someone signed in guards itself one way.**
+  `requireSignedIn(returnTo)` (`src/auth/require-signed-in.ts`) returns the session
+  or sends the person to sign in with the way back, and `sessionFor` calls it for a
+  page that also needs a capability. The proxy sees only that a cookie is there, and
+  a cookie can outlive its session, so the page's check is the one that counts. A
+  test fails when a page outside `(auth)`, `(legal)` and the Console does not call
+  one of them, or calls `getSession` itself. The pages before signing in send a
+  signed-in person on through `sendOnIfSignedIn`, unless an app asked for a fresh
+  sign-in.
 - **A client row is written by the registry and nothing else.**
   `ClientRegistry` (`src/clients`) validates everything (`validate.ts`: addresses,
   scopes, text), makes the client through the provider so the secret is hashed

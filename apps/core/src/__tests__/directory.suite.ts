@@ -91,7 +91,11 @@ export function directorySuite(createDatabase: () => Promise<TestDatabase>): voi
     const ada = await signUp(auth, { name: 'Ada Lovelace', email: 'ada@sovereign.local' });
     const bo = await signUp(auth, { name: 'Bo Barnes', email: 'bo@sovereign.local' });
     const states = new AccountStates(db, { log: () => undefined });
-    revokeOnDeactivation(states, () => Promise.resolve(auth));
+    revokeOnDeactivation(
+      states,
+      () => Promise.resolve(db),
+      () => Promise.resolve(auth),
+    );
     const manager = new AccountManager(db, states, { log: () => undefined });
     const deps = (now?: () => number): TokenDeps => ({
       database: db,

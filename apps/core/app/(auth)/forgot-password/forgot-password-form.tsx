@@ -4,12 +4,13 @@ import Link from 'next/link';
 import { type FormEvent, useState } from 'react';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../src/auth/client';
+import { withReturnTo } from '../../../src/auth/return-to';
 import { AuthField } from '../auth-field';
 import { AuthError, AuthNotice } from '../auth-notice';
 import { emailRequestProblem } from '../messages';
 import styles from '../auth.module.css';
 
-export function ForgotPasswordForm() {
+export function ForgotPasswordForm({ returnTo }: { returnTo: string }) {
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [sentTo, setSentTo] = useState<string | undefined>();
@@ -21,7 +22,7 @@ export function ForgotPasswordForm() {
     setError(undefined);
     const result = await authClient.requestPasswordReset({
       email,
-      redirectTo: '/reset-password',
+      redirectTo: withReturnTo('/reset-password', returnTo),
     });
     setPending(false);
     if (result.error) {
@@ -43,7 +44,7 @@ export function ForgotPasswordForm() {
           hour.
         </AuthNotice>
         <p className={styles.footer}>
-          <Link className={styles.link} href="/sign-in">
+          <Link className={styles.link} href={withReturnTo('/sign-in', returnTo)}>
             Back to sign in
           </Link>
         </p>
@@ -74,7 +75,7 @@ export function ForgotPasswordForm() {
         </Button>
       </form>
       <p className={styles.footer}>
-        <Link className={styles.link} href="/sign-in">
+        <Link className={styles.link} href={withReturnTo('/sign-in', returnTo)}>
           Back to sign in
         </Link>
       </p>

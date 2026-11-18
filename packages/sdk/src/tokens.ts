@@ -251,6 +251,7 @@ async function refusal(reply: Response, person: boolean): Promise<Error> {
   if (person && code === 'invalid_grant') {
     return new SessionEndedError(
       'This person’s session cannot be renewed. They must sign in again.',
+      { byCore: true },
     );
   }
   const retryAfter = secondsOf(reply.headers.get('retry-after'));

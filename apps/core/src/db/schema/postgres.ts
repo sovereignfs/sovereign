@@ -132,6 +132,7 @@ export const invites = pgTable(
     expiresAt: postgresTimestampMs('expires_at'),
     acceptedAt: postgresTimestampMs('accepted_at'),
     cancelledAt: postgresTimestampMs('cancelled_at'),
+    emailedAt: postgresTimestampMs('emailed_at'),
   },
   (table) => [index('invites_email_idx').on(table.email)],
 );
@@ -304,6 +305,34 @@ export const activity = pgTable(
   (table) => [
     index('activity_user_idx').on(table.userId, table.at),
     index('activity_idem_idx').on(table.clientId, table.userId, table.idemKey),
+  ],
+);
+
+/**
+ * Telling an app that a person's session at core ended (OpenID Connect Back-Channel Logout, core-app §3.6.5): one row for each app and
+ * core session (`sid`), written when the session ends and kept until the app answers, or the notice is given up. Not tied to the account
+ * or the session, which may be gone. `state` is `pending`, `delivered` or `given_up`. Times are milliseconds since the epoch.
+ * `last_failure` is the kind of the last failure and never what the app said. `lease_until` stops two instances of core sending one
+ * notice at once. Written only by `src/oauth/logout-notices.ts`.
+ */
+export const logoutNotices = pgTable(
+  'logout_notices',
+  {
+    id: text('id').primaryKey(),
+    clientId: text('client_id').notNull(),
+    sub: text('sub').notNull(),
+    sid: text('sid').notNull(),
+    createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+    state: text('state').notNull(),
+    attempts: integer('attempts').notNull(),
+    nextAttemptAt: bigint('next_attempt_at', { mode: 'number' }),
+    leaseUntil: bigint('lease_until', { mode: 'number' }),
+    lastFailure: text('last_failure'),
+    doneAt: bigint('done_at', { mode: 'number' }),
+  },
+  (table) => [
+    index('logout_notices_due_idx').on(table.state, table.nextAttemptAt),
+    uniqueIndex('logout_notices_client_sid_idx').on(table.clientId, table.sid),
   ],
 );
 

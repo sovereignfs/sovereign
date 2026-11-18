@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { SignInError } from '../errors';
+import type { SignInOptions } from '../auth';
 import type { Session } from '../session';
 import type { Sovereign } from '../sovereign';
 import { trimTrailingSlashes } from '../slashes.js';
@@ -46,8 +47,9 @@ export function nextAuth(sv: Sovereign, options: NextAuthOptions = {}) {
   const GET: RouteHandler = async (request) => {
     switch (actionOf(request)) {
       case 'login': {
-        const returnTo = new URL(request.url).searchParams.get('returnTo') ?? undefined;
-        const step = await sv.auth.beginSignIn(returnTo ? { returnTo } : {});
+        const step = await sv.auth.beginSignIn(
+          signInOptionsFrom(new URL(request.url).searchParams),
+        );
         return go(step.url, step.setCookies, 302);
       }
       case 'key-secret': {
@@ -100,12 +102,37 @@ export function nextAuth(sv: Sovereign, options: NextAuthOptions = {}) {
     return sv.auth.getSession(request);
   };
 
-  /** The session, or the person is sent to sign in and comes back to `returnTo`. */
-  const requireSession = async (returnTo = '/'): Promise<Session> => {
+  /**
+   * The session, or the person is sent to sign in and comes back to `returnTo`. With `maxAgeSeconds`, a session whose sign-in
+   * at core is older (or unknown) sends the person to sign in again, for something that wants a recent one (sdk §9.6).
+   */
+  const requireSession = async (
+    returnTo = '/',
+    options: { maxAgeSeconds?: number } = {},
+  ): Promise<Session> => {
     const session = await getSession();
-    if (session) return session;
-    return redirect(`${base}/login?returnTo=${encodeURIComponent(returnTo)}`);
+    const maxAge = options.maxAgeSeconds;
+    if (session && (maxAge === undefined || sv.auth.signedInWithin(session, maxAge)))
+      return session;
+    const query = new URLSearchParams({ returnTo });
+    if (maxAge !== undefined) query.set('max_age', String(maxAge));
+    return redirect(`${base}/login?${query.toString()}`);
   };
 
   return { handlers: { GET, POST }, getSession, requireSession };
+}
+
+/**
+ * What `/auth/login` passes on from its query: `returnTo`, `prompt` (`login` or `none`, anything else ignored) and `max_age` (a
+ * whole number of seconds, anything else ignored). None of it can do harm: core checks the request, and the callback the age.
+ */
+function signInOptionsFrom(query: URLSearchParams): SignInOptions {
+  const returnTo = query.get('returnTo');
+  const prompt = query.get('prompt');
+  const maxAge = query.get('max_age');
+  return {
+    ...(returnTo ? { returnTo } : {}),
+    ...(prompt === 'login' || prompt === 'none' ? { prompt } : {}),
+    ...(maxAge !== null && /^\d{1,9}$/.test(maxAge) ? { maxAgeSeconds: Number(maxAge) } : {}),
+  };
 }

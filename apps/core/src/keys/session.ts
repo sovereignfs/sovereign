@@ -67,6 +67,12 @@ export const afterPasswordAccepted = (secret: WebKey) =>
 /** The password was right but a second step is asked for: the secret waits for it, once. */
 export const handOverSecret = (secret: WebKey) => quietly(() => keyStore().handOver(secret));
 
+/**
+ * The second step was passed some other way than the one the password expected (a passkey, which may be
+ * another account's): the password's secret is dropped unused.
+ */
+export const dropHandOver = () => quietly(() => keyStore().dropHandOver());
+
 /** After the second step: unlock with the secret the password left, if it is there. */
 export const afterSecondStep = () =>
   quietly(async () => {

@@ -2,6 +2,7 @@ import type { Database } from '@sovereignfs/database';
 import type { Auth } from '../auth/auth';
 import { can } from '../roles/capabilities';
 import { loadMatrix } from '../roles/matrix';
+import { backchannelAddressOf, removeAppLogoutNotices } from '../oauth/logout-notices';
 import { parseMetadata } from '../oauth/client-metadata';
 import { ensureRs256Key, idTokenAlgorithmOf, type IdTokenAlgorithm } from '../oauth/id-token-alg';
 import { removeAppDeletionNotices } from '../accounts/deletion-notices';
@@ -265,6 +266,7 @@ export class ClientRegistry {
       await removeAppMailOfApp(tx, clientId);
       await removeAppActivity(tx, clientId);
       await removeAppDeletionNotices(tx, clientId);
+      await removeAppLogoutNotices(tx, clientId);
     });
     await this.#provider(actor, () =>
       this.#auth.api.deleteOAuthClient({
@@ -542,8 +544,10 @@ export class ClientRegistry {
         redirectUris: settings.redirectUris,
         postLogoutRedirectUris:
           settings.postLogoutRedirectUris.length > 0 ? settings.postLogoutRedirectUris : null,
-        backchannelLogoutUri: settings.backchannelLogoutUri ?? null,
-        backchannelLogoutSessionRequired: settings.backchannelLogoutUri !== undefined,
+        // Core sends every logout notice itself, and retries it (core-app §3.6.5): the address is kept with core's own settings below,
+        // and the provider's field stays empty so the provider sends none of its own.
+        backchannelLogoutUri: null,
+        backchannelLogoutSessionRequired: null,
         enableEndSession: settings.endSession,
         scopes: settings.scopes,
         // The grant an app uses to act for itself, and what it may ask for with it. The provider holds the app to this list.
@@ -562,6 +566,9 @@ export class ClientRegistry {
           },
           // Kept only when it is not the default, so an app that never chose it has the metadata it always had.
           ...(settings.idTokenAlgorithm === 'RS256' ? { idTokenAlgorithm: 'RS256' } : {}),
+          ...(settings.backchannelLogoutUri
+            ? { backchannelLogoutUri: settings.backchannelLogoutUri }
+            : {}),
           ...(settings.accountDeletedUri ? { accountDeletedUri: settings.accountDeletedUri } : {}),
           ...(settings.keyReturnUri ? { keyReturnUri: settings.keyReturnUri } : {}),
         },
@@ -583,7 +590,7 @@ export function clientView(row: ClientRow): ClientView {
     idTokenAlgorithm: idTokenAlgorithmOf(metadata),
     redirectUris: list(row.redirectUris),
     postLogoutRedirectUris: list(row.postLogoutRedirectUris),
-    backchannelLogoutUri: blank(row.backchannelLogoutUri),
+    backchannelLogoutUri: backchannelAddressOf(row.metadata, row.backchannelLogoutUri),
     accountDeletedUri: blank(metadata.accountDeletedUri),
     keyReturnUri: blank(metadata.keyReturnUri),
     endSession: row.enableEndSession === true,
@@ -617,3 +624,41 @@ const blank = (value: unknown): string | undefined =>
   typeof value === 'string' && value !== '' ? value : undefined;
 
 const list = (value: unknown): string[] => (Array.isArray(value) ? value.map(String) : []);
+
+type BackchannelRow = {
+  clientId: string;
+  backchannelLogoutUri?: string | null;
+  metadata?: unknown;
+};
+
+/**
+ * Moves every app's back-channel address from the provider's field to core's own settings for the app, once, at start-up
+ * (core-app §3.6.5). With the provider's field empty the provider sends no logout notice of its own, and core is the one sender,
+ * which retries. It goes through the provider's adapter, as `ClientRegistry` writes, so the metadata is stored as the provider
+ * stores it on each dialect. It is here because the registry is the one writer of client rows; it takes no actor, since it is no
+ * operator's action and changes no setting anyone chose, only where one is kept. Safe to run again, and on several instances at once: an app already moved has nothing to move.
+ * End-session stays on, so the app's ID tokens still carry the `sid` its notices name. Returns how many apps were moved.
+ */
+export async function moveBackchannelAddresses(auth: Pick<Auth, '$context'>): Promise<number> {
+  const adapter = (await auth.$context).adapter;
+  // Every app, filtered here: an instance has few, and a comparison with null in the adapter's terms is not one every dialect keeps.
+  const rows = await adapter.findMany<BackchannelRow>({ model: 'oauthClient', limit: 10_000 });
+  let moved = 0;
+  for (const row of rows) {
+    const address = row.backchannelLogoutUri;
+    if (typeof address !== 'string' || address === '') continue;
+    await adapter.update({
+      model: 'oauthClient',
+      where: [{ field: 'clientId', value: row.clientId }],
+      update: {
+        metadata: { ...parseMetadata(row.metadata), backchannelLogoutUri: address },
+        backchannelLogoutUri: null,
+        backchannelLogoutSessionRequired: null,
+        enableEndSession: true,
+        updatedAt: new Date(),
+      },
+    });
+    moved += 1;
+  }
+  return moved;
+}

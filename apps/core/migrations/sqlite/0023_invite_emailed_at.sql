@@ -1,0 +1,1 @@
+ALTER TABLE `invites` ADD `emailed_at` integer;

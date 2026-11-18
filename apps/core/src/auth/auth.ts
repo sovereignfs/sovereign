@@ -8,11 +8,18 @@ import { hashPassword } from 'better-auth/crypto';
 import { twoFactor } from 'better-auth/plugins/two-factor';
 import * as postgresSchema from '../db/schema/postgres';
 import * as sqliteSchema from '../db/schema/sqlite';
-import { hasValidInvite, markInvitesAccepted } from '../invites';
+import { hasValidInvite, inviteVouchesFor, markInvitesAccepted } from '../invites';
+import { confirmPassword } from './confirm-password';
 import { advancedCookieOptions } from './cookies';
 import { isSignInValue } from '@sovereignfs/crypto';
 import type { AuthMail } from './mail';
 import { isFirstAccount, type RegistrationPolicy } from './registration';
+import {
+  deliverDueLogoutNotices,
+  planLogoutNotices,
+  queueLogoutNotices,
+  type PlannedNotice,
+} from '../oauth/logout-notices';
 import { oidcPlugins } from '../oauth/provider';
 import { assertMayOpenSession } from './session-gate';
 import { ROLE_OWNER, ROLE_USER } from './roles';
@@ -105,8 +112,9 @@ export type Auth = ReturnType<typeof createAuth>;
  * - **No fresh-session requirement** (`freshAge: 0`): better-auth's fresh gate answers 403 for a
  *   session older than a day, which breaks sensitive actions with no flow to recover. Sensitive
  *   actions ask for the password instead (docs/architecture-rules.md).
- * - Sessions are verified from a signed cookie cache valid for 300 seconds, with a server-side
- *   fallback; authentication endpoints are rate limited, with the counters in the database.
+ * - Every session is read from the database: the signed cookie cache is off, so a session that has
+ *   ended stops working at once everywhere; authentication endpoints are rate limited, with the
+ *   counters in the database.
  * - better-auth's telemetry is off: core reports nothing to anyone.
  */
 /** What `createAuth` needs besides the database and the settings. */
@@ -127,6 +135,19 @@ const NEEDS_MAIL = new Set(['/send-verification-email', '/request-password-reset
 /** The second sign-in step's two ways to answer, which also take a `trustDevice` flag core never offers. */
 const SECOND_STEP = new Set(['/two-factor/verify-totp', '/two-factor/verify-backup-code']);
 
+/**
+ * better-auth's routes that ask a signed-in person for their password again, and the field it comes in. Each is checked
+ * through `confirmPassword` first, so wrong answers are counted the way every other page that asks counts them (core-app
+ * §3.4.1): five in ten minutes and every answer is refused for the rest of the window.
+ */
+const PASSWORD_AGAIN: Readonly<Record<string, 'password' | 'currentPassword'>> = {
+  '/two-factor/enable': 'password',
+  '/two-factor/disable': 'password',
+  '/two-factor/generate-backup-codes': 'password',
+  '/two-factor/get-totp-uri': 'password',
+  '/change-password': 'currentPassword',
+};
+
 const ONE_HOUR = 60 * 60;
 
 export function createAuth(
@@ -134,6 +155,8 @@ export function createAuth(
   settings: AuthSettings,
   { registration, mail, background = (task) => void task.catch(() => undefined) }: AuthDependencies,
 ) {
+  // The apps to tell about each session being deleted, read before it goes (deleting it clears the tokens' pointer to it).
+  const endingSessions = new Map<string, PlannedNotice[]>();
   return betterAuth({
     appName: 'Sovereign',
     baseURL: settings.baseUrl,
@@ -160,6 +183,30 @@ export function createAuth(
     },
     databaseHooks: {
       session: {
+        // A session that ends (signing out, ending it from the identity pages, a password reset) is told to every app that used it
+        // and has a back-channel address, by core alone (core-app §3.6.5): the notices are written once it is gone, and sent at
+        // once and then by a timer until each app answers (`logout-notices.ts`). The provider sends none of its own, since no app
+        // has an address in its field.
+        delete: {
+          before: async (session) => {
+            const planned = await planLogoutNotices(database, { sessionId: session.id });
+            if (planned.length > 0) endingSessions.set(session.id, planned);
+          },
+          after: async (session, context) => {
+            const planned = endingSessions.get(session.id);
+            endingSessions.delete(session.id);
+            if (!planned) return;
+            await queueLogoutNotices(database, planned);
+            // Sent now when there is a request to sign with; otherwise the next round of the timer sends them.
+            if (context) {
+              background(
+                deliverDueLogoutNotices(database, {
+                  $context: Promise.resolve(context.context),
+                } as unknown as Pick<Auth, '$context'>),
+              );
+            }
+          },
+        },
         create: {
           // Every session, whichever way it is opened: password, passkey, the second step, a
           // verification link. A deactivated account has none, and neither does one whose address
@@ -185,7 +232,7 @@ export function createAuth(
         create: {
           // Every account is made through here, whatever the route: the sign-up endpoint, or a
           // server-side call that has no route (a request hook cannot see those).
-          before: async (user) => {
+          before: async (user, context) => {
             // The name, the terms, the time zone and the language first: they are the person's to put right, whoever
             // they are. No picture comes with a sign-up: one is uploaded afterwards.
             if (user.image !== undefined && user.image !== null) refuseImageInput();
@@ -207,13 +254,21 @@ export function createAuth(
                 code: 'INVITE_REQUIRED',
               });
             }
+            // A sign-up from the link of an invitation core emailed to this address has shown it reads
+            // the address: it is verified now, and no second email asks the same (core-app §3.3.3).
+            // Only the link's id counts, sent by the sign-up page, never the address alone.
+            const invite = (context?.body as { invite?: unknown } | undefined)?.invite;
+            if (await inviteVouchesFor(database, invite, user.email, Date.now())) {
+              return { data: { ...record, role: ROLE_USER, emailVerified: true } };
+            }
             return { data: { ...record, role: ROLE_USER } };
           },
           after: async (user) => {
             await markInvitesAccepted(database, user.email, Date.now());
             // With verification required, the notice waits until the address is verified: nobody
-            // is told about an account on an address nobody has shown to be theirs.
-            if (!settings.requireEmailVerification) {
+            // is told about an account on an address nobody has shown to be theirs. One verified by
+            // its invitation is told now.
+            if (!settings.requireEmailVerification || user.emailVerified) {
               background(mail.accountCreated({ email: user.email, name: user.name }));
             }
           },
@@ -256,8 +311,12 @@ export function createAuth(
       revokeSessionsOnPasswordReset: true,
     },
     emailVerification: {
+      // better-auth sends one at every sign-up while verification is required, even for an address its
+      // invitation has already verified; that one gets none.
       sendVerificationEmail: ({ user, url }) =>
-        mail.verification({ email: user.email, name: user.name }, url),
+        user.emailVerified
+          ? Promise.resolve()
+          : mail.verification({ email: user.email, name: user.name }, url),
       sendOnSignUp: settings.requireEmailVerification,
       // Signing in with an unverified address does not send another link: asking for one is its
       // own request, so a wrong guess at a password cannot be used to fill an inbox.
@@ -305,6 +364,35 @@ export function createAuth(
             message: 'Invalid email or password',
             code: 'INVALID_EMAIL_OR_PASSWORD',
           });
+        }
+        // The password asked for again is counted as `confirmPassword` counts it, before better-auth checks it too. A wrong
+        // one is answered as better-auth answers it; a limited one as a rate limit.
+        const field = Object.hasOwn(PASSWORD_AGAIN, ctx.path)
+          ? PASSWORD_AGAIN[ctx.path]
+          : undefined;
+        if (field) {
+          const session = await getSessionFromCtx(ctx);
+          if (session) {
+            const given = (ctx.body as Record<string, unknown> | undefined)?.[field];
+            const check = await confirmPassword(
+              database,
+              { $context: Promise.resolve(ctx.context) } as unknown as Pick<Auth, '$context'>,
+              session.user.id,
+              given,
+            );
+            if (check === 'limited') {
+              throw new APIError('TOO_MANY_REQUESTS', {
+                message: 'Too many wrong passwords. Wait ten minutes, then try again.',
+                code: 'TOO_MANY_ATTEMPTS',
+              });
+            }
+            if (check === 'wrong') {
+              throw new APIError('BAD_REQUEST', {
+                message: 'Invalid password',
+                code: 'INVALID_PASSWORD',
+              });
+            }
+          }
         }
         // Two-factor is for an address that has been shown to be the person's. An unverified
         // account that turned it on could later follow a verification link, which opens a session

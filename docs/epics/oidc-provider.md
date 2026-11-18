@@ -140,3 +140,35 @@ client's access, and clients are told when a session ends.
 deletion, which will call the same revocation routine (8.2, 9.5), the Console
 control for the back-channel address and end-session switch (8.6), and CORS for
 single-page apps.
+
+#### ✅ 6.4 — Logout notices that arrive
+
+**Goal:** An app that missed a back-channel logout notice is told again, and every notice comes from one sender.
+
+**Deliverables:**
+
+- notices kept in `logout_notices` and sent again with backoff after a failure that may be temporary, for a day; the spec's "sent
+  once" changed
+- one sender: the back-channel address kept in core's metadata, moved there at start-up (`moveBackchannelAddresses`), so the provider
+  sends nothing; sign-out, deactivation and deletion all write notices that `LogoutDelivery` sends
+
+**Dependencies:** 6.3
+
+**Spec reference:** core-app §3.6.5, §3.16; [research 0011](../research/0011-streamlining-sign-in.md) D
+
+**Built as found (November 2026):**
+
+- OpenID Connect Back-Channel Logout 1.0 §2.5: the provider should not send a notice again unless it suspects an earlier one failed for a
+  recoverable reason (a network outage, a temporary interruption), and then after a delay; in all other cases it should not. So a
+  notice is tried again only after a timeout, an app that could not be reached, or a 5xx, never after the app's `400`, and for a
+  bounded time; each attempt is a new token, good for two minutes (§4).
+- The provider plugin sends its own notices from its session-delete hook, to every client with its `backchannelLogoutUri` field set,
+  once. Being the one sender means keeping each app's back-channel address in a field of core's own, so the plugin sends nothing and
+  core queues every notice: a migration of every registered client's address, and a change to `ClientRegistry`.
+- The queue can follow the account-deletion notices' (`src/accounts/deletion-delivery.ts`): a table read on every round, a lease per
+  notice so two instances do not both send, and the one-minute timer core already runs.
+
+**Review checklist:**
+
+- An app unreachable for a minute still ends the session once it answers
+- A notice is never sent for a session that is still open

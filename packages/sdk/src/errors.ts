@@ -50,9 +50,18 @@ export class CoreUnavailableError extends SovereignError {
   }
 }
 
-/** This person's token cannot be renewed (sdk §5.1). They must sign in again. */
+/**
+ * This person's token cannot be renewed (sdk §5.1). They must sign in again. `byCore` is true when core said so (it refused the
+ * renewal, or the person's token twice): the SDK has then ended the person's sessions in the app (sdk §9.1).
+ */
 export class SessionEndedError extends SovereignError {
   override name = 'SessionEndedError';
+  readonly byCore: boolean;
+
+  constructor(message: string, details: { byCore?: boolean } = {}) {
+    super(message);
+    this.byCore = details.byCore ?? false;
+  }
 }
 
 /** This instance's core does not offer the capability (sdk §7). The call was not sent. */

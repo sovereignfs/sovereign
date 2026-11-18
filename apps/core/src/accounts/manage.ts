@@ -1,6 +1,6 @@
 import type { Database, Executor } from '@sovereignfs/database';
 import { isRole, ROLE_OWNER } from '../auth/roles';
-import { planLogoutNotices, type LogoutNotice } from '../oauth/logout';
+import { planLogoutNotices, queueLogoutNotices } from '../oauth/logout-notices';
 import { revokeAllTokens } from '../oauth/revocation';
 import { NAMES } from '../oauth/schema-names';
 import { can } from '../roles/capabilities';
@@ -136,8 +136,8 @@ export type Actor = { id: string; role: unknown };
 
 /** What the manager needs from outside: telling apps, and telling the person. Both are after the work, and best-effort. */
 export type AccountManagerHooks = {
-  /** Tells the apps that registered a back-channel logout address that sessions ended. */
-  logoutNotices?: (notices: readonly LogoutNotice[]) => Promise<void>;
+  /** Called after logout notices were written for apps (`logout-notices.ts`), so they are sent now and not at the next round. */
+  logoutNotices?: () => Promise<void>;
   /** Called after an account was deleted and notices were written for apps, so they are sent now and not at the next round. */
   deletionNotices?: () => Promise<void>;
   /** Tells the account holder that an operator reset their two-factor sign-in. Resolves true when it was sent. */
@@ -259,7 +259,9 @@ export class AccountManager {
       if (found.rows[0]?.role === ROLE_OWNER) {
         throw new AccountActionError('owner', 'The owner cannot be deleted.');
       }
-      const planned = await planLogoutNotices(tx, id);
+      // Read before the sessions go, and written in this transaction: a notice exists exactly when the deletion does (core-app §3.6.5).
+      const planned = await planLogoutNotices(tx, { userId: id });
+      await queueLogoutNotices(tx, planned);
       // Read before the consents and tokens that say which apps the person used are deleted (core-app §4.5).
       queued = (await planDeletionNotices(tx, id)).length > 0;
       // That it was deleted, so a restore can delete it again (core-app §4.5), even when there was no app to tell.
@@ -289,7 +291,7 @@ export class AccountManager {
     }
     if (notices.length > 0) {
       try {
-        await this.#hooks.logoutNotices?.(notices);
+        await this.#hooks.logoutNotices?.();
       } catch (error) {
         this.#log(
           `A notice after deleting an account failed: ${error instanceof Error ? error.message : 'unknown error'}`,

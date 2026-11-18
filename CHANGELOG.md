@@ -5,6 +5,38 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.114.0] - 2026-11-18
+
+### Changed
+
+- An app that misses the notice that a person signed out of core is told again: core keeps each notice and, after a timeout, an app
+  that cannot be reached or a server error, sends it again after 1, 5 and 30 minutes and then 2 and 6 hours, for up to a day. Any other
+  answer from the app is final. Core is now the only sender of these notices; each app's logout notice address is moved to core's own
+  settings when core starts, with nothing for an operator to do.
+
+- Every place that asks a signed-in person for their password again counts wrong answers against one limit: five in ten minutes, then
+  every answer is refused until the ten minutes pass. Turning two-factor sign-in on or off, its backup codes and key, and changing the
+  password now count with handing over ownership and deleting the account.
+
+## [0.113.0] - 2026-11-18
+
+### Added
+
+- A person who signs up from the link of an invitation that core emailed to them no longer gets a second email asking them to verify
+  the same address: the account is verified by the invitation and they are signed in straight away. An invitation passed on by hand,
+  because its email was not sent, is verified by email as before. Core now records whether each invitation's email was sent; existing
+  invitations count as not sent.
+
+### Fixed
+
+- Someone sent to core by an app to sign in, who instead created an account, verified their email or reset their password, now ends up
+  back in the app, not on core's launcher.
+- A passkey used on the second sign-in step ("Use a passkey instead") unlocks the person's encrypted data with the same touch, as it does
+  on the sign-in page.
+- Signing out that does not reach the server, or is refused, now says the person is still signed in, instead of seeming to work.
+- A verification link that has expired or was already used now says so even in a browser that is already signed in, instead of
+  quietly moving on.
+
 ## [0.112.0] - 2026-11-18
 
 ### Added

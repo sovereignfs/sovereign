@@ -5,9 +5,10 @@ import { type FormEvent, useState } from 'react';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../src/auth/client';
 import { signInValue } from '../../../src/auth/derive';
+import { withReturnTo } from '../../../src/auth/return-to';
 import {
-  passwordPolicyMessage,
-  passwordProblems,
+  newPasswordProblem,
+  PAGE_NOT_READY,
   type PasswordPolicy,
 } from '../../../src/auth/password-policy';
 import { AuthField } from '../auth-field';
@@ -20,12 +21,15 @@ export function ResetPasswordForm({
   passwordHint,
   address,
   policy,
+  returnTo,
 }: {
   token: string;
   passwordHint: string;
   /** The account the link belongs to: the new sign-in value is made from it (core-app §5.2). */
   address: string;
   policy: PasswordPolicy;
+  /** Where signing in goes next: an app's sign-in, when one led here. */
+  returnTo: string;
 }) {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -35,13 +39,9 @@ export function ResetPasswordForm({
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (password !== confirm) {
-      setError('The passwords do not match.');
-      return;
-    }
-    const problems = passwordProblems(password, policy);
-    if (problems.length > 0) {
-      setError(passwordPolicyMessage(problems));
+    const problem = newPasswordProblem(password, confirm, policy);
+    if (problem) {
+      setError(problem);
       return;
     }
     setPending(true);
@@ -51,7 +51,7 @@ export function ResetPasswordForm({
       value = await signInValue(password, address);
     } catch {
       setPending(false);
-      setError('This page could not get ready. Reload it and try again.');
+      setError(PAGE_NOT_READY);
       return;
     }
     const result = await authClient.resetPassword({ newPassword: value, token });
@@ -62,7 +62,7 @@ export function ResetPasswordForm({
       return;
     }
     // Every session was ended, so the next step is signing in with the new password.
-    window.location.assign('/sign-in?reset=1');
+    window.location.assign(withReturnTo('/sign-in?reset=1', returnTo));
   }
 
   if (expired) {
@@ -72,7 +72,7 @@ export function ResetPasswordForm({
           This link has expired or was already used. A link works once, for an hour.
         </AuthNotice>
         <p className={styles.footer}>
-          <Link className={styles.link} href="/forgot-password">
+          <Link className={styles.link} href={withReturnTo('/forgot-password', returnTo)}>
             Request a new link
           </Link>
         </p>

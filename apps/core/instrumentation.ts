@@ -25,4 +25,7 @@ export async function register(): Promise<void> {
   // Account-deletion notices that were not answered before core stopped are sent again (core-app §4.5).
   const { startDeletionDelivery } = await import('./src/accounts/deletion-scheduler');
   startDeletionDelivery();
+  // Logout notices are core's alone, and those not answered before core stopped are sent again (core-app §3.6.5).
+  const { startLogoutDelivery } = await import('./src/oauth/logout-scheduler');
+  await startLogoutDelivery();
 }

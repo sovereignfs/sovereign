@@ -77,10 +77,43 @@ describe('the sign-in page', () => {
     expect(html).toContain('href="/sign-up?returnTo=%2Fsettings%3Ftab%3Dmail"');
   });
 
+  it('keeps an app’s sign-in on the way to sign-up and to a password reset', async () => {
+    const { signIn } = await pages();
+    // What the provider sends: the app's request, the names it signed, and `sig`.
+    const html = await renderServer(
+      await signIn({
+        searchParams: Promise.resolve({
+          client_id: 'app',
+          redirect_uri: 'https://app.sovereign.local/auth/callback',
+          state: 's1',
+          exp: '1',
+          ba_param: ['ba_param', 'client_id', 'exp', 'redirect_uri', 'state'],
+          sig: 'signature',
+        }),
+      }),
+    );
+    const resume = encodeURIComponent(
+      '/api/auth/oauth2/authorize?client_id=app&redirect_uri=https%3A%2F%2Fapp.sovereign.local%2Fauth%2Fcallback&state=s1',
+    );
+    expect(html).toContain(`href="/sign-up?returnTo=${resume}"`);
+    expect(html).toContain(`href="/forgot-password?returnTo=${resume}"`);
+  });
+
   it('does not carry an address on another site', async () => {
     const { signIn } = await pages();
     const html = await renderServer(await signIn({ searchParams: search('https://evil.example') }));
     expect(html).not.toContain('evil.example');
+  });
+
+  it('tells someone signed in that an emailed link did not work, then lets them go on', async () => {
+    const { signIn } = await pages();
+    getSession.mockResolvedValue({ user: { id: 'u1' } });
+    const html = await renderServer(
+      await signIn({ searchParams: search('/files', { error: 'TOKEN_EXPIRED' }) }),
+    );
+    expect(html).toContain('That link has expired or was already used.');
+    expect(html).toContain('href="/files"');
+    expect(html).toContain('Continue');
   });
 
   it('sends someone who is already signed in to where they were going', async () => {
@@ -248,7 +281,7 @@ describe('the sign-in page, when an email link sends the person back', () => {
 describe('the forgot-password page', () => {
   it('asks for an email address and says how long the link works', async () => {
     const { forgot } = await pages();
-    const html = await renderServer(await forgot());
+    const html = await renderServer(await forgot({ searchParams: Promise.resolve({}) }));
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
     expect(html).toContain('Reset password');
     expect(html).toMatch(/<input[^>]*type="email"/);
@@ -258,7 +291,7 @@ describe('the forgot-password page', () => {
   it('sends someone who is already signed in away', async () => {
     const { forgot } = await pages();
     getSession.mockResolvedValue({ user: { id: 'u1' } });
-    await expect(forgot()).rejects.toMatchObject({
+    await expect(forgot({ searchParams: Promise.resolve({}) })).rejects.toMatchObject({
       digest: expect.stringContaining('NEXT_REDIRECT'),
     });
   });

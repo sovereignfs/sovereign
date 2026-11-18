@@ -209,8 +209,11 @@ core and see it in the launcher.
   changes nothing. Capabilities follow the roles at once.
 - Asking for a password again is limited: five wrong answers within ten minutes
   for an account, and every answer after that is refused, a right one too, until
-  the ten minutes have passed. A right answer clears the count. (better-auth's
-  own rate limit guards its HTTP routes and does not see this server-side check.)
+  the ten minutes have passed. A right answer clears the count. The count is one
+  per account wherever the password is asked: handing over ownership, deleting
+  the account, turning two-factor sign-in on or off, its backup codes and key,
+  and changing the password, whose better-auth routes are checked through it
+  before better-auth checks the password itself.
 - A role that is not one of these holds no capability. A person's role is read
   from the database for what core guards, so a change shows at once.
 
@@ -350,9 +353,20 @@ listed for, or opens for, anyone else.
   sends the link; a person who gives the right password before verifying is
   told to verify and can ask for a new link. Signing in does not itself send
   one.
+- A sign-up made from the link of an invitation that core emailed to that very
+  address (§3.10) needs no second email: holding the link's unguessable id
+  shows the person reads the address, as a verification link would. The
+  sign-up page sends the id with the sign-up; the account is made verified,
+  no verification link is sent, the account-created email is, and the person
+  is signed in straight away. The address alone never counts, and neither
+  does the link of an invitation passed on by hand because its email was not
+  sent: those sign-ups are verified by email as any other.
 - The verification link is single-use, expires after one hour, and signs the
   person in when followed. Following it a second time opens no session. A new
   link can be requested.
+- A verification link that does not work (expired, or already used) lands on
+  the sign-in page, which says so; someone already signed in in that browser is
+  told too, and then goes on to where they were going.
 - Sign-up and a request for a new link answer the same whether or not the
   address already has an account, and send nothing to an address that does.
   (An uninvited address is still refused outright when invite-only is on
@@ -442,7 +456,8 @@ Editing them is not part of Phase 1.
 - A person can enrol an authenticator app (QR code and a key to type). It is
   turned on only once a valid code has been entered.
 - Enrolment produces ten single-use backup codes.
-- Enabling, disabling and regenerating backup codes require the password again.
+- Enabling, disabling and regenerating backup codes require the password again,
+  counted with every other time it is asked (§3.2.1).
 - With TOTP on, sign-in asks for a code (or a backup code) as a second step.
 - Turning it on needs an address that has been verified (§3.3.3), so an account
   that never proved its address cannot later be signed in by a verification
@@ -612,6 +627,15 @@ passkeys), subject to §3.2.1. The account holder is told by email.
   request through the password, the second step and a passkey, and sends the
   browser back to the app with its code. Someone already signed in who is sent
   back with `prompt=login` is shown the form.
+- The app's request also survives the pages its signed form does not reach
+  (it lasts ten minutes, and only on the sign-in page and its second step):
+  creating an account, verifying the address by email, and forgetting the
+  password and setting a new one. The sign-in page turns the signed request
+  back into the app's own request to the authorization endpoint, without the
+  signature and with `login` taken out of `prompt`, and carries that as the
+  page to return to through each of those pages and their emails. Once the
+  person has a session it is opened, and the provider checks the whole request
+  again, so it can send the browser nowhere the app's own request could not.
 - Signing keys are stored with their private half encrypted by better-auth with
   `SV_AUTH_SECRET`, so changing it makes the stored keys unreadable and new ones
   must be made (open point, like the authenticator keys in §3.4.1).
@@ -714,19 +738,30 @@ alone, so revoking them is core's own step.
   account is deactivated — core revokes the access tokens of that session and
   sends a signed _logout token_ (OpenID Connect Back-Channel Logout, carrying
   the `sub` and the session id `sid`) to the back-channel logout URI of every
-  client that session was used with. A notice that fails is logged and not
-  retried, so an app must also treat its own session as ending when its access
-  tokens stop working.
-- When the session ended by deactivation, core tells the apps once the
-  deactivation has been committed: it reads which apps held tokens in each
+  client that session was used with. Core is the only sender: an app's
+  back-channel address is kept with core's own settings for the app, not in the
+  provider's field, so the provider sends none of its own; an address kept there
+  before is moved at start-up. Each notice is kept (`logout_notices`), one for
+  each app and session, written once the session is gone (for a deactivation or
+  a deletion, in the same transaction), and sent at once and then by a timer
+  every minute. As the specification asks (§2.5), it is sent again only after a
+  failure that may be temporary (a timeout, an app that cannot be reached, a
+  `5xx` or a `429`), after 1, 5 and 30 minutes and then 2 and 6 hours, and given
+  up after any other answer, or a day after the session ended. An attempt is
+  claimed with a lease, so two instances of core do not send one notice twice.
+  An app must still treat its own session as ending when its access tokens stop
+  working, for a notice that was given up.
+- When the session ended by deactivation, the notices are written in the
+  deactivation's transaction and sent once it has been committed: core reads which apps held tokens in each
   session before deleting the sessions, since deleting a session clears that
   link. A person ending a session in their identity pages, or all the others,
   goes through the same route as signing out, so the same notices and
   revocations follow.
 - The logout token is a JWT signed with the key that signs ID tokens, typed
   `logout+jwt`, carrying `iss`, `aud`, `sub`, `sid`, `iat`, an `exp` two minutes
-  on, a `jti` and the back-channel logout event, and no `nonce`. It is sent once,
-  within five seconds, and a redirect is not followed.
+  on, a `jti` and the back-channel logout event, and no `nonce`. Each attempt is a
+  new token; an attempt waits five seconds at most, and a redirect is not
+  followed.
 - An end-session request core cannot match to the person's session (no hint, a
   hint core did not sign, or one for another browser's session) ends nothing: it
   shows a confirmation. A client that has not enabled end-session cannot use the
@@ -1105,7 +1140,8 @@ invitation is open for an address: a new one cancels the one before, so a link
 sent earlier stops working. The invitation is emailed with a link on core's own
 address, `/invite/<id>`, where the id is random and unguessable. When email is
 not set up, or sending fails, the invitation still exists and the operator is
-shown the link to pass on, with a way to copy it. The Console lists the
+shown the link to pass on, with a way to copy it. Core records whether the
+email was sent, since only an emailed link verifies the address (§3.3.3). The Console lists the
 invitations that have been neither used nor cancelled, newest first, with who
 made them and when each ends; one past its expiry is listed as expired, so it
 can be seen and cancelled. Cancelling takes the link out of use at once; an
@@ -1417,14 +1453,18 @@ Core is told what the instance is for, and a development or staging instance can
 which a production instance never can ([workstream 0002](../workstreams/0002-test-instances.md)).
 
 - **`SV_ENVIRONMENT`** is `development`, `staging` or `production`, and `production` when it is not set. Any other value is a start-up
-  error, since a misspelling must never read as a permission. It changes nothing in how core runs; the only thing it decides is whether
-  the seed below may run. The operator CLI sets it from `environment` in `suite.yml` ([contracts/suite.md](../../contracts/suite.md) §1.1.1), and an
+  error, since a misspelling must never read as a permission. It changes nothing in how core runs for anyone using it; it decides only
+  whether the seed below may run, and whether the lock check below is served. The operator CLI sets it from `environment` in `suite.yml` ([contracts/suite.md](../../contracts/suite.md) §1.1.1), and an
   operator cannot set it in `core.env`.
 - **`sovereign-admin seed [--local] [--json]`** is run in core's container (§3.7.4). It exits 3 when it is refused, which it is before it
   writes anything, and 1 when it stops partway (running it again is safe). It MUST refuse, making nothing, when `SV_ENVIRONMENT` is
   `production` or unset, and when the database holds any account that is not one of the seed accounts. The two are separate checks, so
   a mistake in one is not a hole: a variable set wrongly cannot seed a real instance, and an instance made by hand cannot be seeded by
   setting the variable. It MUST be safe to run again: it makes what is missing, leaves what is there, and says which.
+- **The lock check** (`/lock-check`, task 4.15, [research 0012](../research/0012-biometric-lock.md)) tries on a device what a biometric
+  lock would need: making a passkey there, asking for one after a tap and with none, its PRF output, and how long the device keeps an
+  installed core in the background. It is for a signed-in person on a `development` or `staging` instance, and a page that is not
+  there on `production`. It sends nothing to the server; a passkey it makes is kept by the device only and registered with nothing.
 - **What it makes:** an owner, an admin and an ordinary person (`owner@sovereign.local`, `admin@sovereign.local`,
   `user@sovereign.local`), the owner first since the first account always is, each with a verified address and its role, made through core's
   own sign-up so that every rule applies; and one public sample app, a client with a managed key, made through the registry as the system
@@ -1442,7 +1482,7 @@ which a production instance never can ([workstream 0002](../workstreams/0002-tes
 ### 3.16 Not in Phase 1
 
 Groups and per-app access policies; per-account capability grants;
-verification levels; retrying a failed back-channel logout notice; social
+verification levels; social
 sign-in; changing
 an email address; editable email templates; theme presets, colours and text
 size preferences (a choice of light, dark or the system's is in Preferences, §3.11); mail, notification and activity APIs for apps; account
@@ -1805,10 +1845,10 @@ be made whole, and `sv restore` says so. An app with no account-deleted address 
 **Decided here, so that it can be built.**
 
 - **Its own address, not the back-channel logout address.** The two make different promises: a logout notice says a session ended and is
-  sent once; this one says to delete what is held and is sent until it is answered. An app that wants only one has only one.
+  tried for a day; this one says to delete what is held and is sent until it is answered. An app that wants only one has only one.
 - **No acknowledgement of what was deleted.** Core asks for the app's word that it is done and takes nothing more, because anything more
   would be a way for an app to be asked about a person.
-- **No retry of the logout notice.** §3.6.5 stands: a logout notice is sent once. Only this one is kept.
+- **The logout notice is kept as well, since 6.4** (§3.6.5): for a day, and only after a failure that may be temporary.
 - **Not an export.** What a person may take with them is the "Later" row (§2), and the SDK's legacy `portability` waits for it.
 
 ---
@@ -1959,7 +1999,8 @@ Changes §3.4.2. Built (task 16.8).
   passkey. A device that gives the output only when the passkey is used is asked for one more touch, whose answer is sent nowhere.
   The way in names the passkey, and a person can give a way in only to their own. Removing the passkey removes it, and one whose
   passkey is gone is never read.
-- Signing in with such a passkey unlocks with the same touch.
+- Signing in with such a passkey unlocks with the same touch, on the sign-in page and on its second step alike. A passkey used on the
+  second step drops the secret the password left for that step unused, since the passkey may be another account's.
 - A passkey that does not answer the extension signs in as before, and the browser stays locked: the person is asked for their
   password when something needs unlocking.
 - A browser already signed in is unlocked by a passkey through a ceremony whose answer is sent nowhere; the page checks itself that
@@ -2147,3 +2188,10 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-18 | §1.3, §3.5: a fuller install (RFC 0001 amendment 1): the manifest's fixed `id`, launch handler, shortcuts to pages everyone has, screenshots, categories and language; an offer to install on the account pages; a new version announced with Reload instead of swapped in silently.                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | 2026-11-18 | §3.8: in an installed core, a plain click on an app's tile opens it in a new window, decided when it is clicked, which a device that can hands to the installed app (RFC 0001 A5).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 2026-11-18 | §3.8.1: a shortcut may have an app's own address, checked against a pattern and a list of refused schemes, tried when its tile is clicked from an installed core or a phone, with the web address as the fallback (RFC 0001 A6).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-11-18 | §3.3.3, §3.10: a sign-up from the link of an invitation core emailed to that address is verified by it, with no second email; core records whether an invitation's email was sent.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 2026-11-18 | §3.6.1: an app's sign-in request is carried, as the way back to the authorization endpoint, through sign-up, email verification and a password reset, so each ends in the app.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 2026-11-18 | §5.5: a passkey used on the second sign-in step unlocks with the same touch, as on the sign-in page, and the password's waiting secret is dropped.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 2026-11-18 | §3.3.3: a verification link that did not work is said even to someone already signed in.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 2026-11-18 | §3.2.1, §3.4.1: one count of wrong passwords per account wherever the password is asked again, better-auth's two-factor and change-password routes included.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 2026-11-18 | §3.6.5, §3.16, §4.5: logout notices are core's alone, kept and sent again after a failure that may be temporary, for a day; an app's back-channel address moves to core's own settings.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 2026-11-19 | §3.15.1: the lock check, a development and staging page that tries on a device what a biometric lock needs (research 0012).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |

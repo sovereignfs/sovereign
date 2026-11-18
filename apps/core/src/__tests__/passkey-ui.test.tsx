@@ -32,6 +32,8 @@ const session = {
   isUnlocked: vi.fn(),
   letPasskeyUnlock: vi.fn(),
   unlockWithPasswordAgain: vi.fn(),
+  afterSecondStep: vi.fn(),
+  dropHandOver: vi.fn(),
 };
 vi.mock('../keys/session', () => ({
   ...session,
@@ -45,6 +47,7 @@ vi.mock('../auth/derive', () => ({
 
 const { PasskeyPanel } = await import('../../app/security/passkeys/passkey-panel');
 const { SignInForm } = await import('../../app/(auth)/sign-in/sign-in-form');
+const { TwoFactorForm } = await import('../../app/(auth)/sign-in/two-factor/two-factor-form');
 
 const assign = vi.fn();
 const reload = vi.fn();
@@ -335,6 +338,45 @@ describe('passkeys that unlock (core-app §5.5)', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Sign in with a passkey' }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/'));
     expect(session.afterPasskeyAccepted).not.toHaveBeenCalled();
+  });
+
+  it('unlocks with the same touch on the second step too, as on the sign-in page', async () => {
+    signInPasskey.mockResolvedValue({
+      data: { session: {} },
+      error: null,
+      webauthn: {
+        response: { id: 'c1' },
+        clientExtensionResults: { prf: { results: { first: out } } },
+      },
+    });
+    render(<TwoFactorForm returnTo="/files" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Use a passkey instead' }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('/files'));
+    expect(signInPasskey).toHaveBeenCalledWith({ extensions: PRF, returnWebAuthnResponse: true });
+    expect(session.afterPasskeyAccepted).toHaveBeenCalledWith('c1', new Uint8Array(out));
+  });
+
+  it('drops the password’s secret on the second step, never opening keys with it after a passkey', async () => {
+    signInPasskey.mockResolvedValue({
+      data: { session: {} },
+      error: null,
+      webauthn: { response: { id: 'c2' }, clientExtensionResults: {} },
+    });
+    render(<TwoFactorForm returnTo="/" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Use a passkey instead' }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('/'));
+    expect(session.dropHandOver).toHaveBeenCalled();
+    expect(session.afterSecondStep).not.toHaveBeenCalled();
+    expect(session.afterPasskeyAccepted).not.toHaveBeenCalled();
+  });
+
+  it('keeps the second step open when the passkey is refused', async () => {
+    signInPasskey.mockResolvedValue({ data: null, error: { status: 401 } });
+    render(<TwoFactorForm returnTo="/" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Use a passkey instead' }));
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(session.dropHandOver).not.toHaveBeenCalled();
+    expect(assign).not.toHaveBeenCalled();
   });
 });
 

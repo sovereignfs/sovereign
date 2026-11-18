@@ -134,8 +134,9 @@ Sign-out goes two ways, and an app can use either or both.
   cannot tell whose session it is: it shows a confirmation page and ends nothing, and the person stays signed in to core. Some
   apps send the bare address and nothing more.
 - **From core to the app.** Add a **back-channel logout address**. When a person's session on core ends, core posts a
-  signed logout token there, carrying `sub` and `sid`. It is sent once and not retried, so the app must also treat its
-  own session as over when its tokens stop working.
+  signed logout token there, carrying `sub` and `sid`. If the app cannot be reached, times out or answers with a `5xx`, core
+  sends it again for up to a day; any other answer is final. The app must still treat its own session as over when its tokens
+  stop working.
 
 Not every app takes a back-channel logout. For one that does not, signing out of core does not sign the person out of it: its own session
 lasts until it expires, and it can refresh in the meantime, since a refresh token obtained with `offline_access` outlives core's session.

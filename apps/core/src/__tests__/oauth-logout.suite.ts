@@ -12,13 +12,21 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { AccountStates } from '../accounts/states';
 import type { Auth } from '../auth/auth';
 import { migrateCore } from '../db/migrate';
-import { planLogoutNotices, revokeOnDeactivation, sendLogoutNotices } from '../oauth/logout';
+import { revokeOnDeactivation } from '../oauth/logout';
+import {
+  LogoutDelivery,
+  planLogoutNotices,
+  queueLogoutNotices,
+  signLogoutToken,
+} from '../oauth/logout-notices';
+import { moveBackchannelAddresses } from '../clients/registry';
 import { listConnectedApps } from '../oauth/connected';
 import { removeAccess, revokeAllTokens, revokeClientTokens, stamp } from '../oauth/revocation';
 import { endOtherSessions, endSession } from '../sessions/sessions';
 import { BASE_URL, Jar, PASSWORD, call, makeAuthWithTasks, signUp } from './auth-harness';
 import {
   REDIRECT,
+  actorOf,
   authorize,
   exchangeCode,
   formPost,
@@ -26,6 +34,7 @@ import {
   publishedKeys,
   refresh,
   registerClient,
+  registryFor,
   signInTo,
   useDatabase,
   userInfo,
@@ -35,6 +44,7 @@ import {
 
 const MIGRATIONS = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../migrations');
 const TABLES = [
+  'logout_notices',
   'oauth_access_tokens',
   'oauth_refresh_tokens',
   'oauth_consents',
@@ -352,14 +362,20 @@ export function oauthLogoutSuite(createDatabase: () => Promise<TestDatabase>): v
       expect(sent.map((s) => s.url)).toEqual([LOGOUT_URI]);
     });
 
-    it('is not undone by an app that does not answer: the person is signed out, and it is tried once', async () => {
-      const { auth, settled, person, personId } = await toldApp();
+    it('is not undone by an app that does not answer: the person is signed out, and the notice is kept to send again', async () => {
+      const { auth, settled, person, personId, client } = await toldApp();
       const sent = network(auth, () => new Response('nope', { status: 500 }));
       const out = await call(auth, 'POST', '/sign-out', { jar: person, body: {} });
       await settled();
       expect(out.status).toBe(200);
       expect(await sessionCount(personId)).toBe(0);
       expect(sent).toHaveLength(1);
+      const { rows } = await db.run(
+        'select state, attempts, last_failure from logout_notices where client_id = ?',
+        [client.clientId],
+      );
+      expect(rows[0]).toMatchObject({ state: 'pending', last_failure: 'http_500' });
+      expect(Number(rows[0]?.attempts)).toBe(1);
     });
 
     it('is not undone by an app that cannot be reached', async () => {
@@ -371,6 +387,8 @@ export function oauthLogoutSuite(createDatabase: () => Promise<TestDatabase>): v
       await settled();
       expect(await sessionCount(personId)).toBe(0);
       expect(sent).toHaveLength(1);
+      const { rows } = await db.run('select state, last_failure from logout_notices');
+      expect(rows[0]).toMatchObject({ state: 'pending', last_failure: 'network' });
     });
 
     it('leaves a refresh token obtained with offline_access alone when a session ends, as the specification says', async () => {
@@ -450,7 +468,11 @@ export function oauthLogoutSuite(createDatabase: () => Promise<TestDatabase>): v
       const without = (await signInTo(ctx.auth, ctx.person, quiet, { scope: 'openid profile' }))
         .tokens;
       const states = new AccountStates(db, { log: () => undefined });
-      revokeOnDeactivation(states, () => Promise.resolve(ctx.auth));
+      revokeOnDeactivation(
+        states,
+        () => Promise.resolve(db),
+        () => Promise.resolve(ctx.auth),
+      );
       return { ...ctx, told, quiet, withOffline, without, states };
     }
 
@@ -714,24 +736,48 @@ export function oauthLogoutSuite(createDatabase: () => Promise<TestDatabase>): v
     });
   });
 
-  describe('planning and sending notices directly', () => {
-    it('reads who to tell before the sessions go, and sends nothing for nobody', async () => {
+  describe('planning, keeping and sending notices (core-app §3.6.5)', () => {
+    const MINUTE = 60_000;
+    /** A delivery with its own clock and network, signing with this instance's keys. */
+    function delivery(
+      auth: Auth,
+      respond: (url: string, init: RequestInit) => Response | Promise<Response>,
+      clock: { now: number },
+    ) {
+      const seen: { url: string; init: RequestInit }[] = [];
+      const log: string[] = [];
+      const run = new LogoutDelivery(db, (notice) => signLogoutToken(auth, notice, clock.now), {
+        now: () => clock.now,
+        fetch: (async (url: string, init: RequestInit) => {
+          seen.push({ url: String(url), init });
+          return respond(String(url), init);
+        }) as unknown as typeof fetch,
+        log: (line) => log.push(line),
+      });
+      return { run, seen, log };
+    }
+    const noticeRow = async (clientId: string) =>
+      (await db.run('select * from logout_notices where client_id = ?', [clientId])).rows[0];
+
+    /** A person signed in to an app that has a back-channel address, and the notice for their session written. */
+    async function queued(now: number) {
       const ctx = await instance();
       const told = await registerClient(ctx.auth, ctx.owner, { backchannelLogoutUri: LOGOUT_URI });
       await signInTo(ctx.auth, ctx.person, told, { scope: 'openid' });
-      const planned = await db.transaction((tx) => planLogoutNotices(tx, ctx.personId));
-      expect(planned).toEqual([
-        {
-          clientId: told.clientId,
-          uri: LOGOUT_URI,
-          sessionId: await sessionIdOf(ctx.personId),
-          userId: ctx.personId,
-        },
-      ]);
-      expect(await db.transaction((tx) => planLogoutNotices(tx, 'nobody'))).toEqual([]);
-      const sent = network(ctx.auth);
-      await sendLogoutNotices(ctx.auth, []);
-      expect(sent).toHaveLength(0);
+      const planned = await planLogoutNotices(db, { userId: ctx.personId });
+      await queueLogoutNotices(db, planned, now);
+      return { ...ctx, told, planned };
+    }
+
+    it('reads who to tell before the sessions go, and finds nobody for nobody', async () => {
+      const ctx = await instance();
+      const told = await registerClient(ctx.auth, ctx.owner, { backchannelLogoutUri: LOGOUT_URI });
+      await signInTo(ctx.auth, ctx.person, told, { scope: 'openid' });
+      const session = await sessionIdOf(ctx.personId);
+      const expected = [{ clientId: told.clientId, sub: ctx.personId, sid: session }];
+      expect(await planLogoutNotices(db, { userId: ctx.personId })).toEqual(expected);
+      expect(await planLogoutNotices(db, { sessionId: session })).toEqual(expected);
+      expect(await planLogoutNotices(db, { userId: 'nobody' })).toEqual([]);
     });
 
     it('leaves out an app that is switched off, and one with no address, and tells an app once for each session', async () => {
@@ -748,7 +794,7 @@ export function oauthLogoutSuite(createDatabase: () => Promise<TestDatabase>): v
         db.family === 'postgres' ? true : 1,
         off.clientId,
       ]);
-      const planned = await db.transaction((tx) => planLogoutNotices(tx, ctx.personId));
+      const planned = await planLogoutNotices(db, { userId: ctx.personId });
       expect(planned.map((notice) => notice.clientId)).toEqual([told.clientId]);
     });
 
@@ -760,18 +806,28 @@ export function oauthLogoutSuite(createDatabase: () => Promise<TestDatabase>): v
       });
       await signInTo(ctx.auth, ctx.person, told, { scope: 'openid offline_access' });
       await db.run('delete from oauth_access_tokens');
-      const planned = await db.transaction((tx) => planLogoutNotices(tx, ctx.personId));
+      const planned = await planLogoutNotices(db, { userId: ctx.personId });
       expect(planned.map((notice) => notice.clientId)).toEqual([told.clientId]);
+    });
+
+    it('keeps one notice for an app and a session, however many times it is written', async () => {
+      const { told, planned } = await queued(1000);
+      await queueLogoutNotices(db, planned, 2000);
+      const { rows } = await db.run(
+        'select count(*) as n from logout_notices where client_id = ?',
+        [told.clientId],
+      );
+      expect(Number(rows[0]?.n)).toBe(1);
     });
 
     it('sends a token that is as the specification asks: typed, with the event, an expiry two minutes on, no nonce', async () => {
       const ctx = await instance();
-      const sent = network(ctx.auth);
-      await sendLogoutNotices(ctx.auth, [
-        { clientId: 'the-app', uri: LOGOUT_URI, sessionId: 'sid-1', userId: 'user-1' },
-      ]);
-      expect(sent).toHaveLength(1);
-      const jwt = verifyJwt(logoutTokenOf(sent[0] as Sent), await publishedKeys(ctx.auth));
+      const token = await signLogoutToken(ctx.auth, {
+        clientId: 'the-app',
+        sub: 'user-1',
+        sid: 'sid-1',
+      });
+      const jwt = verifyJwt(token, await publishedKeys(ctx.auth));
       expect(jwt.header).toMatchObject({ alg: 'EdDSA', typ: 'logout+jwt' });
       expect(jwt.payload).toMatchObject({
         iss: BASE_URL,
@@ -785,24 +841,126 @@ export function oauthLogoutSuite(createDatabase: () => Promise<TestDatabase>): v
       expect(String(jwt.payload.jti)).toMatch(/^[0-9a-f]{32}$/);
     });
 
-    it('does not follow a redirect from the app, and times out rather than waiting for ever', async () => {
-      const ctx = await instance();
-      const log: string[] = [];
-      const seen: RequestInit[] = [];
-      await sendLogoutNotices(
-        ctx.auth,
-        [{ clientId: 'c', uri: LOGOUT_URI, sessionId: 's', userId: 'u' }],
-        {
-          fetch: ((_url: string, init: RequestInit) => {
-            seen.push(init);
-            return Promise.resolve(new Response(null, { status: 302 }));
-          }) as unknown as typeof fetch,
-          log: (message) => log.push(message),
-        },
+    it('does not follow a redirect, times out rather than waiting for ever, and gives a redirect up', async () => {
+      const clock = { now: Date.now() };
+      const { told } = await queued(clock.now);
+      const { run, seen, log } = delivery(
+        (await instance()).auth,
+        () => new Response(null, { status: 302 }),
+        clock,
       );
-      expect(seen[0]?.redirect).toBe('error');
-      expect(seen[0]?.signal).toBeInstanceOf(AbortSignal);
-      expect(log.join(' ')).toContain('returned 302');
+      expect(await run.runDue()).toEqual({ tried: 1, delivered: 0, failed: 0, givenUp: 1 });
+      expect(seen[0]?.init.redirect).toBe('manual');
+      expect(seen[0]?.init.signal).toBeInstanceOf(AbortSignal);
+      expect((await noticeRow(told.clientId))?.state).toBe('given_up');
+      expect(log.join(' ')).toContain('http_302');
+    });
+
+    it('tries again after a failure that may be temporary, later, and stops once the app answers', async () => {
+      const clock = { now: Date.now() };
+      const { auth, told } = await queued(clock.now);
+      const answers = [503, 0, 200];
+      const { run, seen } = delivery(
+        auth,
+        () => {
+          const status = answers.shift();
+          if (status === 0) throw new Error('connection refused');
+          return new Response(null, { status });
+        },
+        clock,
+      );
+      expect((await run.runDue()).failed).toBe(1);
+      expect((await noticeRow(told.clientId))?.last_failure).toBe('http_503');
+      // Not before the wait: nothing is sent again in the same minute.
+      expect((await run.runDue()).tried).toBe(0);
+      clock.now += MINUTE;
+      expect((await run.runDue()).failed).toBe(1);
+      expect((await noticeRow(told.clientId))?.last_failure).toBe('network');
+      clock.now += 5 * MINUTE;
+      expect((await run.runDue()).delivered).toBe(1);
+      expect((await noticeRow(told.clientId))?.state).toBe('delivered');
+      expect(seen).toHaveLength(3);
+      // Each attempt is a token of its own.
+      const jtis = seen.map(
+        (attempt) =>
+          JSON.parse(
+            Buffer.from(
+              String(new URLSearchParams(String(attempt.init.body)).get('logout_token')).split(
+                '.',
+              )[1] ?? '',
+              'base64url',
+            ).toString(),
+          ).jti as string,
+      );
+      expect(new Set(jtis).size).toBe(3);
+    });
+
+    it('does not send again when the app refused the notice, as the specification asks', async () => {
+      const clock = { now: Date.now() };
+      const { auth, told } = await queued(clock.now);
+      const { run } = delivery(auth, () => new Response(null, { status: 400 }), clock);
+      expect((await run.runDue()).givenUp).toBe(1);
+      expect((await noticeRow(told.clientId))?.state).toBe('given_up');
+    });
+
+    it('gives a notice up a day after the session ended', async () => {
+      const clock = { now: Date.now() };
+      const { auth, told } = await queued(clock.now);
+      const { run } = delivery(auth, () => new Response(null, { status: 503 }), clock);
+      await run.runDue();
+      clock.now += 24 * 60 * MINUTE;
+      expect((await run.runDue()).givenUp).toBe(1);
+      expect((await noticeRow(told.clientId))?.state).toBe('given_up');
+    });
+
+    it('sends a notice once when two rounds run at the same moment', async () => {
+      const clock = { now: Date.now() };
+      const { auth } = await queued(clock.now);
+      const first = delivery(auth, () => new Response(null, { status: 200 }), clock);
+      const second = delivery(auth, () => new Response(null, { status: 200 }), clock);
+      await Promise.all([first.run.runDue(), second.run.runDue()]);
+      expect(first.seen.length + second.seen.length).toBe(1);
+    });
+
+    it('goes with the app when the app is removed', async () => {
+      const { auth, owner, told } = await queued(Date.now());
+      await registryFor(auth).remove(await actorOf(auth, owner), told.clientId);
+      expect(await noticeRow(told.clientId)).toBeUndefined();
+    });
+  });
+
+  describe('moving apps’ addresses to core’s own settings', () => {
+    it('moves an address kept in the provider’s field, so the provider sends nothing, and moves nothing twice', async () => {
+      const ctx = await instance();
+      const app = await registerClient(ctx.auth, ctx.owner, { enableEndSession: true });
+      // As an app registered before this change was kept.
+      await db.run('update oauth_clients set backchannel_logout_uri = ? where client_id = ?', [
+        LOGOUT_URI,
+        app.clientId,
+      ]);
+      expect(await moveBackchannelAddresses(ctx.auth)).toBe(1);
+      const { rows } = await db.run(
+        'select backchannel_logout_uri as uri from oauth_clients where client_id = ?',
+        [app.clientId],
+      );
+      expect(rows[0]?.uri ?? null).toBeNull();
+      const view = await registryFor(ctx.auth).get(
+        await actorOf(ctx.auth, ctx.owner),
+        app.clientId,
+      );
+      expect(view?.backchannelLogoutUri).toBe(LOGOUT_URI);
+      expect(view?.endSession).toBe(true);
+      expect(await moveBackchannelAddresses(ctx.auth)).toBe(0);
+    });
+
+    it('keeps the provider’s field empty for an app registered now', async () => {
+      const ctx = await instance();
+      const app = await registerClient(ctx.auth, ctx.owner, { backchannelLogoutUri: LOGOUT_URI });
+      const { rows } = await db.run(
+        'select backchannel_logout_uri as uri from oauth_clients where client_id = ?',
+        [app.clientId],
+      );
+      expect(rows[0]?.uri ?? null).toBeNull();
     });
   });
 

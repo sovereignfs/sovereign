@@ -1,12 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { headers } from 'next/headers';
-import { redirect } from 'next/navigation';
 import { Card } from '@sovereignfs/ui';
 import { getAuth, getAuthSettings } from '../../../src/auth';
 import { getDatabase } from '../../../src/database';
 import { KeyVault } from '../../../src/keys/vault';
-import { getSession } from '../../../src/auth/session';
+import { requireSignedIn } from '../../../src/auth/require-signed-in';
 import styles from '../security.module.css';
 import { PasskeyPanel, type PasskeyRow } from './passkey-panel';
 
@@ -14,8 +13,7 @@ export const metadata: Metadata = { title: 'Passkeys' };
 
 export default async function PasskeysPage() {
   // The proxy turns away a request with no session cookie; this is the check that counts.
-  const session = await getSession();
-  if (!session) redirect('/sign-in?returnTo=%2Fsecurity%2Fpasskeys');
+  const session = await requireSignedIn('/security/passkeys');
   const found = await (await getAuth()).api.listPasskeys({ headers: await headers() });
   // Which passkeys unlock (core-app §5.5): those with a way into the person's keys. The session's own account, never another.
   const vault = await new KeyVault(await getDatabase()).read(session.user.id);

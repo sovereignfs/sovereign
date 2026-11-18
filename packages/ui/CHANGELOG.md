@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.96.0; earlier versions are in the repository's
 history and tags.
 
+## [0.101.0] - 2026-11-18
+
+### Added
+
+- `AppTile` takes `onClick`, called before the browser follows the link, so the consumer can decide how it opens (a new window when the
+  page runs as an installed app, for example) and call `preventDefault()` when it opens it itself. Without it, nothing changes.
+
 ## [0.100.0] - 2026-11-18
 
 ### Added

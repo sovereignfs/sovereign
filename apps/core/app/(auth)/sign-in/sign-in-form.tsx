@@ -14,6 +14,7 @@ import {
 import { prfExtension, prfOutput } from '../../../src/keys/passkey';
 import type { WebKey } from '@sovereignfs/crypto/web';
 import { continuationUrl, isContinuation } from '../../../src/auth/oauth-continuation';
+import { withReturnTo } from '../../../src/auth/return-to';
 import { DEACTIVATED, passkeyProblem } from '../messages';
 import { AuthError, AuthNotice } from '../auth-notice';
 import { AuthField } from '../auth-field';
@@ -156,7 +157,7 @@ export function SignInForm({
         <AuthField
           label="Password"
           aside={
-            <Link className={styles.aside} href="/forgot-password">
+            <Link className={styles.aside} href={withReturnTo('/forgot-password', returnTo)}>
               Forgot password?
             </Link>
           }

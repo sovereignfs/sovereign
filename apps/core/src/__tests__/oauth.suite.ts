@@ -29,7 +29,7 @@ import {
 } from '../oauth/provider';
 import { SCOPE_COPY, readConsentRequest } from '../oauth/consent';
 import { rs256AccessTokenHash } from '../oauth/id-token-alg';
-import { signedQueryOf } from '../oauth/signed-query';
+import { resumeAddress, signedQueryOf } from '../oauth/signed-query';
 import { secretOf, totp } from './totp';
 import { BASE_URL, Jar, PASSWORD, authSettings, call, makeAuth, signUp } from './auth-harness';
 import {
@@ -355,6 +355,40 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
       expect(tokens.status).toBe(200);
       const claims = verifyJwt(String(tokens.body.id_token), await publishedKeys(auth)).payload;
       expect(claims.name).toBe('Ada Lovelace');
+    });
+
+    it('carries on from the way back core keeps for pages the signed request does not reach: a new account', async () => {
+      const { auth, owner } = await instance();
+      const client = await registerClient(auth, owner);
+      const { verifier, challenge } = pkce();
+      const { location } = await authorize(auth, new Jar(), client, {
+        scope: 'openid profile',
+        challenge,
+        state: 'state-new',
+      });
+      const resume = resumeAddress(new URL(location as string, BASE_URL).searchParams);
+      expect(resume?.startsWith('/api/auth/oauth2/authorize?')).toBe(true);
+      expect(resume).not.toContain('sig=');
+
+      // The person creates an account instead of signing in (a link, then sign-up, then a session),
+      // and is sent back along that way.
+      const { jar } = await signUp(auth, { name: 'Nell New' });
+      const back = await call(auth, 'GET', (resume as string).replace('/api/auth', ''), {
+        jar,
+        origin: null,
+      });
+      const url = new URL(String(back.headers.get('location')));
+      expect(`${url.origin}${url.pathname}`).toBe(REDIRECT);
+      expect(url.searchParams.get('state')).toBe('state-new');
+      const tokens = await exchangeCode(
+        auth,
+        client,
+        String(url.searchParams.get('code')),
+        verifier,
+      );
+      expect(tokens.status).toBe(200);
+      const claims = verifyJwt(String(tokens.body.id_token), await publishedKeys(auth)).payload;
+      expect(claims.name).toBe('Nell New');
     });
 
     it('carries on after the second step too, and not after the password alone', async () => {

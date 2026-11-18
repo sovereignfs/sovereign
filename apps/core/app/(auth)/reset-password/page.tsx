@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { describePasswordPolicy } from '../../../src/auth/password-policy';
 import { getAuth } from '../../../src/auth';
 import { resetLinkAddress } from '../../../src/auth/reset-link';
+import { safeReturnTo, withReturnTo } from '../../../src/auth/return-to';
 import { getAuthSettings } from '../../../src/auth/settings';
 import { getDatabase } from '../../../src/database';
 import { addressHasKeys } from '../../../src/keys/vault';
@@ -17,9 +18,15 @@ export const metadata: Metadata = { title: 'Choose a new password', referrer: 'n
 export default async function ResetPasswordPage({
   searchParams,
 }: {
-  searchParams: Promise<{ token?: string | string[]; error?: string | string[] }>;
+  searchParams: Promise<{
+    token?: string | string[];
+    error?: string | string[];
+    returnTo?: string | string[];
+  }>;
 }) {
-  const { token, error } = await searchParams;
+  const { token, error, returnTo: asked } = await searchParams;
+  // Where signing in goes once the password is set: an app's sign-in, when one led here.
+  const returnTo = safeReturnTo(asked);
   // better-auth sends a link that did not check out here with `error`, and one that did with `token`.
   const usable = typeof token === 'string' && token !== '' && error === undefined;
   // The account the link belongs to: shown, and the new sign-in value is made from it (core-app §5.2). A link that does not
@@ -33,7 +40,7 @@ export default async function ResetPasswordPage({
           This link has expired or was already used. A link works once, for an hour.
         </AuthNotice>
         <p className={styles.footer}>
-          <Link className={styles.link} href="/forgot-password">
+          <Link className={styles.link} href={withReturnTo('/forgot-password', returnTo)}>
             Request a new link
           </Link>
         </p>
@@ -55,6 +62,7 @@ export default async function ResetPasswordPage({
         address={address}
         passwordHint={describePasswordPolicy(getAuthSettings().passwordPolicy)}
         policy={getAuthSettings().passwordPolicy}
+        returnTo={returnTo}
       />
     </AuthCard>
   );

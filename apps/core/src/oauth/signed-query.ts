@@ -28,3 +28,41 @@ export function queryOf(params: Record<string, string | string[] | undefined>): 
   }
   return query;
 }
+
+/** What the provider adds to an app's request to sign it, and keeps out of the request itself. */
+const SIGNING_PARAMETERS = new Set(['sig', 'exp', 'ba_iat', 'ba_pl', 'ba_param']);
+
+/** The provider's authorization endpoint, as a path on core. */
+const AUTHORIZE_PATH = '/api/auth/oauth2/authorize';
+
+/**
+ * Where to send someone so an app's sign-in carries on once they have a session: the app's own request to
+ * the authorization endpoint, rebuilt from what the provider signed into the page's address.
+ *
+ * The signed request lasts ten minutes and travels only on `/sign-in` and its second step, so it was lost
+ * on sign-up, a verification email and a password reset. This address is not: it is a path on core, carried
+ * as `returnTo` like any other, and the provider checks it all again when it is opened (the app, its return
+ * address, the scopes, PKCE), so it can send the browser nowhere the app's own request could not. `login`
+ * is taken out of `prompt`, as the provider does after a sign-in: whoever opens it has just signed in.
+ *
+ * Nothing when the address carries no signed request, or the rebuilt address is too long to keep.
+ */
+export function resumeAddress(query: URLSearchParams): string | undefined {
+  const signed = signedQueryOf(query);
+  if (signed === undefined) return undefined;
+  const request = new URLSearchParams();
+  for (const [key, value] of new URLSearchParams(signed).entries()) {
+    if (!SIGNING_PARAMETERS.has(key)) request.append(key, value);
+  }
+  if (!request.get('client_id')) return undefined;
+  const prompt = request
+    .get('prompt')
+    ?.split(' ')
+    .filter((word) => word !== '' && word !== 'login')
+    .join(' ');
+  if (prompt) request.set('prompt', prompt);
+  else request.delete('prompt');
+  const address = `${AUTHORIZE_PATH}?${request.toString()}`;
+  // `safeReturnTo` keeps nothing longer, so neither does this.
+  return address.length <= 2048 ? address : undefined;
+}

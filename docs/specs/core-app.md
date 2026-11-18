@@ -164,7 +164,7 @@ Roboto, Helvetica, Arial, sans-serif`. A page or component names a family only
 | ----- | ----------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | **1** | Identity, sign-in server, app registration                                                      | Specified below                              |
 | 2     | Core services for apps: mail, notifications, activity, account-deletion fan-out, backups, files | Specified and built (§4); files on disk only |
-| Keys  | Encryption the server cannot read: signing in with a derived value, the vault, the recovery kit | Specified (§5), not built                    |
+| Keys  | Encryption the server cannot read: signing in with a derived value, the vault, the recovery kit | Specified (§5) and built; not yet audited    |
 | Later | Groups and access policies, export, relay, and more                                             | Not yet specified                            |
 
 ---
@@ -484,8 +484,9 @@ Editing them is not part of Phase 1.
 - A person can add, name and remove passkeys, and sign in with a passkey
   without a password.
 - The relying party is set by `SV_AUTH_WEBAUTHN_RP_ID`, `SV_AUTH_WEBAUTHN_RP_NAME`
-  and `SV_AUTH_WEBAUTHN_ORIGIN`. When core and its apps share a parent domain,
-  the relying party ID SHOULD be that parent domain. Unset, they are core's own
+  and `SV_AUTH_WEBAUTHN_ORIGIN`. For a suite whose apps sign in through core,
+  the relying party ID stays unset ([RFC 0002](../rfcs/0002-deployment-strategies.md)):
+  apps never run a passkey ceremony, so passkeys stay on core's host. Unset, they are core's own
   host, the name `Sovereign` and core's own address. A domain that is not core's
   host or a parent of it, or an origin that is outside the domain or is not
   https (localhost aside), stops core starting, saying which, because no passkey
@@ -650,6 +651,7 @@ passkeys), subject to §3.2.1. The account holder is told by email.
 | `openid`         | `sub`: stable, unique, never reused                                                      |
 | `profile`        | `name`, `picture`, `locale`, `zoneinfo`                                                  |
 | `email`          | `email`, `email_verified`                                                                |
+| `notifications`  | The app's own notifications for the person: list, mark read, dismiss (§4.1)              |
 | `roles`          | `roles`: the account's platform roles. Trusted clients only (§3.6.4)                     |
 | `directory`      | Access to the Directory API (§3.9)                                                       |
 | `keys`           | Encryption the server cannot read (§5.6). Only an app with a key return address holds it |
@@ -1487,7 +1489,7 @@ sign-in; changing
 an email address; editable email templates; theme presets, colours and text
 size preferences (a choice of light, dark or the system's is in Preferences, §3.11); mail, notification and activity APIs for apps; account
 deletion and export across apps; backups; end-to-end encryption and the
-recovery kit (specified in §5, not built); push relay; built-in clients for native shells; provisioning
+recovery kit (§5, built after Phase 1); push relay; built-in clients for native shells; provisioning
 databases for apps, which the operator CLI does and core takes no part in
 ([operator-cli §6.4](operator-cli.md)).
 
@@ -1522,9 +1524,11 @@ databases for apps, which the operator CLI does and core takes no part in
 
 ### 3.18 Open questions
 
-None. The questions raised while drafting Phase 1 are answered in §3.6.1
-(token lifetimes), §3.7.3 (secret rotation), §3.8 (how the launcher opens
-apps) and §3.15 (image storage, secrets from files).
+One: changing `SV_AUTH_SECRET` makes the stored signing keys (§3.6.1) and the
+authenticator enrolments (§3.4.1) unreadable, and how to rotate it without that
+is not decided. The other questions raised while drafting Phase 1 are answered
+in §3.6.1 (token lifetimes), §3.7.3 (secret rotation), §3.8 (how the launcher
+opens apps) and §3.15 (image storage, secrets from files).
 
 ---
 
@@ -1889,9 +1893,9 @@ people's files, through `@sovereignfs/storage`.
 
 ## 5. Keys — encryption the server cannot read
 
-Specified, not built ([RFC 0005](../rfcs/0005-end-to-end-encryption.md), epic [16](../epics/encryption.md), run as
-[workstream 0003](../workstreams/0003-encryption.md)). Until a part is built, §3 describes core as it is; each part below names the
-sections it changes, and the task that builds it changes them.
+Specified and built ([RFC 0005](../rfcs/0005-end-to-end-encryption.md), epic [16](../epics/encryption.md), run as
+[workstream 0003](../workstreams/0003-encryption.md)), and not yet audited by a cryptographer. Each part below says whether it is built
+and names the sections it changes; core's own files (§4.6) and a recovery kit for everyone are still to come (epic 16).
 
 ### 5.1 What is promised
 
@@ -2195,3 +2199,4 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-18 | §3.2.1, §3.4.1: one count of wrong passwords per account wherever the password is asked again, better-auth's two-factor and change-password routes included.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | 2026-11-18 | §3.6.5, §3.16, §4.5: logout notices are core's alone, kept and sent again after a failure that may be temporary, for a day; an app's back-channel address moves to core's own settings.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | 2026-11-19 | §3.15.1: the lock check, a development and staging page that tries on a device what a biometric lock needs (research 0012).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-11-19 | §2, §3.6.2, §3.16, §3.18, §3.4.2, §5: the `notifications` scope in the table; keys said to be built and not yet audited; the one open question named; the passkey relying party stays core's host for a suite (RFC 0002).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |

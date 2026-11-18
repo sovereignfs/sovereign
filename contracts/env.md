@@ -172,7 +172,7 @@ const config = defineConfig({
   variables: {
     url: url({ name: 'URL', required: true, origin: true }),
     authSecret: secret({ name: 'AUTH_SECRET', required: true, minLength: 32 }),
-    inviteOnly: boolean({ name: 'AUTH_INVITE_ONLY', default: false }),
+    inviteOnly: boolean({ name: 'AUTH_INVITE_ONLY', default: true }),
     dialect: oneOf(['sqld', 'sqlite', 'postgres'], { name: 'DB_DIALECT', required: true }),
   },
 });

@@ -8,14 +8,14 @@ and §3.7.
 
 Check these first. They are the places an app that says it supports "OAuth" may not fit.
 
-| Core needs                            | So the app must                                                                                                                           |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| The authorization code flow           | Use it. The implicit and password flows are not offered. The client-credentials flow is, but only to an app an operator gave an app scope |
-| PKCE with `S256`, for every app       | Send a `code_challenge`, even with a client secret. Many apps have PKCE off until a setting turns it on                                   |
-| ID tokens signed with EdDSA (Ed25519) | Verify EdDSA, unless the app is set to RS256 in the Console. Not every library can (below)                                                |
-| The client secret in a Basic header   | Send it as `client_secret_basic`, unless the app is set in the Console to send it in the request body                                     |
-| A server of its own, or a native app  | Not call the token or userinfo endpoints from a web page: core sends no CORS headers, so a browser blocks it                              |
-| `https` addresses                     | Have `https` sign-in and logout addresses. `http` is accepted only on `localhost` on a development instance                               |
+| Core needs                            | So the app must                                                                                                                                                                                                   |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The authorization code flow           | Use it. The implicit and password flows are not offered. The client-credentials flow is, but only to an app an operator gave an app scope                                                                         |
+| PKCE with `S256`, for every app       | Send a `code_challenge`, even with a client secret. Many apps have PKCE off until a setting turns it on                                                                                                           |
+| ID tokens signed with EdDSA (Ed25519) | Verify EdDSA, unless the app is set to RS256 in the Console. Not every library can (below)                                                                                                                        |
+| The client secret in a Basic header   | Send it as `client_secret_basic`, unless the app is set in the Console to send it in the request body                                                                                                             |
+| A server of its own, or a native app  | Not call the token or userinfo endpoints from a web page: core sends no CORS headers, so a browser blocks it                                                                                                      |
+| `https` addresses                     | Have `https` sign-in and logout addresses. `http` is accepted only on `localhost` on a development instance, so a native app, whose return address is its own scheme or a loopback port, cannot be registered yet |
 
 An app that signs people in with plain OAuth 2.0, with no ID token, can read the same details from the userinfo endpoint.
 

@@ -302,7 +302,7 @@ installed hub opens a Safari view, never the installed app; and the desktop Chro
 `window.open` and the click-time choice open the installed target, the same-tab link does not. the macOS Safari row (by hand): every link
 opens the default browser. RFC 0001 A5 is confirmed for desktop Chromium. **Outstanding:** Android on a phone with Play services; the matrix is in research 0010, "Device run".
 
-#### 📋 11.9 — Tiles open installed apps
+#### ✅ 11.9 — Tiles open installed apps
 
 **Goal:** In an installed core, a tile opens the installed app where the device allows; in a browser tab nothing changes.
 
@@ -324,7 +324,12 @@ opens the default browser. RFC 0001 A5 is confirmed for desktop Chromium. **Outs
 
 **Not here:** detecting whether an app is installed.
 
-#### 📋 11.10 — Shortcuts that open a native app
+**Done:** `AppTile` takes `onClick` (`@sovereignfs/ui` 0.101.0); `app/launch.ts` decides when a tile is clicked: a plain click in
+an installed display opens the launch address in a new window (`noopener`), anything else is the link's own. No `intent:` fallback:
+11.8 has not yet seen Android, and desktop Chrome needs none. Unit tests of the decision, and an acceptance test of a real app's tile
+in a tab and with the display mode stood in for standalone (Chromium cannot emulate it).
+
+#### ✅ 11.10 — Shortcuts that open a native app
 
 **Goal:** A shortcut can name a native app, and opens it from an installed core or a phone.
 
@@ -345,6 +350,12 @@ opens the default browser. RFC 0001 A5 is confirmed for desktop Chromium. **Outs
 - The main address stays `https`-only; nothing renders the open-in-app address as an `href` in a browser tab
 
 **Not here:** opening a native app from an app tile.
+
+**Done:** `app_url` on every dialect (migration 0022), `appUrlProblem` beside `urlProblem` (a scheme pattern, the refused schemes
+in any case, no space or control character, 2,048 characters at most), the "Open in app" field in the one form both pages use, and
+`openShortcut` in `app/launch.ts`: from an installed core or a phone (a coarse pointer) it goes to the app's address and opens the web
+address after a second unless the page was left. Table tests of accepted and refused addresses; the store round-trip on SQLite;
+`sv-security-check` found no violation.
 
 #### ✅ 11.11 — `@sovereignfs/pwa`
 

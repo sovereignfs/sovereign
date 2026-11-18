@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.111.0 · **Last updated:** 2026-11-18
+**Version:** 0.112.0 · **Last updated:** 2026-11-18
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -115,8 +115,8 @@ epic [11](docs/epics/pwa.md) · workstream [0006](docs/workstreams/0006-pwa.md)
 | 0.111.0 | 9        | `@sovereignfs/pwa`                                         | ✅     | [11.11](docs/epics/pwa.md) |
 | 0.111.0 | 10       | The app template installs                                  | ✅     | [11.12](docs/epics/pwa.md) |
 | —       | 11       | The deployed apps, audited and fixed                       | ✅     | [11.13](docs/epics/pwa.md) |
-| —       | 12       | Tiles open installed apps                                  | 📋     | [11.9](docs/epics/pwa.md)  |
-| —       | 13       | Shortcuts that open a native app                           | 📋     | [11.10](docs/epics/pwa.md) |
+| 0.112.0 | 12       | Tiles open installed apps                                  | ✅     | [11.9](docs/epics/pwa.md)  |
+| 0.112.0 | 13       | Shortcuts that open a native app                           | ✅     | [11.10](docs/epics/pwa.md) |
 | 0.111.0 | 14       | A content security policy in the app template `[parallel]` | ✅     | [11.14](docs/epics/pwa.md) |
 | —       | 15       | The deployed apps on `@sovereignfs/pwa`                    | 📋     | [11.15](docs/epics/pwa.md) |
 

@@ -11,11 +11,12 @@ import {
 } from 'react';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../../src/auth/client';
-import { afterSecondStep } from '../../../../src/keys/session';
+import { afterSecondStep, dropHandOver } from '../../../../src/keys/session';
 import { continuationUrl, isContinuation } from '../../../../src/auth/oauth-continuation';
 import { AuthError, AuthNotice } from '../../auth-notice';
 import { AuthField } from '../../auth-field';
 import { passkeyProblem } from '../../messages';
+import { signInWithPasskey as passkeySignIn } from '../../passkey-sign-in';
 import styles from '../../auth.module.css';
 
 const DIGITS = 6;
@@ -68,13 +69,17 @@ export function TwoFactorForm({ returnTo }: { returnTo: string }) {
   async function signInWithPasskey() {
     setPasskeyPending(true);
     setError(undefined);
-    const result = await authClient.signIn.passkey();
-    if (result?.error) {
+    // As on the sign-in page: the same touch unlocks the keys, when the passkey can (core-app §5.5).
+    const result = await passkeySignIn();
+    if (result.error) {
       setPasskeyPending(false);
       setError(passkeyProblem(result.error));
       return;
     }
-    window.location.assign(continuationUrl(result?.data) ?? returnTo);
+    // The password's secret is not used: a passkey is a sign-in of its own, and may be another account's,
+    // whose keys that secret must never set up or open.
+    await dropHandOver();
+    window.location.assign(continuationUrl(result.data) ?? returnTo);
   }
 
   function typeDigit(index: number, value: string) {

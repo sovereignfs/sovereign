@@ -5,17 +5,12 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../src/auth/client';
 import { deriveForSignIn } from '../../../src/auth/derive';
-import {
-  afterPasskeyAccepted,
-  afterPasswordAccepted,
-  startAfresh,
-  handOverSecret,
-} from '../../../src/keys/session';
-import { prfExtension, prfOutput } from '../../../src/keys/passkey';
+import { afterPasswordAccepted, startAfresh, handOverSecret } from '../../../src/keys/session';
 import type { WebKey } from '@sovereignfs/crypto/web';
 import { continuationUrl, isContinuation } from '../../../src/auth/oauth-continuation';
 import { withReturnTo } from '../../../src/auth/return-to';
 import { DEACTIVATED, passkeyProblem } from '../messages';
+import { signInWithPasskey as passkeySignIn } from '../passkey-sign-in';
 import { AuthError, AuthNotice } from '../auth-notice';
 import { AuthField } from '../auth-field';
 import { ResendVerification } from '../resend-verification';
@@ -50,25 +45,15 @@ export function SignInForm({
     setPasskeyPending(true);
     setError(undefined);
     setUnverified(false);
-    // The PRF extension's output unlocks with the same touch; better-auth's client keeps it from the server (core-app §5.5). A page
-    // that cannot read the instance document still signs in, without it.
-    const extensions = await prfExtension().catch(() => undefined);
-    const result = await authClient.signIn.passkey({
-      ...(extensions ? { extensions } : {}),
-      returnWebAuthnResponse: true,
-    });
-    if (result?.error) {
+    const result = await passkeySignIn();
+    if (result.error) {
       setPasskeyPending(false);
       setError(passkeyProblem(result.error));
       return;
     }
-    if ('webauthn' in result) {
-      const output = prfOutput(result.webauthn.clientExtensionResults);
-      if (output) await afterPasskeyAccepted(result.webauthn.response.id, output);
-    }
     // A full navigation, so the next page is rendered with the new session cookie. An app's sign-in goes
     // back to the app; anything else goes where the person was headed.
-    window.location.assign(continuationUrl(result?.data) ?? returnTo);
+    window.location.assign(continuationUrl(result.data) ?? returnTo);
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {

@@ -5,6 +5,7 @@ import {
   CACHE_NAME,
   NAVIGATION_TIMEOUT_MS,
   SERVICE_WORKER_SOURCE,
+  TAKE_OVER_MESSAGE,
 } from '../sw/source';
 
 /**
@@ -247,9 +248,12 @@ describe('the service worker: a page that cannot be reached', () => {
 });
 
 describe('the service worker: its life', () => {
-  it('takes over at once, since it holds nothing a swap could break', async () => {
+  it('waits until a page asks it to take over, then claims every page', async () => {
     const worker = boot();
-    worker.handlers.get('install')?.({});
+    expect(worker.handlers.has('install')).toBe(false);
+    worker.handlers.get('message')?.({ data: 'something else' });
+    expect(worker.skipWaiting).not.toHaveBeenCalled();
+    worker.handlers.get('message')?.({ data: TAKE_OVER_MESSAGE });
     expect(worker.skipWaiting).toHaveBeenCalledTimes(1);
     let done: Promise<unknown> | undefined;
     worker.handlers.get('activate')?.({
@@ -273,8 +277,8 @@ describe('the service worker: its life', () => {
     expect([...worker.stores.keys()]).toEqual([CACHE_NAME]);
   });
 
-  it('has no handler for anything it does not need: no push, no sync, no message', () => {
-    expect([...boot().handlers.keys()].sort()).toEqual(['activate', 'fetch', 'install']);
+  it('has no handler for anything it does not need: no push, no sync', () => {
+    expect([...boot().handlers.keys()].sort()).toEqual(['activate', 'fetch', 'message']);
   });
 
   it('reaches no other site: it names no address but its own', () => {

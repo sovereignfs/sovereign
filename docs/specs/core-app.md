@@ -108,7 +108,7 @@ Roboto, Helvetica, Arial, sans-serif`. A page or component names a family only
   `/manifest.webmanifest`, which is public and the same for everyone: the
   instance's name (so renaming it renames the app), core's launcher as its start
   address and its scope (core's origin and no wider; the apps in the launcher are
-  other origins and open outside the window), `standalone` display, the page
+  other origins, opened as §3.8 says), `standalone` display, the page
   colour of the light theme, and the Sovereign mark as 192 and 512 pixel icons
   and a maskable one (`/icons/icon-192.png`, `/icons/icon-512.png`,
   `/icons/icon-maskable-512.png`, served with no session), or the operator's own
@@ -923,7 +923,13 @@ message`), 2 when the command line is wrong or core is not configured, and 3 whe
 - It lists every enabled client with "show in launcher" on, and the person's
   shortcuts (§3.8.1): icon, name and description, with search by name.
 - Choosing an app opens its launch URL in the same tab, as an ordinary link,
-  so a person can still open it in a new tab themselves. The app then signs
+  so a person can still open it in a new tab themselves. In an installed core
+  (a display mode of `standalone`, `minimal-ui`, `fullscreen` or
+  `window-controls-overlay`, read when the tile is clicked, never while the page
+  renders) a plain click opens it in a new window instead, which desktop Chrome
+  and Edge hand to the app when it is installed too, and Android Chrome is
+  expected to; on an iPhone, an iPad and in Safari it is a browser view that
+  closes back to core (RFC 0001 A5, research 0010). The app then signs
   the person in through core; because the person already has a session, this
   completes without a prompt unless consent is needed.
 - In Phase 1 every signed-in person sees every listed app. **The launcher is
@@ -975,6 +981,11 @@ generic. It is kept in `launcher_shortcuts`, written only by `ShortcutManager`.
   up to 50. They are deleted with the account, in its one transaction; those for everyone stay with the instance.
 - **The address** follows the rule for an app's addresses (§3.7.1): `https`, or `http` on `localhost` only on a development
   instance; no user name or password, no fragment. The tile opens it in a new tab with `rel="noopener noreferrer"` and says so.
+- **An app's own address** (optional, RFC 0001 A6): an address in a native app's scheme (`spotify:…`, `obsidian://…`), kept in
+  `app_url`. It must match `scheme:rest` with no space or control character, at most 2,048 characters; `http` and `https` belong in the
+  address, and `javascript`, `data`, `vbscript`, `file`, `blob`, `about`, `intent`, `filesystem`, `view-source`, `ws` and `wss` are
+  refused in any case. It is never rendered as a link: when the tile is clicked from an installed core or a phone (a coarse pointer), the
+  launcher goes to it, and opens the address in a new tab after a second if no app came forward.
 - **The icon** is one of three: a letter drawn from the name; an icon picked from a curated set of the design system's outline
   icons; or an uploaded picture of at most 256 KB, judged by its bytes (PNG, JPEG or WebP as they are, an SVG rebuilt by
   `sanitiseSvg`). A picture is kept in core and served from `/api/shortcuts/<id>/icon?v=<version>` to a signed-in person with
@@ -2134,3 +2145,5 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-17 | §3.2.2, §3.2.3: `console:access` is operator-only: never granted to `platform:user`, whatever the matrix says, so the Console, its launcher tile and the instance details line are for the owner and admins only.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | 2026-11-17 | §3.8, §3.8.1: shortcuts, tiles for any site that sign nobody in: for everyone from the Console, or a person's own from Shortcuts; one dashed "Add" tile; apps and shortcuts together by name; every tile icon in greys.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | 2026-11-18 | §1.3, §3.5: a fuller install (RFC 0001 amendment 1): the manifest's fixed `id`, launch handler, shortcuts to pages everyone has, screenshots, categories and language; an offer to install on the account pages; a new version announced with Reload instead of swapped in silently.                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 2026-11-18 | §3.8: in an installed core, a plain click on an app's tile opens it in a new window, decided when it is clicked, which a device that can hands to the installed app (RFC 0001 A5).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 2026-11-18 | §3.8.1: a shortcut may have an app's own address, checked against a pattern and a list of refused schemes, tried when its tile is clicked from an installed core or a phone, with the web address as the fallback (RFC 0001 A6).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |

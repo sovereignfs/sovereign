@@ -139,6 +139,40 @@ export function twoFactorSuite(createDatabase: () => Promise<TestDatabase>): voi
       expect((await row(email)).hasRow).toBe(false);
     });
 
+    it('counts wrong passwords as every page that asks again does: five, and then even the right one is refused', async () => {
+      const { a, jar, email } = await person();
+      for (let i = 0; i < 5; i++) {
+        const reply = await enable(a, jar, `${PASSWORD}x`);
+        expect(reply.status, `attempt ${i + 1}`).toBe(400);
+        expect(reply.body.code).toBe('INVALID_PASSWORD');
+      }
+      const limited = await enable(a, jar);
+      expect(limited.status).toBe(429);
+      expect((await row(email)).hasRow).toBe(false);
+    });
+
+    it('clears the count with a right password', async () => {
+      const { a, jar } = await person();
+      for (let i = 0; i < 4; i++) await enable(a, jar, `${PASSWORD}x`);
+      expect((await enable(a, jar)).status).toBe(200);
+      const { rows } = await db.run(
+        "select count(*) as n from rate_limits where key like 'confirm-password|%'",
+      );
+      expect(Number(rows[0]?.n)).toBe(0);
+    });
+
+    it('counts a wrong current password when changing it too', async () => {
+      const { a, jar } = await person();
+      for (let i = 0; i < 5; i++) {
+        await call(a, 'POST', '/change-password', {
+          jar,
+          address: freshAddress(),
+          body: { currentPassword: `${PASSWORD}x`, newPassword: PASSWORD },
+        });
+      }
+      expect((await enable(a, jar)).status).toBe(429);
+    });
+
     it('needs a session', async () => {
       const reply = await enable(auth(), new Jar());
       expect(reply.status).toBe(401);

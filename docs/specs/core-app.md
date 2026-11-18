@@ -209,8 +209,11 @@ core and see it in the launcher.
   changes nothing. Capabilities follow the roles at once.
 - Asking for a password again is limited: five wrong answers within ten minutes
   for an account, and every answer after that is refused, a right one too, until
-  the ten minutes have passed. A right answer clears the count. (better-auth's
-  own rate limit guards its HTTP routes and does not see this server-side check.)
+  the ten minutes have passed. A right answer clears the count. The count is one
+  per account wherever the password is asked: handing over ownership, deleting
+  the account, turning two-factor sign-in on or off, its backup codes and key,
+  and changing the password, whose better-auth routes are checked through it
+  before better-auth checks the password itself.
 - A role that is not one of these holds no capability. A person's role is read
   from the database for what core guards, so a change shows at once.
 
@@ -453,7 +456,8 @@ Editing them is not part of Phase 1.
 - A person can enrol an authenticator app (QR code and a key to type). It is
   turned on only once a valid code has been entered.
 - Enrolment produces ten single-use backup codes.
-- Enabling, disabling and regenerating backup codes require the password again.
+- Enabling, disabling and regenerating backup codes require the password again,
+  counted with every other time it is asked (§3.2.1).
 - With TOTP on, sign-in asks for a code (or a backup code) as a second step.
 - Turning it on needs an address that has been verified (§3.3.3), so an account
   that never proved its address cannot later be signed in by a verification
@@ -2173,3 +2177,4 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-18 | §3.6.1: an app's sign-in request is carried, as the way back to the authorization endpoint, through sign-up, email verification and a password reset, so each ends in the app.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | 2026-11-18 | §5.5: a passkey used on the second sign-in step unlocks with the same touch, as on the sign-in page, and the password's waiting secret is dropped.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 2026-11-18 | §3.3.3: a verification link that did not work is said even to someone already signed in.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 2026-11-18 | §3.2.1, §3.4.1: one count of wrong passwords per account wherever the password is asked again, better-auth's two-factor and change-password routes included.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |

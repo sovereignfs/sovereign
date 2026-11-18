@@ -13,6 +13,9 @@
 .icon {
   display: inline-flex;
   flex-shrink: 0;
+  /* Beside the title, not centred on a hint whose buttons have wrapped below it. */
+  align-self: flex-start;
+  margin-top: var(--sv-space-1);
   color: var(--sv-color-text-muted);
 }
 

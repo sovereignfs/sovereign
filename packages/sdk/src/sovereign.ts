@@ -183,8 +183,29 @@ export function createSovereign(options: SovereignOptions): Sovereign {
   let auth: Auth | undefined;
   const pageOf = (path: string) => new URL(path, settings.coreUrl).toString();
 
-  /** One call to core as an actor, or as nobody, with the specification's rules for tokens, failure and version support. */
+  /**
+   * One call to core as an actor, or as nobody. When core says a person's session is over (`SessionEndedError` with `byCore`),
+   * the person's sessions in the app end here, and their dead refresh token is forgotten, so the app stops acting for them
+   * and their next request signs in again (sdk §9.1).
+   */
   async function execute<K extends Name>(
+    actor: ActorKey | undefined,
+    name: K,
+    request: Request<K>,
+  ): Promise<Answer<K>> {
+    try {
+      return await executeOnce(actor, name, request);
+    } catch (error) {
+      if (error instanceof SessionEndedError && error.byCore && actor?.kind === 'person') {
+        await options.sessionStore?.deleteMatching({ sub: actor.sub });
+        await options.tokenStore?.delete?.(actor.sub);
+      }
+      throw error;
+    }
+  }
+
+  /** One call to core as an actor, or as nobody, with the specification's rules for tokens, failure and version support. */
+  async function executeOnce<K extends Name>(
     actor: ActorKey | undefined,
     name: K,
     request: Request<K>,
@@ -219,6 +240,7 @@ export function createSovereign(options: SovereignOptions): Sovereign {
           if (actor.kind === 'person') {
             throw new SessionEndedError(
               'Core refused this person’s token twice. They must sign in again.',
+              { byCore: true },
             );
           }
         }

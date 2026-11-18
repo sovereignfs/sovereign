@@ -29,7 +29,13 @@ function setup(options: Parameters<typeof nextAuth>[1] = {}) {
     environment: time.environment,
     timeoutMs: 100,
   });
-  return { core, sv, handlers: nextAuth(sv, options).handlers, next: nextAuth(sv, options) };
+  return {
+    core,
+    sv,
+    time,
+    handlers: nextAuth(sv, options).handlers,
+    next: nextAuth(sv, options),
+  };
 }
 
 const cookiesOf = (reply: Response) =>
@@ -165,6 +171,38 @@ describe('the Next.js adapter (sdk §9)', () => {
     await expect(next.requireSession('/notes/9')).rejects.toMatchObject({
       digest: 'NEXT_REDIRECT;/auth/login?returnTo=%2Fnotes%2F9',
     });
+  });
+
+  it('passes `prompt` and `max_age` on from the login route, and nothing it does not know', async () => {
+    const { handlers } = setup();
+    const asked = new URL(
+      (await handlers.GET(at('/auth/login?prompt=login&max_age=300'))).headers.get('location') ??
+        '',
+    );
+    expect(asked.searchParams.get('prompt')).toBe('login');
+    expect(asked.searchParams.get('max_age')).toBe('300');
+    const junk = new URL(
+      (await handlers.GET(at('/auth/login?prompt=consent&max_age=soon'))).headers.get('location') ??
+        '',
+    );
+    expect(junk.searchParams.has('prompt')).toBe(false);
+    expect(junk.searchParams.has('max_age')).toBe(false);
+  });
+
+  it('sends a person whose sign-in is older than a page asks to sign in again, with the age (sdk §9.6)', async () => {
+    const { core, handlers, next, time } = setup();
+    const login = await handlers.GET(at('/auth/login'));
+    const back = core.authorize(login.headers.get('location') as string, 'u1');
+    const callback = await handlers.GET(
+      at(new URL(back).pathname + new URL(back).search, { headers: { cookie: cookiesOf(login) } }),
+    );
+    jar.value = cookiesOf(callback);
+    expect((await next.requireSession('/settings', { maxAgeSeconds: 300 })).sub).toBe('u1');
+    time.advance(301_000);
+    await expect(next.requireSession('/settings', { maxAgeSeconds: 300 })).rejects.toMatchObject({
+      digest: 'NEXT_REDIRECT;/auth/login?returnTo=%2Fsettings&max_age=300',
+    });
+    expect((await next.requireSession('/settings')).sub).toBe('u1');
   });
 
   it('answers a path it does not serve with a 404', async () => {

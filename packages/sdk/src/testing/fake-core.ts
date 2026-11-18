@@ -140,8 +140,15 @@ export type FakeCore = {
   /**
    * The person agrees at core's sign-in page: given the address `beginSignIn` returned, this is the address core sends the
    * browser back to, with the code and `state`. It checks the request as core does (PKCE `S256`, a registered redirect).
+   * `authTime` is when the person signed in at core, in milliseconds (now, by default), which the ID token carries as
+   * `auth_time`; an earlier one stands for a core session that was already open. The fake does not ask the person again for
+   * `prompt=login` or `max_age` as core does: the test says when they signed in, so an app's own check of `max_age` can be tried.
    */
-  authorize(authorizationUrl: string, sub: string, options?: { roles?: string[] }): string;
+  authorize(
+    authorizationUrl: string,
+    sub: string,
+    options?: { roles?: string[]; authTime?: number },
+  ): string;
   /** The core session id (`sid`) of the person's latest sign-in. */
   sessionIdOf(sub: string): string | undefined;
   /**
@@ -241,6 +248,7 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
       redirectUri: string;
       scope: string;
       roles: string[];
+      authTime: number;
       used: boolean;
     }
   >();
@@ -340,6 +348,7 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
         const idToken = await new SignJWT({
           ...(record.nonce ? { nonce: record.nonce } : {}),
           sid: record.sid,
+          auth_time: Math.floor(record.authTime / 1000),
           name: person?.name ?? record.sub,
           ...(record.scope.split(' ').includes('roles') ? { roles: record.roles } : {}),
         })
@@ -862,6 +871,7 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
         redirectUri,
         scope,
         roles: options.roles ?? [],
+        authTime: options.authTime ?? now(),
         used: false,
       });
       sessionOf.set(sub, sid);

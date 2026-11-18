@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
+import { ToastProvider } from '@sovereignfs/ui';
 import { getConfig } from '../src/config';
 import { getInstanceIdentity } from '../src/instance/service';
 import { THEME_COLORS } from '../src/pwa';
@@ -53,7 +54,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body>
-        {children}
+        {/* Short notices from any page: the design system's toasts, shown in one place. */}
+        <ToastProvider>{children}</ToastProvider>
         <ServiceWorkerRegistration appName={name} />
         <ThemeWatcher />
       </body>

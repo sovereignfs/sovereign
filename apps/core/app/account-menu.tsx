@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { UserMenu, type UserMenuItem } from '@sovereignfs/ui';
+import { useRef } from 'react';
+import { UserMenu, useToast, type UserMenuItem } from '@sovereignfs/ui';
 import { authClient } from '../src/auth/client';
 import { forgetKeys } from '../src/keys/session';
 
@@ -18,13 +18,30 @@ export function AccountMenu({
   email: string;
   avatarUrl: string | undefined;
 }) {
-  const [, setSigningOut] = useState(false);
+  const toast = useToast();
+  // One sign-out at a time: a second click while the first is on its way does nothing.
+  const signingOut = useRef(false);
 
   async function signOut() {
-    setSigningOut(true);
-    // This browser forgets the keys it kept for the session (core-app §5.4); the session's end makes them unopenable anyway.
+    if (signingOut.current) return;
+    signingOut.current = true;
+    // This browser forgets the keys it kept for the session (core-app §5.4); the session's end makes them unopenable anyway, and
+    // if it does not end they open again with the password.
     await forgetKeys();
-    await authClient.signOut();
+    const ended = await authClient.signOut().then(
+      (result) => !result.error,
+      () => false,
+    );
+    if (!ended) {
+      // The session is still open: the sign-in page would only send the person back here, as if nothing had happened.
+      signingOut.current = false;
+      toast.show({
+        title: 'You are still signed in',
+        message: 'Signing out did not go through. Check your connection and try again.',
+        category: 'error',
+      });
+      return;
+    }
     // A full navigation, so nothing of the session is left in the page.
     window.location.assign('/sign-in?signedout=1');
   }

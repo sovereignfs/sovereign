@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { ToastProvider } from '@sovereignfs/ui';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ROLE_ADMIN, ROLE_OWNER, ROLE_USER } from '../auth/roles';
 
@@ -31,7 +32,8 @@ const as = (role: unknown, extra: Record<string, unknown> = {}) =>
   getSession.mockResolvedValue({
     user: { id: 'u1', name: 'Ada Lovelace', email: 'ada@sovereign.local', role, ...extra },
   });
-const draw = async () => render(await AccountHeader({}));
+// Inside the root layout's toast provider, as every page is.
+const draw = async () => render(<ToastProvider>{await AccountHeader({})}</ToastProvider>);
 const openMenu = () => fireEvent.click(screen.getByRole('button', { name: 'Your account' }));
 const menuLinks = () =>
   screen

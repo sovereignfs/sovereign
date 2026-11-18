@@ -169,6 +169,13 @@
       "when": 1795027206699,
       "tag": "0023_invite_emailed_at",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1795032510595,
+      "tag": "0024_logout_notices",
+      "breakpoints": true
     }
   ]
 }

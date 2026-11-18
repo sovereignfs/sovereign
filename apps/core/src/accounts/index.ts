@@ -3,7 +3,7 @@ import { getDatabase } from '../database';
 import { getAuth } from '../auth';
 import { revokeOnDeactivation } from '../oauth/logout';
 import { getEmailService } from '../mail';
-import { sendLogoutNotices } from '../oauth/logout';
+import { deliverDueLogoutNotices } from '../oauth/logout-notices';
 import { sendDueDeletionNotices } from './deletion-scheduler';
 import { AccountManager } from './manage';
 import { AccountStates } from './states';
@@ -34,7 +34,7 @@ export function getAccountStates(): Promise<AccountStates> {
     .then((database) => {
       const states = new AccountStates(database);
       // Deactivating an account takes back what apps hold for it, and tells them (core-app §3.6.3).
-      revokeOnDeactivation(states, getAuth);
+      revokeOnDeactivation(states, getDatabase, getAuth);
       return states;
     })
     .catch((error: unknown) => {
@@ -55,7 +55,9 @@ export function getAccountManager(): Promise<AccountManager> {
     .then(
       ([database, states]) =>
         new AccountManager(database, states, {
-          logoutNotices: async (notices) => sendLogoutNotices(await getAuth(), notices),
+          logoutNotices: async () => {
+            await deliverDueLogoutNotices(database, await getAuth());
+          },
           // Not waited for: the answer to a person deleting their account does not depend on an app answering.
           deletionNotices: () => {
             void sendDueDeletionNotices();

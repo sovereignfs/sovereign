@@ -129,6 +129,7 @@ renewal) stops; legs 1 and 2 stand on their own.
 
 ## Changelog
 
-| Version | Date       | Change        |
-| ------- | ---------- | ------------- |
-| 0.1     | 2026-11-18 | Initial draft |
+| Version | Date       | Change                                                                                                                                                                                                                                                             |
+| ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0.1     | 2026-11-18 | Initial draft                                                                                                                                                                                                                                                      |
+| 0.2     | 2026-11-18 | Legs 1 and 2 run on one branch, at the goal owner's request. 14.13's atomic `jti` mark is left out (it would need a new required method on every app's session store). 6.4 built as found: the standard allows a retry only after a failure that may be temporary. |

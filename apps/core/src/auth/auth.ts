@@ -14,6 +14,12 @@ import { advancedCookieOptions } from './cookies';
 import { isSignInValue } from '@sovereignfs/crypto';
 import type { AuthMail } from './mail';
 import { isFirstAccount, type RegistrationPolicy } from './registration';
+import {
+  deliverDueLogoutNotices,
+  planLogoutNotices,
+  queueLogoutNotices,
+  type PlannedNotice,
+} from '../oauth/logout-notices';
 import { oidcPlugins } from '../oauth/provider';
 import { assertMayOpenSession } from './session-gate';
 import { ROLE_OWNER, ROLE_USER } from './roles';
@@ -149,6 +155,8 @@ export function createAuth(
   settings: AuthSettings,
   { registration, mail, background = (task) => void task.catch(() => undefined) }: AuthDependencies,
 ) {
+  // The apps to tell about each session being deleted, read before it goes (deleting it clears the tokens' pointer to it).
+  const endingSessions = new Map<string, PlannedNotice[]>();
   return betterAuth({
     appName: 'Sovereign',
     baseURL: settings.baseUrl,
@@ -175,6 +183,30 @@ export function createAuth(
     },
     databaseHooks: {
       session: {
+        // A session that ends (signing out, ending it from the identity pages, a password reset) is told to every app that used it
+        // and has a back-channel address, by core alone (core-app §3.6.5): the notices are written once it is gone, and sent at
+        // once and then by a timer until each app answers (`logout-notices.ts`). The provider sends none of its own, since no app
+        // has an address in its field.
+        delete: {
+          before: async (session) => {
+            const planned = await planLogoutNotices(database, { sessionId: session.id });
+            if (planned.length > 0) endingSessions.set(session.id, planned);
+          },
+          after: async (session, context) => {
+            const planned = endingSessions.get(session.id);
+            endingSessions.delete(session.id);
+            if (!planned) return;
+            await queueLogoutNotices(database, planned);
+            // Sent now when there is a request to sign with; otherwise the next round of the timer sends them.
+            if (context) {
+              background(
+                deliverDueLogoutNotices(database, {
+                  $context: Promise.resolve(context.context),
+                } as unknown as Pick<Auth, '$context'>),
+              );
+            }
+          },
+        },
         create: {
           // Every session, whichever way it is opened: password, passkey, the second step, a
           // verification link. A deactivated account has none, and neither does one whose address

@@ -14,7 +14,7 @@ import {
 } from '@sovereignfs/ui';
 import type { LauncherApp } from '../src/clients/launcher';
 import type { ShortcutIcon as ShortcutIconValue } from '../src/shortcuts/manager';
-import { openApp } from './launch';
+import { openApp, openShortcut } from './launch';
 import { ShortcutIcon } from './shortcuts/shortcut-icon';
 import styles from './launcher.module.css';
 
@@ -46,6 +46,8 @@ export type LauncherShortcut = {
   name: string;
   description: string | undefined;
   url: string;
+  /** A native app's own address, tried first from an installed core or a phone; never rendered (`launch.ts`). */
+  appUrl?: string | undefined;
   icon: ShortcutIconValue;
   own: boolean;
 };
@@ -183,6 +185,7 @@ export function Launcher({
               <AppTile
                 key={`shortcut-${tile.id}`}
                 href={tile.shortcut.url}
+                onClick={(event) => openShortcut(event, tile.shortcut)}
                 external
                 name={tile.shortcut.name}
                 {...(tile.shortcut.description ? { description: tile.shortcut.description } : {})}

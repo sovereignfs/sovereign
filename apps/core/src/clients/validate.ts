@@ -39,6 +39,48 @@ export function urlProblem(value: unknown, development: boolean): string | undef
   return 'must be https';
 }
 
+/**
+ * Schemes an open-in-app address never has (RFC 0001 A6): those that run or read something in the browser, that reach the
+ * device's files, that open a browser's own pages, Android's `intent:` (which can name any app with any extras), and the web's own,
+ * which belong in a shortcut's main address.
+ */
+const REFUSED_APP_SCHEMES = new Set([
+  'javascript',
+  'data',
+  'vbscript',
+  'file',
+  'blob',
+  'about',
+  'intent',
+  'http',
+  'https',
+  'filesystem',
+  'view-source',
+  'ws',
+  'wss',
+]);
+
+/** A scheme as RFC 3986 writes one, then a colon and something after it. */
+const APP_ADDRESS = /^([a-z][a-z0-9+.-]*):(\S+)$/i;
+
+/**
+ * An address a shortcut may open a native app with (RFC 0001 A6): a native app's own scheme (`spotify:`, `obsidian://`), checked
+ * against a pattern and a list of refused schemes, whatever their case. Never shown as a link; the launcher opens it only when the
+ * tile is clicked. Returns what is wrong, or nothing.
+ */
+export function appUrlProblem(value: unknown): string | undefined {
+  if (typeof value !== 'string' || value === '') return 'is required';
+  if (value.length > MAX_URL_LENGTH) return 'is too long';
+  if (value !== value.trim() || CONTROL.test(value)) return 'is not a plain address';
+  const match = APP_ADDRESS.exec(value);
+  if (!match) return 'must be an app’s own address, such as spotify:… or obsidian://…';
+  const scheme = (match[1] ?? '').toLowerCase();
+  if (scheme === 'http' || scheme === 'https')
+    return 'must be an app’s own address: a web address goes in Address';
+  if (REFUSED_APP_SCHEMES.has(scheme)) return `cannot use ${scheme}:`;
+  return undefined;
+}
+
 /** A list of addresses: how many, each one valid, none twice. */
 export function urlListProblems(
   field: string,

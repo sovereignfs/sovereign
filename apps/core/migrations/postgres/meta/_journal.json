@@ -155,6 +155,13 @@
       "when": 1794951248901,
       "tag": "0021_launcher_shortcuts",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1795007031702,
+      "tag": "0022_shortcut_app_url",
+      "breakpoints": true
     }
   ]
 }

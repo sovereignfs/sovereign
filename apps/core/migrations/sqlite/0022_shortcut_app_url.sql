@@ -1,0 +1,1 @@
+ALTER TABLE `launcher_shortcuts` ADD `app_url` text;

@@ -131,6 +131,21 @@ parent domain), so **Tusk cannot use core's passkey directly**. The options:
 3. **Related origins later**, once the redirect through core is seen to be the friction on a device.
 4. **Not a curtain on its own**: it would promise more than it gives.
 
+## Running the device check (task 4.15)
+
+On a development or staging instance on an https host, on each device:
+
+1. Sign in to core in the device's browser (Safari on iPhone and iPad, Chrome on Android) and add core to the home screen.
+2. Open core from the home screen and go to `/lock-check`. The first lines of the log say what the device is, whether core runs
+   installed, and what the browser says about passkeys.
+3. **Make a test passkey**, then **Unlock with the test passkey**: whether a passkey can be made in the installed app, whether a tap
+   brings Face ID, Touch ID or the fingerprint, and whether the PRF output comes back. **Unlock with my passkey for core** asks for a
+   passkey the account already has, as the lock would.
+4. **Arm: ask with no tap**, leave the app for a minute and come back, and note whether a prompt appeared by itself; the log says how
+   the request ended and how fast. Then leave it for ten minutes, and for an hour: the log says whether the app was still running or
+   had been ended.
+5. **Copy results** and send them. Delete the "Lock check" passkey from the device's passwords afterwards.
+
 ## Open questions
 
 - Should the lock be per device only, or can an operator require it on an instance?

@@ -353,22 +353,25 @@ there).
 
 - Five wrong passwords in ten minutes are refused on every page that asks
 
-#### 📋 4.15 — A lock on the devices
+#### ⏳ 4.15 — A lock on the devices
 
 **Goal:** Research 0012's platform table is filled from devices, not documentation.
 
 **Deliverables:**
 
-- on an iPhone (iOS 18.4 and 26), an iPad and an Android phone, with core and one app installed: a passkey made in the installed app,
-  a prompt from a button after resume, a prompt without a tap, PRF output, and how long a background app is kept
+- the lock check (`/lock-check`, core-app §3.15.1): a page on development and staging instances that makes a passkey there, asks for one
+  after a tap and with none (armed, on opening and on coming back), reports user verification and PRF output, and records how long the
+  app was away and whether it was ended, in a log kept by the browser and copied out as text; nothing is sent to the server
+- on an iPhone (iOS 18.4 and 26), an iPad and an Android phone, with core installed: the lock check run, its results sent
 - research 0012 updated with what was seen
 
 **Dependencies:** none `[parallel]`
 
-**Spec reference:** research 0012
+**Spec reference:** core-app §3.15.1; research 0012
 
 **Review checklist:**
 
+- The lock check is a page that is not there on a production instance
 - Each row of the table says what was seen, on which version
 
 #### 📋 4.16 — The specification: sessions across apps, and a lock

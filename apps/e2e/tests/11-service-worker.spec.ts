@@ -117,3 +117,51 @@ test('with no network, a navigation says so in a page of core’s own, and shows
   await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible();
   await context.close();
 });
+
+test('a new version is announced, and takes over only when the person reloads', async ({
+  browser,
+}) => {
+  // A browser does not let a test change what it fetches for a worker's update, so a release is the same worker at
+  // another address: the page's own registration is pointed at the release this context is on.
+  const context = await browser.newContext({ serviceWorkers: 'allow' });
+  await context.addInitScript(() => {
+    const container = navigator.serviceWorker;
+    const register = container.register.bind(container);
+    container.register = (url, options) =>
+      register(`${String(url)}?release=${localStorage.getItem('release') ?? '1'}`, options);
+  });
+  const page = await context.newPage();
+  await page.goto('/sign-in');
+  await expect.poll(async () => (await controlled(page)).active).toBe('activated');
+  await page.reload();
+  expect((await controlled(page)).controller).toBe(true);
+  const scriptURL = () => page.evaluate(() => navigator.serviceWorker.controller?.scriptURL);
+  const waiting = () =>
+    page.evaluate(async () => !!(await navigator.serviceWorker.getRegistration())?.waiting);
+  expect(await scriptURL()).toBe(`${CORE_URL}/sw.js?release=1`);
+
+  // The next release arrives while the page is open.
+  await page.evaluate(() => {
+    localStorage.setItem('release', '2');
+    return navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' });
+  });
+
+  // It waits, and the page says so, rather than swapping under the person.
+  const notice = page
+    .getByRole('status')
+    .filter({ hasText: 'A new version of Sovereign is ready.' });
+  await expect(notice).toBeVisible();
+  expect(await scriptURL()).toBe(`${CORE_URL}/sw.js?release=1`);
+  expect(await waiting()).toBe(true);
+
+  // Reload has it take over, and the page comes back on it, with nothing left to announce.
+  await Promise.all([
+    page.waitForEvent('load'),
+    notice.getByRole('button', { name: 'Reload' }).click(),
+  ]);
+  expect(await scriptURL()).toBe(`${CORE_URL}/sw.js?release=2`);
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  expect(await waiting()).toBe(false);
+  await expect(page.getByRole('status').filter({ hasText: 'A new version' })).toHaveCount(0);
+  await context.close();
+});

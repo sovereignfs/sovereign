@@ -276,7 +276,7 @@ and [research 0010](../research/0010-opening-installed-apps.md). The order and t
 
 **Done:** the worker has no `install` handler and takes the one message `sv-take-over`; `UpdateNotice` in `@sovereignfs/ui`; the registration shows it while a worker waits, reloads on `controllerchange`, and checks for an update when the page comes back into view. Acceptance test: a release waits, is announced, and Reload brings it. Seen in an installed core on an Android emulator.
 
-#### 📋 11.8 — Opening installed apps, seen on devices
+#### 🚧 11.8 — Opening installed apps, seen on devices
 
 **Goal:** What each platform does with a link from an installed core to another installed app is observed, not assumed.
 
@@ -296,6 +296,11 @@ and [research 0010](../research/0010-opening-installed-apps.md). The order and t
 - Every cell of the matrix is filled with what was seen, with the browser and OS versions
 
 **Not here:** any change to core.
+
+**Done so far:** the spike (`docs/research/0010-spike/serve.mjs`) and the iPhone row (simulator, iOS 26.5): every link from an
+installed hub opens a Safari view, never the installed app, as research 0010 expected. **Outstanding, which needs a person with the
+devices:** the desktop Chrome or Edge, Android (a phone with Play services) and macOS Safari rows; the matrix and how to run it are in
+research 0010, "Device run".
 
 #### 📋 11.9 — Tiles open installed apps
 

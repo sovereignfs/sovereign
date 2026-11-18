@@ -111,7 +111,7 @@ epic [11](docs/epics/pwa.md) · workstream [0006](docs/workstreams/0006-pwa.md)
 | 0.110.0 | 5        | Manifest members that do not vary by person     | ✅     | [11.5](docs/epics/pwa.md)  |
 | 0.110.0 | 6        | Install this app `[parallel]`                   | ✅     | [11.6](docs/epics/pwa.md)  |
 | 0.110.0 | 7        | A new version, announced `[parallel]`           | ✅     | [11.7](docs/epics/pwa.md)  |
-| —       | 8        | Opening installed apps, seen on devices         | 📋     | [11.8](docs/epics/pwa.md)  |
+| —       | 8        | Opening installed apps, seen on devices         | 🚧     | [11.8](docs/epics/pwa.md)  |
 | —       | 9        | `@sovereignfs/pwa`                              | 📋     | [11.11](docs/epics/pwa.md) |
 | —       | 10       | The app template installs                       | 📋     | [11.12](docs/epics/pwa.md) |
 | —       | 11       | The deployed apps, audited and fixed            | 📋     | [11.13](docs/epics/pwa.md) |

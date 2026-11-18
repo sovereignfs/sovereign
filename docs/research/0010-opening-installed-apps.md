@@ -2,7 +2,7 @@
 
 |                   |                                                                                                                                                                                                      |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**        | For review                                                                                                                                                                                           |
+| **Status**        | For review; device run started (iPhone seen, desktop and Android pending)                                                                                                                            |
 | **Date**          | November 2026                                                                                                                                                                                        |
 | **Author**        | Claude Code                                                                                                                                                                                          |
 | **Scope**         | [RFC 0001](../rfcs/0001-installable-core.md) §6; [core-app](../specs/core-app.md) §1.3; the launcher (`apps/core/app/launcher.tsx`), `AppTile` in `@sovereignfs/ui`, shortcuts; every app's manifest |
@@ -124,6 +124,37 @@ the main address if nothing handles it. It needs a schema change on every dialec
 4. **Shortcut deep links** as their own task, after B, with the allow-list above and `sv-security-check`.
 5. **Say plainly where it cannot work:** iPhone, iPad and macOS Safari open a browser view; the deployment guide and the launcher's help
    say so, without a hint inside the launcher that nags.
+
+## Device run (task 11.8)
+
+The spike is [`0010-spike/serve.mjs`](0010-spike/serve.mjs): two installable sites with no dependency, a hub playing an installed core
+and a target playing an installed app (`id`, `launch_handler` `navigate-existing`, `handle_links: 'preferred'`). The hub has one link of
+each kind (same tab, `target="_blank"`, `window.open`, the click-time choice of RFC 0001 A5, an Android `intent:` address); the target
+lists every time it was opened, in which display mode, and whether `launchQueue` handed it the address, and reports the same to the
+spike server's log. Run it on this machine (`node docs/research/0010-spike/serve.mjs`, both on `localhost`, which installs) or on two
+https hosts (`HUB_ORIGIN`, `TARGET_ORIGIN`, behind a TLS proxy) for a real phone. Install both, open the hub from its icon, tap each link.
+
+| Platform (seen)                                                       | Same tab                 | `target="_blank"`        | `window.open`        | Click time (A5)          | `intent:`      |
+| --------------------------------------------------------------------- | ------------------------ | ------------------------ | -------------------- | ------------------------ | -------------- |
+| iPhone simulator, iOS 26.5, both added to the Home Screen as web apps | Safari view over the hub | Safari view over the hub | not run (same as A5) | Safari view over the hub | not applicable |
+| Desktop Chrome or Edge                                                | to be seen               | to be seen               | to be seen           | to be seen               | not applicable |
+| Android Chrome, a phone with Play services (a WebAPK)                 | to be seen               | to be seen               | to be seen           | to be seen               | to be seen     |
+| macOS Safari, both added to the Dock                                  | to be seen               | to be seen               | to be seen           | to be seen               | not applicable |
+
+What was seen, and what was not:
+
+- **iPhone (simulator, iOS 26.5, November 2026): finding 4 holds.** Every link from the installed hub opened the target in a Safari
+  view over the hub (a close button, the address, Safari's toolbar), never in the installed target, which kept its own separate
+  storage. The view reports `display-mode: standalone`, so an app opened this way would take itself for installed: an app's install
+  hint must not trust the display mode alone on iOS (it hides, which is harmless).
+- **Desktop Chromium: not settled by automation.** Chrome for Testing 159 (Playwright's) installs both sites through the DevTools
+  `PWA` domain, but its app windows are not driven by Playwright and a scripted click is not a person's tap, which capture may
+  require; and Chrome for Testing is not the Chrome people install. A person with Chrome or Edge runs the row.
+- **Android: not settled on the emulator.** The available emulator image has Google APIs but no Play Store, so Chrome installs a
+  home-screen shortcut, not a WebAPK, and a shortcut registers no intent filter: the question (finding 3) cannot arise there. A phone,
+  or a Play Store image, runs the row.
+
+Until the desktop and Android rows are seen, RFC 0001 A5 stands as written but is not built (task 11.9 depends on 11.8).
 
 ## Sources
 

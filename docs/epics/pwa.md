@@ -297,10 +297,10 @@ and [research 0010](../research/0010-opening-installed-apps.md). The order and t
 
 **Not here:** any change to core.
 
-**Done so far:** the spike (`docs/research/0010-spike/serve.mjs`) and the iPhone row (simulator, iOS 26.5): every link from an
-installed hub opens a Safari view, never the installed app, as research 0010 expected. **Outstanding, which needs a person with the
-devices:** the desktop Chrome or Edge, Android (a phone with Play services) and macOS Safari rows; the matrix and how to run it are in
-research 0010, "Device run".
+**Done so far:** the spike (`docs/research/0010-spike/serve.mjs`); the iPhone row (simulator, iOS 26.5): every link from an
+installed hub opens a Safari view, never the installed app; and the desktop Chrome row (macOS, by hand): `target="_blank"`,
+`window.open` and the click-time choice open the installed target, the same-tab link does not. RFC 0001 A5 is confirmed for desktop
+Chromium. **Outstanding:** the macOS Safari row, and Android on a phone with Play services; the matrix is in research 0010, "Device run".
 
 #### 📋 11.9 — Tiles open installed apps
 

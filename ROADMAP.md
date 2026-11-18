@@ -114,10 +114,11 @@ epic [11](docs/epics/pwa.md) · workstream [0006](docs/workstreams/0006-pwa.md)
 | —       | 8        | Opening installed apps, seen on devices                    | 🚧     | [11.8](docs/epics/pwa.md)  |
 | 0.111.0 | 9        | `@sovereignfs/pwa`                                         | ✅     | [11.11](docs/epics/pwa.md) |
 | 0.111.0 | 10       | The app template installs                                  | ✅     | [11.12](docs/epics/pwa.md) |
-| —       | 11       | The deployed apps, audited and fixed                       | 📋     | [11.13](docs/epics/pwa.md) |
+| —       | 11       | The deployed apps, audited and fixed                       | ✅     | [11.13](docs/epics/pwa.md) |
 | —       | 12       | Tiles open installed apps                                  | 📋     | [11.9](docs/epics/pwa.md)  |
 | —       | 13       | Shortcuts that open a native app                           | 📋     | [11.10](docs/epics/pwa.md) |
 | 0.111.0 | 14       | A content security policy in the app template `[parallel]` | ✅     | [11.14](docs/epics/pwa.md) |
+| —       | 15       | The deployed apps on `@sovereignfs/pwa`                    | 📋     | [11.15](docs/epics/pwa.md) |
 
 ### M5 — Core can be deployed
 

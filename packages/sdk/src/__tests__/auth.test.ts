@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ConfigurationError,
   NotAuthenticatedError,
+  SessionEndedError,
   SignInError,
   createSovereign,
   hasRole,
@@ -179,6 +180,62 @@ describe('signing in (sdk §9)', () => {
   });
 });
 
+describe('asking core for a fresh sign-in (sdk §9.6)', () => {
+  /** A round trip that asks with `options`, the person having signed in at core at `authTime`. */
+  async function signInAsking(
+    world: World,
+    options: { prompt?: 'login' | 'none'; maxAgeSeconds?: number },
+    authTime?: number,
+  ) {
+    const begin = await world.sv.auth.beginSignIn(options);
+    const back = world.core.authorize(begin.url, 'u1', authTime === undefined ? {} : { authTime });
+    return world.sv.auth.completeSignIn(
+      new Request(back, { headers: { cookie: cookieHeader(begin.setCookies) } }),
+    );
+  }
+
+  it('asks core with `prompt` and `max_age` when told to, and with neither otherwise', async () => {
+    const { sv } = setup();
+    const asked = new URL((await sv.auth.beginSignIn({ prompt: 'login', maxAgeSeconds: 300 })).url);
+    expect(asked.searchParams.get('prompt')).toBe('login');
+    expect(asked.searchParams.get('max_age')).toBe('300');
+    const plain = new URL((await sv.auth.beginSignIn()).url);
+    expect(plain.searchParams.has('prompt')).toBe(false);
+    expect(plain.searchParams.has('max_age')).toBe(false);
+  });
+
+  it('refuses an age that is not a whole number of seconds', async () => {
+    const { sv } = setup();
+    for (const bad of [-1, 1.5, Number.NaN]) {
+      await expect(sv.auth.beginSignIn({ maxAgeSeconds: bad })).rejects.toBeInstanceOf(TypeError);
+    }
+  });
+
+  it('keeps when the person signed in at core on the session', async () => {
+    const world = setup();
+    const at = world.time.environment.now() - 60_000;
+    const done = await signInAsking(world, {}, at);
+    expect(done.session.authTime).toBe(Math.floor(at / 1000) * 1000);
+  });
+
+  it('accepts a sign-in within the age asked for', async () => {
+    const world = setup();
+    const done = await signInAsking(
+      world,
+      { maxAgeSeconds: 300 },
+      world.time.environment.now() - 60_000,
+    );
+    expect(done.session.sub).toBe('u1');
+  });
+
+  it('refuses a sign-in older than the age asked for, whatever core answered', async () => {
+    const world = setup();
+    await expect(
+      signInAsking(world, { maxAgeSeconds: 300 }, world.time.environment.now() - 600_000),
+    ).rejects.toBeInstanceOf(SignInError);
+  });
+});
+
 describe('the session', () => {
   it('is host-only over https: __Host- prefix, Secure, HttpOnly, SameSite=Lax, Path=/ and no Domain', async () => {
     const world = setup();
@@ -339,6 +396,18 @@ describe('a back-channel logout (sdk §9.1)', () => {
     expect(reply.status).toBe(200);
     expect(await world.sv.auth.getSession(withCookie(first.cookie))).toBeNull();
     expect(await world.sv.auth.getSession(withCookie(second.cookie))).toBeNull();
+  });
+
+  it('forgets the person’s refresh token when it names only the person, and keeps it for one sid', async () => {
+    const world = setup({ deletes: true });
+    await signIn(world);
+    const sid = world.core.sessionIdOf('u1') as string;
+    await world.sv.auth.handleBackChannelLogout(
+      post(await world.core.logoutToken({ sub: 'u1', sid })),
+    );
+    expect(world.tokens.tokens.get('u1')).toBeTruthy();
+    await world.sv.auth.handleBackChannelLogout(post(await world.core.logoutToken({ sub: 'u1' })));
+    expect(world.tokens.tokens.has('u1')).toBe(false);
   });
 
   it('leaves another person’s sessions alone', async () => {
@@ -521,3 +590,32 @@ function wrongWays(): WrongLogoutToken[] {
     'no-jti',
   ];
 }
+
+describe('when core ends a person’s session (sdk §9.1)', () => {
+  it('ends their sessions in the app and forgets their refresh token when core refuses the renewal', async () => {
+    const world = setup({ deletes: true });
+    const { cookie } = await signIn(world);
+    world.core.revoke('u1');
+    world.core.expireAccessTokens();
+    const failure = await world.sv
+      .as({ sub: 'u1' })
+      .directory.searchUsers({ q: 'ada' })
+      .catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(SessionEndedError);
+    expect((failure as SessionEndedError).byCore).toBe(true);
+    expect(await world.sv.auth.getSession(withCookie(cookie))).toBeNull();
+    expect(world.tokens.tokens.has('u1')).toBe(false);
+  });
+
+  it('leaves the sessions alone when the app simply has no refresh token for the person', async () => {
+    const world = setup({ scopes: ['openid', 'profile'] });
+    const { cookie } = await signIn(world);
+    const failure = await world.sv
+      .as({ sub: 'u1' })
+      .directory.searchUsers({ q: 'ada' })
+      .catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(SessionEndedError);
+    expect((failure as SessionEndedError).byCore).toBe(false);
+    expect((await world.sv.auth.getSession(withCookie(cookie)))?.sub).toBe('u1');
+  });
+});

@@ -275,7 +275,14 @@ after its `expiresAt`.
   answers `200`, and `400` for a token it refuses, saying nothing of why beyond `invalid_request`. A token is refused unless its
   header `typ` is `logout+jwt`, its signature checks against core's published keys, its `iss` is this core and its `aud` includes this
   app, it is not issued in the future and has not expired, its `events` carry the back-channel logout event, it carries a `jti`, it
-  names a `sub` or a `sid`, and it carries no `nonce`. A `jti` seen before is refused.
+  names a `sub` or a `sid`, and it carries no `nonce`. A `jti` seen before is refused. A token that names only the person (no `sid`)
+  also removes their stored refresh token, when the token store can; one that names a `sid` leaves it, since the person's other
+  sessions in the app use it. Two deliveries of one token at the same moment can both pass the `jti` check; they can only end the
+  same sessions twice.
+- When core says a person's session is over (it refuses the renewal of their token, or their token twice), the call throws
+  `SessionEndedError` with `byCore` true, and the SDK has already ended the person's sessions in the app (`deleteMatching`) and
+  removed their stored refresh token, so their next request signs them in again. A `SessionEndedError` for any other reason (the app
+  keeps no token for the person) ends nothing.
 - `handleAccountDeleted(request, handler)` takes a `POST` with an `account_deleted_token` (core-app §4.5). The token is refused, with `400`
   and `invalid_request`, by the rules for a logout token except that its header `typ` is `account-deleted+jwt` and its `events` carry
   `urn:sovereignfs:event:account-deleted`; a `jti` seen before is refused. For a good one the SDK ends the person's sessions
@@ -403,6 +410,22 @@ secret)` are the kit, as core's pages do it; `prepareChange` and `finishChange` 
 - **Not here:** sharing with another person needs their public keys, which only core serves (§9.4); an app with no core shares
   nothing yet.
 
+### 9.6 A fresh sign-in
+
+An app can ask core for a sign-in that is recent, before something that wants one, and know when the person last signed in at core.
+
+- `beginSignIn({ returnTo?, prompt?, maxAgeSeconds? })`: `prompt: 'login'` asks core to have the person sign in again even with a session
+  there; `prompt: 'none'` asks core to show nothing, and the callback fails with `SignInError` when the person would have had to sign in;
+  `maxAgeSeconds` asks for a sign-in no older than that (OpenID Connect `max_age`), which core gives by asking again when its session is
+  older. An age that is not a whole number of seconds, 0 or more, is refused with `TypeError`.
+- `completeSignIn` holds a sign-in asked with `maxAgeSeconds` to it: the ID token's `auth_time` MUST be within the age, or the callback
+  fails with `SignInError`, whatever core answered.
+- A session carries `authTime`, when the person last signed in at core in milliseconds, from `auth_time`; it is missing when core did
+  not say. `sv.auth.signedInWithin(session, seconds)` says whether that is within the last `seconds`, by the client's clock.
+- `@sovereignfs/sdk/next`: `/auth/login` passes on `prompt` (`login` or `none`) and `max_age` (whole seconds) from its query, and
+  ignores anything else; `requireSession(returnTo, { maxAgeSeconds })` sends a person whose sign-in is older, or unknown, to sign in
+  again with that age.
+
 ## 10. From the legacy SDK
 
 Every namespace of the legacy `sdk` object:
@@ -483,16 +506,17 @@ of its own; an app catalogue.
 
 ## Changelog
 
-| Date       | Change                                                                                                                                                                                                              |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-10-30 | First draft. Scope, app tokens and explicit actors were decided in discussion.                                                                                                                                      |
-| 2026-10-30 | §5.1: the token store's `write` says whether it stored, and an optional `lock` closes the window between processes, which a conditional update cannot. §14: what two processes can promise.                         |
-| 2026-10-30 | §9.1: the session store the app provides, what each function does with it, how a logout token is refused, the cookie, `sv.links`.                                                                                   |
-| 2026-10-31 | §9, §8, §10: `handleAccountDeleted`, the app's part of account-deletion fan-out (core-app §4.5); legacy `portability` waits for export. Not built.                                                                  |
-| 2026-10-31 | §5.1, §9.1: built. A token store MAY have `delete(sub)`; `nextAuth` takes `onAccountDeleted` and mounts `/auth/account-deleted`; the fake core makes `accountDeletedToken`.                                         |
-| 2026-11-02 | §9.2: `verifyLogoutToken` and `verifyAccountDeletedToken`, the rules of §9.1 for an app whose sessions are not the SDK's, with `seen` required: [RFC 0003](../rfcs/0003-apps-of-their-own.md). Built in task 14.11. |
-| 2026-11-16 | §9.3: key release, specified and not built (core-app §5.7).                                                                                                                                                         |
-| 2026-11-17 | §9.3: key release built, in the `/keys` entry, with `auth.keySecret` and `nextAuth`'s `/auth/key-secret`; §3 and §12 name the entry. `@sovereignfs/crypto` is bundled rather than published.                        |
-| 2026-11-17 | §8: `keys.me` and `keys.person`; §9.4: sharing, built, in the `/keys` entry.                                                                                                                                        |
-| 2026-11-17 | §9.5: an app with no core, built: `/vault` (`AppVault`, `vaultMigrations`, `vaultRoute`, `newSessionSecret`) and `localVault` in `/keys`; §12 names the entry.                                                      |
-| 2026-11-17 | §9.5, §12: `localVault` moves to `@sovereignfs/sdk/local-vault`, an entry of its own, before any release carried it in `/keys`; `/keys` no longer reaches libsodium.                                                |
+| Date       | Change                                                                                                                                                                                                                                                    |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-30 | First draft. Scope, app tokens and explicit actors were decided in discussion.                                                                                                                                                                            |
+| 2026-10-30 | §5.1: the token store's `write` says whether it stored, and an optional `lock` closes the window between processes, which a conditional update cannot. §14: what two processes can promise.                                                               |
+| 2026-10-30 | §9.1: the session store the app provides, what each function does with it, how a logout token is refused, the cookie, `sv.links`.                                                                                                                         |
+| 2026-10-31 | §9, §8, §10: `handleAccountDeleted`, the app's part of account-deletion fan-out (core-app §4.5); legacy `portability` waits for export. Not built.                                                                                                        |
+| 2026-10-31 | §5.1, §9.1: built. A token store MAY have `delete(sub)`; `nextAuth` takes `onAccountDeleted` and mounts `/auth/account-deleted`; the fake core makes `accountDeletedToken`.                                                                               |
+| 2026-11-02 | §9.2: `verifyLogoutToken` and `verifyAccountDeletedToken`, the rules of §9.1 for an app whose sessions are not the SDK's, with `seen` required: [RFC 0003](../rfcs/0003-apps-of-their-own.md). Built in task 14.11.                                       |
+| 2026-11-16 | §9.3: key release, specified and not built (core-app §5.7).                                                                                                                                                                                               |
+| 2026-11-17 | §9.3: key release built, in the `/keys` entry, with `auth.keySecret` and `nextAuth`'s `/auth/key-secret`; §3 and §12 name the entry. `@sovereignfs/crypto` is bundled rather than published.                                                              |
+| 2026-11-17 | §8: `keys.me` and `keys.person`; §9.4: sharing, built, in the `/keys` entry.                                                                                                                                                                              |
+| 2026-11-17 | §9.5: an app with no core, built: `/vault` (`AppVault`, `vaultMigrations`, `vaultRoute`, `newSessionSecret`) and `localVault` in `/keys`; §12 names the entry.                                                                                            |
+| 2026-11-17 | §9.5, §12: `localVault` moves to `@sovereignfs/sdk/local-vault`, an entry of its own, before any release carried it in `/keys`; `/keys` no longer reaches libsodium.                                                                                      |
+| 2026-11-18 | §9.6: a fresh sign-in (`prompt`, `maxAgeSeconds`, `authTime`, `signedInWithin`, `requireSession`'s age); §9.1: core ending a session ends it in the app (`SessionEndedError.byCore`), and a logout notice for the whole person removes the refresh token. |

@@ -38,6 +38,16 @@ export type AuthOptions = {
   sessionSeconds: number | undefined;
 };
 
+/** How a sign-in is asked for (sdk §9.6). */
+export type SignInOptions = {
+  /** A path on the app to come back to. */
+  returnTo?: string;
+  /** `login`: sign in again at core even with a session there. `none`: show nothing, and fail if that is not possible. */
+  prompt?: 'login' | 'none';
+  /** The oldest sign-in at core the app accepts, in seconds; checked against the ID token's `auth_time`. */
+  maxAgeSeconds?: number;
+};
+
 /** What to do next after a step of signing in or out: where to send the person, and the cookies to set. */
 export type Step = { url: string; setCookies: string[] };
 
@@ -68,8 +78,19 @@ export class Auth {
 
   // ---- signing in ----------------------------------------------------------------
 
-  /** Starts a sign-in: the address to send the person to, and the cookie that names what to remember. */
-  async beginSignIn(options: { returnTo?: string } = {}): Promise<Step> {
+  /**
+   * Starts a sign-in: the address to send the person to, and the cookie that names what to remember.
+   *
+   * `prompt: 'login'` asks core to have the person sign in again even with a session there; `maxAgeSeconds` asks for a sign-in
+   * no older than that, which core gives by asking again when its session is older, and which the callback checks against
+   * the ID token's `auth_time` (sdk §9.6). `prompt: 'none'` asks core not to show anything: the callback then fails with a
+   * `SignInError` when the person would have had to sign in.
+   */
+  async beginSignIn(options: SignInOptions = {}): Promise<Step> {
+    const maxAge = options.maxAgeSeconds;
+    if (maxAge !== undefined && (!Number.isInteger(maxAge) || maxAge < 0)) {
+      throw new TypeError('maxAgeSeconds must be a whole number of seconds, 0 or more.');
+    }
     const config = await this.#configuration();
     const verifier = client.randomPKCECodeVerifier();
     const state = client.randomState();
@@ -81,11 +102,22 @@ export class Auth {
       code_challenge_method: 'S256',
       state,
       nonce,
+      ...(options.prompt ? { prompt: options.prompt } : {}),
+      ...(maxAge !== undefined ? { max_age: String(maxAge) } : {}),
     });
     const id = newId();
     await this.#o.sessionStore.set(
       id,
-      { kind: 'pending', data: { verifier, state, nonce, returnTo: localPath(options.returnTo) } },
+      {
+        kind: 'pending',
+        data: {
+          verifier,
+          state,
+          nonce,
+          returnTo: localPath(options.returnTo),
+          ...(maxAge !== undefined ? { maxAge } : {}),
+        },
+      },
       this.#now() + PENDING_SECONDS * 1000,
     );
     return {
@@ -123,6 +155,8 @@ export class Auth {
         expectedState: String(pending.data.state),
         expectedNonce: String(pending.data.nonce),
         idTokenExpected: true,
+        // A sign-in asked to be recent is held to it: the ID token's `auth_time` must be within the age asked for.
+        ...(typeof pending.data.maxAge === 'number' ? { maxAge: pending.data.maxAge } : {}),
       });
     } catch (error) {
       throw this.#failure(error);
@@ -192,6 +226,14 @@ export class Auth {
     return { sub: found.session.sub, secret };
   }
 
+  /**
+   * Whether the person signed in at core within the last `seconds`, by the session's `authTime`. A session with no `authTime`
+   * is not recent: core did not say when (sdk §9.6).
+   */
+  signedInWithin(session: Pick<Session, 'authTime'>, seconds: number): boolean {
+    return session.authTime !== undefined && this.#now() - session.authTime <= seconds * 1000;
+  }
+
   /** The current session, or `NotAuthenticatedError`. */
   async requireSession(request: Request): Promise<Session> {
     const session = await this.getSession(request);
@@ -255,6 +297,9 @@ export class Auth {
     await store.deleteMatching(
       verified.sid ? { sid: verified.sid } : { sub: verified.sub as string },
     );
+    // A notice for the whole person (no `sid`) ends everything the app holds for them, so the app no longer calls core as them.
+    // One core session's notice leaves the refresh token: it is the person's, and their other sessions in the app use it.
+    if (!verified.sid) await this.#o.tokenStore?.delete?.(verified.sub as string);
     return new Response(null, { status: 200, headers: { 'cache-control': 'no-store' } });
   }
 
@@ -432,6 +477,7 @@ function sessionFrom(id: string, record: StoredRecord): { id: string; session: S
       claims,
       scopes: data.scopes ?? [],
       roles,
+      ...(typeof claims.auth_time === 'number' ? { authTime: claims.auth_time * 1000 } : {}),
       expiresAt: Number(data.expiresAt ?? 0),
     },
   };

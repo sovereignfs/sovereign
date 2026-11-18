@@ -71,6 +71,10 @@ core. A person can sign out of core elsewhere: core tells the app (the back-chan
 names. `sv.links` has the addresses of core's own pages (`profile`, `security`, `connectedApps`, ...) for changing a password or
 ending other sessions, which the app does not do itself.
 
+Before something that wants a recent sign-in, ask for one: `requireSession('/settings', { maxAgeSeconds: 300 })` sends a person who
+signed in at core more than five minutes ago to sign in again, and `session.authTime` says when they did ([sdk §9.6](specs/sdk.md)).
+When core ends a person's session, by refusing to renew their token, the SDK ends their sessions in the app too.
+
 ### When a person deletes their account
 
 If the app holds anything of a person (their notes, their settings, a stored refresh token), core tells it when they delete their account

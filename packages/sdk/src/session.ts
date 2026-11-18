@@ -33,6 +33,8 @@ export type Session = {
   readonly scopes: readonly string[];
   /** The roles core gave a trusted app, or none. */
   readonly roles: readonly string[];
+  /** When the person last signed in at core, in milliseconds, from the ID token's `auth_time`; missing if core did not say. */
+  readonly authTime?: number;
   /** When this session ends, in milliseconds. */
   readonly expiresAt: number;
 };

@@ -431,7 +431,7 @@ sign-out and the encrypted variant's key flow and needs both run against a core.
 
 **Not here:** the planned apps (foundry, loom, papertrail, haven), which start from the template.
 
-#### 📋 11.14 — A content security policy in the app template `[parallel]`
+#### ✅ 11.14 — A content security policy in the app template `[parallel]`
 
 **Goal:** An app made from the template sends every page with a nonce-based content security policy, as the deployed apps do.
 
@@ -452,3 +452,11 @@ sign-out and the encrypted variant's key flow and needs both run against a core.
 - Both variants sign in, work and sign out under the policy, with no violation in the console
 
 **Not here:** the deployed apps, which have their own policies (11.13).
+
+**Done:** `lib/csp.ts` and `proxy.ts` in the template: a nonce per request, `'strict-dynamic'`, `PWA_CSP_DIRECTIVES`, `form-action`
+naming core's origin (from `<PREFIX>_CORE_URL`), `nosniff` and `X-Frame-Options: DENY`; the layout makes every page render per request
+(`connection()`). The encrypted variant needs nothing more: its page fetches only its own server and reaches core by navigation, and it
+never loads libsodium, so no `'wasm-unsafe-eval'`. Run against a built core with both variants generated from the template: sign-in
+and consent, a note written, sign-out, and for `--encryption` key release with the recovery kit and the return to `/keys/return`, with no
+violation on any of the app's pages. A copy built without core in `form-action` could not sign out (the form never left the app), so
+core's origin is needed.

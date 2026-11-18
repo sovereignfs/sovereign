@@ -117,7 +117,7 @@ epic [11](docs/epics/pwa.md) · workstream [0006](docs/workstreams/0006-pwa.md)
 | —       | 11       | The deployed apps, audited and fixed                       | 📋     | [11.13](docs/epics/pwa.md) |
 | —       | 12       | Tiles open installed apps                                  | 📋     | [11.9](docs/epics/pwa.md)  |
 | —       | 13       | Shortcuts that open a native app                           | 📋     | [11.10](docs/epics/pwa.md) |
-| —       | 14       | A content security policy in the app template `[parallel]` | 📋     | [11.14](docs/epics/pwa.md) |
+| 0.111.0 | 14       | A content security policy in the app template `[parallel]` | ✅     | [11.14](docs/epics/pwa.md) |
 
 ### M5 — Core can be deployed
 

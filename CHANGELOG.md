@@ -5,6 +5,14 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.114.0] - 2026-11-18
+
+### Changed
+
+- Every place that asks a signed-in person for their password again counts wrong answers against one limit: five in ten minutes, then
+  every answer is refused until the ten minutes pass. Turning two-factor sign-in on or off, its backup codes and key, and changing the
+  password now count with handing over ownership and deleting the account.
+
 ## [0.113.0] - 2026-11-18
 
 ### Added

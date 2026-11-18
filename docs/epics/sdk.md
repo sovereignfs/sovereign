@@ -283,7 +283,7 @@ pass unchanged. The security check is run.
 - `handle*` behave exactly as before
 - The security check is run
 
-#### 📋 14.12 — Asking core for a fresh sign-in
+#### ✅ 14.12 — Asking core for a fresh sign-in
 
 **Goal:** An app can ask core to sign the person in again, or to have done so recently, and know when they did.
 
@@ -294,21 +294,25 @@ pass unchanged. The security check is run.
 
 **Dependencies:** 14.3
 
-**Spec reference:** sdk §9; [research 0011](../research/0011-streamlining-sign-in.md) E; [research 0012](../research/0012-biometric-lock.md)
+**Spec reference:** sdk §9.6; [research 0011](../research/0011-streamlining-sign-in.md) E; [research 0012](../research/0012-biometric-lock.md)
 
 **Review checklist:**
 
 - A sign-in older than `maxAge` is refused, with a test that was seen to fail without the check
 
-#### 📋 14.13 — An ended session ends in the app
+#### ✅ 14.13 — An ended session ends in the app
 
 **Goal:** An app stops acting for someone whose session at core is over.
 
 **Deliverables:**
 
-- a logout notice that ends the person's last session in the app deletes their refresh token too
-- `requireSession` treats `SessionEndedError` as signed out; the template handles it
-- the `seen` mark of a logout token written so that two deliveries cannot both pass
+- a logout notice for the whole person (no `sid`) deletes their refresh token too; one for a `sid` leaves it, since the person's
+  other sessions in the app use it
+- when core refuses a person's renewal, or their token twice (`SessionEndedError.byCore`), the SDK ends their sessions in the app and
+  deletes the dead refresh token; the template calls core as no person, so it has nothing to handle
+
+**Not here:** making the `seen` mark of a logout token atomic. It would need a new required method on every app's session store, and
+two deliveries of one genuine token can only end the same sessions twice.
 
 **Dependencies:** 14.11
 

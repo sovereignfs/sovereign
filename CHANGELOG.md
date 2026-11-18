@@ -5,6 +5,16 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.112.0] - 2026-11-18
+
+### Added
+
+- In an installed core, an app's tile opens the app in a new window, which desktop Chrome and Edge hand to the app when it is installed
+  too, so it opens as itself; on an iPhone, an iPad and in Safari it opens in a browser view that closes back to core. In a browser tab, a
+  tile opens its app in the same tab, as before.
+- A shortcut may also keep a native app's own address, such as `spotify:…`, tried first from an installed core or a phone, with its web
+  address opened instead if no app answers within a second. Addresses that could run anything in the browser are refused.
+
 ## [0.111.0] - 2026-11-18
 
 ### Added

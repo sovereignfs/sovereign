@@ -307,8 +307,8 @@ workstream [0007](docs/workstreams/0007-sign-in.md)
 | 0.113.0 | 2        | An app's sign-in kept through sign-up, verification and a reset | ✅     | [4.9](docs/epics/identity-auth.md)  |
 | 0.113.0 | 3        | A passkey on the second step unlocks                            | ✅     | [4.10](docs/epics/identity-auth.md) |
 | 0.113.0 | 4        | Signing out says when it did not                                | ✅     | [4.11](docs/epics/identity-auth.md) |
-| —       | 5        | One guard for signed-in pages, and the cookie cache's leftovers | ⏳     | [4.12](docs/epics/identity-auth.md) |
-| —       | 6        | The verification link goes straight on                          | ⏳     | [4.13](docs/epics/identity-auth.md) |
+| 0.113.0 | 5        | One guard for signed-in pages, and the cookie cache's leftovers | ✅     | [4.12](docs/epics/identity-auth.md) |
+| 0.113.0 | 6        | An emailed link that did not work is always said                | ✅     | [4.13](docs/epics/identity-auth.md) |
 | —       | 7        | Asking for the password again, one way                          | 📋     | [4.14](docs/epics/identity-auth.md) |
 | —       | 8        | Asking core for a fresh sign-in                                 | 📋     | [14.12](docs/epics/sdk.md)          |
 | —       | 9        | An ended session ends in the app                                | 📋     | [14.13](docs/epics/sdk.md)          |

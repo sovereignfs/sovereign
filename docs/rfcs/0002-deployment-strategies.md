@@ -317,7 +317,7 @@ sovereign-admin apps remove KEY
   with it set.
 - **Hosted apps are registered as trusted**, so people are not asked about each one, and they may receive `roles`. The
   operator chose to install them. An external app stays untrusted unless the operator says otherwise.
-- **Sign-out** uses the existing back-channel logout. A notice that fails is not retried (§3.6.5), so apps must also stop
+- **Sign-out** uses the existing back-channel logout. A notice that fails is retried only for a day (§3.6.5), so apps must also stop
   when their tokens do.
 - **Passkeys stay on core's host.** `SV_AUTH_WEBAUTHN_RP_ID` stays unset. Apps never run a passkey ceremony, since they send
   people to core. With core on the apex the default RP ID is the apex itself, and the origin check still limits a ceremony

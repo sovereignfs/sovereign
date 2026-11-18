@@ -738,19 +738,30 @@ alone, so revoking them is core's own step.
   account is deactivated — core revokes the access tokens of that session and
   sends a signed _logout token_ (OpenID Connect Back-Channel Logout, carrying
   the `sub` and the session id `sid`) to the back-channel logout URI of every
-  client that session was used with. A notice that fails is logged and not
-  retried, so an app must also treat its own session as ending when its access
-  tokens stop working.
-- When the session ended by deactivation, core tells the apps once the
-  deactivation has been committed: it reads which apps held tokens in each
+  client that session was used with. Core is the only sender: an app's
+  back-channel address is kept with core's own settings for the app, not in the
+  provider's field, so the provider sends none of its own; an address kept there
+  before is moved at start-up. Each notice is kept (`logout_notices`), one for
+  each app and session, written once the session is gone (for a deactivation or
+  a deletion, in the same transaction), and sent at once and then by a timer
+  every minute. As the specification asks (§2.5), it is sent again only after a
+  failure that may be temporary (a timeout, an app that cannot be reached, a
+  `5xx` or a `429`), after 1, 5 and 30 minutes and then 2 and 6 hours, and given
+  up after any other answer, or a day after the session ended. An attempt is
+  claimed with a lease, so two instances of core do not send one notice twice.
+  An app must still treat its own session as ending when its access tokens stop
+  working, for a notice that was given up.
+- When the session ended by deactivation, the notices are written in the
+  deactivation's transaction and sent once it has been committed: core reads which apps held tokens in each
   session before deleting the sessions, since deleting a session clears that
   link. A person ending a session in their identity pages, or all the others,
   goes through the same route as signing out, so the same notices and
   revocations follow.
 - The logout token is a JWT signed with the key that signs ID tokens, typed
   `logout+jwt`, carrying `iss`, `aud`, `sub`, `sid`, `iat`, an `exp` two minutes
-  on, a `jti` and the back-channel logout event, and no `nonce`. It is sent once,
-  within five seconds, and a redirect is not followed.
+  on, a `jti` and the back-channel logout event, and no `nonce`. Each attempt is a
+  new token; an attempt waits five seconds at most, and a redirect is not
+  followed.
 - An end-session request core cannot match to the person's session (no hint, a
   hint core did not sign, or one for another browser's session) ends nothing: it
   shows a confirmation. A client that has not enabled end-session cannot use the
@@ -1467,7 +1478,7 @@ which a production instance never can ([workstream 0002](../workstreams/0002-tes
 ### 3.16 Not in Phase 1
 
 Groups and per-app access policies; per-account capability grants;
-verification levels; retrying a failed back-channel logout notice; social
+verification levels; social
 sign-in; changing
 an email address; editable email templates; theme presets, colours and text
 size preferences (a choice of light, dark or the system's is in Preferences, §3.11); mail, notification and activity APIs for apps; account
@@ -1830,10 +1841,10 @@ be made whole, and `sv restore` says so. An app with no account-deleted address 
 **Decided here, so that it can be built.**
 
 - **Its own address, not the back-channel logout address.** The two make different promises: a logout notice says a session ended and is
-  sent once; this one says to delete what is held and is sent until it is answered. An app that wants only one has only one.
+  tried for a day; this one says to delete what is held and is sent until it is answered. An app that wants only one has only one.
 - **No acknowledgement of what was deleted.** Core asks for the app's word that it is done and takes nothing more, because anything more
   would be a way for an app to be asked about a person.
-- **No retry of the logout notice.** §3.6.5 stands: a logout notice is sent once. Only this one is kept.
+- **The logout notice is kept as well, since 6.4** (§3.6.5): for a day, and only after a failure that may be temporary.
 - **Not an export.** What a person may take with them is the "Later" row (§2), and the SDK's legacy `portability` waits for it.
 
 ---
@@ -2178,3 +2189,4 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-18 | §5.5: a passkey used on the second sign-in step unlocks with the same touch, as on the sign-in page, and the password's waiting secret is dropped.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 2026-11-18 | §3.3.3: a verification link that did not work is said even to someone already signed in.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 2026-11-18 | §3.2.1, §3.4.1: one count of wrong passwords per account wherever the password is asked again, better-auth's two-factor and change-password routes included.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 2026-11-18 | §3.6.5, §3.16, §4.5: logout notices are core's alone, kept and sent again after a failure that may be temporary, for a day; an app's back-channel address moves to core's own settings.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |

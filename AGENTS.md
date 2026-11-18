@@ -319,6 +319,10 @@ each: `docs/architecture-rules.md`.
   ended through better-auth's endpoints, never by deleting its row** (the row's
   tokens would stay alive and no app would be told). Remove access is
   `removeAccess`, the provider's consent-deleting endpoints are off.
+- **Logout notices are core's alone, and kept:** an app's back-channel address
+  lives in core's metadata, never the provider's field (the provider would send
+  its own, once); every notice is a row in `logout_notices`, sent again only
+  after a failure that may be temporary.
 - **`roles` is for trusted clients only** (stripped from the request, not offered
   at consent, withheld from tokens), and the consent page believes only what the
   provider signed.

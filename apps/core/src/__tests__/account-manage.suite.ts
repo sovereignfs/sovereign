@@ -20,7 +20,7 @@ import { AccountStates } from '../accounts/states';
 import type { Auth } from '../auth/auth';
 import { ROLE_ADMIN, ROLE_OWNER, ROLE_USER } from '../auth/roles';
 import { migrateCore } from '../db/migrate';
-import { revokeOnDeactivation, sendLogoutNotices } from '../oauth/logout';
+import { revokeOnDeactivation } from '../oauth/logout';
 import { changeCapabilities } from '../roles/configure';
 import { changeRole } from '../roles/people';
 import { Jar, PASSWORD, call, freshEmail, makeAuthWithTasks, signUp } from './auth-harness';
@@ -29,6 +29,7 @@ import { secretOf, totp } from './totp';
 
 const MIGRATIONS = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../migrations');
 const TABLES = [
+  'logout_notices',
   'oauth_access_tokens',
   'oauth_refresh_tokens',
   'oauth_consents',
@@ -99,7 +100,11 @@ export function accountManageSuite(createDatabase: () => Promise<TestDatabase>):
       people[key].role = ROLE_ADMIN;
     }
     const states = new AccountStates(db, { log: () => undefined });
-    revokeOnDeactivation(states, () => Promise.resolve(auth));
+    revokeOnDeactivation(
+      states,
+      () => Promise.resolve(db),
+      () => Promise.resolve(auth),
+    );
     const manager = new AccountManager(db, states, { log: () => undefined, ...hooks });
     return {
       auth,
@@ -498,17 +503,22 @@ export function accountManageSuite(createDatabase: () => Promise<TestDatabase>):
     });
 
     it('tells the apps, and one that does not answer does not undo it', async () => {
-      const told: unknown[] = [];
+      let told = 0;
       const ctx = await instance({
-        logoutNotices: async (notices) => {
-          told.push(...notices);
+        logoutNotices: async () => {
+          told += 1;
           throw new Error('app is down');
         },
       });
       const client = await app(ctx);
       await signInTo(ctx.auth, ctx.people.pat.jar, client, { scope: 'openid' });
       await ctx.manager.delete(ctx.asAdmin, ctx.people.pat.id);
-      expect(told).toHaveLength(1);
+      expect(told).toBe(1);
+      // The notice was written with the deletion, for the app the person used.
+      const { rows } = await db.run('select client_id from logout_notices where sub = ?', [
+        ctx.people.pat.id,
+      ]);
+      expect(rows.map((row) => row.client_id)).toEqual([client.clientId]);
       expect(await getAccount(db, ctx.people.pat.id)).toBeUndefined();
     });
 
@@ -619,17 +629,22 @@ export function accountManageSuite(createDatabase: () => Promise<TestDatabase>):
     });
 
     it('tells the apps, and one that does not answer does not undo it', async () => {
-      const told: unknown[] = [];
+      let told = 0;
       const ctx = await instance({
-        logoutNotices: async (notices) => {
-          told.push(...notices);
+        logoutNotices: async () => {
+          told += 1;
           throw new Error('app is down');
         },
       });
       const client = await app(ctx);
       await signInTo(ctx.auth, ctx.people.pat.jar, client, { scope: 'openid' });
       await ctx.manager.deleteSelf(own(ctx.people.pat));
-      expect(told).toHaveLength(1);
+      expect(told).toBe(1);
+      // The notice was written with the deletion, for the app the person used.
+      const { rows } = await db.run('select client_id from logout_notices where sub = ?', [
+        ctx.people.pat.id,
+      ]);
+      expect(rows.map((row) => row.client_id)).toEqual([client.clientId]);
       expect(await getAccount(db, ctx.people.pat.id)).toBeUndefined();
     });
 
@@ -789,6 +804,5 @@ export function accountManageSuite(createDatabase: () => Promise<TestDatabase>):
     });
   });
 
-  void sendLogoutNotices;
   void ({} as Auth);
 }

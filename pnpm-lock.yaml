@@ -689,6 +689,9 @@ importers:
 
   tools/create:
     devDependencies:
+      '@sovereignfs/pwa':
+        specifier: workspace:*
+        version: link:../../packages/pwa
       '@sovereignfs/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig

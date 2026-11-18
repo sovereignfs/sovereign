@@ -582,6 +582,65 @@ describe('installing the app', () => {
   });
 });
 
+describe('the content security policy of an app', () => {
+  it('is set on every page by a proxy, from the app’s own variables', async () => {
+    const target = path.join(temp(), 'my-notes');
+    await writeApp(target, namesOf(target));
+    const proxy = read(target, 'proxy.ts');
+    expect(proxy).toContain('process.env.MYNOTES_URL');
+    expect(proxy).toContain('originOf(process.env.MYNOTES_CORE_URL)');
+    expect(proxy).not.toContain('__PREFIX');
+    // Not pages: the API, the sign-in routes, the worker, the manifest, the icons and the built files.
+    for (const left of [
+      'api/',
+      'auth/',
+      'sw\\\\.js',
+      'manifest\\\\.webmanifest',
+      'pwa-icon/',
+      '_next/static',
+    ])
+      expect(proxy, left).toContain(left);
+    // A nonce needs every page rendered per request.
+    expect(read(target, 'app/layout.tsx')).toContain('await connection();');
+  });
+
+  it('runs nothing the server did not mark, and lets sign-out go on to core', async () => {
+    const { contentSecurityPolicy, originOf } = await import('../template/app/lib/csp');
+    const policy = contentSecurityPolicy({
+      nonce: 'abc',
+      secure: true,
+      development: false,
+      core: originOf('https://core.example.org/some/path'),
+    });
+    const directive = (name: string) => policy.split('; ').find((d) => d.startsWith(`${name} `));
+    expect(directive('script-src')).toBe("script-src 'self' 'nonce-abc' 'strict-dynamic'");
+    expect(policy).not.toMatch(/script-src[^;]*'unsafe-inline'/);
+    expect(policy).not.toContain('unsafe-eval');
+    expect(directive('worker-src')).toBe("worker-src 'self'");
+    expect(directive('manifest-src')).toBe("manifest-src 'self'");
+    expect(directive('form-action')).toBe("form-action 'self' https://core.example.org");
+    expect(directive('frame-ancestors')).toBe("frame-ancestors 'none'");
+    expect(policy).toContain('upgrade-insecure-requests');
+  });
+
+  it('allows what next dev needs only in development, and https only where the app is served over it', async () => {
+    const { contentSecurityPolicy, originOf } = await import('../template/app/lib/csp');
+    const development = contentSecurityPolicy({ nonce: 'n', secure: false, development: true });
+    expect(development).toContain("'unsafe-eval'");
+    expect(development).not.toContain('upgrade-insecure-requests');
+    expect(development).toContain("form-action 'self';");
+    expect(originOf('javascript:alert(1)')).toBeUndefined();
+    expect(originOf('not an address')).toBeUndefined();
+  });
+
+  it('makes a nonce that is new every time', async () => {
+    const { newNonce } = await import('../template/app/lib/csp');
+    const nonces = new Set(Array.from({ length: 50 }, () => newNonce()));
+    expect(nonces.size).toBe(50);
+    expect([...nonces][0]).toMatch(/^[A-Za-z0-9+/]{22}==$/);
+  });
+});
+
 describe('what the app depends on', () => {
   it('are ranges the Sovereign packages of this repository satisfy', () => {
     for (const [name, dir] of [

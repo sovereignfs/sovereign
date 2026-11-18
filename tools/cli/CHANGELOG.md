@@ -5,6 +5,15 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.12.0; earlier versions are in the repository's
 history and tags.
 
+## [0.18.0] - 2026-11-18
+
+### Added
+
+- An app made by `npm create @sovereignfs app` installs on a phone and a desktop: it depends on the new `@sovereignfs/pwa` and has a web
+  app manifest (with what lets an installed core open the installed app), a service worker that keeps only files that are the same for
+  everyone, icons drawn from the app's initial, the metadata an iPhone reads, and a notice when a new version is ready. Its
+  `sovereign.manifest.json` names the icon for the launcher. This release was made for core 0.111.0.
+
 ## [0.17.1] - 2026-11-17
 
 ### Fixed

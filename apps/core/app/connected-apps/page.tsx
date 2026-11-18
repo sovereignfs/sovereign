@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
 import { Card, EmptyState } from '@sovereignfs/ui';
-import { getSession } from '../../src/auth/session';
+import { requireSignedIn } from '../../src/auth/require-signed-in';
 import { getDatabase } from '../../src/database';
 import { listConnectedApps } from '../../src/oauth/connected';
 import styles from '../security/security.module.css';
@@ -11,8 +10,7 @@ export const metadata: Metadata = { title: 'Connected apps' };
 
 export default async function ConnectedAppsPage() {
   // The proxy turns away a request with no session cookie; this is the check that counts.
-  const session = await getSession();
-  if (!session) redirect('/sign-in?returnTo=%2Fconnected-apps');
+  const session = await requireSignedIn('/connected-apps');
   // The account is the session's, never a name in the request.
   const apps = await listConnectedApps(await getDatabase(), session.user.id);
 

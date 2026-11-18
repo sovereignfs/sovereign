@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   describePasswordPolicy,
   MAX_PASSWORD_LENGTH,
+  newPasswordProblem,
   passwordPolicyMessage,
   passwordProblems,
   type PasswordPolicy,
@@ -90,5 +91,26 @@ describe('describing the policy', () => {
     expect(passwordPolicyMessage(['be at least 8 characters long', 'include a number'])).toBe(
       'The password must be at least 8 characters long and include a number.',
     );
+  });
+});
+
+describe('newPasswordProblem', () => {
+  it('says nothing for a password typed the same twice that meets the policy', () => {
+    expect(newPasswordProblem('long enough', 'long enough', policy())).toBeUndefined();
+  });
+
+  it('says the two differ before anything else', () => {
+    expect(newPasswordProblem('short', 'other', policy())).toBe('The passwords do not match.');
+  });
+
+  it('says what the policy asks for, in one sentence', () => {
+    expect(newPasswordProblem('short', 'short', policy())).toBe(
+      'The password must be at least 8 characters long.',
+    );
+  });
+
+  it('checks only the policy when the password is typed once', () => {
+    expect(newPasswordProblem('long enough', undefined, policy())).toBeUndefined();
+    expect(newPasswordProblem('short', undefined, policy())).toMatch(/at least 8/);
   });
 });

@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { verifyOAuthQueryParams } from '@better-auth/oauth-provider';
-import { redirect } from 'next/navigation';
 import { getAuth, getAuthSettings } from '../../src/auth';
-import { getSession } from '../../src/auth/session';
+import { requireSignedIn } from '../../src/auth/require-signed-in';
 import { readConsentRequest } from '../../src/oauth/consent';
 import { queryOf, signedQueryOf } from '../../src/oauth/signed-query';
 import { AuthCard } from '../(auth)/auth-card';
@@ -19,8 +18,7 @@ export default async function ConsentPage({
 }) {
   const query = queryOf(await searchParams);
   // The proxy turns away a request with no session cookie; this is the check that counts.
-  const session = await getSession();
-  if (!session) redirect(`/sign-in?returnTo=${encodeURIComponent(`/consent?${query}`)}`);
+  const session = await requireSignedIn(`/consent?${query}`);
 
   const auth = await getAuth();
   const request = await readConsentRequest(signedQueryOf(query), {

@@ -133,3 +133,28 @@ describe('every Console page checks for itself', () => {
     },
   );
 });
+
+describe('every page that needs someone signed in uses the one guard', () => {
+  // The proxy only sees that a cookie is there; a page whose session has ended must send the person to sign in, and
+  // every page does it the same way, through `requireSignedIn` (or `sessionFor`, which calls it) (core-app §3.5).
+  // Public on purpose: the pages before signing in, the legal pages, and the Console, which has its own guard.
+  const isPublic = (name: string) =>
+    name.startsWith('(auth)/') || name.startsWith('(legal)/') || name.startsWith('console/');
+  const pages = all.filter((file) => /(^|\/)page\.tsx$/.test(relative(file)));
+  const signedIn = pages.filter((file) => !isPublic(relative(file)));
+
+  it('finds the pages there are, or this test would pass on nothing', () => {
+    expect(signedIn.map(relative)).toEqual(
+      expect.arrayContaining(['page.tsx', 'security/page.tsx', 'consent/page.tsx']),
+    );
+  });
+
+  it.each(signedIn.map((file) => [relative(file), file]))(
+    '%s asks requireSignedIn, and never looks at the session by hand',
+    (_name, file) => {
+      const source = readFileSync(String(file), 'utf8');
+      expect(/\b(requireSignedIn|sessionFor)\(/.test(source)).toBe(true);
+      expect(/\bgetSession\(/.test(source)).toBe(false);
+    },
+  );
+});

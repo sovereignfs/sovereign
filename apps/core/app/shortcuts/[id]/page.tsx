@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { Card } from '@sovereignfs/ui';
 import { sessionFor } from '../../../src/files/session';
 import { getShortcutManager } from '../../../src/shortcuts';
@@ -12,8 +12,7 @@ export const metadata: Metadata = { title: 'Shortcut' };
 /** One of the person's own shortcuts; another person's, or one that does not exist, is a page that is not there. */
 export default async function ShortcutPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { session, allowed } = await sessionFor('launcher:access');
-  if (!session) redirect(`/sign-in?returnTo=${encodeURIComponent(`/shortcuts/${id}`)}`);
+  const { session, allowed } = await sessionFor('launcher:access', `/shortcuts/${id}`);
   if (!allowed) notFound();
   const shortcut = await (await getShortcutManager()).get(session.user, 'own', id);
   if (!shortcut) notFound();

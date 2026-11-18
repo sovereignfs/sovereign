@@ -1,10 +1,9 @@
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
 import { describePasswordPolicy } from '../../../src/auth/password-policy';
 import { getAuthSettings } from '../../../src/auth/settings';
 import { getRegistrationMode } from '../../../src/auth/mode';
 import { safeReturnTo } from '../../../src/auth/return-to';
-import { getSession } from '../../../src/auth/session';
+import { sendOnIfSignedIn } from '../../../src/auth/require-signed-in';
 import { getDatabase } from '../../../src/database';
 import { lookupInvite } from '../../../src/invites/manage';
 import { getInstanceIdentity } from '../../../src/instance/service';
@@ -24,7 +23,7 @@ export default async function SignUpPage({
 }) {
   const params = await searchParams;
   const returnTo = safeReturnTo(params.returnTo);
-  if (await getSession()) redirect(returnTo);
+  await sendOnIfSignedIn(returnTo);
   const mode = await getRegistrationMode();
   // An invitation link carries its id; the address it was sent to is filled in. The server still decides
   // at sign-up, so a made-up or stale value here only leaves the field empty.

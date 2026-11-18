@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { getAuth, getAuthSettings } from '../../../src/auth';
-import { getSession } from '../../../src/auth/session';
+import { requireSignedIn } from '../../../src/auth/require-signed-in';
 import { getInstanceIdentity } from '../../../src/instance/service';
 import { readReleaseTarget } from '../../../src/keys/release-target';
 import { queryOf } from '../../../src/oauth/signed-query';
@@ -22,10 +22,7 @@ export default async function KeyReleasePage({
 }) {
   const query = await searchParams;
   // The proxy turns away a request with no session cookie; this is the check that counts.
-  const session = await getSession();
-  if (!session) {
-    redirect(`/sign-in?returnTo=${encodeURIComponent(`/keys/release?${queryOf(query)}`)}`);
-  }
+  const session = await requireSignedIn(`/keys/release?${queryOf(query)}`);
   // Every way of being wrong gets the page that is not there: a site that sends a person here learns nothing.
   const target = await readReleaseTarget(await getAuth(), query);
   if (!target) notFound();

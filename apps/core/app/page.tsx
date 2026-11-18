@@ -1,7 +1,6 @@
-import { redirect } from 'next/navigation';
 import { PageContainer, Typography } from '@sovereignfs/ui';
 import { AccountHeader } from './account-header';
-import { getSession } from '../src/auth/session';
+import { requireSignedIn } from '../src/auth/require-signed-in';
 import { getLauncherApps } from '../src/clients';
 import { getShortcutManager } from '../src/shortcuts';
 import { formatInstanceDetails, instanceDetails } from '../src/instance/about';
@@ -16,8 +15,7 @@ import styles from './page.module.css';
  * check that counts is this one. Someone who may open the Console also has, at the foot, what this instance runs.
  */
 export default async function Page() {
-  const session = await getSession();
-  if (!session) redirect('/sign-in');
+  const session = await requireSignedIn('/');
   const matrix = await getCapabilityMatrix();
   const launcher = can(session.user.role, 'launcher:access', matrix);
   const canAddApps = can(session.user.role, 'client:manage', matrix);

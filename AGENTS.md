@@ -310,6 +310,8 @@ each: `docs/architecture-rules.md`.
   shown inline, the person from the session in every call, and each app's container mounting its own folder of `sovereign-data` alone.
 - **Every Console page calls `requireConsole` itself** (a test fails when one does
   not), and answers someone who may not enter with a page that is not there.
+  **Every other signed-in page calls `requireSignedIn`** (or `sessionFor`), never
+  `getSession` and a redirect by hand (a test fails when one does).
 - **A client is written only by `ClientRegistry`** (validation, the provider's
   secret hashing, its adapter for core's fields; the provider's own write routes
   are off), and every method needs `client:manage`.

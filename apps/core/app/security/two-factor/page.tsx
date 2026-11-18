@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { Card } from '@sovereignfs/ui';
-import { getSession } from '../../../src/auth/session';
+import { requireSignedIn } from '../../../src/auth/require-signed-in';
 import { getSettings, SETTINGS } from '../../../src/settings';
 import styles from '../security.module.css';
 import { TwoFactorPanel } from './two-factor-panel';
@@ -11,8 +10,7 @@ export const metadata: Metadata = { title: 'Two-factor sign-in' };
 
 export default async function TwoFactorSettingsPage() {
   // The proxy turns away a request with no session cookie; this is the check that counts.
-  const session = await getSession();
-  if (!session) redirect('/sign-in?returnTo=%2Fsecurity%2Ftwo-factor');
+  const session = await requireSignedIn('/security/two-factor');
   const name = (await (await getSettings()).value(SETTINGS.instanceName)) ?? 'Sovereign';
 
   return (

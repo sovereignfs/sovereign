@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
 import { Card } from '@sovereignfs/ui';
-import { getSession } from '../../src/auth/session';
+import { requireSignedIn } from '../../src/auth/require-signed-in';
 import styles from '../security/security.module.css';
 import { ProfilePanel } from './profile-panel';
 
@@ -9,8 +8,7 @@ export const metadata: Metadata = { title: 'Profile' };
 
 export default async function ProfilePage() {
   // The proxy turns away a request with no session cookie; this is the check that counts.
-  const session = await getSession();
-  if (!session) redirect('/sign-in?returnTo=%2Fprofile');
+  const session = await requireSignedIn('/profile');
 
   return (
     <Card padding="lg">

@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { ButtonLink, Card, EmptyState } from '@sovereignfs/ui';
 import { sessionFor } from '../../src/files/session';
 import { getShortcutManager, MAX_OWN_SHORTCUTS } from '../../src/shortcuts';
@@ -24,8 +23,7 @@ function AddLink() {
  */
 export default async function ShortcutsPage() {
   // The proxy turns away a request with no session cookie; this is the check that counts.
-  const { session, allowed } = await sessionFor('launcher:access');
-  if (!session) redirect('/sign-in?returnTo=%2Fshortcuts');
+  const { session, allowed } = await sessionFor('launcher:access', '/shortcuts');
   if (!allowed) {
     return (
       <Card padding="lg">

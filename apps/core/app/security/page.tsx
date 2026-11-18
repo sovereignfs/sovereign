@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { Card } from '@sovereignfs/ui';
 import { getAuth } from '../../src/auth';
-import { getSession } from '../../src/auth/session';
+import { requireSignedIn } from '../../src/auth/require-signed-in';
 import { getAuthSettings } from '../../src/auth/settings';
 import { getDatabase } from '../../src/database';
 import { KeyVault } from '../../src/keys/vault';
@@ -18,8 +17,7 @@ export const metadata: Metadata = { title: 'Security' };
 
 export default async function SecurityPage() {
   // The proxy turns away a request with no session cookie; this is the check that counts.
-  const session = await getSession();
-  if (!session) redirect('/sign-in?returnTo=%2Fsecurity');
+  const session = await requireSignedIn('/security');
   const [sessions, passkeys, vault, escrowLine] = await Promise.all([
     getDatabase().then((database) => listSessions(database, session.user.id, session.session.id)),
     getAuth().then(async (auth) => auth.api.listPasskeys({ headers: await headers() })),

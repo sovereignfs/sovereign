@@ -453,6 +453,15 @@ pointing here.
   someone moves between the pages beneath it, so a test fails when a Console
   `page.tsx` or `layout.tsx` does not call it. The navigation lists a section
   only when its page exists and the role holds its capability.
+- **Every other page that needs someone signed in guards itself one way.**
+  `requireSignedIn(returnTo)` (`src/auth/require-signed-in.ts`) returns the session
+  or sends the person to sign in with the way back, and `sessionFor` calls it for a
+  page that also needs a capability. The proxy sees only that a cookie is there, and
+  a cookie can outlive its session, so the page's check is the one that counts. A
+  test fails when a page outside `(auth)`, `(legal)` and the Console does not call
+  one of them, or calls `getSession` itself. The pages before signing in send a
+  signed-in person on through `sendOnIfSignedIn`, unless an app asked for a fresh
+  sign-in.
 - **A client row is written by the registry and nothing else.**
   `ClientRegistry` (`src/clients`) validates everything (`validate.ts`: addresses,
   scopes, text), makes the client through the provider so the secret is hashed

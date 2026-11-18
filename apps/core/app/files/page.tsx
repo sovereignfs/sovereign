@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
 import { Card } from '@sovereignfs/ui';
 import { sessionFor } from '../../src/files/session';
 import { getFileStore, MAX_UPLOAD_BYTES } from '../../src/files';
@@ -10,8 +9,7 @@ export const metadata: Metadata = { title: 'Files' };
 
 export default async function FilesPage() {
   // The proxy turns away a request with no session cookie; this is the check that counts.
-  const { session, allowed } = await sessionFor('files:manage');
-  if (!session) redirect('/sign-in?returnTo=%2Ffiles');
+  const { session, allowed } = await sessionFor('files:manage', '/files');
   if (!allowed) {
     return (
       <Card padding="lg">

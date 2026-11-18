@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
 import { signInReturnTo } from '../../../../src/auth/return-to';
-import { getSession } from '../../../../src/auth/session';
+import { sendOnIfSignedIn } from '../../../../src/auth/require-signed-in';
 import { AuthCard } from '../../auth-card';
 import { TwoFactorForm } from './two-factor-form';
 
@@ -18,7 +17,7 @@ export default async function TwoFactorPage({
 }) {
   const query = await searchParams;
   const returnTo = signInReturnTo(query);
-  if (query.sig === undefined && (await getSession())) redirect(returnTo);
+  await sendOnIfSignedIn(returnTo, query);
 
   return (
     <AuthCard title="Two-factor verification" legal={false}>

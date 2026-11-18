@@ -5,6 +5,23 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.113.0] - 2026-11-18
+
+### Added
+
+- A person who signs up from the link of an invitation that core emailed to them no longer gets a second email asking them to verify
+  the same address: the account is verified by the invitation and they are signed in straight away. An invitation passed on by hand,
+  because its email was not sent, is verified by email as before. Core now records whether each invitation's email was sent; existing
+  invitations count as not sent.
+
+### Fixed
+
+- Someone sent to core by an app to sign in, who instead created an account, verified their email or reset their password, now ends up
+  back in the app, not on core's launcher.
+- A passkey used on the second sign-in step ("Use a passkey instead") unlocks the person's encrypted data with the same touch, as it does
+  on the sign-in page.
+- Signing out that does not reach the server, or is refused, now says the person is still signed in, instead of seeming to work.
+
 ## [0.112.0] - 2026-11-18
 
 ### Added

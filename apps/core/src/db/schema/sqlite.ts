@@ -543,6 +543,8 @@ export const oauthClientAssertions = sqliteTable('oauth_client_assertions', {
 /**
  * Invitations to sign up (core-app §3.10). An invite is for one email address, stored lower-case,
  * and is valid until it is used, cancelled or past `expires_at` (none: it does not expire).
+ * `emailed_at` is set once core has emailed the link to the address: a sign-up from that link has
+ * shown it reads the address, so it needs no second email to verify it (core-app §3.3.3).
  */
 export const invites = sqliteTable(
   'invites',
@@ -554,6 +556,7 @@ export const invites = sqliteTable(
     expiresAt: sqliteTimestampMs('expires_at'),
     acceptedAt: sqliteTimestampMs('accepted_at'),
     cancelledAt: sqliteTimestampMs('cancelled_at'),
+    emailedAt: sqliteTimestampMs('emailed_at'),
   },
   (table) => [index('invites_email_idx').on(table.email)],
 );

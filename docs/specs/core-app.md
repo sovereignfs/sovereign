@@ -350,6 +350,14 @@ listed for, or opens for, anyone else.
   sends the link; a person who gives the right password before verifying is
   told to verify and can ask for a new link. Signing in does not itself send
   one.
+- A sign-up made from the link of an invitation that core emailed to that very
+  address (§3.10) needs no second email: holding the link's unguessable id
+  shows the person reads the address, as a verification link would. The
+  sign-up page sends the id with the sign-up; the account is made verified,
+  no verification link is sent, the account-created email is, and the person
+  is signed in straight away. The address alone never counts, and neither
+  does the link of an invitation passed on by hand because its email was not
+  sent: those sign-ups are verified by email as any other.
 - The verification link is single-use, expires after one hour, and signs the
   person in when followed. Following it a second time opens no session. A new
   link can be requested.
@@ -1105,7 +1113,8 @@ invitation is open for an address: a new one cancels the one before, so a link
 sent earlier stops working. The invitation is emailed with a link on core's own
 address, `/invite/<id>`, where the id is random and unguessable. When email is
 not set up, or sending fails, the invitation still exists and the operator is
-shown the link to pass on, with a way to copy it. The Console lists the
+shown the link to pass on, with a way to copy it. Core records whether the
+email was sent, since only an emailed link verifies the address (§3.3.3). The Console lists the
 invitations that have been neither used nor cancelled, newest first, with who
 made them and when each ends; one past its expiry is listed as expired, so it
 can be seen and cancelled. Cancelling takes the link out of use at once; an
@@ -2147,3 +2156,4 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-18 | §1.3, §3.5: a fuller install (RFC 0001 amendment 1): the manifest's fixed `id`, launch handler, shortcuts to pages everyone has, screenshots, categories and language; an offer to install on the account pages; a new version announced with Reload instead of swapped in silently.                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | 2026-11-18 | §3.8: in an installed core, a plain click on an app's tile opens it in a new window, decided when it is clicked, which a device that can hands to the installed app (RFC 0001 A5).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 2026-11-18 | §3.8.1: a shortcut may have an app's own address, checked against a pattern and a list of refused schemes, tried when its tile is clicked from an installed core or a phone, with the web address as the fallback (RFC 0001 A6).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-11-18 | §3.3.3, §3.10: a sign-up from the link of an invitation core emailed to that address is verified by it, with no second email; core records whether an invitation's email was sent.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |

@@ -132,6 +132,7 @@ export const invites = pgTable(
     expiresAt: postgresTimestampMs('expires_at'),
     acceptedAt: postgresTimestampMs('accepted_at'),
     cancelledAt: postgresTimestampMs('cancelled_at'),
+    emailedAt: postgresTimestampMs('emailed_at'),
   },
   (table) => [index('invites_email_idx').on(table.email)],
 );

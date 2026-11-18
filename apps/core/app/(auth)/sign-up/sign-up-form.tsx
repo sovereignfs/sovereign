@@ -5,6 +5,7 @@ import { type FormEvent, useState } from 'react';
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../src/auth/client';
 import { deriveForSignIn } from '../../../src/auth/derive';
+import { continuationUrl } from '../../../src/auth/oauth-continuation';
 import { afterPasswordAccepted } from '../../../src/keys/session';
 import type { WebKey } from '@sovereignfs/crypto/web';
 import {
@@ -23,16 +24,20 @@ export function SignUpForm({
   passwordHint,
   policy,
   instanceName,
-  invitedEmail,
+  invite,
 }: {
   returnTo: string;
   passwordHint: string;
   /** Held here, since the server never sees the password to check it (core-app §5.2). */
   policy: PasswordPolicy;
   instanceName: string;
-  /** The address an invitation link was sent to; the field starts with it. */
-  invitedEmail?: string | undefined;
+  /**
+   * The invitation link this page was opened from: the field starts with its address, and its id goes with
+   * the sign-up, so an address the invitation was emailed to needs no second email (core-app §3.3.3).
+   */
+  invite?: { id: string; email: string } | undefined;
 }) {
+  const invitedEmail = invite?.email;
   const [name, setName] = useState('');
   const [email, setEmail] = useState(invitedEmail ?? '');
   const [password, setPassword] = useState('');
@@ -76,6 +81,7 @@ export function SignUpForm({
       password: value,
       agreedToTerms: true,
       ...(timezone ? { timezone } : {}),
+      ...(invite ? { invite: invite.id } : {}),
       callbackURL: afterVerification(returnTo),
     });
     if (result.error) {
@@ -83,10 +89,23 @@ export function SignUpForm({
       setError(messageFor(result.error));
       return;
     }
-    // No session means the address has to be verified first: the next step is the inbox.
-    if (!result.data?.token) {
+    // No session and an address not yet verified: the next step is the inbox.
+    if (!result.data?.token && !result.data?.user.emailVerified) {
       setPending(false);
       setWaitingFor(email);
+      return;
+    }
+    // Verified by its invitation, while verification is required: better-auth opens no session at
+    // sign-up then, so the person is signed in with the value just made, and goes straight on.
+    if (!result.data?.token) {
+      const signedIn = await authClient.signIn.email({ email, password: value });
+      if (signedIn.error) {
+        setPending(false);
+        setError(messageFor(signedIn.error));
+        return;
+      }
+      await afterPasswordAccepted(secret);
+      window.location.assign(continuationUrl(signedIn.data) ?? returnTo);
       return;
     }
     // Signed in at once: the keys are set up now, silently (core-app §5.3).

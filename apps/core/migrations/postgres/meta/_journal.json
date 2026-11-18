@@ -162,6 +162,13 @@
       "when": 1795007031702,
       "tag": "0022_shortcut_app_url",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1795027213205,
+      "tag": "0023_invite_emailed_at",
+      "breakpoints": true
     }
   ]
 }

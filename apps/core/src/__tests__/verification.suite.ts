@@ -277,6 +277,122 @@ export function verificationSuite(createDatabase: () => Promise<TestDatabase>): 
     });
   });
 
+  describe('signing up from an invitation', () => {
+    /** An invitation for the address, open; emailed unless told otherwise. */
+    const invitation = async (email: string, options: { emailed?: boolean } = {}) => {
+      const id = `invite-${randomBytes(8).toString('hex')}`;
+      await db.run('insert into invites (id, email, created_at, emailed_at) values (?, ?, ?, ?)', [
+        id,
+        email,
+        Date.now(),
+        options.emailed === false ? null : Date.now(),
+      ]);
+      return id;
+    };
+    /** An instance with an owner already, so sign-up is by invitation. */
+    const invitedInstance = async () => {
+      await signUp(start().auth);
+      return start({ inviteOnly: true });
+    };
+    const signUpWith = (auth: Auth, email: string, invite: unknown) =>
+      call(auth, 'POST', '/sign-up/email', {
+        body: { name: 'Ada Lovelace', email, password: PASSWORD, agreedToTerms: true, invite },
+      });
+
+    it('needs no second email when core emailed the link: the address is verified at once', async () => {
+      const { auth, settled } = await invitedInstance();
+      const email = freshEmail();
+      const reply = await signUpWith(auth, email, await invitation(email));
+      await settled();
+      expect(reply.status).toBe(200);
+      expect(await verified(email)).toBe(true);
+      expect(bySubject(email, /verify/i)).toHaveLength(0);
+      // The account-created notice is sent now, since the address has been shown to be theirs.
+      expect(to(email)).toHaveLength(1);
+      expect(linkIn(to(email)[0])).toBe(`${BASE_URL}/sign-in`);
+    });
+
+    it('lets the person sign in straight away, with the password they chose', async () => {
+      const { auth } = await invitedInstance();
+      const email = freshEmail();
+      await signUpWith(auth, email, await invitation(email));
+      const jar = new Jar();
+      const reply = await call(auth, 'POST', '/sign-in/email', {
+        jar,
+        body: { email, password: PASSWORD },
+      });
+      expect(reply.status).toBe(200);
+      expect(signedInAs(reply)?.email).toBe(email);
+      expect(jar.get(SESSION_COOKIE)).toBeTruthy();
+    });
+
+    it('uses the invitation up, as any sign-up it admits does', async () => {
+      const { auth } = await invitedInstance();
+      const email = freshEmail();
+      const id = await invitation(email);
+      await signUpWith(auth, email, id);
+      const { rows } = await db.run('select accepted_at from invites where id = ?', [id]);
+      expect(rows[0]?.accepted_at).not.toBeNull();
+    });
+
+    it('still asks to verify when the link was passed on by hand, not emailed by core', async () => {
+      const { auth, settled } = await invitedInstance();
+      const email = freshEmail();
+      const reply = await signUpWith(auth, email, await invitation(email, { emailed: false }));
+      await settled();
+      expect(reply.status).toBe(200);
+      expect(await verified(email)).toBe(false);
+      expect(bySubject(email, /verify/i)).toHaveLength(1);
+    });
+
+    it('still asks to verify when the address has an invitation but the link is not sent', async () => {
+      const { auth, settled } = await invitedInstance();
+      const email = freshEmail();
+      await invitation(email);
+      for (const invite of [undefined, '', 'made-up', 42]) {
+        const other = freshEmail();
+        await invitation(other);
+        const reply = await signUpWith(auth, other, invite);
+        expect(reply.status).toBe(200);
+        expect(await verified(other)).toBe(false);
+      }
+      await settled();
+    });
+
+    it('verifies nothing with the link of an invitation for another address', async () => {
+      const { auth, settled } = await invitedInstance();
+      const invited = freshEmail();
+      const someoneElse = freshEmail();
+      const theirs = await invitation(invited);
+      await invitation(someoneElse);
+      const reply = await signUpWith(auth, someoneElse, theirs);
+      await settled();
+      expect(reply.status).toBe(200);
+      expect(await verified(someoneElse)).toBe(false);
+      expect(bySubject(someoneElse, /verify/i)).toHaveLength(1);
+    });
+
+    it('verifies nothing with an invitation that was cancelled, used or has expired', async () => {
+      const { settled } = await invitedInstance();
+      const cases = [
+        'update invites set cancelled_at = ? where id = ?',
+        'update invites set accepted_at = ? where id = ?',
+        'update invites set expires_at = ? where id = ?',
+      ];
+      for (const change of cases) {
+        const email = freshEmail();
+        const stale = await invitation(email);
+        await db.run(change, [Date.now() - 1000, stale]);
+        // Open sign-up, so the address is admitted and only the verification is in question.
+        const open = start({ inviteOnly: false });
+        const reply = await signUpWith(open.auth, email, stale);
+        expect(reply.status).toBe(200);
+        expect(await verified(email)).toBe(false);
+      }
+      await settled();
+    });
+  });
+
   describe('the verification link', () => {
     it('is on core’s own address, whatever address the request was made to', async () => {
       const { auth, settled } = start();

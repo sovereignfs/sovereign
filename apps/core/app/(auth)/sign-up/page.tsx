@@ -48,7 +48,9 @@ export default async function SignUpPage({
       <SignUpForm
         returnTo={returnTo}
         instanceName={name}
-        invitedEmail={invited?.state === 'valid' ? invited.email : undefined}
+        invite={
+          invited?.state === 'valid' && invite ? { id: invite, email: invited.email } : undefined
+        }
         passwordHint={describePasswordPolicy(getAuthSettings().passwordPolicy)}
         policy={getAuthSettings().passwordPolicy}
       />

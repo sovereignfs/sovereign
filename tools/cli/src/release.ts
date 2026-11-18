@@ -6,13 +6,13 @@ import { supportedVersions } from '@sovereignfs/manifest';
  */
 export const RELEASE = {
   /** The toolkit's own version: the one in `package.json`, written here so a test can hold the two together. */
-  version: '0.17.1',
+  version: '0.18.0',
   /** The `schema` versions of `suite.yml`, `suite.lock` and `secrets.age.yml` it reads. */
   schemas: [1],
   /** The core versions it can deploy, as an npm-style range. */
   core: '>=0.49.0 <1.0.0',
   /** The newest core it was made for, which `sv setup` writes. */
-  newestCore: '0.108.0',
+  newestCore: '0.111.0',
   /** The app manifest versions it reads: every one `@sovereignfs/manifest` does, since old images stay published. */
   manifests: [...supportedVersions],
   images: {

@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.111.0] - 2026-11-18
+
+### Added
+
+- `@sovereignfs/pwa` 0.1.0, what makes a Sovereign app installable: its manifest, a service worker that keeps nothing of a person, and a
+  new version announced instead of swapped in. Apps made with `npm create @sovereignfs app` use it (toolkit 0.18.0). Core is unchanged.
+
 ## [0.110.0] - 2026-11-18
 
 ### Added

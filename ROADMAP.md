@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.112.0 · **Last updated:** 2026-11-18
+**Version:** 0.113.0 · **Last updated:** 2026-11-18
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -294,3 +294,27 @@ the feature is not yet audited.
 | —       | 21       | Core's own files, designed                                             | 📋     | [16.21](docs/epics/encryption.md) |
 | —       | 22       | Core's files encrypted in the browser                                  | 📋     | [16.22](docs/epics/encryption.md) |
 | —       | 23       | Existing files moved, and the acceptance items                         | 📋     | [16.23](docs/epics/encryption.md) |
+
+### M16 — Signing in keeps its place, and installed apps can lock
+
+[Research 0011](docs/research/0011-streamlining-sign-in.md) · [research 0012](docs/research/0012-biometric-lock.md) · epics
+[4](docs/epics/identity-auth.md), [6](docs/epics/oidc-provider.md), [14](docs/epics/sdk.md) and [16](docs/epics/encryption.md) ·
+workstream [0007](docs/workstreams/0007-sign-in.md)
+
+| Version | Priority | Task                                                            | Status | Epic task                           |
+| ------- | -------- | --------------------------------------------------------------- | ------ | ----------------------------------- |
+| 0.113.0 | 1        | An invited sign-up verified by its emailed link                 | ✅     | [4.8](docs/epics/identity-auth.md)  |
+| 0.113.0 | 2        | An app's sign-in kept through sign-up, verification and a reset | ✅     | [4.9](docs/epics/identity-auth.md)  |
+| 0.113.0 | 3        | A passkey on the second step unlocks                            | ✅     | [4.10](docs/epics/identity-auth.md) |
+| 0.113.0 | 4        | Signing out says when it did not                                | ✅     | [4.11](docs/epics/identity-auth.md) |
+| —       | 5        | One guard for signed-in pages, and the cookie cache's leftovers | ⏳     | [4.12](docs/epics/identity-auth.md) |
+| —       | 6        | The verification link goes straight on                          | ⏳     | [4.13](docs/epics/identity-auth.md) |
+| —       | 7        | Asking for the password again, one way                          | 📋     | [4.14](docs/epics/identity-auth.md) |
+| —       | 8        | Asking core for a fresh sign-in                                 | 📋     | [14.12](docs/epics/sdk.md)          |
+| —       | 9        | An ended session ends in the app                                | 📋     | [14.13](docs/epics/sdk.md)          |
+| —       | 10       | Logout notices that arrive                                      | 📋     | [6.4](docs/epics/oidc-provider.md)  |
+| —       | 11       | A lock on the devices `[parallel]`                              | 📋     | [4.15](docs/epics/identity-auth.md) |
+| —       | 12       | The specification: sessions across apps, and a lock             | 📋     | [4.16](docs/epics/identity-auth.md) |
+| —       | 13       | Core's lock                                                     | 📋     | [4.17](docs/epics/identity-auth.md) |
+| —       | 14       | Keys closed while core is locked                                | 📋     | [16.24](docs/epics/encryption.md)   |
+| —       | 15       | App sessions that follow core's, and an app's lock              | 📋     | [14.14](docs/epics/sdk.md)          |

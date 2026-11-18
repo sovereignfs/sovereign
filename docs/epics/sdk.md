@@ -282,3 +282,55 @@ pass unchanged. The security check is run.
 - `seen` cannot be left out, and a replayed `jti` is refused
 - `handle*` behave exactly as before
 - The security check is run
+
+#### 📋 14.12 — Asking core for a fresh sign-in
+
+**Goal:** An app can ask core to sign the person in again, or to have done so recently, and know when they did.
+
+**Deliverables:**
+
+- `beginSignIn({ prompt, maxAge })`; `completeSignIn` checks `auth_time` against `maxAge` and keeps it on the session
+- the Next.js adapter's `/auth/login` passes them on
+
+**Dependencies:** 14.3
+
+**Spec reference:** sdk §9; [research 0011](../research/0011-streamlining-sign-in.md) E; [research 0012](../research/0012-biometric-lock.md)
+
+**Review checklist:**
+
+- A sign-in older than `maxAge` is refused, with a test that was seen to fail without the check
+
+#### 📋 14.13 — An ended session ends in the app
+
+**Goal:** An app stops acting for someone whose session at core is over.
+
+**Deliverables:**
+
+- a logout notice that ends the person's last session in the app deletes their refresh token too
+- `requireSession` treats `SessionEndedError` as signed out; the template handles it
+- the `seen` mark of a logout token written so that two deliveries cannot both pass
+
+**Dependencies:** 14.11
+
+**Spec reference:** sdk §5.1, §9.1; [research 0011](../research/0011-streamlining-sign-in.md) D
+
+**Review checklist:**
+
+- After a logout notice for someone's only session, no call to core is made as them
+
+#### 📋 14.14 — App sessions that follow core's, and an app's lock
+
+**Goal:** An app's session ends soon after core's, its claims stay current, and an installed app can lock through core.
+
+**Deliverables:**
+
+- a short app session renewed with `prompt=none`; `login_required` ends it; claims refreshed on renewal
+- an app's lock that sends the person to core with `max_age`, so core asks for a passkey
+
+**Dependencies:** 4.16, 14.12
+
+**Spec reference:** RFC 0006
+
+**Review checklist:**
+
+- A role changed in the Console reaches an app within one renewal

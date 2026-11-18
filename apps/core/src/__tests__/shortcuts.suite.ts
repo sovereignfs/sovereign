@@ -152,6 +152,36 @@ export function shortcutsSuite(createDatabase: () => Promise<TestDatabase>): voi
       expect(error.problems.map((p) => p.field)).toContain(field);
     });
 
+    it('keeps an app’s own address beside the web one, changes it, and drops it when left empty', async () => {
+      const spotify = { ...drive, name: 'Music', appUrl: 'spotify:playlist:37i9dQZF1DX' };
+      const made = await shortcuts.create(ada, 'own', spotify);
+      expect(made.appUrl).toBe('spotify:playlist:37i9dQZF1DX');
+      expect(made.url).toBe('https://drive.proton.me');
+      const [listed] = await shortcuts.forLauncher(ada.id);
+      expect(listed?.appUrl).toBe('spotify:playlist:37i9dQZF1DX');
+      const moved = await shortcuts.update(ada, 'own', made.id, {
+        ...spotify,
+        appUrl: 'obsidian://open?vault=Notes',
+      });
+      expect(moved.appUrl).toBe('obsidian://open?vault=Notes');
+      expect(
+        (await shortcuts.update(ada, 'own', made.id, { ...spotify, appUrl: '  ' })).appUrl,
+      ).toBeUndefined();
+      expect((await shortcuts.create(ada, 'own', drive)).appUrl).toBeUndefined();
+    });
+
+    it.each([
+      'javascript:alert(1)',
+      'JavaScript:alert(1)',
+      'data:text/html,x',
+      'https://drive.proton.me',
+      'intent://x#Intent;end',
+    ])('refuses %s as an app’s address, and keeps nothing', async (appUrl) => {
+      const error = await refused(() => shortcuts.create(ada, 'own', { ...drive, appUrl }));
+      expect(error.problems.map((p) => p.field)).toEqual(['appUrl']);
+      expect(await shortcuts.forLauncher(ada.id)).toEqual([]);
+    });
+
     it('allows http on localhost only on a development instance', async () => {
       const local = { ...drive, url: 'http://localhost:4000' };
       expect((await refused(() => shortcuts.create(ada, 'own', local))).code).toBe('invalid');

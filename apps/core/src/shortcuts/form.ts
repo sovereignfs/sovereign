@@ -2,7 +2,7 @@ import { MAX_SHORTCUT_ICON_BYTES, ShortcutError, type ShortcutInput } from './ma
 
 /** What is wrong beside each field of the shortcut form. */
 export type ShortcutFieldProblems = Partial<
-  Record<'name' | 'url' | 'description' | 'icon', string>
+  Record<'name' | 'url' | 'appUrl' | 'description' | 'icon', string>
 >;
 
 /** What the shortcut forms' actions answer. A success leaves the page, so it says nothing more. */
@@ -22,6 +22,7 @@ export async function shortcutFromForm(form: FormData): Promise<ShortcutInput> {
   const input: ShortcutInput = {
     name: text(form.get('name')),
     url: text(form.get('url'))?.trim(),
+    appUrl: text(form.get('appUrl'))?.trim(),
     description: text(form.get('description')),
   };
   if (mode === 'symbol') input.symbol = text(form.get('symbol')) ?? '';
@@ -46,7 +47,13 @@ export function refusedForm(error: unknown): ShortcutFormResult {
   if (!(error instanceof ShortcutError)) throw error;
   const fields: ShortcutFieldProblems = {};
   for (const { field, message } of error.problems) {
-    if (field === 'name' || field === 'url' || field === 'description' || field === 'icon') {
+    if (
+      field === 'name' ||
+      field === 'url' ||
+      field === 'appUrl' ||
+      field === 'description' ||
+      field === 'icon'
+    ) {
       fields[field] ??= message;
     }
   }

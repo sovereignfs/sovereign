@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@sovereignfs/ui', () => ({ isInstalledDisplay: () => false }));
-const { openApp, plainClick } = await import('../../app/launch');
+const { APP_ADDRESS_WAIT_MS, openApp, openShortcut, plainClick } = await import('../../app/launch');
 
 const click = (
   over: Partial<
@@ -50,5 +50,65 @@ describe('opening an app from its tile', () => {
     expect(plainClick(click())).toBe(true);
     expect(plainClick(click({ button: 1 }))).toBe(false);
     expect(plainClick(click({ defaultPrevented: true }))).toBe(false);
+  });
+});
+
+describe('opening a shortcut that names an app', () => {
+  const shortcut = { url: 'https://open.spotify.com/', appUrl: 'spotify:playlist:1' };
+  const deps = (over: { installed?: boolean; phone?: boolean; leaves?: boolean } = {}) => {
+    const later: (() => void)[] = [];
+    const d = {
+      installed: () => over.installed ?? false,
+      phone: () => over.phone ?? false,
+      open: vi.fn(),
+      go: vi.fn(),
+      later: vi.fn((then: () => void, ms: number) => {
+        expect(ms).toBe(APP_ADDRESS_WAIT_MS);
+        later.push(then);
+      }),
+      watch: vi.fn((left: () => void) => {
+        if (over.leaves) left();
+        return vi.fn();
+      }),
+    };
+    return { d, wait: () => later.forEach((then) => then()) };
+  };
+
+  it('opens the web address in a new tab, as it always did, in a browser on a computer', () => {
+    const { d } = deps();
+    const event = click();
+    openShortcut(event, shortcut, d);
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(d.go).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['an installed core', { installed: true }],
+    ['a phone', { phone: true }],
+  ])(
+    'tries the app first from %s, and leaves it there when the app comes forward',
+    (_where, where) => {
+      const { d, wait } = deps({ ...where, leaves: true });
+      const event = click();
+      openShortcut(event, shortcut, d);
+      expect(event.preventDefault).toHaveBeenCalledOnce();
+      expect(d.go).toHaveBeenCalledWith('spotify:playlist:1');
+      wait();
+      expect(d.open).not.toHaveBeenCalled();
+    },
+  );
+
+  it('opens the web address after all when no app answers', () => {
+    const { d, wait } = deps({ phone: true });
+    openShortcut(click(), shortcut, d);
+    wait();
+    expect(d.open).toHaveBeenCalledWith('https://open.spotify.com/');
+  });
+
+  it('does nothing of its own for a shortcut with no app address, or a click with a key held', () => {
+    const { d } = deps({ phone: true });
+    openShortcut(click(), { url: shortcut.url }, d);
+    openShortcut(click({ metaKey: true }), shortcut, d);
+    expect(d.go).not.toHaveBeenCalled();
   });
 });

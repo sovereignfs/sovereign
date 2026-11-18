@@ -30,6 +30,7 @@ export default async function Page() {
         name: shortcut.name,
         description: shortcut.description,
         url: shortcut.url,
+        appUrl: shortcut.appUrl,
         icon: shortcut.icon,
         own: shortcut.ownerId === session.user.id,
       }))

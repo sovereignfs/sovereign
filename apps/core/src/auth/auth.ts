@@ -8,7 +8,7 @@ import { hashPassword } from 'better-auth/crypto';
 import { twoFactor } from 'better-auth/plugins/two-factor';
 import * as postgresSchema from '../db/schema/postgres';
 import * as sqliteSchema from '../db/schema/sqlite';
-import { hasValidInvite, markInvitesAccepted } from '../invites';
+import { hasValidInvite, inviteVouchesFor, markInvitesAccepted } from '../invites';
 import { advancedCookieOptions } from './cookies';
 import { isSignInValue } from '@sovereignfs/crypto';
 import type { AuthMail } from './mail';
@@ -185,7 +185,7 @@ export function createAuth(
         create: {
           // Every account is made through here, whatever the route: the sign-up endpoint, or a
           // server-side call that has no route (a request hook cannot see those).
-          before: async (user) => {
+          before: async (user, context) => {
             // The name, the terms, the time zone and the language first: they are the person's to put right, whoever
             // they are. No picture comes with a sign-up: one is uploaded afterwards.
             if (user.image !== undefined && user.image !== null) refuseImageInput();
@@ -207,13 +207,21 @@ export function createAuth(
                 code: 'INVITE_REQUIRED',
               });
             }
+            // A sign-up from the link of an invitation core emailed to this address has shown it reads
+            // the address: it is verified now, and no second email asks the same (core-app §3.3.3).
+            // Only the link's id counts, sent by the sign-up page, never the address alone.
+            const invite = (context?.body as { invite?: unknown } | undefined)?.invite;
+            if (await inviteVouchesFor(database, invite, user.email, Date.now())) {
+              return { data: { ...record, role: ROLE_USER, emailVerified: true } };
+            }
             return { data: { ...record, role: ROLE_USER } };
           },
           after: async (user) => {
             await markInvitesAccepted(database, user.email, Date.now());
             // With verification required, the notice waits until the address is verified: nobody
-            // is told about an account on an address nobody has shown to be theirs.
-            if (!settings.requireEmailVerification) {
+            // is told about an account on an address nobody has shown to be theirs. One verified by
+            // its invitation is told now.
+            if (!settings.requireEmailVerification || user.emailVerified) {
               background(mail.accountCreated({ email: user.email, name: user.name }));
             }
           },
@@ -256,8 +264,12 @@ export function createAuth(
       revokeSessionsOnPasswordReset: true,
     },
     emailVerification: {
+      // better-auth sends one at every sign-up while verification is required, even for an address its
+      // invitation has already verified; that one gets none.
       sendVerificationEmail: ({ user, url }) =>
-        mail.verification({ email: user.email, name: user.name }, url),
+        user.emailVerified
+          ? Promise.resolve()
+          : mail.verification({ email: user.email, name: user.name }, url),
       sendOnSignUp: settings.requireEmailVerification,
       // Signing in with an unverified address does not send another link: asking for one is its
       // own request, so a wrong guess at a password cannot be used to fill an inbox.

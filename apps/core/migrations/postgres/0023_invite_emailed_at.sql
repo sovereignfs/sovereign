@@ -1,0 +1,1 @@
+ALTER TABLE "invites" ADD COLUMN "emailed_at" bigint;

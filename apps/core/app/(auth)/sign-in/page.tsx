@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getSession } from '../../../src/auth/session';
-import { safeReturnTo } from '../../../src/auth/return-to';
+import { signInReturnTo } from '../../../src/auth/return-to';
 import { getInstanceIdentity } from '../../../src/instance/service';
 import { AuthCard } from '../auth-card';
 import { SignInForm, type SignInNotice } from './sign-in-form';
@@ -22,10 +22,13 @@ export default async function SignInPage({
     signedout?: string;
     /** Present when an app sent the person here: the provider's signed request. */
     sig?: string | string[];
+    [parameter: string]: string | string[] | undefined;
   }>;
 }) {
   const query = await searchParams;
-  const returnTo = safeReturnTo(query.returnTo);
+  // When an app sent the person here, the way back into its sign-in, so that creating an account or
+  // resetting a password on the way still ends in the app (`resumeAddress`).
+  const returnTo = signInReturnTo(query);
   // Someone already signed in is sent on, unless an app asked for a fresh sign-in (`prompt=login`).
   if (query.sig === undefined && (await getSession())) redirect(returnTo);
 

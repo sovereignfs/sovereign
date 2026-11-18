@@ -450,7 +450,7 @@ describe('the forgot-password form', () => {
 
   it('asks for the link to land on core’s reset page, and says the same whoever the address is', async () => {
     requestPasswordReset.mockResolvedValue({ data: { status: true }, error: null });
-    render(<ForgotPasswordForm />);
+    render(<ForgotPasswordForm returnTo="/" />);
     submit();
     expect(await screen.findByText(/If ada@sovereign.local has an account/)).toBeTruthy();
     expect(requestPasswordReset).toHaveBeenCalledWith({
@@ -459,19 +459,34 @@ describe('the forgot-password form', () => {
     });
   });
 
+  it('keeps an app’s sign-in in the link, so it carries on after the reset', async () => {
+    requestPasswordReset.mockResolvedValue({ data: { status: true }, error: null });
+    const resume = '/api/auth/oauth2/authorize?client_id=app&state=s1';
+    render(<ForgotPasswordForm returnTo={resume} />);
+    submit();
+    await screen.findByText(/If ada@sovereign.local has an account/);
+    expect(requestPasswordReset).toHaveBeenCalledWith({
+      email: 'ada@sovereign.local',
+      redirectTo: `/reset-password?returnTo=${encodeURIComponent(resume)}`,
+    });
+    expect(screen.getByRole('link', { name: 'Back to sign in' }).getAttribute('href')).toBe(
+      `/sign-in?returnTo=${encodeURIComponent(resume)}`,
+    );
+  });
+
   it('says when email is not set up', async () => {
     requestPasswordReset.mockResolvedValue({
       data: null,
       error: { status: 503, code: 'EMAIL_NOT_AVAILABLE' },
     });
-    render(<ForgotPasswordForm />);
+    render(<ForgotPasswordForm returnTo="/" />);
     submit();
     expect((await screen.findByRole('alert')).textContent).toContain("Email isn't set up");
   });
 
   it('says to wait when the limit is reached', async () => {
     requestPasswordReset.mockResolvedValue({ data: null, error: { status: 429 } });
-    render(<ForgotPasswordForm />);
+    render(<ForgotPasswordForm returnTo="/" />);
     submit();
     expect(await screen.findByText(/Too many requests/)).toBeTruthy();
   });
@@ -484,6 +499,26 @@ describe('the reset-password form', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Set new password' }));
   };
 
+  it('goes on to sign in for the app’s sign-in that led to the reset', async () => {
+    resetPassword.mockResolvedValue({ data: { status: true }, error: null });
+    const resume = '/api/auth/oauth2/authorize?client_id=app&state=s1';
+    render(
+      <ResetPasswordForm
+        token="tok123"
+        address="ada@sovereign.local"
+        passwordHint=""
+        policy={POLICY}
+        returnTo={resume}
+      />,
+    );
+    submit();
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith(
+        `/sign-in?reset=1&returnTo=${encodeURIComponent(resume)}`,
+      ),
+    );
+  });
+
   it('sends the token with the new password, then goes to sign-in', async () => {
     resetPassword.mockResolvedValue({ data: { status: true }, error: null });
     render(
@@ -492,6 +527,7 @@ describe('the reset-password form', () => {
         address="ada@sovereign.local"
         passwordHint="At least 8 characters."
         policy={POLICY}
+        returnTo="/"
       />,
     );
     expect(screen.getByText('At least 8 characters.')).toBeTruthy();
@@ -510,6 +546,7 @@ describe('the reset-password form', () => {
         address="ada@sovereign.local"
         passwordHint=""
         policy={{ ...POLICY, minLength: 1, requireNumber: true }}
+        returnTo="/"
       />,
     );
     submit('weak');
@@ -526,6 +563,7 @@ describe('the reset-password form', () => {
         address="ada@sovereign.local"
         passwordHint=""
         policy={POLICY}
+        returnTo="/"
       />,
     );
     submit('a different long passphrase', 'another long passphrase');
@@ -541,6 +579,7 @@ describe('the reset-password form', () => {
         address="ada@sovereign.local"
         passwordHint=""
         policy={POLICY}
+        returnTo="/"
       />,
     );
     submit();

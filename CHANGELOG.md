@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.114.1] - 2026-11-19
+
+### Fixed
+
+- When ending a session failed after core had read which apps to tell, what it read was kept in memory for the life of the process. It
+  is now dropped after a minute.
+
 ## [0.114.0] - 2026-11-18
 
 ### Changed

@@ -18,7 +18,7 @@ import {
   deliverDueLogoutNotices,
   planLogoutNotices,
   queueLogoutNotices,
-  type PlannedNotice,
+  EndingSessions,
 } from '../oauth/logout-notices';
 import { oidcPlugins } from '../oauth/provider';
 import { assertMayOpenSession } from './session-gate';
@@ -156,7 +156,7 @@ export function createAuth(
   { registration, mail, background = (task) => void task.catch(() => undefined) }: AuthDependencies,
 ) {
   // The apps to tell about each session being deleted, read before it goes (deleting it clears the tokens' pointer to it).
-  const endingSessions = new Map<string, PlannedNotice[]>();
+  const endingSessions = new EndingSessions();
   return betterAuth({
     appName: 'Sovereign',
     baseURL: settings.baseUrl,
@@ -190,11 +190,10 @@ export function createAuth(
         delete: {
           before: async (session) => {
             const planned = await planLogoutNotices(database, { sessionId: session.id });
-            if (planned.length > 0) endingSessions.set(session.id, planned);
+            endingSessions.hold(session.id, planned);
           },
           after: async (session, context) => {
-            const planned = endingSessions.get(session.id);
-            endingSessions.delete(session.id);
+            const planned = endingSessions.take(session.id);
             if (!planned) return;
             await queueLogoutNotices(database, planned);
             // Sent now when there is a request to sign with; otherwise the next round of the timer sends them.

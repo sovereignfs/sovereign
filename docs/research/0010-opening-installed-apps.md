@@ -2,7 +2,7 @@
 
 |                   |                                                                                                                                                                                                      |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**        | For review; device run: iPhone and desktop Chrome seen, macOS Safari and Android pending                                                                                                             |
+| **Status**        | For review; device run: iPhone, desktop Chrome and macOS Safari seen, Android pending                                                                                                                |
 | **Date**          | November 2026                                                                                                                                                                                        |
 | **Author**        | Claude Code                                                                                                                                                                                          |
 | **Scope**         | [RFC 0001](../rfcs/0001-installable-core.md) §6; [core-app](../specs/core-app.md) §1.3; the launcher (`apps/core/app/launcher.tsx`), `AppTile` in `@sovereignfs/ui`, shortcuts; every app's manifest |
@@ -139,7 +139,7 @@ https hosts (`HUB_ORIGIN`, `TARGET_ORIGIN`, behind a TLS proxy) for a real phone
 | iPhone simulator, iOS 26.5, both added to the Home Screen as web apps | Safari view over the hub | Safari view over the hub | not run (same as A5)     | Safari view over the hub | not applicable  |
 | Desktop Chrome, macOS, both installed from `localhost`                | stays in the hub window  | **the installed target** | **the installed target** | **the installed target** | nothing happens |
 | Android Chrome, a phone with Play services (a WebAPK)                 | to be seen               | to be seen               | to be seen               | to be seen               | to be seen      |
-| macOS Safari, both added to the Dock                                  | to be seen               | to be seen               | to be seen               | to be seen               | not applicable  |
+| macOS Safari, both added to the Dock from `localhost`                 | the default browser      | the default browser      | the default browser      | the default browser      | nothing happens |
 
 What was seen, and what was not:
 
@@ -153,6 +153,8 @@ What was seen, and what was not:
   (Automating it first with Chrome for Testing did not settle it: its app windows are not driven by Playwright, and a scripted
   click is not a person's tap.) Chrome offers to install only over https or on `localhost`, so the desktop run used two `localhost`
   ports, which are two origins.
+- **macOS Safari (Dock web apps, by hand, November 2026): finding 5 holds.** Every link from the hub's Dock app, same tab included,
+  opened in the default browser, never in the target's Dock app; the `intent:` address did nothing.
 - **Android: not settled on the emulator.** The available emulator image has Google APIs but no Play Store, so Chrome installs a
   home-screen shortcut, not a WebAPK, and a shortcut registers no intent filter: the question (finding 3) cannot arise there. A phone,
   or a Play Store image, runs the row.
@@ -160,7 +162,7 @@ What was seen, and what was not:
 **What this settles for A5:** a new top-level context, chosen when the tile is clicked, is what hands the link to an installed app on
 desktop Chrome; the same-tab link core uses today never does. A5 is confirmed for desktop Chromium and stays as written. Android is
 expected to behave the same through its intent filters (finding 3) and is still to be seen on a phone with Play services; iPhone falls
-back to a Safari view, which is no worse than today. Task 11.9 can be built on this; its Android behaviour is checked when a phone is
+back to a Safari view and macOS Safari to the default browser, neither worse than today. Task 11.9 can be built on this; its Android behaviour is checked when a phone is
 at hand.
 
 ## Sources

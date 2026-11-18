@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.108.0 · **Last updated:** 2026-11-17
+**Version:** 0.110.0 · **Last updated:** 2026-11-18
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -108,9 +108,9 @@ epic [11](docs/epics/pwa.md) · workstream [0006](docs/workstreams/0006-pwa.md)
 | 0.46.0  | 2        | Service worker and offline page                 | ✅     | [11.2](docs/epics/pwa.md)  |
 | —       | 3        | Standalone polish, guide and checks             | 🚧     | [11.3](docs/epics/pwa.md)  |
 | 0.47.0  | 4        | Icons from the instance's own logo `[parallel]` | ✅     | [11.4](docs/epics/pwa.md)  |
-| —       | 5        | Manifest members that do not vary by person     | 📋     | [11.5](docs/epics/pwa.md)  |
-| —       | 6        | Install this app `[parallel]`                   | 📋     | [11.6](docs/epics/pwa.md)  |
-| —       | 7        | A new version, announced `[parallel]`           | 📋     | [11.7](docs/epics/pwa.md)  |
+| 0.110.0 | 5        | Manifest members that do not vary by person     | ✅     | [11.5](docs/epics/pwa.md)  |
+| 0.110.0 | 6        | Install this app `[parallel]`                   | ✅     | [11.6](docs/epics/pwa.md)  |
+| 0.110.0 | 7        | A new version, announced `[parallel]`           | ✅     | [11.7](docs/epics/pwa.md)  |
 | —       | 8        | Opening installed apps, seen on devices         | 📋     | [11.8](docs/epics/pwa.md)  |
 | —       | 9        | `@sovereignfs/pwa`                              | 📋     | [11.11](docs/epics/pwa.md) |
 | —       | 10       | The app template installs                       | 📋     | [11.12](docs/epics/pwa.md) |

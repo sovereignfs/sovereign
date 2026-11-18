@@ -147,6 +147,11 @@ holds the status bar, `globals.css`), and the offline page's "Try again" button 
 link points at its own page) instead of the text colour (`color: inherit`, `sw/source.ts`). Each has a test that failed before.
 The simulator would not take a typed password (only the first character arrived), so the signed-in rows were not run.
 
+**Run on an Android emulator** (Pixel-class image with Google APIs, Chrome, a built core on `http://localhost:3200` through
+`adb reverse`, November 2026): Chrome offers to install, its sheet shows the description and the narrow screenshot, the maskable icon
+is masked cleanly to a circle, and the installed core opens in a window of its own with no browser bars. The image has no Play Store,
+so Chrome made a home-screen shortcut rather than a WebAPK; the WebAPK rows still need a real phone.
+
 **Outstanding, which needs a person with the devices:** the Chrome or Edge and Android columns, the iPhone rows marked "not
 run", and a run of the iPhone column on a real phone over https. The review checklist above is not met until they are run.
 
@@ -200,7 +205,7 @@ Sovereign icons.
 and [research 0010](../research/0010-opening-installed-apps.md). The order and the gates are in
 [workstream 0006](../workstreams/0006-pwa.md). 11.11 to 11.13 change the template and the app repositories; core is unchanged by them.
 
-#### 📋 11.5 — Manifest members that do not vary by person
+#### ✅ 11.5 — Manifest members that do not vary by person
 
 **Goal:** Core's manifest carries what a fuller install needs, still the same for everyone.
 
@@ -222,7 +227,9 @@ and [research 0010](../research/0010-opening-installed-apps.md). The order and t
 
 **Not here:** shortcuts that depend on a role, such as the Console.
 
-#### 📋 11.6 — Install this app `[parallel]`
+**Done:** the manifest carries `launch_handler`, two shortcuts (`/`, `/profile`), a narrow and a wide screenshot (made by `apps/e2e/scripts/capture-screenshots.ts`, kept in `src/branding/screenshots.ts` and served under `/icons/`), `categories`, `lang` and `dir`; tests hold `id: '/'` and that the Console is never a shortcut. Seen on an Android emulator: Chrome's install sheet shows the description and the narrow screenshot.
+
+#### ✅ 11.6 — Install this app `[parallel]`
 
 **Goal:** A person learns that core can be installed, from the place they manage their account.
 
@@ -243,7 +250,9 @@ and [research 0010](../research/0010-opening-installed-apps.md). The order and t
 
 **Not here:** a hint anywhere but the Account pages.
 
-#### 📋 11.7 — A new version, announced `[parallel]`
+**Done:** `InstallPrompt` (with `InstallHint`, `useInstallPrompt`, `isInstalledDisplay`) in `@sovereignfs/ui` 0.100.0, shown by the identity layout. Seen on an iPhone simulator (the Add to Home Screen words in Safari, nothing in the installed window) and an Android emulator (Install opens Chrome's sheet; nothing in the installed window).
+
+#### ✅ 11.7 — A new version, announced `[parallel]`
 
 **Goal:** A new release reaches an open window without throwing away what a person was doing.
 
@@ -264,6 +273,8 @@ and [research 0010](../research/0010-opening-installed-apps.md). The order and t
 - A page with no notice shown still gets the new worker on the next start
 
 **Not here:** background or periodic updates.
+
+**Done:** the worker has no `install` handler and takes the one message `sv-take-over`; `UpdateNotice` in `@sovereignfs/ui`; the registration shows it while a worker waits, reloads on `controllerchange`, and checks for an update when the page comes back into view. Acceptance test: a release waits, is announced, and Reload brings it. Seen in an installed core on an Android emulator.
 
 #### 📋 11.8 — Opening installed apps, seen on devices
 

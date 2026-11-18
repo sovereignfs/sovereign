@@ -334,7 +334,8 @@ app made with `npm create @sovereignfs app` has all of it already:
   system's `UpdateNotice` instead of swapping it in. `InstallPrompt` offers installing where the device allows it.
 - **Icons** are served at `/pwa-icon/192`, `/512`, `/maskable` and `/apple` (PNG). The template draws them from the app's initial with
   `next/og`; replace the route with your own pictures when you have them.
-- **A content security policy** names `PWA_CSP_DIRECTIVES` (`worker-src 'self'`, `manifest-src 'self'`).
+- **A content security policy** is set on every page by `proxy.ts` (`lib/csp.ts`): a nonce per request, `PWA_CSP_DIRECTIVES`
+  (`worker-src 'self'`, `manifest-src 'self'`), and core's origin in `form-action`, since signing out goes on to core.
 - On iPhone and iPad, and in macOS Safari, an installed core cannot open your installed app: it opens a browser view. On desktop Chrome
   and Edge it can, and on Android Chrome it is expected to (research 0010).
 

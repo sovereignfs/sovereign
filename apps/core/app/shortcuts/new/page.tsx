@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { Card } from '@sovereignfs/ui';
 import { sessionFor } from '../../../src/files/session';
 import security from '../../security/security.module.css';
@@ -9,8 +9,7 @@ import { ShortcutForm } from '../shortcut-form';
 export const metadata: Metadata = { title: 'Add a shortcut' };
 
 export default async function NewShortcutPage() {
-  const { session, allowed } = await sessionFor('launcher:access');
-  if (!session) redirect('/sign-in?returnTo=%2Fshortcuts%2Fnew');
+  const { allowed } = await sessionFor('launcher:access', '/shortcuts/new');
   if (!allowed) notFound();
   return (
     <Card padding="lg">

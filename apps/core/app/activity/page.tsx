@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
 import { Button, Card, EmptyState, FormField, Select } from '@sovereignfs/ui';
 import { getActivityService } from '../../src/activity';
-import { getSession } from '../../src/auth/session';
+import { requireSignedIn } from '../../src/auth/require-signed-in';
 import styles from '../security/security.module.css';
 import listStyles from './activity.module.css';
 import { ActivityList, type ActivityRow } from './activity-list';
@@ -33,8 +32,7 @@ export default async function ActivityPage({
   searchParams: Promise<{ app?: string | string[] }>;
 }) {
   // The proxy turns away a request with no session cookie; this is the check that counts.
-  const session = await getSession();
-  if (!session) redirect('/sign-in?returnTo=%2Factivity');
+  const session = await requireSignedIn('/activity');
   const service = await getActivityService();
   // The account is the session's, never a name in the request.
   const everyApp = await service.apps(session.user.id);

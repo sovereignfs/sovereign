@@ -105,8 +105,9 @@ export type Auth = ReturnType<typeof createAuth>;
  * - **No fresh-session requirement** (`freshAge: 0`): better-auth's fresh gate answers 403 for a
  *   session older than a day, which breaks sensitive actions with no flow to recover. Sensitive
  *   actions ask for the password instead (docs/architecture-rules.md).
- * - Sessions are verified from a signed cookie cache valid for 300 seconds, with a server-side
- *   fallback; authentication endpoints are rate limited, with the counters in the database.
+ * - Every session is read from the database: the signed cookie cache is off, so a session that has
+ *   ended stops working at once everywhere; authentication endpoints are rate limited, with the
+ *   counters in the database.
  * - better-auth's telemetry is off: core reports nothing to anyone.
  */
 /** What `createAuth` needs besides the database and the settings. */

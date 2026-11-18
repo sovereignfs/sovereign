@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
 import { safeReturnTo } from '../../../src/auth/return-to';
-import { getSession } from '../../../src/auth/session';
+import { sendOnIfSignedIn } from '../../../src/auth/require-signed-in';
 import { AuthCard } from '../auth-card';
 import { ForgotPasswordForm } from './forgot-password-form';
 
@@ -14,7 +13,7 @@ export default async function ForgotPasswordPage({
 }) {
   // Kept through the reset, so an app's sign-in that led here carries on afterwards.
   const returnTo = safeReturnTo((await searchParams).returnTo);
-  if (await getSession()) redirect(returnTo);
+  await sendOnIfSignedIn(returnTo);
 
   return (
     <AuthCard

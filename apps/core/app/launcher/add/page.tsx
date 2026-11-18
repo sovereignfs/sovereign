@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { AppTile, CardTileGrid, Icon, PageContainer } from '@sovereignfs/ui';
-import { getSession } from '../../../src/auth/session';
+import { requireSignedIn } from '../../../src/auth/require-signed-in';
 import { can } from '../../../src/roles/capabilities';
 import { getCapabilityMatrix } from '../../../src/roles/matrix';
 import { AccountHeader } from '../../account-header';
@@ -16,8 +16,7 @@ export const metadata: Metadata = { title: 'Add' };
  * shortcut of their own, so this page is for those who may (`client:manage`) and is not there for anyone else.
  */
 export default async function AddPage() {
-  const session = await getSession();
-  if (!session) redirect('/sign-in?returnTo=%2Flauncher%2Fadd');
+  const session = await requireSignedIn('/launcher/add');
   const matrix = await getCapabilityMatrix();
   if (
     !can(session.user.role, 'launcher:access', matrix) ||

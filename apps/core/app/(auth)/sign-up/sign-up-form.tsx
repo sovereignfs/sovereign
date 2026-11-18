@@ -9,8 +9,8 @@ import { continuationUrl } from '../../../src/auth/oauth-continuation';
 import { afterPasswordAccepted } from '../../../src/keys/session';
 import type { WebKey } from '@sovereignfs/crypto/web';
 import {
-  passwordPolicyMessage,
-  passwordProblems,
+  newPasswordProblem,
+  PAGE_NOT_READY,
   type PasswordPolicy,
 } from '../../../src/auth/password-policy';
 import { AuthError, AuthNotice } from '../auth-notice';
@@ -51,17 +51,13 @@ export function SignUpForm({
     event.preventDefault();
     setError(undefined);
     // The server refuses these too; this only saves the person a round trip.
-    if (password !== confirm) {
-      setError('The passwords do not match.');
-      return;
-    }
     if (!agreed) {
       setError('Accept the Terms of Service and the Privacy Policy to create an account.');
       return;
     }
-    const problems = passwordProblems(password, policy);
-    if (problems.length > 0) {
-      setError(passwordPolicyMessage(problems));
+    const problem = newPasswordProblem(password, confirm, policy);
+    if (problem) {
+      setError(problem);
       return;
     }
     setPending(true);
@@ -71,7 +67,7 @@ export function SignUpForm({
       ({ signIn: value, secret } = await deriveForSignIn(password, email));
     } catch {
       setPending(false);
-      setError('This page could not get ready. Reload it and try again.');
+      setError(PAGE_NOT_READY);
       return;
     }
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;

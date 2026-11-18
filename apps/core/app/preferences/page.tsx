@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
 import { Card } from '@sovereignfs/ui';
-import { getSession } from '../../src/auth/session';
+import { requireSignedIn } from '../../src/auth/require-signed-in';
 import { getMailForAppsService } from '../../src/mail';
 import { getNotificationService } from '../../src/notifications';
 import { localeOptions, timezoneOptions } from '../../src/preferences/options';
@@ -15,8 +14,7 @@ export const metadata: Metadata = { title: 'Preferences' };
 
 export default async function PreferencesPage() {
   // The proxy turns away a request with no session cookie; this is the check that counts.
-  const session = await getSession();
-  if (!session) redirect('/sign-in?returnTo=%2Fpreferences');
+  const session = await requireSignedIn('/preferences');
 
   const { timezone, locale } = session.user;
   const apps = await (await getNotificationService()).apps(session.user.id);

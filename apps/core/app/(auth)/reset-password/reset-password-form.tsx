@@ -7,8 +7,8 @@ import { authClient } from '../../../src/auth/client';
 import { signInValue } from '../../../src/auth/derive';
 import { withReturnTo } from '../../../src/auth/return-to';
 import {
-  passwordPolicyMessage,
-  passwordProblems,
+  newPasswordProblem,
+  PAGE_NOT_READY,
   type PasswordPolicy,
 } from '../../../src/auth/password-policy';
 import { AuthField } from '../auth-field';
@@ -39,13 +39,9 @@ export function ResetPasswordForm({
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (password !== confirm) {
-      setError('The passwords do not match.');
-      return;
-    }
-    const problems = passwordProblems(password, policy);
-    if (problems.length > 0) {
-      setError(passwordPolicyMessage(problems));
+    const problem = newPasswordProblem(password, confirm, policy);
+    if (problem) {
+      setError(problem);
       return;
     }
     setPending(true);
@@ -55,7 +51,7 @@ export function ResetPasswordForm({
       value = await signInValue(password, address);
     } catch {
       setPending(false);
-      setError('This page could not get ready. Reload it and try again.');
+      setError(PAGE_NOT_READY);
       return;
     }
     const result = await authClient.resetPassword({ newPassword: value, token });

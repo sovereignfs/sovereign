@@ -7,8 +7,8 @@ import { deriveForSignIn } from '../../src/auth/derive';
 import { afterPasswordChange, beforePasswordChange } from '../../src/keys/session';
 import type { WebKey } from '@sovereignfs/crypto/web';
 import {
-  passwordPolicyMessage,
-  passwordProblems,
+  newPasswordProblem,
+  PAGE_NOT_READY,
   type PasswordPolicy,
 } from '../../src/auth/password-policy';
 import styles from './security.module.css';
@@ -32,9 +32,9 @@ export function ChangePasswordForm({
     event.preventDefault();
     setError(undefined);
     setDone(false);
-    const problems = passwordProblems(next, policy);
-    if (problems.length > 0) {
-      setError(passwordPolicyMessage(problems));
+    const problem = newPasswordProblem(next, undefined, policy);
+    if (problem) {
+      setError(problem);
       return;
     }
     setPending(true);
@@ -47,7 +47,7 @@ export function ChangePasswordForm({
       ({ signIn: nextValue, secret: nextSecret } = await deriveForSignIn(next, address));
     } catch {
       setPending(false);
-      setError('This page could not get ready. Reload it and try again.');
+      setError(PAGE_NOT_READY);
       return;
     }
     // The keys are wrapped for the new password beside the old before the change, and the old wrap goes after it, so the keys

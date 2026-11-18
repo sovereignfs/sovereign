@@ -52,3 +52,20 @@ export function describePasswordPolicy(policy: PasswordPolicy): string {
 export function passwordPolicyMessage(problems: readonly string[]): string {
   return `The password must ${problems.join(' and ')}.`;
 }
+
+/**
+ * What is wrong with a new password, in one sentence, or nothing: typed twice, the two must match, and then it must meet the
+ * policy. The pages that set one (sign-up, a reset, a change) ask the same way; `confirm` is left out where it is typed once.
+ */
+export function newPasswordProblem(
+  password: string,
+  confirm: string | undefined,
+  policy: PasswordPolicy,
+): string | undefined {
+  if (confirm !== undefined && password !== confirm) return 'The passwords do not match.';
+  const problems = passwordProblems(password, policy);
+  return problems.length > 0 ? passwordPolicyMessage(problems) : undefined;
+}
+
+/** What a page says when it could not make the sign-in value from a password (core-app §5.2), the same on every page. */
+export const PAGE_NOT_READY = 'This page could not get ready. Reload it and try again.';

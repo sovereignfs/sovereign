@@ -13,6 +13,8 @@ history and tags.
   app manifest (with what lets an installed core open the installed app), a service worker that keeps only files that are the same for
   everyone, icons drawn from the app's initial, the metadata an iPhone reads, and a notice when a new version is ready. Its
   `sovereign.manifest.json` names the icon for the launcher. This release was made for core 0.111.0.
+- The app template sends every page with a content security policy: a nonce per request, nothing from another site, and core's origin
+  allowed for the sign-out form. Both the plain and the `--encryption` app sign in, work, unlock and sign out under it.
 
 ## [0.17.1] - 2026-11-17
 

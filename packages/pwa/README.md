@@ -1,0 +1,39 @@
+# @sovereignfs/pwa
+
+[![npm](https://img.shields.io/npm/v/@sovereignfs/pwa?label=npm)](https://www.npmjs.com/package/@sovereignfs/pwa) [![licence](https://img.shields.io/badge/licence-MPL--2.0-blue)](https://github.com/sovereignfs/sovereign/blob/main/packages/pwa/LICENSE)
+
+What makes a [Sovereign](https://github.com/sovereignfs/sovereign) app installable on a phone and a desktop: its web app manifest, a
+service worker that keeps nothing of a person, and a new version announced instead of swapped in. The design is
+[RFC 0001](https://github.com/sovereignfs/sovereign/blob/main/docs/rfcs/0001-installable-core.md), amendment 1. An app made with
+`npm create @sovereignfs app` uses it already.
+
+```ts
+// app/manifest.ts
+import { manifest } from '@sovereignfs/pwa';
+export default () => manifest({ name: 'Notes', description: 'Notes, kept on your instance' });
+
+// app/sw.js/route.ts
+import { serviceWorkerResponse, serviceWorkerSource } from '@sovereignfs/pwa';
+export const GET = () =>
+  serviceWorkerResponse(serviceWorkerSource({ version: buildId, precache: builtFiles }));
+
+// app/layout.tsx
+import { pwaMetadata, pwaViewport } from '@sovereignfs/pwa';
+import { ServiceWorkerRegistration } from '@sovereignfs/pwa/client';
+export const metadata = { title: 'Notes', ...pwaMetadata({ name: 'Notes' }) };
+export const viewport = pwaViewport();
+// …and <ServiceWorkerRegistration appName="Notes" /> in the body.
+```
+
+- **The manifest** has `standalone` display, icons of each size a browser asks for (served by the app at `/pwa-icon/192`, `/512` and
+  `/maskable`), and `launch_handler` and `handle_links: 'preferred'`, so core can open the installed app instead of a browser view where the
+  device allows it. Its `id` is the start address unless you set one: never change it once people have installed the app.
+- **The worker keeps only an allow-list** of what is the same for everyone: the build's files under `/_next/static/`, the icons, the
+  manifest, and a shell page if you give one, which must hold nothing of a person. It never stores a page of a person or an API answer,
+  never touches a request with a query string, an `Authorization` header or another origin, and answers a navigation that fails with a page
+  of its own (or the shell).
+- **A new version waits.** `ServiceWorkerRegistration` (from `@sovereignfs/pwa/client`, with `@sovereignfs/ui`'s `UpdateNotice`) says a new
+  version is ready; Reload has it take over. It registers only in production, over https or on `localhost`.
+- **A content security policy** needs `PWA_CSP_DIRECTIVES`: `worker-src 'self'` and `manifest-src 'self'`.
+
+The main entry has no React and no Node built-in, so a `proxy.ts` can import it. Licence MPL-2.0.

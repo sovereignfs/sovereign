@@ -2,7 +2,7 @@
 
 |                   |                                                                                                                                                                                                      |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**        | For review; device run started (iPhone seen, desktop and Android pending)                                                                                                                            |
+| **Status**        | For review; device run: iPhone and desktop Chrome seen, macOS Safari and Android pending                                                                                                             |
 | **Date**          | November 2026                                                                                                                                                                                        |
 | **Author**        | Claude Code                                                                                                                                                                                          |
 | **Scope**         | [RFC 0001](../rfcs/0001-installable-core.md) §6; [core-app](../specs/core-app.md) §1.3; the launcher (`apps/core/app/launcher.tsx`), `AppTile` in `@sovereignfs/ui`, shortcuts; every app's manifest |
@@ -134,12 +134,12 @@ lists every time it was opened, in which display mode, and whether `launchQueue`
 spike server's log. Run it on this machine (`node docs/research/0010-spike/serve.mjs`, both on `localhost`, which installs) or on two
 https hosts (`HUB_ORIGIN`, `TARGET_ORIGIN`, behind a TLS proxy) for a real phone. Install both, open the hub from its icon, tap each link.
 
-| Platform (seen)                                                       | Same tab                 | `target="_blank"`        | `window.open`        | Click time (A5)          | `intent:`      |
-| --------------------------------------------------------------------- | ------------------------ | ------------------------ | -------------------- | ------------------------ | -------------- |
-| iPhone simulator, iOS 26.5, both added to the Home Screen as web apps | Safari view over the hub | Safari view over the hub | not run (same as A5) | Safari view over the hub | not applicable |
-| Desktop Chrome or Edge                                                | to be seen               | to be seen               | to be seen           | to be seen               | not applicable |
-| Android Chrome, a phone with Play services (a WebAPK)                 | to be seen               | to be seen               | to be seen           | to be seen               | to be seen     |
-| macOS Safari, both added to the Dock                                  | to be seen               | to be seen               | to be seen           | to be seen               | not applicable |
+| Platform (seen)                                                       | Same tab                 | `target="_blank"`        | `window.open`            | Click time (A5)          | `intent:`       |
+| --------------------------------------------------------------------- | ------------------------ | ------------------------ | ------------------------ | ------------------------ | --------------- |
+| iPhone simulator, iOS 26.5, both added to the Home Screen as web apps | Safari view over the hub | Safari view over the hub | not run (same as A5)     | Safari view over the hub | not applicable  |
+| Desktop Chrome, macOS, both installed from `localhost`                | stays in the hub window  | **the installed target** | **the installed target** | **the installed target** | nothing happens |
+| Android Chrome, a phone with Play services (a WebAPK)                 | to be seen               | to be seen               | to be seen               | to be seen               | to be seen      |
+| macOS Safari, both added to the Dock                                  | to be seen               | to be seen               | to be seen               | to be seen               | not applicable  |
 
 What was seen, and what was not:
 
@@ -147,14 +147,21 @@ What was seen, and what was not:
   view over the hub (a close button, the address, Safari's toolbar), never in the installed target, which kept its own separate
   storage. The view reports `display-mode: standalone`, so an app opened this way would take itself for installed: an app's install
   hint must not trust the display mode alone on iOS (it hides, which is harmless).
-- **Desktop Chromium: not settled by automation.** Chrome for Testing 159 (Playwright's) installs both sites through the DevTools
-  `PWA` domain, but its app windows are not driven by Playwright and a scripted click is not a person's tap, which capture may
-  require; and Chrome for Testing is not the Chrome people install. A person with Chrome or Edge runs the row.
+- **Desktop Chrome (macOS, November 2026): finding 2 holds, from inside an installed app too.** Run by hand: from the installed
+  hub, `target="_blank"`, `window.open` and the click-time choice each opened the target in its own installed window; the same-tab
+  link stayed in the hub's window, as a navigation out of scope does. The `intent:` address did nothing, as expected off Android.
+  (Automating it first with Chrome for Testing did not settle it: its app windows are not driven by Playwright, and a scripted
+  click is not a person's tap.) Chrome offers to install only over https or on `localhost`, so the desktop run used two `localhost`
+  ports, which are two origins.
 - **Android: not settled on the emulator.** The available emulator image has Google APIs but no Play Store, so Chrome installs a
   home-screen shortcut, not a WebAPK, and a shortcut registers no intent filter: the question (finding 3) cannot arise there. A phone,
   or a Play Store image, runs the row.
 
-Until the desktop and Android rows are seen, RFC 0001 A5 stands as written but is not built (task 11.9 depends on 11.8).
+**What this settles for A5:** a new top-level context, chosen when the tile is clicked, is what hands the link to an installed app on
+desktop Chrome; the same-tab link core uses today never does. A5 is confirmed for desktop Chromium and stays as written. Android is
+expected to behave the same through its intent filters (finding 3) and is still to be seen on a phone with Play services; iPhone falls
+back to a Safari view, which is no worse than today. Task 11.9 can be built on this; its Android behaviour is checked when a phone is
+at hand.
 
 ## Sources
 

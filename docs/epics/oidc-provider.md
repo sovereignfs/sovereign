@@ -5,7 +5,7 @@
 
 ## Status
 
-✅ Complete
+⏳ In Progress
 
 ## Overview
 
@@ -140,3 +140,21 @@ client's access, and clients are told when a session ends.
 deletion, which will call the same revocation routine (8.2, 9.5), the Console
 control for the back-channel address and end-session switch (8.6), and CORS for
 single-page apps.
+
+#### 📋 6.4 — Logout notices that arrive
+
+**Goal:** An app that missed a back-channel logout notice is told again, and every notice comes from one sender.
+
+**Deliverables:**
+
+- notices kept in a table and retried with backoff until the app answers or the notice expires; the spec's "sent once" changed
+- the provider plugin's session-delete notices and core's `src/oauth/logout.ts` sent by one routine
+
+**Dependencies:** 6.3
+
+**Spec reference:** core-app §3.6.5, §3.16; [research 0011](../research/0011-streamlining-sign-in.md) D
+
+**Review checklist:**
+
+- An app unreachable for a minute still ends the session once it answers
+- A notice is never sent for a session that is still open

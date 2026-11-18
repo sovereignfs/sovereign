@@ -148,9 +148,11 @@ network is down. Nothing needs setting up beyond what sign-in already needs.
   behind, and there is no setting for it.
 - **The installed name follows the instance's name** in the Console's settings. Its icon is the App icon set there, or the
   Sovereign mark when none is set.
-- **Apps open outside the window.** An installed core's window covers core's own address only. A tile in the launcher goes to
-  an app on another address, which the device opens in the browser or in a view over the window, as it chooses; the
-  sign-in the app starts with core comes back to the app the same way.
+- **Apps open as themselves where the device allows it.** An installed core's window covers core's own address only. A
+  tile in an installed core opens its app in a new window: on desktop Chrome and Edge, an app that is installed too opens in
+  its own window (and Android Chrome is expected to do the same); on an iPhone, an iPad and in Safari it opens in a browser
+  view that closes back to core. In a browser tab, a tile opens its app in the same tab. The sign-in the app starts with core
+  comes back to the app either way.
 
 ## Backing up and upgrading
 

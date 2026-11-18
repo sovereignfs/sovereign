@@ -533,10 +533,60 @@ describe('an app made with --encryption', () => {
   });
 });
 
+describe('installing the app', () => {
+  it('has a manifest, a service worker and icons from @sovereignfs/pwa, and a layout that tells a device', async () => {
+    const target = path.join(temp(), 'my-notes');
+    const written = await writeApp(target, namesOf(target));
+    expect(written).toEqual(
+      expect.arrayContaining([
+        'app/manifest.ts',
+        'app/sw.js/route.ts',
+        'app/pwa-icon/[variant]/route.tsx',
+      ]),
+    );
+    expect(read(target, 'app/manifest.ts')).toContain("manifest({\n    name: 'My Notes',");
+    const worker = read(target, 'app/sw.js/route.ts');
+    expect(worker).toContain('serviceWorkerSource({ version: buildId(), precache: builtFiles() })');
+    expect(worker).toContain('serviceWorkerResponse(');
+    const layout = read(target, 'app/layout.tsx');
+    expect(layout).toContain("...pwaMetadata({ name: 'My Notes' })");
+    expect(layout).toContain('export const viewport: Viewport = pwaViewport();');
+    expect(layout).toContain('<ServiceWorkerRegistration appName="My Notes" />');
+    // Every icon the manifest names is drawn by the icon route, and the iPhone's too.
+    const icons = read(target, 'app/pwa-icon/[variant]/route.tsx');
+    for (const variant of ["'192'", "'512'", 'maskable', 'apple']) expect(icons).toContain(variant);
+    expect(icons).toContain("'My Notes'.charAt(0)");
+  });
+
+  it('names its icon in the Sovereign manifest, for the launcher', async () => {
+    for (const encryption of [false, true]) {
+      const target = path.join(temp(), 'my-notes');
+      await writeApp(target, namesOf(target), DEFAULT_APP_PORT, { encryption });
+      expect(JSON.parse(read(target, 'sovereign.manifest.json')).icon, String(encryption)).toBe(
+        '/pwa-icon/192',
+      );
+    }
+  });
+
+  it('keeps the PWA wiring with --encryption, which replaces neither the layout nor the routes', async () => {
+    const target = path.join(temp(), 'my-notes');
+    await writeApp(target, namesOf(target), DEFAULT_APP_PORT, { encryption: true });
+    expect(read(target, 'app/layout.tsx')).toContain('ServiceWorkerRegistration');
+    expect(existsSync(path.join(target, 'app/sw.js/route.ts'))).toBe(true);
+  });
+
+  it('depends on @sovereignfs/pwa', () => {
+    expect(
+      JSON.parse(appPackageJson(namesOf('/x/my-notes'))).dependencies['@sovereignfs/pwa'],
+    ).toBe(APP_DEPENDENCIES['@sovereignfs/pwa']);
+  });
+});
+
 describe('what the app depends on', () => {
   it('are ranges the Sovereign packages of this repository satisfy', () => {
     for (const [name, dir] of [
       ['@sovereignfs/config', 'config'],
+      ['@sovereignfs/pwa', 'pwa'],
       ['@sovereignfs/sdk', 'sdk'],
       ['@sovereignfs/storage', 'storage'],
       ['@sovereignfs/ui', 'ui'],

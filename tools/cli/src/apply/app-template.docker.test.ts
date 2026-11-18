@@ -112,6 +112,8 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
         '--filter',
         '@sovereignfs/storage...',
         '--filter',
+        '@sovereignfs/pwa...',
+        '--filter',
         '@sovereignfs/create',
         'build',
       ],
@@ -124,7 +126,7 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
     });
     const vendor = path.join(app, 'vendor');
     mkdirSync(vendor);
-    for (const name of ['sdk', 'ui', 'manifest', 'config', 'storage', 'create']) {
+    for (const name of ['sdk', 'ui', 'pwa', 'manifest', 'config', 'storage', 'create']) {
       execFileSync(
         'pnpm',
         ['--filter', `@sovereignfs/${name}`, 'pack', '--pack-destination', vendor],
@@ -140,6 +142,7 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
     for (const [name, field] of [
       ['sdk', 'dependencies'],
       ['ui', 'dependencies'],
+      ['pwa', 'dependencies'],
       ['config', 'dependencies'],
       ['storage', 'dependencies'],
       ['manifest', 'devDependencies'],

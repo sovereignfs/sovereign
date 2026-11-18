@@ -346,7 +346,7 @@ opens the default browser. RFC 0001 A5 is confirmed for desktop Chromium. **Outs
 
 **Not here:** opening a native app from an app tile.
 
-#### 📋 11.11 — `@sovereignfs/pwa`
+#### ✅ 11.11 — `@sovereignfs/pwa`
 
 **Goal:** What core and seven apps each copy (the manifest, the worker's allow-list, its registration, the metadata) is one
 published package.
@@ -372,7 +372,12 @@ published package.
 
 **Not here:** core adopting the package (a later task).
 
-#### 📋 11.12 — The app template installs `[parallel]`
+**Done:** `packages/pwa` 0.1.0 (MPL-2.0), listed wherever a published package is (Dockerfile, promotion units, the publish workflow,
+`docs/releasing.md`). The manifest's `id` defaults to its start address, so an app that had none keeps its identity; the worker takes an
+optional person-free `shell`, which the template does not use (its only page is a person's) and which ledger's fix in 11.13 can. The
+main entry has no React or Node built-in; the registration is `@sovereignfs/pwa/client`. 37 tests, the worker evaluated as served.
+
+#### ✅ 11.12 — The app template installs `[parallel]`
 
 **Goal:** An app made by `npm create @sovereignfs` installs, says it is offline, and is ready to be opened from core.
 
@@ -396,6 +401,13 @@ published package.
 
 **Not here:** moving the deployed apps (11.13).
 
+**Done:** the template's manifest, worker route, layout and icons (drawn from the app's initial with `next/og`, prerendered at build:
+the template is filled as text, so it carries no PNG), the icon in `sovereign.manifest.json`, with and without `--encryption`; a section
+"Installing the app" in `docs/building-an-app.md`. Checked on an app generated from it, with `ui` and `pwa` from local tarballs (neither
+is on npm yet): it builds, the built server runs on PostgreSQL, Chromium finds nothing missing to install it, the worker keeps only
+allow-listed files, and offline it answers with its own page. **Moved out:** the content security policy, to 11.14, since it touches
+sign-out and the encrypted variant's key flow and needs both run against a core.
+
 #### 📋 11.13 — The deployed apps, audited and fixed
 
 **Goal:** Every deployed app installs well and can be opened from core.
@@ -418,3 +430,25 @@ published package.
 - An app installed before the change is still the same installed app after it
 
 **Not here:** the planned apps (foundry, loom, papertrail, haven), which start from the template.
+
+#### 📋 11.14 — A content security policy in the app template `[parallel]`
+
+**Goal:** An app made from the template sends every page with a nonce-based content security policy, as the deployed apps do.
+
+**Deliverables:**
+
+- A `proxy.ts` and `lib/csp.ts` in the template, after the deployed apps' `src/security/csp.ts`: a nonce per request, `'strict-dynamic'`,
+  `PWA_CSP_DIRECTIVES`, and the hardening headers; the layout passes the nonce where it needs one
+- What sign-out needs (its form posts to the app, which redirects to core: `form-action` must allow core's origin) and what the
+  `--encryption` variant needs (key release navigates to core and back; check whether its cryptography needs `'wasm-unsafe-eval'`)
+- Tests in `tools/create/src/app.test.ts`; both variants run against a core: sign in, write a note, sign out, and for `--encryption` key
+  release and a shared note
+
+**Dependencies:** 11.12
+
+**Review checklist:**
+
+- No `'unsafe-inline'` in `script-src`; the policy is on every page and on none of the API answers
+- Both variants sign in, work and sign out under the policy, with no violation in the console
+
+**Not here:** the deployed apps, which have their own policies (11.13).

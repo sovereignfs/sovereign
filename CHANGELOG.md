@@ -5,6 +5,20 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.110.0] - 2026-11-18
+
+### Added
+
+- An installed core is fuller: its manifest brings a window already open forward instead of starting another, offers shortcuts to
+  your apps and your account from the icon, and shows pictures of the sign-in page in the install sheet on Android and desktop.
+- The account pages offer to install core where the device allows it: the browser's own Install where it has one, the steps for Add to
+  Home Screen on an iPhone or iPad, and nothing in an installed window or after "Not now" on that device.
+
+### Changed
+
+- A new version of core is announced instead of swapped in silently: an open page says "A new version is ready", and Reload takes it.
+  An installed core left open checks for one whenever it comes back into view.
+
 ## [0.109.0] - 2026-11-17
 
 ### Added

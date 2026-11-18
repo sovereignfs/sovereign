@@ -23,13 +23,13 @@ test fails when a published thing's version has none. Each publish workflow read
 
 Several things here have a version, each counted on its own; two of them being close in number means nothing.
 
-| What                                                                  | Version in                                  | Tag             | Released as                                           | How it moves                                                                                                                                                     |
-| --------------------------------------------------------------------- | ------------------------------------------- | --------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **The platform**: what an instance runs                               | root `package.json`                         | `vX.Y.Z`        | the image, `ghcr.io/sovereignfs/sovereign:X.Y.Z`      | a minor per completed roadmap task, a patch for a fix between tasks; `1.0.0` marks the public release (AGENTS.md)                                                |
-| **Core's app**                                                        | `apps/core/package.json`                    | none            | nothing on its own: it is inside the image            | semver by what changed in core; its `core-vX.Y.Z` commits record it. Which core an operator runs is the platform version.                                        |
-| **The toolkit**: `sv`, its image, `npm create @sovereignfs`           | `tools/cli` and `tools/create`, one version | `cli-vX.Y.Z`    | `@sovereignfs/cli`, `@sovereignfs/create`, two images | semver by what changed for operators and for the apps the template makes                                                                                         |
-| **A published package**: `ui`, `sdk`, `manifest`, `config`, `storage` | its own `package.json`                      | `<name>-vX.Y.Z` | `@sovereignfs/<name>` on npm                          | semver as a contract (AGENTS.md). `sdk` started at `2.0.0` after the legacy repository's `1.x`; `ui` has taken a minor for every feature since its first release |
-| **A private package**: `database`, `crypto`, `mailer`, …              | its own `package.json`                      | none            | nothing: bundled or used inside this repository       | semver by what changed, never published                                                                                                                          |
+| What                                                                         | Version in                                  | Tag             | Released as                                           | How it moves                                                                                                                                                     |
+| ---------------------------------------------------------------------------- | ------------------------------------------- | --------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **The platform**: what an instance runs                                      | root `package.json`                         | `vX.Y.Z`        | the image, `ghcr.io/sovereignfs/sovereign:X.Y.Z`      | a minor per completed roadmap task, a patch for a fix between tasks; `1.0.0` marks the public release (AGENTS.md)                                                |
+| **Core's app**                                                               | `apps/core/package.json`                    | none            | nothing on its own: it is inside the image            | semver by what changed in core; its `core-vX.Y.Z` commits record it. Which core an operator runs is the platform version.                                        |
+| **The toolkit**: `sv`, its image, `npm create @sovereignfs`                  | `tools/cli` and `tools/create`, one version | `cli-vX.Y.Z`    | `@sovereignfs/cli`, `@sovereignfs/create`, two images | semver by what changed for operators and for the apps the template makes                                                                                         |
+| **A published package**: `ui`, `sdk`, `manifest`, `config`, `storage`, `pwa` | its own `package.json`                      | `<name>-vX.Y.Z` | `@sovereignfs/<name>` on npm                          | semver as a contract (AGENTS.md). `sdk` started at `2.0.0` after the legacy repository's `1.x`; `ui` has taken a minor for every feature since its first release |
+| **A private package**: `database`, `crypto`, `mailer`, …                     | its own `package.json`                      | none            | nothing: bundled or used inside this repository       | semver by what changed, never published                                                                                                                          |
 
 A version is set on `develop` in the change that makes it, with its changelog section when it is published (below); it is
 released when a promotion titled with it under `Release` is merged, or its tag is pushed. Not every version is released: one can be
@@ -42,13 +42,14 @@ Three things are released from this repository: a package to npm, core's image t
 
 Five packages are published to npm:
 
-| Package                 | What it is                                                                                                        | Licence                                  |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| `@sovereignfs/ui`       | The design system: tokens and React components                                                                    | MPL-2.0 (icons derived from Lucide: ISC) |
-| `@sovereignfs/sdk`      | How an app's server calls core: tokens, failure, version support and sign-in                                      | MPL-2.0                                  |
-| `@sovereignfs/manifest` | The app manifest: its schemas, a validator, and `sovereign-manifest`, which makes the image label and port        | MPL-2.0                                  |
-| `@sovereignfs/config`   | The environment convention of `contracts/env.md`: settings declared once, read with a prefix, refused at start-up | MPL-2.0                                  |
-| `@sovereignfs/storage`  | The files people upload: a folder per person, a quota per person, served only to them (RFC 0004)                  | MPL-2.0                                  |
+| Package                 | What it is                                                                                                                      | Licence                                  |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `@sovereignfs/ui`       | The design system: tokens and React components                                                                                  | MPL-2.0 (icons derived from Lucide: ISC) |
+| `@sovereignfs/sdk`      | How an app's server calls core: tokens, failure, version support and sign-in                                                    | MPL-2.0                                  |
+| `@sovereignfs/manifest` | The app manifest: its schemas, a validator, and `sovereign-manifest`, which makes the image label and port                      | MPL-2.0                                  |
+| `@sovereignfs/config`   | The environment convention of `contracts/env.md`: settings declared once, read with a prefix, refused at start-up               | MPL-2.0                                  |
+| `@sovereignfs/storage`  | The files people upload: a folder per person, a quota per person, served only to them (RFC 0004)                                | MPL-2.0                                  |
+| `@sovereignfs/pwa`      | What makes an app installable: its manifest, a service worker that keeps nothing of a person, an announced update (RFC 0001 A7) | MPL-2.0                                  |
 
 Every other package is `private` for now and is not published, **`@sovereignfs/bridge`
 included**: it is release-ready (licence, files, README) but marked `private`, so nothing can
@@ -128,7 +129,7 @@ package's `bin`, and `packages:check` holds it to a tool's rules (in `dist/`, in
 
 Merging a promotion titled with the package's version under `Release` releases it, or pushing its tag does: `ui-vX.Y.Z` releases `@sovereignfs/ui`, `sdk-vX.Y.Z` releases
 `@sovereignfs/sdk`, `manifest-vX.Y.Z` releases `@sovereignfs/manifest`, `config-vX.Y.Z` releases `@sovereignfs/config`, and
-`storage-vX.Y.Z` releases `@sovereignfs/storage`.
+`storage-vX.Y.Z` releases `@sovereignfs/storage`, and `pwa-vX.Y.Z` releases `@sovereignfs/pwa`.
 `.github/workflows/publish.yml` does the rest, and **publishes
 nothing unless every one of these holds**:
 

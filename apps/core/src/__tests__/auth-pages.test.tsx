@@ -105,6 +105,17 @@ describe('the sign-in page', () => {
     expect(html).not.toContain('evil.example');
   });
 
+  it('tells someone signed in that an emailed link did not work, then lets them go on', async () => {
+    const { signIn } = await pages();
+    getSession.mockResolvedValue({ user: { id: 'u1' } });
+    const html = await renderServer(
+      await signIn({ searchParams: search('/files', { error: 'TOKEN_EXPIRED' }) }),
+    );
+    expect(html).toContain('That link has expired or was already used.');
+    expect(html).toContain('href="/files"');
+    expect(html).toContain('Continue');
+  });
+
   it('sends someone who is already signed in to where they were going', async () => {
     const { signIn } = await pages();
     getSession.mockResolvedValue({ user: { id: 'u1' } });

@@ -21,6 +21,8 @@ history and tags.
 - A passkey used on the second sign-in step ("Use a passkey instead") unlocks the person's encrypted data with the same touch, as it does
   on the sign-in page.
 - Signing out that does not reach the server, or is refused, now says the person is still signed in, instead of seeming to work.
+- A verification link that has expired or was already used now says so even in a browser that is already signed in, instead of
+  quietly moving on.
 
 ## [0.112.0] - 2026-11-18
 

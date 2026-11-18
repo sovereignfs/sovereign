@@ -290,7 +290,7 @@ These tasks are sequenced by [workstream 0007](../workstreams/0007-sign-in.md).
 
 - A refused and an unreachable sign-out both leave the person where they were, told, and able to try again
 
-#### ⏳ 4.12 — One guard for signed-in pages, and the cookie cache's leftovers gone
+#### ✅ 4.12 — One guard for signed-in pages, and the cookie cache's leftovers gone
 
 **Goal:** Every page that needs a session sends someone without one to sign in the same way, from one function, and nothing is left
 of the signed cookie cache that core turned off.
@@ -312,15 +312,20 @@ of the signed cookie cache that core turned off.
 - A test fails when a signed-in page does not use the guard
 - No page's redirect or message changes
 
-#### ⏳ 4.13 — The verification link goes straight on
+#### ✅ 4.13 — An emailed link that did not work is always said
 
-**Goal:** Following a verification link opens the page the person was going to, without a stop at `/sign-in`, and an expired link is
-always said.
+**Goal:** Someone who follows a verification link that has expired or was already used is told so, even in a browser that is already
+signed in.
 
 **Deliverables:**
 
-- the verification email's address goes to `returnTo` itself, or to the launcher
-- `/sign-in` shows "That link has expired" when better-auth sends `error`, even when the browser already has a session
+- `/sign-in` shows "That link has expired or was already used" when better-auth sends `error`, and to someone already signed in, with a
+  way on to where they were going instead of a silent redirect
+
+**Not here:** going straight to the destination without the stop at `/sign-in`. better-auth sends a link's success and its failure to
+one address, so that stop is what lets a failure be said; it costs one redirect the person does not see. Telling someone that a link is
+for another account belongs with changing an email address, which core does not offer yet (better-auth's `INVALID_USER` applies only
+there).
 
 **Dependencies:** 4.9
 
@@ -329,6 +334,7 @@ always said.
 **Review checklist:**
 
 - An app's sign-in carried through verification still ends in the app
+- A test of the signed-in case fails against the old page
 
 #### 📋 4.14 — Asking for the password again, one way
 

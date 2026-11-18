@@ -9,6 +9,7 @@ import { twoFactor } from 'better-auth/plugins/two-factor';
 import * as postgresSchema from '../db/schema/postgres';
 import * as sqliteSchema from '../db/schema/sqlite';
 import { hasValidInvite, inviteVouchesFor, markInvitesAccepted } from '../invites';
+import { confirmPassword } from './confirm-password';
 import { advancedCookieOptions } from './cookies';
 import { isSignInValue } from '@sovereignfs/crypto';
 import type { AuthMail } from './mail';
@@ -127,6 +128,19 @@ const NEEDS_MAIL = new Set(['/send-verification-email', '/request-password-reset
 
 /** The second sign-in step's two ways to answer, which also take a `trustDevice` flag core never offers. */
 const SECOND_STEP = new Set(['/two-factor/verify-totp', '/two-factor/verify-backup-code']);
+
+/**
+ * better-auth's routes that ask a signed-in person for their password again, and the field it comes in. Each is checked
+ * through `confirmPassword` first, so wrong answers are counted the way every other page that asks counts them (core-app
+ * §3.4.1): five in ten minutes and every answer is refused for the rest of the window.
+ */
+const PASSWORD_AGAIN: Readonly<Record<string, 'password' | 'currentPassword'>> = {
+  '/two-factor/enable': 'password',
+  '/two-factor/disable': 'password',
+  '/two-factor/generate-backup-codes': 'password',
+  '/two-factor/get-totp-uri': 'password',
+  '/change-password': 'currentPassword',
+};
 
 const ONE_HOUR = 60 * 60;
 
@@ -318,6 +332,35 @@ export function createAuth(
             message: 'Invalid email or password',
             code: 'INVALID_EMAIL_OR_PASSWORD',
           });
+        }
+        // The password asked for again is counted as `confirmPassword` counts it, before better-auth checks it too. A wrong
+        // one is answered as better-auth answers it; a limited one as a rate limit.
+        const field = Object.hasOwn(PASSWORD_AGAIN, ctx.path)
+          ? PASSWORD_AGAIN[ctx.path]
+          : undefined;
+        if (field) {
+          const session = await getSessionFromCtx(ctx);
+          if (session) {
+            const given = (ctx.body as Record<string, unknown> | undefined)?.[field];
+            const check = await confirmPassword(
+              database,
+              { $context: Promise.resolve(ctx.context) } as unknown as Pick<Auth, '$context'>,
+              session.user.id,
+              given,
+            );
+            if (check === 'limited') {
+              throw new APIError('TOO_MANY_REQUESTS', {
+                message: 'Too many wrong passwords. Wait ten minutes, then try again.',
+                code: 'TOO_MANY_ATTEMPTS',
+              });
+            }
+            if (check === 'wrong') {
+              throw new APIError('BAD_REQUEST', {
+                message: 'Invalid password',
+                code: 'INVALID_PASSWORD',
+              });
+            }
+          }
         }
         // Two-factor is for an address that has been shown to be the person's. An unverified
         // account that turned it on could later follow a verification link, which opens a session

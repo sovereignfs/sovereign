@@ -54,6 +54,7 @@ export function ShortcutForm({
 }) {
   const [name, setName] = useState(initial?.name ?? '');
   const [url, setUrl] = useState(initial?.url ?? '');
+  const [appUrl, setAppUrl] = useState(initial?.appUrl ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
   const [mode, setMode] = useState<Mode>(
     initial?.icon?.kind === 'symbol'
@@ -143,6 +144,24 @@ export function ShortcutForm({
                 placeholder="https://drive.proton.me"
                 value={url}
                 onChange={(event) => setUrl(event.target.value)}
+              />
+            )}
+          </FormField>
+          <FormField
+            label="Open in app"
+            hint="Optional: an app's own address, such as spotify:… It is tried first on a phone and in an installed Sovereign, and the address opens if nothing answers."
+            error={fields.appUrl}
+          >
+            {(field) => (
+              <Input
+                {...field}
+                name="appUrl"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder="spotify:playlist:…"
+                value={appUrl}
+                onChange={(event) => setAppUrl(event.target.value)}
               />
             )}
           </FormField>

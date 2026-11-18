@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { scopeProblems, textProblem, urlListProblems, urlProblem } from '../clients/validate';
+import {
+  appUrlProblem,
+  scopeProblems,
+  textProblem,
+  urlListProblems,
+  urlProblem,
+} from '../clients/validate';
 
 describe('an address an app may use (core-app §3.7.1)', () => {
   it.each([
@@ -152,5 +158,58 @@ describe('the scopes an app may be allowed', () => {
   ])('refuse %j: %s', (value, why) => {
     const { problems } = scopeProblems('scopes', value, true);
     expect(problems[0]?.message).toMatch(new RegExp(why));
+  });
+});
+
+describe('an app’s own address, for a shortcut (RFC 0001 A6)', () => {
+  it.each([
+    'spotify:playlist:37i9dQZF1DX',
+    'obsidian://open?vault=Notes',
+    'zoommtg://zoom.us/join?confno=123',
+    'tel:+491234',
+    'mailto:someone@example.org',
+    'web+notes:/today',
+  ])('takes %s', (value) => {
+    expect(appUrlProblem(value)).toBeUndefined();
+  });
+
+  it.each([
+    'javascript',
+    'data',
+    'vbscript',
+    'file',
+    'blob',
+    'about',
+    'intent',
+    'filesystem',
+    'view-source',
+    'ws',
+    'wss',
+  ])('refuses %s: in lower, upper and mixed case', (scheme) => {
+    for (const written of [
+      scheme,
+      scheme.toUpperCase(),
+      scheme[0]?.toUpperCase() + scheme.slice(1),
+    ]) {
+      expect(appUrlProblem(`${written}:x`), written).toBe(`cannot use ${scheme}:`);
+    }
+  });
+
+  it('sends a web address to the shortcut’s Address, whatever its case', () => {
+    for (const value of ['https://example.org', 'HTTP://example.org', 'Https://example.org'])
+      expect(appUrlProblem(value), value).toMatch(/web address goes in Address/);
+  });
+
+  it.each([
+    ['', 'is required'],
+    [' spotify:x', 'is not a plain address'],
+    ['spotify:x\u0000', 'is not a plain address'],
+    ['spotify:a b', 'must be an app’s own address, such as spotify:… or obsidian://…'],
+    ['spotify:', 'must be an app’s own address, such as spotify:… or obsidian://…'],
+    ['9app:x', 'must be an app’s own address, such as spotify:… or obsidian://…'],
+    ['no scheme at all', 'must be an app’s own address, such as spotify:… or obsidian://…'],
+    [`spotify:${'x'.repeat(2100)}`, 'is too long'],
+  ])('refuses %j: it %s', (value, problem) => {
+    expect(appUrlProblem(value)).toBe(problem);
   });
 });

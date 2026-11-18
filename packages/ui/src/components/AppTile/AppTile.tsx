@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { Icon } from '../Icon/Icon';
 import styles from './AppTile.module.css';
 
@@ -22,6 +22,11 @@ export interface AppTileProps {
   external?: boolean;
   /** Draws the picture in shades of grey, so tiles whose icons come from elsewhere still look like one set. */
   monochrome?: boolean;
+  /**
+   * Called when the link is clicked, before the browser follows it. The consumer decides how it opens (for example, in a new window
+   * when the page runs as an installed app) and calls `event.preventDefault()` when it does so itself. Only with `href`.
+   */
+  onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
   className?: string;
 }
 
@@ -38,6 +43,7 @@ export function AppTile({
   variant = 'solid',
   external = false,
   monochrome = false,
+  onClick,
   className,
 }: AppTileProps) {
   const opensElsewhere = external && href !== undefined;
@@ -82,6 +88,7 @@ export function AppTile({
       className={classes}
       href={href}
       {...(opensElsewhere ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+      {...(onClick ? { onClick } : {})}
     >
       {content}
     </a>

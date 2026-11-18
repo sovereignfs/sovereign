@@ -702,6 +702,8 @@ export const launcherShortcuts = sqliteTable(
     ownerId: text('owner_id').references(() => users.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     url: text('url').notNull(),
+    // An address in a native app's own scheme, opened instead of `url` from an installed core or a phone (RFC 0001 A6).
+    appUrl: text('app_url'),
     description: text('description'),
     iconSymbol: text('icon_symbol'),
     iconType: text('icon_type'),

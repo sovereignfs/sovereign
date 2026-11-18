@@ -50,5 +50,6 @@ Copy [TEMPLATE.md](TEMPLATE.md) to `NNNN-short-slug.md` and add a row below.
 | [0003](0003-encryption.md)              | An app keeps what people give it so that nobody who reads the server can read it, and people only sign in                    | ⏳ In Progress | RFC 0005, epic 16 |
 | [0004](0004-encryption-follow-ups.md)   | What building encryption left: the kit's words under escrow, a smaller `/keys`, encrypted files, a no-core app in a browser  | ⏳ In Progress | RFC 0005, epic 16 |
 | [0005](0005-encrypted-files-in-core.md) | Core's own files encrypted in the browser, after honest words and a recovery kit for everyone                                | 📋 Planned     | RFC 0005, epic 16 |
+| [0006](0006-pwa.md)                     | Core and every app install, and an installed core opens installed apps where the device allows                               | ⏳ In Progress | RFC 0001, epic 11 |
 
 _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · ⏸️ Paused · ❌ Stopped_

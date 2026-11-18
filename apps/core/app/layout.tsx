@@ -45,6 +45,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // Reading the request's headers makes every page render per request, which a
   // nonce-based Content Security Policy needs: a prerendered page has no nonce.
   const nonce = (await headers()).get('x-nonce') ?? undefined;
+  const { name } = await getInstanceIdentity();
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -53,7 +54,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       </head>
       <body>
         {children}
-        <ServiceWorkerRegistration />
+        <ServiceWorkerRegistration appName={name} />
         <ThemeWatcher />
       </body>
     </html>

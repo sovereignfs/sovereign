@@ -5,6 +5,7 @@
   "description": "Notes kept encrypted in the browser, as a starting point for an app on a Sovereign instance",
   "port": 3100,
   "health": "/api/health",
+  "icon": "/pwa-icon/192",
   "launch": "/",
   "signIn": {
     "redirect": ["/auth/callback"],

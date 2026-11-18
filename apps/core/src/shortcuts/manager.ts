@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { toBuffer, type Database } from '@sovereignfs/database';
-import { textProblem, urlProblem, type Problem } from '../clients/validate';
+import { appUrlProblem, textProblem, urlProblem, type Problem } from '../clients/validate';
 import { sanitiseSvg } from '../images/svg';
 import { ImageError, inspectImage } from '../images/validate';
 import { can, type Capability } from '../roles/capabilities';
@@ -45,6 +45,11 @@ export type Shortcut = {
   ownerId: string | undefined;
   name: string;
   url: string;
+  /**
+   * A native app's own address (`spotify:…`), opened instead of `url` from an installed core or a phone (RFC 0001 A6). Never
+   * rendered as a link; the launcher opens it when the tile is clicked.
+   */
+  appUrl: string | undefined;
   description: string | undefined;
   icon: ShortcutIcon;
 };
@@ -56,6 +61,7 @@ export type Shortcut = {
 export type ShortcutInput = {
   name: unknown;
   url: unknown;
+  appUrl?: unknown;
   description?: unknown;
   symbol?: unknown;
   image?: Buffer | undefined;
@@ -87,6 +93,7 @@ function shortcutOf(row: Row): Shortcut {
     ownerId: row.owner_id === null || row.owner_id === undefined ? undefined : String(row.owner_id),
     name: String(row.name),
     url: String(row.url),
+    appUrl: row.app_url === null || row.app_url === undefined ? undefined : String(row.app_url),
     description: row.description === null ? undefined : String(row.description),
     icon: isShortcutSymbol(symbol)
       ? { kind: 'symbol', symbol }
@@ -96,7 +103,7 @@ function shortcutOf(row: Row): Shortcut {
   };
 }
 
-const COLUMNS = 'id, owner_id, name, url, description, icon_symbol, icon_version';
+const COLUMNS = 'id, owner_id, name, url, app_url, description, icon_symbol, icon_version';
 
 /**
  * Launcher shortcuts (core-app §3.8.1): a name, an address and an icon, opened in a new tab. A shortcut is not an
@@ -163,6 +170,20 @@ export class ShortcutManager {
     if (nameProblem) problems.push({ field: 'name', message: `The name ${nameProblem}.` });
     const urlIssue = urlProblem(input.url, this.#development);
     if (urlIssue) problems.push({ field: 'url', message: `The address ${urlIssue}.` });
+    const appUrl =
+      typeof input.appUrl === 'string'
+        ? blank(input.appUrl)
+        : input.appUrl === undefined
+          ? undefined
+          : '';
+    const appUrlIssue =
+      appUrl === undefined
+        ? undefined
+        : appUrl === ''
+          ? 'is not a plain address'
+          : appUrlProblem(appUrl);
+    if (appUrlIssue)
+      problems.push({ field: 'appUrl', message: `The app’s address ${appUrlIssue}.` });
     const descriptionProblem = textProblem(input.description, 280, false);
     if (descriptionProblem) {
       problems.push({ field: 'description', message: `The description ${descriptionProblem}.` });
@@ -180,6 +201,7 @@ export class ShortcutManager {
     return {
       name: String(input.name).trim(),
       url: String(input.url),
+      appUrl: appUrl ?? null,
       description: blank(input.description as string | undefined) ?? null,
       symbol: (symbol as ShortcutSymbol | undefined) ?? null,
       picture: input.image === undefined ? undefined : this.#picture(input.image),
@@ -207,14 +229,15 @@ export class ShortcutManager {
         }
       }
       await tx.run(
-        `insert into launcher_shortcuts (id, owner_id, name, url, description, icon_symbol, icon_type,
+        `insert into launcher_shortcuts (id, owner_id, name, url, app_url, description, icon_symbol, icon_type,
            icon_bytes, icon_size, icon_version, created_at, created_by)
-         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           scope === 'own' ? actor.id : null,
           fields.name,
           fields.url,
+          fields.appUrl,
           fields.description,
           fields.symbol,
           fields.picture?.contentType ?? null,
@@ -257,9 +280,18 @@ export class ShortcutManager {
         ]
       : [];
     const { rowsAffected } = await this.#database.run(
-      `update launcher_shortcuts set name = ?, url = ?, description = ?, ${picture} icon_symbol = ?
+      `update launcher_shortcuts set name = ?, url = ?, app_url = ?, description = ?, ${picture} icon_symbol = ?
         where id = ? and ${where}`,
-      [fields.name, fields.url, fields.description, ...pictureValues, fields.symbol, id, ...values],
+      [
+        fields.name,
+        fields.url,
+        fields.appUrl,
+        fields.description,
+        ...pictureValues,
+        fields.symbol,
+        id,
+        ...values,
+      ],
     );
     if (rowsAffected === 0) throw new ShortcutError('not-found', 'There is no such shortcut.');
     const updated = await this.get(actor, scope, id);

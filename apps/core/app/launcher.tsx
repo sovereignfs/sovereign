@@ -14,6 +14,7 @@ import {
 } from '@sovereignfs/ui';
 import type { LauncherApp } from '../src/clients/launcher';
 import type { ShortcutIcon as ShortcutIconValue } from '../src/shortcuts/manager';
+import { openApp, openShortcut } from './launch';
 import { ShortcutIcon } from './shortcuts/shortcut-icon';
 import styles from './launcher.module.css';
 
@@ -45,6 +46,8 @@ export type LauncherShortcut = {
   name: string;
   description: string | undefined;
   url: string;
+  /** A native app's own address, tried first from an installed core or a phone; never rendered (`launch.ts`). */
+  appUrl?: string | undefined;
   icon: ShortcutIconValue;
   own: boolean;
 };
@@ -56,8 +59,9 @@ type Tile =
 /**
  * The apps and shortcuts a person can open, with search by name: first a dashed "Add" tile (when not searching),
  * then the apps and shortcuts together in name order, then, for an operator (`canOpenConsole`), the Console, a
- * platform app. An app's tile is an ordinary link to its launch address in the same tab: the app signs the person in
- * through core, which completes without a prompt when they already have a session. A shortcut is another site, so its
+ * platform app. An app's tile is a link to its launch address, followed in the same tab in a browser; in an installed
+ * core a click opens it in a new window instead, which a device that can hands to the installed app (`launch.ts`). The app
+ * signs the person in through core, which completes without a prompt when they already have a session. A shortcut is another site, so its
  * tile opens a new tab and tells the site nothing of where it came from. Every icon is drawn in greys, so the grid is
  * one set whatever the pictures' own colours.
  */
@@ -164,6 +168,7 @@ export function Launcher({
               <AppTile
                 key={`app-${tile.id}`}
                 href={tile.app.launchUrl}
+                onClick={(event) => openApp(event, tile.app.launchUrl)}
                 name={tile.app.name}
                 {...(tile.app.description ? { description: tile.app.description } : {})}
                 icon={
@@ -180,6 +185,7 @@ export function Launcher({
               <AppTile
                 key={`shortcut-${tile.id}`}
                 href={tile.shortcut.url}
+                onClick={(event) => openShortcut(event, tile.shortcut)}
                 external
                 name={tile.shortcut.name}
                 {...(tile.shortcut.description ? { description: tile.shortcut.description } : {})}

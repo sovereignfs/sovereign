@@ -1,0 +1,1 @@
+ALTER TABLE "launcher_shortcuts" ADD COLUMN "app_url" text;

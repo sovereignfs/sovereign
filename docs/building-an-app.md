@@ -59,16 +59,17 @@ through core. No app imports another, and core names no app.
 
 ### What Sovereign publishes
 
-| Published                                            | For                                                                                                                                 |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `ghcr.io/sovereignfs/sovereign`                      | Core's image. Its tag is the **platform version** (`0.83.0`), which is what a manifest's `core` range means                         |
-| `@sovereignfs/ui`                                    | The design system: tokens and React components. Pre-1.0: apps pin it exactly                                                        |
-| `@sovereignfs/sdk`                                   | An app's **server** calling core: sign-in, verifying core's notices, notifications, email, activity, directory. Throws in a browser |
-| `@sovereignfs/config`                                | The environment convention of `contracts/env.md`: settings declared once, read with a prefix, refused at start-up                   |
-| `@sovereignfs/storage`                               | People's files: a folder and a quota for each person, served only to them, with `Range` ([keeping files](keeping-files.md))         |
-| `@sovereignfs/manifest`                              | The manifest's schemas, a validator, and `sovereign-manifest` (`check`, `label`, `docker-args`)                                     |
-| `@sovereignfs/cli` (`sv`), `ghcr.io/sovereignfs/cli` | The operator's toolkit, and the image the server runs it from                                                                       |
-| `@sovereignfs/create`                                | `npm create @sovereignfs` (an instance repository) and `npm create @sovereignfs app <name>` (an app, §11)                           |
+| Published                                            | For                                                                                                                                        |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ghcr.io/sovereignfs/sovereign`                      | Core's image. Its tag is the **platform version** (`0.83.0`), which is what a manifest's `core` range means                                |
+| `@sovereignfs/ui`                                    | The design system: tokens and React components. Pre-1.0: apps pin it exactly                                                               |
+| `@sovereignfs/sdk`                                   | An app's **server** calling core: sign-in, verifying core's notices, notifications, email, activity, directory. Throws in a browser        |
+| `@sovereignfs/config`                                | The environment convention of `contracts/env.md`: settings declared once, read with a prefix, refused at start-up                          |
+| `@sovereignfs/storage`                               | People's files: a folder and a quota for each person, served only to them, with `Range` ([keeping files](keeping-files.md))                |
+| `@sovereignfs/pwa`                                   | Installing the app: its manifest, a service worker that keeps nothing of a person, an announced update ([installing](#installing-the-app)) |
+| `@sovereignfs/manifest`                              | The manifest's schemas, a validator, and `sovereign-manifest` (`check`, `label`, `docker-args`)                                            |
+| `@sovereignfs/cli` (`sv`), `ghcr.io/sovereignfs/cli` | The operator's toolkit, and the image the server runs it from                                                                              |
+| `@sovereignfs/create`                                | `npm create @sovereignfs` (an instance repository) and `npm create @sovereignfs app <name>` (an app, §11)                                  |
 
 `@sovereignfs/database`, `crypto`, `mailer`, `bridge` and `api-client` are **private**: core uses them, apps cannot. Each app
 carries its own database, encryption and mail code today ([research 0004](research/0004-a-kit-for-apps-of-their-own.md) plans to
@@ -315,6 +316,28 @@ From [`specs/design-system.md`](specs/design-system.md) and [the guide](design-s
 - **Reusable UI goes into `@sovereignfs/ui`** in this repository, released, then used. It is not forked into an app.
 - **No third-party loads or requests from the browser.** What people write is rendered as text, never HTML.
 - Fork only what is rendered by viewport, never a navigation decision. A PWA is the mobile story.
+
+### Installing the app
+
+Every app installs, on a phone and on a desktop, from `@sovereignfs/pwa` ([RFC 0001](rfcs/0001-installable-core.md) amendment 1); an
+app made with `npm create @sovereignfs app` has all of it already:
+
+- **`app/manifest.ts`** returns `manifest({ name, description })`: `standalone`, icons of every size a browser asks for, and the members
+  that let core open the installed app rather than a browser view ([research 0010](research/0010-opening-installed-apps.md)):
+  `launch_handler` and `handle_links: 'preferred'`. Its `id` is the start address unless you set one; **never change it once people have
+  installed the app**, or each install becomes another app.
+- **`app/sw.js/route.ts`** answers with `serviceWorkerResponse(serviceWorkerSource({ version, precache }))`, the build's id as the
+  version. The worker keeps only what is the same for everyone (built files, icons, the manifest, and a shell page if you give one that
+  holds nothing of a person) and **never a page of a person or an API answer**. With no network, a page says so.
+- **The root layout** spreads `pwaMetadata({ name })` into its metadata and exports `pwaViewport()` (an iPhone reads these, not the
+  manifest), and renders `ServiceWorkerRegistration` from `@sovereignfs/pwa/client`, which announces a new version with the design
+  system's `UpdateNotice` instead of swapping it in. `InstallPrompt` offers installing where the device allows it.
+- **Icons** are served at `/pwa-icon/192`, `/512`, `/maskable` and `/apple` (PNG). The template draws them from the app's initial with
+  `next/og`; replace the route with your own pictures when you have them.
+- **A content security policy** is set on every page by `proxy.ts` (`lib/csp.ts`): a nonce per request, `PWA_CSP_DIRECTIVES`
+  (`worker-src 'self'`, `manifest-src 'self'`), and core's origin in `form-action`, since signing out goes on to core.
+- On iPhone and iPad, and in macOS Safari, an installed core cannot open your installed app: it opens a browser view. On desktop Chrome
+  and Edge it can, and on Android Chrome it is expected to (research 0010).
 
 ## 11. Repository and image
 

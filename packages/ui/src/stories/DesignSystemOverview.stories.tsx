@@ -62,6 +62,8 @@ import { SegmentedControl } from '../components/SegmentedControl/SegmentedContro
 import { Select } from '../components/Select/Select';
 import { Spinner } from '../components/Spinner/Spinner';
 import { SystemBanner } from '../components/SystemBanner/SystemBanner';
+import { InstallHint } from '../components/InstallPrompt/InstallPrompt';
+import { UpdateNotice } from '../components/UpdateNotice/UpdateNotice';
 import { Tabs } from '../components/Tabs/Tabs';
 import { ToastProvider, useToast } from '../components/Toast/Toast';
 import { Toggle } from '../components/Toggle/Toggle';
@@ -2270,6 +2272,40 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                 <SystemBanner variant="info">Read-only mode during migration.</SystemBanner>
                 <SystemBanner variant="warning">License expires in 7 days.</SystemBanner>
                 <SystemBanner variant="error">Maintenance mode active.</SystemBanner>
+              </div>
+            </ComponentCard>
+
+            {/* InstallPrompt */}
+            <ComponentCard
+              name="InstallPrompt"
+              importLine="import { InstallPrompt } from '@sovereignfs/ui';"
+              usage="Offers to install the site as an app where the device allows it: the browser's prompt, or words for iPhone Safari. Renders nothing installed or once dismissed."
+            >
+              <div style={{ width: '100%' }}>
+                <InstallHint
+                  appName="Sovereign"
+                  kind="prompt"
+                  onInstall={() => undefined}
+                  onDismiss={() => undefined}
+                />
+              </div>
+            </ComponentCard>
+
+            {/* UpdateNotice */}
+            <ComponentCard
+              name="UpdateNotice"
+              importLine="import { UpdateNotice } from '@sovereignfs/ui';"
+              usage="A quiet notice that a new version is ready; Reload takes it. Fixed at the bottom of the window; shown while a service worker waits."
+            >
+              <div
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  height: 64,
+                  transform: 'translateZ(0)',
+                }}
+              >
+                <UpdateNotice appName="Sovereign" onReload={() => undefined} />
               </div>
             </ComponentCard>
 

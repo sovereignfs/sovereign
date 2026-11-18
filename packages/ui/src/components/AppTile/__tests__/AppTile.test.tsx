@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { AppTile } from '../AppTile';
 
 afterEach(cleanup);
@@ -46,5 +46,13 @@ describe('AppTile', () => {
     expect(container.firstElementChild?.className).toContain('monochrome');
     rerender(<AppTile icon={null} name="Notes" />);
     expect(container.firstElementChild?.className).not.toContain('monochrome');
+  });
+
+  it('lets the consumer decide how the link opens, and the browser follows it unless told not to', () => {
+    const decide = vi.fn((event: { preventDefault: () => void }) => event.preventDefault());
+    render(<AppTile icon={null} name="Notes" href="/launch" onClick={decide} />);
+    const followed = fireEvent.click(screen.getByRole('link'));
+    expect(decide).toHaveBeenCalledOnce();
+    expect(followed).toBe(false);
   });
 });

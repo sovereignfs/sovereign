@@ -54,6 +54,17 @@ export const External: Story = {
   },
 };
 
+/** The consumer decides how the link opens: here it logs the click and keeps the page where it is. */
+export const DecidedOnClick: Story = {
+  args: {
+    href: '/launch',
+    onClick: (event) => {
+      event.preventDefault();
+      console.log('The consumer opens /launch itself.');
+    },
+  },
+};
+
 /** The picture in greys, so an icon from elsewhere matches the rest of the grid. */
 export const Monochrome: Story = {
   args: {

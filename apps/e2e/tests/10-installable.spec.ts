@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { CORE_URL, freshAddress, person } from '../support/env';
+import { CORE_URL, MINIMAL_URL, freshAddress, person } from '../support/env';
 import { solidPng } from '../support/png';
 import { newPerson, signIn } from '../support/ui';
 
@@ -19,6 +19,9 @@ type Manifest = {
   scope: string;
   display: string;
   icons: { src: string; sizes: string; type: string; purpose: string }[];
+  launch_handler: { client_mode: string[] };
+  shortcuts: { url: string; icons: { src: string }[] }[];
+  screenshots: { src: string; sizes: string; type: string; form_factor: string }[];
 };
 
 /**
@@ -50,6 +53,21 @@ test('the manifest is public, parses, and names the instance, its start and its 
     const served = await get(icon.src);
     expect(served.status, icon.src).toBe(200);
     expect(served.headers.get('content-type'), icon.src).toBe(icon.type);
+  }
+});
+
+test('the manifest carries what a fuller install needs, and every picture it names is served', async () => {
+  const manifest = (await (await get('/manifest.webmanifest')).json()) as Manifest;
+  expect(manifest.launch_handler.client_mode).toEqual(['focus-existing', 'auto']);
+  expect(manifest.shortcuts.map((shortcut) => shortcut.url)).toEqual(['/', '/profile']);
+  expect(manifest.screenshots.map((shot) => shot.form_factor).sort()).toEqual(['narrow', 'wide']);
+  for (const src of [
+    ...manifest.screenshots.map((shot) => shot.src),
+    ...manifest.shortcuts.flatMap((shortcut) => shortcut.icons.map((icon) => icon.src)),
+  ]) {
+    const served = await get(src);
+    expect(served.status, src).toBe(200);
+    expect(served.headers.get('content-type'), src).toBe('image/png');
   }
 });
 
@@ -172,4 +190,40 @@ test('an operator’s own app icon is what an installed core takes, until they r
     .poll(async () => (await manifestNow()).icons.map((entry) => entry.src))
     .toEqual(['/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-maskable-512.png']);
   await context.close();
+});
+
+test('an app’s tile opens in the same tab in a browser, and in a new window in an installed core', async ({
+  browser,
+}) => {
+  const member = person('Uma');
+  // In a browser tab: an ordinary link, followed where it is.
+  const tab = await newPerson(browser);
+  await signIn(tab.page, member);
+  await tab.page.goto('/');
+  await tab.page.getByRole('link', { name: /Minimal/ }).click();
+  await expect(tab.page).not.toHaveURL(`${CORE_URL}/`);
+  expect(tab.context.pages()).toHaveLength(1);
+  await tab.context.close();
+
+  // In an installed core. Chromium cannot emulate the display mode, so the page is told it is standalone before it loads; the
+  // launcher reads it when the tile is clicked, which is what is under test.
+  const installed = await newPerson(browser);
+  await installed.context.addInitScript(() => {
+    const real = window.matchMedia.bind(window);
+    window.matchMedia = (query: string) =>
+      query.includes('display-mode: standalone')
+        ? ({ ...real(query), matches: true, media: query } as MediaQueryList)
+        : real(query);
+  });
+  await signIn(installed.page, member);
+  await installed.page.goto('/');
+  const [opened] = await Promise.all([
+    installed.context.waitForEvent('page'),
+    installed.page.getByRole('link', { name: /Minimal/ }).click(),
+  ]);
+  await opened.waitForLoadState('domcontentloaded');
+  // The new window went to the app (and on to core to sign in); the launcher stayed where it was.
+  expect(opened.url().startsWith(MINIMAL_URL) || opened.url().startsWith(CORE_URL)).toBe(true);
+  await expect(installed.page).toHaveURL(`${CORE_URL}/`);
+  await installed.context.close();
 });

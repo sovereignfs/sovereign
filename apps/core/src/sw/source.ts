@@ -1,4 +1,7 @@
 import { THEME_COLORS } from '../pwa';
+import { TAKE_OVER_MESSAGE } from './message';
+
+export { TAKE_OVER_MESSAGE };
 
 /**
  * The service worker, as the text core serves at `/sw.js` (RFC 0001, core-app §3.5). It is plain JavaScript in a
@@ -34,6 +37,7 @@ var CACHE = '${CACHE_NAME}';
 var LIMIT = ${CACHE_LIMIT};
 var TIMEOUT = ${NAVIGATION_TIMEOUT_MS};
 var OFFLINE = ${JSON.stringify(OFFLINE_PAGE)};
+var TAKE_OVER = ${JSON.stringify(TAKE_OVER_MESSAGE)};
 
 /* What may be kept: files that are the same for everyone and never change at their address. */
 var KEPT = [/^\/_next\/static\//, /^\/icons\//];
@@ -93,7 +97,13 @@ function navigate(request) {
   });
 }
 
-self.addEventListener('install', function () { self.skipWaiting(); });
+/*
+ * A new worker waits until a page asks it to take over (RFC 0001 A3): the page shows "a new version is ready", and
+ * Reload sends this message. Only pages of core's own origin can send a worker a message.
+ */
+self.addEventListener('message', function (event) {
+  if (event.data === TAKE_OVER) self.skipWaiting();
+});
 
 self.addEventListener('activate', function (event) {
   event.waitUntil(

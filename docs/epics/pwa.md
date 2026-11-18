@@ -408,7 +408,7 @@ is on npm yet): it builds, the built server runs on PostgreSQL, Chromium finds n
 allow-listed files, and offline it answers with its own page. **Moved out:** the content security policy, to 11.14, since it touches
 sign-out and the encrypted variant's key flow and needs both run against a core.
 
-#### 📋 11.13 — The deployed apps, audited and fixed
+#### ✅ 11.13 — The deployed apps, audited and fixed
 
 **Goal:** Every deployed app installs well and can be opened from core.
 
@@ -430,6 +430,17 @@ sign-out and the encrypted variant's key flow and needs both run against a core.
 - An app installed before the change is still the same installed app after it
 
 **Not here:** the planned apps (foundry, loom, papertrail, haven), which start from the template.
+
+**Done:** one commit in each app's `develop` (not pushed), with its version and changelog section: fjord-web 0.6.0, tusk 0.4.0,
+ledger, shopper, tally, wallet and waymark 0.2.0. Every manifest has `launch_handler` (`navigate-existing`, `auto`) and
+`handle_links: 'preferred'`, and the six that had none an explicit `id: '/'`, the identity a browser derived from `start_url: '/'`, so
+existing installs stay the same app (reasoned from how browsers derive it; not yet seen on a device with an install from before). Ledger,
+shopper and tally gained `appleWebApp`; shopper's bar takes the page colour of each scheme, as the others'. Each has a manifest test; each
+app's format, lint, typecheck and full suite pass.
+
+**Audit findings, decided:** ledger needs no `/shell`: its worker's own offline page answers a failed navigation, which is all the rule
+asks. The manifests' `theme_color` stays each app's own (fjord's surface white, the rest grey 900), a design choice of each app, not a
+defect; the bar of every page now follows the scheme. Moving the apps onto `@sovereignfs/pwa` waits until it is published: task 11.15.
 
 #### ✅ 11.14 — A content security policy in the app template `[parallel]`
 
@@ -460,3 +471,23 @@ never loads libsodium, so no `'wasm-unsafe-eval'`. Run against a built core with
 and consent, a note written, sign-out, and for `--encryption` key release with the recovery kit and the return to `/keys/return`, with no
 violation on any of the app's pages. A copy built without core in `form-action` could not sign out (the form never left the app), so
 core's origin is needed.
+
+#### 📋 11.15 — The deployed apps on `@sovereignfs/pwa`
+
+**Goal:** The seven apps carry no copy of the manifest, the worker or its registration of their own.
+
+**Deliverables:**
+
+- In each app, after `@sovereignfs/pwa` (and `@sovereignfs/ui` 0.100.0) are on npm: the manifest from `manifest()` with the app's own
+  colours, icons and shortcuts; the worker from `serviceWorkerSource()` where its allow-list fits (tusk's and waymark's wake, sync and
+  map tiles may keep their own worker); `ServiceWorkerRegistration` in place of the app's own, so a new version is announced
+- The app's own tests for what it keeps, run against the package's worker
+
+**Dependencies:** 11.11 released, 11.13
+
+**Review checklist:**
+
+- Each app's worker still keeps only what is the same for everyone, and its offline behaviour is unchanged
+- An install from before the change is still the same app
+
+**Not here:** an app's own offline features (tusk's Desk, waymark's tiles), which stay the app's.

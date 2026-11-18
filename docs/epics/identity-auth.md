@@ -336,17 +336,18 @@ there).
 - An app's sign-in carried through verification still ends in the app
 - A test of the signed-in case fails against the old page
 
-#### 📋 4.14 — Asking for the password again, one way
+#### ✅ 4.14 — Asking for the password again, one way
 
 **Goal:** Every place that asks for the password again counts wrong answers the same way.
 
 **Deliverables:**
 
-- turning two-factor sign-in on and off goes through `confirmPassword`, or the reason it cannot is recorded in the spec
+- better-auth's routes that ask a signed-in person for their password (two-factor enable, disable, backup codes and key, and changing
+  the password) are checked through `confirmPassword` first, in core's request hook, so every wrong answer counts against one limit
 
 **Dependencies:** 4.12
 
-**Spec reference:** core-app §3.4.1
+**Spec reference:** core-app §3.2.1, §3.4.1
 
 **Review checklist:**
 

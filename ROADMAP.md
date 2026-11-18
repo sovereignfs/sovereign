@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.113.0 · **Last updated:** 2026-11-18
+**Version:** 0.114.0 · **Last updated:** 2026-11-18
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -309,9 +309,9 @@ workstream [0007](docs/workstreams/0007-sign-in.md)
 | 0.113.0 | 4        | Signing out says when it did not                                | ✅     | [4.11](docs/epics/identity-auth.md) |
 | 0.113.0 | 5        | One guard for signed-in pages, and the cookie cache's leftovers | ✅     | [4.12](docs/epics/identity-auth.md) |
 | 0.113.0 | 6        | An emailed link that did not work is always said                | ✅     | [4.13](docs/epics/identity-auth.md) |
-| —       | 7        | Asking for the password again, one way                          | 📋     | [4.14](docs/epics/identity-auth.md) |
-| —       | 8        | Asking core for a fresh sign-in                                 | 📋     | [14.12](docs/epics/sdk.md)          |
-| —       | 9        | An ended session ends in the app                                | 📋     | [14.13](docs/epics/sdk.md)          |
+| 0.114.0 | 7        | Asking for the password again, one way                          | ✅     | [4.14](docs/epics/identity-auth.md) |
+| 0.114.0 | 8        | Asking core for a fresh sign-in                                 | ✅     | [14.12](docs/epics/sdk.md)          |
+| 0.114.0 | 9        | An ended session ends in the app                                | ✅     | [14.13](docs/epics/sdk.md)          |
 | —       | 10       | Logout notices that arrive                                      | 📋     | [6.4](docs/epics/oidc-provider.md)  |
 | —       | 11       | A lock on the devices `[parallel]`                              | 📋     | [4.15](docs/epics/identity-auth.md) |
 | —       | 12       | The specification: sessions across apps, and a lock             | 📋     | [4.16](docs/epics/identity-auth.md) |

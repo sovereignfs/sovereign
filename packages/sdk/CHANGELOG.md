@@ -5,6 +5,24 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 2.1.0; earlier versions are in the repository's
 history and tags.
 
+## [2.7.0] - 2026-11-18
+
+### Added
+
+- `beginSignIn` takes `prompt` (`login` or `none`) and `maxAgeSeconds`, to ask core for a fresh or recent sign-in; a sign-in asked
+  with an age is refused at the callback when the ID token's `auth_time` is older.
+- A session carries `authTime`, when the person last signed in at core, and `sv.auth.signedInWithin(session, seconds)` says whether that
+  was recent. In `@sovereignfs/sdk/next`, `/auth/login` passes `prompt` and `max_age` on, and `requireSession(returnTo, { maxAgeSeconds })`
+  sends a person to sign in again when their sign-in is older.
+- `SessionEndedError.byCore`, true when core said the session is over.
+- `createFakeCore`'s `authorize` takes `authTime`, and its ID tokens carry `auth_time`.
+
+### Changed
+
+- When core refuses to renew a person's token, or refuses their token twice, the SDK ends their sessions in the app and removes their
+  stored refresh token, so the app stops acting for them and they sign in again.
+- A back-channel logout notice that names the whole person (no `sid`) also removes their stored refresh token, when the token store can.
+
 ## [2.6.0] - 2026-11-17
 
 ### Changed

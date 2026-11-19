@@ -196,7 +196,7 @@ only.
 - An external app's end-session leaves core's session and every other app signed in
 - A hosted app's end-session ends core's session and sends every other app's logout notice
 
-#### 📋 6.6 — How a person signed in, in the token `[parallel]`
+#### 🚧 6.6 — How a person signed in, in the token `[parallel]`
 
 **Goal:** An app can tell how someone signed in and ask for a stronger sign-in.
 
@@ -213,3 +213,9 @@ only.
 
 - A passkey sign-in and a password with a second step give different `amr`
 - The discovery document lists only claims core sends
+
+**Parked (November 2026):** `given_name` and `family_name` are out of `claims_supported` (0.119.0). `amr` and `acr` are not possible as
+designed: better-auth's provider (1.7.18) owns both, sends `acr: "0"` in every ID token, and strips them from what `customIdTokenClaims`
+and the claim extensions add. Its JWT plugin takes a signer of core's only with keys kept elsewhere (`jwks.remoteUrl`). The ways on
+are a change upstream, a patch of the provider kept by this repository, or core signing its own ID tokens; each is a decision for the
+goal owner. 14.15 no longer waits for this.

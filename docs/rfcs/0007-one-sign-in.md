@@ -217,7 +217,7 @@ Claims are replaced within the hour by RFC 0006 part A. Proposed:
 
 - **A typed `user`** on the session, in the SDK and the package: `{ id, sub?, name, email, emailVerified, picture?, locale?, zoneinfo?,
 roles }`, the same shape for a local account and one from core, so an app writes one header and one account menu.
-- **`amr`**, how the person signed in (RFC 8176: `pwd` for the password, `otp` added for the second step's code or a backup code, `hwk` and `user` for a passkey, `mfa` when two were used), and **`acr`** (`"1"` one factor, `"2"` two or a passkey, `"0"` a session opened another way, such as an emailed link), so an app can ask for a stronger sign-in alongside `max_age` (task 14.14).
+- **Parked:** better-auth's provider owns `acr` and `amr` and strips them from core's claims (task 6.6). As designed: **`amr`**, how the person signed in (RFC 8176: `pwd` for the password, `otp` added for the second step's code or a backup code, `hwk` and `user` for a passkey, `mfa` when two were used), and **`acr`** (`"1"` one factor, `"2"` two or a passkey, `"0"` a session opened another way, such as an emailed link), so an app can ask for a stronger sign-in alongside `max_age` (task 14.14).
 - **A profile-changed notice** is not proposed: the hourly check already brings a new name, picture or role within the hour, and a
   notice would only make that immediate. It stays an option if an app needs it.
 - **`given_name` and `family_name`** are advertised in `claims_supported` and never sent; they are removed from the discovery document.

@@ -715,12 +715,14 @@ The claims of the granted scopes appear both in the **ID token** and at the
 userinfo endpoint, so an ordinary relying party can read them from either.
 `locale` and `zoneinfo` are the person's saved preferences (§3.11).
 
-**How the person signed in.** Not built (task 6.6). ID tokens and userinfo carry `amr`, the ways the session was opened (RFC 8176):
+**How the person signed in.** Not built, and parked (task 6.6): better-auth's provider (1.7.18) owns `acr` and `amr`, sends `acr` as
+`"0"` in every ID token and removes both from any claims core adds; core could set them only by signing its tokens itself, which the
+provider allows only with keys kept elsewhere. What follows is the design, for when that changes. ID tokens and userinfo carry `amr`, the ways the session was opened (RFC 8176):
 `pwd` for the password, `otp` added for the second step's code or a backup code, `hwk` and `user` for a passkey, which is always
 user-verified (§3.4.2), and `mfa` when two of these were used. `acr` says the same as a level: `"1"` for one factor (the password
 alone), `"2"` for two (the password and the second step) or a passkey, and `"0"` for a session opened some other way, such as an
 emailed link. Both are recorded on the session when it is opened, and unlocking it (§3.5.1) changes neither. The discovery document's
-`claims_supported` lists only the claims core sends; `given_name` and `family_name` are not among them.
+`claims_supported` lists only the claims core sends; `given_name` and `family_name` are not among them (built).
 
 #### 3.6.3 Account state and tokens
 

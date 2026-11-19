@@ -53,14 +53,14 @@ Tusk and Fjord moving onto the package is work in their own repositories, after 
 
 ## Legs
 
-| Leg | Name                        | Epic tasks         | Gate? | Done when                                                                             |
-| --- | --------------------------- | ------------------ | ----- | ------------------------------------------------------------------------------------- |
-| 1   | The specification           | 17.1               | Yes   | RFC 0007 accepted; `docs/specs/auth.md` and the core-app sections merged              |
-| 2   | Core's sign-in in a package | 17.2, 17.3         | Yes   | Merged; `pnpm e2e`, `pnpm test:db` and the populated stores pass unchanged            |
-| 3   | The pages from the package  | 2.6, 17.4          | Yes   | Merged; core's pages thin, on the design system's components, `pnpm e2e` unchanged    |
-| 4   | Core's side of the contract | 6.5, 6.6           | Yes   | Merged; hosted and external sign-out differ as decided; `amr` in tokens               |
-| 5   | Apps sign in with it        | 14.16, 17.5, 13.35 | Yes   | A fixture app and a scaffold sign in through core, locally, and both                  |
-| 6   | The SDK follows             | 14.15              | Yes   | The SDK released with a typed `user` and `nextAuth` deprecated; the package published |
+| Leg | Name                        | Epic tasks         | Gate? | Done when                                                                                                                 |
+| --- | --------------------------- | ------------------ | ----- | ------------------------------------------------------------------------------------------------------------------------- |
+| 1   | The specification           | 17.1               | Yes   | RFC 0007 accepted; `docs/specs/auth.md` and the core-app sections merged                                                  |
+| 2   | Core's sign-in in a package | 17.2, 17.3         | Yes   | Merged; `pnpm e2e`, `pnpm test:db` and the populated stores pass unchanged                                                |
+| 3   | The pages from the package  | 2.6, 17.4          | Yes   | Merged; core's pages thin, on the design system's components, `pnpm e2e` unchanged                                        |
+| 4   | Core's side of the contract | 2.7, 6.5, 6.6      | Yes   | Merged; hosted and external sign-out differ as decided; the account panels shared; 6.6's discovery fix (its `amr` parked) |
+| 5   | Apps sign in with it        | 14.16, 17.5, 13.35 | Yes   | A fixture app and a scaffold sign in through core, locally, and both                                                      |
+| 6   | The SDK follows             | 14.15              | Yes   | The SDK released with a typed `user` and `nextAuth` deprecated; the package published                                     |
 
 One leg is one branch, one draft PR, one review gate ([README](README.md#legs)). Leg 4 needs only leg 1, and can run beside legs 2
 and 3.
@@ -105,7 +105,7 @@ Gallery entry (`sv-ui-design`).
 
 ### Leg 4 — Core's side of the contract
 
-**Epic tasks:** 6.5, 6.6
+**Epic tasks:** 2.7, 6.5, 6.6
 
 **Technical notes:** end-session is turned on by itself for an app with a post-logout or back-channel address
 (`apps/core/src/clients/registry.ts`); the new setting is separate, so an external app keeps its `sid` and its notices. `sv apply`

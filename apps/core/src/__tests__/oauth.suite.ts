@@ -29,6 +29,7 @@ import {
 } from '../oauth/provider';
 import { SCOPE_COPY, readConsentRequest } from '../oauth/consent';
 import { rs256AccessTokenHash } from '../oauth/id-token-alg';
+import { isExpiredRequest } from '../auth/oauth-continuation';
 import { resumeAddress, signedQueryOf } from '../oauth/signed-query';
 import { secretOf, totp } from './totp';
 import { BASE_URL, Jar, PASSWORD, authSettings, call, makeAuth, signUp } from './auth-harness';
@@ -325,6 +326,26 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
       });
       return { verifier, query: signedQuery(location as string) };
     }
+
+    it('refuses a sign-in whose signed request has expired with `invalid_signature`, before the password is looked at', async () => {
+      const { auth, owner } = await instance();
+      const client = await registerClient(auth, owner);
+      const { query } = await asked(auth, client);
+      // The provider signs the request for ten minutes; the page was left open longer.
+      const stale = new URLSearchParams(query);
+      stale.set('exp', String(Math.floor(Date.now() / 1000) - 60));
+      const reply = await call(auth, 'POST', '/sign-in/email', {
+        jar: new Jar(),
+        body: {
+          email: 'nobody@sovereign.local',
+          password: PASSWORD,
+          oauth_query: stale.toString(),
+        },
+      });
+      expect(reply.status).toBe(400);
+      expect(reply.body.error).toBe('invalid_signature');
+      expect(isExpiredRequest({ status: reply.status, ...reply.body })).toBe(true);
+    });
 
     it('carries on with the app’s request after the password, and sends the browser back to the app with a code', async () => {
       const { auth, owner, person } = await instance();

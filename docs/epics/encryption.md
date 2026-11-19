@@ -651,8 +651,10 @@ nobody who reads the server.
 
 **Deliverables:**
 
-- the key store drops the unwrapped account key when the session is locked; unlocking with a passkey reopens it from its PRF output,
-  and with the password from the password's secret
+- a locked session is refused the session's secret, so what the browser kept cannot be opened (RFC 0006 B5); the page drops the
+  unwrapped key when it locks
+- unlocking with a passkey reopens the key from its PRF output, and a passkey that gives none, or the password, from the password's
+  secret: the device check found a passkey with no PRF output, so the fallback is needed
 
 **Dependencies:** 4.17
 

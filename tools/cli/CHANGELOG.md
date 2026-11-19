@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.12.0; earlier versions are in the repository's
 history and tags.
 
+## [0.20.0] - 2026-11-19
+
+### Changed
+
+- `sv apply` registers an external app so that signing out of it leaves the person's core session, on core 0.119.0 or later; on an
+  older core the app is registered as before.
+
 ## [0.19.0] - 2026-11-19
 
 ### Added

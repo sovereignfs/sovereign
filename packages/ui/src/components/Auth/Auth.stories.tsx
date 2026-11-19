@@ -14,6 +14,8 @@ import {
   AuthLinkButton,
 } from './AuthForm';
 import { BrandBadge } from './BrandBadge';
+import { ForgotPasswordForm } from './ForgotPasswordForm';
+import { ResetPasswordForm } from './ResetPasswordForm';
 import { SignInForm } from './SignInForm';
 
 const meta = {
@@ -126,6 +128,59 @@ export const SignInFormRefused: Story = {
         onSubmit={() => undefined}
         forgotPasswordHref="/forgot-password"
         signUpHref="/sign-up"
+      />
+    </AuthCard>
+  ),
+};
+
+/** Asking for a reset link, and what it says once sent. */
+export const ForgotPasswordFormStory: Story = {
+  name: 'ForgotPasswordForm',
+  render: () => (
+    <AuthCard brand={<BrandBadge name="Sovereign" />} title="Reset your password">
+      <ForgotPasswordForm onSubmit={() => undefined} signInHref="/sign-in" />
+    </AuthCard>
+  ),
+};
+
+export const ForgotPasswordFormSent: Story = {
+  name: 'ForgotPasswordForm, sent',
+  render: () => (
+    <AuthCard brand={<BrandBadge name="Sovereign" />} title="Reset your password">
+      <ForgotPasswordForm
+        sentTo="ada@example.com"
+        onSubmit={() => undefined}
+        signInHref="/sign-in"
+      />
+    </AuthCard>
+  ),
+};
+
+/** A new password from the emailed link, and the link run out. */
+export const ResetPasswordFormStory: Story = {
+  name: 'ResetPasswordForm',
+  render: () => (
+    <AuthCard brand={<BrandBadge name="Sovereign" />} title="Choose a new password">
+      <ResetPasswordForm
+        passwordHint="At least 8 characters."
+        onSubmit={() => undefined}
+        signInHref="/sign-in"
+        newLinkHref="/forgot-password"
+      />
+    </AuthCard>
+  ),
+};
+
+export const ResetPasswordFormExpired: Story = {
+  name: 'ResetPasswordForm, expired',
+  render: () => (
+    <AuthCard brand={<BrandBadge name="Sovereign" />} title="Choose a new password">
+      <ResetPasswordForm
+        passwordHint="At least 8 characters."
+        expired
+        onSubmit={() => undefined}
+        signInHref="/sign-in"
+        newLinkHref="/forgot-password"
       />
     </AuthCard>
   ),

@@ -48,6 +48,7 @@ export function inputOf(app: Extract<Command, { name: 'ensure' }>['app']): Regis
     scopes: app.scopes.length > 0 ? app.scopes : [...DEFAULT_SCOPES],
     appScopes: app.appScopes,
     trusted: app.trusted,
+    signOutOfCore: !app.keepCoreSession,
     enabled: true,
     launcher: {
       description: app.description ?? '',

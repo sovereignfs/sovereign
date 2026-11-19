@@ -787,13 +787,17 @@ alone, so revoking them is core's own step.
   received. Core ends the person's core session and returns them to the app's
   post-logout redirect URI with the app's `state` — but only if that URI is
   registered for the client; an unregistered one is never followed.
-- **Whose app it is decides what signing out ends.** Not built (task 6.5; RFC 0007). Each app has a setting, "Signing out of this app
-  signs out of Sovereign" (§3.7.1). On, end-session does what the bullet above says, and so, by the notices below, signs the person out of
+- **Whose app it is decides what signing out ends** (RFC 0007). Each app has a setting, "Signing out of this app signs out of
+  Sovereign" (§3.7.1). On, end-session does what the bullet above says, and so, by the notices below, signs the person out of
   every other app of that session: the suite is one account. Off, end-session ends nothing of core's: it returns the person to the
   app's registered post-logout address with the app's `state`, and the app's own session is the only one that ends. `sv apply` turns
   it on for a hosted app (`contracts/suite.md`); it is off for an external app and for one registered in the Console. The change turns it on for every app that exists, which is what
   they do today; the next `sv apply` then sets it for each app of `suite.yml`, and an app registered in the Console before keeps it on
-  until an operator turns it off.
+  until an operator turns it off. Off, core answers only an `id_token_hint` it signed (EdDSA or RS256, however old) for an app that
+  exists, is enabled and has end-session on (`src/oauth/app-only-sign-out.ts`); a post-logout address that is not registered sends the
+  person to core's own page instead, still signed in to core. Anything else is the provider's, as the bullets around this one say: no
+  hint or one core did not sign ends nothing and shows a confirmation, which, if the person confirms it, ends core's session as
+  signing out of core does. The setting is kept with core's own settings for the app (`keepCoreSession`), only when off.
 - **Back-channel logout.** When a person's core session ends — they sign out of
   core, they end a session in their identity pages, an operator ends it, or the
   account is deactivated — core revokes the access tokens of that session and
@@ -868,22 +872,22 @@ Operators with `client:manage` register clients in the Console.
 
 #### 3.7.1 Client settings
 
-| Setting                   | Notes                                                                                                                                                                                       |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Client type               | Confidential (has a secret) or public (no secret). PKCE is required for both                                                                                                                |
-| Redirect URIs             | One or more; exact match. Must be `https`. `http` is accepted on `localhost` and `*.localhost` only when the instance's own URL (`SV_URL`) is `http`, that is on a development instance     |
-| Post-logout redirect URIs | Optional; the only addresses core returns a person to after sign-out                                                                                                                        |
-| Account-deleted address   | Optional, `https` like a redirect address. Core sends a signed notice there when a person who used the app deletes their account, and keeps trying until the app answers (§4.5)             |
-| Back-channel logout URI   | Optional. Core sends a signed logout notice there when a person's session ends (§3.6.5)                                                                                                     |
-| End-session               | Lets the app send people to core's sign-out (§3.6.5). On automatically when a post-logout redirect URI or a back-channel logout URI is set                                                  |
-| Sign out of Sovereign     | Whether signing out of the app also ends the person's core session (§3.6.5). On for a hosted app, off for a new external or Console app; under the technical settings. Not built (task 6.5) |
-| Secret                    | Confidential apps only. Sent in a header (HTTP Basic; the default) or in the request body (§3.6.1). A public app has none. Changing it needs the app reconfigured.                          |
-| Token signature           | How ID tokens are signed: EdDSA (the default) or RS256, for an app that cannot verify EdDSA (§3.6.1). Either client type may choose it.                                                     |
-| Allowed scopes            | Any of §3.6.2; `roles` only when trusted                                                                                                                                                    |
-| Trusted                   | Off by default                                                                                                                                                                              |
-| Enabled                   | On by default                                                                                                                                                                               |
-| Key return address        | Optional, `https` like a redirect address. Set, the app may use encryption the server cannot read and holds `keys` (§5.6)                                                                   |
-| App scopes                | What a confidential app may do for itself (§3.6.6). None by default; a public app cannot have any                                                                                           |
+| Setting                   | Notes                                                                                                                                                                                   |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Client type               | Confidential (has a secret) or public (no secret). PKCE is required for both                                                                                                            |
+| Redirect URIs             | One or more; exact match. Must be `https`. `http` is accepted on `localhost` and `*.localhost` only when the instance's own URL (`SV_URL`) is `http`, that is on a development instance |
+| Post-logout redirect URIs | Optional; the only addresses core returns a person to after sign-out                                                                                                                    |
+| Account-deleted address   | Optional, `https` like a redirect address. Core sends a signed notice there when a person who used the app deletes their account, and keeps trying until the app answers (§4.5)         |
+| Back-channel logout URI   | Optional. Core sends a signed logout notice there when a person's session ends (§3.6.5)                                                                                                 |
+| End-session               | Lets the app send people to core's sign-out (§3.6.5). On automatically when a post-logout redirect URI or a back-channel logout URI is set                                              |
+| Sign out of Sovereign     | Whether signing out of the app also ends the person's core session (§3.6.5). On for a hosted app, off for a new external or Console app; under the technical settings                   |
+| Secret                    | Confidential apps only. Sent in a header (HTTP Basic; the default) or in the request body (§3.6.1). A public app has none. Changing it needs the app reconfigured.                      |
+| Token signature           | How ID tokens are signed: EdDSA (the default) or RS256, for an app that cannot verify EdDSA (§3.6.1). Either client type may choose it.                                                 |
+| Allowed scopes            | Any of §3.6.2; `roles` only when trusted                                                                                                                                                |
+| Trusted                   | Off by default                                                                                                                                                                          |
+| Enabled                   | On by default                                                                                                                                                                           |
+| Key return address        | Optional, `https` like a redirect address. Set, the app may use encryption the server cannot read and holds `keys` (§5.6)                                                               |
+| App scopes                | What a confidential app may do for itself (§3.6.6). None by default; a public app cannot have any                                                                                       |
 
 #### 3.7.2 Launcher entry
 
@@ -964,6 +968,7 @@ CLI calls it ([operator-cli §6](operator-cli.md)), and it is not run by hand.
 ```text
 sovereign-admin apps ensure KEY --name NAME --redirect URL ... [--post-logout URL ...]
                 [--back-channel URL] [--account-deleted URL] [--key-return URL] [--scope SCOPE ...] [--public] [--trusted]
+                [--keep-core-session]
                 [--launch-url URL] [--description TEXT] [--icon URL] [--hide] [--json]
 sovereign-admin apps list [--json]
 sovereign-admin apps rotate-secret KEY [--json]
@@ -2271,3 +2276,4 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-19 | §3.10: an invitation link opened while signed in says so, and offers to go on or to sign out and use it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 2026-11-19 | §3.5.1: the lock, per device once signed in, with a passkey checked by core on the session; a locked session gets nothing of the person, and is unlocked in place with a passkey or the password; §5.4: its secret is refused while locked (RFC 0006 part B).                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | 2026-11-19 | §3.6.2, §3.6.5, §3.7.1: `amr` and `acr`, and a per-app setting for whether signing out of an app ends the core session (on for hosted apps), written ahead of tasks 6.6 and 6.5 (RFC 0007). Not built.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 2026-11-19 | §3.6.5, §3.7.1, §3.7.4: signing out of an app ends core's session only when the app's setting says so: on for a hosted app, off for an external one (`--keep-core-session`) and a new one in the Console. Built. §3.6.2: `claims_supported` lists only the claims core sends; `amr` and `acr` are parked.                                                                                                                                                                                                                                                                                                                                                                                                                     |

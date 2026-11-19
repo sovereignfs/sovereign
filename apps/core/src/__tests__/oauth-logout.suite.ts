@@ -148,7 +148,11 @@ export function oauthLogoutSuite(createDatabase: () => Promise<TestDatabase>): v
 
   describe('the end-session endpoint', () => {
     async function signedInApp(
-      options: { enableEndSession?: boolean; backchannelLogoutUri?: string } = {},
+      options: {
+        enableEndSession?: boolean;
+        backchannelLogoutUri?: string;
+        signOutOfCore?: boolean;
+      } = {},
     ) {
       const ctx = await instance();
       const client = await registerClient(ctx.auth, ctx.owner, {
@@ -180,6 +184,38 @@ export function oauthLogoutSuite(createDatabase: () => Promise<TestDatabase>): v
       expect(`${location.origin}${location.pathname}`).toBe(POST_LOGOUT);
       expect(location.searchParams.get('state')).toBe('back-to-app');
       expect(await sessionCount(personId)).toBe(0);
+    });
+
+    it('of an app set not to sign people out of core, ends nothing of core and returns them to the app, with its state', async () => {
+      const { auth, person, personId, client, idToken } = await signedInApp({
+        signOutOfCore: false,
+      });
+      network(auth);
+      const reply = await endSessionRequest(auth, person, {
+        id_token_hint: idToken,
+        client_id: client.clientId,
+        post_logout_redirect_uri: POST_LOGOUT,
+        state: 'back-to-app',
+      });
+      expect(reply.status).toBe(302);
+      const location = new URL(reply.headers.get('location') as string);
+      expect(`${location.origin}${location.pathname}`).toBe(POST_LOGOUT);
+      expect(location.searchParams.get('state')).toBe('back-to-app');
+      expect(await sessionCount(personId)).toBe(1);
+    });
+
+    it('of such an app, follows no address it did not register, and still ends nothing', async () => {
+      const { auth, person, personId, client, idToken } = await signedInApp({
+        signOutOfCore: false,
+      });
+      network(auth);
+      const reply = await endSessionRequest(auth, person, {
+        id_token_hint: idToken,
+        client_id: client.clientId,
+        post_logout_redirect_uri: 'https://evil.sovereign.local/signed-out',
+      });
+      expect(reply.headers.get('location')).toBe('/');
+      expect(await sessionCount(personId)).toBe(1);
     });
 
     it('does not follow an address that was not registered, and still ends the session', async () => {
@@ -279,6 +315,22 @@ export function oauthLogoutSuite(createDatabase: () => Promise<TestDatabase>): v
       expect(await sidIn(plain)).toBeUndefined();
       expect(await sidIn(withEnd)).toBe(session);
       expect(await sidIn(told)).toBe(session);
+    });
+    // Last in the group: a hint with a bad signature makes the provider fetch the instance's keys afresh, which the tests after it in
+    // this process would otherwise meet.
+    it('of such an app, leaves a hint core did not sign to the provider, which ends nothing either', async () => {
+      const { auth, person, personId, client, idToken } = await signedInApp({
+        signOutOfCore: false,
+      });
+      network(auth);
+      const [header, payload] = idToken.split('.');
+      const reply = await endSessionRequest(auth, person, {
+        id_token_hint: `${header}.${payload}.not-a-signature`,
+        client_id: client.clientId,
+        post_logout_redirect_uri: POST_LOGOUT,
+      });
+      expect(reply.headers.get('location')).not.toBe(POST_LOGOUT);
+      expect(await sessionCount(personId)).toBe(1);
     });
   });
 

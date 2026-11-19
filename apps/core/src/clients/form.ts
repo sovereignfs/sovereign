@@ -96,6 +96,7 @@ export function appFromForm(form: FormData): UpdateInput & { name: string } {
     accountDeletedUri: text(form.get('accountDeletedUri')).trim(),
     keyReturnUri: text(form.get('keyReturnUri')).trim(),
     endSession: on(form.get('endSession')),
+    signOutOfCore: on(form.get('signOutOfCore')),
     scopes: form.getAll('scope').map(String),
     // Only a confidential app's form has these boxes; a public app sends none, which is none allowed.
     appScopes: form.getAll('appScope').map(String),
@@ -142,6 +143,7 @@ const FIELD_OF: Record<string, string> = {
   idTokenAlgorithm: 'idTokenAlgorithm',
   trusted: 'trusted',
   endSession: 'endSession',
+  signOutOfCore: 'signOutOfCore',
   'launcher.description': 'description',
   'launcher.icon': 'icon',
   'launcher.launchUrl': 'launchUrl',

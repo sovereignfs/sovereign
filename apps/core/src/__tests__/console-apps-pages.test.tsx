@@ -49,6 +49,7 @@ const app = (id: string, extra: Partial<ClientView> = {}): ClientView => ({
   accountDeletedUri: undefined,
   keyReturnUri: undefined,
   endSession: false,
+  signOutOfCore: true,
   scopes: ['openid', 'profile'],
   appScopes: [],
   trusted: false,

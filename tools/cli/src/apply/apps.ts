@@ -122,6 +122,8 @@ export function externalClient(app: ExternalApp): string[] {
     ...app.redirect,
     ...(app.postLogout?.length ? ['--post-logout', ...app.postLogout] : []),
     ...(app.backChannel ? ['--back-channel', app.backChannel] : []),
+    ...(app.accountDeleted ? ['--account-deleted', app.accountDeleted] : []),
+    ...(app.keyReturn ? ['--key-return', app.keyReturn] : []),
     ...(app.scopes?.length ? ['--scope', ...app.scopes] : []),
     ...(app.type === 'public' ? ['--public'] : []),
     ...(app.trusted ? ['--trusted'] : []),

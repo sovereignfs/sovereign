@@ -308,6 +308,32 @@ describe('sv app add', () => {
     expect(done.text).toContain('sv app show NAME --secret');
   });
 
+  it('adds an external app with where core tells it of a deleted account and returns its key, and changes them', async () => {
+    await withNotes();
+    const done = await sv(
+      world,
+      'app',
+      'add',
+      'vault',
+      '--external',
+      '--name',
+      'Vault',
+      '--redirect',
+      'https://vault.sovereign.local/cb',
+      '--account-deleted',
+      'https://vault.sovereign.local/gone',
+      '--key-return',
+      'https://vault.sovereign.local/key',
+    );
+    expect(done.code).toBe(0);
+    expect(suite().apps?.vault).toMatchObject({
+      accountDeleted: 'https://vault.sovereign.local/gone',
+      keyReturn: 'https://vault.sovereign.local/key',
+    });
+    await sv(world, 'app', 'update', 'vault', '--key-return', 'https://vault.sovereign.local/k2');
+    expect(suite().apps?.vault).toMatchObject({ keyReturn: 'https://vault.sovereign.local/k2' });
+  });
+
   it('refuses an external app without a name or an address, and one that asks for roles without being trusted', async () => {
     await withNotes();
     expect((await sv(world, 'app', 'add', 'wiki', '--external', '--name', 'W')).text).toContain(

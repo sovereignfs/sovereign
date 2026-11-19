@@ -51,6 +51,8 @@ const KIND = {
     redirect: 'list',
     'post-logout': 'list',
     'back-channel': 'value',
+    'account-deleted': 'value',
+    'key-return': 'value',
     scope: 'list',
     public: 'switch',
     trusted: 'switch',
@@ -122,6 +124,12 @@ async function add(ctx: Context, argv: string[]): Promise<void> {
         : {}),
       ...(args.values.has('back-channel')
         ? { backChannel: args.values.get('back-channel') as string }
+        : {}),
+      ...(args.values.has('account-deleted')
+        ? { accountDeleted: args.values.get('account-deleted') as string }
+        : {}),
+      ...(args.values.has('key-return')
+        ? { keyReturn: args.values.get('key-return') as string }
         : {}),
       ...(args.lists.has('scope') ? { scopes: args.lists.get('scope') as string[] } : {}),
       ...(args.switches.has('public') ? { type: 'public' as const } : {}),
@@ -220,6 +228,8 @@ const UPDATE = {
   redirect: 'list',
   'post-logout': 'list',
   'back-channel': 'value',
+  'account-deleted': 'value',
+  'key-return': 'value',
   scope: 'list',
   trusted: 'switch',
   untrusted: 'switch',
@@ -253,7 +263,15 @@ async function update(ctx: Context, argv: string[]): Promise<void> {
   for (const flag of ['image', 'manifest', 'env', 'unset-env', 'connections'] as const) {
     if (args.values.has(flag) || args.lists.has(flag)) only(!ext, flag, 'hosted');
   }
-  for (const flag of ['name', 'redirect', 'post-logout', 'back-channel', 'scope'] as const) {
+  for (const flag of [
+    'name',
+    'redirect',
+    'post-logout',
+    'back-channel',
+    'account-deleted',
+    'key-return',
+    'scope',
+  ] as const) {
     if (args.values.has(flag) || args.lists.has(flag)) only(ext, flag, 'external');
   }
   if (args.switches.has('trusted') || args.switches.has('untrusted'))
@@ -301,6 +319,8 @@ async function update(ctx: Context, argv: string[]): Promise<void> {
   setList('redirect', 'redirect');
   setList('post-logout', 'postLogout');
   setValue('back-channel', 'backChannel');
+  setValue('account-deleted', 'accountDeleted');
+  setValue('key-return', 'keyReturn');
   setList('scope', 'scopes');
   for (const [flag, trusted] of [
     ['trusted', true],

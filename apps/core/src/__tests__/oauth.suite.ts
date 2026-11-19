@@ -194,6 +194,13 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
       }
     });
 
+    it('lists no claim core never sends (core-app §3.6.2)', async () => {
+      const { auth } = await instance();
+      const config = (await auth.api.getOpenIdConfig()) as { claims_supported: string[] };
+      expect(config.claims_supported).not.toContain('given_name');
+      expect(config.claims_supported).not.toContain('family_name');
+    });
+
     it('is the same document at the OAuth address, and served at the root by the route helpers', async () => {
       const { auth } = await instance();
       const oidc = await oauthProviderOpenIdConfigMetadata(auth)(

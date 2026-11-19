@@ -347,12 +347,12 @@ two deliveries of one genuine token can only end the same sessions twice.
 **Deliverables:**
 
 - `user` on the session (`id`, `sub`, `name`, `email`, `emailVerified`, `picture`, `locale`, `zoneinfo`, `roles`), the same shape in
-  `@sovereignfs/auth` for a local account and one from core, and `amr` once 6.6 is built
+  `@sovereignfs/auth` for a local account and one from core (`amr` waits for 6.6, which is parked)
 - `nextAuth` marked deprecated in the SDK and its guide, still working; removed in a later major version, with a `docs/upgrade.md`
   note on moving to `@sovereignfs/auth`
 - sdk §9 and `docs/using-the-sdk.md` say what an app is told about a person, and what it is not
 
-**Dependencies:** 13.35, 6.6
+**Dependencies:** 13.35
 
 **Spec reference:** sdk §9; RFC 0007 §4, §10
 

@@ -28,8 +28,6 @@ const SUPPORTED_CLAIMS = [
   'azp',
   'name',
   'picture',
-  'given_name',
-  'family_name',
   'email',
   'email_verified',
   'locale',

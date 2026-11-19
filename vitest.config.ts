@@ -18,6 +18,15 @@ export default defineConfig({
   resolve: {
     alias: [
       source('api-client', './packages/api-client/src/index.ts'),
+      source('auth', './packages/auth/src/index.ts'),
+      {
+        find: /^@sovereignfs\/auth\/server$/,
+        replacement: fileURLToPath(new URL('./packages/auth/src/server/index.ts', import.meta.url)),
+      },
+      {
+        find: /^@sovereignfs\/auth\/next$/,
+        replacement: fileURLToPath(new URL('./packages/auth/src/next/index.ts', import.meta.url)),
+      },
       source('config', './packages/config/src/index.ts'),
       source('crypto', './packages/crypto/src/index.ts'),
       {

@@ -1,4 +1,5 @@
 import { headers } from 'next/headers';
+import { checkSession, readSessionUnchecked } from '@sovereignfs/auth/server';
 import { getDatabase } from '../database';
 import { deviceIdFrom } from '../lock/device';
 import { lockStatus } from '../lock/store';
@@ -8,18 +9,16 @@ import { getAuthSettings } from './settings';
 /**
  * The signed-in person's session for the current request, or `null`. Server components only.
  *
- * It is checked against the database every time. better-auth's signed cookie cache is off (`auth.ts`); asking it
- * not to be used here as well keeps that true for core's own pages if the cache were ever turned on, since a session
- * that has ended (a password reset, a sign-out somewhere else, a deactivation) must stop working at once.
+ * It is the sign-in package's session read (auth.md §6), checked against the database every time, with core's lock as its check.
  */
 export async function getSession() {
-  const session = await getSessionEvenIfLocked();
-  if (!session) return null;
   // A locked session is no session for anything that would show or change the person's data (RFC 0006 B3): pages, server actions,
   // routes and the session's secret, which opens the person's keys (B5), all come through here. Deciding it may lock the session now,
   // if its idle time has passed. An error here is raised, never taken for "not locked".
-  if ((await currentLock(session)).locked) return null;
-  return session;
+  return checkSession(
+    await getSessionEvenIfLocked(),
+    async (session) => (await currentLock(session)).locked,
+  );
 }
 
 /**
@@ -27,16 +26,8 @@ export async function getSession() {
  * locked session it is. Everything else uses `getSession`.
  */
 export async function getSessionEvenIfLocked() {
-  const session = await (
-    await getAuth()
-  ).api.getSession({
-    headers: await headers(),
-    query: { disableCookieCache: true },
-  });
-  // Deactivating an account ends its sessions; one opened at the same moment could slip past that,
-  // so a deactivated account has no session here whatever the table says (core-app §3.3.6).
-  if (session?.user.deactivatedAt) return null;
-  return session;
+  // The package's read: from the database every time, and none for a deactivated account (auth.md §4, rules 6 and 8).
+  return readSessionUnchecked(await getAuth(), await headers());
 }
 
 /** This browser's device id (RFC 0006 B1), from the request's cookies. */

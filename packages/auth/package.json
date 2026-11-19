@@ -1,0 +1,58 @@
+{
+  "name": "@sovereignfs/auth",
+  "version": "0.1.0",
+  "private": true,
+  "description": "How core and every Sovereign app sign people in: core's own sign-in, the part of it that is not about core.",
+  "license": "MPL-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "default": "./dist/server/index.js"
+    },
+    "./next": {
+      "types": "./dist/next/index.d.ts",
+      "default": "./dist/next/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@better-auth/passkey": "1.7.18",
+    "@sovereignfs/config": "workspace:*",
+    "@sovereignfs/crypto": "workspace:*",
+    "@sovereignfs/database": "workspace:*",
+    "better-auth": "1.7.18",
+    "drizzle-orm": "catalog:"
+  },
+  "peerDependencies": {
+    "next": "catalog:"
+  },
+  "devDependencies": {
+    "@sovereignfs/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "drizzle-kit": "catalog:",
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:"
+  }
+}

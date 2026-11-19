@@ -23,6 +23,7 @@ WORKDIR /repo
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY apps/core/package.json apps/core/package.json
 COPY packages/api-client/package.json packages/api-client/package.json
+COPY packages/auth/package.json packages/auth/package.json
 COPY packages/bridge/package.json packages/bridge/package.json
 COPY packages/config/package.json packages/config/package.json
 COPY packages/crypto/package.json packages/crypto/package.json

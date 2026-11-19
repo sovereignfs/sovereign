@@ -25,6 +25,11 @@ export type { ForgotPasswordFormProps } from './components/Auth/ForgotPasswordFo
 export { ResetPasswordForm } from './components/Auth/ResetPasswordForm';
 export { SignUpForm } from './components/Auth/SignUpForm';
 export { TwoFactorForm } from './components/Auth/TwoFactorForm';
+export type { ActionResult, PanelAction } from './components/Account/ActionResult';
+export { SessionsPanel } from './components/Account/SessionsPanel';
+export type { SessionRow, SessionsPanelProps } from './components/Account/SessionsPanel';
+export { ChangePasswordForm } from './components/Account/ChangePasswordForm';
+export type { ChangePasswordFormProps } from './components/Account/ChangePasswordForm';
 export type { TwoFactorFormProps } from './components/Auth/TwoFactorForm';
 export type { SignUpFormProps, SignUpValues } from './components/Auth/SignUpForm';
 export type { ResetPasswordFormProps } from './components/Auth/ResetPasswordForm';

@@ -11,7 +11,7 @@ import { afterPasskeyAccepted } from '../../src/keys/session';
  * where an app's sign-in goes next), or the refusal.
  */
 export function signInWithPasskey() {
-  return signIn(authClient as never, {
+  return signIn(authClient, {
     extension: prfExtension,
     output: (results) => prfOutput(results as never),
     accepted: async (id, output) => {

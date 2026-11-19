@@ -125,6 +125,33 @@ export function createAuth(
       settings,
       mail,
       background,
+      // Who may get an account (core-app §3.3.1): the first account is the owner; after it, invite-only unless the operator opened it.
+      registration: async (user, context, fields) => {
+        // The first account is exempt from invite-only and is the owner. A second sign-up
+        // racing for it loses at the database, which holds one owner at most.
+        if (await isFirstAccount(database)) return { ...fields, role: ROLE_OWNER };
+        if (
+          (await registration.inviteOnly()) &&
+          !(await hasValidInvite(database, user.email, Date.now()))
+        ) {
+          // One answer for no invite, an expired one, a cancelled one and a used one, so it
+          // says nothing about invitations other people hold.
+          // Not 403: with verification required, better-auth answers a 403 from a hook with a
+          // made-up success, so the person would wait for an email that never comes.
+          throw new APIError('UNPROCESSABLE_ENTITY', {
+            message: 'Sign-up needs an invitation, and there is no valid one for this address.',
+            code: 'INVITE_REQUIRED',
+          });
+        }
+        // A sign-up from the link of an invitation core emailed to this address has shown it reads
+        // the address: it is verified now, and no second email asks the same (core-app §3.3.3).
+        // Only the link's id counts, sent by the sign-up page, never the address alone.
+        const invite = (context?.body as { invite?: unknown } | undefined)?.invite;
+        if (await inviteVouchesFor(database, invite, user.email, Date.now())) {
+          return { ...fields, role: ROLE_USER, emailVerified: true };
+        }
+        return { ...fields, role: ROLE_USER };
+      },
       userFields: {
         // Set by core when the account is made. `input: false` makes better-auth refuse a request
         // that tries to choose it.
@@ -167,32 +194,6 @@ export function createAuth(
         },
         // The terms, accepted at sign-up and recorded: when, and which text (core-app §3.3.5).
         userCheck: (user) => signUpRecord(user),
-        userDecide: async (user, context, fields) => {
-          // The first account is exempt from invite-only and is the owner. A second sign-up
-          // racing for it loses at the database, which holds one owner at most.
-          if (await isFirstAccount(database)) return { ...fields, role: ROLE_OWNER };
-          if (
-            (await registration.inviteOnly()) &&
-            !(await hasValidInvite(database, user.email, Date.now()))
-          ) {
-            // One answer for no invite, an expired one, a cancelled one and a used one, so it
-            // says nothing about invitations other people hold.
-            // Not 403: with verification required, better-auth answers a 403 from a hook with a
-            // made-up success, so the person would wait for an email that never comes.
-            throw new APIError('UNPROCESSABLE_ENTITY', {
-              message: 'Sign-up needs an invitation, and there is no valid one for this address.',
-              code: 'INVITE_REQUIRED',
-            });
-          }
-          // A sign-up from the link of an invitation core emailed to this address has shown it reads
-          // the address: it is verified now, and no second email asks the same (core-app §3.3.3).
-          // Only the link's id counts, sent by the sign-up page, never the address alone.
-          const invite = (context?.body as { invite?: unknown } | undefined)?.invite;
-          if (await inviteVouchesFor(database, invite, user.email, Date.now())) {
-            return { ...fields, role: ROLE_USER, emailVerified: true };
-          }
-          return { ...fields, role: ROLE_USER };
-        },
         userCreated: async (user) => {
           await markInvitesAccepted(database, user.email, Date.now());
         },

@@ -81,7 +81,7 @@ const notUnlocked = () =>
 export type RequestContext = Parameters<Parameters<typeof createAuthMiddleware>[0]>[0];
 
 /** A person as better-auth hands them to the user hooks. */
-type UserInput = Record<string, unknown> & { email: string; name: string; image?: unknown };
+export type UserInput = Record<string, unknown> & { email: string; name: string; image?: unknown };
 
 /** What the app adds to the sign-in (auth.md §3): every one is optional, and none replaces a rule of the package. */
 export type AuthPresetHooks = {
@@ -94,15 +94,6 @@ export type AuthPresetHooks = {
    * sign-up must carry (core's terms), returned as fields to store. Throw to refuse it.
    */
   userCheck?: (user: UserInput) => Record<string, unknown>;
-  /**
-   * When an account is made, once everything is checked: the app's registration policy (auth.md §3, `registration`). Given the
-   * fields so far, it returns the ones to store, or throws to refuse the account. Core decides the owner and invitations here.
-   */
-  userDecide?: (
-    user: UserInput,
-    context: { body?: unknown } | null | undefined,
-    fields: Record<string, unknown>,
-  ) => Promise<Record<string, unknown>>;
   /** After an account is made, before the package tells the person about it. */
   userCreated?: (user: { email: string; name: string; emailVerified: boolean }) => Promise<void>;
   /** Before an update of an account is checked: what the app refuses in one (core: the terms, which are accepted once). */
@@ -113,6 +104,37 @@ export type AuthPresetHooks = {
     after?: (session: { id: string }, context: unknown) => Promise<void>;
   };
 };
+
+/**
+ * Who may get an account (auth.md §3): called when an account is made, once everything else is checked, with the fields so far. It
+ * returns the fields to store, or throws to refuse the account. `signUpPolicy` gives the usual ones; core decides the owner and its
+ * invitations here.
+ */
+export type Registration = (
+  user: UserInput,
+  context: { body?: unknown } | null | undefined,
+  fields: Record<string, unknown>,
+) => Promise<Record<string, unknown>>;
+
+/** Refused because sign-up is closed: one answer whatever the address, so it says nothing about who has an account. */
+const signUpClosed = () =>
+  new APIError('UNPROCESSABLE_ENTITY', {
+    message: 'Sign-up is closed.',
+    code: 'SIGNUP_CLOSED',
+  });
+
+/**
+ * The registration of `AUTH_SIGNUP` (auth.md §5): `open`, anyone; `closed`, the first account only. `invite` needs the app's own
+ * check of its invitations, so an app that offers it writes its own `Registration`.
+ */
+export function signUpPolicy(database: Database, mode: 'open' | 'closed'): Registration {
+  return async (_user, _context, fields) => {
+    if (mode === 'open') return fields;
+    const { rows } = await database.run('select 1 as found from users limit 1');
+    if (rows.length > 0) throw signUpClosed();
+    return fields;
+  };
+}
 
 /** What an app gives the package (auth.md §3). */
 export type AuthPresetOptions<
@@ -129,6 +151,8 @@ export type AuthPresetOptions<
   tables: Record<string, unknown>;
   settings: AuthSettings;
   mail: AuthMail;
+  /** Who may get an account. Required: no app is open to everyone by leaving it out. */
+  registration: Registration;
   /**
    * Runs a send without making the request wait for it. The default lets it run on its own: an answer that waited for the mail
    * server would take longer for an address that has an account, which tells whoever asks (auth.md §4, rule 9).
@@ -245,8 +269,7 @@ export function createAuthPreset<
               locale: localeOrNull(user.locale),
               name,
             };
-            const data = hooks.userDecide ? await hooks.userDecide(user, context, fields) : fields;
-            return { data };
+            return { data: await options.registration(user, context, fields) };
           },
           after: async (user: { email: string; name: string; emailVerified: boolean }) => {
             await hooks.userCreated?.(user);

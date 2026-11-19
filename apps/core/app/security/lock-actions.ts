@@ -2,12 +2,12 @@
 
 import { cookies } from 'next/headers';
 import { requireCapability } from '../../src/auth/authorize';
-import { currentDeviceId } from '../../src/auth/session';
+import { currentDeviceId, currentLock } from '../../src/auth/session';
 import { getAuthSettings } from '../../src/auth/settings';
 import { getDatabase } from '../../src/database';
 import { DEVICE_COOKIE_SECONDS, deviceCookieName, newDeviceId } from '../../src/lock/device';
 import { checkPasskey, passkeyChallenge, type PasskeyRequest } from '../../src/lock/passkey';
-import { deviceLock, removeDeviceLock, setDeviceLock } from '../../src/lock/store';
+import { removeDeviceLock, setDeviceLock } from '../../src/lock/store';
 
 export type LockChange = { ok: true } | { ok: false; reason: 'passkey' | 'invalid' };
 
@@ -38,16 +38,18 @@ export async function saveLock(input: {
     return { ok: false, reason: 'invalid' };
   }
   const database = await getDatabase();
-  let deviceId = await currentDeviceId();
-  const isOn = deviceId !== undefined && (await deviceLock(database, session.user.id, deviceId));
-  if (!isOn) {
+  // The device is the one whose lock the session is under, when it is; otherwise this browser's, or a new one.
+  const status = await currentLock(session);
+  const cookieId = await currentDeviceId();
+  if (!status.lock) {
     const who = { sessionId: session.session.id, userId: session.user.id };
     if (!(await checkPasskey(database, getAuthSettings().webauthn, who, input.passkey))) {
       return { ok: false, reason: 'passkey' };
     }
   }
-  if (!deviceId) {
-    deviceId = newDeviceId();
+  const deviceId = status.deviceId ?? cookieId ?? newDeviceId();
+  if (cookieId !== deviceId) {
+    // Made the first time, or given back to a browser that lost it, so its next session takes the setting up too.
     const secure = getAuthSettings().secureCookies;
     (await cookies()).set(deviceCookieName(secure), deviceId, {
       httpOnly: true,
@@ -64,10 +66,10 @@ export async function saveLock(input: {
   return { ok: true };
 }
 
-/** Turns the lock off for this device. The session is unlocked, or it could not reach this. */
+/** Turns the lock off for this device: the one whose lock the session is under, or this browser's. */
 export async function removeLock(): Promise<LockChange> {
   const session = await requireCapability('profile:manage');
-  const deviceId = await currentDeviceId();
+  const deviceId = (await currentLock(session)).deviceId ?? (await currentDeviceId());
   if (deviceId) await removeDeviceLock(await getDatabase(), session.user.id, deviceId);
   return { ok: true };
 }

@@ -21,5 +21,6 @@ CREATE TABLE `session_locks` (
 	`device_id` text NOT NULL,
 	`last_active_at` integer NOT NULL,
 	`locked_at` integer,
+	`left_at` integer,
 	FOREIGN KEY (`session_id`) REFERENCES `sessions`(`id`) ON UPDATE no action ON DELETE cascade
 );

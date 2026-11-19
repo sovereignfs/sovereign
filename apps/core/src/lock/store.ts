@@ -11,8 +11,18 @@ export const DEFAULT_IDLE_MINUTES = 15;
 
 export type DeviceLock = { idleSeconds: number; onLeave: boolean };
 
-/** Activity is written at most this often, so a busy page costs one write each half minute: well inside the shortest idle time. */
-const ACTIVITY_EVERY_MS = 30_000;
+/**
+ * Activity is written at most this often, so a busy page costs one write each ten seconds. The watcher tells core at most every 15
+ * seconds (`app/lock-watcher.tsx`), which is always written, so what core knows of the person's use is never more than about 15 seconds
+ * behind, well inside the shortest idle time.
+ */
+const ACTIVITY_EVERY_MS = 10_000;
+
+/**
+ * How long a page may be gone before leaving counts (B2). A page is hidden by a navigation to another of core's pages as much as by
+ * leaving the app, and the page that follows says it is there as soon as it runs; a session left for longer than this is locked.
+ */
+export const LEAVE_GRACE_MS = 15_000;
 
 type Run = Pick<Executor, 'run'>;
 const truthy = (value: unknown) => value === true || value === 1;
@@ -81,9 +91,9 @@ export async function lockStatus(
   db: Run,
   who: { sessionId: string; userId: string; deviceId: string | undefined },
   now: number = Date.now(),
-): Promise<{ lock: DeviceLock | undefined; locked: boolean }> {
+): Promise<{ lock: DeviceLock | undefined; locked: boolean; deviceId?: string }> {
   const { rows } = await db.run(
-    'select device_id, last_active_at, locked_at from session_locks where session_id = ?',
+    'select device_id, last_active_at, locked_at, left_at from session_locks where session_id = ?',
     [who.sessionId],
   );
   const row = rows[0];
@@ -95,19 +105,30 @@ export async function lockStatus(
       'insert into session_locks (session_id, device_id, last_active_at) values (?, ?, ?) on conflict (session_id) do nothing',
       [who.sessionId, who.deviceId, now],
     );
-    return { lock, locked: false };
+    return { lock, locked: false, deviceId: who.deviceId };
   }
-  const lock = await deviceLock(db, who.userId, String(row.device_id));
+  const deviceId = String(row.device_id);
+  const lock = await deviceLock(db, who.userId, deviceId);
   if (!lock) return { lock: undefined, locked: false };
-  if (row.locked_at !== null && row.locked_at !== undefined) return { lock, locked: true };
-  if (now - Number(row.last_active_at) > lock.idleSeconds * 1000) {
+  const set = (value: unknown) => value !== null && value !== undefined;
+  if (set(row.locked_at)) return { lock, locked: true, deviceId };
+  const idle = now - Number(row.last_active_at) > lock.idleSeconds * 1000;
+  const left = lock.onLeave && set(row.left_at) && now - Number(row.left_at) > LEAVE_GRACE_MS;
+  if (idle || left) {
     await lockSession(db, who.sessionId, now);
-    return { lock, locked: true };
+    return { lock, locked: true, deviceId };
   }
-  return { lock, locked: false };
+  // Back within the grace, or the lock no longer asks: the page that hid was only going to another page.
+  if (set(row.left_at)) {
+    await db.run(
+      'update session_locks set left_at = null where session_id = ? and locked_at is null',
+      [who.sessionId],
+    );
+  }
+  return { lock, locked: false, deviceId };
 }
 
-/** The person did something in this session: its idle time starts again. Written at most each half minute, never for a locked session. */
+/** The person did something in this session: its idle time starts again. Written at most each ten seconds, never for a locked session. */
 export async function noteActivity(
   db: Run,
   sessionId: string,
@@ -119,7 +140,22 @@ export async function noteActivity(
   );
 }
 
-/** Locks the session now: on leaving the app, or once its idle time has passed. Only a session under a lock has a row to lock. */
+/**
+ * The session's page was hidden (B2): leaving the app, or going to another page. It locks if the session is not back within
+ * `LEAVE_GRACE_MS`, decided by `lockStatus`; the first time it was left is kept.
+ */
+export async function markLeft(
+  db: Run,
+  sessionId: string,
+  now: number = Date.now(),
+): Promise<void> {
+  await db.run(
+    'update session_locks set left_at = coalesce(left_at, ?) where session_id = ? and locked_at is null',
+    [now, sessionId],
+  );
+}
+
+/** Locks the session now, once its idle time has passed or it was left. Only a session under a lock has a row to lock. */
 export async function lockSession(
   db: Run,
   sessionId: string,
@@ -138,7 +174,7 @@ export async function unlockSession(
   now: number = Date.now(),
 ): Promise<void> {
   await db.run(
-    'update session_locks set locked_at = null, last_active_at = ? where session_id = ?',
+    'update session_locks set locked_at = null, left_at = null, last_active_at = ? where session_id = ?',
     [now, sessionId],
   );
 }

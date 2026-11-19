@@ -304,8 +304,8 @@ export const deviceLocks = sqliteTable(
 );
 
 /**
- * The lock's state of one session (RFC 0006 B2): the device whose lock it is under, when it was last used, and when it was locked, if it
- * is. Written the first time the session is seen on a device with a lock, and from then on the lock follows the session, not the
+ * The lock's state of one session (RFC 0006 B2): the device whose lock it is under, when it was last used, when its page was last left
+ * (hidden), and when it was locked, if it is. Written the first time the session is seen on a device with a lock, and from then on the lock follows the session, not the
  * browser's cookie. Kept beside better-auth's own `sessions` row and deleted with it. Times are milliseconds since the epoch. Written only
  * by `src/lock/store.ts`.
  */
@@ -316,6 +316,7 @@ export const sessionLocks = sqliteTable('session_locks', {
   deviceId: text('device_id').notNull(),
   lastActiveAt: integer('last_active_at').notNull(),
   lockedAt: integer('locked_at'),
+  leftAt: integer('left_at'),
 });
 
 /**

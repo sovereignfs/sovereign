@@ -17,7 +17,8 @@ CREATE TABLE "session_locks" (
 	"session_id" text PRIMARY KEY NOT NULL,
 	"device_id" text NOT NULL,
 	"last_active_at" bigint NOT NULL,
-	"locked_at" bigint
+	"locked_at" bigint,
+	"left_at" bigint
 );
 --> statement-breakpoint
 ALTER TABLE "device_locks" ADD CONSTRAINT "device_locks_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

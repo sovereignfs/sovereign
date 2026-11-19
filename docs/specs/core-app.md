@@ -590,17 +590,14 @@ the device's PIN) or their password (RFC 0006 part B). Signing in does not chang
   default.
 - **A session under a lock.** The first time a session is seen with the cookie of a device that has a lock for its account, it is put
   under that lock (`session_locks`), and from then on the lock follows the session, not the cookie: a browser that drops the cookie, or
-  the session's token used from another browser, is still locked. Turning the lock off frees the device's sessions; turning it on again
-  starts their idle time afresh.
-- **When it locks.** A request of the session is its use: a page opened, or the watcher on every signed-in page telling core that the
-  person is using it (a tap, a key, a scroll), at most every 30 seconds. A session idle longer than the lock's time is locked by its next
+  the session's token used from another browser, is still locked. Turning the lock off frees the device's sessions; turning it on again starts their idle time afresh. The Security page changes, or turns off, the lock the session is under, and gives a browser that lost the cookie its device id again.
+- **When it locks.** A request of the session is its use: a page opened, or the watcher on every signed-in page telling core that the person is there as it opens and is using it (a tap, a key, a scroll), at most every 15 seconds, all of which core writes, so what it knows is never more than about 15 seconds behind. A session idle longer than the lock's time is locked by its next
   request, before it is answered; the watcher also shows the lock page once the time has passed, so a screen left open stops showing
-  the person's data. With "Also lock when I leave the app", hiding the page locks the session, and coming back shows the lock page.
+  the person's data. With "Also lock when I leave the app", hiding the page tells core it was left, and the session locks unless a page of it is back within 15 seconds (`LEAVE_GRACE_MS`): a page is hidden by going to another page as much as by leaving the app, and the next page says it is there as soon as it opens. Coming back to a page asks core, and shows the lock page if it locked.
   Core decides from its stored times, never from what a page remembers.
 - **What a locked session gets: nothing of the person.** `getSession` (`src/auth/session.ts`) gives no session for it, so every page,
   server action and route treats it as signed out; a guarded page sends it to `/lock?returnTo=…` instead of to sign in, and so do the
-  pages before signing in. better-auth's routes refuse it (`401`, `SESSION_LOCKED`), `get-session` included, except signing out and
-  signing in afresh, which asks for everything signing in asks for and gives a new session. The authorization endpoint sends it to the
+  pages before signing in. better-auth's routes refuse a browser's request from it (`401`, `SESSION_LOCKED`), `get-session` included, except signing out (here, or from an app through the end-session endpoint), signing in afresh, which asks for everything signing in asks for and gives a new session, and the emailed links, which carry their own proof (verifying an address, and resetting a password, which ends every session). Core's own server code calls better-auth only after reading the session through `getSession`, and a test lists every place that does. The authorization endpoint sends it to the
   lock page with the app's request as the way back, `prompt=none` included, so an app's sign-in or hourly check (sdk §9.7) waits for
   the unlock and then carries on. The session's secret, which opens what the browser kept of the person's keys, is refused (§5.4).
 - **The lock page** (`/lock`) says whose session it is and offers **Unlock**, which asks for a passkey after the tap (never a prompt that

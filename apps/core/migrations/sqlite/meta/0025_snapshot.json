@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "609e7f00-9c9a-436b-9d36-b1abea5a4a41",
+  "id": "05c89f45-44e7-437a-af84-6e62092d4bd2",
   "prevId": "9b35ec62-33ab-4544-990d-60574883fe8b",
   "tables": {
     "account_deletion_notices": {
@@ -2976,6 +2976,13 @@
         },
         "locked_at": {
           "name": "locked_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "left_at": {
+          "name": "left_at",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,

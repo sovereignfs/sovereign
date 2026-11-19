@@ -9,6 +9,7 @@ const confirmPassword = vi.fn();
 const checkPasskey = vi.fn();
 const passkeyChallenge = vi.fn();
 const unlockSession = vi.fn();
+/** What the store says of the session's lock: `lockStatus`. */
 const deviceLock = vi.fn();
 const setDeviceLock = vi.fn();
 const removeDeviceLock = vi.fn();
@@ -40,7 +41,7 @@ vi.mock('../lock/passkey', () => ({
 }));
 vi.mock('../lock/store', () => ({
   unlockSession: (...args: unknown[]) => unlockSession(...args) as unknown,
-  deviceLock: (...args: unknown[]) => deviceLock(...args) as unknown,
+  lockStatus: (...args: unknown[]) => deviceLock(...args) as unknown,
   setDeviceLock: (...args: unknown[]) => setDeviceLock(...args) as unknown,
   removeDeviceLock: (...args: unknown[]) => removeDeviceLock(...args) as unknown,
 }));
@@ -74,7 +75,7 @@ beforeEach(() => {
   }
   requireSession.mockResolvedValue(ADA);
   requireCapability.mockResolvedValue(ADA);
-  deviceLock.mockResolvedValue(undefined);
+  deviceLock.mockResolvedValue({ lock: undefined, locked: false });
 });
 
 describe('unlocking with the password', () => {
@@ -164,7 +165,11 @@ describe('turning the lock on, changing it and turning it off', () => {
 
   it('changes it where it is on without asking for the passkey again, on the same device', async () => {
     cookie = `sv_device=${DEVICE}`;
-    deviceLock.mockResolvedValue({ idleSeconds: 900, onLeave: false });
+    deviceLock.mockResolvedValue({
+      lock: { idleSeconds: 900, onLeave: false },
+      locked: false,
+      deviceId: DEVICE,
+    });
     expect(await saveLock({ idleMinutes: 1, onLeave: true })).toEqual({ ok: true });
     expect(checkPasskey).not.toHaveBeenCalled();
     expect(setCookie).not.toHaveBeenCalled();
@@ -172,6 +177,23 @@ describe('turning the lock on, changing it and turning it off', () => {
       idleMinutes: 1,
       onLeave: true,
     });
+  });
+
+  it('changes and turns off the lock the session is under when the browser lost its cookie, and gives it back', async () => {
+    deviceLock.mockResolvedValue({
+      lock: { idleSeconds: 900, onLeave: false },
+      locked: false,
+      deviceId: DEVICE,
+    });
+    expect(await saveLock({ idleMinutes: 5, onLeave: false })).toEqual({ ok: true });
+    expect(checkPasskey).not.toHaveBeenCalled();
+    expect(setCookie).toHaveBeenCalledWith('sv_device', DEVICE, expect.anything());
+    expect(setDeviceLock).toHaveBeenCalledWith({}, 'ada', DEVICE, {
+      idleMinutes: 5,
+      onLeave: false,
+    });
+    expect(await removeLock()).toEqual({ ok: true });
+    expect(removeDeviceLock).toHaveBeenCalledWith({}, 'ada', DEVICE);
   });
 
   it('takes only the offered idle times and a yes or no', async () => {

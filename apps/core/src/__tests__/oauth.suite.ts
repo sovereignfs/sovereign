@@ -1043,6 +1043,19 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
       ).toBe(200);
     });
 
+    it('can still follow an emailed link, and sign out from an app', async () => {
+      const { auth, person, personId } = await instance();
+      await lock(person, personId);
+      for (const path of [
+        '/reset-password/not-a-token?callbackURL=%2Freset-password',
+        '/verify-email?token=not-a-token',
+        '/oauth2/end-session',
+      ]) {
+        const reply = await call(auth, 'GET', path, { jar: person, origin: null });
+        expect((reply.body as { code?: string } | null)?.code, path).not.toBe('SESSION_LOCKED');
+      }
+    });
+
     it('locks nobody else, and follows the session, not the browser’s cookie', async () => {
       const { auth, owner, person, personId } = await instance();
       await lock(person, personId);

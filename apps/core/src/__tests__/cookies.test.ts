@@ -89,12 +89,17 @@ describe('where a cookie is named', () => {
       return /\.tsx?$/.test(entry) ? [file] : [];
     });
 
-  it('is src/auth/cookies.ts alone, outside the tests', () => {
+  it('is src/auth/cookies.ts and the sign-in package’s cookies.ts alone, outside the tests', () => {
     const files = [
       ...sources(path.join(root, 'src')),
       ...sources(path.join(root, 'app')),
+      ...sources(path.join(root, '../../packages/auth/src')),
       path.join(root, 'proxy.ts'),
-    ].filter((file) => !file.endsWith(path.join('auth', 'cookies.ts')));
+    ].filter(
+      (file) =>
+        !file.endsWith(path.join('auth', 'cookies.ts')) &&
+        !file.endsWith(path.join('auth', 'src', 'cookies.ts')),
+    );
     expect(files.length).toBeGreaterThan(50);
     // Code only: a comment that explains the rule does not name a cookie.
     const code = (file: string) =>

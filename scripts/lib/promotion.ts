@@ -32,6 +32,7 @@ export const UNITS: readonly Unit[] = [
   { slug: 'crypto', dir: 'packages/crypto', published: false },
   { slug: 'database', dir: 'packages/database', published: false },
   { slug: 'api-client', dir: 'packages/api-client', published: false },
+  { slug: 'auth', dir: 'packages/auth', published: false },
 ];
 
 export type Change = { unit: Unit; from: string | undefined; to: string };

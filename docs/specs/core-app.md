@@ -237,6 +237,7 @@ them.
 | `role:assign`                | Change another account's role                              | owner only         |
 | `capability:configure`       | Edit the capability matrix                                 | owner only         |
 | `ownership:transfer`         | Transfer ownership                                         | owner only         |
+| `instance:diagnose`          | Open the lock check on a production instance (§3.15.1)     | owner only         |
 
 #### 3.2.3 The capability matrix
 
@@ -244,7 +245,7 @@ them.
 - The owner MAY edit the `platform:admin` and `platform:user` rows in the
   Console. The owner's row is fixed: the owner always holds every capability.
 - Owner-only capabilities (`instance:configure-secrets`, `role:assign`,
-  `capability:configure`, `ownership:transfer`) MUST NOT be granted to any
+  `capability:configure`, `ownership:transfer`, `instance:diagnose`) MUST NOT be granted to any
   other role.
 - Operator-only capabilities (`console:access`) MUST NOT be granted to
   `platform:user`: the Console, its tile on the launcher and what the launcher
@@ -1459,7 +1460,7 @@ which a production instance never can ([workstream 0002](../workstreams/0002-tes
 
 - **`SV_ENVIRONMENT`** is `development`, `staging` or `production`, and `production` when it is not set. Any other value is a start-up
   error, since a misspelling must never read as a permission. It changes nothing in how core runs for anyone using it; it decides only
-  whether the seed below may run, and whether the lock check below is served. The operator CLI sets it from `environment` in `suite.yml` ([contracts/suite.md](../../contracts/suite.md) §1.1.1), and an
+  whether the seed below may run, and whether the lock check below is served to everyone signed in or to the owner alone. The operator CLI sets it from `environment` in `suite.yml` ([contracts/suite.md](../../contracts/suite.md) §1.1.1), and an
   operator cannot set it in `core.env`.
 - **`sovereign-admin seed [--local] [--json]`** is run in core's container (§3.7.4). It exits 3 when it is refused, which it is before it
   writes anything, and 1 when it stops partway (running it again is safe). It MUST refuse, making nothing, when `SV_ENVIRONMENT` is
@@ -1468,8 +1469,9 @@ which a production instance never can ([workstream 0002](../workstreams/0002-tes
   setting the variable. It MUST be safe to run again: it makes what is missing, leaves what is there, and says which.
 - **The lock check** (`/lock-check`, task 4.15, [research 0012](../research/0012-biometric-lock.md)) tries on a device what a biometric
   lock would need: making a passkey there, asking for one after a tap and with none, its PRF output, and how long the device keeps an
-  installed core in the background. It is for a signed-in person on a `development` or `staging` instance, and a page that is not
-  there on `production`. It sends nothing to the server; a passkey it makes is kept by the device only and registered with nothing.
+  installed core in the background. On a `development` or `staging` instance it is for anyone signed in; on `production`, only for
+  someone who holds `instance:diagnose`, which is the owner's alone (§3.2.2), and anyone else gets a page that is not there. It sends
+  nothing to the server; a passkey it makes is kept by the device only and registered with nothing.
 - **What it makes:** an owner, an admin and an ordinary person (`owner@sovereign.local`, `admin@sovereign.local`,
   `user@sovereign.local`), the owner first since the first account always is, each with a verified address and its role, made through core's
   own sign-up so that every rule applies; and one public sample app, a client with a managed key, made through the registry as the system
@@ -2204,3 +2206,4 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-19 | §3.15.1: the lock check, a development and staging page that tries on a device what a biometric lock needs (research 0012).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-11-19 | §2, §3.6.2, §3.16, §3.18, §3.4.2, §5: the `notifications` scope in the table; keys said to be built and not yet audited; the one open question named; the passkey relying party stays core's host for a suite (RFC 0002).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | 2026-11-19 | §3.5: a session lasts seven days without use, extended daily, set in core (RFC 0006 A1).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 2026-11-19 | §3.2.2, §3.2.3, §3.15.1: `instance:diagnose`, owner-only; the lock check is served on production to whoever holds it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |

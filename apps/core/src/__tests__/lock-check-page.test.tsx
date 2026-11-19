@@ -3,6 +3,11 @@ import { renderServer } from './render-server';
 
 const getSession = vi.fn();
 vi.mock('../auth/session', () => ({ getSession: () => getSession() as unknown }));
+vi.mock('../roles/matrix', async () => {
+  const { DEFAULT_MATRIX } = await import('../roles/capabilities');
+  return { getCapabilityMatrix: () => Promise.resolve(DEFAULT_MATRIX) };
+});
+const as = (role: string) => getSession.mockResolvedValue({ user: { id: 'u1', role } });
 
 const failure = async (run: () => Promise<unknown>) => {
   try {
@@ -21,20 +26,40 @@ async function page(environment: string) {
   return (await import('../../app/lock-check/page')).default;
 }
 
-beforeEach(() => getSession.mockReset().mockResolvedValue({ user: { id: 'u1' } }));
+beforeEach(() => {
+  getSession.mockReset();
+  as('platform:user');
+});
 afterEach(() => vi.unstubAllEnvs());
 
 describe('the lock check page (task 4.15)', () => {
-  it('is not there on a production instance, for anyone', async () => {
+  it('is not there on a production instance, for anyone but the owner', async () => {
     const LockCheckPage = await page('production');
-    expect((await failure(() => LockCheckPage()))?.digest).toMatch(/NEXT_HTTP_ERROR_FALLBACK;404/);
-    getSession.mockResolvedValue(null);
-    expect((await failure(() => LockCheckPage()))?.digest).toMatch(/NEXT_HTTP_ERROR_FALLBACK;404/);
+    for (const role of ['platform:user', 'platform:admin']) {
+      as(role);
+      expect((await failure(() => LockCheckPage()))?.digest, role).toMatch(
+        /NEXT_HTTP_ERROR_FALLBACK;404/,
+      );
+    }
   });
 
-  it('sends someone not signed in to sign in, on a development or staging instance', async () => {
-    getSession.mockResolvedValue(null);
+  it('is there on a production instance for the owner, who alone holds instance:diagnose', async () => {
+    const LockCheckPage = await page('production');
+    as('platform:owner');
+    expect(await renderServer(await LockCheckPage())).toContain('Make a test passkey');
+  });
+
+  it('is anyone’s who is signed in on a development or staging instance', async () => {
     for (const environment of ['development', 'staging']) {
+      const LockCheckPage = await page(environment);
+      as('platform:user');
+      expect(await renderServer(await LockCheckPage())).toContain('Lock check');
+    }
+  });
+
+  it('sends someone not signed in to sign in, on every instance', async () => {
+    getSession.mockResolvedValue(null);
+    for (const environment of ['development', 'staging', 'production']) {
       const LockCheckPage = await page(environment);
       expect((await failure(() => LockCheckPage()))?.digest).toContain(
         '/sign-in?returnTo=%2Flock-check',

@@ -7,6 +7,12 @@ history and tags.
 
 ## [0.115.0] - 2026-11-19
 
+### Added
+
+- The lock check (`/lock-check`), which tries on a phone what a biometric lock would need, can be opened by the owner on a production
+  instance, as well as by anyone signed in on a development or staging instance. It is a new owner-only permission, "Try this instance
+  on a device", which the Console's permissions page shows and no other role can be given.
+
 ### Changed
 
 - Core's sessions last seven days without use, extended once a day while in use, as before, but now set in core itself, so apps can

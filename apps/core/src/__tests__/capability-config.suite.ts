@@ -151,6 +151,7 @@ export function capabilityConfigSuite(createDatabase: () => Promise<TestDatabase
       'role:assign',
       'capability:configure',
       'ownership:transfer',
+      'instance:diagnose',
     ])(
       'granting %s, which belongs to the owner, to the admin or the user role',
       async (capability) => {

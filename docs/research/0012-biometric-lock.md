@@ -133,7 +133,8 @@ parent domain), so **Tusk cannot use core's passkey directly**. The options:
 
 ## Running the device check (task 4.15)
 
-On a development or staging instance on an https host, on each device:
+On an instance on an https host, on each device. On a development or staging instance anyone signed in can run it; on production,
+sign in as the owner (`instance:diagnose`):
 
 1. Sign in to core in the device's browser (Safari on iPhone and iPad, Chrome on Android) and add core to the home screen.
 2. Open core from the home screen and go to `/lock-check`. The first lines of the log say what the device is, whether core runs

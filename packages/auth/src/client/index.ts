@@ -557,3 +557,19 @@ export function twoFactorSettings(
 
   return { start, confirm };
 }
+
+/** What saving a person's name needs of the client. */
+type ProfileClient = {
+  updateUser(input: { name: string }): Promise<{ error?: Refusal | null }>;
+};
+
+/** Saves the person's name (auth.md §4, rule 7: the server checks it), in words a person can act on when it is refused. */
+export async function saveName(client: ProfileClient, name: string): Promise<{ error?: string }> {
+  const result = await client.updateUser({ name });
+  if (!result.error) return {};
+  if (result.error.code === 'INVALID_NAME' && result.error.message)
+    return { error: result.error.message };
+  if (result.error.status === 429)
+    return { error: 'Too many attempts. Wait a minute, then try again.' };
+  return { error: 'Your name could not be saved. Try again.' };
+}

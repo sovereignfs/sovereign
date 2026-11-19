@@ -73,3 +73,6 @@ Option 2, in order, each step usable on its own:
    Fjord are built, instead of today's core-only Postgres app.
 
 What this does not do: change any app's data on disk, or make a hosted instance depend on a newer core.
+
+**Sign-in** is taken further by [RFC 0007](../rfcs/0007-one-sign-in.md): the preset is made from core's sign-in rather than the apps',
+core uses it too, and the template's step 5 makes its "local and/or core" app from it.

@@ -1,12 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { type FormEvent, useEffect, useState } from 'react';
-import { Button, Input } from '@sovereignfs/ui';
+import { useEffect, useState } from 'react';
+import { SignInForm as Form } from '@sovereignfs/ui';
+import { signInWithPassword } from '@sovereignfs/auth/client';
 import { authClient } from '../../../src/auth/client';
 import { deriveForSignIn } from '../../../src/auth/derive';
 import { afterPasswordAccepted, startAfresh, handOverSecret } from '../../../src/keys/session';
-import type { WebKey } from '@sovereignfs/crypto/web';
 import {
   continuationUrl,
   isContinuation,
@@ -14,16 +14,37 @@ import {
 } from '../../../src/auth/oauth-continuation';
 import { ExpiredRequest } from '../expired-request';
 import { withReturnTo } from '../../../src/auth/return-to';
-import { DEACTIVATED, passkeyProblem } from '../messages';
+import { passkeyProblem } from '../messages';
 import { signInWithPasskey as passkeySignIn } from '../passkey-sign-in';
-import { AuthError, AuthNotice } from '../auth-notice';
-import { AuthField } from '../auth-field';
+import { AuthNotice } from '../auth-notice';
 import { ResendVerification } from '../resend-verification';
-import styles from '../auth.module.css';
 
 /** Something the person arrived to be told: they signed out, changed their password, or a link did not work. */
 export type SignInNotice = 'password-changed' | 'link-invalid' | 'account-deleted' | 'signed-out';
 
+/** The notice for each, above the form. */
+function noticeFor(notice: SignInNotice | undefined) {
+  if (notice === 'signed-out') return <AuthNotice>You’ve been signed out.</AuthNotice>;
+  if (notice === 'password-changed') {
+    return <AuthNotice>Your password is changed. Sign in with the new one.</AuthNotice>;
+  }
+  if (notice === 'account-deleted') {
+    return <AuthNotice>Your account is deleted. Nothing of it is kept.</AuthNotice>;
+  }
+  if (notice === 'link-invalid') {
+    return (
+      <AuthNotice tone="warning">
+        That link has expired or was already used. Sign in, and we can send you a new one.
+      </AuthNotice>
+    );
+  }
+  return null;
+}
+
+/**
+ * Core's sign-in: the design system's form (`SignInForm`) and the sign-in package's flow (`signInWithPassword`), with what is core's
+ * around them: an app's sign-in request carried through, and the person's keys opened.
+ */
 export function SignInForm({
   returnTo,
   notice,
@@ -33,8 +54,6 @@ export function SignInForm({
   notice?: SignInNotice;
   instanceName: string;
 }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [unverified, setUnverified] = useState(false);
   // Known only in the browser, so it is read after the first render, never during it.
@@ -64,153 +83,73 @@ export function SignInForm({
     window.location.assign(continuationUrl(result.data) ?? returnTo);
   }
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function onSubmit(values: { email: string; password: string }) {
     setPending(true);
     setError(undefined);
     setUnverified(false);
-    let value: string;
-    let secret: WebKey;
-    try {
-      // The password never leaves the browser: what is sent is made from it (core-app §5.2).
-      ({ signIn: value, secret } = await deriveForSignIn(password, email));
-    } catch {
-      setPending(false);
-      setError('This page could not get ready to sign you in. Reload it and try again.');
-      return;
-    }
-    const result = await authClient.signIn.email({ email, password: value });
-    if (result.error) {
-      setPending(false);
-      // Checked before the password, so it says nothing about the account.
-      if (isExpiredRequest(result.error)) {
+    // The password never leaves the browser: what is sent is made from it (core-app §5.2).
+    const result = await signInWithPassword(
+      authClient as never,
+      deriveForSignIn,
+      values,
+      isExpiredRequest,
+    );
+    switch (result.outcome) {
+      case 'not-ready':
+        setPending(false);
+        setError('This page could not get ready to sign you in. Reload it and try again.');
+        return;
+      case 'other':
+        setPending(false);
         setExpired(true);
         return;
-      }
-      // Said only to someone who gave the right password, so it tells nobody else anything.
-      if (result.error.code === 'ACCOUNT_DEACTIVATED') {
-        setError(DEACTIVATED);
-        return;
-      }
-      if (result.error.code === 'EMAIL_NOT_VERIFIED') {
+      case 'unverified':
+        setPending(false);
         setUnverified(true);
         return;
+      case 'refused':
+        setPending(false);
+        setError(result.message);
+        return;
+      case 'second-step': {
+        // The password's secret waits for the second step, which unlocks the person's keys with it (core-app §5.3).
+        await handOverSecret(result.secret);
+        // An app's request goes along, so the second step can carry on with it.
+        const search = window.location.search;
+        window.location.assign(
+          isContinuation(search)
+            ? `/sign-in/two-factor${search}`
+            : `/sign-in/two-factor?returnTo=${encodeURIComponent(returnTo)}`,
+        );
+        return;
       }
-      // The same sentence whether the address has an account or not.
-      setError(
-        result.error.status === 429
-          ? 'Too many attempts. Wait a minute, then try again.'
-          : 'The email or password is incorrect.',
-      );
-      return;
+      case 'signed-in':
+        // The keys are set up the first time, or opened, silently (core-app §5.3); nothing about them stops signing in.
+        await afterPasswordAccepted(result.secret);
+        // A full navigation, so the next page is rendered with the new session cookie.
+        window.location.assign(continuationUrl(result.data) ?? returnTo);
     }
-    // The password was right but a second step is asked for: no session exists yet.
-    if (result.data && 'twoFactorRedirect' in result.data && result.data.twoFactorRedirect) {
-      // The password's secret waits for the second step, which unlocks the person's keys with it (core-app §5.3).
-      await handOverSecret(secret);
-      // An app's request goes along, so the second step can carry on with it.
-      const search = window.location.search;
-      window.location.assign(
-        isContinuation(search)
-          ? `/sign-in/two-factor${search}`
-          : `/sign-in/two-factor?returnTo=${encodeURIComponent(returnTo)}`,
-      );
-      return;
-    }
-    // The keys are set up the first time, or opened, silently (core-app §5.3); nothing about them stops signing in.
-    await afterPasswordAccepted(secret);
-    // A full navigation, so the next page is rendered with the new session cookie.
-    window.location.assign(continuationUrl(result.data) ?? returnTo);
   }
 
   if (expired) return <ExpiredRequest restartAt={returnTo} />;
 
   return (
-    <>
-      {notice === 'signed-out' ? <AuthNotice>You’ve been signed out.</AuthNotice> : null}
-      {notice === 'password-changed' ? (
-        <AuthNotice>Your password is changed. Sign in with the new one.</AuthNotice>
-      ) : null}
-      {notice === 'account-deleted' ? (
-        <AuthNotice>Your account is deleted. Nothing of it is kept.</AuthNotice>
-      ) : null}
-      {notice === 'link-invalid' ? (
-        <AuthNotice tone="warning">
-          That link has expired or was already used. Sign in, and we can send you a new one.
-        </AuthNotice>
-      ) : null}
-      <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
-        <AuthField label="Email">
-          {(control) => (
-            <Input
-              {...control}
-              type="email"
-              name="email"
-              autoComplete="username"
-              required
-              disabled={pending}
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-          )}
-        </AuthField>
-        <AuthField
-          label="Password"
-          aside={
-            <Link className={styles.aside} href={withReturnTo('/forgot-password', returnTo)}>
-              Forgot password?
-            </Link>
-          }
-        >
-          {(control) => (
-            <Input
-              {...control}
-              type="password"
-              name="password"
-              autoComplete="current-password"
-              required
-              disabled={pending}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-          )}
-        </AuthField>
-        {error ? <AuthError>{error}</AuthError> : null}
-        {unverified ? (
-          <>
-            <AuthNotice tone="warning">
-              Verify your email address before signing in: follow the link we sent when you made the
-              account.
-            </AuthNotice>
-            <ResendVerification email={email} returnTo={returnTo} />
-          </>
-        ) : null}
-        <Button type="submit" className={styles.submit} loading={pending}>
-          {pending ? 'Signing in…' : 'Sign in'}
-        </Button>
-      </form>
-      {passkeysSupported ? (
-        <>
-          <div className={styles.divider} aria-hidden="true">
-            or
-          </div>
-          <Button
-            type="button"
-            variant="secondary"
-            className={styles.wide}
-            loading={passkeyPending}
-            onClick={() => void signInWithPasskey()}
-          >
-            {passkeyPending ? 'Waiting for your device…' : 'Sign in with a passkey'}
-          </Button>
-        </>
-      ) : null}
-      <p className={styles.footer}>
-        New to {instanceName}?{' '}
-        <Link className={styles.link} href={`/sign-up?returnTo=${encodeURIComponent(returnTo)}`}>
-          Create account
-        </Link>
-      </p>
-    </>
+    <Form
+      appName={instanceName}
+      notice={noticeFor(notice)}
+      error={error}
+      unverified={unverified}
+      renderUnverified={(email) => <ResendVerification email={email} returnTo={returnTo} />}
+      pending={pending}
+      passkey={
+        passkeysSupported
+          ? { pending: passkeyPending, onClick: () => void signInWithPasskey() }
+          : undefined
+      }
+      onSubmit={(values) => void onSubmit(values)}
+      forgotPasswordHref={withReturnTo('/forgot-password', returnTo)}
+      signUpHref={`/sign-up?returnTo=${encodeURIComponent(returnTo)}`}
+      renderLink={({ href, ...props }) => <Link href={href} {...props} />}
+    />
   );
 }

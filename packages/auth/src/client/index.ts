@@ -478,3 +478,82 @@ export async function changePassword<Prepared>(
     message: 'Your password could not be changed. Check what you entered and try again.',
   };
 }
+
+/** What changing the second step needs of the client. */
+type TwoFactorSettingsClient = {
+  twoFactor: {
+    enable(input: { password: string; issuer?: string }): Promise<{
+      error?: Refusal | null;
+      data?: { method?: string; totpURI?: string; backupCodes?: string[] } | null;
+    }>;
+    generateBackupCodes(input: { password: string }): Promise<{
+      error?: Refusal | null;
+      data?: { backupCodes?: string[] } | null;
+    }>;
+    disable(input: { password: string }): Promise<{ error?: Refusal | null }>;
+    verifyTotp(input: { code: string }): Promise<{ error?: Refusal | null }>;
+  };
+};
+
+/** What went wrong with a change to the second step, in words a person can act on. */
+function twoFactorProblem(error: Refusal): string {
+  if (error.code === 'INVALID_PASSWORD') return 'That password is not right.';
+  if (error.code === 'EMAIL_NOT_VERIFIED') {
+    return 'Verify your email address before turning on two-factor sign-in.';
+  }
+  if (error.status === 429) return 'Too many attempts. Wait a minute, then try again.';
+  return 'That did not work. Try again.';
+}
+
+/**
+ * Turning the second step on and off, and its backup codes (auth.md §4, rules 1 and 3): the password is asked again and sent as the
+ * sign-in value made with the account's address. `start` and `confirm` are what the design system's `TwoFactorPanel` takes.
+ */
+export function twoFactorSettings(
+  client: TwoFactorSettingsClient,
+  signInValue: (password: string, address: string) => Promise<string>,
+  { address, issuer }: { address: string; issuer: string },
+) {
+  async function start(
+    action: 'enable' | 'regenerate' | 'disable',
+    password: string,
+  ): Promise<
+    { error: string } | { uri: string; codes: string[] } | { codes: string[] } | { off: true }
+  > {
+    let value: string;
+    try {
+      value = await signInValue(password, address);
+    } catch {
+      return { error: 'This page could not get ready. Reload it and try again.' };
+    }
+    if (action === 'enable') {
+      const result = await client.twoFactor.enable({ password: value, issuer });
+      if (result.error) return { error: twoFactorProblem(result.error) };
+      const data = result.data;
+      if (data?.method !== 'totp' || !data.totpURI)
+        return { error: 'This could not be started. Try again.' };
+      return { uri: data.totpURI, codes: data.backupCodes ?? [] };
+    }
+    if (action === 'regenerate') {
+      const result = await client.twoFactor.generateBackupCodes({ password: value });
+      if (result.error) return { error: twoFactorProblem(result.error) };
+      return { codes: result.data?.backupCodes ?? [] };
+    }
+    const result = await client.twoFactor.disable({ password: value });
+    if (result.error) return { error: twoFactorProblem(result.error) };
+    return { off: true };
+  }
+
+  async function confirm(code: string): Promise<{ error?: string }> {
+    const result = await client.twoFactor.verifyTotp({ code });
+    if (!result.error) return {};
+    return {
+      error:
+        result.error.status === 401
+          ? 'That code is not right. Check the app and try again.'
+          : twoFactorProblem(result.error),
+    };
+  }
+
+  return { start, confirm };
+}

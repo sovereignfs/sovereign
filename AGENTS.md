@@ -38,6 +38,7 @@ assumptions:
 - `docs/architecture-rules.md` — full detail behind every hard rule listed
   below.
 - `docs/specs/sdk.md` — what `@sovereignfs/sdk` does.
+- `docs/specs/auth.md` — what `@sovereignfs/auth` does: the sign-in core and every app share (RFC 0007).
 - `docs/specs/design-system.md` — what `@sovereignfs/ui` promises, and
   `docs/design-system.md` — the guide to using it.
 - `docs/releasing.md` — what is published (npm, the image) and how it is released.
@@ -426,7 +427,7 @@ packages/
   tsconfig/         shared TS configs — extend these
 contracts/          core-api/ (OpenAPI), env.md, suite.md, app-manifest.md, schemas/
 docs/
-  specs/            core-app.md, operator-cli.md, design-system.md, sdk.md — source of truth for each
+  specs/            core-app.md, operator-cli.md, design-system.md, sdk.md, auth.md — source of truth for each
   epics/            task detail;  rfcs/  research/  adrs/
 scripts/            repository tooling
 Dockerfile, docker-compose*.yml   the image and its three compose setups (docs/deploying.md)

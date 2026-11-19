@@ -254,10 +254,8 @@ Each step is one task, one branch, one pull request, with no change a person or 
 
 ## Open questions
 
-1. **Tusk's ten-minute fresh session** against core's "ask for the password instead": the package takes core's rule; Tusk's pages that
-   rely on a fresh session change with it.
-2. **An app's own lock:** the lock is core's today and apps lock through core. Whether an app on its own offers one, from the package, is
-   left for later.
+None left for this RFC. An app's own lock, for an app that runs with no core, is not part of it: apps lock through core (RFC 0006),
+and a lock in the package is a later proposal if an app on its own needs one.
 
 ## Decided in review
 
@@ -265,6 +263,9 @@ Each step is one task, one branch, one pull request, with no change a person or 
   setting on each app ("Signing out of an app that came through core", above).
 - **The package** is `@sovereignfs/auth`, licensed MPL-2.0 like `ui` and `sdk`.
 - **`nextAuth` is deprecated** once the template moves off it, and removed in a later major version of the SDK (§4).
+- **A fresh session:** the package takes core's rule (`freshAge: 0`, the password asked again); Tusk's pages that rely on its ten-minute
+  fresh session change when it moves onto the package.
+- **The specification** is [`docs/specs/auth.md`](../specs/auth.md) (task 17.1).
 
 ## Changelog
 
@@ -273,3 +274,4 @@ Each step is one task, one branch, one pull request, with no change a person or 
 | November 2026 | Draft                                                                                                            |
 | November 2026 | Decided: signing out of a hosted app signs out of core, of an external app only of itself, held by core; MPL-2.0 |
 | November 2026 | Decided: `nextAuth` deprecated; tasks written into the epics, workstream 0008                                    |
+| November 2026 | The last open questions settled (a fresh session; an app's own lock left out); the specification written         |

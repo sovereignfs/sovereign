@@ -51,6 +51,9 @@ Five packages are published to npm:
 | `@sovereignfs/storage`  | The files people upload: a folder per person, a quota per person, served only to them (RFC 0004)                                | MPL-2.0                                  |
 | `@sovereignfs/pwa`      | What makes an app installable: its manifest, a service worker that keeps nothing of a person, an announced update (RFC 0001 A7) | MPL-2.0                                  |
 
+`@sovereignfs/auth`, the sign-in core and every app share ([`docs/specs/auth.md`](specs/auth.md), RFC 0007), joins them, MPL-2.0, once it
+is built (task 17.2); until then it is not in the table.
+
 Every other package is `private` for now and is not published, **`@sovereignfs/bridge`
 included**: it is release-ready (licence, files, README) but marked `private`, so nothing can
 publish it by accident. To publish it later, remove `"private"` from its `package.json`, add its

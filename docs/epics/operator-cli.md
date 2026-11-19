@@ -954,7 +954,7 @@ can have a plain copy when they ask for one, and cannot lose every backup by los
   ways in from the environment, the three database forms
 - the template off the SDK's `nextAuth`; `building-an-app` §6 and §15 rewritten for one shape
 
-**Dependencies:** 17.5, 2.6
+**Dependencies:** 17.5, 2.6, 2.7
 
 **Spec reference:** RFC 0007 §9; app-manifest §2.3, §4
 

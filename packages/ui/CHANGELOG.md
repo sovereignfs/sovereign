@@ -14,10 +14,6 @@ history and tags.
   and `ChangePasswordForm`, with `ActionResult` for what a panel's server action answers and `AuthLinkRenderer` for the consumer's
   links. Each draws and collects, and sends nothing itself. Experimental.
 
-### Changed
-
-- `AuthCodeInput` selects a box's digit when the box is focused, so the next digit typed replaces it.
-
 ## [0.101.0] - 2026-11-18
 
 ### Added

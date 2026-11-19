@@ -148,14 +148,24 @@ describe('signing in (sdk §9)', () => {
     ).toHaveLength(0);
   });
 
-  it('refuses a callback that comes back after ten minutes', async () => {
+  it('waits an hour for the callback, as long as core’s emailed links last, and refuses one later', async () => {
     const world = setup();
-    const begin = await world.sv.auth.beginSignIn();
-    const back = world.core.authorize(begin.url, 'u1');
-    world.time.advance(11 * 60_000);
+    // The person makes an account and verifies it by email on the way: the code comes back 50 minutes on.
+    const slow = await world.sv.auth.beginSignIn();
+    world.time.advance(50 * 60_000);
+    const back = world.core.authorize(slow.url, 'u1');
+    const done = await world.sv.auth.completeSignIn(
+      new Request(back, { headers: { cookie: cookieHeader(slow.setCookies) } }),
+    );
+    expect(done.session.sub).toBe('u1');
+    expect(slow.setCookies[0]).toContain('Max-Age=3600');
+
+    const late = await world.sv.auth.beginSignIn();
+    world.time.advance(61 * 60_000);
+    const lateBack = world.core.authorize(late.url, 'u1');
     await expect(
       world.sv.auth.completeSignIn(
-        new Request(back, { headers: { cookie: cookieHeader(begin.setCookies) } }),
+        new Request(lateBack, { headers: { cookie: cookieHeader(late.setCookies) } }),
       ),
     ).rejects.toBeInstanceOf(SignInError);
   });

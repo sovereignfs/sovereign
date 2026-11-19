@@ -16,7 +16,12 @@ import {
 import type { TokenStore } from './tokens';
 import type { Transport } from './transport';
 
-const PENDING_SECONDS = 10 * 60;
+/**
+ * How long a sign-in that was begun waits for its callback: an hour. Someone an app sends to core may create an account, verify their
+ * address or reset their password on the way, and core carries the app's request through each (core-app §3.6.1); its emailed links
+ * last an hour, so the app waits as long. The authorization code itself is still core's to time, and is good for minutes.
+ */
+const PENDING_SECONDS = 60 * 60;
 const DEFAULT_SESSION_SECONDS = 30 * 24 * 60 * 60;
 
 export type AuthOptions = {

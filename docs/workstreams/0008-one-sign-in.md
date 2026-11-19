@@ -5,7 +5,7 @@
 **Author:** Claude Code\
 **Goal owner:** kasunben\
 **Governs:** [RFC 0007](../rfcs/0007-one-sign-in.md); [epic 17](../epics/one-sign-in.md) (17.1 to 17.5), [epic 2](../epics/design-system.md)
-(2.6), [epic 6](../epics/oidc-provider.md) (6.5, 6.6), [epic 13](../epics/operator-cli.md) (13.35), [epic 14](../epics/sdk.md) (14.15)\
+(2.6), [epic 6](../epics/oidc-provider.md) (6.5, 6.6), [epic 13](../epics/operator-cli.md) (13.35), [epic 14](../epics/sdk.md) (14.15, 14.16)\
 **Research:** [0004](../research/0004-a-kit-for-apps-of-their-own.md)
 
 ---
@@ -23,6 +23,7 @@ starts this way from the template, and the SDK's own sign-in is deprecated.
 - [ ] RFC 0007 accepted and `docs/specs/auth.md` written (17.1)
 - [ ] Core's sign-in made from the package with nothing anyone can see changed (17.2, 17.3, 2.6, 17.4)
 - [ ] Signing out and `amr` at core (6.5, 6.6)
+- [ ] The SDK signs in for a session the app keeps (14.16)
 - [ ] A fixture app signs in through core, locally, and both; the template makes such an app (17.5, 13.35)
 - [ ] A typed `user`, and `nextAuth` deprecated (14.15)
 - [ ] `@sovereignfs/auth` published; workstream status ✅; epic 17 ✅
@@ -44,20 +45,21 @@ Tusk and Fjord moving onto the package is work in their own repositories, after 
 
 ## Prerequisites
 
-- Core's lock (4.17) merged into `develop`: the lock is one of core's additions on top of the package, and 17.2 and 17.3 move the code
-  it touches. Owner: kasunben.
+- Core's lock (4.17's code) on the branch the work is built on: the lock is one of core's additions on top of the package, and 17.2
+  and 17.3 move the code it touches. At the goal owner's request the whole workstream runs on one branch, `feat/one-sign-in`, stacked
+  on the lock's (`feat/device-lock`), with each leg still a review gate; the lock's branch is merged first. Owner: kasunben.
 - RFC 0007 read by the goal owner before leg 1 ends.
 
 ## Legs
 
-| Leg | Name                        | Epic tasks  | Gate? | Done when                                                                             |
-| --- | --------------------------- | ----------- | ----- | ------------------------------------------------------------------------------------- |
-| 1   | The specification           | 17.1        | Yes   | RFC 0007 accepted; `docs/specs/auth.md` and the core-app sections merged              |
-| 2   | Core's sign-in in a package | 17.2, 17.3  | Yes   | Merged; `pnpm e2e`, `pnpm test:db` and the populated stores pass unchanged            |
-| 3   | The pages from the package  | 2.6, 17.4   | Yes   | Merged; core's pages thin, on the design system's components, `pnpm e2e` unchanged    |
-| 4   | Core's side of the contract | 6.5, 6.6    | Yes   | Merged; hosted and external sign-out differ as decided; `amr` in tokens               |
-| 5   | Apps sign in with it        | 17.5, 13.35 | Yes   | A fixture app and a scaffold sign in through core, locally, and both                  |
-| 6   | The SDK follows             | 14.15       | Yes   | The SDK released with a typed `user` and `nextAuth` deprecated; the package published |
+| Leg | Name                        | Epic tasks         | Gate? | Done when                                                                             |
+| --- | --------------------------- | ------------------ | ----- | ------------------------------------------------------------------------------------- |
+| 1   | The specification           | 17.1               | Yes   | RFC 0007 accepted; `docs/specs/auth.md` and the core-app sections merged              |
+| 2   | Core's sign-in in a package | 17.2, 17.3         | Yes   | Merged; `pnpm e2e`, `pnpm test:db` and the populated stores pass unchanged            |
+| 3   | The pages from the package  | 2.6, 17.4          | Yes   | Merged; core's pages thin, on the design system's components, `pnpm e2e` unchanged    |
+| 4   | Core's side of the contract | 6.5, 6.6           | Yes   | Merged; hosted and external sign-out differ as decided; `amr` in tokens               |
+| 5   | Apps sign in with it        | 14.16, 17.5, 13.35 | Yes   | A fixture app and a scaffold sign in through core, locally, and both                  |
+| 6   | The SDK follows             | 14.15              | Yes   | The SDK released with a typed `user` and `nextAuth` deprecated; the package published |
 
 One leg is one branch, one draft PR, one review gate ([README](README.md#legs)). Leg 4 needs only leg 1, and can run beside legs 2
 and 3.
@@ -112,7 +114,10 @@ registers apps through `src/admin/run.ts` (`inputOf`).
 
 ### Leg 5 — Apps sign in with it
 
-**Epic tasks:** 17.5, 13.35
+**Epic tasks:** 14.16, 17.5, 13.35
+
+**Why here:** `./core` needs the SDK's sign-in without an SDK session first (14.16, sdk §9.8); 14.16 needs only leg 1 and may be
+built earlier, beside leg 4.
 
 **Technical notes:** Tusk's `src/auth/auth.ts` is the working "local and/or core" setup to read for account linking
 (`disableImplicitLinking`, `allowDifferentEmails: false`) and for a core-only account's missing password, but not for core's token,
@@ -145,6 +150,7 @@ Leg 1's spec and leg 4's sign-out setting and `amr` stand on their own.
 
 ## Changelog
 
-| Version | Date       | Change        |
-| ------- | ---------- | ------------- |
-| 0.1     | 2026-11-19 | Initial draft |
+| Version | Date       | Change                                                                                                                                                                                                                                     |
+| ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0.1     | 2026-11-19 | Initial draft                                                                                                                                                                                                                              |
+| 0.2     | 2026-11-19 | One branch for the whole workstream, `feat/one-sign-in`, stacked on the lock's, at the goal owner's request. 14.16 added to leg 5: the SDK's sign-in without an SDK session, which `./core` is built on (found writing the specification). |

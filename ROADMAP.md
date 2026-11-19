@@ -325,7 +325,8 @@ workstream [0007](docs/workstreams/0007-sign-in.md)
 [17](docs/epics/one-sign-in.md), [2](docs/epics/design-system.md), [6](docs/epics/oidc-provider.md), [13](docs/epics/operator-cli.md) and
 [14](docs/epics/sdk.md) · workstream [0008](docs/workstreams/0008-one-sign-in.md)
 
-Starts once core's lock (4.17) is merged, since the lock is one of core's additions on top of the package. Tusk and Fjord move onto
+Built on core's lock (4.17's code), one of core's additions on top of the package: on one branch stacked on the lock's, at the goal
+owner's request (workstream 0008, 0.2). Tusk and Fjord move onto
 the package in their own repositories, after 13.35.
 
 | Version | Priority | Task                                                       | Status | Epic task                           |
@@ -337,6 +338,7 @@ the package in their own repositories, after 13.35.
 | —       | 5        | The pages' actions, and core's pages thin                  | 📋     | [17.4](docs/epics/one-sign-in.md)   |
 | —       | 6        | Signing out of an app follows whose app it is `[parallel]` | 📋     | [6.5](docs/epics/oidc-provider.md)  |
 | —       | 7        | How a person signed in, in the token `[parallel]`          | 📋     | [6.6](docs/epics/oidc-provider.md)  |
-| —       | 8        | Core as a way in, and an app's own accounts                | 📋     | [17.5](docs/epics/one-sign-in.md)   |
-| —       | 9        | The template makes an app of its own                       | 📋     | [13.35](docs/epics/operator-cli.md) |
-| —       | 10       | A typed person, and `nextAuth` deprecated                  | 📋     | [14.15](docs/epics/sdk.md)          |
+| —       | 8        | Signing in for a session the app keeps `[parallel]`        | 📋     | [14.16](docs/epics/sdk.md)          |
+| —       | 9        | Core as a way in, and an app's own accounts                | 📋     | [17.5](docs/epics/one-sign-in.md)   |
+| —       | 10       | The template makes an app of its own                       | 📋     | [13.35](docs/epics/operator-cli.md) |
+| —       | 11       | A typed person, and `nextAuth` deprecated                  | 📋     | [14.15](docs/epics/sdk.md)          |

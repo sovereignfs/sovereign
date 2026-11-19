@@ -1,13 +1,13 @@
 # RFC 0007 — One sign-in for core and every app
 
-|              |                                                                                                                                                                                                                                                      |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**   | Draft, for review                                                                                                                                                                                                                                    |
-| **Date**     | November 2026                                                                                                                                                                                                                                        |
-| **Author**   | Claude Code, for review                                                                                                                                                                                                                              |
-| **Scope**    | A new published package, `@sovereignfs/auth`; `apps/core`'s sign-in, account and security pages; `@sovereignfs/ui`; `@sovereignfs/sdk`; the app template in `tools/create`; `contracts/core-api/`, `contracts/env.md`; `docs/specs/core-app.md` §3.6 |
-| **Research** | [0004](../research/0004-a-kit-for-apps-of-their-own.md) (its sign-in step), [0011](../research/0011-streamlining-sign-in.md)                                                                                                                         |
-| **Tasks**    | [epic 17](../epics/one-sign-in.md) (17.1 to 17.5), [2.6](../epics/design-system.md), [6.5, 6.6](../epics/oidc-provider.md), [13.35](../epics/operator-cli.md), [14.15](../epics/sdk.md); [workstream 0008](../workstreams/0008-one-sign-in.md)       |
+|              |                                                                                                                                                                                                                                                       |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**   | Draft, for review                                                                                                                                                                                                                                     |
+| **Date**     | November 2026                                                                                                                                                                                                                                         |
+| **Author**   | Claude Code, for review                                                                                                                                                                                                                               |
+| **Scope**    | A new published package, `@sovereignfs/auth`; `apps/core`'s sign-in, account and security pages; `@sovereignfs/ui`; `@sovereignfs/sdk`; the app template in `tools/create`; `contracts/core-api/`, `contracts/env.md`; `docs/specs/core-app.md` §3.6  |
+| **Research** | [0004](../research/0004-a-kit-for-apps-of-their-own.md) (its sign-in step), [0011](../research/0011-streamlining-sign-in.md)                                                                                                                          |
+| **Tasks**    | [epic 17](../epics/one-sign-in.md) (17.1 to 17.5), [2.6](../epics/design-system.md), [6.5, 6.6](../epics/oidc-provider.md), [13.35](../epics/operator-cli.md), [14.15, 14.16](../epics/sdk.md); [workstream 0008](../workstreams/0008-one-sign-in.md) |
 
 ## Summary
 
@@ -217,8 +217,7 @@ Claims are replaced within the hour by RFC 0006 part A. Proposed:
 
 - **A typed `user`** on the session, in the SDK and the package: `{ id, sub?, name, email, emailVerified, picture?, locale?, zoneinfo?,
 roles }`, the same shape for a local account and one from core, so an app writes one header and one account menu.
-- **`amr`**, how the person signed in (`pwd`, `hwk` for a passkey, `otp` for the second step), and `acr` to match, so an app can ask for a
-  stronger sign-in alongside `max_age` (task 14.14).
+- **`amr`**, how the person signed in (RFC 8176: `pwd` for the password, `otp` added for the second step's code or a backup code, `hwk` and `user` for a passkey, `mfa` when two were used), and **`acr`** (`"1"` one factor, `"2"` two or a passkey, `"0"` a session opened another way, such as an emailed link), so an app can ask for a stronger sign-in alongside `max_age` (task 14.14).
 - **A profile-changed notice** is not proposed: the hourly check already brings a new name, picture or role within the hour, and a
   notice would only make that immediate. It stays an option if an app needs it.
 - **`given_name` and `family_name`** are advertised in `claims_supported` and never sent; they are removed from the discovery document.

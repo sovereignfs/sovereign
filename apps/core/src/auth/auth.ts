@@ -149,6 +149,14 @@ const PASSWORD_AGAIN: Readonly<Record<string, 'password' | 'currentPassword'>> =
 };
 
 const ONE_HOUR = 60 * 60;
+const ONE_DAY = 24 * ONE_HOUR;
+
+/**
+ * How long a session lasts without use, and how often its end is pushed back while it is used (core-app §3.5, RFC 0006 A1): seven
+ * days, and once a day. Set here rather than left to better-auth's defaults, so a change of library cannot move what apps plan
+ * against (an app checks its session against core's, sdk §9.7).
+ */
+export const SESSION_LIFETIME = { expiresIn: 7 * ONE_DAY, updateAge: ONE_DAY } as const;
 
 export function createAuth(
   database: Database,
@@ -485,6 +493,7 @@ export function createAuth(
       ...oidcPlugins(database, settings),
     ],
     session: {
+      ...SESSION_LIFETIME,
       freshAge: 0,
       // No signed cookie cache: with one, a session that had ended (a sign-out elsewhere, a password
       // reset, a deactivation) went on working for up to 300 seconds for every better-auth endpoint, and

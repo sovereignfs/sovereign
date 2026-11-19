@@ -12,6 +12,7 @@ import type { TestDatabase } from '@sovereignfs/database/testing';
 import { getTableConfig as pgConfig } from 'drizzle-orm/pg-core';
 import { getTableConfig as sqliteConfig } from 'drizzle-orm/sqlite-core';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { SESSION_LIFETIME } from '../auth/auth';
 import { migrateCore } from '../db/migrate';
 import * as postgresSchema from '../db/schema/postgres';
 import * as sqliteSchema from '../db/schema/sqlite';
@@ -184,6 +185,21 @@ export function authSuite(createDatabase: () => Promise<TestDatabase>): void {
       const reply = await call(a, 'GET', '/get-session', { jar });
       expect(reply.status).toBe(200);
       expect(signedInAs(reply)?.email).toBe(email);
+    });
+
+    it('lasts seven days without use, which apps plan against (RFC 0006 A1)', async () => {
+      const a = auth();
+      const before = Date.now();
+      const { email } = await signUp(a);
+      const { rows } = await db.run(
+        'select s.expires_at from sessions s join users u on u.id = s.user_id where u.email = ?',
+        [email],
+      );
+      const expires = new Date(rows[0]?.expires_at as string | number | Date).getTime();
+      const week = 7 * 24 * 60 * 60 * 1000;
+      expect(expires - before).toBeGreaterThanOrEqual(week - 1000);
+      expect(expires - Date.now()).toBeLessThanOrEqual(week);
+      expect(SESSION_LIFETIME).toEqual({ expiresIn: 7 * 24 * 60 * 60, updateAge: 24 * 60 * 60 });
     });
 
     it('is nothing without a cookie, or with one that was never issued', async () => {

@@ -336,7 +336,7 @@ the package in their own repositories, after 13.35.
 | 0.117.0 | 3        | Session helpers with a check of their own                  | ✅     | [17.3](docs/epics/one-sign-in.md)   |
 | 0.118.0 | 4        | Sign-in forms and account panels `[parallel]`              | ✅     | [2.6](docs/epics/design-system.md)  |
 | 0.118.0 | 5        | The pages' actions, and core's pages thin                  | ✅     | [17.4](docs/epics/one-sign-in.md)   |
-| —       | 6        | The account panels that remain `[parallel]`                | 📋     | [2.7](docs/epics/design-system.md)  |
+| —       | 6        | The account panels that remain `[parallel]`                | ✅     | [2.7](docs/epics/design-system.md)  |
 | 0.119.0 | 7        | Signing out of an app follows whose app it is `[parallel]` | ✅     | [6.5](docs/epics/oidc-provider.md)  |
 | —       | 8        | How a person signed in, in the token `[parallel]`          | 🚧     | [6.6](docs/epics/oidc-provider.md)  |
 | —       | 9        | Signing in for a session the app keeps `[parallel]`        | 📋     | [14.16](docs/epics/sdk.md)          |

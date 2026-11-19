@@ -93,6 +93,8 @@ import { ResetPasswordForm } from '../components/Auth/ResetPasswordForm';
 import { TwoFactorForm } from '../components/Auth/TwoFactorForm';
 import { SessionsPanel } from '../components/Account/SessionsPanel';
 import { ChangePasswordForm } from '../components/Account/ChangePasswordForm';
+import { TwoFactorPanel } from '../components/Account/TwoFactorPanel';
+import { ProfilePanel } from '../components/Account/ProfilePanel';
 import { ConsentPrompt } from '../components/ConsentPrompt/ConsentPrompt';
 import { Markdown } from '../components/Markdown/Markdown';
 import { Pagination } from '../components/Pagination/Pagination';
@@ -3397,6 +3399,35 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               usage="Changing the password: the current one, then the new. The app changes it with @sovereignfs/auth/client and passes back done or error."
             >
               <ChangePasswordForm onSubmit={() => undefined} />
+            </ComponentCard>
+
+            <ComponentCard
+              name="TwoFactorPanel"
+              importLine="import { TwoFactorPanel } from '@sovereignfs/ui';"
+              usage="Turning the second sign-in step on and off, and its backup codes. The app gives the steps (twoFactorSettings from @sovereignfs/auth/client) and the QR code's encoder."
+            >
+              <TwoFactorPanel
+                enabled={false}
+                verified
+                start={() => Promise.resolve({ off: true })}
+                confirm={() => Promise.resolve({})}
+                renderQr={() => null}
+                onDone={() => undefined}
+              />
+            </ComponentCard>
+            <ComponentCard
+              name="ProfilePanel"
+              importLine="import { ProfilePanel } from '@sovereignfs/ui';"
+              usage="A person's picture, name and address. The app saves the name (saveName) and prepares and keeps the picture on its own route."
+            >
+              <ProfilePanel
+                name="Ada Lovelace"
+                email="ada@example.com"
+                image={null}
+                saveName={() => Promise.resolve({})}
+                preparePicture={(file) => Promise.resolve(file)}
+                savePicture={() => Promise.resolve({ image: null })}
+              />
             </ComponentCard>
 
             {/* ConsentPrompt */}

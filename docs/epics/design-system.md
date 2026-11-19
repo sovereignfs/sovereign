@@ -231,7 +231,7 @@ padding starts at the 768px breakpoint, not 400px, and a code box selects its di
 profile panels and `AccountMenu` moved to 2.7: they are the most tied to core's key vault and pages, and were not rushed into this
 task.
 
-#### 📋 2.7 — The account panels that remain
+#### ✅ 2.7 — The account panels that remain
 
 **Goal:** The passkeys, second-step setup and profile panels, deleting the account, and the account menu are the design system's too.
 
@@ -250,3 +250,10 @@ task.
 
 - Core's security and profile pages look and behave as before (`pnpm e2e`)
 - No component imports `next/*`
+
+**Built as found (November 2026):** `TwoFactorPanel` (its steps from `twoFactorSettings`, the QR encoder the app's) and `ProfilePanel`
+(the name from `saveName`; the picture prepared and kept by the app, which judges it by its bytes) are the design system's, with
+stories, tests and gallery cards, and core's pages are joins. Three stay core's, for the goal owner to review: the passkey panel, which
+is woven into core's key vault (a passkey's way into the keys, the password asked again, a second touch on some devices) and becomes the
+design system's when an app with a vault needs it; the delete-account form, whose rules are core's (the owner, `AccountManager`); and
+the account menu, which carries core's launcher and lock.

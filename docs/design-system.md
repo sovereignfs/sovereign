@@ -555,7 +555,8 @@ The whole forms are components too, the same in core and every app (RFC 0007): `
 and password to `onSubmit`; the consumer signs in with `@sovereignfs/auth/client` and passes back `pending`, `error` and `unverified`.
 Links come from `renderLink`, so a Next app passes its `Link`. A form never sends anything itself. `SignUpForm`,
 `ForgotPasswordForm`, `ResetPasswordForm` and `TwoFactorForm` work the same way. On the account pages, `SessionsPanel` takes the
-app's server actions (each answers an `ActionResult`), and `ChangePasswordForm` hands the two passwords to the app.
+app's server actions (each answers an `ActionResult`), `ChangePasswordForm` hands the two passwords to the app, and
+`TwoFactorPanel` and `ProfilePanel` take their steps as functions.
 
 ```tsx
 <AuthCard brand={<BrandBadge name="Fjord" mark="Fj" />} title="Sign in to Fjord" legal={false}>
@@ -1946,7 +1947,7 @@ Stories live under two roots inside `packages/ui/src/`:
 | `EmptyState.stories.tsx`           | Heading only; with icon; with action                                                                                                                                                                                                                                                                    |
 | `FormField.stories.tsx`            | Default; with hint; with error (role="alert"); render-prop `children` wires field props (`id`, `aria-describedby`, `aria-invalid`, `required`) onto the control                                                                                                                                         |
 | `Auth.stories.tsx`                 | Sign-in card; with a notice and a field error; the second step with `AuthCodeInput`; `SignInForm` and refused; `SignUpForm` and invited; `ForgotPasswordForm` and sent; `ResetPasswordForm` and expired; `TwoFactorForm` and over. Mark is a slot (`BrandBadge`); `legal={false}` drops the legal links |
-| `Account.stories.tsx`              | `SessionsPanel` with other sessions, and this device only; `ChangePasswordForm`, and refused                                                                                                                                                                                                            |
+| `Account.stories.tsx`              | `SessionsPanel` with other sessions, and this device only; `ChangePasswordForm`, and refused; `TwoFactorPanel` off and on; `ProfilePanel`                                                                                                                                                               |
 | `Icon.stories.tsx`                 | Decorative vs meaningful a11y variants; all three sizes; `AllIcons` full grid                                                                                                                                                                                                                           |
 | `IconPicker.stories.tsx`           | Default; preselected value; disabled                                                                                                                                                                                                                                                                    |
 | `Input.stories.tsx`                | Text/email/password; disabled; error state with `aria-invalid`                                                                                                                                                                                                                                          |

@@ -5,6 +5,16 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.119.0] - 2026-11-19
+
+### Changed
+
+- Signing out of an app that is not part of the suite (an external app) no longer signs the person out of Sovereign and every other
+  app: only that app's session ends. Signing out of an app the instance runs still signs them out everywhere, as signing out of
+  Sovereign does. An operator can change this for each app in the Console. Apps already registered keep what they did until the next
+  `sv apply`.
+- The sign-in server no longer lists `given_name` and `family_name` among the claims it supports: it never sent them.
+
 ## [0.118.0] - 2026-11-19
 
 ### Changed

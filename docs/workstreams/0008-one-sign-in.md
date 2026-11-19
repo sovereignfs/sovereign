@@ -53,14 +53,14 @@ Tusk and Fjord moving onto the package is work in their own repositories, after 
 
 ## Legs
 
-| Leg | Name                        | Epic tasks         | Gate? | Done when                                                                                                                 |
-| --- | --------------------------- | ------------------ | ----- | ------------------------------------------------------------------------------------------------------------------------- |
-| 1   | The specification           | 17.1               | Yes   | RFC 0007 accepted; `docs/specs/auth.md` and the core-app sections merged                                                  |
-| 2   | Core's sign-in in a package | 17.2, 17.3         | Yes   | Merged; `pnpm e2e`, `pnpm test:db` and the populated stores pass unchanged                                                |
-| 3   | The pages from the package  | 2.6, 17.4          | Yes   | Merged; core's pages thin, on the design system's components, `pnpm e2e` unchanged                                        |
-| 4   | Core's side of the contract | 2.7, 6.5, 6.6      | Yes   | Merged; hosted and external sign-out differ as decided; the account panels shared; 6.6's discovery fix (its `amr` parked) |
-| 5   | Apps sign in with it        | 14.16, 17.5, 13.35 | Yes   | A fixture app and a scaffold sign in through core, locally, and both                                                      |
-| 6   | The SDK follows             | 14.15              | Yes   | The SDK released with a typed `user` and `nextAuth` deprecated; the package published                                     |
+| Leg | Name                        | Epic tasks              | Gate? | Done when                                                                                      |
+| --- | --------------------------- | ----------------------- | ----- | ---------------------------------------------------------------------------------------------- |
+| 1   | The specification           | 17.1                    | Yes   | RFC 0007 accepted; `docs/specs/auth.md` and the core-app sections merged                       |
+| 2   | Core's sign-in in a package | 17.2, 17.3              | Yes   | Merged; `pnpm e2e`, `pnpm test:db` and the populated stores pass unchanged                     |
+| 3   | The pages from the package  | 2.6, 17.4               | Yes   | Merged; core's pages thin, on the design system's components, `pnpm e2e` unchanged             |
+| 4   | Core's side of the contract | 6.5, 6.6                | Yes   | Merged; hosted and external sign-out differ as decided; 6.6's discovery fix (its `amr` parked) |
+| 5   | Apps sign in with it        | 2.7, 14.16, 17.5, 13.35 | Yes   | A fixture app and a scaffold sign in through core, locally, and both                           |
+| 6   | The SDK follows             | 14.15                   | Yes   | The SDK released with a typed `user` and `nextAuth` deprecated; the package published          |
 
 One leg is one branch, one draft PR, one review gate ([README](README.md#legs)). Leg 4 needs only leg 1, and can run beside legs 2
 and 3.
@@ -105,7 +105,7 @@ Gallery entry (`sv-ui-design`).
 
 ### Leg 4 — Core's side of the contract
 
-**Epic tasks:** 2.7, 6.5, 6.6
+**Epic tasks:** 6.5, 6.6
 
 **Technical notes:** end-session is turned on by itself for an app with a post-logout or back-channel address
 (`apps/core/src/clients/registry.ts`); the new setting is separate, so an external app keeps its `sid` and its notices. `sv apply`
@@ -115,7 +115,7 @@ registers apps through `src/admin/run.ts` (`inputOf`).
 
 ### Leg 5 — Apps sign in with it
 
-**Epic tasks:** 14.16, 17.5, 13.35
+**Epic tasks:** 2.7, 14.16, 17.5, 13.35
 
 **Why here:** `./core` needs the SDK's sign-in without an SDK session first (14.16, sdk §9.8); 14.16 needs only leg 1 and may be
 built earlier, beside leg 4.
@@ -158,3 +158,4 @@ Leg 1's spec and leg 4's sign-out setting and `amr` stand on their own.
 | 0.3     | 2026-11-19 | Leg 1 done: RFC 0007 accepted, `docs/specs/auth.md` written, 17.1 ✅.                                                                                                                                                                                                                                                                                                                                                                  |
 | 0.4     | 2026-11-19 | Leg 2 done: core's sign-in runs on `@sovereignfs/auth` (17.2, 17.3 ✅), platform 0.117.0, core 0.78.0. Legs run on without a stop between them, at the goal owner's request, committed locally.                                                                                                                                                                                                                                        |
 | 0.5     | 2026-11-19 | Leg 3 done: the sign-in forms and two account panels are the design system's (2.6), their flows the package's (17.4), platform 0.118.0. Changed for people, to the design system's way: the card's padding breakpoint (768px, not 400px) and code boxes that select on focus. The passkey, second-step setup and profile panels and the account menu moved to a new task, 2.7, in leg 4. Server actions stay the app's (auth.md §7.1). |
+| 0.6     | 2026-11-19 | Leg 4 done: signing out follows whose app it is (6.5), platform 0.119.0, toolkit 0.20.0. 6.6 parked: better-auth's provider owns `amr` and `acr`; only its discovery fix is built. 2.7 moves to leg 5, ahead of the template that needs it.                                                                                                                                                                                            |

@@ -173,7 +173,7 @@ single-page apps.
 - An app unreachable for a minute still ends the session once it answers
 - A notice is never sent for a session that is still open
 
-#### 📋 6.5 — Signing out of an app follows whose app it is `[parallel]`
+#### ✅ 6.5 — Signing out of an app follows whose app it is `[parallel]`
 
 **Goal:** Signing out of a hosted app signs the person out of core and so of every app; signing out of an external app ends that app
 only.
@@ -195,6 +195,11 @@ only.
 
 - An external app's end-session leaves core's session and every other app signed in
 - A hosted app's end-session ends core's session and sends every other app's logout notice
+
+**Built (November 2026):** the setting is `signOutOfCore`, on unless set off and stored only when off (`keepCoreSession` in core's
+metadata for the app), so existing apps need no migration. Core answers end-session itself only for a hint it signed, for an app with
+the setting off (`src/oauth/app-only-sign-out.ts`); everything else stays the provider's. `sv apply` sends `--keep-core-session` for an
+external app only to core 0.119.0 or later.
 
 #### 🚧 6.6 — How a person signed in, in the token `[parallel]`
 

@@ -50,11 +50,6 @@
   margin-top: var(--sv-space-6);
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-}
-
 .label {
   display: block;
   margin-bottom: var(--sv-space-2);
@@ -76,22 +71,6 @@
 }
 
 /* ── Divider ─────────────────────────────────────────────────────────────── */
-
-.divider {
-  display: flex;
-  align-items: center;
-  gap: var(--sv-space-3);
-  margin: var(--sv-space-4) 0;
-  color: var(--sv-color-text-muted);
-  font-size: var(--sv-font-size-sm);
-}
-
-.divider::before,
-.divider::after {
-  content: '';
-  flex: 1;
-  border-top: 1px solid var(--sv-color-border);
-}
 
 /* ── Buttons, links ──────────────────────────────────────────────────────── */
 
@@ -117,52 +96,6 @@
   text-underline-offset: 2px;
 }
 
-.linkButton {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--sv-color-text-primary);
-  font: inherit;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
 /* ── Invitation ──────────────────────────────────────────────────────────── */
 
 /* ── Second step: one box for each digit of a code ───────────────────────── */
-
-.codeRow {
-  display: flex;
-  gap: var(--sv-space-2);
-}
-
-.codeCell {
-  width: 100%;
-  min-width: 0;
-  height: 52px;
-  text-align: center;
-  font-family: var(--sv-font-family-mono);
-  font-size: 21px;
-  font-weight: var(--sv-font-weight-semibold);
-  border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-md);
-  background: var(--sv-color-surface);
-  color: var(--sv-color-text-primary);
-  outline: none;
-  caret-color: transparent;
-}
-
-.codeCell:focus {
-  border-color: var(--sv-color-accent);
-  box-shadow: 0 0 0 3px var(--sv-color-focus-ring);
-}
-
-.codeCellError {
-  border-color: var(--sv-color-error-text);
-}
-
-.backupInput {
-  font-family: var(--sv-font-family-mono);
-  letter-spacing: 0.08em;
-}

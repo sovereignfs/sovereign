@@ -282,3 +282,10 @@
   border-radius: var(--sv-radius-sm);
   padding: 2px 7px;
 }
+
+/* ── The second step: a backup code ──────────────────────────────────────── */
+
+.backupInput {
+  font-family: var(--sv-font-family-mono);
+  letter-spacing: 0.08em;
+}

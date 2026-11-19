@@ -14,17 +14,6 @@
   box-sizing: border-box;
 }
 
-.card {
-  width: 100%;
-  max-width: 360px;
-  background-color: var(--sv-color-surface);
-  border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-lg);
-  box-shadow: var(--sv-shadow-card, 0 1px 2px rgba(0, 0, 0, 0.04));
-  padding: var(--sv-space-8);
-  box-sizing: border-box;
-}
-
 /* ── Brand mark ──────────────────────────────────────────────────────────── */
 
 .brand {
@@ -59,23 +48,7 @@
   border: 1px solid var(--sv-color-border);
 }
 
-.noticeText {
-  margin: 0;
-  font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-muted);
-  line-height: 1.5;
-}
-
 /* A notice that something is not as the person expects: amber, as the offline notice has always been. */
-.warning {
-  background: var(--sv-color-warning-surface);
-  border-color: var(--sv-color-warning-border);
-}
-
-.warning .noticeText {
-  color: var(--sv-color-warning-text);
-}
-
 /* ── Form ────────────────────────────────────────────────────────────────── */
 
 .form {
@@ -98,17 +71,6 @@
   color: var(--sv-color-text-muted);
 }
 
-.labelRow {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: var(--sv-space-2);
-}
-
-.labelRow .label {
-  margin-bottom: 0;
-}
-
 .aside {
   font-size: var(--sv-font-size-xs);
   color: var(--sv-color-text-muted);
@@ -126,12 +88,6 @@
 .error {
   margin: 0;
   font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-error-text);
-}
-
-.fieldError {
-  margin: var(--sv-space-1) 0 0;
-  font-size: var(--sv-font-size-xs);
   color: var(--sv-color-error-text);
 }
 
@@ -202,10 +158,6 @@
 
 /* ── Invitation ──────────────────────────────────────────────────────────── */
 
-.invite {
-  margin-top: var(--sv-space-5);
-}
-
 .inviteTitle {
   margin: 0;
   font-size: var(--sv-font-size-sm);
@@ -258,10 +210,4 @@
 .backupInput {
   font-family: var(--sv-font-family-mono);
   letter-spacing: 0.08em;
-}
-
-@media (max-width: 400px) {
-  .card {
-    padding: var(--sv-space-6);
-  }
 }

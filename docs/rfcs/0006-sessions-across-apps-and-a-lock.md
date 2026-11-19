@@ -2,7 +2,7 @@
 
 |              |                                                                                                                                                                                               |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**   | Draft: part A for review; part B waits for the device check (task 4.15)                                                                                                                       |
+| **Status**   | Part A accepted and implemented (2026-11-19); part B waits for the device check (task 4.15)                                                                                                   |
 | **Date**     | November 2026                                                                                                                                                                                 |
 | **Author**   | Claude Code, for review                                                                                                                                                                       |
 | **Scope**    | `docs/specs/core-app.md` §3.5, §5.4; `docs/specs/sdk.md` §9; `@sovereignfs/sdk`; the app template; `apps/core` sessions, the key store and a lock page                                        |
@@ -60,14 +60,16 @@ default that can be read in the spec is what apps plan against (sdk §9).
 The SDK gains one setting, `checkEverySeconds` (default 3600 in the template; see A5 for the package's default):
 
 - A session record gains `checkedAt`, set at sign-in and at each check.
-- `requireSession` (and `nextAuth`'s `requireSession`), on a page navigation, when `now - checkedAt > checkEverySeconds`, sends the person
+- `nextAuth`'s `requireSession`, on a page navigation, when `now - checkedAt > checkEverySeconds`, sends the person
   to `/auth/login?prompt=none&returnTo=<this page>`. Core answers with no page when its session is alive: the callback replaces the app's
   session (A3) and returns to the page. Four redirects, no screen.
 - When core answers `login_required` (its session is over), the callback ends the app's session and sends the person to sign in the usual
   way, to the same page. A `prompt=none` callback that fails for any other reason is treated the same.
 - `getSession` stays a read of the app's own store, with no call to core: server actions and API routes use the session as it is, for up to
   the check interval. The check happens on the next page the person opens.
-- The thirty-day `sessionSeconds` stays the absolute end of an app session; a check does not extend it past core's own.
+- A check renews the app's session **in place**: the same id and cookie, and the same key secret, so what the browser keeps for an
+  encrypted app still opens (sdk §9.3); a new `checkedAt` and `expiresAt`, as a sign-in gives. A different person signing in on the same
+  browser gets a session of their own, and the first person's ends.
 
 **Why a redirect, not a call.** Only the browser holds core's session cookie; core will not tell an app's server whether a person is
 signed in without it. A redirect with `prompt=none` is the standard way (OpenID Connect Core §3.1.2.1) and costs nothing the person sees.
@@ -134,6 +136,7 @@ Part A does not wait for part B: 14.14 can be built once part A is accepted.
 
 ## Open questions
 
-1. Is one hour the right interval, or should the template ask for less on an app that holds sensitive data?
-2. Should core's session lifetime be an operator's setting in the Console, now or later?
+1. ~~Is one hour the right interval?~~ Decided (2026-11-19): one hour, set by each app; the template sets it.
+2. ~~Should core's session lifetime be an operator's setting?~~ Decided (2026-11-19): no, it stays fixed in core, so apps have one
+   lifetime to plan against.
 3. Part B's four questions above, after the device check.

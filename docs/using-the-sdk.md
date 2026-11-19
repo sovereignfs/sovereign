@@ -74,6 +74,9 @@ ending other sessions, which the app does not do itself.
 Before something that wants a recent sign-in, ask for one: `requireSession('/settings', { maxAgeSeconds: 300 })` sends a person who
 signed in at core more than five minutes ago to sign in again, and `session.authTime` says when they did ([sdk §9.6](specs/sdk.md)).
 When core ends a person's session, by refusing to renew their token, the SDK ends their sessions in the app too.
+Set `checkEverySeconds` (the template sets an hour) and each session is checked against core at that interval: the person sees nothing
+while they are still signed in at core, signs in again when they are not, and their name and roles come up to date
+([sdk §9.7](specs/sdk.md)).
 
 ### When a person deletes their account
 

@@ -133,6 +133,12 @@ export type SovereignOptions = SettingsSource & {
   postLogoutPath?: string;
   /** How long a session lasts at most, in seconds. Thirty days unless changed. */
   sessionSeconds?: number;
+  /**
+   * How often a person's session in the app is checked against core, in seconds: past it, the next page they open goes through core
+   * with `prompt=none`, which costs nothing while their core session lives and signs them in again when it does not (sdk §9.7). Not
+   * checked unless set; the template sets an hour.
+   */
+  checkEverySeconds?: number;
   /** Each request's timeout. 5 seconds unless changed. */
   timeoutMs?: number;
   /** Told the operation, status and duration of each request, and nothing else. */
@@ -302,6 +308,12 @@ export function createSovereign(options: SovereignOptions): Sovereign {
           'Signing people in needs a session store: pass sessionStore when creating the client.',
         );
       }
+      const every = options.checkEverySeconds;
+      if (every !== undefined && (!Number.isInteger(every) || every < 1)) {
+        throw new ConfigurationError(
+          'checkEverySeconds must be a whole number of seconds, 1 or more.',
+        );
+      }
       auth ??= new Auth({
         appUrl: settings.appUrl,
         coreUrl: settings.coreUrl,
@@ -314,6 +326,7 @@ export function createSovereign(options: SovereignOptions): Sovereign {
         redirectPath: options.redirectPath ?? '/auth/callback',
         postLogoutPath: options.postLogoutPath ?? '/',
         sessionSeconds: options.sessionSeconds,
+        checkEverySeconds: options.checkEverySeconds,
       });
       return auth;
     },

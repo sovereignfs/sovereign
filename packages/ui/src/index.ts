@@ -23,6 +23,8 @@ export type { AuthLinkRenderer, SignInFormProps } from './components/Auth/SignIn
 export { ForgotPasswordForm } from './components/Auth/ForgotPasswordForm';
 export type { ForgotPasswordFormProps } from './components/Auth/ForgotPasswordForm';
 export { ResetPasswordForm } from './components/Auth/ResetPasswordForm';
+export { SignUpForm } from './components/Auth/SignUpForm';
+export type { SignUpFormProps, SignUpValues } from './components/Auth/SignUpForm';
 export type { ResetPasswordFormProps } from './components/Auth/ResetPasswordForm';
 export type { LegalLinksProps } from './components/LegalLinks/LegalLinks';
 export { ConsentPrompt } from './components/ConsentPrompt/ConsentPrompt';

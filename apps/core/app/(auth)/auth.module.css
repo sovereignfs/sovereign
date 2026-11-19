@@ -40,14 +40,6 @@
 
 /* ── Notices ─────────────────────────────────────────────────────────────── */
 
-.notice {
-  margin-top: var(--sv-space-3);
-  padding: var(--sv-space-3) var(--sv-space-4);
-  border-radius: var(--sv-radius-md);
-  background: var(--sv-color-surface-sunken);
-  border: 1px solid var(--sv-color-border);
-}
-
 /* A notice that something is not as the person expects: amber, as the offline notice has always been. */
 /* ── Form ────────────────────────────────────────────────────────────────── */
 
@@ -71,14 +63,6 @@
   color: var(--sv-color-text-muted);
 }
 
-.aside {
-  font-size: var(--sv-font-size-xs);
-  color: var(--sv-color-text-muted);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  text-decoration-color: var(--sv-color-border);
-}
-
 .hint {
   margin: var(--sv-space-1) 0 0;
   font-size: var(--sv-font-size-xs);
@@ -89,18 +73,6 @@
   margin: 0;
   font-size: var(--sv-font-size-sm);
   color: var(--sv-color-error-text);
-}
-
-.terms {
-  display: flex;
-  gap: var(--sv-space-2);
-  align-items: flex-start;
-  font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-primary);
-}
-
-.terms input {
-  margin-top: 3px;
 }
 
 /* ── Divider ─────────────────────────────────────────────────────────────── */
@@ -157,23 +129,6 @@
 }
 
 /* ── Invitation ──────────────────────────────────────────────────────────── */
-
-.inviteTitle {
-  margin: 0;
-  font-size: var(--sv-font-size-sm);
-  font-weight: var(--sv-font-weight-medium);
-  color: var(--sv-color-text-primary);
-  line-height: 1.4;
-}
-
-.fromInvite {
-  font-family: var(--sv-font-family-mono);
-  font-size: 10px;
-  color: var(--sv-color-text-muted);
-  background-color: var(--sv-color-surface-sunken);
-  border-radius: var(--sv-radius-sm);
-  padding: 2px 7px;
-}
 
 /* ── Second step: one box for each digit of a code ───────────────────────── */
 

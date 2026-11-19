@@ -151,16 +151,23 @@ const PASSWORD_AGAIN: Readonly<Record<string, 'password' | 'currentPassword'>> =
 };
 
 /**
- * better-auth's routes a browser with a locked session may still use (RFC 0006 B3): signing out, and signing in afresh, which asks for
- * everything signing in always asks for and gives a new session. Every other one refuses a locked session, `get-session` included; the
- * authorization endpoint sends it to the lock page instead. Unlocking is core's own (`src/lock/passkey.ts`), on the same session.
+ * better-auth's routes a browser with a locked session may still use (RFC 0006 B3): signing out, here or from an app; signing in afresh,
+ * which asks for everything signing in always asks for and gives a new session; and the emailed links, each of which carries its own
+ * proof (verifying an address, which signs in afresh, and resetting a password, which ends every session). Every other one refuses a
+ * locked session, `get-session` included; the authorization endpoint sends it to the lock page instead. Unlocking is core's own
+ * (`src/lock/passkey.ts`), on the same session.
  */
 const OPEN_WHEN_LOCKED = new Set([
   '/sign-out',
+  '/oauth2/end-session',
   '/sign-in/email',
   '/passkey/generate-authenticate-options',
   '/passkey/verify-authentication',
   ...SECOND_STEP,
+  '/verify-email',
+  '/request-password-reset',
+  '/reset-password/:token',
+  '/reset-password',
 ]);
 
 const ONE_HOUR = 60 * 60;

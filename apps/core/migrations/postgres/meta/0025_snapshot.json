@@ -1,5 +1,5 @@
 {
-  "id": "ad056f98-64ed-47bb-a33c-ce08395433ef",
+  "id": "76d7f46b-dc8f-44b6-97cd-45aff89ff499",
   "prevId": "90a20928-4dc9-472f-a310-7eb41f6a7bdb",
   "version": "7",
   "dialect": "postgresql",
@@ -3122,6 +3122,12 @@
         },
         "locked_at": {
           "name": "locked_at",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "left_at": {
+          "name": "left_at",
           "type": "bigint",
           "primaryKey": false,
           "notNull": false

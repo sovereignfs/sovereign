@@ -117,12 +117,13 @@ themselves, on the Security page, for opening core on **this device** from then 
 
 A session gains `locked_at` and `last_active_at`.
 
-- **Idle.** `last_active_at` is updated by a request of the session at most each half minute. A session whose device has a lock and whose
+- **Idle.** `last_active_at` is updated by a request of the session at most each ten seconds; the page tells core at most every 15. A session whose device has a lock and whose
   last activity is older than the idle time is locked by the next request, before it is answered. The page also keeps a timer and shows
   the lock page when the time passes, so a screen left open does not go on showing the person's data; the server's check is the one that
   counts.
 - **Leaving the app.** With "Also lock when I leave the app", the page sends a beacon when it is hidden (`visibilitychange`), and the
-  server locks the session. iOS may end a Home Screen app in the background without a word; the stored times decide on the next request,
+  server locks the session unless a page of it is back within 15 seconds: a navigation to another page hides the page too, and the next
+  page says it is there as it opens. iOS may end a Home Screen app in the background without a word; the stored times decide on the next request,
   never memory.
 
 ### B3. What a locked session is given
@@ -132,8 +133,9 @@ Nothing of the person, from anywhere:
 - **Pages.** `requireSignedIn` (and `requireConsole`, `sessionFor`) sends a locked session to `/lock?returnTo=…`, and only the lock page
   and signing out are open to it.
 - **Routes and server actions.** `requireSession` and `requireCapability` treat a locked session as none.
-- **better-auth's own routes.** Every one but signing out and signing in afresh refuses a locked session, `get-session` included.
-  Signing in afresh asks for everything signing in asks for, and gives a new session.
+- **better-auth's own routes.** Every one but signing out (here or from an app), signing in afresh and the emailed links refuses a
+  locked session, `get-session` included. Signing in afresh asks for everything signing in asks for, and gives a new session; each
+  emailed link carries its own proof.
 - **Apps.** The authorization endpoint sends a locked session to the lock page with the app's request as `returnTo`, so an app's sign-in
   or its hourly check (part A) waits for the unlock, `prompt=none` included: the check redirects through the browser anyway, so the
   person unlocks and the app carries on, where `login_required` would have sent them to sign in again.

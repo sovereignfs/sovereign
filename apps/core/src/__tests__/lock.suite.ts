@@ -10,7 +10,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { migrateCore } from '../db/migrate';
 import {
   deviceLock,
+  LEAVE_GRACE_MS,
   lockSession,
+  markLeft,
   lockStatus,
   noteActivity,
   removeDeviceLock,
@@ -137,6 +139,7 @@ export function lockSuite(createDatabase: () => Promise<TestDatabase>): void {
       expect(await lockStatus(db, ada, T)).toEqual({
         lock: { idleSeconds: 900, onLeave: false },
         locked: false,
+        deviceId: 'phone',
       });
       expect((await lockStatus(db, ada, T + 15 * MINUTE)).locked).toBe(false);
       expect((await lockStatus(db, ada, T + 15 * MINUTE + 1)).locked).toBe(true);
@@ -144,15 +147,45 @@ export function lockSuite(createDatabase: () => Promise<TestDatabase>): void {
       expect((await lockStatus(db, ada, T)).locked).toBe(true);
     });
 
-    it('starts its idle time again with activity, written at most each half minute', async () => {
+    it('starts its idle time again with activity, written at most each ten seconds', async () => {
       await setDeviceLock(db, 'ada', 'phone', { idleMinutes: 1, onLeave: false }, T);
       await lockStatus(db, ada, T);
-      await noteActivity(db, 's-ada', T + 20_000);
+      await noteActivity(db, 's-ada', T + 5_000);
       expect((await lockStatus(db, ada, T + MINUTE + 1)).locked).toBe(true);
 
       await unlockSession(db, 's-ada', T + 2 * MINUTE);
-      await noteActivity(db, 's-ada', T + 2 * MINUTE + 40_000);
-      expect((await lockStatus(db, ada, T + 3 * MINUTE + 30_000)).locked).toBe(false);
+      await noteActivity(db, 's-ada', T + 2 * MINUTE + 15_000);
+      expect((await lockStatus(db, ada, T + 3 * MINUTE + 10_000)).locked).toBe(false);
+    });
+
+    it('locks once left for longer than the grace, when the lock asks for it', async () => {
+      await setDeviceLock(db, 'ada', 'phone', { idleMinutes: 60, onLeave: true }, T);
+      await lockStatus(db, ada, T);
+      await markLeft(db, 's-ada', T + MINUTE);
+      expect((await lockStatus(db, ada, T + MINUTE + LEAVE_GRACE_MS)).locked).toBe(false);
+      // That check was the session back within the grace: a page that hid was only going to another page.
+      await markLeft(db, 's-ada', T + 2 * MINUTE);
+      expect((await lockStatus(db, ada, T + 2 * MINUTE + LEAVE_GRACE_MS + 1)).locked).toBe(true);
+    });
+
+    it('keeps the first time it was left, and is not locked by leaving when the lock does not ask', async () => {
+      await setDeviceLock(db, 'ada', 'phone', { idleMinutes: 60, onLeave: true }, T);
+      await lockStatus(db, ada, T);
+      await markLeft(db, 's-ada', T);
+      await markLeft(db, 's-ada', T + 10_000);
+      expect((await lockStatus(db, ada, T + LEAVE_GRACE_MS + 1)).locked).toBe(true);
+
+      await unlockSession(db, 's-ada', T + MINUTE);
+      await setDeviceLock(db, 'ada', 'phone', { idleMinutes: 60, onLeave: false }, T + MINUTE);
+      await markLeft(db, 's-ada', T + MINUTE);
+      expect((await lockStatus(db, ada, T + 2 * MINUTE)).locked).toBe(false);
+    });
+
+    it('gives the device whose lock the session is under, whatever cookie came', async () => {
+      await setDeviceLock(db, 'ada', 'phone', { idleMinutes: 15, onLeave: false }, T);
+      expect((await lockStatus(db, ada, T)).deviceId).toBe('phone');
+      expect((await lockStatus(db, { ...ada, deviceId: undefined }, T)).deviceId).toBe('phone');
+      expect((await lockStatus(db, { ...ada, deviceId: 'laptop' }, T)).deviceId).toBe('phone');
     });
 
     it('is not woken by activity once locked', async () => {
@@ -184,6 +217,7 @@ export function lockSuite(createDatabase: () => Promise<TestDatabase>): void {
       await setDeviceLock(db, 'ada', 'phone', { idleMinutes: 1, onLeave: false }, T + 60 * MINUTE);
       expect((await lockStatus(db, ada, T + 60 * MINUTE)).locked).toBe(false);
       expect((await lockStatus(db, ada, T + 60 * MINUTE + 30_000)).locked).toBe(false);
+      expect((await lockStatus(db, ada, T + 61 * MINUTE + 1)).locked).toBe(true);
     });
 
     it('is unlocked with its idle time started again, and the others stay as they are', async () => {

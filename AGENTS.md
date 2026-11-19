@@ -212,7 +212,7 @@ each: `docs/architecture-rules.md`.
   recorded by the server;** every page is rendered per request, for the nonce.
 - **A locked session is no session:** `getSession` applies the lock, so pages, actions and routes get
   nothing for it; only the lock page reads it (`getSessionEvenIfLocked`). better-auth's routes refuse
-  a browser's locked session but signing out and signing in afresh; the lock follows the session, not
+  a browser's locked session but signing out, signing in afresh and the emailed links; the lock follows the session, not
   the device cookie; unlocking is a passkey checked on that session (`src/lock/passkey.ts`) or the
   password, never a new sign-in.
 - **Every way of opening a session must pass the second step** when TOTP is on,

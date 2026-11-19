@@ -619,10 +619,12 @@ pointing here.
   locked one; only the lock page and its actions read it with
   `getSessionEvenIfLocked` or `requireSession({ evenIfLocked: true })`. better-auth's
   `hooks.before` refuses a browser's request from a locked session on every route
-  but signing out and signing in afresh, and sends the authorization endpoint to
-  the lock page. It applies to requests from a browser (`ctx.request`) only: core's
-  own server calls to `auth.api` go through `getSession` first, and the lock page
-  must read the locked session. The lock follows the session once it is put under
+  but signing out (here or from an app), signing in afresh and the emailed links,
+  and sends the authorization endpoint to the lock page. It applies to requests from a browser (`ctx.request`) only: core's
+  own server calls to `auth.api` go through `getSession` first (a test lists every
+  file that passes the request's headers), and the lock page must read the locked
+  session. Leaving the app locks only after a grace, since a navigation hides the
+  page too. The lock follows the session once it is put under
   one (`session_locks`), never only the device cookie, which a browser can drop.
   Unlocking clears the lock on the same session: a passkey is checked against it
   (`src/lock/passkey.ts`), never by a passkey sign-in, which would end the session

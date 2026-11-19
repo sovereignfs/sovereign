@@ -7,7 +7,7 @@ let cookie = '';
 const betterAuthSession = vi.fn();
 const lockStatus = vi.fn();
 const noteActivity = vi.fn();
-const lockSession = vi.fn();
+const markLeft = vi.fn();
 const DEVICE = 'device-id-0123456789';
 
 vi.mock('next/headers', () => ({
@@ -32,7 +32,7 @@ vi.mock('../database', () => ({ getDatabase: () => Promise.resolve({ family: 'sq
 vi.mock('../lock/store', () => ({
   lockStatus: (...args: unknown[]) => lockStatus(...args) as unknown,
   noteActivity: (...args: unknown[]) => noteActivity(...args) as unknown,
-  lockSession: (...args: unknown[]) => lockSession(...args) as unknown,
+  markLeft: (...args: unknown[]) => markLeft(...args) as unknown,
 }));
 
 import { requireSession } from '../auth/authorize';
@@ -48,7 +48,7 @@ beforeEach(() => {
   betterAuthSession.mockReset().mockResolvedValue(ADA);
   lockStatus.mockReset().mockResolvedValue({ lock: LOCK, locked: false });
   noteActivity.mockReset().mockResolvedValue(undefined);
-  lockSession.mockReset().mockResolvedValue(undefined);
+  markLeft.mockReset().mockResolvedValue(undefined);
 });
 
 describe('a locked session', () => {
@@ -146,19 +146,19 @@ describe('the lock route', () => {
     expect(noteActivity).toHaveBeenCalledWith(expect.anything(), 's-ada');
   });
 
-  it('locks on leaving only when the device’s lock asks for it', async () => {
+  it('marks the session left only when the device’s lock asks for it', async () => {
     expect((await post('leave')).status).toBe(204);
-    expect(lockSession).not.toHaveBeenCalled();
+    expect(markLeft).not.toHaveBeenCalled();
     lockStatus.mockResolvedValue({ lock: { ...LOCK, onLeave: true }, locked: false });
     expect((await post('leave')).status).toBe(204);
-    expect(lockSession).toHaveBeenCalledWith(expect.anything(), 's-ada');
+    expect(markLeft).toHaveBeenCalledWith(expect.anything(), 's-ada');
   });
 
   it('does nothing on a device with no lock', async () => {
     lockStatus.mockResolvedValue({ lock: undefined, locked: false });
     expect((await post('leave')).status).toBe(204);
     expect((await post('activity')).status).toBe(204);
-    expect(lockSession).not.toHaveBeenCalled();
+    expect(markLeft).not.toHaveBeenCalled();
     expect(noteActivity).not.toHaveBeenCalled();
   });
 
@@ -170,6 +170,6 @@ describe('the lock route', () => {
     expect((await post('leave', 'https://elsewhere.example')).status).toBe(403);
     betterAuthSession.mockResolvedValue(null);
     expect((await post('leave')).status).toBe(401);
-    expect(lockSession).not.toHaveBeenCalled();
+    expect(markLeft).not.toHaveBeenCalled();
   });
 });

@@ -83,7 +83,9 @@ describe('the lock setting', () => {
 
 describe('the watcher', () => {
   const assign = vi.fn();
-  const fetchMock = vi.fn(() => Promise.resolve(new Response(null, { status: 204 })));
+  const fetchMock = vi.fn((_url: string, _init?: RequestInit) =>
+    Promise.resolve(new Response(null, { status: 204 })),
+  );
   let hidden = false;
 
   beforeEach(() => {
@@ -116,36 +118,62 @@ describe('the watcher', () => {
     expect(assign).toHaveBeenCalledWith(toLock);
   });
 
-  it('starts the time again on use, and tells core at most each half minute', () => {
+  const calls = (event: string) =>
+    fetchMock.mock.calls.filter(([url]) => url === `/api/lock/${event}`).length;
+
+  it('says it is here as the page opens, and shows the lock page if core says the session is locked', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 401 }));
+    render(<LockWatcher idleSeconds={900} onLeave={false} />);
+    expect(calls('activity')).toBe(1);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(assign).toHaveBeenCalledWith(toLock);
+  });
+
+  it('starts the time again on use, and tells core at most each 15 seconds', () => {
     render(<LockWatcher idleSeconds={60} onLeave={false} />);
     act(() => vi.advanceTimersByTime(40_000));
     fireEvent.keyDown(window);
     fireEvent.pointerDown(window);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith('/api/lock/activity', {
+    expect(calls('activity')).toBe(2);
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/lock/activity', {
       method: 'POST',
       keepalive: true,
     });
+    act(() => vi.advanceTimersByTime(10_000));
+    fireEvent.keyDown(window);
+    expect(calls('activity')).toBe(2);
     act(() => vi.advanceTimersByTime(40_000));
     expect(assign).not.toHaveBeenCalled();
   });
 
-  it('locks on leaving the app only when asked, and shows the lock page on coming back', () => {
+  it('tells core it left only when asked, and asks core on coming back', async () => {
     const { unmount } = render(<LockWatcher idleSeconds={900} onLeave={false} />);
     hidden = true;
     fireEvent(document, new Event('visibilitychange'));
     hidden = false;
     fireEvent(document, new Event('visibilitychange'));
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(assign).not.toHaveBeenCalled();
+    expect(calls('leave')).toBe(0);
+    expect(calls('activity')).toBe(1);
     unmount();
 
+    fetchMock.mockClear();
     render(<LockWatcher idleSeconds={900} onLeave />);
     hidden = true;
     fireEvent(document, new Event('visibilitychange'));
-    expect(fetchMock).toHaveBeenCalledWith('/api/lock/leave', { method: 'POST', keepalive: true });
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/lock/leave', {
+      method: 'POST',
+      keepalive: true,
+    });
+    // Core locked it while the page was away: coming back shows the lock page.
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 401 }));
     hidden = false;
     fireEvent(document, new Event('visibilitychange'));
+    expect(calls('activity')).toBe(2);
+    await act(async () => {
+      await Promise.resolve();
+    });
     expect(assign).toHaveBeenCalledWith(toLock);
   });
 });

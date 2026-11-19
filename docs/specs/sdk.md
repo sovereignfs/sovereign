@@ -447,12 +447,19 @@ part A). The template sets an hour; unset, nothing is checked.
 
 ### 9.8 Signing in for a session the app keeps
 
-Not built (task 14.16; RFC 0007, [`auth.md`](auth.md) §8). `@sovereignfs/auth` keeps an app's sessions itself, so the SDK gives it the
-steps of §9.1 without a session of the SDK's own: beginning a sign-in (the pending record stays the SDK's, in its store), and completing
-one, which checks the answer as §9.1 does, stores core's refresh token in the `TokenStore` as §5.1 says, and returns who signed in
-(`sub`, `sid`, the claims, the scopes, the ID token) for the caller to open its own session with. The check of §9.7, the notices of
-§9.2, sign-out through end-session and the key secret work from what the caller kept, never from an SDK session. Everything §5.1
-promises of the refresh token holds unchanged: the SDK is still the only thing that sends it.
+For an app that keeps its people's sessions itself (`@sovereignfs/auth`, [`auth.md`](auth.md) §8, RFC 0007), the SDK gives the steps of
+§9.1 without a session of its own:
+
+- `beginSignIn` as in §9.1: the pending record is the SDK's, in its store, and its cookie the SDK's.
+- `finishSignIn(request)` checks the answer as `completeSignIn` does (state, nonce, PKCE, `max_age`), keeps core's refresh token in the
+  `TokenStore` as §5.1 says, and returns who signed in (`sub`, `sid`, the claims, the scopes, the ID token) and where they were going,
+  with the one cookie that clears the pending sign-in. It makes no session. A sign-in with `prompt=none` that finds the person signed
+  out at core throws a `SignInError` whose reason is `login_required`, so the caller ends its own session (§9.7).
+- `endSessionUrl(idToken)` is core's sign-out for an ID token the caller kept; core decides what it ends (core-app §3.6.5).
+- The notices are §9.2's (`verifyLogoutToken`, `verifyAccountDeletedToken`), and a session's secret is the caller's (`newSessionSecret`).
+
+`completeSignIn` is `finishSignIn` with the SDK's session made from it, so the two cannot drift. Everything §5.1 promises of the refresh
+token holds unchanged: the SDK is still the only thing that sends it.
 
 ## 10. From the legacy SDK
 

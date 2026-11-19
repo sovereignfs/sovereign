@@ -711,3 +711,53 @@ describe('when core ends a person’s session (sdk §9.1)', () => {
     expect((await world.sv.auth.getSession(withCookie(cookie)))?.sub).toBe('u1');
   });
 });
+
+describe('signing in for a session the app keeps (sdk §9.8)', () => {
+  it('says who signed in and keeps the refresh token, with no session of the SDK’s', async () => {
+    const world = setup({ scopes: ['openid', 'profile', 'offline_access'] });
+    const begin = await world.sv.auth.beginSignIn({ returnTo: '/notes' });
+    const back = world.core.authorize(begin.url, 'u1');
+    const signedIn = await world.sv.auth.finishSignIn(
+      new Request(back, { headers: { cookie: cookieHeader(begin.setCookies) } }),
+    );
+    expect(signedIn).toMatchObject({ sub: 'u1', returnTo: '/notes' });
+    expect(signedIn.claims.name).toBe('Ada Lovelace');
+    expect(typeof signedIn.idToken).toBe('string');
+    // The only cookie it sets clears the pending sign-in: the session is the caller's to make.
+    expect(signedIn.setCookies).toHaveLength(1);
+    expect(signedIn.setCookies[0]).toMatch(/Max-Age=0/);
+    expect(await world.tokens.store.read('u1')).toBeTypeOf('string');
+    // And the callback works once.
+    await expect(
+      world.sv.auth.finishSignIn(
+        new Request(back, { headers: { cookie: cookieHeader(begin.setCookies) } }),
+      ),
+    ).rejects.toBeInstanceOf(SignInError);
+  });
+
+  it('says when core finds the person signed out, for the caller to end its own session', async () => {
+    const world = setup();
+    const begin = await world.sv.auth.beginSignIn({ prompt: 'none', returnTo: '/notes' });
+    const back = world.core.loginRequired(begin.url);
+    const failure = await world.sv.auth
+      .finishSignIn(new Request(back, { headers: { cookie: cookieHeader(begin.setCookies) } }))
+      .catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(SignInError);
+    expect(failure).toMatchObject({ reason: 'login_required', returnTo: '/notes' });
+  });
+
+  it('gives core’s sign-out for an ID token the caller kept, and the app’s own page without one', async () => {
+    const world = setup();
+    const begin = await world.sv.auth.beginSignIn();
+    const back = world.core.authorize(begin.url, 'u1');
+    const { idToken } = await world.sv.auth.finishSignIn(
+      new Request(back, { headers: { cookie: cookieHeader(begin.setCookies) } }),
+    );
+    const out = new URL(await world.sv.auth.endSessionUrl(idToken));
+    expect(out.searchParams.get('id_token_hint')).toBe(idToken);
+    expect(out.searchParams.get('post_logout_redirect_uri')).toBe(
+      world.sv.auth.postLogoutRedirectUri,
+    );
+    expect(await world.sv.auth.endSessionUrl(undefined)).toBe(world.sv.auth.postLogoutRedirectUri);
+  });
+});

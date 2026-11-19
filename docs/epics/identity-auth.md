@@ -359,7 +359,8 @@ there).
 
 **Deliverables:**
 
-- the lock check (`/lock-check`, core-app §3.15.1): a page on development and staging instances that makes a passkey there, asks for one
+- the lock check (`/lock-check`, core-app §3.15.1): a page for anyone signed in on development and staging instances, and for the owner
+  alone on production (`instance:diagnose`), that makes a passkey there, asks for one
   after a tap and with none (armed, on opening and on coming back), reports user verification and PRF output, and records how long the
   app was away and whether it was ended, in a log kept by the browser and copied out as text; nothing is sent to the server
 - on an iPhone (iOS 18.4 and 26), an iPad and an Android phone, with core installed: the lock check run, its results sent
@@ -371,7 +372,7 @@ there).
 
 **Review checklist:**
 
-- The lock check is a page that is not there on a production instance
+- On a production instance the lock check is a page that is not there for anyone but the owner
 - Each row of the table says what was seen, on which version
 
 #### ⏳ 4.16 — The specification: sessions across apps, and a lock

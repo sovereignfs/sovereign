@@ -9,6 +9,8 @@ export type NewApp = {
   /** Protocol scope names; the checkboxes are labelled with them. `openid` is always on. */
   scopes: string[];
   trusted?: boolean;
+  /** Signing out of the app signs the person out of core too (core-app §3.6.5); a new app in the Console starts off. */
+  signOutOfCore?: boolean;
   postLogoutRedirectUri?: string;
   backchannelLogoutUri?: string;
   /** Where the app puts its secret when it asks for tokens. In a header unless said. */
@@ -53,6 +55,11 @@ export async function registerApp(
   }
   // Trust first: the role scope is not offered to an app that is not trusted.
   if (app.trusted) await page.getByLabel('Trust this app').check();
+  if (app.signOutOfCore) {
+    await page
+      .getByLabel('Signing out of this app signs people out of core, and of every other app')
+      .check();
+  }
   for (const scope of app.scopes) {
     const label = SCOPE_LABEL[scope];
     if (!label) throw new Error(`No checkbox is known for the scope ${scope}.`);

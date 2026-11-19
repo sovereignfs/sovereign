@@ -25,6 +25,8 @@ test('§3.17.6: an operator registers two apps, one an off-the-shelf OIDC client
     kind: 'confidential',
     scopes: ['profile', 'offline_access', 'directory'],
     postLogoutRedirectUri: `${RP_URL}/after-logout`,
+    // Notes stands for an app of the suite: signing out of it signs the person out of core too (§3.17.10).
+    signOutOfCore: true,
     backchannelLogoutUri: `${RP_URL}/backchannel-logout`,
   });
   const minimal = await registerApp(page, {

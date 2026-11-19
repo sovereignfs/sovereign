@@ -203,7 +203,7 @@ only of design-system parts.
 - Nothing is removed before a migration note exists
 - An export promoted to stable is used by core or an app
 
-#### 📋 2.6 — Sign-in forms and account panels `[parallel]`
+#### ✅ 2.6 — Sign-in forms and account panels `[parallel]`
 
 **Goal:** Every app's sign-in and security pages are the design system's, and core uses the `Auth*` components it already exports.
 
@@ -223,3 +223,30 @@ only of design-system parts.
 
 - No component imports `next/*`
 - Core's sign-in pages look and behave as before (`pnpm e2e`)
+
+**Built (November 2026):** `SignInForm`, `SignUpForm`, `ForgotPasswordForm`, `ResetPasswordForm`, `TwoFactorForm`, `SessionsPanel`,
+`ChangePasswordForm` and `ActionResult`, each with stories, tests and a gallery card; core's pages run on them and on the `Auth*`
+parts, and core's own copies are gone. Two things a person can see changed, both to the design system's way: the card's smaller
+padding starts at the 768px breakpoint, not 400px, and a code box selects its digit on focus. The passkey, second-step setup and
+profile panels and `AccountMenu` moved to 2.7: they are the most tied to core's key vault and pages, and were not rushed into this
+task.
+
+#### 📋 2.7 — The account panels that remain
+
+**Goal:** The passkeys, second-step setup and profile panels, deleting the account, and the account menu are the design system's too.
+
+**Deliverables:**
+
+- `PasskeyPanel`, `TwoFactorPanel` (on `QrCode`, the encoder the app's), `ProfilePanel`, a delete-account form, and `AccountMenu` over
+  `UserMenu`, each with a story, tests and a gallery card; the flows behind them in `@sovereignfs/auth/client`, the key vault's part
+  given as hooks (a passkey's way into the keys) or, where it cannot be, left in core and said so
+- core's `app/security/*` and `app/profile/*` thin, as the sign-in pages are
+
+**Dependencies:** 2.6
+
+**Spec reference:** design system §6; auth.md §7
+
+**Review checklist:**
+
+- Core's security and profile pages look and behave as before (`pnpm e2e`)
+- No component imports `next/*`

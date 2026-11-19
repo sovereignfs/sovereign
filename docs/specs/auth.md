@@ -42,8 +42,8 @@ an app                          + its own data and pages
 | ---------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `.`        | Anywhere      | What imports nothing and runs on a server, in a browser or on the Edge: the cookie names (rule 10), the password policy, the time zone and language checks, `safeReturnTo`                                       |
 | `./server` | Server        | `createAuthPreset(options)` (§4); the settings resolver (§5); the session read (§6); the checks of rules 3, 6 and 7; a person's sessions; the account tables' schema for each dialect and their migrations (§10) |
-| `./next`   | Server        | The page guards (§6), and the server actions and route handlers behind the sign-in, security and profile pages (§7)                                                                                              |
-| `./client` | Browser       | The browser client; `derive`, the sign-in value (core-app §5.2); the passkey ceremony with PRF; the key store's browser hooks                                                                                    |
+| `./next`   | Server        | The page guards (§6)                                                                                                                                                                                             |
+| `./client` | Browser       | The browser client's plugins and fields; the sign-in value (`signInDerivation`, `saltReader`); the flows of §7.1 and their messages; the passkey sign-in with the key store's PRF hooks                          |
 | `./core`   | Server        | Core as a way in for an app (§8)                                                                                                                                                                                 |
 
 A browser that imports `./server`, `./next` or `./core` MUST fail at once, as the SDK's server entry does.
@@ -135,16 +135,28 @@ function (§3).
 - `listSessions` and `endSession` / `endOtherSessions` work on the signed-in person's own sessions only (rule 13).
 - The password policy is one function, used by the forms in the browser and by the server.
 
-## 7. The pages' actions
+## 7. The pages
 
 ### 7.1 What there is
 
-`./next` exports an action or route for each of: sign in (password, passkey), sign up, forgot and reset the password, verify an address
-and send the link again, the second step (a code, a backup code, a passkey), passkeys (add, rename, remove), the second step's setup,
-sessions (list, end), the profile and its picture, change the password, and delete the account. The forms that call them are
-`@sovereignfs/ui` components (design-system §6), and an app's page is a few lines that join the two.
+A page of the sign-in is three parts:
 
-Every action and route:
+- **the form**, from `@sovereignfs/ui` (design-system §6): `SignInForm`, `SignUpForm`, `ForgotPasswordForm`, `ResetPasswordForm`,
+  `TwoFactorForm`, and on the account pages `SessionsPanel` and `ChangePasswordForm`. It draws and collects, and sends nothing itself;
+  links come from the app (`renderLink`);
+- **the flow**, from `./client`: `signInWithPassword`, `signInWithPasskey`, `signUp` (with `signUpProblem` checked first, at once),
+  `requestPasswordReset`, `resetPassword`, `verifySecondStep`, `changePassword`. Each derives the sign-in value where a password is
+  given, calls better-auth's browser client, and tells the answer apart in words a person can act on (the messages are the package's,
+  the same everywhere). An app's own refusal (core's: an app's sign-in request that ran out) is taken first;
+- **the join**, the app's own page: it passes the app's client, its key store's hooks and its links, and decides where to go next.
+
+The sign-in pages call better-auth from the browser, so they have no server action. What changes a person's account from a page that
+is signed in (ending a session) is a server action **of the app's**, a `'use server'` file in the app that calls the package's server
+functions (`listSessions`, `endSession`, `endOtherSessions`): a server action cannot be handed the app's better-auth instance and its
+capability check from a package, and the rule that every action checks its own session and capability is held where the action is.
+The panels take those actions as props (`ActionResult` is their answer).
+
+Every action and route of an app's sign-in:
 
 - reads the session itself and refuses without one, whatever the page's guard says, since a server action is a public endpoint;
 - calls the app's capability check where the app has one (core's `requireCapability`);
@@ -152,7 +164,8 @@ Every action and route:
 - answers with a result a form can show, never a thrown error a person sees.
 
 Deleting an account asks for the password, then calls the app's deletion and ends every session; an app that cannot delete
-someone (core's owner) refuses there.
+someone (core's owner) refuses there. The panels for passkeys, the second step's setup, the profile and deleting the account, and the
+account menu, follow in task 2.7.
 
 ### 7.2 The key store
 

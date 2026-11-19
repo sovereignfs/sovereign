@@ -10,6 +10,8 @@ Not published yet: it is built from private packages of this repository, and is 
 - `@sovereignfs/auth`: what runs anywhere (the cookie names, the password policy, the time zone and language checks, `safeReturnTo`).
 - `@sovereignfs/auth/server`: `createAuthPreset`, the settings resolver, the session read, the checks, a person's sessions, the
   account tables and their migrations.
+- `@sovereignfs/auth/client`: the sign-in in a page: the browser client's plugins (`signInClientPlugins`), the sign-in value
+  (`signInDerivation`), and the flows behind the design system's forms (`signInWithPassword`, `signUp`, `resetPassword`, …).
 - `@sovereignfs/auth/next`: the page guards.
 
 ## Using it

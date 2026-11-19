@@ -86,6 +86,13 @@ import {
 import { Alert } from '../components/Alert/Alert';
 import { Breadcrumb } from '../components/Breadcrumb/Breadcrumb';
 import { LegalLinks } from '../components/LegalLinks/LegalLinks';
+import { SignInForm } from '../components/Auth/SignInForm';
+import { SignUpForm } from '../components/Auth/SignUpForm';
+import { ForgotPasswordForm } from '../components/Auth/ForgotPasswordForm';
+import { ResetPasswordForm } from '../components/Auth/ResetPasswordForm';
+import { TwoFactorForm } from '../components/Auth/TwoFactorForm';
+import { SessionsPanel } from '../components/Account/SessionsPanel';
+import { ChangePasswordForm } from '../components/Account/ChangePasswordForm';
 import { ConsentPrompt } from '../components/ConsentPrompt/ConsentPrompt';
 import { Markdown } from '../components/Markdown/Markdown';
 import { Pagination } from '../components/Pagination/Pagination';
@@ -3311,6 +3318,85 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               usage="Privacy Policy / Terms of Service link row for standalone auth pages (login, register, forgot/reset password). Pass renderLink to keep navigation client-side if ever mounted inside an SPA-like shell."
             >
               <LegalLinks />
+            </ComponentCard>
+
+            {/* The sign-in forms (RFC 0007) */}
+            <ComponentCard
+              name="SignInForm"
+              importLine="import { SignInForm } from '@sovereignfs/ui';"
+              usage="The sign-in of core and every app. It draws and collects; the app signs in with @sovereignfs/auth/client and passes back pending, error and unverified. renderLink keeps links client-side."
+            >
+              <SignInForm
+                appName="Sovereign"
+                onSubmit={() => undefined}
+                forgotPasswordHref="#"
+                signUpHref="#"
+              />
+            </ComponentCard>
+            <ComponentCard
+              name="SignUpForm"
+              importLine="import { SignUpForm } from '@sovereignfs/ui';"
+              usage="Creating an account: a name, the address (an invitation's, kept), the password typed twice, and the terms when the app has them; then the wait for a verification link."
+            >
+              <SignUpForm
+                appName="Sovereign"
+                passwordHint="At least 8 characters."
+                onSubmit={() => undefined}
+                signInHref="#"
+              />
+            </ComponentCard>
+            <ComponentCard
+              name="ForgotPasswordForm"
+              importLine="import { ForgotPasswordForm } from '@sovereignfs/ui';"
+              usage="Asking for a reset link. What it says once sent is the same whether or not the address has an account."
+            >
+              <ForgotPasswordForm onSubmit={() => undefined} signInHref="#" />
+            </ComponentCard>
+            <ComponentCard
+              name="ResetPasswordForm"
+              importLine="import { ResetPasswordForm } from '@sovereignfs/ui';"
+              usage="A new password from the emailed link, typed twice; a link that ran out offers a new one."
+            >
+              <ResetPasswordForm
+                passwordHint="At least 8 characters."
+                onSubmit={() => undefined}
+                signInHref="#"
+                newLinkHref="#"
+              />
+            </ComponentCard>
+            <ComponentCard
+              name="TwoFactorForm"
+              importLine="import { TwoFactorForm } from '@sovereignfs/ui';"
+              usage="The second sign-in step: the authenticator's six digits, a backup code, or a passkey instead. No 'trust this device'."
+            >
+              <TwoFactorForm onSubmit={() => undefined} signInAgainHref="#" />
+            </ComponentCard>
+            <ComponentCard
+              name="SessionsPanel"
+              importLine="import { SessionsPanel } from '@sovereignfs/ui';"
+              usage="A person's own sessions, each ended by the app's server action (which checks it is theirs); ActionResult is the answer's shape."
+            >
+              <SessionsPanel
+                sessions={[
+                  {
+                    id: 'a',
+                    current: true,
+                    device: 'Safari on iOS',
+                    ipAddress: null,
+                    signedInAt: 0,
+                    lastActiveAt: 0,
+                  },
+                ]}
+                endSession={() => Promise.resolve({ ok: true })}
+                endOthers={() => Promise.resolve({ ok: true })}
+              />
+            </ComponentCard>
+            <ComponentCard
+              name="ChangePasswordForm"
+              importLine="import { ChangePasswordForm } from '@sovereignfs/ui';"
+              usage="Changing the password: the current one, then the new. The app changes it with @sovereignfs/auth/client and passes back done or error."
+            >
+              <ChangePasswordForm onSubmit={() => undefined} />
             </ComponentCard>
 
             {/* ConsentPrompt */}

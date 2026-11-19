@@ -4,6 +4,16 @@ What changed in each version of the sign-in core and every Sovereign app share, 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/). A version's section is
 written in the change that sets the version, dated that day, and becomes the release notes when the version is published.
 
+## [0.2.0] - 2026-11-19
+
+### Added
+
+- `@sovereignfs/auth/client`: the browser client's plugins and fields, the sign-in value derived from a salt the app names, and the
+  flows behind the sign-in pages (`signInWithPassword`, `signInWithPasskey`, `signUp` with `signUpProblem`, `requestPasswordReset`,
+  `resetPassword`, `verifySecondStep`, `changePassword`) with their messages.
+- `signUpPolicy` and a required `registration`, so no app is open to every sign-up by leaving it out; the server entries throw in a
+  browser.
+
 ## [0.1.0] - 2026-11-19
 
 ### Added

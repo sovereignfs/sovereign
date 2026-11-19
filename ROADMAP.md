@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.117.0 · **Last updated:** 2026-11-19
+**Version:** 0.118.0 · **Last updated:** 2026-11-19
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -334,11 +334,12 @@ the package in their own repositories, after 13.35.
 | —       | 1        | The specification                                          | ✅     | [17.1](docs/epics/one-sign-in.md)   |
 | 0.117.0 | 2        | The package, and core's sign-in made from it               | ✅     | [17.2](docs/epics/one-sign-in.md)   |
 | 0.117.0 | 3        | Session helpers with a check of their own                  | ✅     | [17.3](docs/epics/one-sign-in.md)   |
-| —       | 4        | Sign-in forms and account panels `[parallel]`              | 📋     | [2.6](docs/epics/design-system.md)  |
-| —       | 5        | The pages' actions, and core's pages thin                  | 📋     | [17.4](docs/epics/one-sign-in.md)   |
-| —       | 6        | Signing out of an app follows whose app it is `[parallel]` | 📋     | [6.5](docs/epics/oidc-provider.md)  |
-| —       | 7        | How a person signed in, in the token `[parallel]`          | 📋     | [6.6](docs/epics/oidc-provider.md)  |
-| —       | 8        | Signing in for a session the app keeps `[parallel]`        | 📋     | [14.16](docs/epics/sdk.md)          |
-| —       | 9        | Core as a way in, and an app's own accounts                | 📋     | [17.5](docs/epics/one-sign-in.md)   |
-| —       | 10       | The template makes an app of its own                       | 📋     | [13.35](docs/epics/operator-cli.md) |
-| —       | 11       | A typed person, and `nextAuth` deprecated                  | 📋     | [14.15](docs/epics/sdk.md)          |
+| 0.118.0 | 4        | Sign-in forms and account panels `[parallel]`              | ✅     | [2.6](docs/epics/design-system.md)  |
+| 0.118.0 | 5        | The pages' actions, and core's pages thin                  | ✅     | [17.4](docs/epics/one-sign-in.md)   |
+| —       | 6        | The account panels that remain `[parallel]`                | 📋     | [2.7](docs/epics/design-system.md)  |
+| —       | 7        | Signing out of an app follows whose app it is `[parallel]` | 📋     | [6.5](docs/epics/oidc-provider.md)  |
+| —       | 8        | How a person signed in, in the token `[parallel]`          | 📋     | [6.6](docs/epics/oidc-provider.md)  |
+| —       | 9        | Signing in for a session the app keeps `[parallel]`        | 📋     | [14.16](docs/epics/sdk.md)          |
+| —       | 10       | Core as a way in, and an app's own accounts                | 📋     | [17.5](docs/epics/one-sign-in.md)   |
+| —       | 11       | The template makes an app of its own                       | 📋     | [13.35](docs/epics/operator-cli.md) |
+| —       | 12       | A typed person, and `nextAuth` deprecated                  | 📋     | [14.15](docs/epics/sdk.md)          |

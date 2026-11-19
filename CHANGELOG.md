@@ -5,6 +5,15 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.118.0] - 2026-11-19
+
+### Changed
+
+- Core's sign-in, sign-up, forgotten and reset password and second-step pages, and the sessions and change-password panels, are drawn
+  with the design system's forms, which every Sovereign app will use, and run on the sign-in package. They say and do what they did.
+  Two small things look different: on a screen between 401 and 768 pixels wide the sign-in card has a little more room inside, and a
+  box of a sign-in code selects its digit when it is focused, so typing replaces it.
+
 ## [0.117.0] - 2026-11-19
 
 ### Changed

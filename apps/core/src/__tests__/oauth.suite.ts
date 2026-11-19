@@ -17,6 +17,7 @@ import type { Database } from '@sovereignfs/database';
 import type { TestDatabase } from '@sovereignfs/database/testing';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AccountStates } from '../accounts/states';
+import { lockSession, lockStatus, setDeviceLock, unlockSession } from '../lock/store';
 import type { Auth } from '../auth/auth';
 import { ROLE_OWNER } from '../auth/roles';
 import { migrateCore } from '../db/migrate';
@@ -51,6 +52,8 @@ import {
 
 const MIGRATIONS = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../migrations');
 const TABLES = [
+  'session_locks',
+  'device_locks',
   'oauth_access_tokens',
   'oauth_refresh_tokens',
   'oauth_consents',
@@ -927,6 +930,125 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
       });
       expect(issued).toBeUndefined();
       expect(url?.pathname).toBe('/sign-in');
+    });
+  });
+
+  describe('a locked session (RFC 0006 B3)', () => {
+    const DEVICE = 'device-id-0123456789';
+    /** Turns the lock on for this account on this browser, and locks the browser's session. */
+    async function lock(jar: Jar, userId: string) {
+      jar.absorb([`sv_device=${DEVICE}`]);
+      await setDeviceLock(db, userId, DEVICE, { idleMinutes: 15, onLeave: false });
+      const { rows } = await db.run('select id from sessions where user_id = ?', [userId]);
+      for (const row of rows) {
+        await lockStatus(db, { sessionId: String(row.id), userId, deviceId: DEVICE });
+        await lockSession(db, String(row.id));
+      }
+    }
+
+    it('sends an app’s sign-in to the lock page, with the app’s request as the way back', async () => {
+      const { auth, owner, person, personId } = await instance();
+      const client = await registerClient(auth, owner);
+      await lock(person, personId);
+      const {
+        reply,
+        code: issued,
+        url,
+      } = await authorize(auth, person, client, {
+        challenge: pkce().challenge,
+        state: 'state-locked',
+      });
+      expect(issued).toBeUndefined();
+      expect(reply.status).toBe(302);
+      expect(url?.pathname).toBe('/lock');
+      const back = url?.searchParams.get('returnTo') ?? '';
+      expect(back.startsWith('/api/auth/oauth2/authorize?')).toBe(true);
+      expect(new URL(back, BASE_URL).searchParams.get('state')).toBe('state-locked');
+
+      // Unlocked, the same request carries on to the app.
+      await unlockSession(
+        db,
+        String((await db.run('select id from sessions where user_id = ?', [personId])).rows[0]?.id),
+      );
+      expect(
+        (await authorize(auth, person, client, { challenge: pkce().challenge })).code,
+      ).toBeTruthy();
+    });
+
+    it('sends even a sign-in that may show nothing (prompt=none) to the lock page, never giving a code', async () => {
+      const { auth, owner, person, personId } = await instance();
+      const client = await registerClient(auth, owner);
+      await lock(person, personId);
+      const reply = await call(
+        auth,
+        'GET',
+        `/oauth2/authorize?${new URLSearchParams({
+          client_id: client.clientId,
+          response_type: 'code',
+          redirect_uri: REDIRECT,
+          scope: 'openid',
+          state: 's',
+          prompt: 'none',
+          code_challenge: pkce().challenge,
+          code_challenge_method: 'S256',
+        })}`,
+        { jar: person, origin: null },
+      );
+      const location = new URL(reply.headers.get('location') ?? '', BASE_URL);
+      expect(location.pathname).toBe('/lock');
+      expect(location.searchParams.get('code')).toBeNull();
+    });
+
+    it('gets nothing from better-auth’s routes, the session itself included', async () => {
+      const { auth, person, personId } = await instance();
+      await lock(person, personId);
+      for (const path of ['/get-session', '/list-sessions', '/passkey/list-user-passkeys']) {
+        const reply = await call(auth, 'GET', path, { jar: person });
+        expect(reply.status, path).toBe(401);
+        expect((reply.body as { code?: string }).code, path).toBe('SESSION_LOCKED');
+      }
+    });
+
+    it('is still read by core’s own server code, which applies the lock itself', async () => {
+      const { auth, person, personId } = await instance();
+      await lock(person, personId);
+      const read = await auth.api.getSession({
+        headers: new Headers({ cookie: person.header() ?? '' }),
+        query: { disableCookieCache: true },
+      });
+      expect(read?.user.id).toBe(personId);
+    });
+
+    it('can still sign out, and the session ends', async () => {
+      const { auth, person, personId } = await instance();
+      await lock(person, personId);
+      expect((await call(auth, 'POST', '/sign-out', { jar: person, body: {} })).status).toBe(200);
+      const { rows } = await db.run('select count(*) as n from sessions where user_id = ?', [
+        personId,
+      ]);
+      expect(Number(rows[0]?.n)).toBe(0);
+    });
+
+    it('can sign in afresh, with the password, getting a new session', async () => {
+      const { auth, person, personId } = await instance();
+      await lock(person, personId);
+      const { rows } = await db.run('select email from users where id = ?', [personId]);
+      const reply = await call(auth, 'POST', '/sign-in/email', {
+        jar: person,
+        body: { email: String(rows[0]?.email), password: PASSWORD },
+      });
+      expect(reply.status).toBe(200);
+      expect(
+        (await call(auth, 'GET', '/get-session', { jar: person.without('sv_device') })).status,
+      ).toBe(200);
+    });
+
+    it('locks nobody else, and follows the session, not the browser’s cookie', async () => {
+      const { auth, owner, person, personId } = await instance();
+      await lock(person, personId);
+      expect((await call(auth, 'GET', '/get-session', { jar: owner })).status).toBe(200);
+      const withoutCookie = person.without('sv_device');
+      expect((await call(auth, 'GET', '/get-session', { jar: withoutCookie })).status).toBe(401);
     });
   });
 

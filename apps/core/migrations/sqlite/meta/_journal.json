@@ -176,6 +176,13 @@
       "when": 1795032510595,
       "tag": "0024_logout_notices",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1795083556063,
+      "tag": "0025_lock",
+      "breakpoints": true
     }
   ]
 }

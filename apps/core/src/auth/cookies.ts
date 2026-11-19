@@ -84,3 +84,10 @@ export function removalAttributes(
     ...(domain !== undefined && !name.startsWith('__Host-') ? { domain } : {}),
   };
 }
+
+/**
+ * The cookie that names this browser for a person's lock (RFC 0006 B1, `src/lock/device.ts`): a random id that says nothing of the person.
+ * `__Host-` over https, as the session cookie is, so no other host can set it.
+ */
+export const deviceCookieName = (secure: boolean): string =>
+  secure ? '__Host-sv_device' : 'sv_device';

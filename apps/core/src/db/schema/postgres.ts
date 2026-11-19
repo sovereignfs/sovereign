@@ -309,6 +309,53 @@ export const activity = pgTable(
 );
 
 /**
+ * A person's lock on one device (RFC 0006 B1): the device is the browser, named by a random id in a host-only cookie, and the setting is
+ * the idle time and whether leaving the app locks too. One row for each account and device; written only by `src/lock/store.ts`.
+ */
+export const deviceLocks = pgTable(
+  'device_locks',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    deviceId: text('device_id').notNull(),
+    idleSeconds: integer('idle_seconds').notNull(),
+    onLeave: boolean('on_leave').notNull(),
+    createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+    updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
+  },
+  (table) => [uniqueIndex('device_locks_user_device_idx').on(table.userId, table.deviceId)],
+);
+
+/**
+ * The lock's state of one session (RFC 0006 B2): the device whose lock it is under, when it was last used, and when it was locked, if it
+ * is. Written the first time the session is seen on a device with a lock, and from then on the lock follows the session, not the
+ * browser's cookie. Kept beside better-auth's own `sessions` row and deleted with it. Times are milliseconds since the epoch. Written only
+ * by `src/lock/store.ts`.
+ */
+export const sessionLocks = pgTable('session_locks', {
+  sessionId: text('session_id')
+    .primaryKey()
+    .references(() => sessions.id, { onDelete: 'cascade' }),
+  deviceId: text('device_id').notNull(),
+  lastActiveAt: bigint('last_active_at', { mode: 'number' }).notNull(),
+  lockedAt: bigint('locked_at', { mode: 'number' }),
+});
+
+/**
+ * A passkey challenge core gave a session, to check a passkey without signing in (RFC 0006 B1, B4): turning the lock on, and unlocking.
+ * One at a time per session, used once, and good for five minutes. Times are milliseconds since the epoch. Written only by
+ * `src/lock/passkey.ts`.
+ */
+export const lockChallenges = pgTable('lock_challenges', {
+  sessionId: text('session_id')
+    .primaryKey()
+    .references(() => sessions.id, { onDelete: 'cascade' }),
+  challenge: text('challenge').notNull(),
+  expiresAt: bigint('expires_at', { mode: 'number' }).notNull(),
+});
+
+/**
  * Telling an app that a person's session at core ended (OpenID Connect Back-Channel Logout, core-app §3.6.5): one row for each app and
  * core session (`sid`), written when the session ends and kept until the app answers, or the notice is given up. Not tied to the account
  * or the session, which may be gone. `state` is `pending`, `delivered` or `given_up`. Times are milliseconds since the epoch.

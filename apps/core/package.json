@@ -17,6 +17,7 @@
   "dependencies": {
     "@better-auth/oauth-provider": "1.7.18",
     "@better-auth/passkey": "1.7.18",
+    "@simplewebauthn/server": "13.3.3",
     "@sovereignfs/api-client": "workspace:*",
     "@sovereignfs/config": "workspace:*",
     "@sovereignfs/crypto": "workspace:*",

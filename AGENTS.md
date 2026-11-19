@@ -210,6 +210,11 @@ each: `docs/architecture-rules.md`.
   ended session stops working at once everywhere.
 - **Sign-up's terms and time zone are checked in the user-create hook and
   recorded by the server;** every page is rendered per request, for the nonce.
+- **A locked session is no session:** `getSession` applies the lock, so pages, actions and routes get
+  nothing for it; only the lock page reads it (`getSessionEvenIfLocked`). better-auth's routes refuse
+  a browser's locked session but signing out and signing in afresh; the lock follows the session, not
+  the device cookie; unlocking is a passkey checked on that session (`src/lock/passkey.ts`) or the
+  password, never a new sign-in.
 - **Every way of opening a session must pass the second step** when TOTP is on,
   and core offers no "trust this device".
 - **Passkeys must be user-verified** (checked in core's hooks, not left to

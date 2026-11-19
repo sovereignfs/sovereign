@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 import { getSession } from '../auth/session';
+import { notePageActivity, sendToLockIfLocked } from '../lock/guard';
 import { can, type Capability } from '../roles/capabilities';
 import { getCapabilityMatrix } from '../roles/matrix';
 import { visibleSections, type ConsoleSection } from './sections';
@@ -20,8 +21,11 @@ export async function requireConsole(
 ) {
   const session = await getSession();
   if (!session) {
+    // A locked session is sent to the lock page, not to sign in (RFC 0006 B3).
+    await sendToLockIfLocked(options.returnTo ?? '/console');
     redirect(`/sign-in?returnTo=${encodeURIComponent(options.returnTo ?? '/console')}`);
   }
+  await notePageActivity(session);
   const matrix = await getCapabilityMatrix();
   if (
     !can(session.user.role, 'console:access', matrix) ||

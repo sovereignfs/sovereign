@@ -573,6 +573,43 @@ passkeys), subject to §3.2.1. The account holder is told by email.
 - A health endpoint reports whether core and its database are up, and nothing
   else.
 
+#### 3.5.1 The lock
+
+A person may lock core on a device, so that coming back to it after a while asks for their passkey (Face ID, Touch ID, a fingerprint or
+the device's PIN) or their password (RFC 0006 part B). Signing in does not change; the lock is their own choice, never an operator's.
+
+- **Turning it on.** On the Security page, under "Lock on this device", once signed in. It needs one of the account's passkeys, answered
+  on this device with the person verified: the page asks for it after a tap, and core checks the answer (`src/lock/passkey.ts`) the way
+  a passkey sign-in is checked (one of the account's own, a challenge core gave this session and takes back once, within five minutes,
+  the instance's relying party and origins, the person verified), without opening a session. An account with no passkey is sent to add
+  one. Changing the setting, or turning it off, needs only the unlocked session.
+- **The device** is the browser: a random id in a host-only, `HttpOnly` cookie (`__Host-sv_device` over https, `sv_device` over http),
+  kept 400 days, made the first time the lock is turned on there. The setting is kept per account and device (`device_locks`): another
+  account in that browser has none.
+- **The settings:** lock after **15 minutes** without use by default, or 1, 5 or 60; and **"Also lock when I leave the app"**, off by
+  default.
+- **A session under a lock.** The first time a session is seen with the cookie of a device that has a lock for its account, it is put
+  under that lock (`session_locks`), and from then on the lock follows the session, not the cookie: a browser that drops the cookie, or
+  the session's token used from another browser, is still locked. Turning the lock off frees the device's sessions; turning it on again
+  starts their idle time afresh.
+- **When it locks.** A request of the session is its use: a page opened, or the watcher on every signed-in page telling core that the
+  person is using it (a tap, a key, a scroll), at most every 30 seconds. A session idle longer than the lock's time is locked by its next
+  request, before it is answered; the watcher also shows the lock page once the time has passed, so a screen left open stops showing
+  the person's data. With "Also lock when I leave the app", hiding the page locks the session, and coming back shows the lock page.
+  Core decides from its stored times, never from what a page remembers.
+- **What a locked session gets: nothing of the person.** `getSession` (`src/auth/session.ts`) gives no session for it, so every page,
+  server action and route treats it as signed out; a guarded page sends it to `/lock?returnTo=…` instead of to sign in, and so do the
+  pages before signing in. better-auth's routes refuse it (`401`, `SESSION_LOCKED`), `get-session` included, except signing out and
+  signing in afresh, which asks for everything signing in asks for and gives a new session. The authorization endpoint sends it to the
+  lock page with the app's request as the way back, `prompt=none` included, so an app's sign-in or hourly check (sdk §9.7) waits for
+  the unlock and then carries on. The session's secret, which opens what the browser kept of the person's keys, is refused (§5.4).
+- **The lock page** (`/lock`) says whose session it is and offers **Unlock**, which asks for a passkey after the tap (never a prompt that
+  appears by itself, which the devices could not be relied on to show; research 0012), **Use your password**, and **Sign out**. The
+  password goes through `confirmPassword` (§3.2.1), counted with every other time it is asked. Either unlocks the **same session**, so
+  no app's session that hangs from it ends. The session's secret is given again, so what the browser kept of the keys opens as before
+  (§5.4); where nothing was kept, a passkey that answers PRF opens them (§5.5), and the password with its secret.
+  The password always unlocks, so someone whose passkey does not work on a device is never locked out.
+
 ### 3.6 Sign-in server (OpenID Connect provider)
 
 #### 3.6.1 Endpoints and flows
@@ -2004,6 +2041,7 @@ cascade; deleting an account deletes the secrets of its sessions in its transact
 - When a session ends, however it ends, its secret is deleted with it, so what a browser kept can never be opened again, whether or not
   a page was open at the time.
 - The service worker (§3.5) never stores or sees any of it.
+- A locked session (§3.5.1) is refused its secret, so what the browser kept stays closed until the session is unlocked.
 
 ### 5.5 Passkeys that unlock
 
@@ -2217,3 +2255,4 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-19 | §3.2.2, §3.2.3, §3.15.1: `instance:diagnose`, owner-only; the lock check is served on production to whoever holds it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2026-11-19 | §3.6.1: a sign-in page whose app request ran out says so and starts the app's sign-in again.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | 2026-11-19 | §3.10: an invitation link opened while signed in says so, and offers to go on or to sign out and use it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 2026-11-19 | §3.5.1: the lock, per device once signed in, with a passkey checked by core on the session; a locked session gets nothing of the person, and is unlocked in place with a passkey or the password; §5.4: its secret is refused while locked (RFC 0006 part B).                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |

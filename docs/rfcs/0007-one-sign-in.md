@@ -2,7 +2,7 @@
 
 |              |                                                                                                                                                                                                                                                       |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**   | Draft, for review                                                                                                                                                                                                                                     |
+| **Status**   | Accepted (2026-11-19); not built                                                                                                                                                                                                                      |
 | **Date**     | November 2026                                                                                                                                                                                                                                         |
 | **Author**   | Claude Code, for review                                                                                                                                                                                                                               |
 | **Scope**    | A new published package, `@sovereignfs/auth`; `apps/core`'s sign-in, account and security pages; `@sovereignfs/ui`; `@sovereignfs/sdk`; the app template in `tools/create`; `contracts/core-api/`, `contracts/env.md`; `docs/specs/core-app.md` §3.6  |
@@ -274,3 +274,4 @@ and a lock in the package is a later proposal if an app on its own needs one.
 | November 2026 | Decided: signing out of a hosted app signs out of core, of an external app only of itself, held by core; MPL-2.0 |
 | November 2026 | Decided: `nextAuth` deprecated; tasks written into the epics, workstream 0008                                    |
 | November 2026 | The last open questions settled (a fresh session; an app's own lock left out); the specification written         |
+| November 2026 | Accepted by the goal owner                                                                                       |

@@ -1,6 +1,6 @@
 # Workstream 0008 — One sign-in for core and every app
 
-**Status:** 📋 Planned\
+**Status:** ⏳ In Progress\
 **Date:** November 2026\
 **Author:** Claude Code\
 **Goal owner:** kasunben\
@@ -20,7 +20,7 @@ starts this way from the template, and the SDK's own sign-in is deprecated.
 
 ## Definition of done
 
-- [ ] RFC 0007 accepted and `docs/specs/auth.md` written (17.1)
+- [x] RFC 0007 accepted and `docs/specs/auth.md` written (17.1)
 - [ ] Core's sign-in made from the package with nothing anyone can see changed (17.2, 17.3, 2.6, 17.4)
 - [ ] Signing out and `amr` at core (6.5, 6.6)
 - [ ] The SDK signs in for a session the app keeps (14.16)
@@ -154,3 +154,4 @@ Leg 1's spec and leg 4's sign-out setting and `amr` stand on their own.
 | ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 0.1     | 2026-11-19 | Initial draft                                                                                                                                                                                                                              |
 | 0.2     | 2026-11-19 | One branch for the whole workstream, `feat/one-sign-in`, stacked on the lock's, at the goal owner's request. 14.16 added to leg 5: the SDK's sign-in without an SDK session, which `./core` is built on (found writing the specification). |
+| 0.3     | 2026-11-19 | Leg 1 done: RFC 0007 accepted, `docs/specs/auth.md` written, 17.1 ✅.                                                                                                                                                                      |

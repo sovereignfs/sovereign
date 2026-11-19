@@ -321,7 +321,7 @@ workstream [0007](docs/workstreams/0007-sign-in.md)
 
 ### M17 — One sign-in for core and every app
 
-[RFC 0007](docs/rfcs/0007-one-sign-in.md) (Draft) · [research 0004](docs/research/0004-a-kit-for-apps-of-their-own.md) · epics
+[RFC 0007](docs/rfcs/0007-one-sign-in.md) (Accepted) · [research 0004](docs/research/0004-a-kit-for-apps-of-their-own.md) · epics
 [17](docs/epics/one-sign-in.md), [2](docs/epics/design-system.md), [6](docs/epics/oidc-provider.md), [13](docs/epics/operator-cli.md) and
 [14](docs/epics/sdk.md) · workstream [0008](docs/workstreams/0008-one-sign-in.md)
 
@@ -331,7 +331,7 @@ the package in their own repositories, after 13.35.
 
 | Version | Priority | Task                                                       | Status | Epic task                           |
 | ------- | -------- | ---------------------------------------------------------- | ------ | ----------------------------------- |
-| —       | 1        | The specification                                          | 📋     | [17.1](docs/epics/one-sign-in.md)   |
+| —       | 1        | The specification                                          | ✅     | [17.1](docs/epics/one-sign-in.md)   |
 | —       | 2        | The package, and core's sign-in made from it               | 📋     | [17.2](docs/epics/one-sign-in.md)   |
 | —       | 3        | Session helpers with a check of their own                  | 📋     | [17.3](docs/epics/one-sign-in.md)   |
 | —       | 4        | Sign-in forms and account panels `[parallel]`              | 📋     | [2.6](docs/epics/design-system.md)  |

@@ -2,7 +2,7 @@
 
 |              |                                                                                                                                                                                               |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**   | Accepted: part A implemented; part B decided (2026-11-19), to be built                                                                                                                        |
+| **Status**   | Partially implemented (part B tried in an installed iPhone app with its release, B7; the app's side of B6, 14.14, to come)                                                                    |
 | **Date**     | November 2026                                                                                                                                                                                 |
 | **Author**   | Claude Code, for review                                                                                                                                                                       |
 | **Scope**    | `docs/specs/core-app.md` §3.5, §5.4; `docs/specs/sdk.md` §9; `@sovereignfs/sdk`; the app template; `apps/core` sessions, the key store and a lock page                                        |
@@ -106,7 +106,7 @@ Signing in does not change: email and password, a passkey, and the second step w
 themselves, on the Security page, for opening core on **this device** from then on. An operator cannot require it.
 
 - **It needs a passkey on this device.** Turning it on runs a passkey ceremony, checked by the server (user verified, one of the account's
-  own passkeys). With none that works, the page asks the person to add one first (the existing flow, §3.4.2) and then turns the lock on.
+  own passkeys, a challenge given to this session). With none, the page asks the person to add one first (the existing flow, §3.4.2).
 - **The device is the browser.** A long-lived, host-only cookie (`__Host-sv_device`, a random id) names it, and a table keyed by the account
   and that id (`device_locks`) holds the setting. A new session in the same browser, for the same account, takes the setting up; another
   account in that browser has none.
@@ -117,7 +117,7 @@ themselves, on the Security page, for opening core on **this device** from then 
 
 A session gains `locked_at` and `last_active_at`.
 
-- **Idle.** `last_active_at` is updated by a request of the session at most once a minute. A session whose device has a lock and whose
+- **Idle.** `last_active_at` is updated by a request of the session at most each half minute. A session whose device has a lock and whose
   last activity is older than the idle time is locked by the next request, before it is answered. The page also keeps a timer and shows
   the lock page when the time passes, so a screen left open does not go on showing the person's data; the server's check is the one that
   counts.
@@ -132,19 +132,26 @@ Nothing of the person, from anywhere:
 - **Pages.** `requireSignedIn` (and `requireConsole`, `sessionFor`) sends a locked session to `/lock?returnTo=…`, and only the lock page
   and signing out are open to it.
 - **Routes and server actions.** `requireSession` and `requireCapability` treat a locked session as none.
-- **better-auth's own routes.** Every one but signing out and the unlock ceremony refuses a locked session, `get-session` included.
+- **better-auth's own routes.** Every one but signing out and signing in afresh refuses a locked session, `get-session` included.
+  Signing in afresh asks for everything signing in asks for, and gives a new session.
 - **Apps.** The authorization endpoint sends a locked session to the lock page with the app's request as `returnTo`, so an app's sign-in
-  or its hourly check (part A) waits for the unlock; `prompt=none` with a locked session is `login_required`.
+  or its hourly check (part A) waits for the unlock, `prompt=none` included: the check redirects through the browser anyway, so the
+  person unlocks and the app carries on, where `login_required` would have sent them to sign in again.
+- **The session, not the cookie.** A session is put under a device's lock the first time it is seen with that device's cookie, and the
+  lock follows the session from then on, so dropping the cookie, or taking the session's token to another browser, does not escape it.
 
 ### B4. Unlocking
 
 The lock page shows whose session it is, an **Unlock** button and **Use your password**, and **Sign out**.
 
-- **Unlock** runs a passkey ceremony after the tap, checked by the server: user verified, one of the account's own passkeys. The page never
+- **Unlock** runs a passkey ceremony after the tap, checked by the server against the locked session itself, with a challenge given to
+  it: user verified, one of the account's own passkeys. It opens no new session: a passkey sign-in would, and would end the locked one,
+  and every app's session with it (§3.6.5). The page never
   depends on a prompt appearing without a tap, which the device check found possible but not dependable; asking on its own as the page
   opens may be added where a platform allows it.
 - **Use your password** goes through `confirmPassword`, counted with every other time it is asked (§3.2.1).
-- Either clears `locked_at` and sends the person on to `returnTo`. A session that cannot be unlocked can always sign out.
+- Either clears `locked_at` on the same session and sends the person on to `returnTo`. A session that cannot be unlocked can always sign
+  out.
 
 ### B5. Keys closed while locked
 
@@ -156,9 +163,11 @@ device check found a passkey that gave no PRF output, so the fallback is needed,
 ### B6. Apps
 
 An app gets the lock through core: its hourly check (part A) and any sign-in go through the authorization endpoint, which a locked session
-cannot pass (B3). An app that wants the person to unlock before something sensitive asks for a recent sign-in, `requireSession(returnTo,
-{ maxAgeSeconds })` (sdk §9.6), which a locked session meets by unlocking. Related origins, letting an app use core's passkey without the
-redirect, stay for later.
+cannot pass (B3). An app that wants the person to prove themselves again before something sensitive asks for a recent sign-in, `requireSession(returnTo,
+{ maxAgeSeconds })` (sdk §9.6). As built, unlocking does not count as one: `max_age` is held to the time the session signed in, which an
+unlock leaves as it was, so such a request asks for a fresh sign-in. Whether an unlock should count, and how an app shows that it asked
+for one, is the app's side of this part (14.14), still to come. Related origins, letting an app use core's passkey without the redirect,
+stay for later.
 
 ### B7. What is confirmed with the release
 
@@ -182,9 +191,9 @@ installed app cannot use passkeys there, people unlock with the password on it.
 | ----- | ----- | -------------------------------------------------------------------------------------------- | ------------------------------------------ |
 | 1     | 4.15  | The device check, run; research 0012's table filled                                          | Done: desktop and iPhone in a browser (B7) |
 | 2     | 4.16  | This RFC accepted, part B decided                                                            | Done                                       |
-| 3     | 14.14 | A2, A3, A5 in the SDK, the fake core and the template; B6 documented                         | A done; B6 with 4.17                       |
-| 4     | 4.17  | A1; B1 to B4 in core: the device setting, locking, what a locked session gets, the lock page | A1 done; B to build                        |
-| 5     | 16.24 | B5: keys closed while locked                                                                 | To build, with 4.17                        |
+| 3     | 14.14 | A2, A3, A5 in the SDK, the fake core and the template; B6 documented                         | A done; the app's side of B6 to come       |
+| 4     | 4.17  | A1; B1 to B4 in core: the device setting, locking, what a locked session gets, the lock page | Done; B7 with the release                  |
+| 5     | 16.24 | B5: keys closed while locked                                                                 | Done, with 4.17                            |
 
 Part A did not wait for part B. Part B is built in one release, tried in an installed app on an iPhone before it is called done (B7).
 

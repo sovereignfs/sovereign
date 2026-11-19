@@ -403,14 +403,14 @@ there).
 **Deliverables:**
 
 - ✅ core's session lifetime set explicitly (`SESSION_LIFETIME`: seven days, extended daily; RFC 0006 A1)
-- the setting, per device (`__Host-sv_device`, `device_locks`): turned on from the Security page once signed in, needing a passkey on the
-  device (added first when there is none); idle time 15 minutes by default, from 1, 5, 15 or 60; "Also lock when I leave the app", off by
+- ✅ the setting, per device (`__Host-sv_device`, `device_locks`): turned on from the Security page once signed in, needing a passkey on the
+  device, checked by core on the session (added first when there is none); idle time 15 minutes by default, from 1, 5, 15 or 60; "Also lock when I leave the app", off by
   default (RFC 0006 B1)
-- `locked_at` and `last_active_at` on the session; locked by the next request after the idle time, by a beacon on leaving the app, and
+- ✅ `locked_at` and `last_active_at` on the session (`session_locks`, which then follows the session, not the cookie); locked by the next request after the idle time, by a beacon on leaving the app, and
   shown by the page's own timer (B2)
-- a locked session gets nothing of the person: pages send it to `/lock`, routes and actions treat it as none, better-auth's routes refuse
-  it but signing out and the unlock ceremony, and the authorization endpoint sends it to the lock page (B3)
-- the lock page: Unlock (a server-checked passkey assertion with user verification, after a tap), Use your password (`confirmPassword`),
+- ✅ a locked session gets nothing of the person: pages send it to `/lock`, routes and actions treat it as none, better-auth's routes refuse
+  it but signing out and signing in afresh, and the authorization endpoint sends it to the lock page (B3)
+- ✅ the lock page: Unlock (a server-checked passkey assertion with user verification, after a tap, on the locked session itself), Use your password (`confirmPassword`),
   Sign out (B4)
 - tried in an installed app on an iPhone before it is called done (B7)
 

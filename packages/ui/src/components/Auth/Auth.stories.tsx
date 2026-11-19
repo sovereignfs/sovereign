@@ -18,6 +18,7 @@ import { ForgotPasswordForm } from './ForgotPasswordForm';
 import { ResetPasswordForm } from './ResetPasswordForm';
 import { SignInForm } from './SignInForm';
 import { SignUpForm } from './SignUpForm';
+import { TwoFactorForm } from './TwoFactorForm';
 
 const meta = {
   title: 'Components/Auth',
@@ -214,6 +215,29 @@ export const SignUpFormInvited: Story = {
         onSubmit={() => undefined}
         signInHref="/sign-in"
       />
+    </AuthCard>
+  ),
+};
+
+/** The second step, and a sign-in that can no longer be finished. */
+export const TwoFactorFormStory: Story = {
+  name: 'TwoFactorForm',
+  render: () => (
+    <AuthCard brand={<BrandBadge name="Sovereign" />} title="Two-step sign-in" legal={false}>
+      <TwoFactorForm
+        passkey={{ pending: false, onClick: () => undefined }}
+        onSubmit={() => undefined}
+        signInAgainHref="/sign-in"
+      />
+    </AuthCard>
+  ),
+};
+
+export const TwoFactorFormOver: Story = {
+  name: 'TwoFactorForm, over',
+  render: () => (
+    <AuthCard brand={<BrandBadge name="Sovereign" />} title="Two-step sign-in" legal={false}>
+      <TwoFactorForm over onSubmit={() => undefined} signInAgainHref="/sign-in" />
     </AuthCard>
   ),
 };

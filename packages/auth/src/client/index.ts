@@ -367,3 +367,54 @@ export async function signUp(
   }
   return { outcome: 'signed-in', secret };
 }
+
+/** What the second step needs of the client. */
+type SecondStepClient = {
+  twoFactor: {
+    verifyTotp(input: { code: string }): Promise<{ error?: Refusal | null; data?: unknown }>;
+    verifyBackupCode(input: { code: string }): Promise<{ error?: Refusal | null; data?: unknown }>;
+  };
+};
+
+/** What the second step came to, for the page to act on. */
+export type SecondStepOutcome =
+  | { outcome: 'signed-in'; data: unknown }
+  | { outcome: 'over' }
+  | { outcome: 'refused'; message: string }
+  | { outcome: 'other'; error: Refusal };
+
+/**
+ * The second sign-in step (auth.md §4, rule 4): a code from the authenticator app or a backup code, told apart from a sign-in that can
+ * no longer be finished. `isOther` lets the app take a refusal of its own first (core: an app's request that ran out).
+ */
+export async function verifySecondStep(
+  client: SecondStepClient,
+  { code, backup }: { code: string; backup: boolean },
+  isOther: (error: Refusal) => boolean = () => false,
+): Promise<SecondStepOutcome> {
+  const result = backup
+    ? await client.twoFactor.verifyBackupCode({ code })
+    : await client.twoFactor.verifyTotp({ code });
+  if (!result.error) return { outcome: 'signed-in', data: result.data };
+  const error = result.error;
+  if (isOther(error)) return { outcome: 'other', error };
+  if (error.code === 'INVALID_TWO_FACTOR_COOKIE') return { outcome: 'over' };
+  if (error.code === 'TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE') return { outcome: 'over' };
+  if (error.code === 'ACCOUNT_TEMPORARILY_LOCKED') {
+    return {
+      outcome: 'refused',
+      message: 'Too many wrong codes. Wait a few minutes, then sign in again.',
+    };
+  }
+  if (error.status === 429)
+    return { outcome: 'refused', message: 'Too many attempts. Wait a minute, then try again.' };
+  if (error.status === 401) {
+    return {
+      outcome: 'refused',
+      message: backup
+        ? 'That backup code is not right, or it was already used.'
+        : 'That code is not right. Check the app and try again.',
+    };
+  }
+  return { outcome: 'refused', message: 'The code could not be checked. Try again.' };
+}

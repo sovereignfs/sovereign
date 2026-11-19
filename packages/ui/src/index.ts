@@ -24,6 +24,8 @@ export { ForgotPasswordForm } from './components/Auth/ForgotPasswordForm';
 export type { ForgotPasswordFormProps } from './components/Auth/ForgotPasswordForm';
 export { ResetPasswordForm } from './components/Auth/ResetPasswordForm';
 export { SignUpForm } from './components/Auth/SignUpForm';
+export { TwoFactorForm } from './components/Auth/TwoFactorForm';
+export type { TwoFactorFormProps } from './components/Auth/TwoFactorForm';
 export type { SignUpFormProps, SignUpValues } from './components/Auth/SignUpForm';
 export type { ResetPasswordFormProps } from './components/Auth/ResetPasswordForm';
 export type { LegalLinksProps } from './components/LegalLinks/LegalLinks';

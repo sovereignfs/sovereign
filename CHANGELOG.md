@@ -5,6 +5,17 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.116.0] - 2026-11-19
+
+### Added
+
+- A lock on a device. Once signed in, a person can turn it on from the Security page under "Lock on this device", with a passkey that
+  works on that device. Core then locks their session after 15 minutes without use (or 1, 5 or 60, as they choose), and, if they ask,
+  when they leave the app. A locked session shows nothing of the person, to core's pages or to apps signing in through core, until it is
+  unlocked with the passkey or the password; signing out is always offered. Unlocking carries on in the same session, so the person's
+  apps stay signed in, and their encrypted data stays closed while the session is locked. Nothing changes for anyone who does not turn
+  it on.
+
 ## [0.115.0] - 2026-11-19
 
 ### Added

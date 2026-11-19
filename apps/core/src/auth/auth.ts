@@ -22,6 +22,8 @@ import {
   EndingSessions,
 } from '../oauth/logout-notices';
 import { oidcPlugins } from '../oauth/provider';
+import { appOnlySignOut } from '../oauth/app-only-sign-out';
+import type { JSONWebKeySet } from 'jose';
 import { ROLE_OWNER, ROLE_USER } from './roles';
 import type { AuthSettings } from './settings';
 import { signUpRecord } from './terms';
@@ -117,7 +119,9 @@ export function createAuth(
 ) {
   // The apps to tell about each session being deleted, read before it goes (deleting it clears the tokens' pointer to it).
   const endingSessions = new EndingSessions();
-  return betterAuth(
+  // The instance's own keys, for checking a hint on signing out of an app (`appOnlySignOut`): read through the instance once it exists.
+  const own: { jwks?: () => Promise<unknown> } = {};
+  const auth = betterAuth(
     createAuthPreset({
       appName: 'Sovereign',
       database,
@@ -166,6 +170,17 @@ export function createAuth(
         // server code reads the session through `getSession` (src/auth/session.ts), which applies the lock itself, and the lock page
         // has to read a locked session to say whose it is.
         beforeRequest: async (ctx: RequestContext) => {
+          // Signing out of an app whose setting keeps the core session ends nothing of core's (core-app §3.6.5). Apart from the lock
+          // below, which leaves this route open.
+          const jwks = own.jwks;
+          if (ctx.path === '/oauth2/end-session' && jwks) {
+            const to = await appOnlySignOut(
+              ctx,
+              async () => (await jwks()) as JSONWebKeySet,
+              new URL(settings.baseUrl).origin,
+            );
+            if (to) throw ctx.redirect(to);
+          }
           if (!ctx.request || OPEN_WHEN_LOCKED.has(ctx.path)) return;
           const current = await getSessionFromCtx(ctx);
           if (!current) return;
@@ -251,4 +266,6 @@ export function createAuth(
       plugins: oidcPlugins(database, settings),
     }),
   );
+  own.jwks = () => auth.api.getJwks();
+  return auth;
 }

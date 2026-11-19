@@ -18,6 +18,7 @@ const view = (
   accountDeletedUri: undefined,
   keyReturnUri: undefined,
   endSession: false,
+  signOutOfCore: true,
   scopes: ['openid'],
   appScopes: [],
   trusted: false,

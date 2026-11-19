@@ -51,6 +51,7 @@ describe('the command line of sovereign-admin', () => {
         appScopes: ['notifications:send'],
         isPublic: false,
         trusted: true,
+        keepCoreSession: false,
         launchUrl: 'https://a.test/',
         description: 'Writes things down',
         icon: 'https://a.test/i.png',
@@ -122,9 +123,21 @@ describe('the command line of sovereign-admin', () => {
       scopes: ['openid', 'profile', 'email'],
       appScopes: [],
       trusted: false,
+      signOutOfCore: true,
       enabled: true,
       launcher: { description: '', icon: '', launchUrl: '', show: true },
     });
     expect(inputOf({ ...app, isPublic: true }).type).toBe('public');
+    // An external app is registered with --keep-core-session: signing out of it leaves the core session (core-app §3.6.5).
+    const external = ensure(
+      'k',
+      '--name',
+      'N',
+      '--redirect',
+      'https://a.test/cb',
+      '--keep-core-session',
+    ).app;
+    expect(external.keepCoreSession).toBe(true);
+    expect(inputOf(external).signOutOfCore).toBe(false);
   });
 });

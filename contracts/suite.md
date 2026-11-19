@@ -206,6 +206,10 @@ whose manifest has `database`.
 
 An **external app**:
 
+Signing out of an external app ends that app's session and leaves the person's core session (core-app §3.6.5): `sv apply`
+registers it with `--keep-core-session` on a core of 0.119.0 or later, and on an older one leaves it as it was. A hosted app
+signs the person out of core too, as signing out of core does.
+
 | Field            | Required | Meaning                                                                                                                        |
 | ---------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `external`       | yes      | `true`                                                                                                                         |

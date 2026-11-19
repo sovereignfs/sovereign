@@ -22,6 +22,8 @@ export type ClientOptions = {
   name?: string;
   /** Lets the app send someone to core's end-session endpoint. */
   enableEndSession?: boolean;
+  /** Whether signing out of the app ends the core session too (core-app §3.6.5). On unless set. */
+  signOutOfCore?: boolean;
   /** Where core tells the app that a session ended. */
   backchannelLogoutUri?: string;
   /** How the app's ID tokens are signed (core-app §3.6.1). EdDSA unless said. */
@@ -70,6 +72,7 @@ export async function registerClient(
     ).split(' '),
     trusted: options.trusted ?? true,
     endSession: options.enableEndSession ?? false,
+    ...(options.signOutOfCore === false ? { signOutOfCore: false } : {}),
     ...(options.postLogoutRedirectUris
       ? { postLogoutRedirectUris: options.postLogoutRedirectUris }
       : {}),

@@ -44,6 +44,7 @@ export const NEW_APP: Pick<
   | 'accountDeletedUri'
   | 'keyReturnUri'
   | 'endSession'
+  | 'signOutOfCore'
   | 'scopes'
   | 'appScopes'
   | 'trusted'
@@ -59,6 +60,8 @@ export const NEW_APP: Pick<
   accountDeletedUri: undefined,
   keyReturnUri: undefined,
   endSession: false,
+  // A new app here starts off: signing out of it leaves the person's core session (core-app §3.6.5).
+  signOutOfCore: false,
   scopes: ['openid', 'profile', 'email'],
   appScopes: [],
   trusted: false,
@@ -87,6 +90,7 @@ export function AppForm({ id, initial }: { id?: string; initial: Initial }) {
   const [accountDeleted, setAccountDeleted] = useState(initial.accountDeletedUri ?? '');
   const [keyReturn, setKeyReturn] = useState(initial.keyReturnUri ?? '');
   const [endSession, setEndSession] = useState(initial.endSession);
+  const [signOutOfCore, setSignOutOfCore] = useState(initial.signOutOfCore);
   const [scopes, setScopes] = useState(new Set(initial.scopes));
   const [appScopes, setAppScopes] = useState(new Set(initial.appScopes));
   const [trusted, setTrusted] = useState(initial.trusted);
@@ -355,6 +359,12 @@ export function AppForm({ id, initial }: { id?: string; initial: Initial }) {
             checked={endSession || postLogout.trim() !== '' || backchannel.trim() !== ''}
             disabled={postLogout.trim() !== '' || backchannel.trim() !== ''}
             onChange={setEndSession}
+          />
+          <Checkbox
+            name="signOutOfCore"
+            label="Signing out of this app signs people out of core, and of every other app"
+            checked={signOutOfCore}
+            onChange={setSignOutOfCore}
           />
           <fieldset className={styles.scopes}>
             <legend className={styles.legend}>What the app may ask to see</legend>

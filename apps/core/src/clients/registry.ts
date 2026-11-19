@@ -47,6 +47,12 @@ export type ClientSettings = {
   keyReturnUri: string | undefined;
   /** Lets the app send people to core's sign-out. On whenever a post-logout or back-channel address is set. */
   endSession: boolean;
+  /**
+   * Whether signing out of the app also ends the person's core session, and so every other app's (core-app §3.6.5). On unless an operator
+   * turns it off: `sv apply` does for an external app, and a new app in the Console starts off. Kept with core's own settings, and
+   * only when off, so an app that never chose keeps what it always did.
+   */
+  signOutOfCore: boolean;
   scopes: string[];
   /**
    * What the app may do for itself, with no person present (core-app §3.6.6, §3.7.1): the scopes of its own token. None unless an
@@ -446,6 +452,7 @@ export class ClientRegistry {
       ['trusted', input.trusted],
       ['enabled', input.enabled],
       ['endSession', input.endSession],
+      ['signOutOfCore', input.signOutOfCore],
       ['launcher.show', input.launcher?.show],
     ] as const) {
       if (value !== undefined && typeof value !== 'boolean') {
@@ -508,6 +515,7 @@ export class ClientRegistry {
       // `keys` follows the key return address and nothing else: an app may use encryption exactly when it has one (core-app §5.6).
       scopes: [...scopes.list.filter((scope) => scope !== 'keys'), ...(encryption ? ['keys'] : [])],
       appScopes: [...new Set(appScopes.map(String))],
+      signOutOfCore: input.signOutOfCore ?? before?.signOutOfCore ?? true,
       trusted,
       enabled: input.enabled ?? before?.enabled ?? true,
       launcher: {
@@ -571,6 +579,7 @@ export class ClientRegistry {
             : {}),
           ...(settings.accountDeletedUri ? { accountDeletedUri: settings.accountDeletedUri } : {}),
           ...(settings.keyReturnUri ? { keyReturnUri: settings.keyReturnUri } : {}),
+          ...(settings.signOutOfCore ? {} : { keepCoreSession: true }),
         },
         updatedAt: new Date(),
       },
@@ -594,6 +603,7 @@ export function clientView(row: ClientRow): ClientView {
     accountDeletedUri: blank(metadata.accountDeletedUri),
     keyReturnUri: blank(metadata.keyReturnUri),
     endSession: row.enableEndSession === true,
+    signOutOfCore: metadata.keepCoreSession !== true,
     scopes: list(row.scopes),
     appScopes: list(row.clientCredentialsScopes),
     trusted: row.skipConsent === true,

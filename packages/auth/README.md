@@ -16,7 +16,7 @@ Not published yet: it is built from private packages of this repository, and is 
 
 ```ts
 import { betterAuth } from 'better-auth';
-import { accountTables, createAuthPreset } from '@sovereignfs/auth/server';
+import { accountTables, createAuthPreset, signUpPolicy } from '@sovereignfs/auth/server';
 
 export const auth = betterAuth(
   createAuthPreset({
@@ -25,6 +25,7 @@ export const auth = betterAuth(
     tables: accountTables(database.family),
     settings,
     mail,
+    registration: signUpPolicy(database, 'closed'),
   }),
 );
 ```

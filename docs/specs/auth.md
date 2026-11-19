@@ -50,19 +50,25 @@ A browser that imports `./server`, `./next` or `./core` MUST fail at once, as th
 
 ## 3. What an app gives it
 
-| Option         | What it is                                                                                                                                                                  |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `prefix`       | The app's settings prefix (`SV` for core); the settings of §5 are read with it, through `@sovereignfs/config`                                                               |
-| `database`     | One of the three dialects, through `@sovereignfs/database`                                                                                                                  |
-| `mail`         | Sending: verification, reset, account created, second step reset, with `@sovereignfs/mailer`'s templates. An app with no mail set up says so before any lookup (§4, rule 9) |
-| `registration` | Who may get an account (§5 `AUTH_SIGNUP`), or a function that decides (core's invitations are one); called inside the user-create hook, never from a route                  |
-| `salt`         | What the sign-in value is derived with: core's instance id, or the app's vault id (sdk §9.5)                                                                                |
-| `hooks`        | `onUserCreate`, `onSessionEnd`, `beforeRequest`, and an extra session check (§6)                                                                                            |
-| `keyStore`     | The key store's hooks around signing in and changing the password (§7.2), or none                                                                                           |
-| `plugins`      | More better-auth plugins, run after the preset's                                                                                                                            |
+`createAuthPreset(options)` (`./server`) takes:
+
+| Option          | What it is                                                                                                                                                                                                                         |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `appName`       | What better-auth and the authenticator app call the app                                                                                                                                                                            |
+| `database`      | One of the three dialects, through `@sovereignfs/database`                                                                                                                                                                         |
+| `tables`        | The account tables under better-auth's model names: `accountTables(family)` (§10), or the app's own with more columns (core's)                                                                                                     |
+| `settings`      | What `resolveAuthSettings(config, { prefix, appName })` gives from the app's settings (§5)                                                                                                                                         |
+| `mail`          | Sending: verification, reset, account created, with `@sovereignfs/mailer`'s templates. An app with no mail set up says so before any lookup (§4, rule 9)                                                                           |
+| `registration`  | Required. Who may get an account: `signUpPolicy(database, 'open' \| 'closed')` for `AUTH_SIGNUP`, or the app's own function (core's decides the owner and its invitations). Called inside the user-create hook, never from a route |
+| `userFields`    | More fields on an account, beside the package's own (`timezone`, `locale`, `deactivatedAt`)                                                                                                                                        |
+| `hooks`         | `beforeRequest` (first of the request checks: core's lock), `afterRequest`, `userCheck` (what else a sign-up must carry: core's terms), `userCreated`, `userUpdateCheck`, `sessionDelete` (core's logout notices)                  |
+| `disabledPaths` | Routes of better-auth or of the app's plugins to switch off                                                                                                                                                                        |
+| `plugins`       | More better-auth plugins, run after the package's own (the second step and passkeys)                                                                                                                                               |
+| `background`    | How a send runs without making the request wait (rule 9)                                                                                                                                                                           |
 
 The preset gives back better-auth's options; the app (or core) calls better-auth with them. Core passes its additions this way and in
-no other: nothing the preset holds is overridden by an option, only added to.
+no other: nothing the preset holds is overridden by an option, only added to. The salt for the sign-in value and the key store's hooks
+are the browser's (`./client`, §7.2), not the preset's.
 
 ## 4. The rules it holds
 

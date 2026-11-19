@@ -4,10 +4,13 @@
  */
 export {
   createAuthPreset,
+  signUpPolicy,
   SECOND_STEP,
   SESSION_LIFETIME,
   type AuthPresetHooks,
   type AuthPresetOptions,
+  type Registration,
+  type UserInput,
   type RequestContext,
 } from './preset.js';
 export {

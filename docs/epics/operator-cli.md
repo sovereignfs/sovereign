@@ -943,3 +943,22 @@ can have a plain copy when they ask for one, and cannot lose every backup by los
 
 - A scaffold builds, starts with `docker compose up`, uploads a file and serves it to its owner only
 - A scaffold is a valid manifest 3 under the published `@sovereignfs/manifest`
+
+#### 📋 13.35 — The template makes an app of its own
+
+**Goal:** A new app signs people in through core, with accounts of its own, or both, and runs with no instance at all.
+
+**Deliverables:**
+
+- `tools/create`'s template on `@sovereignfs/auth`: thin `app/(auth)/*` and `app/security/*` pages, the account migrations, both
+  ways in from the environment, the three database forms
+- the template off the SDK's `nextAuth`; `building-an-app` §6 and §15 rewritten for one shape
+
+**Dependencies:** 17.5, 2.6
+
+**Spec reference:** RFC 0007 §9; app-manifest §2.3, §4
+
+**Review checklist:**
+
+- A scaffold signs in with a local account and no `CORE_*` settings, and through core with them
+- A scaffold is a valid manifest under the published `@sovereignfs/manifest`

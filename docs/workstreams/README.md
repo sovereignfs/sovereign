@@ -52,5 +52,6 @@ Copy [TEMPLATE.md](TEMPLATE.md) to `NNNN-short-slug.md` and add a row below.
 | [0005](0005-encrypted-files-in-core.md) | Core's own files encrypted in the browser, after honest words and a recovery kit for everyone                                | 📋 Planned     | RFC 0005, epic 16                       |
 | [0006](0006-pwa.md)                     | Core and every app install, and an installed core opens installed apps where the device allows                               | ⏳ In Progress | RFC 0001, epic 11                       |
 | [0007](0007-sign-in.md)                 | Signing in keeps an app's request and verifies an invited person once; apps follow core's sessions; installed apps can lock  | ⏳ In Progress | Research 0011, 0012; epics 4, 6, 14, 16 |
+| [0008](0008-one-sign-in.md)             | Core and every app sign in with one package made from core's; core and local accounts as two ways in                         | 📋 Planned     | RFC 0007; epics 17, 2, 6, 13, 14        |
 
 _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · ⏸️ Paused · ❌ Stopped_

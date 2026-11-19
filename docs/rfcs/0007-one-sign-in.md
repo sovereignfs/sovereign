@@ -7,7 +7,7 @@
 | **Author**   | Claude Code, for review                                                                                                                                                                                                                              |
 | **Scope**    | A new published package, `@sovereignfs/auth`; `apps/core`'s sign-in, account and security pages; `@sovereignfs/ui`; `@sovereignfs/sdk`; the app template in `tools/create`; `contracts/core-api/`, `contracts/env.md`; `docs/specs/core-app.md` §3.6 |
 | **Research** | [0004](../research/0004-a-kit-for-apps-of-their-own.md) (its sign-in step), [0011](../research/0011-streamlining-sign-in.md)                                                                                                                         |
-| **Tasks**    | None yet: written into the epics once this is reviewed                                                                                                                                                                                               |
+| **Tasks**    | [epic 17](../epics/one-sign-in.md) (17.1 to 17.5), [2.6](../epics/design-system.md), [6.5, 6.6](../epics/oidc-provider.md), [13.35](../epics/operator-cli.md), [14.15](../epics/sdk.md); [workstream 0008](../workstreams/0008-one-sign-in.md)       |
 
 ## Summary
 
@@ -133,7 +133,9 @@ Instead, `./core` is a small better-auth plugin built on the SDK:
 | `key-secret` and key release                      | `./core`, the per-session secret kept with the better-auth session           |
 | Sign-out, through core's end-session              | `./core`, when the session came from core; core decides what it ends (below) |
 
-`nextAuth` stays in the SDK for the apps already on it; whether it is deprecated is an open question.
+**`nextAuth` is deprecated** (decided in review). It keeps working, marked deprecated in the SDK and its guide, for the apps already on
+it, once the template no longer uses it; it is removed in a later major version of the SDK, with a migration note in `docs/upgrade.md`.
+An app that only ever runs hosted still uses the package, with local accounts off: one sign-in to keep, not two.
 
 #### Signing out of an app that came through core
 
@@ -252,10 +254,9 @@ Each step is one task, one branch, one pull request, with no change a person or 
 
 ## Open questions
 
-1. **Deprecating `nextAuth`** once the template no longer uses it, or keeping it for apps that want no account tables.
-2. **Tusk's ten-minute fresh session** against core's "ask for the password instead": the package takes core's rule; Tusk's pages that
+1. **Tusk's ten-minute fresh session** against core's "ask for the password instead": the package takes core's rule; Tusk's pages that
    rely on a fresh session change with it.
-3. **An app's own lock:** the lock is core's today and apps lock through core. Whether an app on its own offers one, from the package, is
+2. **An app's own lock:** the lock is core's today and apps lock through core. Whether an app on its own offers one, from the package, is
    left for later.
 
 ## Decided in review
@@ -263,6 +264,7 @@ Each step is one task, one branch, one pull request, with no change a person or 
 - **Signing out:** a hosted app signs the person out of core too; an external app signs out of itself only; core holds the rule, by a
   setting on each app ("Signing out of an app that came through core", above).
 - **The package** is `@sovereignfs/auth`, licensed MPL-2.0 like `ui` and `sdk`.
+- **`nextAuth` is deprecated** once the template moves off it, and removed in a later major version of the SDK (§4).
 
 ## Changelog
 
@@ -270,3 +272,4 @@ Each step is one task, one branch, one pull request, with no change a person or 
 | ------------- | ---------------------------------------------------------------------------------------------------------------- |
 | November 2026 | Draft                                                                                                            |
 | November 2026 | Decided: signing out of a hosted app signs out of core, of an external app only of itself, held by core; MPL-2.0 |
+| November 2026 | Decided: `nextAuth` deprecated; tasks written into the epics, workstream 0008                                    |

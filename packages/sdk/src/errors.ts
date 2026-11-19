@@ -88,6 +88,22 @@ export class NotAuthenticatedError extends SovereignError {
 /** A sign-in could not be completed: it was not one this app began, it ran out, or core refused it (sdk §9). The person starts again. */
 export class SignInError extends SovereignError {
   override name = 'SignInError';
+  /**
+   * `login_required` when core answered a sign-in asked with `prompt: 'none'` by saying the person must sign in: their session at core
+   * is over (sdk §9.7). Otherwise undefined.
+   */
+  readonly reason: 'login_required' | undefined;
+  /** Where the sign-in was to return to, when it was known: a path on the app. */
+  readonly returnTo: string | undefined;
+
+  constructor(
+    message: string,
+    details: { cause?: unknown; reason?: 'login_required'; returnTo?: string } = {},
+  ) {
+    super(message, details.cause === undefined ? undefined : { cause: details.cause });
+    this.reason = details.reason;
+    this.returnTo = details.returnTo;
+  }
 }
 
 /** A notice from core (a logout token or an account-deleted token) is not one core sent to this app, or was seen before (sdk §9.2). Answer `400`. */

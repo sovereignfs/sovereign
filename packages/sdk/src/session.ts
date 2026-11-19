@@ -35,6 +35,8 @@ export type Session = {
   readonly roles: readonly string[];
   /** When the person last signed in at core, in milliseconds, from the ID token's `auth_time`; missing if core did not say. */
   readonly authTime?: number;
+  /** When this session was last checked against core (signed in, or found alive with `prompt=none`), in milliseconds (sdk §9.7). */
+  readonly checkedAt?: number;
   /** When this session ends, in milliseconds. */
   readonly expiresAt: number;
 };

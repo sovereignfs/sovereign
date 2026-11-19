@@ -122,18 +122,42 @@ Instead, `./core` is a small better-auth plugin built on the SDK:
 
 "One layer" replaces the SDK's `nextAuth` for new apps. Each of its features has a home:
 
-| `nextAuth` feature                                | In the new design                                                   |
-| ------------------------------------------------- | ------------------------------------------------------------------- |
-| PKCE sign-in, `returnTo`, `prompt`, `max_age`     | `./core`'s sign-in, on the SDK's                                    |
-| The session and its cookie                        | better-auth's session (`__Host-`, in the database, no cookie cache) |
-| Hourly check, claims replaced (RFC 0006 A2, A3)   | `./core`, on the SDK's check                                        |
-| Back-channel logout by `sid`, or by `sub`         | `./core`, ending better-auth sessions                               |
-| Account deleted, answered after the app's handler | `./core`, calling the app's handler                                 |
-| Refresh once (`offline_access`)                   | The SDK's `TokenStore`, unchanged                                   |
-| `key-secret` and key release                      | `./core`, the per-session secret kept with the better-auth session  |
-| Sign-out, through core's end-session              | `./core`, when the session came from core (an open question below)  |
+| `nextAuth` feature                                | In the new design                                                            |
+| ------------------------------------------------- | ---------------------------------------------------------------------------- |
+| PKCE sign-in, `returnTo`, `prompt`, `max_age`     | `./core`'s sign-in, on the SDK's                                             |
+| The session and its cookie                        | better-auth's session (`__Host-`, in the database, no cookie cache)          |
+| Hourly check, claims replaced (RFC 0006 A2, A3)   | `./core`, on the SDK's check                                                 |
+| Back-channel logout by `sid`, or by `sub`         | `./core`, ending better-auth sessions                                        |
+| Account deleted, answered after the app's handler | `./core`, calling the app's handler                                          |
+| Refresh once (`offline_access`)                   | The SDK's `TokenStore`, unchanged                                            |
+| `key-secret` and key release                      | `./core`, the per-session secret kept with the better-auth session           |
+| Sign-out, through core's end-session              | `./core`, when the session came from core; core decides what it ends (below) |
 
 `nextAuth` stays in the SDK for the apps already on it; whether it is deprecated is an open question.
+
+#### Signing out of an app that came through core
+
+Signing out of an app always ends the app's session. Whether it also ends core's depends on whose app it is (decided in review):
+
+- **A hosted app** (one the instance runs, from `suite.yml`): signing out of it signs the person out of core too, and so, by core's logout
+  notices (core-app §3.6.5), out of every other app they used in that session. The suite is one account; core's own account menu already
+  signs out of everything, and now every hosted app's does the same.
+- **An external app** (`external: true`, or one an operator registered in the Console): signing out of it ends that app's session only. A
+  person's Sovereign account is not ended by an app the instance does not run, any more than signing out of a site that uses "Sign in with
+  Google" signs them out of Google.
+
+**Core decides, not the app.** Today any app with end-session enabled (on by itself once it has a post-logout or back-channel address,
+core-app §3.7.1) ends core's session through the end-session endpoint, external apps included, and an off-the-shelf OIDC client cannot be
+asked to behave otherwise. So:
+
+- each app at core gets a setting, **"Signing out of this app signs out of Sovereign"**: `sv apply` turns it on for a hosted app, and it is
+  off for an external app and for one registered in the Console, where an operator can change it under the technical settings;
+- with it on, end-session does what it does today; with it off, end-session ends nothing of core's and returns the person to the app's
+  registered post-logout address, so a standard client's sign-out still lands where it should;
+- `./core` always sends the person through end-session when the session came from core, so the package has one path and the rule lives in
+  one place. An app's local account has no core session, and signing out of it is the app's alone.
+
+This changes core-app §3.6.5 and §3.7.1, `contracts/suite.md` (what `sv apply` sets for a hosted app) and the Console's app form.
 
 ### 5. Who a person is, when both ways in are on
 
@@ -220,24 +244,29 @@ Each step is one task, one branch, one pull request, with no change a person or 
 2. The session helpers, with the extra check in place of the lock's import.
 3. The forms and panels into `@sovereignfs/ui`; core onto them.
 4. `./next`'s actions; core's pages thin.
-5. `./core` and local accounts in an app, shown by a fixture app in `apps/e2e` that signs in both ways.
+5. `./core` and local accounts in an app, shown by a fixture app in `apps/e2e` that signs in both ways; core's per-app sign-out setting,
+   with `sv apply` turning it on for hosted apps.
 6. The template switched over.
 7. The data contract: the typed `user`, `amr`/`acr`, the discovery document; `contracts/core-api/`, the SDK and core-app §3.6.
 8. Tusk and Fjord onto the package, in their own repositories.
 
 ## Open questions
 
-1. **Signing out of an app that came through core:** sign out of the app only (Tusk's `disableProviderLogout`), or of core too
-   (`nextAuth`'s)? Today the two disagree.
-2. **Deprecating `nextAuth`** once the template no longer uses it, or keeping it for apps that want no account tables.
-3. **Tusk's ten-minute fresh session** against core's "ask for the password instead": the package takes core's rule; Tusk's pages that
+1. **Deprecating `nextAuth`** once the template no longer uses it, or keeping it for apps that want no account tables.
+2. **Tusk's ten-minute fresh session** against core's "ask for the password instead": the package takes core's rule; Tusk's pages that
    rely on a fresh session change with it.
-4. **An app's own lock:** the lock is core's today and apps lock through core. Whether an app on its own offers one, from the package, is
+3. **An app's own lock:** the lock is core's today and apps lock through core. Whether an app on its own offers one, from the package, is
    left for later.
-5. **The package's name and license:** `@sovereignfs/auth`, and whether it is MPL-2.0 like `ui` and `sdk` (the proposal) or AGPL like `tools/`.
+
+## Decided in review
+
+- **Signing out:** a hosted app signs the person out of core too; an external app signs out of itself only; core holds the rule, by a
+  setting on each app ("Signing out of an app that came through core", above).
+- **The package** is `@sovereignfs/auth`, licensed MPL-2.0 like `ui` and `sdk`.
 
 ## Changelog
 
-| Date          | Change |
-| ------------- | ------ |
-| November 2026 | Draft  |
+| Date          | Change                                                                                                           |
+| ------------- | ---------------------------------------------------------------------------------------------------------------- |
+| November 2026 | Draft                                                                                                            |
+| November 2026 | Decided: signing out of a hosted app signs out of core, of an external app only of itself, held by core; MPL-2.0 |

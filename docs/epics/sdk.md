@@ -322,14 +322,15 @@ two deliveries of one genuine token can only end the same sessions twice.
 
 - After a logout notice for someone's only session, no call to core is made as them
 
-#### 📋 14.14 — App sessions that follow core's, and an app's lock
+#### ⏳ 14.14 — App sessions that follow core's, and an app's lock
 
 **Goal:** An app's session ends soon after core's, its claims stay current, and an installed app can lock through core.
 
 **Deliverables:**
 
-- a short app session renewed with `prompt=none`; `login_required` ends it; claims refreshed on renewal
-- an app's lock that sends the person to core with `max_age`, so core asks for a passkey
+- ✅ (RFC 0006 part A) a session checked against core every `checkEverySeconds` with `prompt=none`, renewed in place (same cookie and key
+  secret, new claims); `login_required` ends it; the template checks hourly (sdk §9.7)
+- an app's lock that sends the person to core with `max_age`, so core asks for a passkey (part B, after 4.15)
 
 **Dependencies:** 4.16, 14.12
 

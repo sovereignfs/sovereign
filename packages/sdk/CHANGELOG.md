@@ -5,6 +5,25 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 2.1.0; earlier versions are in the repository's
 history and tags.
 
+## [2.8.0] - 2026-11-19
+
+### Added
+
+- `checkEverySeconds`: an app's sessions are checked against core at that interval. Past it, `requireSession` in `@sovereignfs/sdk/next`
+  sends the person through core with `prompt=none`, which shows them nothing while their core session lives: the session is renewed
+  in place, with the same cookie and key secret and the claims core gives now, so a changed name or role reaches the app. When core says
+  they must sign in, the session ends and they sign in the usual way, back to the same page. Not checked unless set.
+- A session carries `checkedAt`; `sv.auth.needsCheck(session)` says whether it is due a check, and `sv.auth.endSessionCookie` clears the
+  session cookie.
+- `SignInError.reason` is `login_required` when core refused a `prompt=none` sign-in because the person is signed out there, with
+  `returnTo` saying where they were going.
+- `createFakeCore`'s `loginRequired` gives core's answer to a `prompt=none` sign-in for someone with no session.
+
+### Changed
+
+- Signing in again in a browser that has a session for the same person renews that session instead of making a second one; another
+  person signing in on that browser ends the first person's session there.
+
 ## [2.7.0] - 2026-11-18
 
 ### Added

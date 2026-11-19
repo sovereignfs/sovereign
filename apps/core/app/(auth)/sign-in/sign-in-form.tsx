@@ -7,7 +7,12 @@ import { authClient } from '../../../src/auth/client';
 import { deriveForSignIn } from '../../../src/auth/derive';
 import { afterPasswordAccepted, startAfresh, handOverSecret } from '../../../src/keys/session';
 import type { WebKey } from '@sovereignfs/crypto/web';
-import { continuationUrl, isContinuation } from '../../../src/auth/oauth-continuation';
+import {
+  continuationUrl,
+  isContinuation,
+  isExpiredRequest,
+} from '../../../src/auth/oauth-continuation';
+import { ExpiredRequest } from '../expired-request';
 import { withReturnTo } from '../../../src/auth/return-to';
 import { DEACTIVATED, passkeyProblem } from '../messages';
 import { signInWithPasskey as passkeySignIn } from '../passkey-sign-in';
@@ -36,6 +41,8 @@ export function SignInForm({
   const [passkeysSupported, setPasskeysSupported] = useState(false);
   const [passkeyPending, setPasskeyPending] = useState(false);
   const [pending, setPending] = useState(false);
+  // The app's signed request ran out while the page was open: its sign-in starts again (`ExpiredRequest`).
+  const [expired, setExpired] = useState(false);
 
   useEffect(() => setPasskeysSupported(typeof window.PublicKeyCredential === 'function'), []);
   // A sign-in starts afresh: a password's secret left waiting for a second step is dropped, and with no session, kept keys too.
@@ -48,7 +55,8 @@ export function SignInForm({
     const result = await passkeySignIn();
     if (result.error) {
       setPasskeyPending(false);
-      setError(passkeyProblem(result.error));
+      if (isExpiredRequest(result.error)) setExpired(true);
+      else setError(passkeyProblem(result.error));
       return;
     }
     // A full navigation, so the next page is rendered with the new session cookie. An app's sign-in goes
@@ -74,6 +82,11 @@ export function SignInForm({
     const result = await authClient.signIn.email({ email, password: value });
     if (result.error) {
       setPending(false);
+      // Checked before the password, so it says nothing about the account.
+      if (isExpiredRequest(result.error)) {
+        setExpired(true);
+        return;
+      }
       // Said only to someone who gave the right password, so it tells nobody else anything.
       if (result.error.code === 'ACCOUNT_DEACTIVATED') {
         setError(DEACTIVATED);
@@ -109,6 +122,8 @@ export function SignInForm({
     // A full navigation, so the next page is rendered with the new session cookie.
     window.location.assign(continuationUrl(result.data) ?? returnTo);
   }
+
+  if (expired) return <ExpiredRequest restartAt={returnTo} />;
 
   return (
     <>

@@ -18,6 +18,11 @@ history and tags.
 - Core's sessions last seven days without use, extended once a day while in use, as before, but now set in core itself, so apps can
   rely on it as they check their sessions against core's.
 
+### Fixed
+
+- A sign-in page an app sent someone to, left open for more than ten minutes, said the email or password was wrong when they finally
+  signed in. It now says the sign-in waited too long and offers to start it again.
+
 ## [0.114.1] - 2026-11-19
 
 ### Fixed

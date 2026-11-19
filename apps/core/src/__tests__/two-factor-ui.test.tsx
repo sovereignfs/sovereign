@@ -223,6 +223,19 @@ describe('the two-factor panel, while it is on', () => {
 });
 
 describe('the second sign-in step', () => {
+  it('starts the app’s sign-in again when its signed request ran out on this step', async () => {
+    verifyTotp.mockResolvedValue({
+      data: null,
+      error: { status: 400, error: 'invalid_signature' },
+    });
+    const resume = '/api/auth/oauth2/authorize?client_id=abc&state=s1';
+    render(<TwoFactorForm returnTo={resume} />);
+    typeCode('123456');
+    click('Verify');
+    expect(await screen.findByText(/This sign-in waited too long/)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Start again' }).getAttribute('href')).toBe(resume);
+  });
+
   it('sends the code and goes where the person was headed', async () => {
     verifyTotp.mockResolvedValue({ data: {}, error: null });
     render(<TwoFactorForm returnTo="/settings" />);

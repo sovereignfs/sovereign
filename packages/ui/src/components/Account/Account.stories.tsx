@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { ChangePasswordForm } from './ChangePasswordForm';
 import { SessionsPanel } from './SessionsPanel';
 import { TwoFactorPanel } from './TwoFactorPanel';
+import { ProfilePanel } from './ProfilePanel';
 
 const meta = {
   title: 'Components/Account',
@@ -87,4 +88,16 @@ export const TwoFactorOff: Story = {
 
 export const TwoFactorOn: Story = {
   render: () => <TwoFactorPanel enabled verified {...twoFactor} />,
+};
+
+const profile = {
+  saveName: () => Promise.resolve({}),
+  preparePicture: (file: Blob) => Promise.resolve(file),
+  savePicture: () => Promise.resolve({ image: null }),
+};
+
+export const Profile: Story = {
+  render: () => (
+    <ProfilePanel name="Ada Lovelace" email="ada@example.com" image={null} {...profile} />
+  ),
 };

@@ -30,6 +30,8 @@ export { SessionsPanel } from './components/Account/SessionsPanel';
 export type { SessionRow, SessionsPanelProps } from './components/Account/SessionsPanel';
 export { ChangePasswordForm } from './components/Account/ChangePasswordForm';
 export { TwoFactorPanel } from './components/Account/TwoFactorPanel';
+export { ProfilePanel } from './components/Account/ProfilePanel';
+export type { ProfilePanelProps } from './components/Account/ProfilePanel';
 export type {
   TwoFactorAction,
   TwoFactorPanelProps,

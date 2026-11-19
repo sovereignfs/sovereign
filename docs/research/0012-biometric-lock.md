@@ -1,11 +1,11 @@
 # Research 0012 — A biometric lock for installed core and its apps
 
-|            |                                                                                                                                                                                                                   |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status** | For review; nothing run on a device                                                                                                                                                                               |
-| **Date**   | November 2026                                                                                                                                                                                                     |
-| **Author** | Claude Code                                                                                                                                                                                                       |
-| **Scope**  | [core-app](../specs/core-app.md) §3.4.2, §5.4, §5.5; [sdk](../specs/sdk.md) §9.3, §9.5; `@sovereignfs/pwa`; [research 0011](0011-streamlining-sign-in.md) (step-up); [RFC 0001](../rfcs/0001-installable-core.md) |
+|            |                                                                                                                                                                                                                     |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status** | Decided: designed in [RFC 0006](../rfcs/0006-sessions-across-apps-and-a-lock.md) part B; seen on desktop Chrome and on an iPhone in Safari, the installed app on iOS and Android to confirm with the lock's release |
+| **Date**   | November 2026                                                                                                                                                                                                       |
+| **Author** | Claude Code                                                                                                                                                                                                         |
+| **Scope**  | [core-app](../specs/core-app.md) §3.4.2, §5.4, §5.5; [sdk](../specs/sdk.md) §9.3, §9.5; `@sovereignfs/pwa`; [research 0011](0011-streamlining-sign-in.md) (step-up); [RFC 0001](../rfcs/0001-installable-core.md)   |
 
 ---
 
@@ -147,11 +147,42 @@ sign in as the owner (`instance:diagnose`):
    had been ended.
 5. **Copy results** and send them. Delete the "Lock check" passkey from the device's passwords afterwards.
 
+## What the devices showed (task 4.15)
+
+Run with the lock check on `sovereign.openfs.io`, core 0.115.0, signed in as the owner, in November 2026.
+
+|                                                    | Desktop Chrome 158, macOS, browser tab                                                                     | iPhone 15 Pro, iOS 18.7, Safari tab                            | iPhone, installed app | Android  |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | --------------------- | -------- |
+| A passkey made in the page                         | Yes (6 s), PRF enabled                                                                                     | Yes (36 s); PRF not reported, which Safari reports only on use | Not seen              | Not seen |
+| Unlock after a tap, the account's passkey for core | Yes, user verified, PRF 32 bytes (twice)                                                                   | Yes, Face ID, user verified, PRF 32 bytes                      | Not seen              | Not seen |
+| Unlock after a tap, the passkey made in the page   | Yes, user verified, PRF 32 bytes (three times)                                                             | Yes, user verified, **no PRF output**                          | Not seen              | Not seen |
+| Unlock with no tap                                 | On load: once refused after 10 s, once answered in 1.8 s; on coming back to the tab: no answer within 60 s | On coming back after 29 s: answered in 7.8 s, user verified    | Not seen              | Not seen |
+| Kept in the background                             | Not measured (a reload and a 1 s switch)                                                                   | Still running after 29 s                                       | Not seen              | Not seen |
+
+What this settles:
+
+- **The lock's path works where it was tried.** A tap on an unlock button brings Touch ID or Face ID, the person is verified, and the
+  account's own passkey gives the PRF output that reopens their keys, on both a desktop browser and an iPhone.
+- **A prompt with no tap is possible but not dependable.** It worked once on each, and failed or went unanswered on desktop Chrome. The
+  lock page always has an Unlock button; asking on its own is at most an addition.
+- **PRF depends on where the passkey is kept.** The passkey made in the page on the iPhone gave none, while the account's passkey did. A
+  likely cause is that it was saved to a password manager other than iCloud Keychain; unlocking keys by passkey must fall back to the
+  password whenever there is no output.
+
+What stays open: an installed app on iOS (the installed app opens at `/`, and nothing in core links to the lock check, so it could not be
+reached there without another release), and Android, for which no device was at hand. Neither changes the design, which works whatever
+they show (RFC 0006 part B): there is always an Unlock button and always the password, and the lock decides from a stored time. The lock's
+own release is tried in an installed app on an iPhone before it is called done.
+
 ## Open questions
 
-- Should the lock be per device only, or can an operator require it on an instance?
-- What idle time is the default, and does "lock on leaving the app" suit a phone and not a desktop?
-- When a person has no passkey that verifies, does turning the lock on ask them to add one first?
+Decided with the goal owner (2026-11-19), and written into RFC 0006 part B:
+
+- ~~Can an operator require it?~~ No. Signing in stays as it is (email and password, a passkey, the second step); the lock is something a
+  person turns on for themselves, once signed in, for opening the app on that device from then on.
+- ~~The default idle time?~~ Fifteen minutes, with 1, 5, 15 and 60 to choose from.
+- ~~"Lock on leaving the app" on a desktop?~~ Yes, offered on every device, but only once the person has turned the lock on there.
+- ~~Add a passkey first?~~ Yes: turning the lock on needs a passkey on this device, and asks for one to be added when there is none.
 
 ## Sources
 

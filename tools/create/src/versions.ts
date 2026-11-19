@@ -14,7 +14,7 @@ export const APP_DEPENDENCIES = {
   // 2.8 checks a session against core (`checkEverySeconds`), which the template turns on.
   '@sovereignfs/sdk': '^2.8.0',
   '@sovereignfs/storage': '^0.1.0',
-  '@sovereignfs/ui': '^0.101.0',
+  '@sovereignfs/ui': '^0.102.0',
   next: '^16.4.6',
   pg: '^8.23.1',
   react: '^19.3.1',

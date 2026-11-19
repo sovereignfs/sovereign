@@ -172,7 +172,7 @@ This changes core-app §3.6.5 and §3.7.1, `contracts/suite.md` (what `sv apply`
 
 - The package ships the account tables' schema for each dialect, and a migration set for apps, run with `@sovereignfs/database`'s
   `migrate(…, { table })`, recorded apart from the app's own, as the vault already is.
-- **Core keeps its own history.** Its `users` table has columns no app has (`role`, `deactivatedAt`, the terms), and a changed migration
+- **Core keeps its own history.** Its `users` table has columns no app has (`role` and the terms), and a changed migration
   refuses to boot. The package's schema is the shape core's must keep; a test holds core's tables to it.
 - **Tusk's and Fjord's stores** move onto the package's set by a migration of their own that checks the tables are what it expects and
   records them as done; a populated store is the test.
@@ -185,7 +185,7 @@ Rules held today by tests that scan `apps/core` move with the code:
   route that changes something; the tests that scan core also scan the package;
 - the list of places that call better-auth with the request's headers (`server-auth-calls.test.ts`) covers the package;
 - **better-auth's packages stay pinned to one version**: the package depends on the exact version, a peer range would let an app run
-  another; an app that installs a second copy is refused at start-up;
+  another; a test holds every workspace manifest to that one version;
 - **a better-auth bump is still verified against a populated store**: the `auth-store` fixtures move into the package's tests.
 
 ### 8. The interface

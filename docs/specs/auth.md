@@ -38,12 +38,13 @@ an app                          + its own data and pages
 
 ## 2. Entries
 
-| Entry      | Where it runs | What it holds                                                                                                                      |
-| ---------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `./server` | Server        | `createAuthPreset(options)` (§4); the session helpers (§6); the account tables' schema for each dialect and their migrations (§10) |
-| `./next`   | Server        | The server actions and route handlers behind the sign-in, security and profile pages (§7)                                          |
-| `./client` | Browser       | The browser client; `derive`, the sign-in value (core-app §5.2); the passkey ceremony with PRF; the key store's browser hooks      |
-| `./core`   | Server        | Core as a way in for an app (§8)                                                                                                   |
+| Entry      | Where it runs | What it holds                                                                                                                                                                                                    |
+| ---------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.`        | Anywhere      | What imports nothing and runs on a server, in a browser or on the Edge: the cookie names (rule 10), the password policy, the time zone and language checks, `safeReturnTo`                                       |
+| `./server` | Server        | `createAuthPreset(options)` (§4); the settings resolver (§5); the session read (§6); the checks of rules 3, 6 and 7; a person's sessions; the account tables' schema for each dialect and their migrations (§10) |
+| `./next`   | Server        | The page guards (§6), and the server actions and route handlers behind the sign-in, security and profile pages (§7)                                                                                              |
+| `./client` | Browser       | The browser client; `derive`, the sign-in value (core-app §5.2); the passkey ceremony with PRF; the key store's browser hooks                                                                                    |
+| `./core`   | Server        | Core as a way in for an app (§8)                                                                                                                                                                                 |
 
 A browser that imports `./server`, `./next` or `./core` MUST fail at once, as the SDK's server entry does.
 
@@ -117,9 +118,11 @@ function (§3).
 
 ## 6. Sessions
 
-- `getSession()` gives the signed-in person and their session, or nothing. It runs the app's extra check, and gives nothing when the
-  check says so: core's lock is that check, so a locked session is no session wherever the package reads one.
-- `requireSignedIn(returnTo)` sends someone without a session to sign in, with `returnTo` kept, and someone the extra check refuses
+- `readSession(auth, headers, refused?)` (`./server`) gives the signed-in person and their session, or nothing. It runs the app's
+  extra check, and gives nothing when the check says so: core's lock is that check, so a locked session is no session wherever the
+  package reads one. `readSessionUnchecked` and `checkSession` are its two steps, for the one module of an app that decides the check
+  (core's `src/auth/session.ts`); nothing else may read a session unchecked.
+- `sessionGuards({ getSession, whenRefused, onPage })` (`./next`) gives `requireSignedIn` and `sendOnIfSignedIn`. `requireSignedIn(returnTo)` sends someone without a session to sign in, with `returnTo` kept, and someone the extra check refuses
   wherever the check says (core's lock page). Every signed-in page of an app calls it, or `getSession` itself; never a session read and a
   redirect by hand.
 - `returnTo` is always a path on the app; anything else is replaced by `/`.
@@ -189,7 +192,8 @@ session gives it as one typed `user`: `id`, `sub` (linked accounts), `name`, `em
   `rate_limits`, `two_factors`, `passkeys`) for each dialect, under the names core uses.
 - **An app** runs the package's migrations at start-up with `@sovereignfs/database`'s `migrate(…, { table })`, recorded apart from its
   own, as the SDK's vault is.
-- **Core** keeps its own migration history: its `users` table has columns no app has, and a migration that changes refuses to boot. A
+- **Core** keeps its own migration history: its `users` table has columns no app has (`role` and the terms; `timezone`, `locale` and
+  `deactivatedAt` are the package's, since its rules use them), and a migration that changes refuses to boot. A
   test holds core's tables to the package's schema, so the two cannot drift.
 - An app that kept better-auth's tables before moves onto the package's migrations with one of its own that checks the tables are what
   the package expects and records them as done; it never changes data.
@@ -197,7 +201,8 @@ session gives it as one typed `user`: `id`, `sub` (linked accounts), `name`, `em
 ## 11. better-auth
 
 - The package depends on **one exact version** of better-auth and of each of its plugins, never a range, and an app MUST NOT install
-  another. The package refuses to start when it finds a second copy.
+  another: a second copy would split better-auth's errors, its context and its types. The repository holds every workspace
+  manifest to one exact version (`scripts/__tests__/better-auth-pin.test.ts`); an app outside it keeps the version the package names.
 - A new version is taken in a release of the package, verified against populated stores of the versions before it (fixtures of a store
   made by each), never only a fresh one.
 

@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.114.1 · **Last updated:** 2026-11-18
+**Version:** 0.115.0 · **Last updated:** 2026-11-18
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -314,7 +314,7 @@ workstream [0007](docs/workstreams/0007-sign-in.md)
 | 0.114.0 | 9        | An ended session ends in the app                                | ✅     | [14.13](docs/epics/sdk.md)          |
 | 0.114.0 | 10       | Logout notices that arrive                                      | ✅     | [6.4](docs/epics/oidc-provider.md)  |
 | —       | 11       | A lock on the devices `[parallel]`                              | ⏳     | [4.15](docs/epics/identity-auth.md) |
-| —       | 12       | The specification: sessions across apps, and a lock             | 📋     | [4.16](docs/epics/identity-auth.md) |
-| —       | 13       | Core's lock                                                     | 📋     | [4.17](docs/epics/identity-auth.md) |
+| —       | 12       | The specification: sessions across apps, and a lock             | ⏳     | [4.16](docs/epics/identity-auth.md) |
+| —       | 13       | Core's lock                                                     | ⏳     | [4.17](docs/epics/identity-auth.md) |
 | —       | 14       | Keys closed while core is locked                                | 📋     | [16.24](docs/epics/encryption.md)   |
-| —       | 15       | App sessions that follow core's, and an app's lock              | 📋     | [14.14](docs/epics/sdk.md)          |
+| —       | 15       | App sessions that follow core's, and an app's lock              | ⏳     | [14.14](docs/epics/sdk.md)          |

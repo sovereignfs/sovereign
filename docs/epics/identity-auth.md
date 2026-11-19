@@ -374,7 +374,7 @@ there).
 - The lock check is a page that is not there on a production instance
 - Each row of the table says what was seen, on which version
 
-#### 📋 4.16 — The specification: sessions across apps, and a lock
+#### ⏳ 4.16 — The specification: sessions across apps, and a lock
 
 **Goal:** An RFC settles how an app's session follows core's and how core and its apps lock.
 
@@ -393,13 +393,14 @@ there).
 
 - The RFC answers research 0012's open questions
 
-#### 📋 4.17 — Core's lock
+#### ⏳ 4.17 — Core's lock
 
 **Goal:** An installed core asks for a passkey (or the password) when it is opened after the time a person chose.
 
 **Deliverables:**
 
-- core's session lifetime set explicitly; a locked state on the session, set after the person's idle time or on leaving the app
+- ✅ core's session lifetime set explicitly (`SESSION_LIFETIME`: seven days, extended daily; RFC 0006 A1)
+- a locked state on the session, set after the person's idle time or on leaving the app
 - every request of a locked session answered with the lock page, unlocked by a server-checked passkey assertion with user
   verification, or the password; the setting on the Security page, per device
 

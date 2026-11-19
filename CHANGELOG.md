@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.115.0] - 2026-11-19
+
+### Changed
+
+- Core's sessions last seven days without use, extended once a day while in use, as before, but now set in core itself, so apps can
+  rely on it as they check their sessions against core's.
+
 ## [0.114.1] - 2026-11-19
 
 ### Fixed

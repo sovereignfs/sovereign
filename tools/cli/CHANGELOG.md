@@ -5,6 +5,14 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.12.0; earlier versions are in the repository's
 history and tags.
 
+## [0.19.0] - 2026-11-19
+
+### Changed
+
+- An app made by `npm create @sovereignfs app` checks each person's session against core every hour: the next page they open after
+  that goes through core, which shows nothing while they are still signed in there, asks them to sign in when they are not, and brings
+  their name and roles up to date. It needs `@sovereignfs/sdk` 2.8, so that release comes first.
+
 ## [0.18.0] - 2026-11-18
 
 ### Added

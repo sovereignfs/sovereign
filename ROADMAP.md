@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.116.0 · **Last updated:** 2026-11-19
+**Version:** 0.117.0 · **Last updated:** 2026-11-19
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -332,8 +332,8 @@ the package in their own repositories, after 13.35.
 | Version | Priority | Task                                                       | Status | Epic task                           |
 | ------- | -------- | ---------------------------------------------------------- | ------ | ----------------------------------- |
 | —       | 1        | The specification                                          | ✅     | [17.1](docs/epics/one-sign-in.md)   |
-| —       | 2        | The package, and core's sign-in made from it               | 📋     | [17.2](docs/epics/one-sign-in.md)   |
-| —       | 3        | Session helpers with a check of their own                  | 📋     | [17.3](docs/epics/one-sign-in.md)   |
+| 0.117.0 | 2        | The package, and core's sign-in made from it               | ✅     | [17.2](docs/epics/one-sign-in.md)   |
+| 0.117.0 | 3        | Session helpers with a check of their own                  | ✅     | [17.3](docs/epics/one-sign-in.md)   |
 | —       | 4        | Sign-in forms and account panels `[parallel]`              | 📋     | [2.6](docs/epics/design-system.md)  |
 | —       | 5        | The pages' actions, and core's pages thin                  | 📋     | [17.4](docs/epics/one-sign-in.md)   |
 | —       | 6        | Signing out of an app follows whose app it is `[parallel]` | 📋     | [6.5](docs/epics/oidc-provider.md)  |

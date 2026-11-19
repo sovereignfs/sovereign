@@ -5,6 +5,14 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.117.0] - 2026-11-19
+
+### Changed
+
+- Core's sign-in now runs on `@sovereignfs/auth`, the sign-in package every Sovereign app will share
+  ([RFC 0007](https://github.com/sovereignfs/sovereign/blob/main/docs/rfcs/0007-one-sign-in.md)). Nothing a person or an app sees
+  changes: the same pages, the same rules, the same sessions and the same database.
+
 ## [0.116.0] - 2026-11-19
 
 ### Added

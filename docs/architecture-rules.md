@@ -630,6 +630,19 @@ pointing here.
   (`src/lock/passkey.ts`), never by a passkey sign-in, which would end the session
   and every app's session with it. A lock lookup that fails is raised, never taken
   for "not locked".
+- **A rule every sign-in holds lives in the sign-in package** (`@sovereignfs/auth`,
+  auth.md §4, RFC 0007). Core's `createAuth` is `createAuthPreset` with core's own
+  additions given as hooks and plugins (the lock first among the request hooks, the
+  owner and invitations as the registration decision, the terms, logout notices, the
+  passkey's way into the keys, the OIDC provider); a rule added to core's `auth.ts`
+  instead would hold for core and for no app. Core's old module paths re-export the
+  package, so tests and imports keep their targets. The session read has two steps
+  (`readSessionUnchecked`, `checkSession`) so core's lock sits between them, and only
+  `src/auth/session.ts` may use the unchecked one (a test). The tests that scan core
+  for calls with the request's headers and for cookie names scan the package too.
+  better-auth is named at one exact version in every workspace manifest (a test): two
+  copies would split its errors, its context and its types; a refusal at start-up was
+  considered and dropped, since a second copy cannot be told reliably from inside.
 
 ## Data layer
 

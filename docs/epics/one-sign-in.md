@@ -47,7 +47,7 @@ the SDK's `nextAuth` is deprecated (14.15), after it signs in for a session the 
 
 - Every rule core's sign-in holds today has a home in the spec: the package, or core's additions on top of it
 
-#### 📋 17.2 — The package, and core's sign-in made from it
+#### ✅ 17.2 — The package, and core's sign-in made from it
 
 **Goal:** Core's better-auth setup is the package's preset plus core's own additions, with no change anyone can see.
 
@@ -79,7 +79,7 @@ the SDK's `nextAuth` is deprecated (14.15), after it signs in for a session the 
 - The populated `auth-store` fixtures load and sign in
 - `packages/auth` imports nothing from `apps/core`
 
-#### 📋 17.3 — Session helpers with a check of their own
+#### ✅ 17.3 — Session helpers with a check of their own
 
 **Goal:** Reading the session, guarding a page and asking for the password again are the package's, and core's lock is a check it
 passes in.

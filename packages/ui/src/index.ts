@@ -29,6 +29,12 @@ export type { ActionResult, PanelAction } from './components/Account/ActionResul
 export { SessionsPanel } from './components/Account/SessionsPanel';
 export type { SessionRow, SessionsPanelProps } from './components/Account/SessionsPanel';
 export { ChangePasswordForm } from './components/Account/ChangePasswordForm';
+export { TwoFactorPanel } from './components/Account/TwoFactorPanel';
+export type {
+  TwoFactorAction,
+  TwoFactorPanelProps,
+  TwoFactorStart,
+} from './components/Account/TwoFactorPanel';
 export type { ChangePasswordFormProps } from './components/Account/ChangePasswordForm';
 export type { TwoFactorFormProps } from './components/Auth/TwoFactorForm';
 export type { SignUpFormProps, SignUpValues } from './components/Auth/SignUpForm';

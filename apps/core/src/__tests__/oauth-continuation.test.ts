@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { continuationUrl, isContinuation } from '../auth/oauth-continuation';
+import { continuationUrl, isContinuation, isExpiredRequest } from '../auth/oauth-continuation';
 
 describe('isContinuation', () => {
   it.each([
@@ -35,5 +35,20 @@ describe('continuationUrl', () => {
     ['an ordinary sign-in answer', { session: { id: 's1' }, user: { id: 'u1' } }],
   ])('is nothing for %s', (_name, data) => {
     expect(continuationUrl(data)).toBeUndefined();
+  });
+});
+
+describe('isExpiredRequest', () => {
+  it('is the provider refusing a signed request that ran out or was changed', () => {
+    expect(isExpiredRequest({ status: 400, error: 'invalid_signature' })).toBe(true);
+  });
+
+  it.each([
+    ['a wrong password', { status: 401, code: 'INVALID_EMAIL_OR_PASSWORD' }],
+    ['another 400', { status: 400, error: 'invalid_request' }],
+    ['nothing', undefined],
+    ['text', 'invalid_signature'],
+  ])('is not %s', (_name, error) => {
+    expect(isExpiredRequest(error)).toBe(false);
   });
 });

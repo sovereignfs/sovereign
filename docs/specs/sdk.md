@@ -261,7 +261,7 @@ A record is `{ kind: 'session' | 'pending' | 'seen', sub?, sid?, data }`, which 
 after its `expiresAt`.
 
 - `beginSignIn({ returnTo? })` makes the PKCE `S256` verifier, `state` and `nonce`, keeps them in the store as a `pending` record that
-  lives ten minutes, and returns the address to send the person to and the cookie (`__Host-sv_signin`) that names the record. `returnTo`
+  lives an hour (as long as core's emailed links, since core carries an app's request through sign-up, verification and a reset), and returns the address to send the person to and the cookie (`__Host-sv_signin`) that names the record. `returnTo`
   is a path on the app, and anything else is ignored.
 - `completeSignIn(request)` finds the pending record from the cookie, deletes it (a callback can be used once), exchanges the code
   with the app's secret, checks the ID token (signature, issuer, audience, `nonce`) and `state`, and makes the session: a `session`
@@ -426,6 +426,25 @@ An app can ask core for a sign-in that is recent, before something that wants on
   ignores anything else; `requireSession(returnTo, { maxAgeSeconds })` sends a person whose sign-in is older, or unknown, to sign in
   again with that age.
 
+### 9.7 Checking a session against core
+
+An app's session is its own, and core's can end without telling it (it expires; a notice is missed). An app that sets
+`checkEverySeconds` has its sessions checked against core at that interval ([RFC 0006](../rfcs/0006-sessions-across-apps-and-a-lock.md)
+part A). The template sets an hour; unset, nothing is checked.
+
+- A session carries `checkedAt`, set when it is signed in and at each check. `sv.auth.needsCheck(session)` is true once more than
+  `checkEverySeconds` have passed since then, and never when the client does not check.
+- `@sovereignfs/sdk/next`: `requireSession` sends a session that needs a check to `/auth/login?returnTo=…&prompt=none`. Core shows nothing
+  while its session lives: the callback **renews the session in place** (the same id, cookie and key secret; the claims, `authTime`,
+  `checkedAt` and `expiresAt` of the new sign-in) and returns to the page. When core answers `login_required`, `completeSignIn` ends the
+  browser's session and throws `SignInError` with `reason: 'login_required'` and the `returnTo`; the callback clears the session cookie and
+  sends the person to sign in the usual way, to the same page.
+- `getSession` is unchanged: no call to core, so server actions and routes use the session as it is until the next page is opened.
+- Signing in again in a browser that has a session renews it for the same person; another person's sign-in ends the first person's
+  session in that browser.
+- `checkEverySeconds` must be a whole number of seconds, 1 or more (`ConfigurationError`).
+- The fake core's `loginRequired(authorizationUrl)` answers a `prompt=none` sign-in as core does for someone with no session.
+
 ## 10. From the legacy SDK
 
 Every namespace of the legacy `sdk` object:
@@ -520,3 +539,5 @@ of its own; an app catalogue.
 | 2026-11-17 | §9.5: an app with no core, built: `/vault` (`AppVault`, `vaultMigrations`, `vaultRoute`, `newSessionSecret`) and `localVault` in `/keys`; §12 names the entry.                                                                                            |
 | 2026-11-17 | §9.5, §12: `localVault` moves to `@sovereignfs/sdk/local-vault`, an entry of its own, before any release carried it in `/keys`; `/keys` no longer reaches libsodium.                                                                                      |
 | 2026-11-18 | §9.6: a fresh sign-in (`prompt`, `maxAgeSeconds`, `authTime`, `signedInWithin`, `requireSession`'s age); §9.1: core ending a session ends it in the app (`SessionEndedError.byCore`), and a logout notice for the whole person removes the refresh token. |
+| 2026-11-19 | §9.7: checking a session against core (`checkEverySeconds`, `checkedAt`, `needsCheck`, `prompt=none` renewal in place, `SignInError.reason`); the fake core's `loginRequired`.                                                                            |
+| 2026-11-19 | §9.1: a pending sign-in lives an hour, not ten minutes, so an app's sign-in carried through an emailed link is not refused.                                                                                                                               |

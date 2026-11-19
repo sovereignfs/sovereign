@@ -149,6 +149,11 @@ export type FakeCore = {
     sub: string,
     options?: { roles?: string[]; authTime?: number },
   ): string;
+  /**
+   * Core's answer to a sign-in asked with `prompt=none` when the person has no session at core: the address it sends the browser back
+   * to, with `error=login_required` and the request's `state`, as core does (sdk §9.7).
+   */
+  loginRequired(authorizationUrl: string): string;
   /** The core session id (`sid`) of the person's latest sign-in. */
   sessionIdOf(sub: string): string | undefined;
   /**
@@ -878,6 +883,15 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
       if (!people.has(sub)) people.set(sub, { sub, name: sub, picture: null, active: true });
       const back = new URL(redirectUri);
       back.searchParams.set('code', code);
+      const state = given.get('state');
+      if (state) back.searchParams.set('state', state);
+      back.searchParams.set('iss', url);
+      return back.toString();
+    },
+    loginRequired(authorizationUrl) {
+      const given = new URL(authorizationUrl).searchParams;
+      const back = new URL(given.get('redirect_uri') ?? '');
+      back.searchParams.set('error', 'login_required');
       const state = given.get('state');
       if (state) back.searchParams.set('state', state);
       back.searchParams.set('iss', url);

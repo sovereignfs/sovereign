@@ -76,7 +76,7 @@ describe('the permissions page', () => {
     expect(html).toMatch(/<input[^>]*name="grant"[^>]*value="platform:user\|launcher:access"/);
     expect(html).not.toMatch(/value="platform:[a-z]+\|instance:configure-secrets"/);
     expect(html).not.toMatch(/value="platform:[a-z]+\|ownership:transfer"/);
-    expect(html.match(/Only the owner/g)?.length).toBe(4);
+    expect(html.match(/Only the owner/g)?.length).toBe(5);
   });
 
   it('starts each box as the matrix in force says', async () => {

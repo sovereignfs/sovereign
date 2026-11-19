@@ -18,3 +18,14 @@ export function continuationUrl(data: unknown): string | undefined {
   const { redirect, url } = data as { redirect?: unknown; url?: unknown };
   return redirect === true && typeof url === 'string' && url !== '' ? url : undefined;
 }
+
+/**
+ * Whether a sign-in step was refused because the app's signed request has expired: the provider signs it for ten minutes, and a page
+ * left open longer is answered `400` with `invalid_signature`, before anything else is looked at. Nothing about the person is wrong;
+ * the app's sign-in has to start again (from `resumeAddress`, which the page has as its `returnTo`).
+ */
+export function isExpiredRequest(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  const { status, error: code } = error as { status?: unknown; error?: unknown };
+  return status === 400 && code === 'invalid_signature';
+}

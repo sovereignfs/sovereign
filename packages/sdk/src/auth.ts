@@ -16,7 +16,12 @@ import {
 import type { TokenStore } from './tokens';
 import type { Transport } from './transport';
 
-const PENDING_SECONDS = 10 * 60;
+/**
+ * How long a sign-in that was begun waits for its callback: an hour. Someone an app sends to core may create an account, verify their
+ * address or reset their password on the way, and core carries the app's request through each (core-app §3.6.1); its emailed links
+ * last an hour, so the app waits as long. The authorization code itself is still core's to time, and is good for minutes.
+ */
+const PENDING_SECONDS = 60 * 60;
 const DEFAULT_SESSION_SECONDS = 30 * 24 * 60 * 60;
 
 export type AuthOptions = {
@@ -36,6 +41,8 @@ export type AuthOptions = {
   postLogoutPath: string;
   /** How long a session lasts at most, in seconds. */
   sessionSeconds: number | undefined;
+  /** How often a session is checked against core, in seconds, or never when unset (sdk §9.7). */
+  checkEverySeconds: number | undefined;
 };
 
 /** How a sign-in is asked for (sdk §9.6). */
@@ -69,6 +76,11 @@ export class Auth {
   /** The app's own callback address, which must be registered with core. */
   get redirectUri(): string {
     return new URL(this.#o.redirectPath, this.#o.appUrl).toString();
+  }
+
+  /** A `Set-Cookie` value that clears the session cookie. */
+  get endSessionCookie(): string {
+    return clearCookie(cookieName('session', this.#secure), this.#secure);
   }
 
   /** The address core sends the person to after signing out, which must be registered with core. */
@@ -159,6 +171,18 @@ export class Auth {
         ...(typeof pending.data.maxAge === 'number' ? { maxAge: pending.data.maxAge } : {}),
       });
     } catch (error) {
+      const returnTo = localPath(String(pending.data.returnTo));
+      // Core said the person must sign in, to a sign-in that asked it to show nothing: their core session is over. The session this
+      // browser has here ends with it (sdk §9.7).
+      if ((error as { error?: unknown } | undefined)?.error === 'login_required') {
+        const ending = await this.#find(request);
+        if (ending) await this.#o.sessionStore.delete(ending.id);
+        throw new SignInError('The person is no longer signed in at core.', {
+          cause: error,
+          reason: 'login_required',
+          returnTo,
+        });
+      }
       throw this.#failure(error);
     }
 
@@ -169,14 +193,28 @@ export class Auth {
     const seconds = this.#o.sessionSeconds ?? DEFAULT_SESSION_SECONDS;
     const expiresAt = this.#now() + seconds * 1000;
     const scopes = (tokens.scope ?? '').split(' ').filter((scope) => scope !== '');
-    const id = newId();
+    // A check of this browser's session (sdk §9.7), or a sign-in again by the same person, renews the session in place: the same id,
+    // and the same key secret, so what the browser keeps for the session still opens. Another person gets a session of their own.
+    const existing = await this.#find(request);
+    const renewing = existing?.session.sub === sub ? existing : undefined;
+    if (existing && !renewing) await this.#o.sessionStore.delete(existing.id);
+    const id = renewing?.id ?? newId();
+    const keySecret = renewing?.record.data.keySecret;
+    const checkedAt = this.#now();
     await this.#o.sessionStore.set(
       id,
       {
         kind: 'session',
         sub,
         ...(sid ? { sid } : {}),
-        data: { claims, scopes, idToken: tokens.id_token, expiresAt },
+        data: {
+          claims,
+          scopes,
+          idToken: tokens.id_token,
+          expiresAt,
+          checkedAt,
+          ...(typeof keySecret === 'string' ? { keySecret } : {}),
+        },
       },
       expiresAt,
     );
@@ -187,7 +225,7 @@ export class Auth {
         kind: 'session',
         sub,
         ...(sid ? { sid } : {}),
-        data: { claims, scopes, expiresAt },
+        data: { claims, scopes, expiresAt, checkedAt },
       }).session,
       returnTo: localPath(String(pending.data.returnTo)),
       setCookies: [
@@ -232,6 +270,16 @@ export class Auth {
    */
   signedInWithin(session: Pick<Session, 'authTime'>, seconds: number): boolean {
     return session.authTime !== undefined && this.#now() - session.authTime <= seconds * 1000;
+  }
+
+  /**
+   * Whether the session is due a check against core (sdk §9.7): the client checks every `checkEverySeconds`, and this one was last checked
+   * longer ago, or never. Always false when the client does not check.
+   */
+  needsCheck(session: Pick<Session, 'checkedAt'>): boolean {
+    const every = this.#o.checkEverySeconds;
+    if (every === undefined) return false;
+    return session.checkedAt === undefined || this.#now() - session.checkedAt > every * 1000;
   }
 
   /** The current session, or `NotAuthenticatedError`. */
@@ -464,6 +512,7 @@ function sessionFrom(id: string, record: StoredRecord): { id: string; session: S
     claims?: Record<string, unknown>;
     scopes?: string[];
     expiresAt?: number;
+    checkedAt?: number;
   };
   const claims = data.claims ?? {};
   const roles = Array.isArray(claims.roles)
@@ -478,6 +527,7 @@ function sessionFrom(id: string, record: StoredRecord): { id: string; session: S
       scopes: data.scopes ?? [],
       roles,
       ...(typeof claims.auth_time === 'number' ? { authTime: claims.auth_time * 1000 } : {}),
+      ...(typeof data.checkedAt === 'number' ? { checkedAt: data.checkedAt } : {}),
       expiresAt: Number(data.expiresAt ?? 0),
     },
   };

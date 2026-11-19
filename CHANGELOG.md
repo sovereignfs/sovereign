@@ -5,6 +5,33 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.115.0] - 2026-11-19
+
+### Added
+
+- The lock check (`/lock-check`), which tries on a phone what a biometric lock would need, can be opened by the owner on a production
+  instance, as well as by anyone signed in on a development or staging instance. It is a new owner-only permission, "Try this instance
+  on a device", which the Console's permissions page shows and no other role can be given.
+
+### Changed
+
+- Core's sessions last seven days without use, extended once a day while in use, as before, but now set in core itself, so apps can
+  rely on it as they check their sessions against core's.
+
+### Fixed
+
+- Opening an invitation link while already signed in sent the person to the launcher without a word. It now says whose account they
+  are in and whom the invitation is for, and offers to go on or to sign out and use the invitation.
+- A sign-in page an app sent someone to, left open for more than ten minutes, said the email or password was wrong when they finally
+  signed in. It now says the sign-in waited too long and offers to start it again.
+
+## [0.114.1] - 2026-11-19
+
+### Fixed
+
+- When ending a session failed after core had read which apps to tell, what it read was kept in memory for the life of the process. It
+  is now dropped after a minute.
+
 ## [0.114.0] - 2026-11-18
 
 ### Changed

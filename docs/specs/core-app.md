@@ -164,7 +164,7 @@ Roboto, Helvetica, Arial, sans-serif`. A page or component names a family only
 | ----- | ----------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | **1** | Identity, sign-in server, app registration                                                      | Specified below                              |
 | 2     | Core services for apps: mail, notifications, activity, account-deletion fan-out, backups, files | Specified and built (§4); files on disk only |
-| Keys  | Encryption the server cannot read: signing in with a derived value, the vault, the recovery kit | Specified (§5), not built                    |
+| Keys  | Encryption the server cannot read: signing in with a derived value, the vault, the recovery kit | Specified (§5) and built; not yet audited    |
 | Later | Groups and access policies, export, relay, and more                                             | Not yet specified                            |
 
 ---
@@ -237,6 +237,7 @@ them.
 | `role:assign`                | Change another account's role                              | owner only         |
 | `capability:configure`       | Edit the capability matrix                                 | owner only         |
 | `ownership:transfer`         | Transfer ownership                                         | owner only         |
+| `instance:diagnose`          | Open the lock check on a production instance (§3.15.1)     | owner only         |
 
 #### 3.2.3 The capability matrix
 
@@ -244,7 +245,7 @@ them.
 - The owner MAY edit the `platform:admin` and `platform:user` rows in the
   Console. The owner's row is fixed: the owner always holds every capability.
 - Owner-only capabilities (`instance:configure-secrets`, `role:assign`,
-  `capability:configure`, `ownership:transfer`) MUST NOT be granted to any
+  `capability:configure`, `ownership:transfer`, `instance:diagnose`) MUST NOT be granted to any
   other role.
 - Operator-only capabilities (`console:access`) MUST NOT be granted to
   `platform:user`: the Console, its tile on the launcher and what the launcher
@@ -484,8 +485,9 @@ Editing them is not part of Phase 1.
 - A person can add, name and remove passkeys, and sign in with a passkey
   without a password.
 - The relying party is set by `SV_AUTH_WEBAUTHN_RP_ID`, `SV_AUTH_WEBAUTHN_RP_NAME`
-  and `SV_AUTH_WEBAUTHN_ORIGIN`. When core and its apps share a parent domain,
-  the relying party ID SHOULD be that parent domain. Unset, they are core's own
+  and `SV_AUTH_WEBAUTHN_ORIGIN`. For a suite whose apps sign in through core,
+  the relying party ID stays unset ([RFC 0002](../rfcs/0002-deployment-strategies.md)):
+  apps never run a passkey ceremony, so passkeys stay on core's host. Unset, they are core's own
   host, the name `Sovereign` and core's own address. A domain that is not core's
   host or a parent of it, or an origin that is outside the domain or is not
   https (localhost aside), stops core starting, saying which, because no passkey
@@ -513,6 +515,9 @@ passkeys), subject to §3.2.1. The account holder is told by email.
 
 ### 3.5 Sessions and security
 
+- A session lasts **seven days without use**, and its end is pushed back once a day while it is used (`SESSION_LIFETIME`). It is set in
+  core, not left to the library's default, because apps check their sessions against core's (sdk §9.7, RFC 0006 A1); it is not an
+  operator's setting.
 - Session cookies are **host-only** unless an operator shares them. Served over
   https with `SV_AUTH_COOKIE_DOMAIN` unset, core's cookies carry the `__Host-`
   prefix (`__Host-better-auth.session_token`), which a browser keeps only if the
@@ -627,6 +632,11 @@ passkeys), subject to §3.2.1. The account holder is told by email.
   request through the password, the second step and a passkey, and sends the
   browser back to the app with its code. Someone already signed in who is sent
   back with `prompt=login` is shown the form.
+- A sign-in page left open longer than the ten minutes the provider signs the
+  app's request for is refused with `invalid_signature` before anything else
+  is looked at. The page then says the sign-in waited too long and offers to
+  start again, from the app's own request to the authorization endpoint, rather
+  than saying the password was wrong.
 - The app's request also survives the pages its signed form does not reach
   (it lasts ten minutes, and only on the sign-in page and its second step):
   creating an account, verifying the address by email, and forgetting the
@@ -650,6 +660,7 @@ passkeys), subject to §3.2.1. The account holder is told by email.
 | `openid`         | `sub`: stable, unique, never reused                                                      |
 | `profile`        | `name`, `picture`, `locale`, `zoneinfo`                                                  |
 | `email`          | `email`, `email_verified`                                                                |
+| `notifications`  | The app's own notifications for the person: list, mark read, dismiss (§4.1)              |
 | `roles`          | `roles`: the account's platform roles. Trusted clients only (§3.6.4)                     |
 | `directory`      | Access to the Directory API (§3.9)                                                       |
 | `keys`           | Encryption the server cannot read (§5.6). Only an app with a key return address holds it |
@@ -1140,7 +1151,10 @@ invitation is open for an address: a new one cancels the one before, so a link
 sent earlier stops working. The invitation is emailed with a link on core's own
 address, `/invite/<id>`, where the id is random and unguessable. When email is
 not set up, or sending fails, the invitation still exists and the operator is
-shown the link to pass on, with a way to copy it. Core records whether the
+shown the link to pass on, with a way to copy it. Someone already signed in who opens a link that can still be
+used is told whose account they are in and whom the invitation is for, and
+may go on or sign out to use it; a link that does not work shows the same page
+to everyone. Core records whether the
 email was sent, since only an emailed link verifies the address (§3.3.3). The Console lists the
 invitations that have been neither used nor cancelled, newest first, with who
 made them and when each ends; one past its expiry is listed as expired, so it
@@ -1454,7 +1468,7 @@ which a production instance never can ([workstream 0002](../workstreams/0002-tes
 
 - **`SV_ENVIRONMENT`** is `development`, `staging` or `production`, and `production` when it is not set. Any other value is a start-up
   error, since a misspelling must never read as a permission. It changes nothing in how core runs for anyone using it; it decides only
-  whether the seed below may run, and whether the lock check below is served. The operator CLI sets it from `environment` in `suite.yml` ([contracts/suite.md](../../contracts/suite.md) §1.1.1), and an
+  whether the seed below may run, and whether the lock check below is served to everyone signed in or to the owner alone. The operator CLI sets it from `environment` in `suite.yml` ([contracts/suite.md](../../contracts/suite.md) §1.1.1), and an
   operator cannot set it in `core.env`.
 - **`sovereign-admin seed [--local] [--json]`** is run in core's container (§3.7.4). It exits 3 when it is refused, which it is before it
   writes anything, and 1 when it stops partway (running it again is safe). It MUST refuse, making nothing, when `SV_ENVIRONMENT` is
@@ -1463,8 +1477,9 @@ which a production instance never can ([workstream 0002](../workstreams/0002-tes
   setting the variable. It MUST be safe to run again: it makes what is missing, leaves what is there, and says which.
 - **The lock check** (`/lock-check`, task 4.15, [research 0012](../research/0012-biometric-lock.md)) tries on a device what a biometric
   lock would need: making a passkey there, asking for one after a tap and with none, its PRF output, and how long the device keeps an
-  installed core in the background. It is for a signed-in person on a `development` or `staging` instance, and a page that is not
-  there on `production`. It sends nothing to the server; a passkey it makes is kept by the device only and registered with nothing.
+  installed core in the background. On a `development` or `staging` instance it is for anyone signed in; on `production`, only for
+  someone who holds `instance:diagnose`, which is the owner's alone (§3.2.2), and anyone else gets a page that is not there. It sends
+  nothing to the server; a passkey it makes is kept by the device only and registered with nothing.
 - **What it makes:** an owner, an admin and an ordinary person (`owner@sovereign.local`, `admin@sovereign.local`,
   `user@sovereign.local`), the owner first since the first account always is, each with a verified address and its role, made through core's
   own sign-up so that every rule applies; and one public sample app, a client with a managed key, made through the registry as the system
@@ -1487,7 +1502,7 @@ sign-in; changing
 an email address; editable email templates; theme presets, colours and text
 size preferences (a choice of light, dark or the system's is in Preferences, §3.11); mail, notification and activity APIs for apps; account
 deletion and export across apps; backups; end-to-end encryption and the
-recovery kit (specified in §5, not built); push relay; built-in clients for native shells; provisioning
+recovery kit (§5, built after Phase 1); push relay; built-in clients for native shells; provisioning
 databases for apps, which the operator CLI does and core takes no part in
 ([operator-cli §6.4](operator-cli.md)).
 
@@ -1522,9 +1537,11 @@ databases for apps, which the operator CLI does and core takes no part in
 
 ### 3.18 Open questions
 
-None. The questions raised while drafting Phase 1 are answered in §3.6.1
-(token lifetimes), §3.7.3 (secret rotation), §3.8 (how the launcher opens
-apps) and §3.15 (image storage, secrets from files).
+One: changing `SV_AUTH_SECRET` makes the stored signing keys (§3.6.1) and the
+authenticator enrolments (§3.4.1) unreadable, and how to rotate it without that
+is not decided. The other questions raised while drafting Phase 1 are answered
+in §3.6.1 (token lifetimes), §3.7.3 (secret rotation), §3.8 (how the launcher
+opens apps) and §3.15 (image storage, secrets from files).
 
 ---
 
@@ -1889,9 +1906,9 @@ people's files, through `@sovereignfs/storage`.
 
 ## 5. Keys — encryption the server cannot read
 
-Specified, not built ([RFC 0005](../rfcs/0005-end-to-end-encryption.md), epic [16](../epics/encryption.md), run as
-[workstream 0003](../workstreams/0003-encryption.md)). Until a part is built, §3 describes core as it is; each part below names the
-sections it changes, and the task that builds it changes them.
+Specified and built ([RFC 0005](../rfcs/0005-end-to-end-encryption.md), epic [16](../epics/encryption.md), run as
+[workstream 0003](../workstreams/0003-encryption.md)), and not yet audited by a cryptographer. Each part below says whether it is built
+and names the sections it changes; core's own files (§4.6) and a recovery kit for everyone are still to come (epic 16).
 
 ### 5.1 What is promised
 
@@ -2195,3 +2212,8 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-18 | §3.2.1, §3.4.1: one count of wrong passwords per account wherever the password is asked again, better-auth's two-factor and change-password routes included.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | 2026-11-18 | §3.6.5, §3.16, §4.5: logout notices are core's alone, kept and sent again after a failure that may be temporary, for a day; an app's back-channel address moves to core's own settings.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | 2026-11-19 | §3.15.1: the lock check, a development and staging page that tries on a device what a biometric lock needs (research 0012).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-11-19 | §2, §3.6.2, §3.16, §3.18, §3.4.2, §5: the `notifications` scope in the table; keys said to be built and not yet audited; the one open question named; the passkey relying party stays core's host for a suite (RFC 0002).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| 2026-11-19 | §3.5: a session lasts seven days without use, extended daily, set in core (RFC 0006 A1).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 2026-11-19 | §3.2.2, §3.2.3, §3.15.1: `instance:diagnose`, owner-only; the lock check is served on production to whoever holds it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 2026-11-19 | §3.6.1: a sign-in page whose app request ran out says so and starts the app's sign-in again.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 2026-11-19 | §3.10: an invitation link opened while signed in says so, and offers to go on or to sign out and use it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |

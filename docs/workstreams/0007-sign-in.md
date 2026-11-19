@@ -117,8 +117,10 @@ out.
 
 ## Risks
 
-- The SDK's pending sign-in lasts ten minutes, so an app's sign-in resumed after a slow email round trip is refused by the app; leg 2
-  may lengthen it or say so.
+- ~~The SDK's pending sign-in lasts ten minutes, so an app's sign-in resumed after a slow email round trip is refused by the app.~~
+  Resolved: it lasts an hour, as core's emailed links do (sdk §9.1).
+- ~~A sign-in page left open past the ten minutes the provider signs an app's request for says the password is wrong.~~ Resolved: it
+  says the sign-in waited too long and starts it again (core-app §3.6.1).
 - iOS ends Home Screen apps in the background often; the lock must decide from a stored time, never from memory alone.
 - A person with no passkey that verifies must never be locked out: the password always unlocks.
 
@@ -133,3 +135,5 @@ renewal) stops; legs 1 and 2 stand on their own.
 | ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 0.1     | 2026-11-18 | Initial draft                                                                                                                                                                                                                                                      |
 | 0.2     | 2026-11-18 | Legs 1 and 2 run on one branch, at the goal owner's request. 14.13's atomic `jti` mark is left out (it would need a new required method on every app's session store). 6.4 built as found: the standard allows a retry only after a failure that may be temporary. |
+| 0.3     | 2026-11-19 | The rest of the workstream (legs 3 to 5, with the documentation fixes and the logout-plan fix found on the way) runs on one branch, `feat/sign-in-workstream`, at the goal owner's request.                                                                        |
+| 0.4     | 2026-11-19 | Two risks resolved without the device check (the pending sign-in's lifetime, an expired sign-in page), with an invitation link opened while signed in and external apps' account-deleted and key addresses in `suite.yml`.                                         |

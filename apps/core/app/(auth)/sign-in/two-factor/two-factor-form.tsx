@@ -12,7 +12,12 @@ import {
 import { Button, Input } from '@sovereignfs/ui';
 import { authClient } from '../../../../src/auth/client';
 import { afterSecondStep, dropHandOver } from '../../../../src/keys/session';
-import { continuationUrl, isContinuation } from '../../../../src/auth/oauth-continuation';
+import {
+  continuationUrl,
+  isContinuation,
+  isExpiredRequest,
+} from '../../../../src/auth/oauth-continuation';
+import { ExpiredRequest } from '../../expired-request';
 import { AuthError, AuthNotice } from '../../auth-notice';
 import { AuthField } from '../../auth-field';
 import { passkeyProblem } from '../../messages';
@@ -30,6 +35,8 @@ export function TwoFactorForm({ returnTo }: { returnTo: string }) {
   const [error, setError] = useState<string | undefined>();
   /** The sign-in this step belongs to cannot go on: only signing in again helps. */
   const [over, setOver] = useState(false);
+  // The app's signed request ran out while the page was open: its sign-in starts again (`ExpiredRequest`).
+  const [expired, setExpired] = useState(false);
   const [pending, setPending] = useState(false);
   // An app's request, when it sent the person here: sign-in starts again with it, not without. Known only
   // in the browser, so it is read after the first render, never during it.
@@ -54,6 +61,10 @@ export function TwoFactorForm({ returnTo }: { returnTo: string }) {
       : await authClient.twoFactor.verifyTotp({ code });
     if (result.error) {
       setPending(false);
+      if (isExpiredRequest(result.error)) {
+        setExpired(true);
+        return;
+      }
       const problem = problemWith(result.error, useBackup);
       if (problem.over) setOver(true);
       else setError(problem.message);
@@ -73,7 +84,8 @@ export function TwoFactorForm({ returnTo }: { returnTo: string }) {
     const result = await passkeySignIn();
     if (result.error) {
       setPasskeyPending(false);
-      setError(passkeyProblem(result.error));
+      if (isExpiredRequest(result.error)) setExpired(true);
+      else setError(passkeyProblem(result.error));
       return;
     }
     // The password's secret is not used: a passkey is a sign-in of its own, and may be another account's,
@@ -106,6 +118,8 @@ export function TwoFactorForm({ returnTo }: { returnTo: string }) {
     setBackupCode('');
     setError(undefined);
   }
+
+  if (expired) return <ExpiredRequest restartAt={returnTo} />;
 
   if (over) {
     return (

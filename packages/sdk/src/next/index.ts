@@ -70,6 +70,12 @@ export function nextAuth(sv: Sovereign, options: NextAuthOptions = {}) {
           return go(done.returnTo, done.setCookies);
         } catch (error) {
           if (!(error instanceof SignInError)) throw error;
+          // A check found the person signed out at core: the app's session has ended, and they sign in the usual way, to the
+          // same page (sdk §9.7).
+          if (error.reason === 'login_required') {
+            const query = new URLSearchParams({ returnTo: error.returnTo ?? '/' });
+            return go(`${base}/login?${query.toString()}`, [sv.auth.endSessionCookie]);
+          }
           return go(errorPath, []);
         }
       }
@@ -112,9 +118,13 @@ export function nextAuth(sv: Sovereign, options: NextAuthOptions = {}) {
   ): Promise<Session> => {
     const session = await getSession();
     const maxAge = options.maxAgeSeconds;
-    if (session && (maxAge === undefined || sv.auth.signedInWithin(session, maxAge)))
-      return session;
     const query = new URLSearchParams({ returnTo });
+    if (session && (maxAge === undefined || sv.auth.signedInWithin(session, maxAge))) {
+      if (!sv.auth.needsCheck(session)) return session;
+      // Due a check against core (sdk §9.7): through core with `prompt=none`, which shows nothing while core's session lives.
+      query.set('prompt', 'none');
+      return redirect(`${base}/login?${query.toString()}`);
+    }
     if (maxAge !== undefined) query.set('max_age', String(maxAge));
     return redirect(`${base}/login?${query.toString()}`);
   };

@@ -23,6 +23,10 @@ export type ExternalApp = {
   redirect: string[];
   postLogout?: string[];
   backChannel?: string;
+  /** Where core tells the app that a person who used it deleted their account (core-app §4.5). */
+  accountDeleted?: string;
+  /** Where core's key release sends a person back with the app's key: set, the app may use encryption (core-app §5.6). */
+  keyReturn?: string;
   scopes?: string[];
   type?: 'confidential' | 'public';
   trusted?: boolean;

@@ -91,6 +91,43 @@ export async function planLogoutNotices(
   return [...found.values()];
 }
 
+/** How long a plan read before a session is deleted waits for the deletion to finish before it is dropped. */
+export const PLAN_KEPT_MS = 60_000;
+
+/**
+ * The apps to tell about sessions being deleted, held from just before each deletion until just after it (the session-delete hooks).
+ * A deletion that fails after its plan was read never comes back for it, so a plan older than `PLAN_KEPT_MS` is dropped whenever
+ * another is held: what is waiting stays small whatever fails. A dropped plan sends no notice, which is right, since its session
+ * was not deleted.
+ */
+export class EndingSessions {
+  readonly #plans = new Map<string, { planned: PlannedNotice[]; at: number }>();
+  readonly #now: () => number;
+
+  constructor(now: () => number = Date.now) {
+    this.#now = now;
+  }
+
+  hold(sessionId: string, planned: PlannedNotice[]): void {
+    const now = this.#now();
+    for (const [id, held] of this.#plans) {
+      if (now - held.at > PLAN_KEPT_MS) this.#plans.delete(id);
+    }
+    if (planned.length > 0) this.#plans.set(sessionId, { planned, at: now });
+  }
+
+  take(sessionId: string): PlannedNotice[] | undefined {
+    const held = this.#plans.get(sessionId);
+    this.#plans.delete(sessionId);
+    return held?.planned;
+  }
+
+  /** How many plans are held, for the tests. */
+  get size(): number {
+    return this.#plans.size;
+  }
+}
+
 /** Writes the notices, on the caller's transaction where there is one. A notice already written for that app and session is kept. */
 export async function queueLogoutNotices(
   executor: Pick<Executor, 'run'>,

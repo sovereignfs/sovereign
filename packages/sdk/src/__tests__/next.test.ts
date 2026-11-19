@@ -15,7 +15,7 @@ vi.mock('next/navigation', () => ({
 
 const { nextAuth } = await import('../next/index');
 
-function setup(options: Parameters<typeof nextAuth>[1] = {}) {
+function setup(options: Parameters<typeof nextAuth>[1] = {}, checkEverySeconds?: number) {
   const time = clock();
   const core = createFakeCore({ now: time.environment.now });
   core.addPerson({ sub: 'u1', name: 'Ada Lovelace' });
@@ -28,6 +28,7 @@ function setup(options: Parameters<typeof nextAuth>[1] = {}) {
     fetch: core.fetch,
     environment: time.environment,
     timeoutMs: 100,
+    ...(checkEverySeconds === undefined ? {} : { checkEverySeconds }),
   });
   return {
     core,
@@ -203,6 +204,48 @@ describe('the Next.js adapter (sdk §9)', () => {
       digest: 'NEXT_REDIRECT;/auth/login?returnTo=%2Fsettings&max_age=300',
     });
     expect((await next.requireSession('/settings')).sub).toBe('u1');
+  });
+
+  it('sends a session due a check through core with prompt=none, and keeps it when core still knows the person (sdk §9.7)', async () => {
+    const { core, handlers, next, time } = setup({}, 3600);
+    const signIn = async (path: string, cookie = '') => {
+      const login = await handlers.GET(at(path, { headers: { cookie } }));
+      const back = core.authorize(login.headers.get('location') as string, 'u1');
+      return handlers.GET(
+        at(new URL(back).pathname + new URL(back).search, {
+          headers: { cookie: [cookie, cookiesOf(login)].filter(Boolean).join('; ') },
+        }),
+      );
+    };
+    jar.value = cookiesOf(await signIn('/auth/login'));
+    expect((await next.requireSession('/notes')).sub).toBe('u1');
+    time.advance(3601 * 1000);
+    await expect(next.requireSession('/notes')).rejects.toMatchObject({
+      digest: 'NEXT_REDIRECT;/auth/login?returnTo=%2Fnotes&prompt=none',
+    });
+    const toCore = new URL(
+      (await handlers.GET(at('/auth/login?returnTo=%2Fnotes&prompt=none'))).headers.get(
+        'location',
+      ) ?? '',
+    );
+    expect(toCore.searchParams.get('prompt')).toBe('none');
+    const renewed = await signIn('/auth/login?returnTo=%2Fnotes&prompt=none', jar.value);
+    expect(renewed.headers.get('location')).toBe('/notes');
+    expect((await next.requireSession('/notes')).sub).toBe('u1');
+  });
+
+  it('ends the session and asks the person to sign in when core says they must (sdk §9.7)', async () => {
+    const { core, handlers } = setup({}, 3600);
+    const login = await handlers.GET(at('/auth/login?returnTo=%2Fnotes&prompt=none'));
+    const back = core.loginRequired(login.headers.get('location') as string);
+    const callback = await handlers.GET(
+      at(new URL(back).pathname + new URL(back).search, { headers: { cookie: cookiesOf(login) } }),
+    );
+    expect(callback.status).toBe(303);
+    expect(callback.headers.get('location')).toBe('/auth/login?returnTo=%2Fnotes');
+    expect(
+      callback.headers.getSetCookie().some((cookie) => /sv_session=;.*Max-Age=0/.test(cookie)),
+    ).toBe(true);
   });
 
   it('answers a path it does not serve with a 404', async () => {

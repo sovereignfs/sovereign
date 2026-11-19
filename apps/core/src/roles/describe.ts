@@ -67,6 +67,10 @@ export const CAPABILITY_TEXT: Record<Capability, { label: string; description: s
     label: 'Hand over ownership',
     description: 'Make an admin the owner of this instance.',
   },
+  'instance:diagnose': {
+    label: 'Try this instance on a device',
+    description: 'Open the lock check, which tries on a phone what a biometric lock would need.',
+  },
 };
 
 export type MatrixRow = {

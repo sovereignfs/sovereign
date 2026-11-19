@@ -37,7 +37,7 @@ export const config = defineConfig({
       name: 'ENVIRONMENT',
       default: 'production',
       description:
-        'What the instance is for. It changes nothing in how core runs; it decides only whether the development and staging seed may run and the lock check is served (core-app §3.15.1). The operator CLI sets it from suite.yml, and an unset value is production',
+        'What the instance is for. It changes nothing in how core runs; it decides only whether the development and staging seed may run, and who is served the lock check: anyone signed in, or on production the owner alone (core-app §3.15.1). The operator CLI sets it from suite.yml, and an unset value is production',
     }),
     authSecret: secret({
       name: 'AUTH_SECRET',

@@ -341,6 +341,17 @@ describe('the sign-in form, when an app sent the person here', () => {
     vi.stubGlobal('location', { ...window.location, assign, search: REQUEST });
   });
 
+  it('starts the app’s sign-in again when its signed request ran out while the page was open', async () => {
+    signIn.mockResolvedValue({ data: null, error: { status: 400, error: 'invalid_signature' } });
+    const resume = '/api/auth/oauth2/authorize?client_id=abc&state=s1';
+    render(<SignInForm instanceName="Acme" returnTo={resume} />);
+    submit();
+    expect(await screen.findByText(/This sign-in waited too long/)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Start again' }).getAttribute('href')).toBe(resume);
+    expect(screen.queryByText('The email or password is incorrect.')).toBeNull();
+    expect(assign).not.toHaveBeenCalled();
+  });
+
   it('goes back to the app, with its code, rather than to where the person was headed', async () => {
     signIn.mockResolvedValue({ data: { redirect: true, url: APP }, error: null });
     render(<SignInForm instanceName="Acme" returnTo="/" />);

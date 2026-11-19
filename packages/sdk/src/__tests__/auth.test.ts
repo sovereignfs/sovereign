@@ -16,6 +16,7 @@ type Options = {
   coreUrl?: string;
   scopes?: string[];
   sessionSeconds?: number;
+  checkEverySeconds?: number;
 };
 
 function setup(options: Options = {}) {
@@ -38,6 +39,9 @@ function setup(options: Options = {}) {
     timeoutMs: 100,
     ...(options.scopes ? { scopes: options.scopes } : {}),
     ...(options.sessionSeconds ? { sessionSeconds: options.sessionSeconds } : {}),
+    ...(options.checkEverySeconds === undefined
+      ? {}
+      : { checkEverySeconds: options.checkEverySeconds }),
   });
   return { time, core, sv, sessions, tokens };
 }
@@ -144,14 +148,24 @@ describe('signing in (sdk §9)', () => {
     ).toHaveLength(0);
   });
 
-  it('refuses a callback that comes back after ten minutes', async () => {
+  it('waits an hour for the callback, as long as core’s emailed links last, and refuses one later', async () => {
     const world = setup();
-    const begin = await world.sv.auth.beginSignIn();
-    const back = world.core.authorize(begin.url, 'u1');
-    world.time.advance(11 * 60_000);
+    // The person makes an account and verifies it by email on the way: the code comes back 50 minutes on.
+    const slow = await world.sv.auth.beginSignIn();
+    world.time.advance(50 * 60_000);
+    const back = world.core.authorize(slow.url, 'u1');
+    const done = await world.sv.auth.completeSignIn(
+      new Request(back, { headers: { cookie: cookieHeader(slow.setCookies) } }),
+    );
+    expect(done.session.sub).toBe('u1');
+    expect(slow.setCookies[0]).toContain('Max-Age=3600');
+
+    const late = await world.sv.auth.beginSignIn();
+    world.time.advance(61 * 60_000);
+    const lateBack = world.core.authorize(late.url, 'u1');
     await expect(
       world.sv.auth.completeSignIn(
-        new Request(back, { headers: { cookie: cookieHeader(begin.setCookies) } }),
+        new Request(lateBack, { headers: { cookie: cookieHeader(late.setCookies) } }),
       ),
     ).rejects.toBeInstanceOf(SignInError);
   });
@@ -233,6 +247,84 @@ describe('asking core for a fresh sign-in (sdk §9.6)', () => {
     await expect(
       signInAsking(world, { maxAgeSeconds: 300 }, world.time.environment.now() - 600_000),
     ).rejects.toBeInstanceOf(SignInError);
+  });
+});
+
+describe('checking a session against core (sdk §9.7)', () => {
+  /** The browser comes back through core with `prompt=none`, holding its session cookie: core still knows the person. */
+  async function check(world: World, cookie: string, sub = 'u1') {
+    const begin = await world.sv.auth.beginSignIn({ prompt: 'none', returnTo: '/notes' });
+    const back = world.core.authorize(begin.url, sub);
+    return world.sv.auth.completeSignIn(
+      new Request(back, { headers: { cookie: `${cookie}; ${cookieHeader(begin.setCookies)}` } }),
+    );
+  }
+
+  it('is never due when the client does not check', async () => {
+    const world = setup();
+    const { done } = await signIn(world);
+    world.time.advance(10 * 24 * 60 * 60 * 1000);
+    expect(world.sv.auth.needsCheck(done.session)).toBe(false);
+  });
+
+  it('is due once the interval has passed since sign-in, and not before', async () => {
+    const world = setup({ checkEverySeconds: 3600 });
+    const { done } = await signIn(world);
+    expect(done.session.checkedAt).toBe(world.time.environment.now());
+    world.time.advance(3600 * 1000);
+    expect(world.sv.auth.needsCheck(done.session)).toBe(false);
+    world.time.advance(1);
+    expect(world.sv.auth.needsCheck(done.session)).toBe(true);
+  });
+
+  it('renews the session in place when core still knows the person: the same cookie, the same key secret, new claims', async () => {
+    const world = setup({ checkEverySeconds: 3600 });
+    const first = await signIn(world);
+    const secret = await world.sv.auth.keySecret(withCookie(first.cookie));
+    world.core.addPerson({ sub: 'u1', name: 'Ada King' });
+    world.time.advance(2 * 3600 * 1000);
+    const renewed = await check(world, first.cookie);
+    expect(cookieHeader(renewed.setCookies)).toBe(first.cookie);
+    expect(renewed.returnTo).toBe('/notes');
+    const session = await world.sv.auth.getSession(withCookie(first.cookie));
+    expect(session?.claims.name).toBe('Ada King');
+    expect(session?.checkedAt).toBe(world.time.environment.now());
+    expect(world.sv.auth.needsCheck(session as NonNullable<typeof session>)).toBe(false);
+    expect(await world.sv.auth.keySecret(withCookie(first.cookie))).toEqual(secret);
+  });
+
+  it('ends the session when core says the person must sign in, and says where they were going', async () => {
+    const world = setup({ checkEverySeconds: 3600 });
+    const { cookie } = await signIn(world);
+    const begin = await world.sv.auth.beginSignIn({ prompt: 'none', returnTo: '/notes' });
+    const back = world.core.loginRequired(begin.url);
+    const failure = await world.sv.auth
+      .completeSignIn(
+        new Request(back, { headers: { cookie: `${cookie}; ${cookieHeader(begin.setCookies)}` } }),
+      )
+      .catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(SignInError);
+    expect(failure).toMatchObject({ reason: 'login_required', returnTo: '/notes' });
+    expect(await world.sv.auth.getSession(withCookie(cookie))).toBeNull();
+  });
+
+  it('gives another person who signs in on the same browser a session of their own, and ends the first', async () => {
+    const world = setup({ checkEverySeconds: 3600 });
+    world.core.addPerson({ sub: 'u2', name: 'Bo Barnes' });
+    const first = await signIn(world);
+    await world.sv.auth.keySecret(withCookie(first.cookie));
+    const other = await check(world, first.cookie, 'u2');
+    expect(cookieHeader(other.setCookies)).not.toBe(first.cookie);
+    expect(await world.sv.auth.getSession(withCookie(first.cookie))).toBeNull();
+    expect((await world.sv.auth.getSession(withCookie(cookieHeader(other.setCookies))))?.sub).toBe(
+      'u2',
+    );
+  });
+
+  it('refuses an interval that is not a whole number of seconds, 1 or more', () => {
+    for (const bad of [0, -5, 1.5]) {
+      expect(() => setup({ checkEverySeconds: bad }).sv.auth).toThrow(ConfigurationError);
+    }
   });
 });
 

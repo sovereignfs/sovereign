@@ -18,7 +18,7 @@ import {
   deliverDueLogoutNotices,
   planLogoutNotices,
   queueLogoutNotices,
-  type PlannedNotice,
+  EndingSessions,
 } from '../oauth/logout-notices';
 import { oidcPlugins } from '../oauth/provider';
 import { assertMayOpenSession } from './session-gate';
@@ -149,6 +149,14 @@ const PASSWORD_AGAIN: Readonly<Record<string, 'password' | 'currentPassword'>> =
 };
 
 const ONE_HOUR = 60 * 60;
+const ONE_DAY = 24 * ONE_HOUR;
+
+/**
+ * How long a session lasts without use, and how often its end is pushed back while it is used (core-app §3.5, RFC 0006 A1): seven
+ * days, and once a day. Set here rather than left to better-auth's defaults, so a change of library cannot move what apps plan
+ * against (an app checks its session against core's, sdk §9.7).
+ */
+export const SESSION_LIFETIME = { expiresIn: 7 * ONE_DAY, updateAge: ONE_DAY } as const;
 
 export function createAuth(
   database: Database,
@@ -156,7 +164,7 @@ export function createAuth(
   { registration, mail, background = (task) => void task.catch(() => undefined) }: AuthDependencies,
 ) {
   // The apps to tell about each session being deleted, read before it goes (deleting it clears the tokens' pointer to it).
-  const endingSessions = new Map<string, PlannedNotice[]>();
+  const endingSessions = new EndingSessions();
   return betterAuth({
     appName: 'Sovereign',
     baseURL: settings.baseUrl,
@@ -190,11 +198,10 @@ export function createAuth(
         delete: {
           before: async (session) => {
             const planned = await planLogoutNotices(database, { sessionId: session.id });
-            if (planned.length > 0) endingSessions.set(session.id, planned);
+            endingSessions.hold(session.id, planned);
           },
           after: async (session, context) => {
-            const planned = endingSessions.get(session.id);
-            endingSessions.delete(session.id);
+            const planned = endingSessions.take(session.id);
             if (!planned) return;
             await queueLogoutNotices(database, planned);
             // Sent now when there is a request to sign with; otherwise the next round of the timer sends them.
@@ -486,6 +493,7 @@ export function createAuth(
       ...oidcPlugins(database, settings),
     ],
     session: {
+      ...SESSION_LIFETIME,
       freshAge: 0,
       // No signed cookie cache: with one, a session that had ended (a sign-out elsewhere, a password
       // reset, a deactivation) went on working for up to 300 seconds for every better-auth endpoint, and

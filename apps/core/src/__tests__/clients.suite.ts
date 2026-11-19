@@ -288,7 +288,9 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
         const { registry, asOwner } = await instance();
         const { client } = await registry.register(asOwner, settings());
         expect(client.idTokenAlgorithm).toBe('EdDSA');
-        expect(String((await rowOf(client.clientId))?.metadata)).not.toContain('idTokenAlgorithm');
+        expect(JSON.stringify((await rowOf(client.clientId))?.metadata ?? null)).not.toContain(
+          'idTokenAlgorithm',
+        );
       });
 
       it('can be RS256 for either kind of app, changed either way, and kept when something else is saved', async () => {
@@ -629,10 +631,14 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
       const { registry, asOwner } = await instance();
       const { client } = await registry.register(asOwner, settings());
       expect(client.signOutOfCore).toBe(true);
-      expect(String((await rowOf(client.clientId))?.metadata)).not.toContain('keepCoreSession');
+      expect(JSON.stringify((await rowOf(client.clientId))?.metadata ?? null)).not.toContain(
+        'keepCoreSession',
+      );
       const off = await registry.update(asOwner, client.clientId, { signOutOfCore: false });
       expect(off.signOutOfCore).toBe(false);
-      expect(String((await rowOf(client.clientId))?.metadata)).toContain('keepCoreSession');
+      expect(JSON.stringify((await rowOf(client.clientId))?.metadata ?? null)).toContain(
+        'keepCoreSession',
+      );
       expect(
         (await registry.update(asOwner, client.clientId, { name: 'Renamed' })).signOutOfCore,
       ).toBe(false);

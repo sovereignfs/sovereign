@@ -21,7 +21,7 @@ starts this way from the template, and the SDK's own sign-in is deprecated.
 ## Definition of done
 
 - [x] RFC 0007 accepted and `docs/specs/auth.md` written (17.1)
-- [ ] Core's sign-in made from the package with nothing anyone can see changed (17.2, 17.3, 2.6, 17.4)
+- [ ] Core's sign-in made from the package with nothing anyone can see changed (17.2 and 17.3 ✅; 2.6, 17.4)
 - [ ] Signing out and `amr` at core (6.5, 6.6)
 - [ ] The SDK signs in for a session the app keeps (14.16)
 - [ ] A fixture app signs in through core, locally, and both; the template makes such an app (17.5, 13.35)
@@ -155,3 +155,4 @@ Leg 1's spec and leg 4's sign-out setting and `amr` stand on their own.
 | 0.1     | 2026-11-19 | Initial draft                                                                                                                                                                                                                              |
 | 0.2     | 2026-11-19 | One branch for the whole workstream, `feat/one-sign-in`, stacked on the lock's, at the goal owner's request. 14.16 added to leg 5: the SDK's sign-in without an SDK session, which `./core` is built on (found writing the specification). |
 | 0.3     | 2026-11-19 | Leg 1 done: RFC 0007 accepted, `docs/specs/auth.md` written, 17.1 ✅.                                                                                                                                                                      |
+| 0.4     | 2026-11-19 | Leg 2 done: core's sign-in runs on `@sovereignfs/auth` (17.2, 17.3 ✅), platform 0.117.0, core 0.78.0. Legs run on without a stop between them, at the goal owner's request, committed locally.                                            |

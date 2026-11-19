@@ -216,6 +216,10 @@ each: `docs/architecture-rules.md`.
   a browser's locked session but signing out, signing in afresh and the emailed links; the lock follows the session, not
   the device cookie; unlocking is a passkey checked on that session (`src/lock/passkey.ts`) or the
   password, never a new sign-in.
+- **A rule every sign-in holds lives in `@sovereignfs/auth`** (auth.md §4), never in core's `auth.ts`:
+  core's better-auth is `createAuthPreset` plus core's additions, given as hooks and plugins; only
+  `src/auth/session.ts` reads a session unchecked (`readSessionUnchecked`); better-auth is named at one
+  exact version in every manifest (each held by a test).
 - **Every way of opening a session must pass the second step** when TOTP is on,
   and core offers no "trust this device".
 - **Passkeys must be user-verified** (checked in core's hooks, not left to

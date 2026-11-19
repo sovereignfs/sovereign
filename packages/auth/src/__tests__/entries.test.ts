@@ -28,4 +28,12 @@ describe('the package’s entries', () => {
       expect(source, file).not.toMatch(/from '\.\/(server|next)\//);
     }
   });
+
+  it('keeps the browser entry off the server’s code', () => {
+    expect(manifest.exports['./client']?.browser).toBeUndefined();
+    const source = readFileSync(path.join(ROOT, 'src/client/index.ts'), 'utf8');
+    expect(source).not.toMatch(
+      /from '(node:|better-auth\/(api|crypto|adapters)|\.\.\/(server|next)\/|@sovereignfs\/database)/,
+    );
+  });
 });

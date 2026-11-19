@@ -24,6 +24,10 @@ export default defineConfig({
         replacement: fileURLToPath(new URL('./packages/auth/src/server/index.ts', import.meta.url)),
       },
       {
+        find: /^@sovereignfs\/auth\/client$/,
+        replacement: fileURLToPath(new URL('./packages/auth/src/client/index.ts', import.meta.url)),
+      },
+      {
         find: /^@sovereignfs\/auth\/next$/,
         replacement: fileURLToPath(new URL('./packages/auth/src/next/index.ts', import.meta.url)),
       },

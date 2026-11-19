@@ -715,6 +715,13 @@ The claims of the granted scopes appear both in the **ID token** and at the
 userinfo endpoint, so an ordinary relying party can read them from either.
 `locale` and `zoneinfo` are the person's saved preferences (§3.11).
 
+**How the person signed in.** Not built (task 6.6). ID tokens and userinfo carry `amr`, the ways the session was opened (RFC 8176):
+`pwd` for the password, `otp` added for the second step's code or a backup code, `hwk` and `user` for a passkey, which is always
+user-verified (§3.4.2), and `mfa` when two of these were used. `acr` says the same as a level: `"1"` for one factor (the password
+alone), `"2"` for two (the password and the second step) or a passkey, and `"0"` for a session opened some other way, such as an
+emailed link. Both are recorded on the session when it is opened, and unlocking it (§3.5.1) changes neither. The discovery document's
+`claims_supported` lists only the claims core sends; `given_name` and `family_name` are not among them.
+
 #### 3.6.3 Account state and tokens
 
 A deactivated or deleted account MUST NOT obtain new tokens, and tokens already
@@ -778,6 +785,12 @@ alone, so revoking them is core's own step.
   received. Core ends the person's core session and returns them to the app's
   post-logout redirect URI with the app's `state` — but only if that URI is
   registered for the client; an unregistered one is never followed.
+- **Whose app it is decides what signing out ends.** Not built (task 6.5; RFC 0007). Each app has a setting, "Signing out of this app
+  signs out of Sovereign" (§3.7.1). On, end-session does what the bullet above says, and so, by the notices below, signs the person out of
+  every other app of that session: the suite is one account. Off, end-session ends nothing of core's: it returns the person to the
+  app's registered post-logout address with the app's `state`, and the app's own session is the only one that ends. `sv apply` turns
+  it on for a hosted app (`contracts/suite.md`); it is off for an external app and for one registered in the Console. Existing apps
+  keep today's behaviour until the next `sv apply`.
 - **Back-channel logout.** When a person's core session ends — they sign out of
   core, they end a session in their identity pages, an operator ends it, or the
   account is deactivated — core revokes the access tokens of that session and
@@ -860,6 +873,7 @@ Operators with `client:manage` register clients in the Console.
 | Account-deleted address   | Optional, `https` like a redirect address. Core sends a signed notice there when a person who used the app deletes their account, and keeps trying until the app answers (§4.5)         |
 | Back-channel logout URI   | Optional. Core sends a signed logout notice there when a person's session ends (§3.6.5)                                                                                                 |
 | End-session               | Lets the app send people to core's sign-out (§3.6.5). On automatically when a post-logout redirect URI or a back-channel logout URI is set                                              |
+| Sign out of Sovereign     | Whether signing out of the app also ends the person's core session (§3.6.5). On for a hosted app, off otherwise; under the technical settings. Not built (task 6.5)                     |
 | Secret                    | Confidential apps only. Sent in a header (HTTP Basic; the default) or in the request body (§3.6.1). A public app has none. Changing it needs the app reconfigured.                      |
 | Token signature           | How ID tokens are signed: EdDSA (the default) or RS256, for an app that cannot verify EdDSA (§3.6.1). Either client type may choose it.                                                 |
 | Allowed scopes            | Any of §3.6.2; `roles` only when trusted                                                                                                                                                |
@@ -2253,3 +2267,4 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-19 | §3.6.1: a sign-in page whose app request ran out says so and starts the app's sign-in again.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | 2026-11-19 | §3.10: an invitation link opened while signed in says so, and offers to go on or to sign out and use it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 2026-11-19 | §3.5.1: the lock, per device once signed in, with a passkey checked by core on the session; a locked session gets nothing of the person, and is unlocked in place with a passkey or the password; §5.4: its secret is refused while locked (RFC 0006 part B).                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 2026-11-19 | §3.6.2, §3.6.5, §3.7.1: `amr` and `acr`, and a per-app setting for whether signing out of an app ends the core session (on for hosted apps), written ahead of tasks 6.6 and 6.5 (RFC 0007). Not built.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |

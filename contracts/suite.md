@@ -206,17 +206,19 @@ whose manifest has `database`.
 
 An **external app**:
 
-| Field         | Required | Meaning                                                               |
-| ------------- | -------- | --------------------------------------------------------------------- |
-| `external`    | yes      | `true`                                                                |
-| `name`        | yes      | The name people see                                                   |
-| `redirect`    | yes      | Sign-in addresses, at least one. `https`, matched exactly             |
-| `postLogout`  | no       | Addresses core may return a person to after sign-out                  |
-| `backChannel` | no       | The address core posts a logout notice to                             |
-| `scopes`      | no       | What it may ask for. Default `openid`, `profile`, `email`             |
-| `type`        | no       | `confidential` (the default) or `public`. It cannot change afterwards |
-| `trusted`     | no       | Default `false`. `roles` needs `true`                                 |
-| `launcher`    | no       | Its launcher entry (below)                                            |
+| Field            | Required | Meaning                                                                                                                        |
+| ---------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `external`       | yes      | `true`                                                                                                                         |
+| `name`           | yes      | The name people see                                                                                                            |
+| `redirect`       | yes      | Sign-in addresses, at least one. `https`, matched exactly                                                                      |
+| `postLogout`     | no       | Addresses core may return a person to after sign-out                                                                           |
+| `backChannel`    | no       | The address core posts a logout notice to                                                                                      |
+| `accountDeleted` | no       | The address core tells when a person who used the app deleted their account (core-app §4.5)                                    |
+| `keyReturn`      | no       | Where core's key release returns a person with the app's key. Set, the app may use encryption and holds `keys` (core-app §5.6) |
+| `scopes`         | no       | What it may ask for. Default `openid`, `profile`, `email`                                                                      |
+| `type`           | no       | `confidential` (the default) or `public`. It cannot change afterwards                                                          |
+| `trusted`        | no       | Default `false`. `roles` needs `true`                                                                                          |
+| `launcher`       | no       | Its launcher entry (below)                                                                                                     |
 
 A `launcher`: `description`, `icon` and `launchUrl` are text, and `show` is true or false. An address follows
 [core-app §3.7.3](../docs/specs/core-app.md).

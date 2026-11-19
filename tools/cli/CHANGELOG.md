@@ -7,6 +7,12 @@ history and tags.
 
 ## [0.19.0] - 2026-11-19
 
+### Added
+
+- An external app in `suite.yml` may name where core tells it that a person who used it deleted their account (`accountDeleted`) and
+  where core's key release returns a person with its key (`keyReturn`), as a hosted app does through its manifest. `sv app add --external`
+  takes `--account-deleted` and `--key-return`, and `sv app update` changes them.
+
 ### Changed
 
 - An app made by `npm create @sovereignfs app` checks each person's session against core every hour: the next page they open after

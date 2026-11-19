@@ -137,6 +137,20 @@ describe('what an external app is registered as', () => {
     expect(full['--trusted']).toEqual([]);
     expect(full['--scope']).toEqual(['openid', 'roles']);
     expect(full['--back-channel']).toEqual(['https://wiki.sovereign.local/out']);
+    expect(full['--account-deleted']).toBeUndefined();
+    expect(full['--key-return']).toBeUndefined();
+  });
+
+  it('passes on where core tells it of a deleted account and returns its key, when the operator gave them', () => {
+    const args = flags(
+      externalClient({
+        ...app,
+        accountDeleted: 'https://wiki.sovereign.local/gone',
+        keyReturn: 'https://wiki.sovereign.local/key',
+      }),
+    );
+    expect(args['--account-deleted']).toEqual(['https://wiki.sovereign.local/gone']);
+    expect(args['--key-return']).toEqual(['https://wiki.sovereign.local/key']);
   });
 });
 

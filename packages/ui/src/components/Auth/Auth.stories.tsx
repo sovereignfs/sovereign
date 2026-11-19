@@ -17,6 +17,7 @@ import { BrandBadge } from './BrandBadge';
 import { ForgotPasswordForm } from './ForgotPasswordForm';
 import { ResetPasswordForm } from './ResetPasswordForm';
 import { SignInForm } from './SignInForm';
+import { SignUpForm } from './SignUpForm';
 
 const meta = {
   title: 'Components/Auth',
@@ -181,6 +182,37 @@ export const ResetPasswordFormExpired: Story = {
         onSubmit={() => undefined}
         signInHref="/sign-in"
         newLinkHref="/forgot-password"
+      />
+    </AuthCard>
+  ),
+};
+
+/** Creating an account, with the terms to accept; and from an invitation. */
+export const SignUpFormStory: Story = {
+  name: 'SignUpForm',
+  render: () => (
+    <AuthCard brand={<BrandBadge name="Sovereign" />} title="Create your account">
+      <SignUpForm
+        appName="Sovereign"
+        passwordHint="At least 8 characters."
+        terms={{ privacyHref: '/privacy', tosHref: '/tos' }}
+        onSubmit={() => undefined}
+        signInHref="/sign-in"
+      />
+    </AuthCard>
+  ),
+};
+
+export const SignUpFormInvited: Story = {
+  name: 'SignUpForm, invited',
+  render: () => (
+    <AuthCard brand={<BrandBadge name="Sovereign" />} title="Create your account">
+      <SignUpForm
+        appName="Sovereign"
+        passwordHint="At least 8 characters."
+        invitedEmail="ada@example.com"
+        onSubmit={() => undefined}
+        signInHref="/sign-in"
       />
     </AuthCard>
   ),

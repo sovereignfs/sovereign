@@ -275,3 +275,95 @@ export async function resetPassword(
   }
   return { outcome: 'refused', message: 'The password could not be changed. Try again.' };
 }
+
+/**
+ * What is wrong with a sign-up before anything is sent, in one sentence, or nothing: the terms when the app asks for them, then the
+ * password against the policy, typed twice. The server refuses these too; this saves the person a round trip.
+ */
+export function signUpProblem(input: {
+  agreed: boolean;
+  password: string;
+  confirm: string;
+  policy: PasswordPolicy;
+}): string | undefined {
+  if (!input.agreed)
+    return 'Accept the Terms of Service and the Privacy Policy to create an account.';
+  return newPasswordProblem(input.password, input.confirm, input.policy);
+}
+
+/** What signing up needs of the client: its sign-up, and signing in for an address an invitation verified. */
+type SignUpClient = PasswordClient & {
+  signUp: {
+    email(
+      input: Record<string, unknown> & { name: string; email: string; password: string },
+    ): Promise<{
+      error?: Refusal | null;
+      data?: { token?: string | null; user?: { emailVerified?: boolean } } | null;
+    }>;
+  };
+};
+
+/** What signing up came to, for the page to act on. */
+export type SignUpOutcome =
+  | { outcome: 'signed-in'; secret: WebKey; data?: unknown }
+  | { outcome: 'waiting' }
+  | { outcome: 'refused'; message: string };
+
+/** What a sign-up refusal says, in words a person can act on. The server's password and terms messages already are. */
+export function signUpRefusal(error: Refusal): string {
+  if (error.status === 429) return 'Too many attempts. Wait a minute, then try again.';
+  if (error.code === 'EMAIL_NOT_AVAILABLE') {
+    return "Email isn't set up on this instance, so accounts can't be verified yet. Ask whoever runs it.";
+  }
+  if (error.code === 'INVITE_REQUIRED')
+    return 'There is no valid invitation for this email address. Ask whoever runs this instance to invite you.';
+  if (error.code === 'PASSWORD_DOES_NOT_MEET_POLICY' && error.message) return error.message;
+  if (error.code === 'TERMS_NOT_ACCEPTED' && error.message) return error.message;
+  if (error.code === 'INVALID_TIMEZONE') {
+    return 'Your browser reported a time zone this instance does not recognise. Try again in another browser.';
+  }
+  if (error.code === 'USER_ALREADY_EXISTS' || error.code?.startsWith('USER_ALREADY_EXISTS'))
+    return 'An account with this email address already exists. Try signing in instead.';
+  if (error.code === 'INVALID_EMAIL') return 'Enter a valid email address.';
+  return 'The account could not be created. Check what you entered and try again.';
+}
+
+/**
+ * Signing up (auth.md §4, rule 1): the sign-in value is derived and sent with the browser's time zone and whatever else the app adds
+ * (`extra`: core's terms and invitation), never the password. An address still to verify waits for its link; one an invitation verified
+ * is signed in with the value just made; otherwise the person is signed in at once.
+ */
+export async function signUp(
+  client: SignUpClient,
+  derive: ReturnType<typeof signInDerivation>['deriveForSignIn'],
+  input: { name: string; email: string; password: string; callbackURL: string },
+  extra: Record<string, unknown> = {},
+): Promise<SignUpOutcome | { outcome: 'not-ready' }> {
+  let value: string;
+  let secret: WebKey;
+  try {
+    ({ signIn: value, secret } = await derive(input.password, input.email));
+  } catch {
+    return { outcome: 'not-ready' };
+  }
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const result = await client.signUp.email({
+    name: input.name,
+    email: input.email,
+    password: value,
+    ...extra,
+    ...(timezone ? { timezone } : {}),
+    callbackURL: input.callbackURL,
+  });
+  if (result.error) return { outcome: 'refused', message: signUpRefusal(result.error) };
+  // No session and an address not yet verified: the next step is the inbox.
+  if (!result.data?.token && !result.data?.user?.emailVerified) return { outcome: 'waiting' };
+  // Verified already while verification is required: better-auth opens no session at sign-up then, so the person is signed in with the
+  // value just made, and goes straight on.
+  if (!result.data?.token) {
+    const signedIn = await client.signIn.email({ email: input.email, password: value });
+    if (signedIn.error) return { outcome: 'refused', message: signUpRefusal(signedIn.error) };
+    return { outcome: 'signed-in', secret, data: signedIn.data };
+  }
+  return { outcome: 'signed-in', secret };
+}

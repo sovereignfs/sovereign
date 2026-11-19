@@ -18,6 +18,8 @@ export {
 export type { AuthFooterProps } from './components/Auth/AuthForm';
 export { AuthCodeInput } from './components/Auth/AuthCodeInput';
 export type { AuthCodeInputProps } from './components/Auth/AuthCodeInput';
+export { SignInForm } from './components/Auth/SignInForm';
+export type { AuthLinkRenderer, SignInFormProps } from './components/Auth/SignInForm';
 export type { LegalLinksProps } from './components/LegalLinks/LegalLinks';
 export { ConsentPrompt } from './components/ConsentPrompt/ConsentPrompt';
 export type { ConsentPromptProps } from './components/ConsentPrompt/ConsentPrompt';

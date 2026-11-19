@@ -142,3 +142,68 @@ export async function signInWithPasskey(
   }
   return { data: result?.data };
 }
+
+/** What signing in with a password needs of the client: its email sign-in. */
+type PasswordClient = {
+  signIn: {
+    email(input: { email: string; password: string }): Promise<{
+      error?: Refusal | null;
+      data?: unknown;
+    }>;
+  };
+};
+
+/** Said to someone whose account was deactivated, and to nobody else (rule 6). */
+export const DEACTIVATED = 'This account has been deactivated. Ask whoever runs this instance.';
+
+/** What signing in with a password came to, for the page to act on. */
+export type PasswordSignIn =
+  | { outcome: 'signed-in'; data: unknown; secret: WebKey }
+  | { outcome: 'second-step'; secret: WebKey }
+  | { outcome: 'unverified' }
+  | { outcome: 'refused'; message: string }
+  | { outcome: 'not-ready' }
+  | { outcome: 'other'; error: Refusal };
+
+/**
+ * Signing in with a password (auth.md §4, rule 1): the sign-in value is derived from it and sent, never the password. The answer is
+ * told apart the way the page needs it, and the same sentence goes to an address with an account and one without. `isOther` lets the
+ * app take a refusal of its own first (core: an app's sign-in request that ran out), before anything about the account is said.
+ */
+export async function signInWithPassword(
+  client: PasswordClient,
+  derive: ReturnType<typeof signInDerivation>['deriveForSignIn'],
+  { email, password }: { email: string; password: string },
+  isOther: (error: Refusal) => boolean = () => false,
+): Promise<PasswordSignIn> {
+  let value: string;
+  let secret: WebKey;
+  try {
+    // The password never leaves the browser: what is sent is made from it.
+    ({ signIn: value, secret } = await derive(password, email));
+  } catch {
+    return { outcome: 'not-ready' };
+  }
+  const result = await client.signIn.email({ email, password: value });
+  if (result.error) {
+    // Checked before the password, so it says nothing about the account.
+    if (isOther(result.error)) return { outcome: 'other', error: result.error };
+    // Said only to someone who gave the right password, so it tells nobody else anything.
+    if (result.error.code === 'ACCOUNT_DEACTIVATED')
+      return { outcome: 'refused', message: DEACTIVATED };
+    if (result.error.code === 'EMAIL_NOT_VERIFIED') return { outcome: 'unverified' };
+    // The same sentence whether the address has an account or not.
+    return {
+      outcome: 'refused',
+      message:
+        result.error.status === 429
+          ? 'Too many attempts. Wait a minute, then try again.'
+          : 'The email or password is incorrect.',
+    };
+  }
+  // The password was right but a second step is asked for: no session exists yet.
+  const data = result.data as { twoFactorRedirect?: unknown } | undefined;
+  if (data && 'twoFactorRedirect' in data && data.twoFactorRedirect)
+    return { outcome: 'second-step', secret };
+  return { outcome: 'signed-in', data: result.data, secret };
+}

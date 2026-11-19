@@ -14,6 +14,7 @@ import {
   AuthLinkButton,
 } from './AuthForm';
 import { BrandBadge } from './BrandBadge';
+import { SignInForm } from './SignInForm';
 
 const meta = {
   title: 'Components/Auth',
@@ -92,4 +93,40 @@ export const SecondStep: Story = {
       </AuthCard>
     );
   },
+};
+
+// ---------------------------------------------------------------------------
+
+/** The whole sign-in form, as core and every app use it: the consumer signs in and passes back what happened. */
+export const SignInFormStory: Story = {
+  name: 'SignInForm',
+  render: () => (
+    <AuthCard brand={<BrandBadge name="Sovereign" />} title="Sign in to Sovereign">
+      <SignInForm
+        appName="Sovereign"
+        onSubmit={() => undefined}
+        passkey={{ pending: false, onClick: () => undefined }}
+        forgotPasswordHref="/forgot-password"
+        signUpHref="/sign-up"
+      />
+    </AuthCard>
+  ),
+};
+
+/** Refused, with an address to verify first and no passkey on this browser. */
+export const SignInFormRefused: Story = {
+  name: 'SignInForm, refused',
+  render: () => (
+    <AuthCard brand={<BrandBadge name="Sovereign" />} title="Sign in to Sovereign">
+      <SignInForm
+        appName="Sovereign"
+        error="The email or password is incorrect."
+        unverified
+        renderUnverified={() => <AuthLinkButton>Send the link again</AuthLinkButton>}
+        onSubmit={() => undefined}
+        forgotPasswordHref="/forgot-password"
+        signUpHref="/sign-up"
+      />
+    </AuthCard>
+  ),
 };

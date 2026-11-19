@@ -1,5 +1,7 @@
 /** Said after the password or passkey was right, so it tells nobody anything they did not know. */
-export const DEACTIVATED = 'This account has been deactivated. Ask whoever runs this instance.';
+import { DEACTIVATED } from '@sovereignfs/auth/client';
+
+export { DEACTIVATED };
 
 /** What an error from an email request says to a person, or `undefined` when it is not one of the common ones. */
 export function emailRequestProblem(error: { status: number; code?: string }): string | undefined {

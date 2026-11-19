@@ -100,7 +100,7 @@ passes in.
 - A locked session still gets nothing from a page, an action or a route
 - A guard without a check behaves as core's did before the lock
 
-#### 📋 17.4 — The pages' actions, and core's pages thin
+#### ✅ 17.4 — The pages' actions, and core's pages thin
 
 **Goal:** Every sign-in and security page is a few lines over the package's actions and the design system's components.
 
@@ -121,6 +121,13 @@ passes in.
 
 - `pnpm e2e` passes unchanged, including the key vault and sign-in value items (§5.10)
 - No request of any password flow carries a password
+
+**Built as found (November 2026):** the sign-in pages call better-auth from the browser and have no server action, so their part of
+`./next` is the flows of `./client` (`signInWithPassword`, `signUp`, `requestPasswordReset`, `resetPassword`, `verifySecondStep`,
+`changePassword`, `signInWithPasskey`) and the messages. A server action that changes an account stays a `'use server'` file of the
+app's, calling the package's server functions: a package's action cannot be handed the app's better-auth and capability check, and the
+rule that each action checks itself is held where the action is (auth.md §7.1). `./next` keeps the page guards. The browser client is
+the app's `createAuthClient` with the package's plugins, so its types stay the app's. The remaining panels thin out with 2.7.
 
 #### 📋 17.5 — Core as a way in, and an app's own accounts
 

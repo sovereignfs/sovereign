@@ -5,6 +5,19 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.96.0; earlier versions are in the repository's
 history and tags.
 
+## [0.102.0] - 2026-11-19
+
+### Added
+
+- The sign-in forms of core and every app ([RFC 0007](https://github.com/sovereignfs/sovereign/blob/main/docs/rfcs/0007-one-sign-in.md)):
+  `SignInForm`, `SignUpForm`, `ForgotPasswordForm`, `ResetPasswordForm` and `TwoFactorForm`, and on the account pages `SessionsPanel`
+  and `ChangePasswordForm`, with `ActionResult` for what a panel's server action answers and `AuthLinkRenderer` for the consumer's
+  links. Each draws and collects, and sends nothing itself. Experimental.
+
+### Changed
+
+- `AuthCodeInput` selects a box's digit when the box is focused, so the next digit typed replaces it.
+
 ## [0.101.0] - 2026-11-18
 
 ### Added

@@ -1,11 +1,12 @@
 import Link from 'next/link';
-import { getSession } from '../src/auth/session';
+import { currentLock, getSession } from '../src/auth/session';
 import { getInstanceIdentity } from '../src/instance/service';
 import { getNotificationService } from '../src/notifications';
 import { AccountMenu } from './account-menu';
 import { NotificationsBell } from './notifications-bell';
 import styles from './account-header.module.css';
 import { BrandMark } from './brand-mark';
+import { LockWatcher } from './lock-watcher';
 
 /**
  * The bar every signed-in page has: the instance's mark and name on the left, which lead home, and on the right
@@ -22,6 +23,8 @@ export async function AccountHeader({ bordered = false }: { bordered?: boolean }
   const hasNotifications =
     (await notifications.apps(session.user.id)).length > 0 ||
     (await notifications.list(session.user.id, { limit: 1 })).length > 0;
+  // This device's lock, for the watcher on every signed-in page (RFC 0006 B2); none, and there is no watcher.
+  const { lock } = await currentLock(session);
 
   return (
     <header className={bordered ? `${styles.header} ${styles.bordered}` : styles.header}>
@@ -29,6 +32,7 @@ export async function AccountHeader({ bordered = false }: { bordered?: boolean }
         <BrandMark size="sm" />
         <span className={styles.brandName}>{identity.name}</span>
       </Link>
+      {lock ? <LockWatcher idleSeconds={lock.idleSeconds} onLeave={lock.onLeave} /> : null}
       <div className={styles.actions}>
         {hasNotifications ? <NotificationsBell /> : null}
         <AccountMenu

@@ -110,6 +110,7 @@ export function settingsSuite(createDatabase: () => Promise<TestDatabase>): void
         '0022_shortcut_app_url',
         '0023_invite_emailed_at',
         '0024_logout_notices',
+        '0025_lock',
       ]);
     });
   });

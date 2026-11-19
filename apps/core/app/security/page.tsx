@@ -3,12 +3,14 @@ import Link from 'next/link';
 import { Card } from '@sovereignfs/ui';
 import { getAuth } from '../../src/auth';
 import { requireSignedIn } from '../../src/auth/require-signed-in';
+import { currentLock } from '../../src/auth/session';
 import { getAuthSettings } from '../../src/auth/settings';
 import { getDatabase } from '../../src/database';
 import { KeyVault } from '../../src/keys/vault';
 import { listSessions } from '../../src/sessions/sessions';
 import { getSettings, SETTINGS } from '../../src/settings';
 import { ChangePasswordForm } from './change-password-form';
+import { LockPanel } from './lock-panel';
 import { SessionsPanel } from './sessions-panel';
 import styles from './security.module.css';
 import { headers } from 'next/headers';
@@ -27,6 +29,8 @@ export default async function SecurityPage() {
   // Who can open the person's encrypted data (core-app §5.3, §5.8), said only to someone who has some.
   const escrowId = escrowLine?.split('.')[1];
   const covered = vault.waysIn.some((wayIn) => wayIn.way === 'escrow' && wayIn.id === escrowId);
+  // This device's lock (RFC 0006 B1): the setting is the browser's, for this account.
+  const { lock } = await currentLock(session);
 
   return (
     <div className={styles.content}>
@@ -70,6 +74,19 @@ export default async function SecurityPage() {
               Manage passkeys
             </Link>
           </p>
+        </div>
+      </Card>
+      <Card padding="lg">
+        <div className={styles.content}>
+          <h2 className={styles.heading}>Lock on this device</h2>
+          <LockPanel
+            lock={
+              lock
+                ? { idleMinutes: Math.round(lock.idleSeconds / 60), onLeave: lock.onLeave }
+                : undefined
+            }
+            hasPasskey={passkeys.length > 0}
+          />
         </div>
       </Card>
       {vault.account ? (

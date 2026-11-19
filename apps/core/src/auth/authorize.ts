@@ -1,6 +1,6 @@
 import { can, type Capability } from '../roles/capabilities';
 import { getCapabilityMatrix } from '../roles/matrix';
-import { getSession } from './session';
+import { getSession, getSessionEvenIfLocked } from './session';
 import { getAuthSettings } from './settings';
 
 export type AuthorizationErrorCode = 'unauthenticated' | 'forbidden';
@@ -24,8 +24,12 @@ export type AuthorizedSession = NonNullable<Awaited<ReturnType<typeof getSession
  * handler, which are public endpoints whatever the page around them checks: it is called inside
  * every one of them, first (docs/architecture-rules.md).
  */
-export async function requireSession(): Promise<AuthorizedSession> {
-  const session = await getSession();
+export async function requireSession(
+  options: { evenIfLocked?: boolean } = {},
+): Promise<AuthorizedSession> {
+  // `evenIfLocked` is for the lock page's own actions alone (RFC 0006 B4), which unlock a locked session; for everything else a locked
+  // session is none (B3).
+  const session = options.evenIfLocked ? await getSessionEvenIfLocked() : await getSession();
   if (!session) throw new AuthorizationError('unauthenticated');
   return session;
 }

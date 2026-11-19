@@ -17,7 +17,7 @@ export default async function TwoFactorPage({
 }) {
   const query = await searchParams;
   const returnTo = signInReturnTo(query);
-  await sendOnIfSignedIn(returnTo, query);
+  await sendOnIfSignedIn(returnTo, query, { toLock: false });
 
   return (
     <AuthCard title="Two-factor verification" legal={false}>

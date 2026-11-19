@@ -4,7 +4,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const getSession = vi.fn();
 const listPasskeys = vi.fn();
 const listSessions = vi.fn();
-vi.mock('../auth/session', () => ({ getSession: () => getSession() as unknown }));
+vi.mock('../auth/session', () => ({
+  getSession: () => getSession() as unknown,
+  currentLock: () => Promise.resolve({ lock: undefined, locked: false }),
+}));
+vi.mock('next/navigation', async (actual) => ({
+  ...(await actual<typeof import('next/navigation')>()),
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
+}));
+vi.mock('../../app/security/lock-actions', () => ({ saveLock: vi.fn(), removeLock: vi.fn() }));
 vi.mock('next/headers', () => ({ headers: () => Promise.resolve(new Headers()) }));
 vi.mock('../auth', () => ({
   getAuth: () => Promise.resolve({ api: { listPasskeys: () => listPasskeys() as unknown } }),
@@ -33,6 +41,7 @@ vi.mock('../auth/settings', () => ({
       requireNumber: false,
       requireSymbol: false,
     },
+    webauthn: { rpId: 'localhost' },
   }),
 }));
 vi.mock('../sessions/sessions', () => ({

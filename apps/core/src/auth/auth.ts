@@ -10,6 +10,8 @@ import * as postgresSchema from '../db/schema/postgres';
 import * as sqliteSchema from '../db/schema/sqlite';
 import { hasValidInvite, inviteVouchesFor, markInvitesAccepted } from '../invites';
 import { confirmPassword } from './confirm-password';
+import { deviceIdFrom } from '../lock/device';
+import { lockStatus } from '../lock/store';
 import { advancedCookieOptions } from './cookies';
 import { isSignInValue } from '@sovereignfs/crypto';
 import type { AuthMail } from './mail';
@@ -147,6 +149,19 @@ const PASSWORD_AGAIN: Readonly<Record<string, 'password' | 'currentPassword'>> =
   '/two-factor/get-totp-uri': 'password',
   '/change-password': 'currentPassword',
 };
+
+/**
+ * better-auth's routes a browser with a locked session may still use (RFC 0006 B3): signing out, and signing in afresh, which asks for
+ * everything signing in always asks for and gives a new session. Every other one refuses a locked session, `get-session` included; the
+ * authorization endpoint sends it to the lock page instead. Unlocking is core's own (`src/lock/passkey.ts`), on the same session.
+ */
+const OPEN_WHEN_LOCKED = new Set([
+  '/sign-out',
+  '/sign-in/email',
+  '/passkey/generate-authenticate-options',
+  '/passkey/verify-authentication',
+  ...SECOND_STEP,
+]);
 
 const ONE_HOUR = 60 * 60;
 const ONE_DAY = 24 * ONE_HOUR;
@@ -341,6 +356,30 @@ export function createAuth(
     },
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
+        // A locked session gets nothing from better-auth's routes either (RFC 0006 B3). This is for requests from a browser: core's own
+        // server code reads the session through `getSession` (src/auth/session.ts), which applies the lock itself, and the lock page
+        // has to read a locked session to say whose it is.
+        if (ctx.request && !OPEN_WHEN_LOCKED.has(ctx.path)) {
+          const current = await getSessionFromCtx(ctx);
+          if (current) {
+            const { locked } = await lockStatus(database, {
+              sessionId: current.session.id,
+              userId: current.user.id,
+              deviceId: deviceIdFrom(ctx.headers?.get('cookie') ?? null, settings.secureCookies),
+            });
+            if (locked) {
+              // An app's sign-in, or its hourly check, waits for the unlock and then carries on.
+              if (ctx.path === '/oauth2/authorize') {
+                const asked = `/api/auth/oauth2/authorize${new URL(ctx.request.url).search}`;
+                throw ctx.redirect(`/lock?returnTo=${encodeURIComponent(asked)}`);
+              }
+              throw new APIError('UNAUTHORIZED', {
+                message: 'This session is locked.',
+                code: 'SESSION_LOCKED',
+              });
+            }
+          }
+        }
         // A person's second factor is theirs alone: core offers no "trust this device" that would
         // skip the second step for a month, so a request asking for one is refused, not ignored.
         if (SECOND_STEP.has(ctx.path) && (ctx.body as { trustDevice?: unknown })?.trustDevice) {

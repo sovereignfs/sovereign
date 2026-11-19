@@ -613,6 +613,21 @@ pointing here.
   added to the list, and the tests (the worker's source is evaluated; the
   acceptance suite lists every cache after a signed-in tour) fail when something
   else gets in.
+- **A locked session is no session** (core-app §3.5.1, RFC 0006 B3). `getSession`
+  applies the lock, so every page, server action and route that reads the session
+  through it, `requireSession` and `requireCapability` included, gets nothing for a
+  locked one; only the lock page and its actions read it with
+  `getSessionEvenIfLocked` or `requireSession({ evenIfLocked: true })`. better-auth's
+  `hooks.before` refuses a browser's request from a locked session on every route
+  but signing out and signing in afresh, and sends the authorization endpoint to
+  the lock page. It applies to requests from a browser (`ctx.request`) only: core's
+  own server calls to `auth.api` go through `getSession` first, and the lock page
+  must read the locked session. The lock follows the session once it is put under
+  one (`session_locks`), never only the device cookie, which a browser can drop.
+  Unlocking clears the lock on the same session: a passkey is checked against it
+  (`src/lock/passkey.ts`), never by a passkey sign-in, which would end the session
+  and every app's session with it. A lock lookup that fails is raised, never taken
+  for "not locked".
 
 ## Data layer
 

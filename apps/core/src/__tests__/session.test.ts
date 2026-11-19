@@ -7,6 +7,12 @@ vi.mock('../auth/index', () => ({
     Promise.resolve({ api: { getSession: (options: unknown) => getSession(options) } }),
 }));
 
+// The lock is tested in lock-session.test.ts; here no session is under one.
+vi.mock('../database', () => ({ getDatabase: () => Promise.resolve({}) }));
+vi.mock('../lock/store', () => ({
+  lockStatus: () => Promise.resolve({ lock: undefined, locked: false }),
+}));
+
 import { getSession as sessionForRequest } from '../auth/session';
 
 beforeEach(() => getSession.mockReset().mockResolvedValue(null));
@@ -25,7 +31,7 @@ describe("core's own session check", () => {
   });
 
   it('gives the session of an active account as it is', async () => {
-    const session = { user: { id: 'u1', deactivatedAt: null } };
+    const session = { session: { id: 's1' }, user: { id: 'u1', deactivatedAt: null } };
     getSession.mockResolvedValue(session);
     expect(await sessionForRequest()).toBe(session);
   });

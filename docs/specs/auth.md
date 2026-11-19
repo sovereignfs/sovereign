@@ -1,9 +1,9 @@
 # Sovereign sign-in package — specification
 
-|            |                                                                                                            |
-| ---------- | ---------------------------------------------------------------------------------------------------------- |
-| **Status** | Draft. Not built ([epic 17](../epics/one-sign-in.md); designed in [RFC 0007](../rfcs/0007-one-sign-in.md)) |
-| **Covers** | `@sovereignfs/auth`                                                                                        |
+|            |                                                                                                                                                         |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status** | Accepted ([RFC 0007](../rfcs/0007-one-sign-in.md)). Not built ([epic 17](../epics/one-sign-in.md); designed in [RFC 0007](../rfcs/0007-one-sign-in.md)) |
+| **Covers** | `@sovereignfs/auth`                                                                                                                                     |
 
 This document is the single source of truth for what `@sovereignfs/auth` does. Where code, another document or an issue disagrees with
 it, this document wins until it is changed. What core does on top of the package stays in [`core-app.md`](core-app.md); how an app is

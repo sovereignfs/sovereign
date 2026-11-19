@@ -5,7 +5,7 @@
 
 ## Status
 
-📋 Planned
+⏳ In Progress
 
 ## Overview
 
@@ -26,7 +26,7 @@ the SDK's `nextAuth` is deprecated (14.15), after it signs in for a session the 
 
 ## Tasks
 
-#### 📋 17.1 — The specification
+#### ✅ 17.1 — The specification
 
 **Goal:** What `@sovereignfs/auth` does is written down before any of it is built.
 

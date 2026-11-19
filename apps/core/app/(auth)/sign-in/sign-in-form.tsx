@@ -88,12 +88,7 @@ export function SignInForm({
     setError(undefined);
     setUnverified(false);
     // The password never leaves the browser: what is sent is made from it (core-app §5.2).
-    const result = await signInWithPassword(
-      authClient as never,
-      deriveForSignIn,
-      values,
-      isExpiredRequest,
-    );
+    const result = await signInWithPassword(authClient, deriveForSignIn, values, isExpiredRequest);
     switch (result.outcome) {
       case 'not-ready':
         setPending(false);

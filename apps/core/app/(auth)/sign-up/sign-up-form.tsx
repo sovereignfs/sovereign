@@ -48,7 +48,7 @@ export function SignUpForm({
     }
     setPending(true);
     const result = await signUp(
-      authClient as never,
+      authClient,
       deriveForSignIn,
       { ...values, callbackURL: afterVerification(returnTo) },
       { agreedToTerms: true, ...(invite ? { invite: invite.id } : {}) },

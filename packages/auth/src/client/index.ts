@@ -103,7 +103,10 @@ export type Refusal = { status: number; code?: string; message?: string };
 /** What signing in with a passkey needs of the client: its passkey sign-in. */
 type PasskeyClient = {
   signIn: {
-    passkey(input: { extensions?: unknown; returnWebAuthnResponse: true }): Promise<
+    passkey(input: {
+      extensions?: AuthenticationExtensionsClientInputs;
+      returnWebAuthnResponse: true;
+    }): Promise<
       | {
           error?: Refusal | null;
           data?: unknown;
@@ -120,7 +123,7 @@ type PasskeyClient = {
  * once the server has accepted the passkey. An app with no encryption gives none.
  */
 export type PasskeyKeys = {
-  extension(): Promise<unknown>;
+  extension(): Promise<AuthenticationExtensionsClientInputs | undefined>;
   output(results: unknown): Uint8Array | undefined;
   accepted(credentialId: string, output: Uint8Array): Promise<void>;
 };
@@ -417,4 +420,61 @@ export async function verifySecondStep(
     };
   }
   return { outcome: 'refused', message: 'The code could not be checked. Try again.' };
+}
+
+/** What changing the password needs of the client. */
+type ChangeClient = {
+  changePassword(input: {
+    currentPassword: string;
+    newPassword: string;
+    revokeOtherSessions: true;
+  }): Promise<{ error?: Refusal | null }>;
+};
+
+/**
+ * The key store's part in changing the password (auth.md §7.2): the keys are wrapped for the new password beside the old before the
+ * change, and the old wrap goes after it, so the keys never stop opening with whichever password the account has.
+ */
+export type PasswordChangeKeys<Prepared> = {
+  before(current: WebKey, next: WebKey): Promise<Prepared>;
+  after(prepared: Prepared, changed: boolean): Promise<void>;
+};
+
+/**
+ * Changing the password (auth.md §4, rules 1 and 3): both are sent as sign-in values made with the account's address, never as
+ * passwords, and every other session ends. The policy is the page's to check first, at once.
+ */
+export async function changePassword<Prepared>(
+  client: ChangeClient,
+  derive: ReturnType<typeof signInDerivation>['deriveForSignIn'],
+  input: { current: string; next: string; address: string },
+  keys?: PasswordChangeKeys<Prepared>,
+): Promise<{ changed: true } | { changed: false; message: string }> {
+  let current: { signIn: string; secret: WebKey };
+  let next: { signIn: string; secret: WebKey };
+  try {
+    current = await derive(input.current, input.address);
+    next = await derive(input.next, input.address);
+  } catch {
+    return { changed: false, message: PAGE_NOT_READY };
+  }
+  const prepared = keys ? await keys.before(current.secret, next.secret) : undefined;
+  const result = await client.changePassword({
+    currentPassword: current.signIn,
+    newPassword: next.signIn,
+    revokeOtherSessions: true,
+  });
+  if (keys) await keys.after(prepared as Prepared, !result.error);
+  if (!result.error) return { changed: true };
+  const error = result.error;
+  if (error.code === 'INVALID_PASSWORD')
+    return { changed: false, message: 'Your current password is not right.' };
+  if (error.code === 'PASSWORD_DOES_NOT_MEET_POLICY' && error.message)
+    return { changed: false, message: error.message };
+  if (error.status === 429)
+    return { changed: false, message: 'Too many attempts. Wait a minute, then try again.' };
+  return {
+    changed: false,
+    message: 'Your password could not be changed. Check what you entered and try again.',
+  };
 }

@@ -202,3 +202,24 @@ only of design-system parts.
 - §10 of the specification is empty, or says why what is left stays
 - Nothing is removed before a migration note exists
 - An export promoted to stable is used by core or an app
+
+#### 📋 2.6 — Sign-in forms and account panels `[parallel]`
+
+**Goal:** Every app's sign-in and security pages are the design system's, and core uses the `Auth*` components it already exports.
+
+**Deliverables:**
+
+- `SignInForm`, `SignUpForm`, `TwoFactorForm`, `ResetForm`, `PasskeyPanel`, `TwoFactorPanel`, `SessionsPanel`, `ChangePasswordForm`,
+  `ProfilePanel`, and `AccountMenu` over `UserMenu`: framework-agnostic, their actions and links given as props, each with a story
+  and a Component Gallery entry
+- core's pages on them and on `AuthShell`, `AuthCard`, `AuthField`, `AuthCodeInput`, `AuthNotice`; core's local `auth-card`,
+  `auth-field`, `auth-notice`, `auth-shell` and `auth.module.css` removed
+
+**Dependencies:** 17.1
+
+**Spec reference:** design system §3; RFC 0007 §8
+
+**Review checklist:**
+
+- No component imports `next/*`
+- Core's sign-in pages look and behave as before (`pnpm e2e`)

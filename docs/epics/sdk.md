@@ -339,3 +339,24 @@ two deliveries of one genuine token can only end the same sessions twice.
 **Review checklist:**
 
 - A role changed in the Console reaches an app within one renewal
+
+#### 📋 14.15 — A typed person, and `nextAuth` deprecated
+
+**Goal:** An app reads who someone is from one typed `user`, and new apps no longer start on the SDK's own sign-in.
+
+**Deliverables:**
+
+- `user` on the session (`id`, `sub`, `name`, `email`, `emailVerified`, `picture`, `locale`, `zoneinfo`, `roles`), the same shape in
+  `@sovereignfs/auth` for a local account and one from core, and `amr` once 6.6 is built
+- `nextAuth` marked deprecated in the SDK and its guide, still working; removed in a later major version, with a `docs/upgrade.md`
+  note on moving to `@sovereignfs/auth`
+- sdk §9 and `docs/using-the-sdk.md` say what an app is told about a person, and what it is not
+
+**Dependencies:** 13.35, 6.6
+
+**Spec reference:** sdk §9; RFC 0007 §4, §10
+
+**Review checklist:**
+
+- An app using `nextAuth` builds and signs in unchanged, with a deprecation warning from its types
+- The SDK's version is a minor bump: nothing is removed

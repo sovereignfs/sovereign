@@ -172,3 +172,44 @@ single-page apps.
 
 - An app unreachable for a minute still ends the session once it answers
 - A notice is never sent for a session that is still open
+
+#### 📋 6.5 — Signing out of an app follows whose app it is `[parallel]`
+
+**Goal:** Signing out of a hosted app signs the person out of core and so of every app; signing out of an external app ends that app
+only.
+
+**Deliverables:**
+
+- a setting on each app at core, "Signing out of this app signs out of Sovereign": on for a hosted app (`sv apply`), off for an
+  external app and one registered in the Console, changed under the technical settings
+- with it off, end-session ends nothing of core's and returns the person to the app's registered post-logout address
+- `contracts/suite.md`, the admin entry's arguments and `ClientRegistry` carry it; existing apps keep today's behaviour until the next
+  `sv apply`
+
+**Dependencies:** 17.1
+
+**Spec reference:** core-app §3.6.5, §3.7.1; RFC 0007 §4
+
+**Review checklist:**
+
+- An external app's end-session leaves core's session and every other app signed in
+- A hosted app's end-session ends core's session and sends every other app's logout notice
+
+#### 📋 6.6 — How a person signed in, in the token `[parallel]`
+
+**Goal:** An app can tell how someone signed in and ask for a stronger sign-in.
+
+**Deliverables:**
+
+- `amr` (`pwd`, `hwk` for a passkey, `otp` for the second step) and `acr` to match in ID tokens and userinfo, recorded on the session
+  when it is opened
+- `given_name` and `family_name` removed from `claims_supported`, which core never sends
+
+**Dependencies:** 17.1
+
+**Spec reference:** core-app §3.6.2; RFC 0007 §10
+
+**Review checklist:**
+
+- A passkey sign-in and a password with a second step give different `amr`
+- The discovery document lists only claims core sends

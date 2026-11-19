@@ -23,8 +23,8 @@ while they are locked.
 - [ ] 4.8 to 4.13 merged: no path through core's sign-in pages drops an app's request, and the guard and the leftovers are done
 - [ ] 4.14, 14.12, 14.13 and 6.4 merged: one way to ask for the password again; `max_age` and `auth_time` in the SDK; logout reaches
       every app and ends what the app holds
-- [ ] Research 0012's table filled from devices (4.15)
-- [ ] RFC 0006 accepted (4.16)
+- [x] Research 0012's table filled from devices (4.15): desktop and iPhone in a browser; installed iOS and Android with the release
+- [x] RFC 0006 accepted (4.16)
 - [ ] Core's lock, keys closed while locked, and apps' sessions that follow core's (4.17, 16.24, 14.14) merged
 - [ ] Workstream status ✅; epics 4 and 6 ✅
 
@@ -113,6 +113,12 @@ on PRF. The RFC is written from what is seen.
 through `afterPasskeyAccepted` or the password's secret. The SDK's renewal sends `prompt=none` and treats `login_required` as signed
 out.
 
+**Design:** RFC 0006 part B, B1 to B7: opt-in per device once signed in, with a passkey on the device; 15 minutes idle by default;
+"also lock when I leave the app" once the lock is on; a locked session gets nothing of the person, from pages, routes, better-auth or
+the authorization endpoint; the lock page always has an Unlock button and Use your password.
+
+**Before calling it done:** try the release in an installed app on an iPhone, and on Android when a device is at hand (B7).
+
 **Do not proceed if:** a locked browser would still receive a page with the person's data.
 
 ## Risks
@@ -126,14 +132,16 @@ out.
 
 ## Kill criteria
 
-If leg 3 shows that installed apps cannot use passkeys on either platform, the lock (legs 4 and 5, apart from 14.14's session
-renewal) stops; legs 1 and 2 stand on their own.
+The device check saw the lock's path work in a desktop browser and in Safari on an iPhone, so the lock goes ahead. If its release shows
+that an installed app on a platform cannot use passkeys, the lock does not stop there: people on that platform unlock with the password
+(RFC 0006 B7). Legs 1 and 2 stand on their own whatever happens.
 
 ## Changelog
 
-| Version | Date       | Change                                                                                                                                                                                                                                                             |
-| ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0.1     | 2026-11-18 | Initial draft                                                                                                                                                                                                                                                      |
-| 0.2     | 2026-11-18 | Legs 1 and 2 run on one branch, at the goal owner's request. 14.13's atomic `jti` mark is left out (it would need a new required method on every app's session store). 6.4 built as found: the standard allows a retry only after a failure that may be temporary. |
-| 0.3     | 2026-11-19 | The rest of the workstream (legs 3 to 5, with the documentation fixes and the logout-plan fix found on the way) runs on one branch, `feat/sign-in-workstream`, at the goal owner's request.                                                                        |
-| 0.4     | 2026-11-19 | Two risks resolved without the device check (the pending sign-in's lifetime, an expired sign-in page), with an invitation link opened while signed in and external apps' account-deleted and key addresses in `suite.yml`.                                         |
+| Version | Date       | Change                                                                                                                                                                                                                                                                    |
+| ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | 2026-11-18 | Initial draft                                                                                                                                                                                                                                                             |
+| 0.2     | 2026-11-18 | Legs 1 and 2 run on one branch, at the goal owner's request. 14.13's atomic `jti` mark is left out (it would need a new required method on every app's session store). 6.4 built as found: the standard allows a retry only after a failure that may be temporary.        |
+| 0.3     | 2026-11-19 | The rest of the workstream (legs 3 to 5, with the documentation fixes and the logout-plan fix found on the way) runs on one branch, `feat/sign-in-workstream`, at the goal owner's request.                                                                               |
+| 0.4     | 2026-11-19 | Two risks resolved without the device check (the pending sign-in's lifetime, an expired sign-in page), with an invitation link opened while signed in and external apps' account-deleted and key addresses in `suite.yml`.                                                |
+| 0.5     | 2026-11-19 | Legs 3 and 4 done: the device check on desktop and an iPhone in a browser, and RFC 0006 part B decided with the goal owner (opt-in per device once signed in, 15 minutes idle, lock on leaving once on, a passkey first). The kill criterion becomes a password fallback. |

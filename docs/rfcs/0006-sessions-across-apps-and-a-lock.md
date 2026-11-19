@@ -2,7 +2,7 @@
 
 |              |                                                                                                                                                                                               |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**   | Part A accepted and implemented (2026-11-19); part B waits for the device check (task 4.15)                                                                                                   |
+| **Status**   | Accepted: part A implemented; part B decided (2026-11-19), to be built                                                                                                                        |
 | **Date**     | November 2026                                                                                                                                                                                 |
 | **Author**   | Claude Code, for review                                                                                                                                                                       |
 | **Scope**    | `docs/specs/core-app.md` §3.5, §5.4; `docs/specs/sdk.md` §9; `@sovereignfs/sdk`; the app template; `apps/core` sessions, the key store and a lock page                                        |
@@ -22,9 +22,9 @@
 4. A refresh token obtained with `offline_access` still outlives core's session, as §3.6.3 says: it is what lets an app act for a person
    who is not there. Logout notices (6.4) and this hourly check are what end an app's sessions.
 
-**Part B, a lock** (to be completed from the device check). On a device where the person turned it on, core locks its session after an
-idle time or when the app leaves the screen, answers every request with a lock page until a passkey with user verification or the
-password unlocks it, and closes the person's keys while locked; an app locks through core with `max_age`.
+**Part B, a lock.** A person who wants one turns it on for a device, once signed in, with a passkey on that device. Core then locks the
+session after 15 minutes idle (or the time they chose), or when they leave the app if they asked; a locked session gets the lock page and
+nothing of the person until a passkey or the password unlocks it, and its keys stay closed. Apps lock through core.
 
 ## Motivation
 
@@ -96,22 +96,76 @@ session that expired, and a notice an app missed. `offline_access` refresh token
   core" from "something went wrong".
 - The fake core answers `prompt=none` with `login_required` when told the person has no core session.
 
-## Part B: a lock (outline; completed after task 4.15)
+## Part B: a lock
 
-What research 0012 settled, kept here so the device results can be judged against it:
+Decided with the goal owner on 2026-11-19, from the device check (research 0012, "What the devices showed").
 
-- **Only a passkey with user verification reaches the biometric**, after a tap on a lock page. What a prompt without a tap does, whether a
-  passkey can be made in an installed app, PRF support, and how long a background app is kept are what 4.15 measures.
-- **A locked session in core.** A session gains `lockedAt`. Core sets it after the person's idle time on this device, or when the page tells
-  it the app left the screen; every request of a locked session gets the lock page and nothing of the person. A server-checked passkey
-  assertion with user verification, or the password through `confirmPassword`, clears it.
-- **Keys closed while locked** (16.24): the key store drops the unwrapped account key on locking; unlocking reopens it from the passkey's
-  PRF output, or from the password.
-- **Per device**, set on the Security page, with the password always a way to unlock.
-- **Apps lock through core**: an app's own lock sends the person to core with `max_age` (sdk §9.6); core asks for the passkey.
+### B1. Opt-in, per device, after signing in
 
-To be decided with the device results: whether an operator may require the lock on an instance, the default idle time, whether "lock when
-the app leaves the screen" is offered on a desktop, and whether turning the lock on requires a passkey first.
+Signing in does not change: email and password, a passkey, and the second step when it is on. The lock is something a person turns on for
+themselves, on the Security page, for opening core on **this device** from then on. An operator cannot require it.
+
+- **It needs a passkey on this device.** Turning it on runs a passkey ceremony, checked by the server (user verified, one of the account's
+  own passkeys). With none that works, the page asks the person to add one first (the existing flow, §3.4.2) and then turns the lock on.
+- **The device is the browser.** A long-lived, host-only cookie (`__Host-sv_device`, a random id) names it, and a table keyed by the account
+  and that id (`device_locks`) holds the setting. A new session in the same browser, for the same account, takes the setting up; another
+  account in that browser has none.
+- **The settings:** the idle time, **15 minutes** by default, from 1, 5, 15 or 60; and **"Also lock when I leave the app"**, off by default
+  and offered on every device once the lock is on. Turning the lock off needs the session unlocked, and nothing more.
+
+### B2. When a session locks
+
+A session gains `locked_at` and `last_active_at`.
+
+- **Idle.** `last_active_at` is updated by a request of the session at most once a minute. A session whose device has a lock and whose
+  last activity is older than the idle time is locked by the next request, before it is answered. The page also keeps a timer and shows
+  the lock page when the time passes, so a screen left open does not go on showing the person's data; the server's check is the one that
+  counts.
+- **Leaving the app.** With "Also lock when I leave the app", the page sends a beacon when it is hidden (`visibilitychange`), and the
+  server locks the session. iOS may end a Home Screen app in the background without a word; the stored times decide on the next request,
+  never memory.
+
+### B3. What a locked session is given
+
+Nothing of the person, from anywhere:
+
+- **Pages.** `requireSignedIn` (and `requireConsole`, `sessionFor`) sends a locked session to `/lock?returnTo=…`, and only the lock page
+  and signing out are open to it.
+- **Routes and server actions.** `requireSession` and `requireCapability` treat a locked session as none.
+- **better-auth's own routes.** Every one but signing out and the unlock ceremony refuses a locked session, `get-session` included.
+- **Apps.** The authorization endpoint sends a locked session to the lock page with the app's request as `returnTo`, so an app's sign-in
+  or its hourly check (part A) waits for the unlock; `prompt=none` with a locked session is `login_required`.
+
+### B4. Unlocking
+
+The lock page shows whose session it is, an **Unlock** button and **Use your password**, and **Sign out**.
+
+- **Unlock** runs a passkey ceremony after the tap, checked by the server: user verified, one of the account's own passkeys. The page never
+  depends on a prompt appearing without a tap, which the device check found possible but not dependable; asking on its own as the page
+  opens may be added where a platform allows it.
+- **Use your password** goes through `confirmPassword`, counted with every other time it is asked (§3.2.1).
+- Either clears `locked_at` and sends the person on to `returnTo`. A session that cannot be unlocked can always sign out.
+
+### B5. Keys closed while locked
+
+The browser keeps the account key wrapped by a key from the session's secret, which the server gives only to a live session (§5.4). A
+locked session is refused that secret, so what the browser kept cannot be opened while it is locked. Unlocking with a passkey reopens the
+key from its PRF output (§5.5); a passkey that gives none, or the password, reopens it from the password's secret, as signing in does. The
+device check found a passkey that gave no PRF output, so the fallback is needed, not only kept.
+
+### B6. Apps
+
+An app gets the lock through core: its hourly check (part A) and any sign-in go through the authorization endpoint, which a locked session
+cannot pass (B3). An app that wants the person to unlock before something sensitive asks for a recent sign-in, `requireSession(returnTo,
+{ maxAgeSeconds })` (sdk §9.6), which a locked session meets by unlocking. Related origins, letting an app use core's passkey without the
+redirect, stay for later.
+
+### B7. What is confirmed with the release
+
+The device check saw the lock's path work in a desktop browser and in Safari on an iPhone. An installed app on iOS and Android were not
+seen. Nothing in B1 to B6 depends on them: the Unlock button, the password and the stored times work whatever they show. The release that
+builds the lock is tried in an installed app on an iPhone before it is called done, and on Android when a device is at hand. If an
+installed app cannot use passkeys there, people unlock with the password on it.
 
 ## Alternatives considered
 
@@ -124,19 +178,21 @@ the app leaves the screen" is offered on a desktop, and whether turning the lock
 
 ## Rollout
 
-| Order | Task  | What                                                  |
-| ----- | ----- | ----------------------------------------------------- |
-| 1     | 4.15  | The device check, run; research 0012's table filled   |
-| 2     | 4.16  | This RFC accepted, part B completed                   |
-| 3     | 14.14 | A2, A3, A5 in the SDK, the fake core and the template |
-| 4     | 4.17  | A1, and part B's locked session and lock page in core |
-| 5     | 16.24 | Keys closed while locked                              |
+| Order | Task  | What                                                                                         | State                                      |
+| ----- | ----- | -------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| 1     | 4.15  | The device check, run; research 0012's table filled                                          | Done: desktop and iPhone in a browser (B7) |
+| 2     | 4.16  | This RFC accepted, part B decided                                                            | Done                                       |
+| 3     | 14.14 | A2, A3, A5 in the SDK, the fake core and the template; B6 documented                         | A done; B6 with 4.17                       |
+| 4     | 4.17  | A1; B1 to B4 in core: the device setting, locking, what a locked session gets, the lock page | A1 done; B to build                        |
+| 5     | 16.24 | B5: keys closed while locked                                                                 | To build, with 4.17                        |
 
-Part A does not wait for part B: 14.14 can be built once part A is accepted.
+Part A did not wait for part B. Part B is built in one release, tried in an installed app on an iPhone before it is called done (B7).
 
 ## Open questions
 
 1. ~~Is one hour the right interval?~~ Decided (2026-11-19): one hour, set by each app; the template sets it.
 2. ~~Should core's session lifetime be an operator's setting?~~ Decided (2026-11-19): no, it stays fixed in core, so apps have one
    lifetime to plan against.
-3. Part B's four questions above, after the device check.
+3. ~~Part B's four questions.~~ Decided (2026-11-19): no operator requirement, the lock is the person's own choice once signed in (B1);
+   15 minutes by default (B1); "lock when I leave the app" offered on every device once the lock is on (B1); a passkey on the device
+   first (B1).

@@ -353,7 +353,7 @@ there).
 
 - Five wrong passwords in ten minutes are refused on every page that asks
 
-#### ⏳ 4.15 — A lock on the devices
+#### ✅ 4.15 — A lock on the devices
 
 **Goal:** Research 0012's platform table is filled from devices, not documentation.
 
@@ -363,7 +363,9 @@ there).
   alone on production (`instance:diagnose`), that makes a passkey there, asks for one
   after a tap and with none (armed, on opening and on coming back), reports user verification and PRF output, and records how long the
   app was away and whether it was ended, in a log kept by the browser and copied out as text; nothing is sent to the server
-- on an iPhone (iOS 18.4 and 26), an iPad and an Android phone, with core installed: the lock check run, its results sent
+- the lock check run, its results sent: done on desktop Chrome (macOS) and on an iPhone 15 Pro (iOS 18.7) in Safari; an installed app on
+  iOS, and Android, not reached (the installed app opens at `/` and nothing links to the lock check), and confirmed with the lock's
+  release instead (RFC 0006 B7)
 - research 0012 updated with what was seen
 
 **Dependencies:** none `[parallel]`
@@ -375,7 +377,7 @@ there).
 - On a production instance the lock check is a page that is not there for anyone but the owner
 - Each row of the table says what was seen, on which version
 
-#### ⏳ 4.16 — The specification: sessions across apps, and a lock
+#### ✅ 4.16 — The specification: sessions across apps, and a lock
 
 **Goal:** An RFC settles how an app's session follows core's and how core and its apps lock.
 
@@ -401,9 +403,16 @@ there).
 **Deliverables:**
 
 - ✅ core's session lifetime set explicitly (`SESSION_LIFETIME`: seven days, extended daily; RFC 0006 A1)
-- a locked state on the session, set after the person's idle time or on leaving the app
-- every request of a locked session answered with the lock page, unlocked by a server-checked passkey assertion with user
-  verification, or the password; the setting on the Security page, per device
+- the setting, per device (`__Host-sv_device`, `device_locks`): turned on from the Security page once signed in, needing a passkey on the
+  device (added first when there is none); idle time 15 minutes by default, from 1, 5, 15 or 60; "Also lock when I leave the app", off by
+  default (RFC 0006 B1)
+- `locked_at` and `last_active_at` on the session; locked by the next request after the idle time, by a beacon on leaving the app, and
+  shown by the page's own timer (B2)
+- a locked session gets nothing of the person: pages send it to `/lock`, routes and actions treat it as none, better-auth's routes refuse
+  it but signing out and the unlock ceremony, and the authorization endpoint sends it to the lock page (B3)
+- the lock page: Unlock (a server-checked passkey assertion with user verification, after a tap), Use your password (`confirmPassword`),
+  Sign out (B4)
+- tried in an installed app on an iPhone before it is called done (B7)
 
 **Dependencies:** 4.16
 

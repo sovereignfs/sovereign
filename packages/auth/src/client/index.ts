@@ -5,6 +5,10 @@
 import { passkeyClient } from '@better-auth/passkey/client';
 import { twoFactorClient } from 'better-auth/client/plugins';
 import { derivePassword, fromBase64Url, type WebKey } from '@sovereignfs/crypto/web';
+import { newPasswordProblem, PAGE_NOT_READY, type PasswordPolicy } from '../password-policy.js';
+import { DEACTIVATED, emailRequestProblem } from './messages.js';
+
+export { DEACTIVATED, emailRequestProblem, passkeyProblem } from './messages.js';
 
 /**
  * The browser's client for the app's sign-in is better-auth's `createAuthClient` (from `better-auth/react`), called by the app so its
@@ -153,9 +157,6 @@ type PasswordClient = {
   };
 };
 
-/** Said to someone whose account was deactivated, and to nobody else (rule 6). */
-export const DEACTIVATED = 'This account has been deactivated. Ask whoever runs this instance.';
-
 /** What signing in with a password came to, for the page to act on. */
 export type PasswordSignIn =
   | { outcome: 'signed-in'; data: unknown; secret: WebKey }
@@ -206,4 +207,71 @@ export async function signInWithPassword(
   if (data && 'twoFactorRedirect' in data && data.twoFactorRedirect)
     return { outcome: 'second-step', secret };
   return { outcome: 'signed-in', data: result.data, secret };
+}
+
+/** What asking for a reset link needs of the client. */
+type ResetRequestClient = {
+  requestPasswordReset(input: {
+    email: string;
+    redirectTo: string;
+  }): Promise<{ error?: Refusal | null }>;
+};
+
+/**
+ * Asking for a link to reset the password (auth.md §4, rule 9): the answer is the same whether or not the address has an account, so
+ * only a refusal that says nothing about it (too many requests, no mail set up) comes back as a sentence.
+ */
+export async function requestPasswordReset(
+  client: ResetRequestClient,
+  input: { email: string; redirectTo: string },
+): Promise<{ sent: true } | { sent: false; message: string }> {
+  const result = await client.requestPasswordReset(input);
+  if (result.error) {
+    return {
+      sent: false,
+      message:
+        emailRequestProblem(result.error) ??
+        'The request could not be sent. Check the address and try again.',
+    };
+  }
+  return { sent: true };
+}
+
+/** What setting a new password from a reset link needs of the client. */
+type ResetClient = {
+  resetPassword(input: { newPassword: string; token: string }): Promise<{ error?: Refusal | null }>;
+};
+
+/**
+ * Setting a new password from a reset link (auth.md §4, rule 1): checked against the policy, typed twice, then sent as the sign-in
+ * value made with the account's address, never as the password. A link that has run out or was used says so.
+ */
+export async function resetPassword(
+  client: ResetClient,
+  signInValue: (password: string, address: string) => Promise<string>,
+  input: {
+    password: string;
+    confirm: string;
+    address: string;
+    token: string;
+    policy: PasswordPolicy;
+  },
+): Promise<{ outcome: 'done' } | { outcome: 'expired' } | { outcome: 'refused'; message: string }> {
+  const problem = newPasswordProblem(input.password, input.confirm, input.policy);
+  if (problem) return { outcome: 'refused', message: problem };
+  let value: string;
+  try {
+    value = await signInValue(input.password, input.address);
+  } catch {
+    return { outcome: 'refused', message: PAGE_NOT_READY };
+  }
+  const result = await client.resetPassword({ newPassword: value, token: input.token });
+  if (!result.error) return { outcome: 'done' };
+  if (result.error.code === 'INVALID_TOKEN') return { outcome: 'expired' };
+  const common = emailRequestProblem(result.error);
+  if (common) return { outcome: 'refused', message: common };
+  if (result.error.code === 'PASSWORD_DOES_NOT_MEET_POLICY' && result.error.message) {
+    return { outcome: 'refused', message: result.error.message };
+  }
+  return { outcome: 'refused', message: 'The password could not be changed. Try again.' };
 }

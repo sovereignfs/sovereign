@@ -1,16 +1,12 @@
-import { useState, type AnchorHTMLAttributes, type FormEvent, type ReactNode } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
+import { plainLink, type AuthLinkRenderer } from './AuthLinkRenderer';
+
+export type { AuthLinkRenderer };
 import { Input } from '../Input/Input';
 import { AuthField } from './AuthField';
 import { AuthButton, AuthDivider, AuthFooter, AuthForm } from './AuthForm';
 import { AuthError, AuthNotice } from './AuthNotice';
 import styles from './Auth.module.css';
-
-/** How a link is drawn: the consumer's router link, or a plain `<a>` when none is given. */
-export type AuthLinkRenderer = (
-  props: AnchorHTMLAttributes<HTMLAnchorElement> & { href: string },
-) => ReactNode;
-
-const plainLink: AuthLinkRenderer = ({ children, ...props }) => <a {...props}>{children}</a>;
 
 export interface SignInFormProps {
   /** The app's name, for "New to … ?". */

@@ -183,8 +183,9 @@ only.
 - a setting on each app at core, "Signing out of this app signs out of Sovereign": on for a hosted app (`sv apply`), off for an
   external app and one registered in the Console, changed under the technical settings
 - with it off, end-session ends nothing of core's and returns the person to the app's registered post-logout address
-- `contracts/suite.md`, the admin entry's arguments and `ClientRegistry` carry it; existing apps keep today's behaviour until the next
-  `sv apply`
+- `contracts/suite.md`, the admin entry's arguments and `ClientRegistry` carry it; the migration turns it on for every existing app, which is today's behaviour, and the next `sv apply` sets
+  it for each app of `suite.yml`; an app registered in the Console before keeps it on until an operator turns it off, and a new one
+  starts off
 
 **Dependencies:** 17.1
 
@@ -201,8 +202,7 @@ only.
 
 **Deliverables:**
 
-- `amr` (`pwd`, `hwk` for a passkey, `otp` for the second step) and `acr` to match in ID tokens and userinfo, recorded on the session
-  when it is opened
+- `amr` (RFC 8176: `pwd` for the password, `otp` added for the second step's code or a backup code, `hwk` and `user` for a passkey, `mfa` when two were used) and `acr` (`"1"` one factor, `"2"` two or a passkey, `"0"` a session opened another way, such as an emailed link) in ID tokens and userinfo, recorded on the session when it is opened, unchanged by unlocking it (core-app §3.6.2)
 - `given_name` and `family_name` removed from `claims_supported`, which core never sends
 
 **Dependencies:** 17.1

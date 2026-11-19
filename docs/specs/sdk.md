@@ -445,6 +445,15 @@ part A). The template sets an hour; unset, nothing is checked.
 - `checkEverySeconds` must be a whole number of seconds, 1 or more (`ConfigurationError`).
 - The fake core's `loginRequired(authorizationUrl)` answers a `prompt=none` sign-in as core does for someone with no session.
 
+### 9.8 Signing in for a session the app keeps
+
+Not built (task 14.16; RFC 0007, [`auth.md`](auth.md) §8). `@sovereignfs/auth` keeps an app's sessions itself, so the SDK gives it the
+steps of §9.1 without a session of the SDK's own: beginning a sign-in (the pending record stays the SDK's, in its store), and completing
+one, which checks the answer as §9.1 does, stores core's refresh token in the `TokenStore` as §5.1 says, and returns who signed in
+(`sub`, `sid`, the claims, the scopes, the ID token) for the caller to open its own session with. The check of §9.7, the notices of
+§9.2, sign-out through end-session and the key secret work from what the caller kept, never from an SDK session. Everything §5.1
+promises of the refresh token holds unchanged: the SDK is still the only thing that sends it.
+
 ## 10. From the legacy SDK
 
 Every namespace of the legacy `sdk` object:

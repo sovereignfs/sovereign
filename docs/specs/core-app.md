@@ -789,8 +789,9 @@ alone, so revoking them is core's own step.
   signs out of Sovereign" (§3.7.1). On, end-session does what the bullet above says, and so, by the notices below, signs the person out of
   every other app of that session: the suite is one account. Off, end-session ends nothing of core's: it returns the person to the
   app's registered post-logout address with the app's `state`, and the app's own session is the only one that ends. `sv apply` turns
-  it on for a hosted app (`contracts/suite.md`); it is off for an external app and for one registered in the Console. Existing apps
-  keep today's behaviour until the next `sv apply`.
+  it on for a hosted app (`contracts/suite.md`); it is off for an external app and for one registered in the Console. The change turns it on for every app that exists, which is what
+  they do today; the next `sv apply` then sets it for each app of `suite.yml`, and an app registered in the Console before keeps it on
+  until an operator turns it off.
 - **Back-channel logout.** When a person's core session ends — they sign out of
   core, they end a session in their identity pages, an operator ends it, or the
   account is deactivated — core revokes the access tokens of that session and
@@ -865,22 +866,22 @@ Operators with `client:manage` register clients in the Console.
 
 #### 3.7.1 Client settings
 
-| Setting                   | Notes                                                                                                                                                                                   |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Client type               | Confidential (has a secret) or public (no secret). PKCE is required for both                                                                                                            |
-| Redirect URIs             | One or more; exact match. Must be `https`. `http` is accepted on `localhost` and `*.localhost` only when the instance's own URL (`SV_URL`) is `http`, that is on a development instance |
-| Post-logout redirect URIs | Optional; the only addresses core returns a person to after sign-out                                                                                                                    |
-| Account-deleted address   | Optional, `https` like a redirect address. Core sends a signed notice there when a person who used the app deletes their account, and keeps trying until the app answers (§4.5)         |
-| Back-channel logout URI   | Optional. Core sends a signed logout notice there when a person's session ends (§3.6.5)                                                                                                 |
-| End-session               | Lets the app send people to core's sign-out (§3.6.5). On automatically when a post-logout redirect URI or a back-channel logout URI is set                                              |
-| Sign out of Sovereign     | Whether signing out of the app also ends the person's core session (§3.6.5). On for a hosted app, off otherwise; under the technical settings. Not built (task 6.5)                     |
-| Secret                    | Confidential apps only. Sent in a header (HTTP Basic; the default) or in the request body (§3.6.1). A public app has none. Changing it needs the app reconfigured.                      |
-| Token signature           | How ID tokens are signed: EdDSA (the default) or RS256, for an app that cannot verify EdDSA (§3.6.1). Either client type may choose it.                                                 |
-| Allowed scopes            | Any of §3.6.2; `roles` only when trusted                                                                                                                                                |
-| Trusted                   | Off by default                                                                                                                                                                          |
-| Enabled                   | On by default                                                                                                                                                                           |
-| Key return address        | Optional, `https` like a redirect address. Set, the app may use encryption the server cannot read and holds `keys` (§5.6)                                                               |
-| App scopes                | What a confidential app may do for itself (§3.6.6). None by default; a public app cannot have any                                                                                       |
+| Setting                   | Notes                                                                                                                                                                                       |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Client type               | Confidential (has a secret) or public (no secret). PKCE is required for both                                                                                                                |
+| Redirect URIs             | One or more; exact match. Must be `https`. `http` is accepted on `localhost` and `*.localhost` only when the instance's own URL (`SV_URL`) is `http`, that is on a development instance     |
+| Post-logout redirect URIs | Optional; the only addresses core returns a person to after sign-out                                                                                                                        |
+| Account-deleted address   | Optional, `https` like a redirect address. Core sends a signed notice there when a person who used the app deletes their account, and keeps trying until the app answers (§4.5)             |
+| Back-channel logout URI   | Optional. Core sends a signed logout notice there when a person's session ends (§3.6.5)                                                                                                     |
+| End-session               | Lets the app send people to core's sign-out (§3.6.5). On automatically when a post-logout redirect URI or a back-channel logout URI is set                                                  |
+| Sign out of Sovereign     | Whether signing out of the app also ends the person's core session (§3.6.5). On for a hosted app, off for a new external or Console app; under the technical settings. Not built (task 6.5) |
+| Secret                    | Confidential apps only. Sent in a header (HTTP Basic; the default) or in the request body (§3.6.1). A public app has none. Changing it needs the app reconfigured.                          |
+| Token signature           | How ID tokens are signed: EdDSA (the default) or RS256, for an app that cannot verify EdDSA (§3.6.1). Either client type may choose it.                                                     |
+| Allowed scopes            | Any of §3.6.2; `roles` only when trusted                                                                                                                                                    |
+| Trusted                   | Off by default                                                                                                                                                                              |
+| Enabled                   | On by default                                                                                                                                                                               |
+| Key return address        | Optional, `https` like a redirect address. Set, the app may use encryption the server cannot read and holds `keys` (§5.6)                                                                   |
+| App scopes                | What a confidential app may do for itself (§3.6.6). None by default; a public app cannot have any                                                                                           |
 
 #### 3.7.2 Launcher entry
 

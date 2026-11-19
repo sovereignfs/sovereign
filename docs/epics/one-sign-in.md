@@ -13,7 +13,7 @@ Core, the app template, and Tusk and Fjord each carry a sign-in of their own, an
 [RFC 0007](../rfcs/0007-one-sign-in.md) moves the part of core's sign-in that is not about core into `@sovereignfs/auth`, which core
 uses too, and makes every app run the same session layer with core and local accounts as its two ways in. The forms and panels go into
 the design system (2.6), signing out follows whose app it is (6.5), the template makes an app of its own from the package (13.35), and
-the SDK's `nextAuth` is deprecated (14.15).
+the SDK's `nextAuth` is deprecated (14.15), after it signs in for a session the app keeps (14.16).
 
 ## Related
 
@@ -66,7 +66,7 @@ the SDK's `nextAuth` is deprecated (14.15).
 - the tests that scan core for `requireCapability`, `requireSameOrigin` and calls with the request's headers scan the package too;
   the populated `auth-store` fixtures move into the package's tests
 
-**Dependencies:** 17.1, 4.17
+**Dependencies:** 17.1, and core's lock (4.17's code) on the branch it is built on
 
 **Spec reference:** RFC 0007 §1, §2, §6, §7
 
@@ -132,7 +132,7 @@ passes in.
   email that is a local account's refused until linked from a signed-in session
 - a fixture app in `apps/e2e` that signs in both ways
 
-**Dependencies:** 17.4, 6.5
+**Dependencies:** 17.4, 6.5, 14.16
 
 **Spec reference:** RFC 0007 §3, §4, §5
 

@@ -212,7 +212,7 @@ sessionStore, tokenStore })` and `nextAuth(sv).handlers` mounted at `app/auth/[a
 back-channel route). This is what the app template makes ([using the SDK](using-the-sdk.md)). It cannot run without an instance.
 
 **Local and/or core** (Tusk and Fjord: an app of its own). better-auth keeps the sessions and accounts; core is one provider, turned on
-when `<P>_CORE_URL` is set; local accounts when `<P>_AUTH_LOCAL=1` (off by default, and then the sign-in pages answer 404); one
+when `<P>_CORE_URL` is set; local accounts when `<P>_AUTH_LOCAL=true` (off by default, and then the sign-in pages answer 404); one
 image does all three. The SDK is still used, for the notices:
 `verifyLogoutToken` and `verifyAccountDeletedToken` do every check and return who the notice names, and the app ends or deletes. `seen`
 records each notice's `jti` in a table, so a replay is refused after a restart.
@@ -445,8 +445,8 @@ instance.
   format in `crypto`, then a template for an app of its own. Until then, copy from Tusk, and say in the design which files were copied.
 - **`env.md`'s `FIELD_ENCRYPTION_KEYS`** is not what the apps use (`<P>_ENCRYPTION_KEY` and `_PREVIOUS`); research 0004 step 4 reconciles them.
 - **The template** makes a core-only PostgreSQL app; an app of its own does not start there yet.
-- **`AUTH_LOCAL` takes `1`** (Tusk also accepts `true`), which `env.md` §4's booleans (exactly `true` or `false`) do not allow. Until
-  the contract and the apps agree, accept both.
+- **`AUTH_LOCAL` is `true` or `false`** (`env.md` §2, settled by [RFC 0007](rfcs/0007-one-sign-in.md)). Tusk and Fjord read `1` today;
+  until they move onto `@sovereignfs/auth`, which refuses it, accept both.
 
 ## Where to read more
 

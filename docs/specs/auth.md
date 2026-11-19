@@ -97,21 +97,23 @@ through the user-create hook).
 
 Read with the app's prefix (`contracts/env.md` §2):
 
-| Name                                               | Meaning                                                                                                                              |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `URL`                                              | The app's address; the relying party of its passkeys and the origin requests must come from                                          |
-| `AUTH_SECRET`                                      | Required (rule 15)                                                                                                                   |
-| `AUTH_TRUSTED_ORIGINS`                             | Other origins requests may come from                                                                                                 |
-| `AUTH_LOCAL`                                       | `true` turns on the app's own accounts. Default `true` when `CORE_URL` is unset, `false` when it is set                              |
-| `AUTH_SIGNUP`                                      | `open`, `closed` (the first account only) or `invite` (`contracts/env.md` §2); for the app's own accounts                            |
-| `AUTH_PASSWORD_MIN_LENGTH`                         | The shortest password the app's own accounts accept: default 8, never below it, with `AUTH_PASSWORD_REQUIRE_*` as in core-app §3.3.2 |
-| `CORE_URL`, `CORE_CLIENT_ID`, `CORE_CLIENT_SECRET` | Core as a way in (§8), all three or none                                                                                             |
+| Name                                               | Meaning                                                                                                                     |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `URL`                                              | The app's address; the relying party of its passkeys and the origin requests must come from                                 |
+| `AUTH_SECRET`                                      | Required (rule 15)                                                                                                          |
+| `AUTH_TRUSTED_ORIGINS`                             | Other origins requests may come from                                                                                        |
+| `AUTH_LOCAL`                                       | `true` turns on the app's own accounts. Default `true` when `CORE_URL` is unset, `false` when it is set                     |
+| `AUTH_SIGNUP`                                      | `open`, `closed` (the first account only) or `invite` (`contracts/env.md` §2); for the app's own accounts                   |
+| `AUTH_PASSWORD_MIN_LENGTH`                         | The shortest password the app's own accounts accept: default 8, with `AUTH_PASSWORD_REQUIRE_*`, as core's (core-app §3.3.2) |
+| `CORE_URL`, `CORE_CLIENT_ID`, `CORE_CLIENT_SECRET` | Core as a way in (§8), all three or none                                                                                    |
 
 An app with neither way in (`AUTH_LOCAL=false` and no `CORE_URL`) MUST refuse to start. `AUTH_LOCAL` is a boolean of the contract,
 exactly `true` or `false`; the `1` some apps read today is refused.
 
-Core reads its own settings through the same table under `SV`, with `AUTH_LOCAL` always on and no `CORE_URL`: core is not an app of
-another core.
+Core reads `URL`, `AUTH_SECRET`, `AUTH_TRUSTED_ORIGINS` and the password policy under `SV`, as it does today. It has no `AUTH_LOCAL`,
+`AUTH_SIGNUP` or `CORE_URL`: its accounts are always its own, core is not an app of another core, and who may get an account is
+core's registration policy (core-app §3.3.1, from the instance's settings and invitations), which it passes as the `registration`
+function (§3).
 
 ## 6. Sessions
 
@@ -151,7 +153,9 @@ the SDK's (`AppVault`, `localVault`, sdk §9.5); an app with no encryption gives
 
 ## 8. Core as a way in
 
-With `CORE_URL` set, an app signs people in through core. `./core` is a better-auth plugin built on the SDK:
+With `CORE_URL` set, an app signs people in through core. `./core` is a better-auth plugin built on the SDK. The SDK's sign-in keeps a
+session of its own today (sdk §9.1); for `./core` it gives its steps without one, so that the app's session is the package's and the SDK
+keeps only the pending sign-in and core's refresh token (task 14.16, sdk §9.8):
 
 - **Signing in** is the SDK's (sdk §9.1): PKCE, `returnTo`, `prompt`, `max_age`. It ends by opening the app's session for the account
   linked to core's `sub`.

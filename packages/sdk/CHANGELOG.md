@@ -5,6 +5,14 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 2.1.0; earlier versions are in the repository's
 history and tags.
 
+## [2.9.0] - 2026-11-20
+
+### Added
+
+- Signing in for an app that keeps its own sessions (sdk §9.8): `finishSignIn` checks core's answer as `completeSignIn` does and keeps
+  the refresh token, then says who signed in without making a session, and `endSessionUrl` gives core's sign-out for an ID token the
+  app kept. `completeSignIn` is now `finishSignIn` with the SDK's session made from it; nothing of it changes for an app using it.
+
 ## [2.8.0] - 2026-11-19
 
 ### Added

@@ -1,7 +1,7 @@
 export { createSovereign } from './sovereign';
 export { hasRole } from './session';
 export type { Session, SessionStore, StoredRecord } from './session';
-export type { Auth, SignInOptions, Step } from './auth';
+export type { Auth, SignedIn, SignInOptions, Step } from './auth';
 export type {
   ActivityApi,
   AppClient,

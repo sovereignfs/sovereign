@@ -361,7 +361,7 @@ two deliveries of one genuine token can only end the same sessions twice.
 - An app using `nextAuth` builds and signs in unchanged, with a deprecation warning from its types
 - The SDK's version is a minor bump: nothing is removed
 
-#### 📋 14.16 — Signing in for a session the app keeps
+#### ✅ 14.16 — Signing in for a session the app keeps
 
 **Goal:** `@sovereignfs/auth` signs people in through core on the SDK, with the session its own and core's refresh token the SDK's alone.
 

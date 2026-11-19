@@ -58,6 +58,21 @@ export type SignInOptions = {
 /** What to do next after a step of signing in or out: where to send the person, and the cookies to set. */
 export type Step = { url: string; setCookies: string[] };
 
+/** Who signed in, for an app that keeps its own sessions (sdk §9.8). The refresh token is already in the token store. */
+export type SignedIn = {
+  sub: string;
+  /** The core session this sign-in belongs to, when core gave one. */
+  sid: string | undefined;
+  claims: Record<string, unknown>;
+  scopes: string[];
+  /** Kept by the caller for signing out (`endSessionUrl`). */
+  idToken: string | undefined;
+  /** Where the person was headed, a path on the app. */
+  returnTo: string;
+  /** Clears the pending sign-in's cookie. */
+  setCookies: string[];
+};
+
 /**
  * Signing people in through core with `openid-client`, and ending sessions (sdk §9). Framework-neutral: it takes a web
  * `Request` and returns data and `Set-Cookie` values. It keeps nothing itself: the state of a sign-in and the sessions are
@@ -143,10 +158,13 @@ export class Auth {
     };
   }
 
-  /** Finishes a sign-in at the callback: checks what came back, and makes the session. */
-  async completeSignIn(
-    request: Request,
-  ): Promise<{ session: Session; returnTo: string; setCookies: string[] }> {
+  /**
+   * Finishes a sign-in at the callback for an app that keeps its own sessions (sdk §9.8): checks what came back as §9.1 does, keeps
+   * the refresh token in the token store (§5.1), and says who signed in. It makes no session of the SDK's; the cookie it sets only
+   * clears the pending sign-in. A sign-in that asked to show nothing and found the person signed out at core throws a `SignInError`
+   * whose reason is `login_required`, so the caller ends its own session (§9.7).
+   */
+  async finishSignIn(request: Request): Promise<SignedIn> {
     const pendingName = cookieName('signin', this.#secure);
     const pendingId = readCookies(request.headers.get('cookie'))[pendingName];
     const clearPending = clearCookie(pendingName, this.#secure);
@@ -155,6 +173,7 @@ export class Auth {
     // A callback can be used once, whatever comes of it.
     await this.#o.sessionStore.delete(pendingId);
     if (!pending || pending.kind !== 'pending') throw new SignInError('That sign-in has run out.');
+    const returnTo = localPath(String(pending.data.returnTo));
 
     const config = await this.#configuration();
     // Behind a proxy the request's own address may be an internal one; the callback is the app's public address.
@@ -171,12 +190,8 @@ export class Auth {
         ...(typeof pending.data.maxAge === 'number' ? { maxAge: pending.data.maxAge } : {}),
       });
     } catch (error) {
-      const returnTo = localPath(String(pending.data.returnTo));
-      // Core said the person must sign in, to a sign-in that asked it to show nothing: their core session is over. The session this
-      // browser has here ends with it (sdk §9.7).
+      // Core said the person must sign in, to a sign-in that asked it to show nothing: their core session is over (sdk §9.7).
       if ((error as { error?: unknown } | undefined)?.error === 'login_required') {
-        const ending = await this.#find(request);
-        if (ending) await this.#o.sessionStore.delete(ending.id);
         throw new SignInError('The person is no longer signed in at core.', {
           cause: error,
           reason: 'login_required',
@@ -190,9 +205,37 @@ export class Auth {
     const sub = claims?.sub;
     if (!claims || typeof sub !== 'string') throw new SignInError('Core gave no identity.');
     const sid = typeof claims.sid === 'string' ? claims.sid : undefined;
+    const scopes = (tokens.scope ?? '').split(' ').filter((scope) => scope !== '');
+    await this.#keepRefreshToken(sub, tokens.refresh_token);
+    return {
+      sub,
+      sid,
+      claims,
+      scopes,
+      idToken: tokens.id_token,
+      returnTo,
+      setCookies: [clearPending],
+    };
+  }
+
+  /** Finishes a sign-in at the callback: `finishSignIn`, and the SDK's own session made from it (§9.1). */
+  async completeSignIn(
+    request: Request,
+  ): Promise<{ session: Session; returnTo: string; setCookies: string[] }> {
+    let signedIn: SignedIn;
+    try {
+      signedIn = await this.finishSignIn(request);
+    } catch (error) {
+      // The session this browser has here ends with the core session that ended (sdk §9.7).
+      if (error instanceof SignInError && error.reason === 'login_required') {
+        const ending = await this.#find(request);
+        if (ending) await this.#o.sessionStore.delete(ending.id);
+      }
+      throw error;
+    }
+    const { sub, sid, claims, scopes, idToken, returnTo, setCookies } = signedIn;
     const seconds = this.#o.sessionSeconds ?? DEFAULT_SESSION_SECONDS;
     const expiresAt = this.#now() + seconds * 1000;
-    const scopes = (tokens.scope ?? '').split(' ').filter((scope) => scope !== '');
     // A check of this browser's session (sdk §9.7), or a sign-in again by the same person, renews the session in place: the same id,
     // and the same key secret, so what the browser keeps for the session still opens. Another person gets a session of their own.
     const existing = await this.#find(request);
@@ -210,7 +253,7 @@ export class Auth {
         data: {
           claims,
           scopes,
-          idToken: tokens.id_token,
+          idToken,
           expiresAt,
           checkedAt,
           ...(typeof keySecret === 'string' ? { keySecret } : {}),
@@ -218,7 +261,6 @@ export class Auth {
       },
       expiresAt,
     );
-    await this.#keepRefreshToken(sub, tokens.refresh_token);
 
     return {
       session: sessionFrom(id, {
@@ -227,15 +269,33 @@ export class Auth {
         ...(sid ? { sid } : {}),
         data: { claims, scopes, expiresAt, checkedAt },
       }).session,
-      returnTo: localPath(String(pending.data.returnTo)),
+      returnTo,
       setCookies: [
         setCookie(cookieName('session', this.#secure), id, {
           secure: this.#secure,
           maxAgeSeconds: seconds,
         }),
-        clearPending,
+        ...setCookies,
       ],
     };
+  }
+
+  /**
+   * Core's sign-out for an ID token the caller kept (sdk §9.8): the address that ends the person's core session, or the app's own
+   * post-logout address when core offers no end-session or there is no token. Core decides what signing out of the app ends
+   * (core-app §3.6.5).
+   */
+  async endSessionUrl(idToken: string | undefined): Promise<string> {
+    const config = await this.#configuration();
+    if (!config.serverMetadata().end_session_endpoint || typeof idToken !== 'string') {
+      return this.postLogoutRedirectUri;
+    }
+    return client
+      .buildEndSessionUrl(config, {
+        id_token_hint: idToken,
+        post_logout_redirect_uri: this.postLogoutRedirectUri,
+      })
+      .toString();
   }
 
   // ---- the session -----------------------------------------------------------------

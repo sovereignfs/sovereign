@@ -339,7 +339,7 @@ the package in their own repositories, after 13.35.
 | —       | 6        | The account panels that remain `[parallel]`                | ✅     | [2.7](docs/epics/design-system.md)  |
 | 0.119.0 | 7        | Signing out of an app follows whose app it is `[parallel]` | ✅     | [6.5](docs/epics/oidc-provider.md)  |
 | —       | 8        | How a person signed in, in the token `[parallel]`          | 🚧     | [6.6](docs/epics/oidc-provider.md)  |
-| —       | 9        | Signing in for a session the app keeps `[parallel]`        | 📋     | [14.16](docs/epics/sdk.md)          |
+| —       | 9        | Signing in for a session the app keeps `[parallel]`        | ✅     | [14.16](docs/epics/sdk.md)          |
 | —       | 10       | Core as a way in, and an app's own accounts                | 📋     | [17.5](docs/epics/one-sign-in.md)   |
 | —       | 11       | The template makes an app of its own                       | 📋     | [13.35](docs/epics/operator-cli.md) |
 | —       | 12       | A typed person, and `nextAuth` deprecated                  | 📋     | [14.15](docs/epics/sdk.md)          |

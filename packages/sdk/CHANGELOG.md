@@ -21,6 +21,8 @@ history and tags.
 
 ### Changed
 
+- A sign-in that was begun waits an hour for its callback, not ten minutes, so someone an app sent to core who makes an account, verifies
+  their address or resets their password on the way is not refused when they come back.
 - Signing in again in a browser that has a session for the same person renews that session instead of making a second one; another
   person signing in on that browser ends the first person's session there.
 

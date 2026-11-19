@@ -261,7 +261,7 @@ A record is `{ kind: 'session' | 'pending' | 'seen', sub?, sid?, data }`, which 
 after its `expiresAt`.
 
 - `beginSignIn({ returnTo? })` makes the PKCE `S256` verifier, `state` and `nonce`, keeps them in the store as a `pending` record that
-  lives ten minutes, and returns the address to send the person to and the cookie (`__Host-sv_signin`) that names the record. `returnTo`
+  lives an hour (as long as core's emailed links, since core carries an app's request through sign-up, verification and a reset), and returns the address to send the person to and the cookie (`__Host-sv_signin`) that names the record. `returnTo`
   is a path on the app, and anything else is ignored.
 - `completeSignIn(request)` finds the pending record from the cookie, deletes it (a callback can be used once), exchanges the code
   with the app's secret, checks the ID token (signature, issuer, audience, `nonce`) and `state`, and makes the session: a `session`
@@ -540,3 +540,4 @@ of its own; an app catalogue.
 | 2026-11-17 | §9.5, §12: `localVault` moves to `@sovereignfs/sdk/local-vault`, an entry of its own, before any release carried it in `/keys`; `/keys` no longer reaches libsodium.                                                                                      |
 | 2026-11-18 | §9.6: a fresh sign-in (`prompt`, `maxAgeSeconds`, `authTime`, `signedInWithin`, `requireSession`'s age); §9.1: core ending a session ends it in the app (`SessionEndedError.byCore`), and a logout notice for the whole person removes the refresh token. |
 | 2026-11-19 | §9.7: checking a session against core (`checkEverySeconds`, `checkedAt`, `needsCheck`, `prompt=none` renewal in place, `SignInError.reason`); the fake core's `loginRequired`.                                                                            |
+| 2026-11-19 | §9.1: a pending sign-in lives an hour, not ten minutes, so an app's sign-in carried through an emailed link is not refused.                                                                                                                               |

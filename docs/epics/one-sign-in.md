@@ -53,7 +53,8 @@ the SDK's `nextAuth` is deprecated (14.15), after it signs in for a session the 
 
 **Deliverables:**
 
-- `packages/auth`, published as `@sovereignfs/auth`: `createAuthPreset(options)` from the generic part of
+- `packages/auth`, `@sovereignfs/auth` (`private` until leg 6 publishes it, since it is built from the private `crypto` and
+  `database`): `createAuthPreset(options)` from the generic part of
   `apps/core/src/auth/auth.ts` (the adapter's mapping, `policedHash`, user-verified passkeys, the second step with no "trust this
   device", `PASSWORD_AGAIN`, the `NEEDS_MAIL` answer, `assertMayOpenSession`, the name, time zone and locale hooks, rate limits, cookie
   cache off, `freshAge: 0`, `__Host-` cookies, `resolveAuthSettings`)
@@ -62,9 +63,11 @@ the SDK's `nextAuth` is deprecated (14.15), after it signs in for a session the 
   own history, and a test holds core's tables to the package's schema
 - core's `createAuth` becomes the preset plus the OIDC provider, invitations, the owner, logout notices, the lock and the passkey's
   way into the keys
-- better-auth pinned to one exact version in the package; an app with a second copy refused at start-up
+- better-auth pinned to one exact version in the package, and every workspace manifest held to that one version by a test (a
+  refusal at start-up was dropped: a second copy cannot be told reliably from inside the package)
 - the tests that scan core for `requireCapability`, `requireSameOrigin` and calls with the request's headers scan the package too;
-  the populated `auth-store` fixtures move into the package's tests
+  the populated `auth-store` fixtures stay in core's suite, which runs the package (a copy in the package waits for a database harness
+  of its own)
 
 **Dependencies:** 17.1, and core's lock (4.17's code) on the branch it is built on
 

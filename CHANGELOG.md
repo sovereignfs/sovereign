@@ -20,6 +20,8 @@ history and tags.
 
 ### Fixed
 
+- Opening an invitation link while already signed in sent the person to the launcher without a word. It now says whose account they
+  are in and whom the invitation is for, and offers to go on or to sign out and use the invitation.
 - A sign-in page an app sent someone to, left open for more than ten minutes, said the email or password was wrong when they finally
   signed in. It now says the sign-in waited too long and offers to start it again.
 

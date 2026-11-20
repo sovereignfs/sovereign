@@ -69,6 +69,9 @@ npm create @sovereignfs instance my-instance
 - `--encryption` (or `npm_config_encryption`) makes an app whose notes are encrypted in the browser (RFC 0005): manifest 4 with
   `encryption`, the notes shared between people of the instance, and `ENCRYPTION.md` saying what is protected and that it is not yet
   audited. It is written over the app's files, which are otherwise the same. `--encryption` with `instance` is refused.
+- `--package-manager pnpm|npm|yarn` (or `npm_config_package_manager`) names the package manager an app is made with (§2.2). With none it
+  MUST ask when there is a terminal, and otherwise use **pnpm**, whatever tool started `create`. Yarn is Yarn 4 with its packages in
+  `node_modules`. Any other value, and `--package-manager` with `instance`, is refused.
 
 `instance` MUST, in order: write the files of §2.1, run `git init`, install the toolkit from the lockfile it wrote, add
 `--remote URL` as `origin` if given, and make the first commit. It MUST NOT push.
@@ -99,7 +102,11 @@ It MUST meet [`contracts/app-manifest.md`](../../contracts/app-manifest.md), and
   `database.pooling: transaction`;
 - a `package.json` named `@sovereignfs/<name>` and marked `private`, so the name claims nothing on npm;
 - an image that does not run as root, listens on `PORT` and is configured by its environment alone;
-- one port, the manifest's `port`, that `npm run dev`, `npm start` and `<PREFIX>_URL` in `.env.example` are made with, so the app runs on
+- one package manager, the one it is made with, that every file naming a command uses: the Dockerfile, the workflows, the pre-push hook,
+  the scripts and the guides. pnpm and Yarn are pinned in `packageManager`, which the image and CI run through corepack; an app made with
+  npm has no such field, and `app sync` reads a missing one as npm. The script that turns the hooks on is `prepare`, or `postinstall`
+  for Yarn, which does not run `prepare` on an install;
+- one port, the manifest's `port`, that the `dev` and `start` scripts and `<PREFIX>_URL` in `.env.example` are made with, so the app runs on
   a developer's machine where the instance will run it;
 - a workflow, `.github/workflows/publish.yml`, that builds that image for linux/amd64 and linux/arm64, with the arguments
   `sovereign-manifest docker-args` prints, publishes it to `ghcr.io/<owner>/<repository>` tagged `X.Y.Z`, which is where `sv app add
@@ -108,7 +115,8 @@ It MUST meet [`contracts/app-manifest.md`](../../contracts/app-manifest.md), and
 - the shared files of §2.3, as `app sync` would write them, and `@sovereignfs/create` pinned exactly among its development dependencies,
   with its settings for them under `sovereign` in `package.json` (`tagPrefix`, `requiredChecks`, `unmanaged`).
 
-`create` writes the files, runs `git init`, resolves the lockfile, makes the first commit on `main`, and creates and checks out
+`create` writes the files, runs `git init`, resolves the lockfile with the app's package manager (through corepack when pnpm or Yarn is not
+installed), makes the first commit on `main`, and creates and checks out
 `develop`, the branch work lands on (the app's `CONTRIBUTING.md`: `main` takes release pull requests). It MUST NOT install or build, and it
 writes nothing outside the folder. The versions it writes are held by a test to the packages of this repository.
 

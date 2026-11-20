@@ -12,6 +12,7 @@ import {
   type CreateIo,
   type Exec,
 } from './create.js';
+import { DEFAULT_PACKAGE_MANAGER, parsePackageManager } from './package-manager.js';
 import { runTool, TOOL_COMMANDS } from './tools.js';
 
 const exec: Exec = (command, args, options) =>
@@ -92,10 +93,28 @@ async function main(): Promise<number> {
         const answer = await io.ask(`Which port should it listen on? (${DEFAULT_APP_PORT})`);
         port = answer === '' ? DEFAULT_APP_PORT : parsePort(answer);
       }
-      await createApp({ dir, port, encryption: request.encryption }, io, exec, process.cwd());
+      let { packageManager } = request;
+      if (packageManager === undefined && io.interactive) {
+        const answer = await io.ask(
+          `Which package manager (pnpm, npm or yarn)? (${DEFAULT_PACKAGE_MANAGER})`,
+        );
+        packageManager = answer === '' ? DEFAULT_PACKAGE_MANAGER : parsePackageManager(answer);
+      }
+      await createApp(
+        { dir, port, encryption: request.encryption, packageManager },
+        io,
+        exec,
+        process.cwd(),
+      );
     } else {
       if (request.encryption)
         throw new CreateError('--encryption is for an app.', 2, 'Make an app with it instead.');
+      if (request.packageManager !== undefined)
+        throw new CreateError(
+          '--package-manager is for an app.',
+          2,
+          'An instance installs its toolkit with npm, from the lockfile it is made with.',
+        );
       if (request.port !== undefined)
         throw new CreateError(
           '--port is for an app.',

@@ -8,7 +8,14 @@ import { satisfies } from 'semver';
 import { afterEach, describe, expect, it } from 'vitest';
 import { appPackageJson, createApp, namesOf, writeApp } from './app.js';
 import { CreateError, DEFAULT_APP_PORT, type CreateIo, type Exec } from './create.js';
-import { APP_DEPENDENCIES, APP_DEV_DEPENDENCIES, ENCRYPTION_DEPENDENCIES } from './versions.js';
+import { DEFAULT_PACKAGE_MANAGER, MANAGERS, managerOf } from './package-manager.js';
+import {
+  APP_DEPENDENCIES,
+  APP_DEV_DEPENDENCIES,
+  ENCRYPTION_DEPENDENCIES,
+  PNPM_VERSION,
+  YARN_VERSION,
+} from './versions.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const dirs: string[] = [];
@@ -225,7 +232,7 @@ describe('the files of an app', () => {
     expect(ci).toMatch(/on:\n {2}pull_request:\n {4}branches: \[main\]/);
     expect(ci).not.toMatch(/^ {2}push:/m);
     expect(ci).toContain('github.event.pull_request.draft == false');
-    for (const step of ['npm run typecheck', 'npm run manifest:check', 'npm run build'])
+    for (const step of ['pnpm run typecheck', 'pnpm run manifest:check', 'pnpm run build'])
       expect(ci).toContain(step);
     for (const action of ci.matchAll(/uses: (\S+)/g))
       expect(action[1], 'an action').toMatch(/@[0-9a-f]{40}$/);
@@ -233,14 +240,14 @@ describe('the files of an app', () => {
     const publish = read(target, '.github/workflows/publish.yml');
     expect(publish).toContain('uses: ./.github/workflows/ci.yml');
     expect(publish).toMatch(/image:\n {4}needs: validate/);
-    // The hook is executable, runs verify, and npm install turns it on.
+    // The hook is executable, runs verify, and an install turns it on.
     const hook = path.join(target, '.githooks', 'pre-push');
     expect(statSync(hook).mode & 0o111).not.toBe(0);
-    expect(read(target, '.githooks/pre-push')).toContain('npm run --silent verify');
+    expect(read(target, '.githooks/pre-push')).toContain('exec pnpm run verify');
     const scripts = (
       JSON.parse(read(target, 'package.json')) as { scripts: Record<string, string> }
     ).scripts;
-    expect(scripts.verify).toBe('npm run typecheck && npm run manifest:check');
+    expect(scripts.verify).toBe('pnpm run typecheck && pnpm run manifest:check');
     expect(scripts.prepare).toBe('git config core.hooksPath .githooks || true');
     expect(read(target, 'CONTRIBUTING.md')).toContain('## Continuous integration');
   });
@@ -267,7 +274,7 @@ describe('the files of an app', () => {
     expect(workflow).toContain('git merge-base --is-ancestor HEAD origin/main');
     // Called by release.yml with the tag a merged Release promotion made, and making the GitHub release from the changelog.
     expect(workflow).toMatch(/workflow_call:\n {4}inputs:\n {6}tag:/);
-    expect(workflow).toContain('npx create app release notes "$TAG" > notes.md');
+    expect(workflow).toContain('pnpm exec create app release notes "$TAG" > notes.md');
     expect(workflow).toContain('fetch-depth: 0');
     expect(workflow.indexOf('git merge-base')).toBeLessThan(
       workflow.indexOf('docker/login-action'),
@@ -759,7 +766,7 @@ describe('npm create @sovereignfs app', () => {
     expect(existsSync(path.join(cwd, 'my-notes', 'Dockerfile'))).toBe(true);
     expect(ran.map((line) => line.split(' ').slice(0, 2).join(' '))).toEqual([
       'git init',
-      'npm install',
+      'pnpm install',
       'git add',
       'git commit',
       'git switch',
@@ -768,8 +775,9 @@ describe('npm create @sovereignfs app', () => {
     expect(ran[0]).toBe('git init --initial-branch=main');
     expect(ran[4]).toBe('git switch --create develop');
     expect(io.said.join('\n')).toContain('on the branch develop');
-    expect(ran[1]).toContain('--package-lock-only');
+    expect(ran[1]).toContain('--lockfile-only');
     expect(ran[1]).toContain('--ignore-scripts');
+    expect(ran[2]).toContain('pnpm-lock.yaml');
     expect(io.said.join('\n')).toContain('./sv app add my-notes');
     expect(
       statSync(path.join(cwd, 'my-notes', '.github', 'workflows', 'publish.yml')).isFile(),
@@ -779,12 +787,131 @@ describe('npm create @sovereignfs app', () => {
   it('says what to do when a step fails, and what it wrote stays', async () => {
     const cwd = temp();
     const exec: Exec = async (command, args) =>
-      command === 'npm' && args[0] === 'install'
-        ? { code: 1, stdout: '', stderr: 'npm error 404 @sovereignfs/sdk' }
+      command === 'pnpm' && args[0] === 'install'
+        ? { code: 1, stdout: '', stderr: 'ERR_PNPM_FETCH_404 @sovereignfs/sdk' }
         : { code: 0, stdout: '', stderr: '' };
     const failure = await createApp({ dir: 'my-notes' }, io, exec, cwd).catch((e: unknown) => e);
     expect(failure).toBeInstanceOf(CreateError);
     expect((failure as CreateError).message).toContain('404');
+    expect((failure as CreateError).hint).toContain('corepack enable pnpm');
     expect(existsSync(path.join(cwd, 'my-notes', 'package.json'))).toBe(true);
+  });
+});
+
+describe('the package manager of an app', () => {
+  const cases = [
+    {
+      manager: 'pnpm',
+      pin: `pnpm@${PNPM_VERSION}`,
+      lockfile: 'pnpm-lock.yaml',
+      copy: 'COPY package.json pnpm-lock.yaml ./',
+      install: 'RUN pnpm install --frozen-lockfile --ignore-scripts',
+      run: 'pnpm run',
+      exec: 'pnpm exec',
+      corepack: true,
+    },
+    {
+      manager: 'npm',
+      pin: undefined,
+      lockfile: 'package-lock.json',
+      copy: 'COPY package.json package-lock.json ./',
+      install: 'RUN npm ci --ignore-scripts --no-audit --no-fund',
+      run: 'npm run',
+      exec: 'npx',
+      corepack: false,
+    },
+    {
+      manager: 'yarn',
+      pin: `yarn@${YARN_VERSION}`,
+      lockfile: 'yarn.lock',
+      copy: 'COPY package.json yarn.lock .yarnrc.yml ./',
+      install: 'RUN yarn install --immutable --mode=skip-build',
+      run: 'yarn run',
+      exec: 'yarn exec',
+      corepack: true,
+    },
+  ] as const;
+
+  it('is pnpm when none is named', async () => {
+    const target = path.join(temp(), 'my-notes');
+    await writeApp(target, namesOf(target));
+    expect(JSON.parse(read(target, 'package.json')).packageManager).toBe(`pnpm@${PNPM_VERSION}`);
+    expect(MANAGERS[DEFAULT_PACKAGE_MANAGER].lockfile).toBe('pnpm-lock.yaml');
+  });
+
+  it('pins the pnpm this repository uses', () => {
+    const pkg = JSON.parse(read(root, 'package.json')) as { packageManager: string };
+    expect(pkg.packageManager).toBe(`pnpm@${PNPM_VERSION}`);
+  });
+
+  for (const c of cases)
+    it(`names ${c.manager} in every file that runs it, and leaves no placeholder`, async () => {
+      const target = path.join(temp(), 'my-notes');
+      await writeApp(target, namesOf(target), DEFAULT_APP_PORT, { packageManager: c.manager });
+      const pkg = JSON.parse(read(target, 'package.json')) as {
+        packageManager?: string;
+        scripts: Record<string, string>;
+      };
+      expect(pkg.packageManager).toBe(c.pin);
+      expect(pkg.scripts.verify).toBe(`${c.run} typecheck && ${c.run} manifest:check`);
+      // Yarn 4 does not run `prepare` on an install, so the hooks are turned on after it.
+      const hookScript = c.manager === 'yarn' ? 'postinstall' : 'prepare';
+      expect(pkg.scripts[hookScript]).toBe('git config core.hooksPath .githooks || true');
+
+      const dockerfile = read(target, 'Dockerfile');
+      expect(dockerfile).toContain(c.copy);
+      expect(dockerfile).toContain(c.install);
+      expect(dockerfile).toContain(`RUN ${c.run} build`);
+      expect(dockerfile).toContain(`$(${c.exec} sovereign-manifest docker-args)`);
+      expect(dockerfile.includes('RUN corepack enable')).toBe(c.corepack);
+
+      for (const workflow of ['ci.yml', 'publish.yml']) {
+        const text = read(target, `.github/workflows/${workflow}`);
+        expect(text.includes('- run: corepack enable'), workflow).toBe(c.corepack);
+        expect(text, workflow).toContain(c.install.replace(/^RUN /, '- run: '));
+      }
+      expect(read(target, '.github/workflows/ci.yml')).toContain(`- run: ${c.run} build`);
+      expect(read(target, '.githooks/pre-push')).toContain(`exec ${c.run} verify`);
+      expect(read(target, 'AGENTS.md')).toContain(`(\`${c.run} verify\`)`);
+      expect(read(target, 'README.md')).toContain(`${c.run} dev`);
+      expect(existsSync(path.join(target, '.yarnrc.yml'))).toBe(c.manager === 'yarn');
+
+      for (const file of all(target))
+        expect(read(target, file), file).not.toMatch(/__[A-Z_]+__|# __COREPACK/);
+    });
+
+  for (const c of cases)
+    it(`writes the ${c.manager} lockfile and commits it`, async () => {
+      const cwd = temp();
+      const ran: string[] = [];
+      const exec: Exec = async (command, args) => {
+        ran.push([command, ...args].join(' '));
+        return { code: 0, stdout: '', stderr: '' };
+      };
+      const io: CreateIo = { err: () => {}, interactive: false, ask: async () => '' };
+      await createApp({ dir: 'my-notes', packageManager: c.manager }, io, exec, cwd);
+      expect(ran[1]?.split(' ')[0]).toBe(c.manager);
+      expect(ran[2]).toContain(c.lockfile);
+    });
+
+  it('runs a manager that is not installed through corepack, which comes with Node', async () => {
+    const cwd = temp();
+    const ran: string[] = [];
+    const exec: Exec = async (command, args) => {
+      ran.push([command, ...args].join(' '));
+      return command === 'yarn'
+        ? { code: 1, stdout: '', stderr: 'spawn yarn ENOENT' }
+        : { code: 0, stdout: '', stderr: '' };
+    };
+    const io: CreateIo = { err: () => {}, interactive: false, ask: async () => '' };
+    await createApp({ dir: 'my-notes', packageManager: 'yarn' }, io, exec, cwd);
+    expect(ran[2]).toBe('corepack yarn install --mode=update-lockfile');
+  });
+
+  it('is read back from packageManager, and is npm for an app made before there was a choice', () => {
+    expect(managerOf('pnpm@11.0.0')).toBe('pnpm');
+    expect(managerOf('yarn@4.18.1+sha512.abc')).toBe('yarn');
+    expect(managerOf(undefined)).toBe('npm');
+    expect(managerOf('bun@1.0.0')).toBe('npm');
   });
 });

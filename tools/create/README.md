@@ -10,7 +10,8 @@ npm create @sovereignfs my-instance
 ```
 
 Then `./sv setup`. `npm create @sovereignfs app my-notes` makes a Next.js app that an instance can host as it stands: it signs in through
-the instance's core, keeps its data in its own database, and builds into an image whose label is its manifest. With `--encryption`, its
+the instance's core, keeps its data in its own database, and builds into an image whose label is its manifest. It is made with pnpm unless
+`--package-manager npm` or `--package-manager yarn` says otherwise. With `--encryption`, its
 notes are encrypted in the browser and shared between people of the instance (not yet audited; see its `ENCRYPTION.md`). See [`@sovereignfs/cli`](https://www.npmjs.com/package/@sovereignfs/cli). Licence: AGPL-3.0-or-later.
 
 Once an app exists, it keeps the files every app of the suite shares (its release workflows, repository settings, contributing and

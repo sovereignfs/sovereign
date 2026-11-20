@@ -47,8 +47,8 @@ CI runs only where a change is about to reach what is released:
 - by hand, for any branch: **Actions → CI → Run workflow**.
 
 It never runs on a push to `develop` or a feature branch, nor on a pull request into `develop`, so runner time is not spent on every
-commit. Those are checked on your machine instead: where the repository has versioned hooks in `.githooks/` (an app's `npm install` turns
-them on), the pre-push hook runs its checks (`npm run verify`) before anything is pushed. This is the CI strategy of every repository of
+commit. Those are checked on your machine instead: where the repository has versioned hooks in `.githooks/` (an app's `__INSTALL__` turns
+them on), the pre-push hook runs its checks (`__RUN__ verify`) before anything is pushed. This is the CI strategy of every repository of
 the suite.
 
 ## Promoting `develop` into `main`

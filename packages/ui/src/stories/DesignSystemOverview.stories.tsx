@@ -129,6 +129,7 @@ import { FileDropzone } from '../components/FileDropzone/FileDropzone';
 import { OverlayHeader } from '../components/OverlayHeader/OverlayHeader';
 import { Sheet } from '../components/Sheet/Sheet';
 import { ConfirmDialog } from '../components/ConfirmDialog/ConfirmDialog';
+import { ExportPanel } from '../components/ExportPanel/ExportPanel';
 import { Menu, MenuEntries } from '../components/Menu/Menu';
 import { Calendar } from '../components/Calendar/Calendar';
 import { DatePicker } from '../components/DatePicker/DatePicker';
@@ -2224,6 +2225,28 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               usage="Small, content-sized confirm/cancel prompt. Same presentation on desktop and mobile — not a full-screen sheet. destructive for a solid red confirm action; pending + error for an async onConfirm."
             >
               <ConfirmDialogDemo />
+            </ComponentCard>
+
+            {/* ExportPanel */}
+            <ComponentCard
+              name="ExportPanel"
+              importLine="import { ExportPanel } from '@sovereignfs/ui';"
+              usage="Taking an export and downloading it once, for an operator's export or a person's: the password asked again, a confirmation, the state while it is made, and a download that works once. The consumer gives onStart (with the password typed), downloadAction and onRefresh."
+            >
+              <ExportPanel
+                status={{
+                  state: 'ready',
+                  id: 'demo',
+                  size: 7_340_032,
+                  until: Date.UTC(2026, 10, 20, 11, 0),
+                  here: true,
+                }}
+                onStart={async () => ({ ok: true })}
+                downloadAction={() => '#'}
+                confirmTitle="Download your data?"
+                confirmMessage="Ready to download once, within the hour."
+                startLabel="Get my data"
+              />
             </ComponentCard>
 
             {/* Popover */}

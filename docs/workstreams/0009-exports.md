@@ -145,7 +145,8 @@ the whole branch, push, and open the one draft PR (`sv-create-pr`).
 
 ## Changelog
 
-| Version | Date        | Change                                                                                                                                                |
-| ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | Nov 2026    | Initial draft, from RFC 0008.                                                                                                                         |
-| 0.2     | 20 Nov 2026 | Legs 1 to 4 built on `feat/exports`; 18.8 split off. Not yet checked on sqld and PostgreSQL, nor end to end against a built core with a template app. |
+| Version | Date        | Change                                                                                                                                        |
+| ------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | Nov 2026    | Initial draft, from RFC 0008.                                                                                                                 |
+| 0.2     | 20 Nov 2026 | Legs 1 to 4 built on `feat/exports`; 18.8 split off. Not yet checked end to end against a built core with a template app.                     |
+| 0.3     | 20 Nov 2026 | `pnpm test:db` passes on sqld and PostgreSQL, the exports suite included (11 tests on each); the jobs and the panel moved to shared packages. |

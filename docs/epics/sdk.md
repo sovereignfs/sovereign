@@ -340,7 +340,7 @@ two deliveries of one genuine token can only end the same sessions twice.
 
 - A role changed in the Console reaches an app within one renewal
 
-#### 📋 14.15 — A typed person, and `nextAuth` deprecated
+#### ✅ 14.15 — A typed person, and `nextAuth` deprecated
 
 **Goal:** An app reads who someone is from one typed `user`, and new apps no longer start on the SDK's own sign-in.
 
@@ -360,6 +360,13 @@ two deliveries of one genuine token can only end the same sessions twice.
 
 - An app using `nextAuth` builds and signs in unchanged, with a deprecation warning from its types
 - The SDK's version is a minor bump: nothing is removed
+
+**Done:** the typed person is `User` (the SDK's `Person` was already its actor, `{ sub }`): `session.user` in the SDK, from
+`personFromClaims`, and `userOf` / `signedInUser` in `@sovereignfs/auth`, mapped from what is already stored (the preset's user fields
+and the session's core sign-in row with its kept ID token), so no column was added; `sub` and `roles` come only from a session that
+came through core. The template reads it through `userOfSession`. `nextAuth` carries `@deprecated` in the built types; the repository's
+lint does not turn that into an error, and the `--encryption` scaffold, still on `nextAuth`, typechecks unchanged. SDK 2.10.0, sign-in
+package 0.4.0.
 
 #### ✅ 14.16 — Signing in for a session the app keeps
 

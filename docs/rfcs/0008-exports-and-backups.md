@@ -2,7 +2,7 @@
 
 |              |                                                                                                                                                                                                 |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**   | Accepted (milestone 1 planned in workstream 0009; milestone 2 is tasks 13.17 and 13.18)                                                                                                         |
+| **Status**   | Partially implemented (milestone 1 built, 18.1 to 18.7, but an app with no core, 18.8; milestone 2 is tasks 13.17 and 13.18)                                                                    |
 | **Date**     | November 2026                                                                                                                                                                                   |
 | **Author**   | Claude Code, for review                                                                                                                                                                         |
 | **Scope**    | `docs/specs/core-app.md` §2, §4.4, a new section for exports; `contracts/app-manifest.md`; `docs/specs/sdk.md` §9; `docs/specs/operator-cli.md` §9, §10.2.2; a shared package; the app template |

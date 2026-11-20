@@ -9,6 +9,7 @@ import {
   APP_DEV_DEPENDENCIES,
   CREATE_VERSION,
   ENCRYPTION_DEPENDENCIES,
+  ENCRYPTION_LEAVES_OUT,
   SHARED_WORKFLOWS_REF,
 } from './versions.js';
 
@@ -61,6 +62,19 @@ async function* walk(dir: string, base = dir): AsyncGenerator<string> {
   }
 }
 
+/** The file of an overlay that names the base app's files it leaves out, one path to a line; `#` starts a comment. */
+const SKIP_FILE = '_skip';
+
+async function skipList(overlay: string): Promise<Set<string>> {
+  const text = await readFile(path.join(overlay, SKIP_FILE), 'utf8').catch(() => '');
+  return new Set(
+    text
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line !== '' && !line.startsWith('#')),
+  );
+}
+
 /** The `package.json` of a new app. */
 export function appPackageJson(
   names: AppNames,
@@ -88,7 +102,11 @@ export function appPackageJson(
         prepare: 'git config core.hooksPath .githooks || true',
       },
       dependencies: options.encryption
-        ? { ...APP_DEPENDENCIES, ...ENCRYPTION_DEPENDENCIES }
+        ? Object.fromEntries(
+            Object.entries({ ...APP_DEPENDENCIES, ...ENCRYPTION_DEPENDENCIES }).filter(
+              ([name]) => !(ENCRYPTION_LEAVES_OUT as readonly string[]).includes(name),
+            ),
+          )
         : APP_DEPENDENCIES,
       // `@sovereignfs/create` is pinned exactly: `npm create @sovereignfs sync` and the shared workflows run this version (research 0007).
       devDependencies: { ...APP_DEV_DEPENDENCIES, '@sovereignfs/create': CREATE_VERSION },
@@ -112,11 +130,15 @@ export async function writeApp(
   const values = { names, port, workflowsRef: SHARED_WORKFLOWS_REF, directory: '.', tagPrefix: '' };
   const replace = (text: string) => fill(text, values);
 
-  // With `--encryption`, its files are written over the app's: the same names replace, new ones are added.
+  // With `--encryption`, its files are written over the app's: the same names replace, new ones are added, and the app's files its
+  // `_skip` names are left out.
   const sources = [TEMPLATE, ...(options.encryption ? [ENCRYPTION_TEMPLATE] : [])];
+  const skipped = options.encryption ? await skipList(ENCRYPTION_TEMPLATE) : new Set<string>();
   for (const source of sources)
     for await (const file of walk(source)) {
+      if (file === SKIP_FILE) continue;
       const out = targetOf(file);
+      if (source === TEMPLATE && skipped.has(out.split(path.sep).join('/'))) continue;
       const target_ = path.join(target, out);
       await mkdir(path.dirname(target_), { recursive: true });
       let text = replace(await readFile(path.join(source, file), 'utf8'));

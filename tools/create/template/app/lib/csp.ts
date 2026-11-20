@@ -5,11 +5,11 @@ import { PWA_CSP_DIRECTIVES } from '@sovereignfs/pwa';
  * mark, and nothing loads from another site:
  *
  * - **Scripts** run only with this request's nonce, or when a script that has it loads them (`'strict-dynamic'`): the bundles Next adds.
- *   No inline handler, no `javascript:` address, no `eval` but in development, where React wants it.
+ *   No inline handler, no `javascript:` address, no `eval` but in development, where React wants it; WebAssembly for the sign-in value.
  * - **Style elements** carry the nonce; **style attributes** are allowed, which the design system positions overlays with and which can
  *   change how something looks but not run anything.
  * - **Everything else is this origin's**: images, fonts, what the page fetches, the service worker and the manifest.
- * - **Forms** go to this origin and to core: signing out posts here, and the answer sends the browser on to core.
+ * - **Forms** go to this origin and to core: signing out posts here, and the answer may send the browser on to core.
  * - Nobody may frame a page, `<base>` cannot be changed, and over https every request of the page is made over https.
  *
  * Kept free of Node's built-ins, since the proxy imports it.
@@ -30,7 +30,9 @@ export function contentSecurityPolicy({ nonce, secure, development, core }: Poli
   const styles = development ? "'self' 'unsafe-inline'" : `'self' 'nonce-${nonce}'`;
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${development ? " 'unsafe-eval'" : ''}`,
+    // `'wasm-unsafe-eval'` runs the sign-in value's Argon2id, which is WebAssembly (auth.md §4, rule 1); never `'unsafe-eval'` but in
+    // development.
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'${development ? " 'unsafe-eval'" : ''}`,
     `style-src ${styles}`,
     `style-src-elem ${styles}`,
     "style-src-attr 'unsafe-inline'",

@@ -8,13 +8,15 @@
   "icon": "/pwa-icon/192",
   "launch": "/",
   "signIn": {
-    "redirect": ["/auth/callback"],
-    "postLogout": ["/"],
-    "backChannel": "/auth/backchannel-logout",
-    "accountDeleted": "/auth/account-deleted",
+    "redirect": ["/api/auth/callback/sovereign"],
+    "postLogout": ["/sign-in"],
+    "backChannel": "/api/sovereign/backchannel-logout",
+    "accountDeleted": "/api/sovereign/account-deleted",
     "scopes": ["openid", "profile", "email", "offline_access"]
   },
-  "database": { "pooling": "transaction" },
+  "database": {
+    "pooling": "transaction"
+  },
   "storage": true,
   "generate": ["__PREFIX___AUTH_SECRET"],
   "core": ">=0.49.0 <1.0.0"

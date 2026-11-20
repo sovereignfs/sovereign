@@ -60,7 +60,12 @@ describe('the files of an app', () => {
         'Dockerfile',
         '.github/workflows/publish.yml',
         'sovereign.manifest.json',
-        'app/auth/[action]/route.ts',
+        'app/api/auth/[...all]/route.ts',
+        'app/sign-in/page.tsx',
+        'app/sign-up/page.tsx',
+        'app/security/page.tsx',
+        'app/api/sovereign/backchannel-logout/route.ts',
+        'app/api/sovereign/account-deleted/route.ts',
         'app/api/health/route.ts',
         'instrumentation.ts',
         'migrations/001_init.sql',
@@ -85,6 +90,10 @@ describe('the files of an app', () => {
     expect(read(target, 'app/page.tsx')).toContain('title="My Notes"');
     // The manifest is the one copy: nothing in the app repeats it, or the sync script that kept a second one.
     expect(written).not.toContain('scripts/manifest.mjs');
+    // Its sign-in is the package's; the SDK's sign-in routes, and the overlay's list of what it leaves out, are not written.
+    expect(written).not.toContain('app/auth/[action]/route.ts');
+    expect(written).not.toContain('lib/auth.ts');
+    expect(written).not.toContain('_skip');
   });
 
   it('listen on one port, written wherever it is needed: the default, clear of the suite, or the one asked for', async () => {
@@ -282,7 +291,7 @@ describe('the files of an app', () => {
     expect(stores).toContain('seal(next)');
     expect(stores).toContain('pg_advisory_lock');
     expect(read(target, 'app/actions.ts')).toContain('AND owner = $2');
-    expect(read(target, 'lib/auth.ts')).toContain('onAccountDeleted');
+    expect(read(target, 'lib/notices.ts')).toContain('onAccountDeleted');
   });
 
   it('keep what needs a session on the direct address, in a small pool, and say they can be pooled', async () => {
@@ -344,7 +353,8 @@ describe('the files an app keeps for people', () => {
     const target = await made();
     for (const file of ['app/api/files/route.ts', 'app/api/files/[id]/route.ts']) {
       const code = read(target, file);
-      expect(code, file).toContain('auth().getSession()');
+      expect(code, file).toContain('getSession()');
+      expect(code, file).toContain("from '@/lib/session'");
       expect(code, file).toContain('unauthorised()');
       // Every handler that changes something asks where the request came from before it asks who made it.
       for (const method of ['POST', 'DELETE']) {
@@ -369,16 +379,16 @@ describe('the files an app keeps for people', () => {
       for (const call of read(target, file).match(
         /files\(\)\.(put|list|usage|remove|serve)\([^,)]*/g,
       ) ?? [])
-        expect(call, `${file}: ${call}`).toMatch(/session\.sub|sub$/);
+        expect(call, `${file}: ${call}`).toMatch(/session\.user\.id|sub$/);
     }
     expect(read(target, 'lib/files.ts')).toContain("request.headers.get('origin')");
   });
 
   it('are deleted with the person, in the handler of the notice that they deleted their account', async () => {
     const target = await made();
-    const auth = read(target, 'lib/auth.ts');
-    expect(auth).toContain('await files().removeAll(sub)');
-    expect(auth.indexOf('DELETE FROM notes')).toBeLessThan(auth.indexOf('removeAll(sub)'));
+    const notices = read(target, 'lib/notices.ts');
+    expect(notices).toContain('await files().removeAll(userId)');
+    expect(notices.indexOf('DELETE FROM notes')).toBeLessThan(notices.indexOf('removeAll(userId)'));
   });
 
   it('run with docker compose on a volume where an instance mounts the app’s folder, and the port the manifest names', async () => {
@@ -454,6 +464,31 @@ describe('an app made with --encryption', () => {
       }
     ).version;
     expect(satisfies(sdk, ENCRYPTION_DEPENDENCIES['@sovereignfs/sdk'])).toBe(true);
+  });
+
+  it('signs in through core with the SDK, leaving out the package’s sign-in and what it depends on', async () => {
+    const target = await made();
+    const written = all(target);
+    for (const file of [
+      'lib/sign-in.ts',
+      'lib/session.ts',
+      'app/sign-in/page.tsx',
+      'app/api/auth/[...all]/route.ts',
+      '_skip',
+    ])
+      expect(written, file).not.toContain(file);
+    expect(written).toEqual(expect.arrayContaining(['lib/auth.ts', 'app/auth/[action]/route.ts']));
+    // Nothing it keeps imports what was left out.
+    for (const file of written.filter((f) => /\.tsx?$/.test(f)))
+      expect(read(target, file), file).not.toMatch(
+        /@\/lib\/(sign-in|session|notices|sign-in-client)'/,
+      );
+    const pkg = JSON.parse(read(target, 'package.json')) as {
+      dependencies: Record<string, string>;
+    };
+    expect(pkg.dependencies['@sovereignfs/auth']).toBeUndefined();
+    expect(pkg.dependencies['better-auth']).toBeUndefined();
+    expect(read(target, '.env.example')).not.toContain('_AUTH_LOCAL');
   });
 
   it('writes its own files over the app’s, with the names put in and nothing of the template left', async () => {
@@ -613,9 +648,12 @@ describe('the content security policy of an app', () => {
       core: originOf('https://core.example.org/some/path'),
     });
     const directive = (name: string) => policy.split('; ').find((d) => d.startsWith(`${name} `));
-    expect(directive('script-src')).toBe("script-src 'self' 'nonce-abc' 'strict-dynamic'");
+    // WebAssembly, for the sign-in value the browser derives (auth.md §6); never eval.
+    expect(directive('script-src')).toBe(
+      "script-src 'self' 'nonce-abc' 'strict-dynamic' 'wasm-unsafe-eval'",
+    );
     expect(policy).not.toMatch(/script-src[^;]*'unsafe-inline'/);
-    expect(policy).not.toContain('unsafe-eval');
+    expect(policy).not.toContain("'unsafe-eval'");
     expect(directive('worker-src')).toBe("worker-src 'self'");
     expect(directive('manifest-src')).toBe("manifest-src 'self'");
     expect(directive('form-action')).toBe("form-action 'self' https://core.example.org");

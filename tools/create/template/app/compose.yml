@@ -3,7 +3,8 @@
 #   cp .env.example .env      # point it at a core you can reach, and give it its client there
 #   docker compose up --build
 #
-# The app still signs people in through a core: set __PREFIX___CORE_URL, __PREFIX___CORE_CLIENT_ID and __PREFIX___CORE_CLIENT_SECRET in .env. People's
+# People sign in with the app's own accounts (.env's __PREFIX___AUTH_LOCAL), or through a core too: set __PREFIX___CORE_URL,
+# __PREFIX___CORE_CLIENT_ID and __PREFIX___CORE_CLIENT_SECRET in .env. People's
 # files are kept in the volume `files`, mounted where an instance mounts the app's own folder, so the app's code is the same in both
 # (contracts/app-manifest.md §2.7).
 services:

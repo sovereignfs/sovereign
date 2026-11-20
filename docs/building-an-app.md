@@ -205,21 +205,18 @@ What Tusk and Fjord Web use, and a new app should, unless its design says why no
 
 ## 6. Signing people in
 
-There are two shapes. Choose in the design, before anything is built.
+One session layer, [`@sovereignfs/auth`](specs/auth.md), whatever the ways in. better-auth keeps the app's sessions and accounts; core is
+one way in, turned on when `<P>_CORE_URL` is set (`@sovereignfs/auth/core`, on the SDK's sign-in, with core's back-channel logout and
+account-deleted notices); the app's own accounts when `<P>_AUTH_LOCAL=true`, which is the default only when there is no core. One image
+does all three. This is what the app template makes: thin pages in `app/sign-in`, `app/sign-up` and `app/security` on the package and
+`@sovereignfs/ui`'s forms, with the setup in `lib/sign-in.ts` and `lib/session.ts`. Choose in the design which ways in the app offers.
 
-**Core only.** The app has no accounts of its own; core is the only way in. The SDK does everything: `createSovereign({ prefix,
-sessionStore, tokenStore })` and `nextAuth(sv).handlers` mounted at `app/auth/[action]/route.ts` (login, callback, logout, and the
-back-channel route). This is what the app template makes ([using the SDK](using-the-sdk.md)). It cannot run without an instance.
-
-**Local and/or core** (Tusk and Fjord: an app of its own). better-auth keeps the sessions and accounts; core is one provider, turned on
-when `<P>_CORE_URL` is set; local accounts when `<P>_AUTH_LOCAL=true` (off by default, and then the sign-in pages answer 404); one
-image does all three. The SDK is still used, for the notices:
-`verifyLogoutToken` and `verifyAccountDeletedToken` do every check and return who the notice names, and the app ends or deletes. `seen`
-records each notice's `jti` in a table, so a replay is refused after a restart.
+An app made with `--encryption`, and an app already on it, sign in through core with the SDK's `nextAuth` (core only), which stays for
+them ([using the SDK](using-the-sdk.md)).
 
 Rules that hold for both:
 
-- **A person is their `sub`**, opaque and stable. Never match an account by email at sign-in: link a core identity only from a signed-in
+- **A person is the app's own id for them** (`session.user.id`); core's `sub`, opaque and stable, is linked to it. Never match an account by email at sign-in: link a core identity only from a signed-in
   session, and only to the account's own verified address. Core gives `sub`, `name`, `email`; **no `preferred_username` and no `groups`**.
 - **One function deletes everything of a person** (Tusk: `People.deletePerson`), safe to run twice. A new table that holds something of
   a person is added to it in the same change, with a test.
@@ -444,7 +441,7 @@ instance.
   settings (done: `@sovereignfs/config`), the notice handlers in the SDK, two stores and the boot sequence in `database`, the envelope
   format in `crypto`, then a template for an app of its own. Until then, copy from Tusk, and say in the design which files were copied.
 - **`env.md`'s `FIELD_ENCRYPTION_KEYS`** is not what the apps use (`<P>_ENCRYPTION_KEY` and `_PREVIOUS`); research 0004 step 4 reconciles them.
-- **The template** makes a core-only PostgreSQL app; an app of its own does not start there yet.
+- **The template** is PostgreSQL only; an app of its own on sqld or a SQLite file still copies Tusk's database boot.
 - **`AUTH_LOCAL` is `true` or `false`** (`env.md` §2, settled by [RFC 0007](rfcs/0007-one-sign-in.md)). Tusk and Fjord read `1` today;
   until they move onto `@sovereignfs/auth`, which refuses it, accept both.
 

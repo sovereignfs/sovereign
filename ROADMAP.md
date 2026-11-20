@@ -344,3 +344,21 @@ the package in their own repositories, after 13.35.
 | 0.120.0 | 11       | The template makes an app of its own                       | ✅     | [13.35](docs/epics/operator-cli.md) |
 | 0.121.0 | 12       | A typed person, and `nextAuth` deprecated                  | ✅     | [14.15](docs/epics/sdk.md)          |
 | —       | 13       | The template on sqld and a SQLite file                     | 📋     | [13.36](docs/epics/operator-cli.md) |
+
+### M18 — People and operators take their data with them
+
+[RFC 0008](docs/rfcs/0008-exports-and-backups.md) (Accepted) · epic [18](docs/epics/exports.md) · workstream
+[0009](docs/workstreams/0009-exports.md)
+
+Exports on demand, as downloads: the owner's of core's data, encrypted to their key, and each person's, from core and every app they use.
+Backups sent to a destination on a schedule are milestone 2 of the RFC, tasks 13.17 and 13.18 in M10.
+
+| Version | Priority | Task                                    | Status | Epic task                     |
+| ------- | -------- | --------------------------------------- | ------ | ----------------------------- |
+| —       | 1        | The specifications                      | 📋     | [18.1](docs/epics/exports.md) |
+| —       | 2        | The format and the package `[parallel]` | 📋     | [18.2](docs/epics/exports.md) |
+| —       | 3        | The operator's recipients               | 📋     | [18.3](docs/epics/exports.md) |
+| —       | 4        | The operator's export in core           | 📋     | [18.4](docs/epics/exports.md) |
+| —       | 5        | A person's export in core               | 📋     | [18.5](docs/epics/exports.md) |
+| —       | 6        | Apps' parts                             | 📋     | [18.6](docs/epics/exports.md) |
+| —       | 7        | The template's exports                  | 📋     | [18.7](docs/epics/exports.md) |

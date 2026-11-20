@@ -12,6 +12,7 @@ import {
   coreSignInMigrations,
   coreSignOutUrl,
   needsCoreCheck,
+  signedInUser,
   sovereignSignIn,
 } from '../core/index';
 import {
@@ -21,6 +22,7 @@ import {
   createAuthPreset,
   resolveAuthSettings,
   signUpPolicy,
+  userOf,
 } from '../server/index';
 
 // Core as a way in for an app (auth.md §8), end to end in one process: a better-auth of the app's on the package's tables, the SDK
@@ -49,7 +51,7 @@ const cookiesOf = (response: Response) =>
     .map((cookie) => cookie.split(';')[0])
     .join('; ');
 
-async function world(options: { localAccounts?: boolean } = {}) {
+async function world(options: { localAccounts?: boolean; roles?: string[] } = {}) {
   const folder = mkdtempSync(path.join(tmpdir(), 'sv-auth-core-'));
   const db = await connect({
     dialect: 'sqlite',
@@ -68,7 +70,7 @@ async function world(options: { localAccounts?: boolean } = {}) {
     coreUrl: core.url,
     ...core.credentials,
     redirectPath: '/api/auth/callback/sovereign',
-    scopes: ['openid', 'profile', 'email', 'offline_access'],
+    scopes: ['openid', 'profile', 'email', 'offline_access', ...(options.roles ? ['roles'] : [])],
     sessionStore: memorySessionStore(),
     tokenStore: {
       read: (sub) => tokens.get(sub),
@@ -123,7 +125,7 @@ async function world(options: { localAccounts?: boolean } = {}) {
   async function signIn(sub = 'u1', previous = '') {
     const start = await get('/api/auth/sign-in/sovereign?returnTo=%2Fnotes', previous);
     const toCore = start.headers.get('location') as string;
-    const back = core.authorize(toCore, sub);
+    const back = core.authorize(toCore, sub, options.roles ? { roles: options.roles } : {});
     const pending = cookiesOf(start);
     const done = await get(back, [previous, pending].filter(Boolean).join('; '));
     return { start, done, cookie: cookiesOf(done) };
@@ -251,6 +253,71 @@ describe('signing in through core (auth.md §8)', () => {
       }),
     );
     expect(response.status).toBe(404);
+  });
+});
+
+describe('who is signed in, typed (sdk §9.9)', () => {
+  it('is the same shape for an account from core, with its sub and the roles core signed, and for one of the app’s own', async () => {
+    const { signIn, sessionOf, db, auth } = await world({ roles: ['platform:admin'] });
+    const { cookie } = await signIn();
+    const fromCore = await sessionOf(cookie);
+    expect(await signedInUser(db, fromCore as NonNullable<typeof fromCore>)).toEqual({
+      id: fromCore?.user.id,
+      sub: 'u1',
+      name: 'Ada Lovelace',
+      email: 'ada@example.com',
+      emailVerified: true,
+      roles: ['platform:admin'],
+    });
+
+    await db.run(
+      "insert into users (id, name, email, email_verified, two_factor_enabled, locale, timezone, created_at, updated_at) values ('local', 'Bea', 'bea@example.com', 1, 0, 'de-DE', 'Europe/Berlin', 0, 0)",
+    );
+    const ctx = await auth.$context;
+    const session = await ctx.internalAdapter.createSession('local');
+    const own = await sessionOf(
+      `${ctx.authCookies.sessionToken.name}=${await signed(session.token)}`,
+    );
+    // No sub and no roles: nothing of core is on it, and an account's own row is never where roles come from.
+    expect(await signedInUser(db, own as NonNullable<typeof own>)).toEqual({
+      id: 'local',
+      name: 'Bea',
+      email: 'bea@example.com',
+      emailVerified: true,
+      locale: 'de-DE',
+      zoneinfo: 'Europe/Berlin',
+      roles: [],
+    });
+  });
+
+  it('keeps what the app holds of a person ahead of core’s claims, and fills in only what it lacks', () => {
+    expect(
+      userOf(
+        { id: 'a', name: 'Kept', email: null, image: null, locale: null, timezone: 'UTC' },
+        {
+          sub: 's',
+          claims: {
+            sub: 's',
+            name: 'Core',
+            email: 'c@example.com',
+            picture: 'https://core/p.png',
+            locale: 'fr',
+            zoneinfo: 'Europe/Paris',
+            roles: 'platform:owner',
+          },
+        },
+      ),
+    ).toEqual({
+      id: 'a',
+      sub: 's',
+      name: 'Kept',
+      email: 'c@example.com',
+      picture: 'https://core/p.png',
+      locale: 'fr',
+      zoneinfo: 'UTC',
+      // `roles` that is not a list is no roles.
+      roles: [],
+    });
   });
 });
 

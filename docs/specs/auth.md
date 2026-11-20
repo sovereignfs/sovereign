@@ -133,6 +133,10 @@ function (§3).
   wherever the check says (core's lock page). Every signed-in page of an app calls it, or `getSession` itself; never a session read and a
   redirect by hand.
 - `returnTo` is always a path on the app; anything else is replaced by `/`.
+- **Who is signed in, typed:** `userOf(session.user, core?)` (`./server`) and `signedInUser(database, session)` (`./core`) give the
+  SDK's `User` (sdk §9.9), the same shape for an account of the app's own and one from core. What the app keeps of the person comes
+  first and core's claims fill in the rest; `sub` and `roles` come only from the session's core sign-in, its roles from the ID token
+  core signed for that session (renewed with each check), never from the account or a request.
 - `listSessions` and `endSession` / `endOtherSessions` work on the signed-in person's own sessions only (rule 13).
 - The password policy is one function, used by the forms in the browser and by the server.
 

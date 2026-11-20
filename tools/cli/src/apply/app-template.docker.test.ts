@@ -15,6 +15,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { namesOf, writeApp } from '../../../create/src/app.js';
+import { DEFAULT_APP_PORT } from '../../../create/src/create.js';
 import { Registry } from '../registry.js';
 import { makeSource, type Source } from '../testing/source.js';
 import { fakeRegistry } from '../testing/world.js';
@@ -99,7 +100,8 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
     // The app, as the template makes it.
     work = mkdtempSync(path.join(os.tmpdir(), 'sv-template-'));
     const app = path.join(work, 'tplnotes');
-    await writeApp(app, namesOf(app));
+    // npm, which writes the lockfile below with no install; what the test checks is sv apply, the same for every manager.
+    await writeApp(app, namesOf(app), DEFAULT_APP_PORT, { packageManager: 'npm' });
 
     // The Sovereign packages of this repository, packed, since the published ones do not exist yet.
     execFileSync(
@@ -113,6 +115,8 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
         '@sovereignfs/storage...',
         '--filter',
         '@sovereignfs/pwa...',
+        '--filter',
+        '@sovereignfs/push',
         '--filter',
         '@sovereignfs/auth...',
         '--filter',
@@ -128,7 +132,18 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
     });
     const vendor = path.join(app, 'vendor');
     mkdirSync(vendor);
-    for (const name of ['sdk', 'ui', 'pwa', 'manifest', 'config', 'storage', 'auth', 'create']) {
+    for (const name of [
+      'sdk',
+      'ui',
+      'pwa',
+      'push',
+      'export',
+      'manifest',
+      'config',
+      'storage',
+      'auth',
+      'create',
+    ]) {
       execFileSync(
         'pnpm',
         ['--filter', `@sovereignfs/${name}`, 'pack', '--pack-destination', vendor],
@@ -145,6 +160,8 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
       ['sdk', 'dependencies'],
       ['ui', 'dependencies'],
       ['pwa', 'dependencies'],
+      ['push', 'dependencies'],
+      ['export', 'dependencies'],
       ['config', 'dependencies'],
       ['storage', 'dependencies'],
       ['auth', 'dependencies'],
@@ -154,10 +171,12 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
       pkg[field][`@sovereignfs/${name}`] =
         `file:./vendor/${tarballs.find((file) => file.startsWith(`sovereignfs-${name}-`)) as string}`;
     }
-    // The storage and sign-in packages ask for config and the SDK by version, which are not published either: they are the tarballs too.
+    // The storage and sign-in packages ask for config and the SDK by version, and the SDK for the export package, which are not
+    // published either: they are the tarballs too. The export package is named here only so its tarball can stand in for it.
     pkg.overrides = {
       '@sovereignfs/config': pkg.dependencies['@sovereignfs/config'] as string,
       '@sovereignfs/sdk': pkg.dependencies['@sovereignfs/sdk'] as string,
+      '@sovereignfs/export': pkg.dependencies['@sovereignfs/export'] as string,
     };
     writeFileSync(path.join(app, 'package.json'), `${JSON.stringify(pkg, null, 2)}\n`);
     execFileSync(
@@ -186,8 +205,17 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
     manifest = JSON.parse(readFileSync(path.join(app, 'sovereign.manifest.json'), 'utf8'));
 
     state = mkdtempSync(path.join(os.tmpdir(), 'sv-template-state-'));
+    // The core this checkout builds, which is the image the test runs: the template's `core` range asks for a recent one.
+    const coreVersion = (
+      JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8')) as { version: string }
+    ).version;
     source = await makeSource({
-      suite: { domain: DOMAIN, tls: { mode: 'internal' }, apps: { tplnotes: { image: REF } } },
+      suite: {
+        domain: DOMAIN,
+        core: { version: coreVersion },
+        tls: { mode: 'internal' },
+        apps: { tplnotes: { image: REF } },
+      },
       resolve: (ref) =>
         ref.startsWith('ghcr.io/')
           ? Promise.resolve(`sha256:${'1'.repeat(64)}`)
@@ -253,7 +281,13 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
       '-c',
       'SELECT name FROM schema_migrations ORDER BY name',
     );
-    expect(migrated.stdout.trim()).toBe('001_init.sql');
+    // Every migration the template ships, applied in order (002 is the push tables).
+    expect(migrated.stdout.trim()).toBe(
+      readdirSync(path.join(appDir, 'migrations'))
+        .filter((file) => file.endsWith('.sql'))
+        .sort()
+        .join('\n'),
+    );
     expect(docker('exec', 'sv-app-tplnotes', 'id', '-u').stdout.trim()).not.toBe('0');
   });
 

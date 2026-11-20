@@ -5,6 +5,16 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.129.0] - 2026-11-20
+
+### Added
+
+- `@sovereignfs/push` 0.2.0, a new published package: Web Push for an app's server with no dependency
+  ([RFC 0009](docs/rfcs/0009-web-push.md) §1). The app's key is one variable, `<PREFIX>_VAPID_PRIVATE_KEY`, its public key derived;
+  messages are encrypted (RFC 8291) and signed (RFC 8292) on `node:crypto` and sent only to the browsers' push services; the app gives
+  a store, with an in-memory one and a conformance suite under `/testing`; pushes are queued in the change's own transaction and sent
+  from an outbox claimed by a lease; and the subscription route is three framework-free handlers. No app uses it yet.
+
 ## [0.128.0] - 2026-11-20
 
 ### Changed

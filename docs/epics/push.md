@@ -4,7 +4,7 @@
 
 ## Status
 
-📋 Planned
+⏳ In Progress
 
 ## Overview
 
@@ -27,7 +27,7 @@ epic's first milestone; core sending pushes, and mirroring into core's bell, are
 
 ## Tasks
 
-#### 📋 19.1 — `@sovereignfs/push`: keys, encryption and sending
+#### ✅ 19.1 — `@sovereignfs/push`: keys, encryption and sending
 
 **Goal:** An app's server can encrypt and send a push to a browser with no dependency and nothing of core.
 
@@ -58,7 +58,12 @@ epic's first milestone; core sending pushes, and mirroring into core's bell, are
 
 **Not here:** the store and the outbox (19.2).
 
-#### 📋 19.2 — `@sovereignfs/push`: the store, the outbox and the route
+**Notes:** RFC 8291's worked example reproduces byte for byte, intermediates and all; its §5 gives `Content-Length: 145`, but the
+body it shows is 144 bytes (an 86-byte header, 41 of message, the delimiter and the tag), which is what is asserted. The signed
+token lives an hour, inside the RFC's twelve, since Apple's service is the strictest. A redirect from a push service is not
+followed (`redirect: 'manual'`), so a request never leaves the host list.
+
+#### ✅ 19.2 — `@sovereignfs/push`: the store, the outbox and the route
 
 **Goal:** An app keeps devices and waiting pushes in its own database, sends after the change commits, and gives devices one route.
 
@@ -83,6 +88,12 @@ epic's first milestone; core sending pushes, and mirroring into core's bell, are
 - `DELETE` removes only the calling account's device; a cross-origin `POST` is refused
 
 **Not here:** the browser's side (19.3).
+
+**Notes:** a queued push names its device by endpoint and carries no keys; `claim` returns it with the device's subscription, so the
+keys are sealed once, in the devices table. A store refuses to queue a push for a device that is not the account's, and saving an
+endpoint another account had drops that account's waiting pushes for it: both are conformance cases. A batch is sent at once, so the
+one-minute lease covers it (ten seconds a push at most). Waymark's key is an HKDF-derived secret, not a P-256 scalar: 19.7 must keep
+its existing subscriptions with that in mind.
 
 #### 📋 19.3 — The worker shows a push, and the page turns it on `[parallel]`
 

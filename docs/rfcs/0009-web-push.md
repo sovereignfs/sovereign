@@ -2,7 +2,7 @@
 
 |              |                                                                                                                                                                               |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**   | Proposed, for review                                                                                                                                                          |
+| **Status**   | Partially implemented (19.1, 19.2: `@sovereignfs/push`)                                                                                                                       |
 | **Date**     | November 2026                                                                                                                                                                 |
 | **Author**   | Claude Code (design discussion with `kasunben`)                                                                                                                               |
 | **Scope**    | A new published `@sovereignfs/push`; `@sovereignfs/pwa` (worker and client); `@sovereignfs/ui` (`PushControl`); the app template; Tusk and Waymark; `docs/building-an-app.md` |

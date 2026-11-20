@@ -58,6 +58,12 @@ export default defineConfig({
       source('storage', './packages/storage/src/index.ts'),
       source('export', './packages/export/src/index.ts'),
       source('push', './packages/push/src/index.ts'),
+      {
+        find: /^@sovereignfs\/push\/testing$/,
+        replacement: fileURLToPath(
+          new URL('./packages/push/src/testing/index.ts', import.meta.url),
+        ),
+      },
       source('pwa', './packages/pwa/src/index.ts'),
       {
         find: /^@sovereignfs\/pwa\/client$/,

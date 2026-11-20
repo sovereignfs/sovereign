@@ -1,6 +1,6 @@
 # Workstream 0010 — Every app sends Web Push the same way
 
-**Status:** 📋 Planned\
+**Status:** ⏳ In Progress\
 **Date:** November 2026\
 **Author:** Claude Code\
 **Goal owner:** kasunben\
@@ -18,7 +18,7 @@ instance makes that key. Tusk and Waymark keep no copy of their own, and Tally, 
 
 ## Definition of done
 
-- [ ] `@sovereignfs/push` is release-ready: it encrypts to RFC 8291's worked example, signs to RFC 8292, and sends through an outbox
+- [x] `@sovereignfs/push` is release-ready: it encrypts to RFC 8291's worked example, signs to RFC 8292, and sends through an outbox
       from a store the app gives
 - [ ] `@sovereignfs/pwa`'s worker shows every push and opens only its own paths; its client turns push on and off
 - [ ] `PushControl` is in `@sovereignfs/ui`, with a story for each state and a gallery entry

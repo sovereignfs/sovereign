@@ -4,6 +4,17 @@ What changed in each version of the Web Push package, newest first, in the form 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/). A version's section is written
 in the change that sets the version, dated that day, and becomes the release notes when the version is published.
 
+## [0.2.0] - 2026-11-20
+
+### Added
+
+- The store, the outbox and the route (RFC 0009 §1.4 to §1.6). `PushStore` is the app's own, at most ten devices an account, the
+  device's keys sealed by the app; `@sovereignfs/push/testing` has `memoryPushStore` and `pushStoreConformance`, the cases every store
+  passes, on `node:assert`. `enqueuePush` queues a push for each of an account's devices in the change's own transaction;
+  `runPushOutbox` claims what is due by a lease and sends it, trying again after 1, 5 and 30 minutes and forgetting a device that is
+  gone. `pushSubscriptionHandlers` gives `GET`, `POST` and `DELETE` for the subscription route. The README has the tables for
+  PostgreSQL and SQLite.
+
 ## [0.1.0] - 2026-11-20
 
 ### Added

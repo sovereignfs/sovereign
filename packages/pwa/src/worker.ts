@@ -13,7 +13,25 @@ import { TAKE_OVER_MESSAGE } from './message.js';
  *    or else with a page of its own, built here, that says so and offers to try again.
  * 3. **Waits to take over** until a page asks it to (`TAKE_OVER_MESSAGE`), so a new version is announced rather than swapped in under
  *    someone; the registration in `@sovereignfs/pwa/client` shows the notice.
+ * 4. **Shows a push**, only when the app asks for it (`push`, RFC 0009 §2.1): every push shows something, since a browser stops
+ *    allowing pushes that show nothing, and opening one goes only to a path on this origin. Nothing of a push is stored.
  */
+
+/** Web Push in the worker (RFC 0009 §2.1). */
+export type WorkerPushOptions = {
+  /** The app's name: the title of a push that cannot be read or has none. */
+  name: string;
+  /** A path of the app's own icon, shown with every push. */
+  icon: string;
+  /** A path of the small monochrome icon some systems show in their status bar. */
+  badge?: string;
+  /**
+   * JavaScript text defining `async function onPushKind(kind, data, message)`, for an app's own kinds: it may return
+   * `{ title, body?, path?, tag? }` to show instead, or nothing to show the message as it came. It runs in the worker, so it may read
+   * the device's own storage (a wake); it is the app's code, as trusted as the rest of the worker.
+   */
+  handlers?: string;
+};
 
 export type WorkerOptions = {
   /** Changes with each build (Next's `BUILD_ID`): the cache's name carries it, and a new one deletes the old caches. */
@@ -38,6 +56,8 @@ export type WorkerOptions = {
   navigationTimeoutMs?: number;
   /** The colours of the worker's own offline page: the page and the text, light and dark. */
   offlineColors?: { light?: [string, string]; dark?: [string, string] };
+  /** Shows Web Push (RFC 0009 §2.1). Without it the worker has no push handlers at all. */
+  push?: WorkerPushOptions;
 };
 
 /** What the worker keeps unless told more. */
@@ -66,6 +86,90 @@ function offlinePage(colors: Required<NonNullable<WorkerOptions['offlineColors']
   for (const color of [lightPage, lightText, darkPage, darkText])
     if (!COLOR.test(color)) throw new TypeError(`offlineColors must be hex colours: got ${color}`);
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>You’re offline</title><style>html{background:${lightPage};color:${lightText}}@media (prefers-color-scheme:dark){html{background:${darkPage};color:${darkText}}}body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;box-sizing:border-box;font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;text-align:center}main{max-width:22rem}h1{margin:0 0 .5rem;font-size:1.25rem}p{margin:0 0 1.5rem;opacity:.7}a{display:inline-block;padding:.6rem 1.2rem;border-radius:.5rem;border:1px solid currentColor;color:inherit;text-decoration:none}</style></head><body><main><h1>You’re offline</h1><p>This page can’t reach the server right now. Check your connection, then try again.</p><a href="">Try again</a></main></body></html>`;
+}
+
+/** The worker's push and notificationclick handlers, appended to its text only when the app asks for push. */
+function pushSource(push: WorkerPushOptions): string {
+  if (typeof push.name !== 'string' || push.name.trim() === '')
+    throw new TypeError("push.name must be the app's name");
+  const icon = check(push.icon, 'push.icon');
+  const badge = push.badge === undefined ? null : check(push.badge, 'push.badge');
+  if (push.handlers !== undefined && typeof push.handlers !== 'string')
+    throw new TypeError('push.handlers must be JavaScript text');
+  return `
+// Web Push (RFC 0009 §2.1): what arrives is shown and is not kept; opening it goes to a path on this origin only.
+var PUSH_NAME = ${JSON.stringify(push.name)};
+var PUSH_ICON = ${JSON.stringify(icon)};
+var PUSH_BADGE = ${JSON.stringify(badge)};
+${push.handlers ?? ''}
+
+function pushText(value, most) {
+  if (typeof value !== 'string' || value === '') return undefined;
+  var chars = Array.from(value);
+  return chars.length > most ? chars.slice(0, most).join('') : value;
+}
+
+function ownPath(path) {
+  return typeof path === 'string' && /^\\/(?![\\/\\\\])[^\\s\\\\]*$/.test(path) ? path : '/';
+}
+
+function readPush(event) {
+  try {
+    var message = event.data ? event.data.json() : null;
+    return message && typeof message === 'object' && !Array.isArray(message) ? message : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function pushShown(message) {
+  var title = message && pushText(message.title, 120);
+  var options = { icon: PUSH_ICON, data: { path: ownPath(message && message.path) } };
+  if (PUSH_BADGE) options.badge = PUSH_BADGE;
+  var body = message && pushText(message.body, 500);
+  if (body) options.body = body;
+  else if (!title) options.body = 'You have a new notification';
+  var tag = message && pushText(message.tag, 100);
+  if (tag) options.tag = tag;
+  return { title: title || PUSH_NAME, options: options };
+}
+
+function pushDecide(message) {
+  if (!message || typeof message.kind !== 'string' || typeof onPushKind !== 'function') return Promise.resolve(message);
+  var data = message.data && typeof message.data === 'object' ? message.data : {};
+  return Promise.resolve()
+    .then(function () { return onPushKind(message.kind, data, message); })
+    .then(function (instead) { return instead && typeof instead === 'object' ? instead : message; }, function () { return message; });
+}
+
+self.addEventListener('push', function (event) {
+  var message = readPush(event);
+  event.waitUntil(
+    pushDecide(message)
+      .then(function (shown) { return pushShown(shown); }, function () { return pushShown(message); })
+      .then(function (shown) { return self.registration.showNotification(shown.title, shown.options); })
+      .catch(function () { return self.registration.showNotification(PUSH_NAME, { icon: PUSH_ICON, body: 'You have a new notification', data: { path: '/' } }); })
+  );
+});
+
+self.addEventListener('notificationclick', function (event) {
+  event.notification.close();
+  var data = event.notification.data;
+  var url = self.location.origin + ownPath(data && data.path);
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (pages) {
+      for (var i = 0; i < pages.length; i += 1) {
+        var page = pages[i];
+        if (new URL(page.url).origin !== self.location.origin || !('focus' in page)) continue;
+        return page.focus().then(function (focused) {
+          if (focused && 'navigate' in focused) return focused.navigate(url).catch(function () { return undefined; });
+        });
+      }
+      return self.clients.openWindow(url);
+    })
+  );
+});
+`;
 }
 
 /** The worker's text, for `/sw.js`. Throws on an option that would keep something it must not. */
@@ -197,7 +301,7 @@ self.addEventListener('fetch', function (event) {
   }
   if (keptRequest(request)) event.respondWith(fromCache(request));
 });
-`;
+${options.push ? pushSource(options.push) : ''}`;
 }
 
 /** The answer for `/sw.js`: script, fetched afresh every time, allowed to control the whole origin. */

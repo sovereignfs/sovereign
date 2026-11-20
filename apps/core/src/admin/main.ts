@@ -17,6 +17,7 @@ import { systemActor } from '../clients/system-actor';
 import { getConfig, getDatabaseSettings } from '../config';
 import { getDatabase } from '../database';
 import { getFileStore } from '../files';
+import { removePersonData } from '../exports/service';
 import { seedInstance } from '../dev/seed';
 import { recordRestore } from '../instance/restore';
 import { runAdmin } from './run';
@@ -87,7 +88,7 @@ async function main(): Promise<number> {
         applyDeletions: async (file) => {
           // No sending from here: the notices wait in the table, and core sends them when it starts.
           const manager = new AccountManager(database, new AccountStates(database), {
-            removeFiles: (sub) => getFileStore().removeAll(sub),
+            removeFiles: (sub) => removePersonData(sub, (who) => getFileStore().removeAll(who)),
             log: (line) => console.error(line),
           });
           const text = file === undefined ? await readStdin() : await readFile(file, 'utf8');

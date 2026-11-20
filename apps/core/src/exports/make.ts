@@ -133,8 +133,34 @@ async function fill(writer: ExportWriter, job: ExportJob, context: MakeContext):
       file.size,
     );
   }
+  if (sub !== undefined) {
+    // The apps the person allowed, named, so the consents above say something without core.
+    await writer.addRecords(
+      'core/records/connected_apps.jsonl',
+      'connected_apps',
+      connectedApps(context.database, sub),
+    );
+  }
   if (sub !== undefined && context.appParts) await context.appParts(writer, sub);
   await writer.finish();
+}
+
+async function* connectedApps(
+  database: Database,
+  sub: string,
+): AsyncGenerator<Record<string, unknown>> {
+  const { rows } = await database.run(
+    'select client_id, name, uri from oauth_clients where client_id in (select client_id from oauth_consents where user_id = ?) order by name',
+    [sub],
+  );
+  for (const row of rows) {
+    const record = row as Record<string, unknown>;
+    yield {
+      client_id: record.client_id ?? null,
+      name: record.name ?? null,
+      uri: record.uri ?? null,
+    };
+  }
 }
 
 /** Removes export files by name, from the exports' folder only. */

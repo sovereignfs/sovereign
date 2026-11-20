@@ -5,6 +5,15 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.125.0] - 2026-11-20
+
+### Added
+
+- Anyone can download their own data from a new account page, Your data, after their password: their profile and settings, the apps
+  they allowed, their notifications and activity, their files, and their encrypted data, still encrypted. Their password, passkeys and
+  two-factor codes are never in it. It is a zip (or a tar), made in the background and downloaded once within the hour, and it goes
+  with the account when the account is deleted.
+
 ## [0.124.0] - 2026-11-20
 
 ### Added

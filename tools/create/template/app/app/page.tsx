@@ -1,4 +1,4 @@
-import { requireSignedIn } from '@/lib/session';
+import { requireSignedIn, userOfSession } from '@/lib/session';
 import { db } from '@/lib/db';
 import { files } from '@/lib/files';
 import { addNote, deleteFile, deleteNote, signOut } from './actions';
@@ -32,7 +32,8 @@ export default async function Home() {
     files().list(session.user.id),
     files().usage(session.user.id),
   ]);
-  const name = session.user.name;
+  const user = await userOfSession(session);
+  const name = user.name ?? user.email;
 
   return (
     <main>

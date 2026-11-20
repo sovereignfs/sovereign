@@ -10,11 +10,11 @@ export const APP_DEPENDENCIES = {
   '@dnd-kit/core': '^6.3.1',
   '@dnd-kit/sortable': '^10.0.0',
   // The sign-in: the package's preset, pages' flows and core as a way in, on better-auth at the one version the package names.
-  '@sovereignfs/auth': '^0.3.0',
+  '@sovereignfs/auth': '^0.4.0',
   '@sovereignfs/config': '^0.1.0',
   '@sovereignfs/pwa': '^0.1.0',
-  // 2.9 signs in for a session the app keeps (`finishSignIn`), which `@sovereignfs/auth/core` is built on.
-  '@sovereignfs/sdk': '^2.9.0',
+  // 2.10 has the typed `User` the package's `userOf` gives, on 2.9's sign-in for a session the app keeps (`finishSignIn`).
+  '@sovereignfs/sdk': '^2.10.0',
   '@sovereignfs/storage': '^0.1.0',
   '@sovereignfs/ui': '^0.102.0',
   'better-auth': '1.7.18',

@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.12.0; earlier versions are in the repository's
 history and tags.
 
+## [0.22.0] - 2026-11-20
+
+### Changed
+
+- An app made by `npm create @sovereignfs app` reads who is signed in from one typed user (`userOfSession` in `lib/session.ts`), the
+  same for an account of its own and one from core.
+
 ## [0.21.0] - 2026-11-20
 
 ### Changed

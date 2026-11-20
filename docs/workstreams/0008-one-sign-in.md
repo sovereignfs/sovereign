@@ -27,7 +27,7 @@ starts this way from the template, and the SDK's own sign-in is deprecated.
 - [x] The SDK signs in for a session the app keeps (14.16)
 - [x] A fixture app signs in through core, locally, and both; the template makes such an app (17.5, 13.35); PostgreSQL only, the other two
       database forms are 13.36, after the workstream
-- [ ] A typed `user`, and `nextAuth` deprecated (14.15)
+- [x] A typed `user`, and `nextAuth` deprecated (14.15)
 - [ ] `@sovereignfs/auth` published; workstream status ✅; epic 17 ✅
 
 Tusk and Fjord moving onto the package is work in their own repositories, after 13.35, and not part of this workstream.
@@ -162,3 +162,4 @@ Leg 1's spec and leg 4's sign-out setting and `amr` stand on their own.
 | 0.6     | 2026-11-19 | Leg 4 done: signing out follows whose app it is (6.5), platform 0.119.0, toolkit 0.20.0. 6.6 parked: better-auth's provider owns `amr` and `acr`; only its discovery fix is built. 2.7 moves to leg 5, ahead of the template that needs it.                                                                                                                                                                                            |
 | 0.7     | 2026-11-20 | Leg 5 under way: 2.7, 14.16 and 17.5 built. Making `@sovereignfs/auth` publishable moves ahead of 13.35, from leg 6, since an app made from the template must be able to install it.                                                                                                                                                                                                                                                   |
 | 0.8     | 2026-11-20 | Leg 5 done: the template signs in with the package (13.35), PostgreSQL only; sqld and SQLite are 13.36, outside the workstream. An app made with `--encryption` keeps `nextAuth`. Platform 0.120.0, core 0.80.1, toolkit 0.21.0.                                                                                                                                                                                                       |
+| 0.9     | 2026-11-20 | Leg 6 done: a typed `User` in the SDK and the package (14.15), `nextAuth` deprecated. Platform 0.121.0, SDK 2.10.0, sign-in package 0.4.0, toolkit 0.22.0. Left: publishing the package, and 6.6 (parked).                                                                                                                                                                                                                             |

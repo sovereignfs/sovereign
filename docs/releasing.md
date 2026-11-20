@@ -135,8 +135,8 @@ entries reach nothing of the server's (a test, and the built files' imports).
 
 - **It is a dependency of the app template,** with the SDK release it is built on and the `@sovereignfs/ui` release whose forms the
   template's pages use (`tools/create/src/versions.ts`, held by a test to each package's version). As with the manifest package,
-  **release them before a toolkit release that makes new apps**: the first toolkit to make an app on it is `cli-v0.21.0`, which needs
-  `auth-v0.3.0`, `sdk-v2.9.0` and `ui-v0.102.0` on npm.
+  **release them before a toolkit release that makes new apps**: the first toolkit to make an app on it, `cli-v0.22.0`, needs
+  `auth-v0.4.0`, `sdk-v2.10.0` and `ui-v0.102.0` on npm.
 
 ### Releasing a package
 

@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.121.0] - 2026-11-20
+
+### Changed
+
+- Nothing in core changes. This version carries the SDK's typed user and its deprecation of `nextAuth`, and the sign-in package's
+  typed user, for apps.
+
 ## [0.120.0] - 2026-11-20
 
 ### Changed

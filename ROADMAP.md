@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.120.0 · **Last updated:** 2026-11-20
+**Version:** 0.121.0 · **Last updated:** 2026-11-20
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -342,5 +342,5 @@ the package in their own repositories, after 13.35.
 | 0.120.0 | 9        | Signing in for a session the app keeps `[parallel]`        | ✅     | [14.16](docs/epics/sdk.md)          |
 | 0.120.0 | 10       | Core as a way in, and an app's own accounts                | ✅     | [17.5](docs/epics/one-sign-in.md)   |
 | 0.120.0 | 11       | The template makes an app of its own                       | ✅     | [13.35](docs/epics/operator-cli.md) |
-| —       | 12       | A typed person, and `nextAuth` deprecated                  | 📋     | [14.15](docs/epics/sdk.md)          |
+| 0.121.0 | 12       | A typed person, and `nextAuth` deprecated                  | ✅     | [14.15](docs/epics/sdk.md)          |
 | —       | 13       | The template on sqld and a SQLite file                     | 📋     | [13.36](docs/epics/operator-cli.md) |

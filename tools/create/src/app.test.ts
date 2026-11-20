@@ -140,12 +140,16 @@ describe('the files of an app', () => {
     addFormats(ajv);
     const validate = ajv.compile(
       JSON.parse(
-        readFileSync(path.join(root, 'contracts/schemas/app-manifest-v3.schema.json'), 'utf8'),
+        readFileSync(path.join(root, 'contracts/schemas/app-manifest-v5.schema.json'), 'utf8'),
       ),
     );
     expect(validate(manifest), JSON.stringify(validate.errors)).toBe(true);
     // The manifest names the app in lower case, and the variables are its upper case (app-manifest §2.4).
-    expect(manifest.manifest).toBe(3);
+    expect(manifest.manifest).toBe(5);
+    // Where core asks for a person's part of their export, which the SDK answers (core-app §4.7.2).
+    expect(manifest.signIn.export).toBe('/api/sovereign/export');
+    expect(read(target, 'lib/notices.ts')).toContain('handleExportRequest');
+    expect(read(target, 'app/api/sovereign/export/route.ts')).toContain('exportPart');
     expect(manifest.prefix).toBe('mynotes');
     // What the code reads is what the manifest gives it (contracts/app-manifest.md §3).
     const code = all(target)
@@ -421,7 +425,7 @@ describe('an app made with --encryption', () => {
     return target;
   };
 
-  it('meets manifest 4, with its key return address, the Directory for sharing, and the core that has them', async () => {
+  it('meets manifest 5, with its key return address, the Directory for sharing, and the core that has them', async () => {
     const target = await made();
     const manifest = JSON.parse(read(target, 'sovereign.manifest.json')) as {
       manifest: number;
@@ -433,11 +437,11 @@ describe('an app made with --encryption', () => {
     addFormats(ajv);
     const validate = ajv.compile(
       JSON.parse(
-        readFileSync(path.join(root, 'contracts/schemas/app-manifest-v4.schema.json'), 'utf8'),
+        readFileSync(path.join(root, 'contracts/schemas/app-manifest-v5.schema.json'), 'utf8'),
       ),
     );
     expect(validate(manifest), JSON.stringify(validate.errors)).toBe(true);
-    expect(manifest.manifest).toBe(4);
+    expect(manifest.manifest).toBe(5);
     expect(manifest.encryption).toEqual({ return: '/keys/return' });
     expect(existsSync(path.join(target, 'app/keys/return/page.tsx'))).toBe(true);
     // Sharing finds people in the Directory; `keys` is not asked for, it comes with `encryption` once the operator allows it (§2.8).
@@ -449,7 +453,7 @@ describe('an app made with --encryption', () => {
     expect(read(target, 'lib/sovereign.ts')).toContain(
       "scopes: ['openid', 'profile', 'email', 'offline_access', 'directory', 'keys']",
     );
-    expect(manifest.core.startsWith('>=0.68.0')).toBe(true);
+    expect(manifest.core.startsWith('>=0.126.0')).toBe(true);
   });
 
   it('depends on the SDK whose keys entry encrypts a document, which this repository satisfies', async () => {
@@ -564,7 +568,7 @@ describe('an app made with --encryption', () => {
     await writeApp(target, namesOf(target));
     expect(existsSync(path.join(target, 'app/notes.tsx'))).toBe(false);
     expect(existsSync(path.join(target, 'ENCRYPTION.md'))).toBe(false);
-    expect(JSON.parse(read(target, 'sovereign.manifest.json')).manifest).toBe(3);
+    expect(JSON.parse(read(target, 'sovereign.manifest.json')).encryption).toBeUndefined();
   });
 });
 

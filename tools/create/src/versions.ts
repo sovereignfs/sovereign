@@ -13,8 +13,9 @@ export const APP_DEPENDENCIES = {
   '@sovereignfs/auth': '^0.4.0',
   '@sovereignfs/config': '^0.1.0',
   '@sovereignfs/pwa': '^0.1.0',
-  // 2.10 has the typed `User` the package's `userOf` gives, on 2.9's sign-in for a session the app keeps (`finishSignIn`).
-  '@sovereignfs/sdk': '^2.10.0',
+  // 2.11 answers core's export request (`handleExportRequest`), which the template mounts; 2.10 has the typed `User` the package's
+  // `userOf` gives, on 2.9's sign-in for a session the app keeps (`finishSignIn`).
+  '@sovereignfs/sdk': '^2.11.0',
   '@sovereignfs/storage': '^0.1.0',
   '@sovereignfs/ui': '^0.102.0',
   'better-auth': '1.7.18',
@@ -29,7 +30,7 @@ export const APP_DEPENDENCIES = {
  * repository's SDK by the same test.
  */
 export const ENCRYPTION_DEPENDENCIES = {
-  '@sovereignfs/sdk': '^2.5.0',
+  '@sovereignfs/sdk': '^2.11.0',
 } as const;
 
 /** What an app made with `--encryption` does not depend on: it signs in with the SDK's `nextAuth`, as it did before the package. */
@@ -37,7 +38,7 @@ export const ENCRYPTION_LEAVES_OUT = ['@sovereignfs/auth', 'better-auth'] as con
 
 export const APP_DEV_DEPENDENCIES = {
   // Makes the image's label and port from the manifest, and checks the manifest (`sovereign-manifest`).
-  '@sovereignfs/manifest': '^0.3.0',
+  '@sovereignfs/manifest': '^0.4.0',
   '@types/node': '^24.19.2',
   '@types/pg': '^8.23.1',
   '@types/react': '^19.3.0',

@@ -188,7 +188,7 @@ specification and not an RFC.
 - One app down leaves the rest of the export complete, and says which is missing
 - Manifests 1 to 4 still validate
 
-#### 📋 18.7 — The template's exports
+#### ✅ 18.7 — The template's exports
 
 **Goal:** Every new app has both exports, hosted by core or running alone.
 
@@ -210,3 +210,29 @@ specification and not an RFC.
 - An app made from the template answers core's export request in a test against a built core
 - The app's operator export opens with the operator's identity only
 - The template's existing tests still pass
+
+**As built:** the template is an app hosted by core, so it has the export handler and manifest 5. The two pages of an app with no core
+need the template of an app of its own, which does not exist yet ([research 0004](../research/0004-a-kit-for-apps-of-their-own.md), step
+5); they are task 18.8.
+
+#### 📋 18.8 — An app with no core: its exports
+
+**Goal:** An app that runs without core offers its operator's export and each person's own, as core does.
+
+**Priority:** 8.
+
+**Deliverables:**
+
+- in the template of an app of its own: its first account as its operator; Console > Data with the operator's recipients and the app's
+  export (`kind: "app"`), encrypted as written; Account > Data with a person's own part, not encrypted; jobs and single downloads as
+  core's (core-app §4.7.3)
+- the template's tests for both
+
+**Dependencies:** 18.7, and the template of an app of its own (research 0004, step 5)
+
+**Spec reference:** sdk §9.5; core-app §4.7
+
+**Review checklist:**
+
+- The operator's export opens with the operator's identity only
+- A person's export holds nobody else's data

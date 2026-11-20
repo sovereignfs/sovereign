@@ -1,4 +1,5 @@
-// /auth/login, /auth/callback, /auth/logout, /auth/backchannel-logout and /auth/account-deleted: the addresses in sovereign.manifest.json.
+// /auth/login, /auth/callback, /auth/logout, /auth/backchannel-logout, /auth/account-deleted and /auth/export: the addresses in
+// sovereign.manifest.json.
 import { auth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';

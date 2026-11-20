@@ -1,4 +1,6 @@
 import { nextAuth } from '@sovereignfs/sdk/next';
+import pkg from '../package.json' with { type: 'json' };
+import { db } from './db';
 import { files } from './files';
 import { notes } from './notes';
 import { sovereign } from './sovereign';
@@ -15,5 +17,36 @@ export const auth = () =>
       // And the files they uploaded: their folder, which is gone once this has run, however often it does.
       await files().removeAll(sub);
       // The SDK has already ended the person's sessions and forgotten their refresh token.
+    },
+    // A person's part of their export (core-app §4.7.2): their notes as stored, still encrypted, and the keys sealed to them, so the
+    // export opens with their own keys and nobody else's.
+    onExport: {
+      prefix: '__PREFIX_LOWER__',
+      version: pkg.version,
+      handler: async ({ sub, writer }) => {
+        const notes = await db().query(
+          "SELECT id, version, encode(meta, 'base64') AS meta, encode(body, 'base64') AS body, updated_at FROM notes WHERE owner = $1 ORDER BY id",
+          [sub],
+        );
+        await writer.addRecords('apps/__PREFIX_LOWER__/records/notes.jsonl', 'notes', notes.rows, {
+          endToEnd: true,
+        });
+        const readers = await db().query(
+          'SELECT * FROM note_readers WHERE reader = $1 ORDER BY note_id',
+          [sub],
+        );
+        await writer.addRecords(
+          'apps/__PREFIX_LOWER__/records/note_readers.jsonl',
+          'note_readers',
+          readers.rows,
+          { endToEnd: true },
+        );
+        const kept = await files().list(sub);
+        await writer.addRecords('apps/__PREFIX_LOWER__/records/files.jsonl', 'files', kept);
+        for (const record of kept) {
+          const { body } = await files().get(sub, record.id);
+          await writer.addFile(`apps/__PREFIX_LOWER__/files/${record.id}`, body, record.size);
+        }
+      },
     },
   });

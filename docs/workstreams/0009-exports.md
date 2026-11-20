@@ -24,7 +24,8 @@ package. Nothing is sent anywhere and nothing runs on a schedule: those are mile
 - [x] `18.4` — The operator's export in core
 - [x] `18.5` — A person's export in core
 - [x] `18.6` — Apps' parts
-- [ ] `18.7` — The template's exports
+- [x] `18.7` — The template's exports
+- [ ] 18.8 (an app with no core) is outside this workstream: it waits for the template of an app of its own
 - [ ] An owner's export, taken from a built core, opens with `sv export open` and passes its check; a person's export holds an app's part
       from a template app, on each database
 - [ ] No guide or screen says an export is a backup that restores an instance

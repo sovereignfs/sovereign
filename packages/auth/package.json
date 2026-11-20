@@ -29,6 +29,11 @@
     "./client": {
       "types": "./dist/client/index.d.ts",
       "default": "./dist/client/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "browser": "./dist/browser.js",
+      "default": "./dist/core/index.js"
     }
   },
   "files": [
@@ -46,6 +51,7 @@
     "@sovereignfs/config": "workspace:*",
     "@sovereignfs/crypto": "workspace:*",
     "@sovereignfs/database": "workspace:*",
+    "@sovereignfs/sdk": "workspace:*",
     "better-auth": "1.7.18",
     "drizzle-orm": "catalog:",
     "zod": "^4.6.7"

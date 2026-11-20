@@ -951,7 +951,8 @@ can have a plain copy when they ask for one, and cannot lose every backup by los
 **Deliverables:**
 
 - `tools/create`'s template on `@sovereignfs/auth`: thin `app/(auth)/*` and `app/security/*` pages, the account migrations, both
-  ways in from the environment, the three database forms
+  ways in from the environment, the three database forms; the SDK's token store for the three dialects, encrypted (today's template keeps one for PostgreSQL only); a scaffold that
+  signs in through core, with a local account, and both, in a browser (17.5's browser proof)
 - the template off the SDK's `nextAuth`; `building-an-app` §6 and §15 rewritten for one shape
 
 **Dependencies:** 17.5, 2.6, 2.7

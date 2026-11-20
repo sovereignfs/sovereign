@@ -129,7 +129,7 @@ app's, calling the package's server functions: a package's action cannot be hand
 rule that each action checks itself is held where the action is (auth.md §7.1). `./next` keeps the page guards. The browser client is
 the app's `createAuthClient` with the package's plugins, so its types stay the app's. The remaining panels thin out with 2.7.
 
-#### 📋 17.5 — Core as a way in, and an app's own accounts
+#### ✅ 17.5 — Core as a way in, and an app's own accounts
 
 **Goal:** An app signs people in through core, with accounts of its own, or both, from its environment alone.
 
@@ -151,3 +151,12 @@ the app's `createAuthClient` with the package's plugins, so its types stay the a
 - better-auth never refreshes core's token: no `accounts` row for core holds one
 - A logout notice for a `sid` ends that session in the fixture app, and one for a `sub` every session of that person
 - Signing out of the fixture app as a hosted app ends core's session; as an external app it does not
+
+**Built as found (November 2026):** `@sovereignfs/auth/core` (`sovereignSignIn`, `coreNotices`, `coreSignOutUrl`, `needsCoreCheck`,
+`coreSignInMigrations`) on the SDK's `finishSignIn`, with the preset's `localAccounts` switch, the registration's `arrival`, and the
+refusal of password routes for an account with no password. Proved in the package's own tests against the SDK's fake core on a real
+better-auth and SQLite: no account row holds a token, a callback works once, a `sid` notice ends one core session and a `sub` notice
+every session and the refresh token, a replay ends nothing, `login_required` ends the session. The browser proof, a fixture app signing
+in both ways, moves to 13.35's scaffold: a local sign-in needs the sign-in value derived in a page, which the template has and the e2e
+suite's bare server does not. Linking an account to core from a signed-in session, and the per-session key secret, are not built
+(auth.md §8).

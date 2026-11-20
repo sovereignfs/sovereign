@@ -3,6 +3,7 @@
  * checks every account and session passes, and the account tables.
  */
 export {
+  asCoreArrival,
   createAuthPreset,
   signUpPolicy,
   SECOND_STEP,

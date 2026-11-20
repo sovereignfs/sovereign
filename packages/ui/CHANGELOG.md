@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.96.0; earlier versions are in the repository's
 history and tags.
 
+## [0.103.0] - 2026-11-20
+
+### Added
+
+- `ExportPanel` (experimental): taking an export after the password and downloading it once, for an operator's export or a person's,
+  in core or in an app with no core. The consumer gives `onStart`, `downloadAction` and `onRefresh`; it knows no framework.
+
 ## [0.102.0] - 2026-11-19
 
 ### Added

@@ -1,4 +1,4 @@
-export { connect } from './database.js';
+export { connect, fromPostgresPool } from './database.js';
 export type { ConnectOptions } from './database.js';
 export { databaseVariables, DIALECTS, resolveDatabase } from './settings.js';
 export type { DatabaseSettings, Dialect, ResolvedDatabase, ResolveOptions } from './settings.js';

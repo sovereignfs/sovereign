@@ -14,6 +14,12 @@ written in the change that sets the version, dated that day, and becomes the rel
   refusal of the password, second-step and passkey routes to an account that has no password.
 - The flows behind the second step's setup (`twoFactorSettings`) and the profile (`saveName`).
 - Published: the private packages it is built from are bundled in.
+- `@sovereignfs/auth/postgres`: an app's own PostgreSQL pool as the package's database (`postgresDatabase`), the database package's own
+  code, bundled; only this entry loads `pg`.
+
+### Fixed
+
+- A sign-in through core that comes back `login_required` ends only a session that came from core, never a local account's.
 
 ## [0.2.0] - 2026-11-19
 

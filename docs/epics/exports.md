@@ -161,7 +161,7 @@ specification and not an RFC.
 - End-to-end ciphertext in the archive equals what is stored
 - Another person's export cannot be asked for or downloaded
 
-#### 📋 18.6 — Apps' parts
+#### ✅ 18.6 — Apps' parts
 
 **Goal:** A person's export holds what each app they use holds of them.
 

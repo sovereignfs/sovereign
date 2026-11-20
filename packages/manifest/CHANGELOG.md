@@ -5,6 +5,12 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.2.0; earlier versions are in the repository's
 history and tags.
 
+## [0.4.0] - 2026-11-20
+
+### Added
+
+- Manifest 5: `signIn.export`, the path core asks for a person's part of their export (`contracts/app-manifest.md` §5.4).
+
 ## [0.3.0] - 2026-11-16
 
 ### Added

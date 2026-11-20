@@ -201,3 +201,27 @@ describe('manifest 4', () => {
     expect(problemsOf(manifest4Of({ data: ['/data/s3/fjord'] }))[0]?.at).toBe('data.0');
   });
 });
+
+describe('manifest 5', () => {
+  const manifest5Of = (signIn: Record<string, unknown> = {}) => {
+    const base = manifest2Of() as { signIn: Record<string, unknown> };
+    return { ...base, manifest: 5, signIn: { ...base.signIn, export: '/auth/export', ...signIn } };
+  };
+
+  it('accepts an export path in signIn', () => {
+    expect(problemsOf(manifest5Of())).toEqual([]);
+  });
+
+  it('takes export only from version 5', () => {
+    const four = { ...manifest5Of(), manifest: 4 };
+    expect(validate(four).ok).toBe(false);
+  });
+
+  it.each([
+    ['a host', 'https://notes.example/auth/export'],
+    ['no leading slash', 'auth/export'],
+    ['a way up', '/a/../export'],
+  ])('refuses an export path with %s', (_, path) => {
+    expect(problemsOf(manifest5Of({ export: path })).length).toBeGreaterThan(0);
+  });
+});

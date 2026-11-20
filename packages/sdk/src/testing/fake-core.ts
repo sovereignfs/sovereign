@@ -174,6 +174,8 @@ export type FakeCore = {
     who: { sub: string },
     options?: { wrong?: WrongLogoutToken },
   ): Promise<string>;
+  /** A signed export request, as core sends to an app's export address for a person's export (core-app §4.7.2). */
+  exportRequestToken(who: { sub: string }, options?: { wrong?: WrongLogoutToken }): Promise<string>;
   /** Ends a person's tokens, as core does when their sessions end: the next use of any is refused. */
   revoke(sub: string): void;
   /** Ends every access token but keeps the refresh tokens, so the next call must refresh. */
@@ -910,6 +912,9 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
     },
     async accountDeletedToken(who, { wrong } = {}) {
       return notice('account-deleted+jwt', 'urn:sovereignfs:event:account-deleted', who, wrong);
+    },
+    async exportRequestToken(who, { wrong } = {}) {
+      return notice('export-request+jwt', 'urn:sovereignfs:event:export-requested', who, wrong);
     },
     get notificationsSent() {
       return [...sent.values()];

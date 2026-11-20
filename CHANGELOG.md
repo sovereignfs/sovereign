@@ -5,6 +5,14 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.126.0] - 2026-11-20
+
+### Added
+
+- A person's download from Your data now holds what each app they use keeps of them. Core asks each app at the export address it
+  registered (a new setting in an app's technical settings, and `signIn.export` in manifest 5), checks what the app sends, and adds it;
+  an app that offers nothing, does not answer or answers wrongly is named in the download as missing.
+
 ## [0.125.0] - 2026-11-20
 
 ### Added

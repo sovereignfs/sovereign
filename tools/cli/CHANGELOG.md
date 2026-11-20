@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.12.0; earlier versions are in the repository's
 history and tags.
 
+## [0.24.0] - 2026-11-20
+
+### Added
+
+- An app's manifest 5 `signIn.export`, and an external app's `export` in `suite.yml` (`--export` on `sv app add` and `sv app update`),
+  register where core asks the app for a person's part of their export.
+
 ## [0.23.0] - 2026-11-20
 
 ### Added

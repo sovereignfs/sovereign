@@ -630,6 +630,9 @@ importers:
 
   packages/sdk:
     dependencies:
+      '@sovereignfs/export':
+        specifier: workspace:*
+        version: link:../export
       jose:
         specifier: ^6.2.13
         version: 6.2.17

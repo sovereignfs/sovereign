@@ -2,12 +2,19 @@ import manifest1 from '../../../contracts/schemas/app-manifest-v1.schema.json' w
 import manifest2 from '../../../contracts/schemas/app-manifest-v2.schema.json' with { type: 'json' };
 import manifest3 from '../../../contracts/schemas/app-manifest-v3.schema.json' with { type: 'json' };
 import manifest4 from '../../../contracts/schemas/app-manifest-v4.schema.json' with { type: 'json' };
+import manifest5 from '../../../contracts/schemas/app-manifest-v5.schema.json' with { type: 'json' };
 
 /** Every manifest version's JSON Schema, as published under `contracts/schemas`, by the `manifest` number. */
-export const schemas = { 1: manifest1, 2: manifest2, 3: manifest3, 4: manifest4 } as const;
+export const schemas = {
+  1: manifest1,
+  2: manifest2,
+  3: manifest3,
+  4: manifest4,
+  5: manifest5,
+} as const;
 
 /** The manifest versions this package reads: all that have ever been supported, since old images stay published. */
-export const supportedVersions = [1, 2, 3, 4] as const;
+export const supportedVersions = [1, 2, 3, 4, 5] as const;
 
 export type ManifestVersion = (typeof supportedVersions)[number];
 

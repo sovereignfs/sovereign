@@ -16,6 +16,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { migrateCore } from '../db/migrate';
 import { ExportBusyError, ExportJobs, KEPT_MS } from '../exports/jobs';
 import { exportsFolder, makeExport, removeExportFiles } from '../exports/make';
+import { addAppParts } from '../exports/apps';
+import { ExportWriter } from '@sovereignfs/export';
 
 const MIGRATIONS = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../migrations');
 
@@ -36,7 +38,15 @@ export function exportsSuite(createDatabase: () => Promise<TestDatabase>): void 
     await target.cleanup();
   });
   beforeEach(async () => {
-    for (const table of ['export_jobs', 'two_factors', 'accounts', 'notifications', 'users'])
+    for (const table of [
+      'export_jobs',
+      'two_factors',
+      'accounts',
+      'notifications',
+      'oauth_consents',
+      'oauth_clients',
+      'users',
+    ])
       await db.run(`delete from ${table}`);
     root = await mkdtemp(path.join(tmpdir(), 'sv-exports-'));
     return () => rm(root, { recursive: true, force: true });
@@ -189,6 +199,155 @@ export function exportsSuite(createDatabase: () => Promise<TestDatabase>): void 
           (name) => name.includes('instance_settings') || name.includes('invites'),
         ),
       ).toBe(false);
+    });
+  });
+
+  describe('apps’ parts of a person’s export', () => {
+    async function client(clientId: string, name: string, exportUri?: string) {
+      const time = pg() ? new Date(clock) : clock;
+      await db.run(
+        'insert into oauth_clients (id, client_id, name, metadata, redirect_uris, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?)',
+        [
+          clientId,
+          clientId,
+          name,
+          JSON.stringify(exportUri ? { exportUri } : {}),
+          pg() ? '{https://x/cb}' : '["https://x/cb"]',
+          time,
+          time,
+        ],
+      );
+      await db.run(
+        'insert into oauth_consents (id, client_id, user_id, scopes, created_at, updated_at) values (?, ?, ?, ?, ?, ?)',
+        [`c-${clientId}`, clientId, 'u1', pg() ? '{openid}' : '["openid"]', time, time],
+      );
+    }
+
+    async function appAnswer(sub: string, prefix: string): Promise<Uint8Array> {
+      const writer = new ExportWriter({
+        head: {
+          format: 1,
+          kind: 'person',
+          producer: { name: prefix, version: '1.0.0' },
+          app: prefix,
+          sub,
+          takenAt: new Date(clock).toISOString(),
+        },
+      });
+      const parts: Uint8Array[] = [];
+      const read = (async () => {
+        for await (const chunk of writer.readable as unknown as AsyncIterable<Uint8Array>)
+          parts.push(chunk);
+      })();
+      writer.addPart({ name: prefix, status: 'complete', version: '1.0.0' });
+      await writer.addRecords(`apps/${prefix}/records/notes.jsonl`, 'notes', [
+        { text: `${sub}'s note` },
+      ]);
+      await writer.finish();
+      await read;
+      return Buffer.concat(parts);
+    }
+
+    it('places what an app answers under its own folder, and lists one that cannot answer as missing', async () => {
+      await person('u1', 'ada@sovereign.local');
+      await client('notes-id', 'Notes', 'https://notes.example/auth/export');
+      await client('tally-id', 'Tally', 'https://tally.example/auth/export');
+      await client('old-id', 'Old app');
+      const asked: string[] = [];
+      const fakeFetch = (async (url: string | URL, init?: RequestInit) => {
+        asked.push(String(url));
+        expect(String(init?.body)).toContain('export_request_token=signed-');
+        expect(init?.redirect).toBe('manual');
+        if (String(url).startsWith('https://tally')) return new Response('no', { status: 500 });
+        return new Response(Buffer.from(await appAnswer('u1', 'notes')), { status: 200 });
+      }) as typeof fetch;
+      const writer = new ExportWriter({
+        head: {
+          format: 1,
+          kind: 'person',
+          producer: { name: 'core', version: '0.81.0' },
+          sub: 'u1',
+          takenAt: new Date(clock).toISOString(),
+        },
+      });
+      const parts: Uint8Array[] = [];
+      const drained = (async () => {
+        for await (const chunk of writer.readable as unknown as AsyncIterable<Uint8Array>)
+          parts.push(chunk);
+      })();
+      await addAppParts(writer, 'u1', {
+        database: db,
+        sign: async (clientId, sub) => `signed-${clientId}-${sub}`,
+        spoolDirectory: root,
+        fetch: fakeFetch,
+      });
+      await writer.finish();
+      await drained;
+      const files = new Map<string, string>();
+      const read = await readExport(Buffer.concat(parts), {
+        onFile: async ({ path: inside, body }) => {
+          const chunks: Buffer[] = [];
+          for await (const chunk of body) chunks.push(Buffer.from(chunk));
+          files.set(inside, Buffer.concat(chunks).toString('utf8'));
+        },
+      });
+      expect(asked.sort()).toEqual([
+        'https://notes.example/auth/export',
+        'https://tally.example/auth/export',
+      ]);
+      expect(read.contents.parts).toEqual([
+        { name: 'notes', status: 'complete', version: '1.0.0' },
+        { name: 'old-app', status: 'missing', reason: 'not_supported' },
+        { name: 'tally', status: 'missing', reason: 'refused' },
+      ]);
+      expect(files.get('apps/notes/records/notes.jsonl')).toContain("u1's note");
+      expect(read.contents.records).toEqual([
+        { path: 'apps/notes/records/notes.jsonl', kind: 'notes', count: 1, endToEnd: false },
+      ]);
+    });
+
+    it('refuses an answer for another person, or that is not an export, or is too large', async () => {
+      await person('u1', 'ada@sovereign.local');
+      await client('a-id', 'Alpha', 'https://a.example/x');
+      await client('b-id', 'Bravo', 'https://b.example/x');
+      await client('c-id', 'Charlie', 'https://c.example/x');
+      const fakeFetch = (async (url: string | URL) => {
+        if (String(url).startsWith('https://a'))
+          return new Response(Buffer.from(await appAnswer('someone-else', 'alpha')), {
+            status: 200,
+          });
+        if (String(url).startsWith('https://b')) return new Response('not a tar', { status: 200 });
+        return new Response(new Uint8Array(65536), { status: 200 });
+      }) as typeof fetch;
+      const writer = new ExportWriter({
+        head: {
+          format: 1,
+          kind: 'person',
+          producer: { name: 'core', version: '0.81.0' },
+          sub: 'u1',
+          takenAt: new Date(clock).toISOString(),
+        },
+      });
+      const drained = (async () => {
+        for await (const _chunk of writer.readable as unknown as AsyncIterable<Uint8Array>) {
+          // read
+        }
+      })();
+      await addAppParts(writer, 'u1', {
+        database: db,
+        sign: async () => 't',
+        spoolDirectory: root,
+        fetch: fakeFetch,
+        maxBytes: 32768,
+      });
+      const contents = await writer.finish();
+      await drained;
+      expect(contents.parts.map((part) => [part.name, part.reason])).toEqual([
+        ['alpha', 'invalid'],
+        ['bravo', 'invalid'],
+        ['charlie', 'too_large'],
+      ]);
+      expect(contents.files).toEqual([]);
     });
   });
 

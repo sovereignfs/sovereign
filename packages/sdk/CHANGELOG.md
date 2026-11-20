@@ -5,6 +5,15 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 2.1.0; earlier versions are in the repository's
 history and tags.
 
+## [2.11.0] - 2026-11-20
+
+### Added
+
+- `handleExportRequest(request, app, handler)` answers core's request for a person's part of their export (sdk §9.1, core-app §4.7.2):
+  it checks the signed `export-request+jwt` and streams an export, in the format of `@sovereignfs/export`, written by the app's
+  `handler`. The Next.js handlers mount it at `/auth/export` with `onExport`. `@sovereignfs/sdk/testing`'s fake core signs such
+  requests (`exportRequestToken`).
+
 ## [2.10.0] - 2026-11-20
 
 ### Added

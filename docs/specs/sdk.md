@@ -245,6 +245,9 @@ The SDK signs people in through core with an established OpenID Connect client, 
 
 ### 9.1 What the app provides, and what the SDK does with it
 
+`nextAuth` (`/next`) is **deprecated** from 2.10.0: a new app signs people in with `@sovereignfs/auth` (§9.8). It keeps working, and is
+removed only in a major version ([`docs/upgrade.md`](../upgrade.md)).
+
 The app gives `createSovereign` a `sessionStore` (the app owns its data; the SDK ships none outside `/testing`):
 
 ```ts
@@ -461,6 +464,27 @@ For an app that keeps its people's sessions itself (`@sovereignfs/auth`, [`auth.
 `completeSignIn` is `finishSignIn` with the SDK's session made from it, so the two cannot drift. Everything §5.1 promises of the refresh
 token holds unchanged: the SDK is still the only thing that sends it.
 
+### 9.9 Who is signed in, typed
+
+A session's `user` is who the person is, the same shape for the SDK's sessions and for `@sovereignfs/auth`'s ([`auth.md`](auth.md)),
+and for an account of the app's own as for one from core (RFC 0007 §10):
+
+| Field      | Is                                                                                                                  |
+| ---------- | ------------------------------------------------------------------------------------------------------------------- |
+| `id`       | The app's own id for the person, and the only thing to identify them by. With the SDK's sessions it is core's `sub` |
+| `sub`      | Core's id for the person, when they came through core; missing for an account of the app's own                      |
+| `name`     | With `profile`                                                                                                      |
+| `email`    | With `email`, and `emailVerified` with it                                                                           |
+| `picture`  | With `profile`: an absolute, versioned address                                                                      |
+| `locale`   | With `profile`: a BCP 47 tag                                                                                        |
+| `zoneinfo` | With `profile`: an IANA time zone                                                                                   |
+| `roles`    | With `roles`, for a trusted app only, from the token core signed; empty otherwise                                   |
+
+A field core was not asked for or did not send is missing, and a claim of the wrong type is left out (`personFromClaims`). `claims`
+stays for what is not typed. **An app is not told** another person's email beyond a Directory match on the whole address, anything
+of their passkeys, second step or sessions, or anything of the lock but that the person must sign in again. How a person signed in
+(`amr`) waits for core to send it (6.6, parked).
+
 ## 10. From the legacy SDK
 
 Every namespace of the legacy `sdk` object:
@@ -557,3 +581,4 @@ of its own; an app catalogue.
 | 2026-11-18 | §9.6: a fresh sign-in (`prompt`, `maxAgeSeconds`, `authTime`, `signedInWithin`, `requireSession`'s age); §9.1: core ending a session ends it in the app (`SessionEndedError.byCore`), and a logout notice for the whole person removes the refresh token. |
 | 2026-11-19 | §9.7: checking a session against core (`checkEverySeconds`, `checkedAt`, `needsCheck`, `prompt=none` renewal in place, `SignInError.reason`); the fake core's `loginRequired`.                                                                            |
 | 2026-11-19 | §9.1: a pending sign-in lives an hour, not ten minutes, so an app's sign-in carried through an emailed link is not refused.                                                                                                                               |
+| 2026-11-20 | §9.9: a session's typed `user`, the same shape as `@sovereignfs/auth`'s, and what an app is not told; §9.1: `nextAuth` deprecated.                                                                                                                        |

@@ -5,6 +5,14 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.128.0] - 2026-11-20
+
+### Changed
+
+- Core's exports run on shared pieces an app with no core can use too: the jobs, the runner and the one-time download from
+  `@sovereignfs/export` 0.3.0, and the export panel from `@sovereignfs/ui` 0.103.0. Nothing a person or the owner sees changes, except
+  that times on the export pages are written in the person's own time zone.
+
 ## [0.127.0] - 2026-11-20
 
 ### Added

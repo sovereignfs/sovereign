@@ -5,6 +5,18 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 2.1.0; earlier versions are in the repository's
 history and tags.
 
+## [2.10.0] - 2026-11-20
+
+### Added
+
+- `session.user`: who is signed in, typed (`id`, `sub`, `name`, `email`, `emailVerified`, `picture`, `locale`, `zoneinfo`, `roles`), the
+  same shape `@sovereignfs/auth` gives (sdk §9.9); `personFromClaims` makes it from core's claims. `sub`, `claims` and `roles` stay.
+
+### Deprecated
+
+- `nextAuth` (`@sovereignfs/sdk/next`): a new app signs people in with `@sovereignfs/auth`. It keeps working and is removed only in a
+  major version; `docs/upgrade.md` says how to move off it.
+
 ## [2.9.0] - 2026-11-20
 
 ### Added

@@ -28,6 +28,9 @@ type RouteHandler = (request: Request) => Promise<Response>;
  *   export const { GET, POST } = nextAuth(sv).handlers;
  *
  * `next` is an optional peer dependency of the SDK, and this is the only entry that uses it.
+ *
+ * @deprecated Sign people in with `@sovereignfs/auth` instead, whose `./core` is core as one way in beside the app's own accounts
+ * (RFC 0007; `docs/upgrade.md`, "Moving off `nextAuth`"). It keeps working, and is removed only in a major version of the SDK.
  */
 export function nextAuth(sv: Sovereign, options: NextAuthOptions = {}) {
   const base = trimTrailingSlashes(options.basePath ?? '/auth');

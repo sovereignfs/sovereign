@@ -49,6 +49,10 @@ The SDK keeps nothing itself. Each store is a few functions over a table or a ca
 
 ## 3. Sign people in
 
+**A new app signs people in with [`@sovereignfs/auth`](specs/auth.md)** instead, with core as one way in (what
+`npm create @sovereignfs app` makes). `nextAuth` below is deprecated: it keeps working for an app already on it, and is removed only in
+a major version ([upgrading](upgrade.md)).
+
 With Next.js, mount the routes once, and read the session where you need it:
 
 ```ts
@@ -61,8 +65,9 @@ export const { GET, POST } = nextAuth(sv).handlers;
 ```ts
 // A Server Component, route or action
 const session = await nextAuth(sv).requireSession('/notes'); // sends a person to sign in, and back
-session.sub; //   who they are: identify a person by this and by nothing else
-session.claims; // name, email, picture... for the scopes granted
+session.user; //   who they are, typed: id (core's sub here), name, email, picture, locale, zoneinfo, roles
+session.user.id; // identify a person by this and by nothing else
+session.claims; // everything the ID token said, for the scopes granted
 ```
 
 Elsewhere, `sv.auth` has the same steps for a web `Request`: `beginSignIn`, `completeSignIn`, `getSession`, `requireSession`,

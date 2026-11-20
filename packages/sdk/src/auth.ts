@@ -7,8 +7,11 @@ import {
   cookieName,
   localPath,
   newId,
+  personFromClaims,
   readCookies,
+  rolesFromClaims,
   setCookie,
+  type User,
   type Session,
   type SessionStore,
   type StoredRecord,
@@ -64,6 +67,8 @@ export type SignedIn = {
   /** The core session this sign-in belongs to, when core gave one. */
   sid: string | undefined;
   claims: Record<string, unknown>;
+  /** Who the person is, from the claims (sdk §9.9); `id` is `sub` until the app gives the person an id of its own. */
+  user: User;
   scopes: string[];
   /** Kept by the caller for signing out (`endSessionUrl`). */
   idToken: string | undefined;
@@ -211,6 +216,7 @@ export class Auth {
       sub,
       sid,
       claims,
+      user: personFromClaims(claims),
       scopes,
       idToken: tokens.id_token,
       returnTo,
@@ -575,14 +581,13 @@ function sessionFrom(id: string, record: StoredRecord): { id: string; session: S
     checkedAt?: number;
   };
   const claims = data.claims ?? {};
-  const roles = Array.isArray(claims.roles)
-    ? (claims.roles as unknown[]).filter((role): role is string => typeof role === 'string')
-    : [];
+  const roles = rolesFromClaims(claims);
   return {
     id,
     session: {
       sub: String(record.sub),
       sid: record.sid,
+      user: personFromClaims({ ...claims, sub: String(record.sub) }),
       claims,
       scopes: data.scopes ?? [],
       roles,

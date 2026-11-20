@@ -21,6 +21,24 @@ before that is recorded.
 
 ## `@sovereignfs/sdk`
 
+### 2.10.0
+
+- **`nextAuth` is deprecated.** It still works and nothing changes for an app on it; it is removed only in a major version. Your editor
+  strikes it through.
+- **Moving off `nextAuth`:** sign people in with [`@sovereignfs/auth`](specs/auth.md), which keeps the app's sessions with better-auth
+  and has core as one way in (`@sovereignfs/auth/core`), beside accounts of the app's own if you want them. An app made by
+  `npm create @sovereignfs app` from toolkit 0.22.0 is built this way: compare yours with it. In short:
+  1. Add `@sovereignfs/auth` and `better-auth` (at the version the package names), and make the preset in a `lib/sign-in.ts` with
+     `createAuthPreset`, your PostgreSQL pool through `@sovereignfs/auth/postgres`, and `sovereignSignIn` as a plugin when
+     `<P>_CORE_URL` is set. Run its migrations when the app starts.
+  2. Mount better-auth's handler at `app/api/auth/[...all]/route.ts`, and core's notices at their own routes with `coreNotices`.
+  3. In the manifest, the sign-in address becomes `/api/auth/callback/sovereign`; give the notices' addresses too. The operator's next
+     `sv apply` registers the new addresses.
+  4. Read the person from the session's `user` (`id` is your app's id for them), not `sub`: a person who signed in before has a new
+     id here, and their data is found by linking core's `sub`, which `userIdForSub` returns.
+- **`session.user`** is new: who the person is, typed (`id`, `sub`, `name`, `email`, `emailVerified`, `picture`, `locale`, `zoneinfo`,
+  `roles`). `session.sub`, `session.claims` and `session.roles` stay.
+
 ### 2.0.0
 
 - **This is a new SDK under the old name.** Versions up to `1.25.0` were the legacy SDK, which ran inside the old platform as an

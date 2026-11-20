@@ -6,6 +6,7 @@ import {
   SignInError,
   createSovereign,
   hasRole,
+  personFromClaims,
 } from '../index';
 import { createFakeCore, memorySessionStore, type WrongLogoutToken } from '../testing';
 import { checkedAgainstContract, clock, memoryStore } from './helpers';
@@ -191,6 +192,59 @@ describe('signing in (sdk §9)', () => {
       new Request(inside, { headers: { cookie: cookieHeader(begin.setCookies) } }),
     );
     expect(done.session.sub).toBe('u1');
+  });
+});
+
+describe('who is signed in, typed (sdk §9.9)', () => {
+  it('is the session’s user: core’s sub as the id, and the claims of the scopes granted', async () => {
+    const world = setup();
+    world.core.addPerson({ sub: 'u2', name: 'Grace Hopper', email: 'grace@example.org' });
+    const { done, cookie } = await signIn(world, 'u2');
+    const user = {
+      id: 'u2',
+      sub: 'u2',
+      name: 'Grace Hopper',
+      email: 'grace@example.org',
+      emailVerified: true,
+      roles: [],
+    };
+    expect(done.session.user).toEqual(user);
+    // The same when the session is read again from its cookie.
+    expect((await world.sv.auth.getSession(withCookie(cookie)))?.user).toEqual(user);
+  });
+
+  it('leaves out what core was not asked for, and takes nothing of the wrong type', () => {
+    expect(
+      personFromClaims({
+        sub: 's',
+        name: 7,
+        email: '',
+        email_verified: 'yes',
+        picture: 'https://core.test/p.png',
+        locale: 'en-GB',
+        zoneinfo: 'Europe/Berlin',
+        roles: ['platform:admin', 3],
+      }),
+    ).toEqual({
+      id: 's',
+      sub: 's',
+      picture: 'https://core.test/p.png',
+      locale: 'en-GB',
+      zoneinfo: 'Europe/Berlin',
+      roles: ['platform:admin'],
+    });
+    // An app that keeps accounts of its own gives its id for the person.
+    expect(personFromClaims({ sub: 's' }, 'local-1')).toEqual({
+      id: 'local-1',
+      sub: 's',
+      roles: [],
+    });
+  });
+
+  it('carries the roles core gave a trusted app', async () => {
+    const world = setup({ scopes: ['openid', 'profile', 'roles'] });
+    const { done } = await signIn(world, 'u1', { roles: ['platform:owner'] });
+    expect(done.session.user.roles).toEqual(['platform:owner']);
   });
 });
 

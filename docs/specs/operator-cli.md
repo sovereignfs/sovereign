@@ -73,7 +73,7 @@ npm create @sovereignfs instance my-instance
   MUST ask when there is a terminal, and otherwise use **pnpm**, whatever tool started `create`. Yarn is Yarn 4 with its packages in
   `node_modules`. Any other value, and `--package-manager` with `instance`, is refused.
 
-`instance` MUST, in order: write the files of §2.1, run `git init`, install the toolkit from the lockfile it wrote, add
+`instance` MUST, in order: write the files of §2.1 (`package.json`, the launcher, `.gitignore`, `README.md`, `AGENTS.md` and `CLAUDE.md`), run `git init`, install the toolkit from the lockfile it wrote, add
 `--remote URL` as `origin` if given, and make the first commit. It MUST NOT push.
 
 ### 2.2 An app
@@ -164,11 +164,19 @@ overrides/            optional additions (contracts/suite.md)
 .github/workflows/    a thin deployment workflow
 .gitignore
 README.md
+AGENTS.md             the guide for an AI agent the operator asks to look after the instance
+CLAUDE.md             Claude Code's way to AGENTS.md
 .backups/             backups sv backup took (§10.2); git-ignored, never committed
 ```
 
 `package.json` MUST pin `@sovereignfs/cli` to an exact version. Every file here belongs to the operator. `.gitignore` MUST
 ignore `.backups/`: `create` writes it so, and `sv backup` adds the line to a repository that lacks it.
+
+`AGENTS.md` is written by `create`, once, like the rest: it says what each file is, how a change is made (look, change the repository,
+push and deploy when the operator says so, check), and which commands an agent may run alone (those that only read), prepare for the
+operator to see (those that change only the repository), run only when asked each time (those that reach the server), and never run
+(those that show a secret's value, destroy data, or read an age key). `CLAUDE.md` imports it. An instance made before has neither, and
+`sv push` commits them when the operator adds them.
 
 ---
 

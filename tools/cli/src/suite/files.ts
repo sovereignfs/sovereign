@@ -25,6 +25,9 @@ export const KNOWN_FILES = [
   'secrets.age.yml',
   '.gitignore',
   'README.md',
+  // The guide for an agent looking after the instance, and Claude Code's way to it (create writes both).
+  'AGENTS.md',
+  'CLAUDE.md',
 ] as const;
 export const KNOWN_DIRECTORIES = ['overrides/', '.github/workflows/'] as const;
 

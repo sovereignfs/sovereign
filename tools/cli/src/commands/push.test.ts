@@ -64,6 +64,14 @@ describe('sv push', () => {
     expect(done.text).toContain('Pushed');
   });
 
+  it('commits the guide for an agent that create writes, AGENTS.md and CLAUDE.md', async () => {
+    await ready();
+    write('AGENTS.md', '# AGENTS.md\n');
+    write('CLAUDE.md', '@AGENTS.md\n');
+    expect((await sv(world, 'push')).code).toBe(0);
+    expect(remoteFiles()).toEqual(expect.arrayContaining(['AGENTS.md', 'CLAUDE.md']));
+  });
+
   it('says there is nothing new when nothing changed, and still pushes what is waiting', async () => {
     await ready();
     await sv(world, 'push');

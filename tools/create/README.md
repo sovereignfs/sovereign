@@ -15,7 +15,7 @@ the instance's core, keeps its data in its own database, and builds into an imag
 notes are encrypted in the browser and shared between people of the instance (not yet audited; see its `ENCRYPTION.md`). See [`@sovereignfs/cli`](https://www.npmjs.com/package/@sovereignfs/cli). Licence: AGPL-3.0-or-later.
 
 Once an app exists, it keeps the files every app of the suite shares (its release workflows, repository settings, contributing and
-release guides, and the shared section of `AGENTS.md`) with the version of this package it pins:
+release guides, its `Dockerfile`, `.dockerignore` and `compose.yml`, and the shared section of `AGENTS.md`) with the version of this package it pins:
 
 ```bash
 npm create @sovereignfs app sync           # write them from this version's template

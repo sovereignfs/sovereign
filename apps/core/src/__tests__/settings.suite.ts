@@ -458,6 +458,7 @@ export function settingsSuite(createDatabase: () => Promise<TestDatabase>): void
       expect(all.map((d) => d.key).sort()).toEqual([
         'auth.invite_only',
         'escrow.public_key',
+        'export.recipients',
         'instance.name',
         'smtp.from',
         'smtp.host',

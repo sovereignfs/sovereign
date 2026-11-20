@@ -86,7 +86,7 @@ specification and not an RFC.
 - What is encrypted opens with `age -d` and the identity, and with nothing the writer held
 - The package imports nothing of core's
 
-#### 📋 18.3 — The operator's recipients
+#### ✅ 18.3 — The operator's recipients
 
 **Goal:** The owner gives core the public keys an export is encrypted to, and opens an export on their own machine.
 

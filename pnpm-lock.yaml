@@ -243,6 +243,9 @@ importers:
       '@sovereignfs/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@sovereignfs/export':
+        specifier: workspace:*
+        version: link:../../packages/export
       '@sovereignfs/mailer':
         specifier: workspace:*
         version: link:../../packages/mailer
@@ -292,6 +295,9 @@ importers:
       '@types/react-dom':
         specifier: 'catalog:'
         version: 19.3.0(@types/react@19.3.0)
+      age-encryption:
+        specifier: 'catalog:'
+        version: 0.3.1
       drizzle-kit:
         specifier: 'catalog:'
         version: 0.31.11
@@ -745,6 +751,9 @@ importers:
       '@sovereignfs/crypto':
         specifier: workspace:*
         version: link:../../packages/crypto
+      '@sovereignfs/export':
+        specifier: workspace:*
+        version: link:../../packages/export
       '@sovereignfs/manifest':
         specifier: workspace:*
         version: link:../../packages/manifest

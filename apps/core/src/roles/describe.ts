@@ -71,6 +71,10 @@ export const CAPABILITY_TEXT: Record<Capability, { label: string; description: s
     label: 'Try this instance on a device',
     description: 'Open the lock check, which tries on a phone what a biometric lock would need.',
   },
+  'instance:export': {
+    label: 'Export the instance’s data',
+    description: 'Download everything core holds, encrypted to the owner’s key.',
+  },
 };
 
 export type MatrixRow = {

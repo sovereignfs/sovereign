@@ -794,3 +794,31 @@ export const launcherShortcuts = sqliteTable(
   },
   (table) => [index('launcher_shortcuts_owner_idx').on(table.ownerId)],
 );
+
+/**
+ * Exports being made or waiting to be downloaded (core-app §4.7.3): one row for each, whose (`kind` `instance`, or `person` with the
+ * person's `sub`), the session that asked, and where it stands (`pending`, `running`, `ready`, `failed`). Times are milliseconds since the
+ * epoch. `file` is the name under `.exports/` in core's storage path; `lease_until` stops two instances of core making one twice;
+ * `failure` is the kind of failure and never what was being written. Written only by `ExportJobs`.
+ */
+export const exportJobs = sqliteTable(
+  'export_jobs',
+  {
+    id: text('id').primaryKey(),
+    kind: text('kind').notNull(),
+    sub: text('sub'),
+    sessionId: text('session_id').notNull(),
+    state: text('state').notNull(),
+    archive: text('archive').notNull(),
+    file: text('file'),
+    size: integer('size'),
+    requestedAt: integer('requested_at').notNull(),
+    finishedAt: integer('finished_at'),
+    leaseUntil: integer('lease_until'),
+    failure: text('failure'),
+  },
+  (table) => [
+    index('export_jobs_state_idx').on(table.state),
+    index('export_jobs_sub_idx').on(table.sub),
+  ],
+);

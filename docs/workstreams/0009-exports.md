@@ -21,7 +21,7 @@ package. Nothing is sent anywhere and nothing runs on a schedule: those are mile
 - [x] `18.1` — The specifications
 - [x] `18.2` — The format and the package
 - [x] `18.3` — The operator's recipients
-- [ ] `18.4` — The operator's export in core
+- [x] `18.4` — The operator's export in core
 - [ ] `18.5` — A person's export in core
 - [ ] `18.6` — Apps' parts
 - [ ] `18.7` — The template's exports

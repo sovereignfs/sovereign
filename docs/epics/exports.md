@@ -109,7 +109,7 @@ specification and not an RFC.
 - A line that is not age X25519 recipients is refused with a message that says what is expected
 - `sv export open` refuses an archive whose manifest fails
 
-#### 📋 18.4 — The operator's export in core
+#### ✅ 18.4 — The operator's export in core
 
 **Goal:** The owner downloads core's data in one file that only their key opens.
 

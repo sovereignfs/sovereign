@@ -712,3 +712,26 @@ export const launcherShortcuts = pgTable(
   },
   (table) => [index('launcher_shortcuts_owner_idx').on(table.ownerId)],
 );
+
+/** Exports being made or waiting to be downloaded (core-app §4.7.3); see the SQLite schema. */
+export const exportJobs = pgTable(
+  'export_jobs',
+  {
+    id: text('id').primaryKey(),
+    kind: text('kind').notNull(),
+    sub: text('sub'),
+    sessionId: text('session_id').notNull(),
+    state: text('state').notNull(),
+    archive: text('archive').notNull(),
+    file: text('file'),
+    size: bigint('size', { mode: 'number' }),
+    requestedAt: bigint('requested_at', { mode: 'number' }).notNull(),
+    finishedAt: bigint('finished_at', { mode: 'number' }),
+    leaseUntil: bigint('lease_until', { mode: 'number' }),
+    failure: text('failure'),
+  },
+  (table) => [
+    index('export_jobs_state_idx').on(table.state),
+    index('export_jobs_sub_idx').on(table.sub),
+  ],
+);

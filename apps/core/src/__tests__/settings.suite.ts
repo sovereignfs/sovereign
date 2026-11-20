@@ -111,6 +111,7 @@ export function settingsSuite(createDatabase: () => Promise<TestDatabase>): void
         '0023_invite_emailed_at',
         '0024_logout_notices',
         '0025_lock',
+        '0026_export_jobs',
       ]);
     });
   });

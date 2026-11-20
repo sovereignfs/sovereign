@@ -131,6 +131,8 @@ The port is written once, in `sovereign.manifest.json`; everything else reads it
   public page, a kiosk), and `icon`/`launch` are refused.
 - **`backChannel` and `accountDeleted`**: have both. Without the first, signing out of core leaves the app signed in; without the
   second, what the app holds of a person outlives their account.
+- **`export`** (manifest 5): have it if the app holds anything of people. Core asks it for a person's part when they download their data
+  from core; without it, their download says the app's part is missing (§8).
 - **`database`**: `true` gives a PostgreSQL database and role. `{ "pooling": "transaction" }` only if every statement is safe on any
   pooled connection (no advisory lock, `SET`, `LISTEN`, temporary table or named prepared statement).
 - **`generate`**: secrets the server makes once and keeps. An app with sessions generates `<PREFIX>_AUTH_SECRET`; one that stores
@@ -257,6 +259,12 @@ its own") when hosting it:
 - Start-up waits for a database that is still starting (`<P>_DB_CONNECT_TIMEOUT_MS`), with retries.
 - **People's files are not in the database.** They are kept with `@sovereignfs/storage` in the app's own folder, `/data/s3/<name>`, when the
   manifest says `"storage": true`: a folder and a quota for each person, deleted with them. See [Keeping people's files](keeping-files.md).
+- **A person can take their data with them.** When someone downloads their data from core (core-app §4.7.2), core posts a signed
+  request to the app's `export` path, and the SDK's `handleExportRequest` (or `onExport` with the Next.js handlers) answers with an
+  export in the [one format](../contracts/export.md), written through `@sovereignfs/export`: the person's records under
+  `apps/<prefix>/records/` as JSON Lines and their files under `apps/<prefix>/files/`, nothing of anyone else, encrypted data as
+  stored. The app template does this for its notes and files. An app with no core offers its operator's export and each person's
+  export itself (sdk §9.5); the template does not have that form yet.
 
 ## 9. Secrets and encryption
 

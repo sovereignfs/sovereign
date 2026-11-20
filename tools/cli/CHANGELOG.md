@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.12.0; earlier versions are in the repository's
 history and tags.
 
+## [0.25.0] - 2026-11-20
+
+### Added
+
+- `npm create @sovereignfs app` makes a manifest 5 app that answers core's export request: a person's notes and files go into the data
+  they download from core. It depends on `@sovereignfs/sdk` 2.9 and `@sovereignfs/manifest` 0.4, and asks for core 0.121 or later.
+
 ## [0.24.0] - 2026-11-20
 
 ### Added

@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.127.0] - 2026-11-20
+
+### Added
+
+- A new app made with `npm create @sovereignfs app` answers core when a person downloads their data: their notes and files from the app
+  go into the download, encrypted notes still encrypted.
+
 ## [0.126.0] - 2026-11-20
 
 ### Added

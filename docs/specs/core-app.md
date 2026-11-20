@@ -1967,8 +1967,8 @@ people's files, through `@sovereignfs/storage`.
 
 ### 4.7 Exports
 
-Specified ([RFC 0008](../rfcs/0008-exports-and-backups.md), milestone 1; epic [18](../epics/exports.md)). The owner's export (§4.7.1) and
-the jobs (§4.7.3) are built; a person's export is not yet. An owner can
+Specified ([RFC 0008](../rfcs/0008-exports-and-backups.md), milestone 1; epic [18](../epics/exports.md)). The owner's export (§4.7.1), core's
+part of a person's export (§4.7.2) and the jobs (§4.7.3) are built; apps' parts are not yet. An owner can
 download core's data, and anyone can download their own, from core and from every app they use. An export is a copy to keep, in the
 format of [`contracts/export.md`](../../contracts/export.md); it is never imported, and it is not a backup: the instance's backup is
 `sv backup` (§4.4).
@@ -2006,7 +2006,7 @@ when a table or column is added that it has not decided.
 - **Where:** the identity page **Your data** (`/data`, §3.11), for the session's own account; nothing in a request names whose. It needs
   `profile:manage`. Taking one asks for the password again (`confirmPassword`, §3.2.1).
 - **Core's part** (`core/`): the person's account (address, name, picture, role, time zone, language, when made), the apps they have
-  allowed with the scopes and when, their notifications and notification preferences, their activity, their files, and their vault's
+  allowed with the scopes and when (and each app's name and address, `connected_apps`), their notifications and notification preferences, their activity, their files, and their vault's
   records. Nothing of another person.
 - **Apps' parts** (`apps/<prefix>/`): for each app the person has used, in §4.5's sense ("Who is told"), that has an **export address**
   (§3.7.1), core sends a `POST` to it with the form field `export_request_token`: a JWT typed `export-request+jwt`, signed with the key

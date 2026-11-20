@@ -1,4 +1,5 @@
 import { getFileStore } from '../files';
+import { removePersonData } from '../exports/service';
 import { getDatabase } from '../database';
 import { getAuth } from '../auth';
 import { revokeOnDeactivation } from '../oauth/logout';
@@ -63,7 +64,7 @@ export function getAccountManager(): Promise<AccountManager> {
             void sendDueDeletionNotices();
             return Promise.resolve();
           },
-          removeFiles: (sub) => getFileStore().removeAll(sub),
+          removeFiles: (sub) => removePersonData(sub, (who) => getFileStore().removeAll(who)),
           mfaReset: async (to) => {
             const emails = await getEmailService();
             await emails.send(to.email, { template: 'mfaReset', link: emails.link('/sign-in') });

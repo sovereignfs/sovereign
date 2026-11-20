@@ -13,6 +13,7 @@ const PAGES = [
   { label: 'Shortcuts', href: '/shortcuts' },
   { label: 'Connected apps', href: '/connected-apps' },
   { label: 'Activity', href: '/activity' },
+  { label: 'Your data', href: '/data' },
   { label: 'Delete account', href: '/delete-account' },
 ];
 

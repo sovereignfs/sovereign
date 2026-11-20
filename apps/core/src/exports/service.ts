@@ -36,6 +36,15 @@ async function context(): Promise<MakeContext> {
   };
 }
 
+/** Removes a person's files and their exports, once their account is deleted (core-app §4.6, §4.7.3). */
+export async function removePersonData(
+  sub: string,
+  removeFiles: (sub: string) => Promise<unknown>,
+): Promise<void> {
+  await removeFiles(sub);
+  await removeExportFiles(coreFilesRoot(), await (await getExportJobs()).forget(sub));
+}
+
 let running: Promise<void> | undefined;
 
 /** Makes what is due, one export after another, and forgets what is done with. Says nothing of what an export held. */

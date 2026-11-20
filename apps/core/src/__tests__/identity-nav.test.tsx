@@ -23,6 +23,7 @@ describe('the identity pages navigation', () => {
       '/shortcuts',
       '/connected-apps',
       '/activity',
+      '/data',
       '/delete-account',
     ]);
   });

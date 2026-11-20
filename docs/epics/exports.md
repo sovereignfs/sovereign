@@ -136,7 +136,7 @@ specification and not an RFC.
 - Refused without the capability, without the password, without recipients; the route calls `requireSameOrigin`
 - Works on sqld, PostgreSQL and SQLite (`pnpm test:db`)
 
-#### 📋 18.5 — A person's export in core
+#### ✅ 18.5 — A person's export in core
 
 **Goal:** Anyone downloads what core holds of them, from their account.
 

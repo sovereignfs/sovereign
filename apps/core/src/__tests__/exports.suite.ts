@@ -130,6 +130,68 @@ export function exportsSuite(createDatabase: () => Promise<TestDatabase>): void 
     });
   });
 
+  describe('a person’s export', () => {
+    it('holds them and their files, and nothing of anyone else or of their credentials', async () => {
+      await person('u1', 'ada@sovereign.local');
+      await person('u2', 'bob@sovereign.local');
+      const time = pg() ? new Date(clock) : clock;
+      await db.run(
+        "insert into accounts (id, account_id, provider_id, user_id, password, created_at, updated_at) values ('a1', 'u1', 'credential', 'u1', 'STORED-PASSWORD-HASH', ?, ?)",
+        [time, time],
+      );
+      for (const [id, user, title] of [
+        ['n1', 'u1', 'For Ada'],
+        ['n2', 'u2', 'For Bob'],
+      ]) {
+        await db.run(
+          "insert into notifications (id, user_id, client_id, title, category, created_at, expires_at) values (?, ?, 'app', ?, 'info', ?, ?)",
+          [id, user, title, clock, clock + 1000],
+        );
+      }
+      await mkdir(path.join(root, 'u1'), { recursive: true });
+      await mkdir(path.join(root, 'u2'), { recursive: true });
+      await writeFile(path.join(root, 'u1', 'f1'), 'ada’s file');
+      await writeFile(path.join(root, 'u2', 'f2'), 'bob’s file');
+      await jobs().request({ kind: 'person', sub: 'u1', sessionId: 's1', archive: 'tar' });
+      const job = await jobs().claim();
+      if (!job) throw new Error('no job');
+      const made = await makeExport(job, {
+        database: db,
+        storageRoot: root,
+        instance: { id: 'i1', url: 'https://sovereign.example.org' },
+        coreVersion: '0.79.0',
+        recipients: async () => [],
+        now: () => clock,
+      });
+      const files = new Map<string, string>();
+      const read = await readExport(
+        Readable.toWeb(
+          createReadStream(path.join(exportsFolder(root), made.file)),
+        ) as ReadableStream<Uint8Array>,
+        {
+          onFile: async ({ path: inside, body }) => {
+            const parts: Buffer[] = [];
+            for await (const chunk of body) parts.push(Buffer.from(chunk));
+            files.set(inside, Buffer.concat(parts).toString('utf8'));
+          },
+        },
+      );
+      expect(read.head).toMatchObject({ kind: 'person', sub: 'u1' });
+      expect(files.get('core/files/f1')).toBe('ada’s file');
+      expect(files.get('core/records/users.jsonl')).toContain('ada@sovereign.local');
+      expect(files.get('core/records/notifications.jsonl')).toContain('For Ada');
+      expect(files.has('core/records/connected_apps.jsonl')).toBe(true);
+      const everything = [...files.values()].join('\n');
+      for (const other of ['bob@sovereign.local', 'For Bob', 'bob’s file', 'STORED-PASSWORD-HASH'])
+        expect(everything).not.toContain(other);
+      expect(
+        [...files.keys()].some(
+          (name) => name.includes('instance_settings') || name.includes('invites'),
+        ),
+      ).toBe(false);
+    });
+  });
+
   describe('the owner’s export', () => {
     it('opens with the owner’s key alone, holds core’s records and files, and no credential', async () => {
       await person('u1', 'ada@sovereign.local');

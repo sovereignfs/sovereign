@@ -5,6 +5,16 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.12.0; earlier versions are in the repository's
 history and tags.
 
+## [0.21.0] - 2026-11-20
+
+### Changed
+
+- An app made by `npm create @sovereignfs app` signs people in with `@sovereignfs/auth`: with accounts of its own, through the instance's
+  core, or both, chosen by `<PREFIX>_AUTH_LOCAL` and `<PREFIX>_CORE_URL`, so it runs with no instance at all. It has its own sign-in,
+  sign-up and security pages; hosted by an instance, it sends people straight on to core, as before. Its sign-in routes move under
+  `/api/auth` and core's notices under `/api/sovereign`, and its manifest says so. An app made with `--encryption` signs in through
+  core with the SDK, as before.
+
 ## [0.20.0] - 2026-11-19
 
 ### Changed

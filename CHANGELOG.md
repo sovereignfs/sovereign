@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.120.0] - 2026-11-20
+
+### Changed
+
+- The panels for the second sign-in step and a person's profile come from the design system, which apps share; nothing a person sees
+  changes.
+
 ## [0.119.0] - 2026-11-19
 
 ### Changed

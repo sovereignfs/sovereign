@@ -22,10 +22,11 @@ starts this way from the template, and the SDK's own sign-in is deprecated.
 
 - [x] RFC 0007 accepted and `docs/specs/auth.md` written (17.1)
 - [x] Core's sign-in made from the package (17.2, 17.3, 2.6, 17.4); two looks changed to the design system's, recorded in 2.6
-- [ ] The account panels that remain (2.7)
+- [x] The account panels that remain (2.7)
 - [ ] Signing out and `amr` at core (6.5, 6.6)
-- [ ] The SDK signs in for a session the app keeps (14.16)
-- [ ] A fixture app signs in through core, locally, and both; the template makes such an app (17.5, 13.35)
+- [x] The SDK signs in for a session the app keeps (14.16)
+- [x] A fixture app signs in through core, locally, and both; the template makes such an app (17.5, 13.35); PostgreSQL only, the other two
+      database forms are 13.36, after the workstream
 - [ ] A typed `user`, and `nextAuth` deprecated (14.15)
 - [ ] `@sovereignfs/auth` published; workstream status ✅; epic 17 ✅
 
@@ -160,3 +161,4 @@ Leg 1's spec and leg 4's sign-out setting and `amr` stand on their own.
 | 0.5     | 2026-11-19 | Leg 3 done: the sign-in forms and two account panels are the design system's (2.6), their flows the package's (17.4), platform 0.118.0. Changed for people, to the design system's way: the card's padding breakpoint (768px, not 400px) and code boxes that select on focus. The passkey, second-step setup and profile panels and the account menu moved to a new task, 2.7, in leg 4. Server actions stay the app's (auth.md §7.1). |
 | 0.6     | 2026-11-19 | Leg 4 done: signing out follows whose app it is (6.5), platform 0.119.0, toolkit 0.20.0. 6.6 parked: better-auth's provider owns `amr` and `acr`; only its discovery fix is built. 2.7 moves to leg 5, ahead of the template that needs it.                                                                                                                                                                                            |
 | 0.7     | 2026-11-20 | Leg 5 under way: 2.7, 14.16 and 17.5 built. Making `@sovereignfs/auth` publishable moves ahead of 13.35, from leg 6, since an app made from the template must be able to install it.                                                                                                                                                                                                                                                   |
+| 0.8     | 2026-11-20 | Leg 5 done: the template signs in with the package (13.35), PostgreSQL only; sqld and SQLite are 13.36, outside the workstream. An app made with `--encryption` keeps `nextAuth`. Platform 0.120.0, core 0.80.1, toolkit 0.21.0.                                                                                                                                                                                                       |

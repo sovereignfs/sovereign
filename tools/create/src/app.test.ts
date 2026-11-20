@@ -252,6 +252,35 @@ describe('the files of an app', () => {
     expect(read(target, 'CONTRIBUTING.md')).toContain('## Continuous integration');
   });
 
+  it('tell an agent the suite’s conventions in the shared section of AGENTS.md, with this app’s commands', async () => {
+    const target = path.join(temp(), 'my-notes');
+    await writeApp(target, namesOf(target));
+    const agents = read(target, 'AGENTS.md');
+    const shared = agents.slice(
+      agents.indexOf('<!-- sovereign:shared:begin -->'),
+      agents.indexOf('<!-- sovereign:shared:end -->'),
+    );
+    for (const rule of [
+      'Two branches',
+      'Commits explain why',
+      'The version follows the change, by semver',
+      'One task, one branch, one pull request',
+      '`pnpm install`, `pnpm run dev`',
+      'No secret has a default',
+      'Every server action and route decides for itself',
+      'names the owner',
+      '@sovereignfs/storage',
+      'constant time',
+      'Every outbound `fetch` has a timeout',
+      'never `NEXT_PUBLIC_*`',
+      '`--sv-*` tokens',
+      'node_modules/next/dist/docs/',
+      '`MYNOTES_`',
+    ])
+      expect(shared, rule).toContain(rule);
+    expect(read(target, 'CLAUDE.md')).toContain('@AGENTS.md');
+  });
+
   it('name the package in the @sovereignfs scope, private, so it claims nothing on npm', async () => {
     const target = path.join(temp(), 'my-notes');
     await writeApp(target, namesOf(target));

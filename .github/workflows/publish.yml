@@ -8,6 +8,7 @@ name: Publish
 #   config-vX.Y.Z  -> @sovereignfs/config
 #   storage-vX.Y.Z -> @sovereignfs/storage
 #   export-vX.Y.Z  -> @sovereignfs/export
+#   push-vX.Y.Z    -> @sovereignfs/push
 #   pwa-vX.Y.Z     -> @sovereignfs/pwa
 #   auth-vX.Y.Z    -> @sovereignfs/auth
 # Every other package is private and never published (@sovereignfs/bridge is private for now;
@@ -30,6 +31,7 @@ on:
       - 'config-v*.*.*'
       - 'storage-v*.*.*'
       - 'export-v*.*.*'
+      - 'push-v*.*.*'
       - 'pwa-v*.*.*'
       - 'auth-v*.*.*'
   workflow_call:
@@ -116,6 +118,7 @@ jobs:
             config-v*) dir=config; prefix=config-v ;;
             storage-v*) dir=storage; prefix=storage-v ;;
             export-v*) dir=export; prefix=export-v ;;
+            push-v*) dir=push; prefix=push-v ;;
             pwa-v*) dir=pwa; prefix=pwa-v ;;
             auth-v*) dir=auth; prefix=auth-v ;;
             *) echo "The tag $TAG is not a package release tag." >&2; exit 1 ;;

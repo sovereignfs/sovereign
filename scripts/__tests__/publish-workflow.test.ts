@@ -32,6 +32,7 @@ describe('the publish workflow', () => {
       'config',
       'export',
       'manifest',
+      'push',
       'pwa',
       'sdk',
       'storage',

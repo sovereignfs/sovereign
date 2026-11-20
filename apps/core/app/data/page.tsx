@@ -34,6 +34,7 @@ export default async function DataPage() {
           view={view}
           address={session.user.email}
           kind="person"
+          timeZone={session.user.timezone}
           action={startPersonExportAction}
           confirmTitle="Download your data?"
           confirmMessage="Your data is gathered from this instance and the apps you use, which can take a few minutes. It is ready to download once, within the hour, from this browser."

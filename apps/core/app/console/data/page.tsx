@@ -49,6 +49,7 @@ export default async function DataPage() {
           view={view}
           address={session.user.email}
           kind="instance"
+          timeZone={session.user.timezone}
           action={startInstanceExportAction}
           {...(recipients.length === 0
             ? { disabledReason: 'Save a key above before taking an export.' }

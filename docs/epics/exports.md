@@ -227,6 +227,8 @@ need the template of an app of its own, which does not exist yet ([research 0004
   export (`kind: "app"`), encrypted as written; Account > Data with a person's own part, not encrypted; jobs and single downloads as
   core's (core-app §4.7.3)
 - the template's tests for both
+- built from the shared pieces, as core is: `ExportJobs`, `ExportRunner`, `downloadExport` and `viewOf` from `@sovereignfs/export`
+  (export 0.3.0), and `ExportPanel` from `@sovereignfs/ui` (0.103.0); the app adds its sign-in, its password check and its storage
 
 **Dependencies:** 18.7, and the template of an app of its own (research 0004, step 5)
 

@@ -422,7 +422,9 @@ secret)` are the kit, as core's pages do it; `prepareChange` and `finishChange` 
   Its **operator** is the first account made in it. On its **Data** page, the operator saves the age recipients its export is encrypted
   to, and takes the app's export (`kind: "app"`), encrypted as it is written, after their password again; anyone else gets a page that is
   not there. On a person's **Your data** page, each person takes their own (`kind: "person"`), not encrypted. Both run and are downloaded
-  once as core's do (core-app §4.7.3), under the app's own data path. The template has both pages.
+  once as core's do (core-app §4.7.3), under the app's own data path, with the same shared pieces core uses:
+  `ExportJobs` on the app's own database (its table from `exportJobsMigrations`), `ExportRunner`, `downloadExport` and `viewOf` from
+  `@sovereignfs/export`, and `ExportPanel` from `@sovereignfs/ui`.
 - **Not here:** sharing with another person needs their public keys, which only core serves (§9.4); an app with no core shares
   nothing yet.
 

@@ -10,7 +10,7 @@ const manifest = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8'
 };
 
 describe('the package’s entries', () => {
-  it.each(['./server', './next', './core'])(
+  it.each(['./server', './next', './core', './postgres'])(
     '%s resolves to a file that throws in a browser',
     (entry) => {
       expect(manifest.exports[entry]?.browser).toBe('./dist/browser.js');

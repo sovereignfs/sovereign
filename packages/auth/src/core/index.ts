@@ -125,7 +125,9 @@ export function sovereignSignIn({
             const returnTo = safeReturnTo(text((error as { returnTo?: unknown }).returnTo));
             // The person is signed out at core: the session that came from it ends here too (sdk §9.7).
             if (reason === 'login_required') {
-              if (current) {
+              // Only a session that came from core ends: the start route is a link anyone could make, and a local account's session
+              // is not core's to end.
+              if (current && (await readSignIn(database, current.session.id))) {
                 await ctx.context.internalAdapter.deleteSession(current.session.token);
                 deleteSessionCookie(ctx);
               }

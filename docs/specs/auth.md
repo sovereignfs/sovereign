@@ -38,13 +38,14 @@ an app                          + its own data and pages
 
 ## 2. Entries
 
-| Entry      | Where it runs | What it holds                                                                                                                                                                                                    |
-| ---------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.`        | Anywhere      | What imports nothing and runs on a server, in a browser or on the Edge: the cookie names (rule 10), the password policy, the time zone and language checks, `safeReturnTo`                                       |
-| `./server` | Server        | `createAuthPreset(options)` (§4); the settings resolver (§5); the session read (§6); the checks of rules 3, 6 and 7; a person's sessions; the account tables' schema for each dialect and their migrations (§10) |
-| `./next`   | Server        | The page guards (§6)                                                                                                                                                                                             |
-| `./client` | Browser       | The browser client's plugins and fields; the sign-in value (`signInDerivation`, `saltReader`); the flows of §7.1 and their messages; the passkey sign-in with the key store's PRF hooks                          |
-| `./core`   | Server        | Core as a way in for an app (§8)                                                                                                                                                                                 |
+| Entry        | Where it runs | What it holds                                                                                                                                                                                                    |
+| ------------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.`          | Anywhere      | What imports nothing and runs on a server, in a browser or on the Edge: the cookie names (rule 10), the password policy, the time zone and language checks, `safeReturnTo`                                       |
+| `./server`   | Server        | `createAuthPreset(options)` (§4); the settings resolver (§5); the session read (§6); the checks of rules 3, 6 and 7; a person's sessions; the account tables' schema for each dialect and their migrations (§10) |
+| `./next`     | Server        | The page guards (§6)                                                                                                                                                                                             |
+| `./client`   | Browser       | The browser client's plugins and fields; the sign-in value (`signInDerivation`, `saltReader`); the flows of §7.1 and their messages; the passkey sign-in with the key store's PRF hooks                          |
+| `./core`     | Server        | Core as a way in for an app (§8)                                                                                                                                                                                 |
+| `./postgres` | Server        | `postgresDatabase(pool)`: an app's own PostgreSQL pool as the database of §3, the database package's own code; only this entry loads `pg`                                                                        |
 
 A browser that imports `./server`, `./next` or `./core` MUST fail at once, as the SDK's server entry does.
 

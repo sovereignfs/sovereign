@@ -26,6 +26,13 @@ import {
 // Core as a way in for an app (auth.md §8), end to end in one process: a better-auth of the app's on the package's tables, the SDK
 // against its fake core, and the plugin between them. Each test has its own SQLite file.
 const APP = 'https://notes.sovereign.local';
+const SECRET = 'a-secret-of-at-least-thirty-two-characters';
+
+/** A session token signed as better-auth signs its cookie. */
+async function signed(token: string): Promise<string> {
+  const { makeSignature } = await import('better-auth/crypto');
+  return encodeURIComponent(`${token}.${await makeSignature(token, SECRET)}`);
+}
 const opened: { db: Database; folder: string }[] = [];
 
 afterEach(async () => {
@@ -75,7 +82,7 @@ async function world(options: { localAccounts?: boolean } = {}) {
   const settings = resolveAuthSettings(
     {
       url: APP,
-      authSecret: { reveal: () => 'a-secret-of-at-least-thirty-two-characters' },
+      authSecret: { reveal: () => SECRET },
       authTrustedOrigins: [],
       authTrustedProxies: [],
       authCookieDomain: undefined,
@@ -191,6 +198,21 @@ describe('signing in through core (auth.md §8)', () => {
     const done = await get(back, `${cookie}; ${cookiesOf(start)}`);
     expect(done.headers.get('location')).toBe('/sign-in?returnTo=%2Fnotes');
     expect(await sessionOf(cookie)).toBeNull();
+  });
+
+  it('leaves a session that did not come from core alone, whatever core says', async () => {
+    const { sessionOf, get, core, auth, db } = await world();
+    await db.run(
+      "insert into users (id, name, email, email_verified, two_factor_enabled, created_at, updated_at) values ('local', 'Bea', 'bea@example.com', 1, 0, 0, 0)",
+    );
+    const ctx = await auth.$context;
+    const session = await ctx.internalAdapter.createSession('local');
+    const cookie = `${ctx.authCookies.sessionToken.name}=${await signed(session.token)}`;
+    expect(await sessionOf(cookie)).not.toBeNull();
+    const start = await get('/api/auth/sign-in/sovereign?prompt=none', cookie);
+    const back = core.loginRequired(start.headers.get('location') as string);
+    await get(back, `${cookie}; ${cookiesOf(start)}`);
+    expect(await sessionOf(cookie)).not.toBeNull();
   });
 
   it('says when a session is due a check against core, and where signing out sends the person', async () => {

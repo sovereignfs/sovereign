@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.128.0 · **Last updated:** 2026-11-20
+**Version:** 0.129.0 · **Last updated:** 2026-11-20
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -366,13 +366,13 @@ Backups sent to a destination on a schedule are milestone 2 of the RFC, tasks 13
 
 ### M19 — Every app sends Web Push the same way
 
-[Research 0013](docs/research/0013-web-push.md) · [RFC 0009](docs/rfcs/0009-web-push.md) (Proposed) · epic [19](docs/epics/push.md) ·
+[Research 0013](docs/research/0013-web-push.md) · [RFC 0009](docs/rfcs/0009-web-push.md) (Partially implemented) · epic [19](docs/epics/push.md) ·
 workstream [0010](docs/workstreams/0010-web-push.md)
 
 | Version | Priority | Task                                                           | Status | Epic task                  |
 | ------- | -------- | -------------------------------------------------------------- | ------ | -------------------------- |
-| —       | 1        | `@sovereignfs/push`: keys, encryption and sending              | 📋     | [19.1](docs/epics/push.md) |
-| —       | 2        | `@sovereignfs/push`: the store, the outbox and the route       | 📋     | [19.2](docs/epics/push.md) |
+| 0.129.0 | 1        | `@sovereignfs/push`: keys, encryption and sending              | ✅     | [19.1](docs/epics/push.md) |
+| 0.129.0 | 2        | `@sovereignfs/push`: the store, the outbox and the route       | ✅     | [19.2](docs/epics/push.md) |
 | —       | 3        | The worker shows a push, and the page turns it on `[parallel]` | 📋     | [19.3](docs/epics/push.md) |
 | —       | 4        | `PushControl` `[parallel]`                                     | 📋     | [19.4](docs/epics/push.md) |
 | —       | 5        | The app template sends notifications                           | 📋     | [19.5](docs/epics/push.md) |

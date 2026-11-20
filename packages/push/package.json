@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/push",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Web Push for a Sovereign app's server: its key, encryption and signing with no dependency, a store the app gives, an outbox and the subscription route.",
   "license": "MPL-2.0",
   "repository": {
@@ -27,6 +27,10 @@
       "types": "./dist/index.d.ts",
       "browser": "./dist/browser.js",
       "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "default": "./dist/testing/index.js"
     }
   },
   "files": [

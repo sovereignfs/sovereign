@@ -5,6 +5,23 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.12.0; earlier versions are in the repository's
 history and tags.
 
+## [0.26.0] - 2026-11-20
+
+### Added
+
+- `npm create @sovereignfs app --package-manager pnpm|npm|yarn` chooses the app's package manager, pnpm by default (Yarn 4, with
+  `node_modules`). The app's `packageManager` field, lockfile, Dockerfile, pre-push hook, workflows, README and AGENTS.md use its
+  commands. An app without the field is taken as npm, so an existing app is unchanged by `app sync`.
+- `npm create @sovereignfs instance` writes `AGENTS.md` and `CLAUDE.md`, a guide for an AI agent an operator hands the instance to: what
+  each file is, how a change is made, and what an agent may do alone, only when asked, and never. `sv push` commits both.
+
+### Changed
+
+- `npm create @sovereignfs app sync` keeps the `Dockerfile`, `.dockerignore` and `compose.yml` the same in every app; an app that needs
+  its own lists the file under `sovereign.unmanaged`.
+- The shared section of an app's `AGENTS.md` covers versions, one task per branch, naming, secrets, people's data, timeouts,
+  migrations, configuration at run time and the design system.
+
 ## [0.25.0] - 2026-11-20
 
 ### Added

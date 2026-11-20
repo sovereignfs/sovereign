@@ -1,4 +1,3 @@
-import { sqliteTimestampMs } from '@sovereignfs/database';
 import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 /**
@@ -82,7 +81,8 @@ export const rateLimits = sqliteTable('rate_limits', {
   id: text('id').primaryKey(),
   key: text('key').notNull().unique(),
   count: integer('count').notNull(),
-  lastRequest: sqliteTimestampMs('last_request').notNull(),
+  // A plain millisecond number, as `@sovereignfs/database`'s `sqliteTimestampMs` makes it.
+  lastRequest: integer('last_request').notNull(),
 });
 
 /**

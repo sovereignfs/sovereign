@@ -1,9 +1,17 @@
 {
   "name": "@sovereignfs/auth",
-  "version": "0.2.0",
-  "private": true,
+  "version": "0.3.0",
   "description": "How core and every Sovereign app sign people in: core's own sign-in, the part of it that is not about core.",
   "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sovereignfs/sovereign.git",
+    "directory": "packages/auth"
+  },
+  "homepage": "https://github.com/sovereignfs/sovereign/tree/main/packages/auth#readme",
+  "bugs": {
+    "url": "https://github.com/sovereignfs/sovereign/issues"
+  },
   "type": "module",
   "sideEffects": [
     "./dist/browser.js"
@@ -42,18 +50,20 @@
     "README.md",
     "CHANGELOG.md"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsup",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@better-auth/passkey": "1.7.18",
-    "@sovereignfs/config": "workspace:*",
-    "@sovereignfs/crypto": "workspace:*",
-    "@sovereignfs/database": "workspace:*",
-    "@sovereignfs/sdk": "workspace:*",
+    "@sovereignfs/config": "workspace:^",
+    "@sovereignfs/sdk": "workspace:^",
     "better-auth": "1.7.18",
     "drizzle-orm": "catalog:",
+    "libsodium-wrappers-sumo": "catalog:",
     "zod": "^4.6.7"
   },
   "peerDependencies": {
@@ -61,6 +71,8 @@
     "react": "catalog:"
   },
   "devDependencies": {
+    "@sovereignfs/crypto": "workspace:*",
+    "@sovereignfs/database": "workspace:*",
     "@sovereignfs/tsconfig": "workspace:*",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
@@ -69,6 +81,7 @@
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "tsup": "catalog:",
     "typescript": "catalog:"
   }
 }

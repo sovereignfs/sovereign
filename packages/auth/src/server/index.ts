@@ -53,3 +53,4 @@ export {
 export { ACCOUNT_MIGRATIONS_TABLE, accountMigrations, accountTables } from './migrations.js';
 export * as postgresAccountSchema from './schema/postgres.js';
 export * as sqliteAccountSchema from './schema/sqlite.js';
+export type { Database, Migration } from '@sovereignfs/database';

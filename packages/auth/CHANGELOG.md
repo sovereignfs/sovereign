@@ -4,6 +4,17 @@ What changed in each version of the sign-in core and every Sovereign app share, 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/). A version's section is
 written in the change that sets the version, dated that day, and becomes the release notes when the version is published.
 
+## [0.3.0] - 2026-11-20
+
+### Added
+
+- `@sovereignfs/auth/core`: core as a way in for an app, a better-auth plugin built on the SDK's sign-in, with core's refresh token kept
+  by the SDK alone, core's notices verified and remembered, and the plugin's own tables (`coreSignInMigrations`).
+- The preset's `localAccounts` switch, the registration's `arrival` (an account from core, or a sign-up of the app's own), and the
+  refusal of the password, second-step and passkey routes to an account that has no password.
+- The flows behind the second step's setup (`twoFactorSettings`) and the profile (`saveName`).
+- Published: the private packages it is built from are bundled in.
+
 ## [0.2.0] - 2026-11-19
 
 ### Added

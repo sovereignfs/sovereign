@@ -3,6 +3,8 @@ import { files } from '@/lib/files';
 import { keySettings } from '@/lib/keys';
 import { deleteFile } from './actions';
 import { Notes } from './notes';
+import { Notifications } from './notifications';
+import { SignOutForm } from './sign-out';
 import { Button, Card, PageHeader } from './ui';
 import { Upload } from './upload';
 
@@ -60,12 +62,15 @@ export default async function Home() {
           </li>
         ))}
       </ul>
+      <Card>
+        <Notifications />
+      </Card>
       {/* Signing out ends the session, and with it the secret this browser's kept key needs: it opens nothing afterwards. */}
-      <form action="/auth/logout" method="post">
+      <SignOutForm>
         <Button type="submit" variant="secondary">
           Sign out
         </Button>
-      </form>
+      </SignOutForm>
     </main>
   );
 }

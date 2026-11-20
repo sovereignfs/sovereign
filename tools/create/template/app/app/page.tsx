@@ -1,7 +1,9 @@
 import { requireSignedIn, userOfSession } from '@/lib/session';
 import { db } from '@/lib/db';
 import { files } from '@/lib/files';
-import { addNote, deleteFile, deleteNote, signOut } from './actions';
+import { addNote, deleteFile, deleteNote } from './actions';
+import { Notifications } from './notifications';
+import { SignOutForm } from './sign-out';
 import { Button, ButtonLink, Card, Input, PageHeader } from './ui';
 import { Upload } from './upload';
 
@@ -86,14 +88,17 @@ export default async function Home() {
           </li>
         ))}
       </ul>
-      <form action={signOut}>
+      <Card>
+        <Notifications />
+      </Card>
+      <SignOutForm>
         <ButtonLink href="/security" variant="secondary">
           Security
         </ButtonLink>{' '}
         <Button type="submit" variant="secondary">
           Sign out
         </Button>
-      </form>
+      </SignOutForm>
     </main>
   );
 }

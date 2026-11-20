@@ -5,6 +5,16 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.131.0] - 2026-11-20
+
+### Added
+
+- An app made by `npm create @sovereignfs app` (toolkit 0.27.0) sends notifications, with and without `--encryption`
+  ([RFC 0009](docs/rfcs/0009-web-push.md) §4): its key is in the manifest's `generate`, devices and waiting pushes are in its database
+  with their keys sealed, a push is queued in the change's own transaction and sent from an outbox, `PushControl` is on its home page
+  with "Send me a test notification", and signing out turns the device off first. `docs/building-an-app.md` has "Sending
+  notifications".
+
 ## [0.130.0] - 2026-11-20
 
 ### Added

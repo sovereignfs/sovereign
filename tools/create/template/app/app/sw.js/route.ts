@@ -1,10 +1,12 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { serviceWorkerResponse, serviceWorkerSource } from '@sovereignfs/pwa';
+import { appPush } from '@/lib/push';
 
 /**
  * The service worker, served from the root so it controls the whole app (`@sovereignfs/pwa`). It keeps only what is the same for
- * everyone, never a page of a person. Its version is the build's, so a new build is a new worker, announced to an open page.
+ * everyone, never a page of a person. Its version is the build's, so a new build is a new worker, announced to an open page. When the
+ * app has a push key, it also shows notifications, and opening one goes to a page of this app.
  */
 export const dynamic = 'force-dynamic';
 
@@ -36,5 +38,11 @@ function builtFiles(): string[] {
 }
 
 export function GET() {
-  return serviceWorkerResponse(serviceWorkerSource({ version: buildId(), precache: builtFiles() }));
+  return serviceWorkerResponse(
+    serviceWorkerSource({
+      version: buildId(),
+      precache: builtFiles(),
+      ...(appPush() ? { push: { name: '__TITLE__', icon: '/pwa-icon/192' } } : {}),
+    }),
+  );
 }

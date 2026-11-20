@@ -59,17 +59,18 @@ through core. No app imports another, and core names no app.
 
 ### What Sovereign publishes
 
-| Published                                            | For                                                                                                                                        |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `ghcr.io/sovereignfs/sovereign`                      | Core's image. Its tag is the **platform version** (`0.83.0`), which is what a manifest's `core` range means                                |
-| `@sovereignfs/ui`                                    | The design system: tokens and React components. Pre-1.0: apps pin it exactly                                                               |
-| `@sovereignfs/sdk`                                   | An app's **server** calling core: sign-in, verifying core's notices, notifications, email, activity, directory. Throws in a browser        |
-| `@sovereignfs/config`                                | The environment convention of `contracts/env.md`: settings declared once, read with a prefix, refused at start-up                          |
-| `@sovereignfs/storage`                               | People's files: a folder and a quota for each person, served only to them, with `Range` ([keeping files](keeping-files.md))                |
-| `@sovereignfs/pwa`                                   | Installing the app: its manifest, a service worker that keeps nothing of a person, an announced update ([installing](#installing-the-app)) |
-| `@sovereignfs/manifest`                              | The manifest's schemas, a validator, and `sovereign-manifest` (`check`, `label`, `docker-args`)                                            |
-| `@sovereignfs/cli` (`sv`), `ghcr.io/sovereignfs/cli` | The operator's toolkit, and the image the server runs it from                                                                              |
-| `@sovereignfs/create`                                | `npm create @sovereignfs` (an instance repository) and `npm create @sovereignfs app <name>` (an app, §11)                                  |
+| Published                                            | For                                                                                                                                                         |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ghcr.io/sovereignfs/sovereign`                      | Core's image. Its tag is the **platform version** (`0.83.0`), which is what a manifest's `core` range means                                                 |
+| `@sovereignfs/ui`                                    | The design system: tokens and React components. Pre-1.0: apps pin it exactly                                                                                |
+| `@sovereignfs/sdk`                                   | An app's **server** calling core: sign-in, verifying core's notices, notifications, email, activity, directory. Throws in a browser                         |
+| `@sovereignfs/config`                                | The environment convention of `contracts/env.md`: settings declared once, read with a prefix, refused at start-up                                           |
+| `@sovereignfs/storage`                               | People's files: a folder and a quota for each person, served only to them, with `Range` ([keeping files](keeping-files.md))                                 |
+| `@sovereignfs/push`                                  | Notifications on a device where the app is not open (Web Push): the key, a store, an outbox and the route ([sending notifications](#sending-notifications)) |
+| `@sovereignfs/pwa`                                   | Installing the app: its manifest, a service worker that keeps nothing of a person, an announced update ([installing](#installing-the-app))                  |
+| `@sovereignfs/manifest`                              | The manifest's schemas, a validator, and `sovereign-manifest` (`check`, `label`, `docker-args`)                                                             |
+| `@sovereignfs/cli` (`sv`), `ghcr.io/sovereignfs/cli` | The operator's toolkit, and the image the server runs it from                                                                                               |
+| `@sovereignfs/create`                                | `npm create @sovereignfs` (an instance repository) and `npm create @sovereignfs app <name>` (an app, §11)                                                   |
 
 `@sovereignfs/database`, `crypto`, `mailer`, `bridge` and `api-client` are **private**: core uses them, apps cannot. Each app
 carries its own database, encryption and mail code today ([research 0004](research/0004-a-kit-for-apps-of-their-own.md) plans to
@@ -343,6 +344,29 @@ app made with `npm create @sovereignfs app` has all of it already:
   (`worker-src 'self'`, `manifest-src 'self'`), and core's origin in `form-action`, since signing out goes on to core.
 - On iPhone and iPad, and in macOS Safari, an installed core cannot open your installed app: it opens a browser view. On desktop Chrome
   and Edge it can, and on Android Chrome it is expected to (research 0010).
+
+### Sending notifications
+
+An app tells a person something on a phone or a computer where it is not open with Web Push, the same way in every app
+([RFC 0009](rfcs/0009-web-push.md)): `@sovereignfs/push` on the server, the worker's and the page's side in `@sovereignfs/pwa`, and the
+switch, `PushControl`, in `@sovereignfs/ui`. An app made with `npm create @sovereignfs app` has all of it, and sends notifications as
+soon as its key exists:
+
+- **The key** is `<PREFIX>_VAPID_PRIVATE_KEY`, one variable: the public key is derived from it. A hosted app lists
+  `{ "name": "<PREFIX>_VAPID_PRIVATE_KEY", "bytes": 32 }` in its manifest's `generate`, and the instance makes it once; running it
+  yourself, `npx @sovereignfs/push keys` makes one. `<PREFIX>_VAPID_SUBJECT` (`mailto:` or `https:`) is whom push services may contact,
+  and defaults to the app's `https` address; `localhost` is refused at start-up, as Apple's service refuses it. With no key, the app
+  sends nothing and the control shows nothing. **Changing the key ends every device's subscription.**
+- **Devices and waiting pushes are in the app's database** (`lib/push.ts`, `migrations/002_push.sql`), through the `PushStore` the
+  package asks for; a device's keys are sealed (`lib/crypto.ts`). The store passes the package's conformance suite.
+- **A push is queued in the transaction of the change that raised it**, with `enqueuePush(pushStore(client), { account, message, now })`,
+  so a change rolled back sends nothing, and sent by the outbox, which `instrumentation.ts` starts every fifteen seconds. A message is
+  `{ title, body?, path?, tag?, kind?, data? }`; `path` is a page of the app, never another site. An app that keeps what it is told
+  encrypted puts nothing of it in a push: "A card is due", or a `kind` its worker resolves on the device (`push.handlers`).
+- **The route** `app/api/push/subscription` is `pushSubscriptionHandlers`, for the signed-in account and from the app's own origin;
+  the page uses it through `usePush`, and `PushControl` says what the device can do (on an iPhone, add the app to the Home Screen
+  first). **Signing out turns the device off first** (`turnOffPush`), and deleting an account forgets its devices.
+- The template's "Send me a test notification" shows the whole path; replace it with the notifications your app sends.
 
 ## 11. Repository and image
 

@@ -150,7 +150,7 @@ the device's states, so `PushControl` renders nothing in both and the server's m
 app and the device; its description is the sentence beside it, and a failure is added to the description and announced (`role=alert`).
 Seen in Storybook in both themes and at phone width.
 
-#### 📋 19.5 — The app template sends notifications
+#### ✅ 19.5 — The app template sends notifications
 
 **Goal:** An app made by `npm create @sovereignfs` has push as soon as its key exists, and shows the whole path working.
 
@@ -174,6 +174,18 @@ Seen in Storybook in both themes and at phone width.
 - With and without `--encryption`
 
 **Not here:** devices other than a desktop browser (19.6).
+
+**Done:** checked on apps generated from the template in both variants, with every Sovereign package from local tarballs (`auth`,
+`sdk` 2.11, `manifest` 0.4, `push`, `pwa` 0.2 and `ui` 0.104 are not on npm yet): both typecheck and build. The plain one, run on
+PostgreSQL with a key, in Google Chrome on macOS (a fresh profile driven by Playwright; headless Chrome refuses push registration, and
+so does Chrome with Playwright's default `--disable-background-networking`): the switch turned on, the subscription was at
+`fcm.googleapis.com`, "Send me a test notification" was sent through Google's push service and shown by the worker with its path, and
+turning off unsubscribed the browser. With no key the route answered `available: false`, the control showed nothing and the worker had
+no push handlers. The template's store passes the conformance suite on PostgreSQL (`tools/create/src/push-store.db.test.ts`), and a
+push queued in a rolled-back transaction is never sent (seen to fail when the transaction commits). Clicking the notification was
+not driven in Chrome; the worker's tests evaluate it. Sealing takes a purpose now (`lib/crypto.ts`), the refresh token keeping its
+key. The claim is guarded twice (`FOR UPDATE SKIP LOCKED` and the outer re-check), since the concurrent-claim case passed on
+PostgreSQL even without the lock.
 
 #### 📋 19.6 — Push seen on devices
 

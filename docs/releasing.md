@@ -133,6 +133,11 @@ package's `bin`, and `packages:check` holds it to a tool's rules (in `dist/`, in
 published, and are its dependencies. better-auth and its passkey plugin are pinned to one exact version (auth.md §11), and the browser
 entries reach nothing of the server's (a test, and the built files' imports).
 
+- **It is a dependency of the app template,** with the SDK release it is built on and the `@sovereignfs/ui` release whose forms the
+  template's pages use (`tools/create/src/versions.ts`, held by a test to each package's version). As with the manifest package,
+  **release them before a toolkit release that makes new apps**: the first toolkit to make an app on it is `cli-v0.21.0`, which needs
+  `auth-v0.3.0`, `sdk-v2.9.0` and `ui-v0.102.0` on npm.
+
 ### Releasing a package
 
 Merging a promotion titled with the package's version under `Release` releases it, or pushing its tag does: `ui-vX.Y.Z` releases `@sovereignfs/ui`, `sdk-vX.Y.Z` releases

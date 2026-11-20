@@ -4,6 +4,16 @@ What changed in each version of what makes an app installable, newest first, in 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/). A version's section is written in
 the change that sets the version, dated that day, and becomes the release notes when the version is published.
 
+## [0.2.0] - 2026-11-20
+
+### Added
+
+- Web Push in the worker and the page ([RFC 0009](https://github.com/sovereignfs/sovereign/blob/main/docs/rfcs/0009-web-push.md) §2).
+  `serviceWorkerSource({ push })` adds `push` and `notificationclick` handlers, and only then: every push shows something, a push
+  with a `kind` asks the app's `onPushKind`, nothing of a push is stored, and opening one goes only to a path on the worker's own
+  origin. `@sovereignfs/pwa/client` gains `pushState`, `turnOnPush` (replacing a subscription made with another key), `turnOffPush`,
+  `pushAvailability` and the `usePush` hook.
+
 ## [0.1.0] - 2026-11-18
 
 ### Added

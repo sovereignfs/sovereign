@@ -612,7 +612,11 @@ pointing here.
   answered with a page the worker builds itself. A new path is cached only by being
   added to the list, and the tests (the worker's source is evaluated; the
   acceptance suite lists every cache after a signed-in tour) fail when something
-  else gets in.
+  else gets in. An app's worker from `@sovereignfs/pwa` follows the same rule, and
+  when the app asks for push (RFC 0009 §2.1) it gains exactly two handlers more:
+  `push`, which shows every push (one it cannot read shows the app's name) and
+  stores nothing of it, and `notificationclick`, which opens only a path on the
+  worker's own origin. Without `push` the worker's text has neither.
 - **A locked session is no session** (core-app §3.5.1, RFC 0006 B3). `getSession`
   applies the lock, so every page, server action and route that reads the session
   through it, `requireSession` and `requireCapability` included, gets nothing for a

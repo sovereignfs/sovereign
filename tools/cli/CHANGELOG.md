@@ -21,6 +21,11 @@ history and tags.
 - The core this toolkit was made for is 0.131.0, the one released with it: `sv setup` starts on it when the registry cannot be
   asked, where it named 0.111.0, a version never published.
 
+### Fixed
+
+- Reading an app's manifest from a pinned image takes the image's tag off by scanning it, where a pattern took time in proportion to
+  the square of a reference made of many colons (CodeQL's polynomial regular expression).
+
 ## [0.26.0] - 2026-11-20
 
 ### Added

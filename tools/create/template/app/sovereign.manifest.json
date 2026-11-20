@@ -19,6 +19,6 @@
     "pooling": "transaction"
   },
   "storage": true,
-  "generate": ["__PREFIX___AUTH_SECRET"],
+  "generate": ["__PREFIX___AUTH_SECRET", { "name": "__PREFIX___VAPID_PRIVATE_KEY", "bytes": 32 }],
   "core": ">=0.126.0 <1.0.0"
 }

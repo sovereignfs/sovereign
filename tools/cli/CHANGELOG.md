@@ -5,6 +5,17 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.12.0; earlier versions are in the repository's
 history and tags.
 
+## [0.27.0] - 2026-11-20
+
+### Added
+
+- An app made by `npm create @sovereignfs app` sends notifications (Web Push, RFC 0009), with and without `--encryption`: the key
+  `<PREFIX>_VAPID_PRIVATE_KEY` in the manifest's `generate`, so an instance makes it; devices and waiting pushes in its database
+  (`migrations/002_push.sql`, `lib/push.ts`, the keys sealed); the route a device turns them on with; the worker showing them;
+  `PushControl` on the home page with "Send me a test notification"; the outbox started at start-up; the device turned off before
+  signing out, and forgotten with the account. It depends on `@sovereignfs/push` 0.2, `@sovereignfs/pwa` 0.2 and `@sovereignfs/ui`
+  0.104.
+
 ## [0.26.0] - 2026-11-20
 
 ### Added

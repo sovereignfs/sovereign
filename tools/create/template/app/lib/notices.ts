@@ -2,6 +2,7 @@ import { coreNotices, userIdForSub } from '@sovereignfs/auth/core';
 import pkg from '../package.json' with { type: 'json' };
 import { required } from './config';
 import { files } from './files';
+import { pushStore } from './push';
 import { signIn } from './sign-in';
 import { sovereign } from './sovereign';
 import { tokenStore } from './stores';
@@ -26,6 +27,8 @@ export async function notices() {
       await database.run('DELETE FROM notes WHERE owner = ?', [userId]);
       // And the files they uploaded: their folder, which is gone once this has run, however often it does.
       await files().removeAll(userId);
+      // And the devices they get notifications on, with what was waiting for them.
+      await pushStore().removeAccount(userId);
       await (await auth.$context).internalAdapter.deleteUser(userId);
     },
   });

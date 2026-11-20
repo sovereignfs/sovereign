@@ -140,7 +140,7 @@ describe('the files of an app', () => {
     await writeApp(target, namesOf(target));
     const manifest = JSON.parse(read(target, 'sovereign.manifest.json')) as {
       manifest: number;
-      generate: string[];
+      generate: (string | { name: string; bytes: number })[];
       prefix: string;
       signIn: { export?: string };
     };
@@ -167,7 +167,11 @@ describe('the files of an app', () => {
     const variables = manifest.prefix.toUpperCase();
     for (const name of ['POSTGRES_URL', 'AUTH_SECRET'])
       expect(code).toContain(`${variables}_${name}`);
-    expect(manifest.generate).toEqual([`${variables}_AUTH_SECRET`]);
+    // The push key is a P-256 key, 32 bytes: the instance makes it once, as it makes the secret.
+    expect(manifest.generate).toEqual([
+      `${variables}_AUTH_SECRET`,
+      { name: `${variables}_VAPID_PRIVATE_KEY`, bytes: 32 },
+    ]);
     expect(code).toContain("prefix: 'MYNOTES'");
   });
 
@@ -622,7 +626,7 @@ describe('installing the app', () => {
     );
     expect(read(target, 'app/manifest.ts')).toContain("manifest({\n    name: 'My Notes',");
     const worker = read(target, 'app/sw.js/route.ts');
-    expect(worker).toContain('serviceWorkerSource({ version: buildId(), precache: builtFiles() })');
+    expect(worker).toContain('version: buildId(),\n      precache: builtFiles(),');
     expect(worker).toContain('serviceWorkerResponse(');
     const layout = read(target, 'app/layout.tsx');
     expect(layout).toContain("...pwaMetadata({ name: 'My Notes' })");
@@ -655,6 +659,117 @@ describe('installing the app', () => {
     expect(
       JSON.parse(appPackageJson(namesOf('/x/my-notes'))).dependencies['@sovereignfs/pwa'],
     ).toBe(APP_DEPENDENCIES['@sovereignfs/pwa']);
+  });
+});
+
+describe('notifications in an app', () => {
+  const variants = [false, true] as const;
+
+  it('turn on with a key the instance makes, read from the app’s own variables, in both variants', async () => {
+    for (const encryption of variants) {
+      const target = path.join(temp(), 'my-notes');
+      await writeApp(target, namesOf(target), DEFAULT_APP_PORT, { encryption });
+      const manifest = JSON.parse(read(target, 'sovereign.manifest.json')) as {
+        generate: unknown[];
+      };
+      expect(manifest.generate, String(encryption)).toContainEqual({
+        name: 'MYNOTES_VAPID_PRIVATE_KEY',
+        bytes: 32,
+      });
+      expect(read(target, 'lib/push.ts')).toContain("pushSettings('MYNOTES')");
+      const env = read(target, '.env.example');
+      expect(env).toContain('MYNOTES_VAPID_PRIVATE_KEY=\n');
+      expect(env).toContain('MYNOTES_VAPID_SUBJECT=\n');
+      expect(env).toContain('npx @sovereignfs/push keys');
+    }
+  });
+
+  it('keep devices in two tables, the keys sealed under a purpose of their own, and a push only for the account’s device', async () => {
+    const target = path.join(temp(), 'my-notes');
+    await writeApp(target, namesOf(target));
+    const migration = read(target, 'migrations/002_push.sql');
+    expect(migration).toContain('CREATE TABLE push_devices');
+    expect(migration).toContain('REFERENCES push_devices (endpoint) ON DELETE CASCADE');
+    const store = read(target, 'lib/push.ts');
+    expect(store).toContain("const PURPOSE = 'push devices'");
+    expect(store).toMatch(
+      /seal\(\s*JSON\.stringify\(\{ p256dh: subscription\.p256dh, auth: subscription\.auth \}\),\s*PURPOSE,?\s*\)/,
+    );
+    expect(store).toContain(
+      'WHERE EXISTS (SELECT 1 FROM push_devices WHERE endpoint = $3 AND account = $2)',
+    );
+    expect(store).toContain('FOR UPDATE SKIP LOCKED');
+    // A refresh token keeps the key it had before devices were sealed too.
+    expect(read(target, 'lib/crypto.ts')).toContain("purpose = 'refresh tokens'");
+  });
+
+  it('give a device one route, for the signed-in account, from the app’s own origin, in both variants', async () => {
+    for (const encryption of variants) {
+      const target = path.join(temp(), 'my-notes');
+      await writeApp(target, namesOf(target), DEFAULT_APP_PORT, { encryption });
+      const route = read(target, 'app/api/push/subscription/route.ts');
+      expect(route).toContain('pushSubscriptionHandlers({');
+      expect(route).toContain("originOf(setting('MYNOTES_URL'))");
+      expect(route).toContain('account: () => currentAccount()');
+      expect(read(target, 'lib/account.ts'), String(encryption)).toContain(
+        encryption ? 'auth().getSession())?.sub' : 'getSession())?.user.id',
+      );
+      const action = read(target, 'app/push-actions.ts');
+      expect(action.startsWith("'use server';")).toBe(true);
+      expect(action).toContain('const account = await currentAccount();');
+      // Queued in a transaction, as a change's push would be, and sent after it commits.
+      expect(action.indexOf("client.query('BEGIN')")).toBeLessThan(action.indexOf('enqueuePush('));
+      expect(action.indexOf("client.query('COMMIT')")).toBeLessThan(
+        action.indexOf('sendDuePushes()'),
+      );
+    }
+  });
+
+  it('show the switch and the test, start the outbox, and turn the device off before signing out, in both variants', async () => {
+    for (const encryption of variants) {
+      const target = path.join(temp(), 'my-notes');
+      await writeApp(target, namesOf(target), DEFAULT_APP_PORT, { encryption });
+      const page = read(target, 'app/page.tsx');
+      expect(page, String(encryption)).toContain('<Notifications />');
+      expect(page).toContain('<SignOutForm>');
+      expect(read(target, 'app/notifications.tsx')).toContain('Send me a test notification');
+      expect(read(target, 'app/notifications.tsx')).toContain('appName="My Notes"');
+      expect(read(target, 'app/ui.tsx')).toContain('PushControl');
+      // The device is turned off first, then the sign-out goes on: the server action, or the SDK's form.
+      const signOut = read(target, 'app/sign-out.tsx');
+      const off = signOut.indexOf('turnOffPush()');
+      expect(off).toBeGreaterThan(-1);
+      expect(off).toBeLessThan(signOut.indexOf(encryption ? 'form.submit()' : 'await signOut()'));
+      expect(read(target, 'instrumentation.ts')).toContain('startPushOutbox();');
+      expect(read(target, 'app/sw.js/route.ts')).toContain(
+        "...(appPush() ? { push: { name: 'My Notes', icon: '/pwa-icon/192' } } : {})",
+      );
+    }
+  });
+
+  it('forget a person’s devices with their account, in both variants', async () => {
+    for (const encryption of variants) {
+      const target = path.join(temp(), 'my-notes');
+      await writeApp(target, namesOf(target), DEFAULT_APP_PORT, { encryption });
+      expect(read(target, encryption ? 'lib/auth.ts' : 'lib/notices.ts')).toContain(
+        `await pushStore().removeAccount(${encryption ? 'sub' : 'userId'});`,
+      );
+    }
+  });
+
+  it('need no new content security policy: the route is the app’s own and the push services are the browser’s', async () => {
+    const { contentSecurityPolicy } = await import('../template/app/lib/csp');
+    const policy = contentSecurityPolicy({ nonce: 'n', secure: true, development: false });
+    const directive = (name: string) => policy.split('; ').find((d) => d.startsWith(`${name} `));
+    expect(directive('connect-src')).toMatch(/^connect-src 'self'/);
+    expect(directive('worker-src')).toBe("worker-src 'self'");
+    expect(policy).not.toMatch(/googleapis|mozilla|apple\.com|windows\.com/);
+  });
+
+  it('depend on @sovereignfs/push', () => {
+    expect(
+      JSON.parse(appPackageJson(namesOf('/x/my-notes'))).dependencies['@sovereignfs/push'],
+    ).toBe(APP_DEPENDENCIES['@sovereignfs/push']);
   });
 });
 
@@ -725,6 +840,7 @@ describe('what the app depends on', () => {
     for (const [name, dir] of [
       ['@sovereignfs/config', 'config'],
       ['@sovereignfs/pwa', 'pwa'],
+      ['@sovereignfs/push', 'push'],
       ['@sovereignfs/sdk', 'sdk'],
       ['@sovereignfs/storage', 'storage'],
       ['@sovereignfs/ui', 'ui'],

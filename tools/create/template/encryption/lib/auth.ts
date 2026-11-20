@@ -3,6 +3,7 @@ import pkg from '../package.json' with { type: 'json' };
 import { db } from './db';
 import { files } from './files';
 import { notes } from './notes';
+import { pushStore } from './push';
 import { sovereign } from './sovereign';
 
 /**
@@ -16,6 +17,8 @@ export const auth = () =>
       await notes().deleteAll(sub);
       // And the files they uploaded: their folder, which is gone once this has run, however often it does.
       await files().removeAll(sub);
+      // And the devices they get notifications on, with what was waiting for them.
+      await pushStore().removeAccount(sub);
       // The SDK has already ended the person's sessions and forgotten their refresh token.
     },
     // A person's part of their export (core-app §4.7.2): their notes as stored, still encrypted, and the keys sealed to them, so the

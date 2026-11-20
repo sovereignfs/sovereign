@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.130.0 · **Last updated:** 2026-11-20
+**Version:** 0.131.0 · **Last updated:** 2026-11-20
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -375,6 +375,6 @@ workstream [0010](docs/workstreams/0010-web-push.md)
 | 0.129.0 | 2        | `@sovereignfs/push`: the store, the outbox and the route       | ✅     | [19.2](docs/epics/push.md) |
 | 0.130.0 | 3        | The worker shows a push, and the page turns it on `[parallel]` | ✅     | [19.3](docs/epics/push.md) |
 | 0.130.0 | 4        | `PushControl` `[parallel]`                                     | ✅     | [19.4](docs/epics/push.md) |
-| —       | 5        | The app template sends notifications                           | 📋     | [19.5](docs/epics/push.md) |
+| 0.131.0 | 5        | The app template sends notifications                           | ✅     | [19.5](docs/epics/push.md) |
 | —       | 6        | Push seen on devices                                           | 📋     | [19.6](docs/epics/push.md) |
 | —       | 7        | Tusk and Waymark on the packages, and the designs that follow  | 📋     | [19.7](docs/epics/push.md) |

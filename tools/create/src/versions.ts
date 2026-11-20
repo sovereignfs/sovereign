@@ -12,12 +12,16 @@ export const APP_DEPENDENCIES = {
   // The sign-in: the package's preset, pages' flows and core as a way in, on better-auth at the one version the package names.
   '@sovereignfs/auth': '^0.4.0',
   '@sovereignfs/config': '^0.1.0',
-  '@sovereignfs/pwa': '^0.1.0',
+  // 0.2 has the worker's push handlers and `usePush`, which the template's notifications use.
+  '@sovereignfs/pwa': '^0.2.0',
+  // Web Push for the app's server: the key, the store's shape, the outbox and the subscription route.
+  '@sovereignfs/push': '^0.2.0',
   // 2.11 answers core's export request (`handleExportRequest`), which the template mounts; 2.10 has the typed `User` the package's
   // `userOf` gives, on 2.9's sign-in for a session the app keeps (`finishSignIn`).
   '@sovereignfs/sdk': '^2.11.0',
   '@sovereignfs/storage': '^0.1.0',
-  '@sovereignfs/ui': '^0.103.0',
+  // 0.104 has `PushControl`.
+  '@sovereignfs/ui': '^0.104.0',
   'better-auth': '1.7.18',
   next: '^16.4.6',
   pg: '^8.23.1',

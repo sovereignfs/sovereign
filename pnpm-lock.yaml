@@ -805,6 +805,9 @@ importers:
 
   tools/create:
     devDependencies:
+      '@sovereignfs/push':
+        specifier: workspace:*
+        version: link:../../packages/push
       '@sovereignfs/pwa':
         specifier: workspace:*
         version: link:../../packages/pwa

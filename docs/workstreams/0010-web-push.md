@@ -22,7 +22,7 @@ instance makes that key. Tusk and Waymark keep no copy of their own, and Tally, 
       from a store the app gives
 - [x] `@sovereignfs/pwa`'s worker shows every push and opens only its own paths; its client turns push on and off
 - [x] `PushControl` is in `@sovereignfs/ui`, with a story for each state and a gallery entry
-- [ ] A generated app turns push on, sends a test notification and opens it, with and without `--encryption`
+- [x] A generated app turns push on, sends a test notification and opens it, with and without `--encryption`
 - [ ] Research 0013's _(to confirm)_ marks are resolved from devices
 - [ ] Tusk and Waymark use the packages and no longer depend on `web-push`; the three designs name the packages
 - [ ] RFC 0009 says Implemented; epic 19 is ✅

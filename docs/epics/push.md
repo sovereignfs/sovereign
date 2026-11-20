@@ -95,7 +95,7 @@ endpoint another account had drops that account's waiting pushes for it: both ar
 one-minute lease covers it (ten seconds a push at most). Waymark's key is an HKDF-derived secret, not a P-256 scalar: 19.7 must keep
 its existing subscriptions with that in mind.
 
-#### 📋 19.3 — The worker shows a push, and the page turns it on `[parallel]`
+#### ✅ 19.3 — The worker shows a push, and the page turns it on `[parallel]`
 
 **Goal:** `@sovereignfs/pwa` gives every app the worker's push handlers and the browser's side of subscribing.
 
@@ -120,7 +120,12 @@ its existing subscriptions with that in mind.
 
 **Not here:** the control's look (19.4).
 
-#### 📋 19.4 — `PushControl` `[parallel]`
+**Notes:** `onPushKind` returning nothing, or throwing, shows the message as it came (its title, or the app's name when it has none),
+so "the app's name" is the floor, not the answer to every kind. `turnOnPush` asks for permission before anything else is awaited,
+since Safari asks only from a tap. `usePush` adds `checking` (before it knows) and `unavailable` (the route says the app has no key) to
+the device's states, so `PushControl` renders nothing in both and the server's markup is everyone's.
+
+#### ✅ 19.4 — `PushControl` `[parallel]`
 
 **Goal:** Every app says the same thing about notifications on a device, and offers the same switch.
 
@@ -140,6 +145,10 @@ its existing subscriptions with that in mind.
 - Each state reads correctly with a screen reader (the toggle's label and its description)
 
 **Not here:** wiring it to the client (19.5).
+
+**Notes:** the iPhone's sentence is `IOS_INSTALL_STEPS`, now one constant shared with `InstallPrompt`. The toggle's label names the
+app and the device; its description is the sentence beside it, and a failure is added to the description and announced (`role=alert`).
+Seen in Storybook in both themes and at phone width.
 
 #### 📋 19.5 — The app template sends notifications
 

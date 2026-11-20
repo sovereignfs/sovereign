@@ -20,8 +20,8 @@ instance makes that key. Tusk and Waymark keep no copy of their own, and Tally, 
 
 - [x] `@sovereignfs/push` is release-ready: it encrypts to RFC 8291's worked example, signs to RFC 8292, and sends through an outbox
       from a store the app gives
-- [ ] `@sovereignfs/pwa`'s worker shows every push and opens only its own paths; its client turns push on and off
-- [ ] `PushControl` is in `@sovereignfs/ui`, with a story for each state and a gallery entry
+- [x] `@sovereignfs/pwa`'s worker shows every push and opens only its own paths; its client turns push on and off
+- [x] `PushControl` is in `@sovereignfs/ui`, with a story for each state and a gallery entry
 - [ ] A generated app turns push on, sends a test notification and opens it, with and without `--encryption`
 - [ ] Research 0013's _(to confirm)_ marks are resolved from devices
 - [ ] Tusk and Waymark use the packages and no longer depend on `web-push`; the three designs name the packages

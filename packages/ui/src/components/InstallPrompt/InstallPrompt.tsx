@@ -5,6 +5,9 @@ import { Button } from '../Button/Button';
 import { Icon } from '../Icon/Icon';
 import styles from './InstallPrompt.module.css';
 
+/** How to add a site to the Home Screen on an iPhone or iPad, which has no install prompt: one sentence, shared with `PushControl`. */
+export const IOS_INSTALL_STEPS = 'tap Share, then Add to Home Screen.';
+
 /** What a device lets a page do about installing it. */
 export type InstallKind = 'prompt' | 'ios';
 
@@ -40,7 +43,7 @@ export function InstallHint({ appName, kind, onInstall, onDismiss, className }: 
         <p className={styles.title}>Install {appName}</p>
         <p className={styles.text}>
           {kind === 'ios'
-            ? 'Open it from your Home Screen, in a window of its own: tap Share, then Add to Home Screen.'
+            ? `Open it from your Home Screen, in a window of its own: ${IOS_INSTALL_STEPS}`
             : 'Open it from your home screen or app list, in a window of its own.'}
         </p>
       </div>

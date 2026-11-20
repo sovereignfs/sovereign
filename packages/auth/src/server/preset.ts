@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import type { Database } from '@sovereignfs/database';
 import { isSignInValue } from '@sovereignfs/crypto';
 import { passkey } from '@better-auth/passkey';
@@ -114,7 +115,17 @@ export type Registration = (
   user: UserInput,
   context: { body?: unknown } | null | undefined,
   fields: Record<string, unknown>,
+  /** How the account came: `local`, a sign-up of the app's own; `core`, a first sign-in through core (`./core`). */
+  arrival: { via: 'local' | 'core' },
 ) => Promise<Record<string, unknown>>;
+
+/** Marks the accounts made while a sign-in through core is being finished (`./core`), which better-auth makes with no request context. */
+const coreArrival = new AsyncLocalStorage<true>();
+
+/** Runs `work` as a sign-in through core, so registration sees the account it makes as one from core. */
+export function asCoreArrival<T>(work: () => Promise<T>): Promise<T> {
+  return coreArrival.run(true, work);
+}
 
 /** Refused because sign-up is closed: one answer whatever the address, so it says nothing about who has an account. */
 const signUpClosed = () =>
@@ -128,8 +139,9 @@ const signUpClosed = () =>
  * check of its invitations, so an app that offers it writes its own `Registration`.
  */
 export function signUpPolicy(database: Database, mode: 'open' | 'closed'): Registration {
-  return async (_user, _context, fields) => {
-    if (mode === 'open') return fields;
+  return async (_user, _context, fields, arrival) => {
+    // `AUTH_SIGNUP` is for the app's own accounts (auth.md §5): who may sign in through core is core's to say.
+    if (mode === 'open' || arrival.via === 'core') return fields;
     const { rows } = await database.run('select 1 as found from users limit 1');
     if (rows.length > 0) throw signUpClosed();
     return fields;
@@ -154,6 +166,11 @@ export type AuthPresetOptions<
   /** Who may get an account. Required: no app is open to everyone by leaving it out. */
   registration: Registration;
   /**
+   * Whether the app has accounts of its own: a password, the second step and passkeys (`<P>_AUTH_LOCAL`, auth.md §5). Default on;
+   * an app that signs people in only through core turns it off, and every route of an own account is switched off with it.
+   */
+  localAccounts?: boolean;
+  /**
    * Runs a send without making the request wait for it. The default lets it run on its own: an answer that waited for the mail
    * server would take longer for an address that has an account, which tells whoever asks (auth.md §4, rule 9).
    */
@@ -168,6 +185,41 @@ export type AuthPresetOptions<
 };
 
 const noHook = () => Promise.resolve();
+
+/** The routes of an account's own sign-in: a password, the second step, passkeys. Off with `localAccounts: false`. */
+const LOCAL_ROUTES = [
+  '/sign-in/email',
+  '/sign-up/email',
+  '/request-password-reset',
+  '/reset-password',
+  '/reset-password/:token',
+  '/change-password',
+  '/set-password',
+  '/two-factor/enable',
+  '/two-factor/disable',
+  '/two-factor/get-totp-uri',
+  '/two-factor/verify-totp',
+  '/two-factor/verify-backup-code',
+  '/two-factor/generate-backup-codes',
+  '/passkey/generate-register-options',
+  '/passkey/verify-registration',
+  '/passkey/generate-authenticate-options',
+  '/passkey/verify-authentication',
+];
+
+/**
+ * The routes that set up a password's second step, a passkey, or a new password. An account that came only through core has no
+ * password, so it has none of these: core is its way in, and its second step is core's (auth.md §9).
+ */
+const FOR_PASSWORD_ACCOUNTS: ReadonlySet<string> = new Set([
+  '/change-password',
+  '/two-factor/enable',
+  '/two-factor/disable',
+  '/two-factor/get-totp-uri',
+  '/two-factor/generate-backup-codes',
+  '/passkey/generate-register-options',
+  '/passkey/verify-registration',
+]);
 
 /** The package's own fields on an account. */
 const BASE_FIELDS = {
@@ -269,7 +321,8 @@ export function createAuthPreset<
               locale: localeOrNull(user.locale),
               name,
             };
-            return { data: await options.registration(user, context, fields) };
+            const via = coreArrival.getStore() ? 'core' : 'local';
+            return { data: await options.registration(user, context, fields, { via }) };
           },
           after: async (user: { email: string; name: string; emailVerified: boolean }) => {
             await hooks.userCreated?.(user);
@@ -297,7 +350,7 @@ export function createAuthPreset<
       },
     },
     emailAndPassword: {
-      enabled: true,
+      enabled: options.localAccounts !== false,
       // better-auth's own length limits would answer first, with its own wording; the app's policy says it all, in one sentence.
       // These only keep an absurdly long body from reaching it.
       minPasswordLength: 1,
@@ -342,6 +395,18 @@ export function createAuthPreset<
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
         await (hooks.beforeRequest ?? noHook)(ctx);
+        if (FOR_PASSWORD_ACCOUNTS.has(ctx.path)) {
+          const current = await getSessionFromCtx(ctx);
+          if (current) {
+            const accounts = await ctx.context.internalAdapter.findAccounts(current.user.id);
+            if (!accounts.some((account) => account.providerId === 'credential')) {
+              throw new APIError('FORBIDDEN', {
+                message: 'This account signs in through Sovereign, which has its own.',
+                code: 'NO_PASSWORD_ACCOUNT',
+              });
+            }
+          }
+        }
         // A person's second factor is theirs alone: there is no "trust this device" that would skip the second step for a month,
         // so a request asking for one is refused, not ignored (rule 4).
         if (SECOND_STEP.has(ctx.path) && (ctx.body as { trustDevice?: unknown })?.trustDevice) {
@@ -427,7 +492,10 @@ export function createAuthPreset<
         await (hooks.afterRequest ?? noHook)(ctx);
       }),
     },
-    disabledPaths: options.disabledPaths ?? [],
+    disabledPaths: [
+      ...(options.disabledPaths ?? []),
+      ...(options.localAccounts === false ? LOCAL_ROUTES : []),
+    ],
     plugins: [
       // Authenticator app (TOTP) with backup codes. The code sent by email or text is not offered: no `sendOTP` is given, so those
       // endpoints answer that they are not configured. The secret and the backup codes are stored encrypted with the app's secret

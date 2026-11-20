@@ -6,6 +6,8 @@ import type { SessionStore, StoredRecord } from '../session';
 export type FakePerson = {
   sub: string;
   name?: string;
+  /** Sent as `email`, verified, when the sign-in was granted the `email` scope, as core does. */
+  email?: string;
   picture?: string | null;
   /** False for a deactivated account (the Directory returns it with `active: false`). */
   active?: boolean;
@@ -189,7 +191,8 @@ export type FakeCore = {
   };
 };
 
-type Person = Required<Pick<FakePerson, 'sub' | 'name'>> & Pick<FakePerson, 'picture' | 'active'>;
+type Person = Required<Pick<FakePerson, 'sub' | 'name'>> &
+  Pick<FakePerson, 'picture' | 'active' | 'email'>;
 type Access = { kind: 'person'; sub: string } | { kind: 'app' };
 
 /** The PKCE `S256` challenge for a verifier. */
@@ -355,6 +358,9 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
           sid: record.sid,
           auth_time: Math.floor(record.authTime / 1000),
           name: person?.name ?? record.sub,
+          ...(person?.email && record.scope.split(' ').includes('email')
+            ? { email: person.email, email_verified: true }
+            : {}),
           ...(record.scope.split(' ').includes('roles') ? { roles: record.roles } : {}),
         })
           .setProtectedHeader({ alg: 'EdDSA', kid: 'fake-1' })
@@ -830,6 +836,7 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
         name: person.name ?? person.sub,
         picture: person.picture ?? null,
         active: person.active ?? true,
+        ...(person.email ? { email: person.email } : {}),
       });
     },
     setKeys(sub, keys) {

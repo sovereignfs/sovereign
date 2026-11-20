@@ -10,10 +10,15 @@ const manifest = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8'
 };
 
 describe('the package’s entries', () => {
-  it.each(['./server', './next'])('%s resolves to a file that throws in a browser', (entry) => {
-    expect(manifest.exports[entry]?.browser).toBe('./dist/browser.js');
-    expect(readFileSync(path.join(ROOT, 'src/browser.ts'), 'utf8')).toMatch(/^throw new Error\(/m);
-  });
+  it.each(['./server', './next', './core'])(
+    '%s resolves to a file that throws in a browser',
+    (entry) => {
+      expect(manifest.exports[entry]?.browser).toBe('./dist/browser.js');
+      expect(readFileSync(path.join(ROOT, 'src/browser.ts'), 'utf8')).toMatch(
+        /^throw new Error\(/m,
+      );
+    },
+  );
 
   it('keeps the root free of imports that need a server', () => {
     for (const file of [

@@ -175,22 +175,36 @@ the SDK's (`AppVault`, `localVault`, sdk §9.5); an app with no encryption gives
 
 ## 8. Core as a way in
 
-With `CORE_URL` set, an app signs people in through core. `./core` is a better-auth plugin built on the SDK. The SDK's sign-in keeps a
-session of its own today (sdk §9.1); for `./core` it gives its steps without one, so that the app's session is the package's and the SDK
-keeps only the pending sign-in and core's refresh token (task 14.16, sdk §9.8):
+With `CORE_URL` set, an app signs people in through core. `./core` is a better-auth plugin built on the SDK's steps for a session the app
+keeps (sdk §9.8), so the app's session is the package's and the SDK keeps only the pending sign-in and core's refresh token:
 
-- **Signing in** is the SDK's (sdk §9.1): PKCE, `returnTo`, `prompt`, `max_age`. It ends by opening the app's session for the account
-  linked to core's `sub`.
-- **Core's refresh token is the SDK's alone**, in its `TokenStore` (sdk §5.1). better-auth's account row for core MUST hold no token,
-  and better-auth MUST NOT refresh it: core rotates a refresh token on every use and takes one used twice for theft. better-auth's
+- **The addresses** are one convention for every app, the ones core already knows from the manifest: `GET /api/auth/sign-in/sovereign`
+  (with `returnTo` and `prompt`) starts a sign-in, `GET /api/auth/callback/sovereign` is the redirect address, and core's notices go to
+  `POST /api/sovereign/backchannel-logout` and `POST /api/sovereign/account-deleted`, plain routes of the app's that call
+  `coreNotices`, since no browser makes them.
+- **Signing in** is the SDK's (sdk §9.1): PKCE, state, nonce, `returnTo`, `prompt`, `max_age`, and a callback used once. It ends by
+  opening the app's session for the account linked to core's `sub` (`accounts.provider_id` `sovereign`), through better-auth's adapter,
+  so every hook of §4 runs (a deactivated account gets no session). A first sign-in makes the account, as one from core: registration
+  is told so (`arrival.via` is `core`), and `signUpPolicy`'s `closed` applies only to the app's own sign-ups. Core must send `email`.
+  A sign-in that does not work comes back to the app's sign-in page with `error` (`sovereign`, `sovereign_email`, `sovereign_refused`,
+  `account_not_linked`), never a bare error.
+- **Core's refresh token is the SDK's alone**, in its `TokenStore` (sdk §5.1). better-auth's account row for core holds no token, and
+  better-auth never refreshes it: core rotates a refresh token on every use and takes one used twice for theft. better-auth's
   `genericOAuth` is not used.
-- **The session follows core's** (sdk §9.7): checked at most an hour after the last check, with `prompt=none`; the new ID token's
-  claims update the account; `login_required` ends the app's session.
-- **Core's notices** are the SDK's verified handlers (sdk §9.2): a logout notice ends the app's session for that `sid`, or every
-  session of that `sub`; an account-deleted notice runs the app's deletion before it is answered.
-- **Encryption**: the per-session key secret and key release as the SDK gives them (sdk §9.3).
-- **Signing out** of a session that came from core sends the person through core's end-session; core decides whether that ends core's
-  session too (core-app §3.6.5): yes for a hosted app, no for an external one.
+- **What a session from core keeps** is in the plugin's table, `sv_core_sign_ins` (`coreSignInMigrations`), ended with its session:
+  core's `sid`, the ID token for signing out, and when it was last checked.
+- **The session follows core's** (sdk §9.7): `needsCoreCheck` says when an hour has passed; the app's guard then sends the person to
+  `/api/auth/sign-in/sovereign?prompt=none`, which renews the session in place and its name from the new claims, or, on
+  `login_required`, ends it.
+- **Core's notices** are verified by the SDK (sdk §9.2) and remembered by their `jti` (`sv_core_notices`), so a replay ends nothing:
+  a logout notice ends the app's sessions of that `sid`, or every session of that `sub` and the person's refresh token; an
+  account-deleted notice runs the app's deletion before it is answered. Sessions are ended through better-auth's adapter (rule 13).
+- **Signing out** of a session that came from core sends the person through core's end-session (`coreSignOutUrl`); core decides
+  whether that ends core's session too (core-app §3.6.5): yes for a hosted app, no for an external one.
+- **An account from core has no password**, so the routes that set up a password's second step, a passkey or a new password refuse it
+  (`NO_PASSWORD_ACCOUNT`); its second step is core's. `localAccounts: false` switches every route of an own account off.
+- **Not built yet:** linking a local account to core from a signed-in session (until then an address that is a local account's is
+  refused), and encryption's per-session key secret and key release for an app on the package.
 
 ## 9. Who a person is
 

@@ -12,6 +12,7 @@ history and tags.
 - Signing in for an app that keeps its own sessions (sdk §9.8): `finishSignIn` checks core's answer as `completeSignIn` does and keeps
   the refresh token, then says who signed in without making a session, and `endSessionUrl` gives core's sign-out for an ID token the
   app kept. `completeSignIn` is now `finishSignIn` with the SDK's session made from it; nothing of it changes for an app using it.
+- The fake core (`@sovereignfs/sdk/testing`) takes a person's `email`, and sends it, verified, to a sign-in granted the `email` scope.
 
 ## [2.8.0] - 2026-11-19
 

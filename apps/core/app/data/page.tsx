@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Card } from '@sovereignfs/ui';
 import { requireSignedIn } from '../../src/auth/require-signed-in';
 import { getExportJobs } from '../../src/exports/service';
-import { viewOf } from '../../src/exports/view';
+import { viewOf } from '@sovereignfs/export';
 import { ExportPanel } from '../export-panel';
 import styles from '../security/security.module.css';
 import { startPersonExportAction } from './actions';

@@ -4,9 +4,15 @@ import path from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type { Database } from '@sovereignfs/database';
-import { encryptTo, ExportWriter, type ExportHead } from '@sovereignfs/export';
+import {
+  encryptTo,
+  ExportFailure,
+  ExportWriter,
+  removeExportFiles as removeFrom,
+  type ExportHead,
+  type ExportJob,
+} from '@sovereignfs/export';
 import { CATALOG, isExported } from './catalog';
-import type { ExportJob } from './jobs';
 import { exportRows } from './records';
 
 /** The folder under core's storage path where exports wait (core-app §4.7.3). It is no person's folder. */
@@ -24,13 +30,6 @@ export type MakeContext = {
   appParts?: (writer: ExportWriter, sub: string) => Promise<void>;
   now?: () => number;
 };
-
-export class ExportFailure extends Error {
-  override name = 'ExportFailure';
-  constructor(readonly kind: string) {
-    super(kind);
-  }
-}
 
 export function exportsFolder(storageRoot: string): string {
   return path.join(storageRoot, EXPORTS_FOLDER);
@@ -163,14 +162,10 @@ async function* connectedApps(
   }
 }
 
-/** Removes export files by name, from the exports' folder only. */
+/** Removes export files by name, from core's exports' folder only. */
 export async function removeExportFiles(
   storageRoot: string,
   names: readonly string[],
 ): Promise<void> {
-  const folder = exportsFolder(storageRoot);
-  for (const name of names) {
-    if (name.includes('/') || name.includes('\\') || name.startsWith('.')) continue;
-    await rm(path.join(folder, name), { force: true });
-  }
+  await removeFrom(exportsFolder(storageRoot), names);
 }

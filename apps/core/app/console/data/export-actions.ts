@@ -7,7 +7,7 @@ import { requireCapability } from '../../../src/auth/authorize';
 import { confirmPassword } from '../../../src/auth/confirm-password';
 import { getDatabase } from '../../../src/database';
 import { coreFilesRoot } from '../../../src/files';
-import { ExportBusyError } from '../../../src/exports/jobs';
+import { ExportBusyError } from '@sovereignfs/export';
 import { removeExportFiles } from '../../../src/exports/make';
 import { getExportJobs, runDueExports } from '../../../src/exports/service';
 import { getInstanceManager } from '../../../src/instance/service';

@@ -154,7 +154,9 @@ push?: {
 
 - **`push`** reads the message (a push that cannot be read shows `name` and "You have a new notification"). With a `kind` and
   `handlers`, it asks `onPushKind`, which may return what to show instead; whatever happens, **it shows something**, since a browser
-  stops allowing a push that shows nothing. `tag` is passed on.
+  stops allowing a push that shows nothing. On an installed iPhone app, Safari drops **every subscription of the app's origin** after a
+  few pushes that show nothing, keeping the permission (research 0013 §6): an `onPushKind` that shows nothing switches the app's
+  notifications off on that device until the person turns them on again. `tag` is passed on.
 - **`notificationclick`** closes the notification, resolves `path` on the worker's own origin (anything else is `/`), focuses a
   window of the app and sends it there, or opens one.
 - The worker still keeps only what is the same for everyone, and **stores nothing of a push**. The rule's wording in

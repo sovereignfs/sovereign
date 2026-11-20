@@ -72,18 +72,21 @@ drifting, and three more copies to come.
   key and gets an endpoint and two keys (`p256dh`, `auth`). Every app is its own origin, so every app subscribes for itself.
 - **The payload is encrypted to the device** (RFC 8291, `aes128gcm`: ECDH P-256, HKDF, AES-128-GCM). The push service sees the
   endpoint, timing and size. The sender signs a short JWT (RFC 8292, ES256) with a `sub` naming a contact.
-- **Every push must show something** (`userVisibleOnly: true`). A push that shows nothing is tolerated rarely in Chrome and costs the
-  subscription in Safari _(to confirm)_. Tusk's worker shows something for every push for this reason.
+- **Every push must show something** (`userVisibleOnly: true`). A push that shows nothing costs the subscription in Safari: **seen on
+  an installed iPhone app, and worse than expected** (§6): after a few, Safari dropped every subscription of the app's origin, not only
+  the one that showed nothing, though it kept the permission. Chrome's tolerance is _(to confirm)_. Tusk's worker shows something for
+  every push for this reason, and so does `@sovereignfs/pwa`'s.
 - A notification's `tag` replaces an earlier one with the same tag on that origin, so a retried push replaces itself.
 - `TTL` bounds how long the push service holds a push for a device that is off; `Urgency` lets a device save battery. `404` and `410`
   mean the subscription is gone.
 
 ### 4. Platforms
 
-- **iPhone and iPad (16.4 and later)** _(to confirm on the current release)_: only an app added to the Home Screen receives pushes,
-  never a Safari tab; asking for permission must follow a tap; each installed app asks for itself.
+- **iPhone and iPad (16.4 and later)**: an app added to the Home Screen receives pushes, **seen on the current release** (§6); that a
+  Safari tab never does is _(to confirm)_. Asking for permission must follow a tap; each installed app asks for itself.
 - **Apple's push service refuses a VAPID `sub` that is `localhost` or not a real address** with `403 BadJwtToken`, while Google's
-  accepts almost anything (legacy's warning). "Push works except on iPhone" is the symptom to design out.
+  accepts almost anything (legacy's warning). "Push works except on iPhone" is the symptom to design out. Apple accepted the app's own
+  `https` address as `sub`, with a token that lives an hour (§6).
 - **Desktop Chromium, Firefox and Safari, and Android:** a tab or an installed app receives pushes; the worker is woken with no window
   open while the browser runs.
 - Permission once denied cannot be asked again by the page; the person must change it in the browser's settings.
@@ -153,6 +156,30 @@ A small command in the package makes a key: `npx @sovereignfs/push keys`.
    needs installing on iPhone, needs HTTPS, blocked in the browser, off, on, working, failed). It is framework-agnostic and takes its
    state and actions from the app, which gets them from `@sovereignfs/pwa/client`. **Recommended.**
 
+### 6. Seen on devices
+
+What task 19.6 saw on devices, with an app generated from the template (`@sovereignfs/push` 0.2.0, `@sovereignfs/pwa` 0.2.0,
+`@sovereignfs/ui` 0.104.0), served over `https` through a tunnel, its `sub` the app's own `https` address. Sends through the app's
+outbox and directly with `sendPush` from a throwaway page (not committed), which also registered a second worker, scoped to a
+folder of its own, that showed nothing for a push. Each cell says what was seen; _not tried_ is not a result.
+
+| Device and browser                                     | Turn on                  | Push with the app closed                                     | Opening it                       | Two with one tag     | Pushes that show nothing                                                                                                                                                  | Denied    | Key changed |
+| ------------------------------------------------------ | ------------------------ | ------------------------------------------------------------ | -------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ----------- |
+| iPhone, Safari 27.2, installed (Home Screen), Nov 2026 | Works (permission asked) | Arrives (sent 30 s later)                                    | Opens the app at the push's path | Only the second left | Nothing shown. Five accepted (`201`) with the subscription kept; after more, Safari dropped **every** subscription of the origin, the app's own included; permission kept | not tried | not tried   |
+| iPhone, Safari tab, not installed                      | not tried                | not tried                                                    | not tried                        | not tried            | not tried                                                                                                                                                                 | not tried | not tried   |
+| Android, Chrome (installed and tab)                    | not tried                | not tried                                                    | not tried                        | not tried            | not tried                                                                                                                                                                 | not tried | not tried   |
+| macOS, Chrome (tab)                                    | Works                    | not tried (with the page open: arrives, shown by the worker) | not tried                        | not tried            | not tried                                                                                                                                                                 | not tried | not tried   |
+| Desktop Firefox, Safari                                | not tried                | not tried                                                    | not tried                        | not tried            | not tried                                                                                                                                                                 | not tried | not tried   |
+
+- **iPhone:** its user agent says `iPhone OS 18_7` beside `Version/27.2`; Safari reports a frozen OS number, so the Safari version is
+  the one recorded. After the subscriptions were dropped, the page found none and the control showed off by itself; turning it on
+  again made a working subscription. The second worker would not subscribe again.
+- **macOS Chrome** was driven by Playwright with a fresh profile, so its permission was granted by the tool, not asked: headless
+  Chrome, and Chrome with `--disable-background-networking`, refuse push registration (`AbortError: Registration failed - permission
+denied`).
+- What this changes: a worker that shows nothing for a push is not a lost push but a lost app on iPhone, so "every push shows
+  something" is a rule, not advice (RFC 0009 §2.1). The rest of this section is for whoever has the other devices.
+
 ## Recommendation
 
 Write [RFC 0009](../rfcs/0009-web-push.md): one implementation in three published places, used the same way by every app.
@@ -187,7 +214,8 @@ on the packages above.
    to turn one off from another, is left for later.
 3. **Key rotation.** A new key ends every subscription made with the old one; the page finds its subscription made with another key
    and subscribes again on its next visit. Keeping two keys for a while is not proposed.
-4. **An unread count on the installed icon** (`setAppBadge`): useful, and supported unevenly _(to confirm)_. Not in this milestone.
+4. **An unread count on the installed icon** (`setAppBadge`): useful, and supported unevenly _(to confirm; not tried in §6)_. Not in
+   this milestone.
 
 ## Sources
 

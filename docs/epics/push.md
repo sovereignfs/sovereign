@@ -187,7 +187,7 @@ not driven in Chrome; the worker's tests evaluate it. Sealing takes a purpose no
 key. The claim is guarded twice (`FOR UPDATE SKIP LOCKED` and the outer re-check), since the concurrent-claim case passed on
 PostgreSQL even without the lock.
 
-#### 📋 19.6 — Push seen on devices
+#### ⏳ 19.6 — Push seen on devices
 
 **Goal:** What research 0013 marks _(to confirm)_ is seen, so the apps move on facts.
 
@@ -207,6 +207,14 @@ PostgreSQL even without the lock.
 - Every row of the device table is filled from a device, not from documentation
 
 **Not here:** the deployed apps (19.7).
+
+**So far (partial):** only an installed iPhone has been tried (Safari 27.2), with the template's app served over `https` through a
+tunnel; its row of research 0013 §6 is filled, and macOS Chrome's from 19.5. It receives pushes with the app closed, opens the push's
+path, keeps one notification per tag, and Apple accepts the app's `https` address as `sub`. **A push that shows nothing costs more
+than the research said:** after a few, Safari dropped every subscription of the origin (the app's own as well as the test worker's)
+and kept the permission; the control showed off by itself and turning it on again worked. RFC 0009 §2.1 says so now. Not yet tried:
+a Safari tab on iPhone, Android, desktop Firefox and Safari, a denied permission, and a key changed. The task stays open until they
+are; the leg's "Do not proceed if" (no push on an installed iPhone) does not hold, so 19.7 is not blocked by it.
 
 #### 📋 19.7 — Tusk and Waymark on the packages, and the designs that follow
 

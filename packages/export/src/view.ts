@@ -1,5 +1,4 @@
-import type { ExportJob } from './jobs';
-import { KEPT_MS } from './jobs';
+import { KEPT_MS, type ExportJob } from './jobs.js';
 
 /** What a page shows of an export: never its file's name, nor whose session asked. */
 export type ExportView =

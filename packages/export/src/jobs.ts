@@ -1,6 +1,9 @@
 import { randomBytes } from 'node:crypto';
-import type { Database } from '@sovereignfs/database';
 
+/**
+ * Whose export: `instance` is the operator's (the owner's of core, or an app's operator's), `person` one person's own. Stored as written,
+ * so an app's operator's export is an `instance` job though its archive says `kind: "app"`.
+ */
 export type ExportKind = 'instance' | 'person';
 export type ExportState = 'pending' | 'running' | 'ready' | 'failed' | 'sent';
 export type ExportArchive = 'tar.age' | 'zip' | 'tar';
@@ -48,18 +51,61 @@ function toJob(row: Record<string, unknown>): ExportJob {
 const COLUMNS =
   'id, kind, sub, session_id, state, archive, file, size, requested_at, finished_at, failure';
 
+/** One row, as a driver returns it. */
+export type ExportRow = Record<string, unknown>;
+
+/** What the jobs run a statement on. Placeholders are `?`, as `@sovereignfs/database` takes them on every dialect. */
+export interface ExportExecutor {
+  run(sql: string, args?: readonly unknown[]): Promise<{ rows: ExportRow[]; rowsAffected: number }>;
+}
+
+/** The database the jobs are kept in. `@sovereignfs/database`'s `Database` is one. */
+export interface ExportDatabase extends ExportExecutor {
+  transaction<T>(fn: (tx: ExportExecutor) => Promise<T>): Promise<T>;
+}
+
+/** One migration, in `@sovereignfs/database`'s shape. */
+export interface ExportMigration {
+  readonly name: string;
+  readonly sql: string;
+}
+
+/** The table the jobs' migrations are recorded in, apart from the app's own (`migrate(db, exportJobsMigrations(…), { table })`). */
+export const EXPORT_MIGRATIONS_TABLE = 'sv_export_migrations';
+/** The table an app keeps its jobs in. Core keeps its own as `export_jobs`, made by its migrations. */
+export const EXPORT_JOBS_TABLE = 'sv_export_jobs';
+
+/** The jobs' table for a dialect family: `sqlite` for a SQLite file and sqld, `postgres` for PostgreSQL (times in milliseconds). */
+export function exportJobsMigrations(family: 'sqlite' | 'postgres'): ExportMigration[] {
+  const number = family === 'postgres' ? 'bigint' : 'integer';
+  return [
+    {
+      name: '0000_export_jobs',
+      sql: [
+        `CREATE TABLE ${EXPORT_JOBS_TABLE} (\n\tid text PRIMARY KEY NOT NULL,\n\tkind text NOT NULL,\n\tsub text,\n\tsession_id text NOT NULL,\n\tstate text NOT NULL,\n\tarchive text NOT NULL,\n\tfile text,\n\tsize ${number},\n\trequested_at ${number} NOT NULL,\n\tfinished_at ${number},\n\tlease_until ${number},\n\tfailure text\n)`,
+        `CREATE INDEX ${EXPORT_JOBS_TABLE}_state_idx ON ${EXPORT_JOBS_TABLE} (state)`,
+        `CREATE INDEX ${EXPORT_JOBS_TABLE}_sub_idx ON ${EXPORT_JOBS_TABLE} (sub)`,
+      ].join('\n--> statement-breakpoint\n'),
+    },
+  ];
+}
+
 /**
  * The exports being made and waiting (core-app §4.7.3): one at a time for the instance and one for each person, claimed with a
  * conditional update so that two instances of core never make one twice, downloaded once, and forgotten an hour after. It holds no file;
  * the caller removes the files a method says are done with.
  */
 export class ExportJobs {
-  readonly #database: Database;
+  readonly #database: ExportDatabase;
   readonly #now: () => number;
+  readonly #table: string;
 
-  constructor(database: Database, now: () => number = Date.now) {
+  constructor(database: ExportDatabase, options: { now?: () => number; table?: string } = {}) {
     this.#database = database;
-    this.#now = now;
+    this.#now = options.now ?? Date.now;
+    this.#table = options.table ?? EXPORT_JOBS_TABLE;
+    if (!/^[a-z_][a-z0-9_]*$/.test(this.#table))
+      throw new Error('The jobs table must be a plain name.');
   }
 
   #owner(kind: ExportKind, sub: string | undefined): { sql: string; args: unknown[] } {
@@ -72,7 +118,7 @@ export class ExportJobs {
   async latest(kind: ExportKind, sub?: string): Promise<ExportJob | undefined> {
     const owner = this.#owner(kind, sub);
     const { rows } = await this.#database.run(
-      `select ${COLUMNS} from export_jobs where ${owner.sql} order by requested_at desc limit 1`,
+      `select ${COLUMNS} from ${this.#table} where ${owner.sql} order by requested_at desc limit 1`,
       owner.args,
     );
     return rows[0] ? toJob(rows[0] as Record<string, unknown>) : undefined;
@@ -91,7 +137,7 @@ export class ExportJobs {
     const owner = this.#owner(input.kind, input.sub);
     return this.#database.transaction(async (tx) => {
       const { rows } = await tx.run(
-        `select ${COLUMNS} from export_jobs where ${owner.sql}`,
+        `select ${COLUMNS} from ${this.#table} where ${owner.sql}`,
         owner.args,
       );
       const existing = rows.map((row) => toJob(row as Record<string, unknown>));
@@ -99,7 +145,7 @@ export class ExportJobs {
         throw new ExportBusyError('An export is already being made.');
       }
       await tx.run(
-        `delete from export_jobs where ${owner.sql} and state in ('ready', 'failed')`,
+        `delete from ${this.#table} where ${owner.sql} and state in ('ready', 'failed')`,
         owner.args,
       );
       const job: ExportJob = {
@@ -116,7 +162,7 @@ export class ExportJobs {
         failure: null,
       };
       await tx.run(
-        "insert into export_jobs (id, kind, sub, session_id, state, archive, requested_at) values (?, ?, ?, ?, 'pending', ?, ?)",
+        `insert into ${this.#table} (id, kind, sub, session_id, state, archive, requested_at) values (?, ?, ?, ?, 'pending', ?, ?)`,
         [job.id, job.kind, job.sub, job.sessionId, job.archive, job.requestedAt],
       );
       return {
@@ -132,13 +178,13 @@ export class ExportJobs {
   async claim(): Promise<ExportJob | undefined> {
     const now = this.#now();
     const { rows } = await this.#database.run(
-      `select ${COLUMNS} from export_jobs where state = 'pending' or (state = 'running' and lease_until < ?) order by requested_at limit 5`,
+      `select ${COLUMNS} from ${this.#table} where state = 'pending' or (state = 'running' and lease_until < ?) order by requested_at limit 5`,
       [now],
     );
     for (const row of rows) {
       const job = toJob(row as Record<string, unknown>);
       const taken = await this.#database.run(
-        "update export_jobs set state = 'running', lease_until = ? where id = ? and (state = 'pending' or (state = 'running' and lease_until < ?))",
+        `update ${this.#table} set state = 'running', lease_until = ? where id = ? and (state = 'pending' or (state = 'running' and lease_until < ?))`,
         [now + LEASE_MS, job.id, now],
       );
       if (taken.rowsAffected === 1) return { ...job, state: 'running' };
@@ -149,14 +195,14 @@ export class ExportJobs {
   /** Holds a job a while longer, for a maker still at work. */
   async renew(id: string): Promise<void> {
     await this.#database.run(
-      "update export_jobs set lease_until = ? where id = ? and state = 'running'",
+      `update ${this.#table} set lease_until = ? where id = ? and state = 'running'`,
       [this.#now() + LEASE_MS, id],
     );
   }
 
   async finish(id: string, file: string, size: number): Promise<void> {
     await this.#database.run(
-      "update export_jobs set state = 'ready', file = ?, size = ?, finished_at = ?, lease_until = null where id = ? and state = 'running'",
+      `update ${this.#table} set state = 'ready', file = ?, size = ?, finished_at = ?, lease_until = null where id = ? and state = 'running'`,
       [file, size, this.#now(), id],
     );
   }
@@ -164,7 +210,7 @@ export class ExportJobs {
   /** Records a failure by its kind, never by what was being written. */
   async fail(id: string, failure: string): Promise<void> {
     await this.#database.run(
-      "update export_jobs set state = 'failed', failure = ?, finished_at = ?, lease_until = null where id = ? and state = 'running'",
+      `update ${this.#table} set state = 'failed', failure = ?, finished_at = ?, lease_until = null where id = ? and state = 'running'`,
       [failure.slice(0, 64), this.#now(), id],
     );
   }
@@ -182,13 +228,14 @@ export class ExportJobs {
     const owner = this.#owner(input.kind, input.sub);
     const now = this.#now();
     const taken = await this.#database.run(
-      `update export_jobs set state = 'sent' where id = ? and ${owner.sql} and session_id = ? and state = 'ready' and finished_at > ?`,
+      `update ${this.#table} set state = 'sent' where id = ? and ${owner.sql} and session_id = ? and state = 'ready' and finished_at > ?`,
       [input.id, ...owner.args, input.sessionId, now - KEPT_MS],
     );
     if (taken.rowsAffected !== 1) return undefined;
-    const { rows } = await this.#database.run(`select ${COLUMNS} from export_jobs where id = ?`, [
-      input.id,
-    ]);
+    const { rows } = await this.#database.run(
+      `select ${COLUMNS} from ${this.#table} where id = ?`,
+      [input.id],
+    );
     return rows[0] ? toJob(rows[0] as Record<string, unknown>) : undefined;
   }
 
@@ -197,11 +244,11 @@ export class ExportJobs {
     const cutoff = this.#now() - KEPT_MS;
     return this.#database.transaction(async (tx) => {
       const { rows } = await tx.run(
-        "select file from export_jobs where file is not null and (state = 'sent' or (state in ('ready', 'failed') and finished_at < ?))",
+        `select file from ${this.#table} where file is not null and (state = 'sent' or (state in ('ready', 'failed') and finished_at < ?))`,
         [cutoff],
       );
       await tx.run(
-        "delete from export_jobs where state = 'sent' or (state in ('ready', 'failed') and finished_at < ?)",
+        `delete from ${this.#table} where state = 'sent' or (state in ('ready', 'failed') and finished_at < ?)`,
         [cutoff],
       );
       return rows.map((row) => String((row as Record<string, unknown>).file));
@@ -212,10 +259,10 @@ export class ExportJobs {
   async forget(sub: string): Promise<string[]> {
     return this.#database.transaction(async (tx) => {
       const { rows } = await tx.run(
-        "select file from export_jobs where kind = 'person' and sub = ? and file is not null",
+        `select file from ${this.#table} where kind = 'person' and sub = ? and file is not null`,
         [sub],
       );
-      await tx.run("delete from export_jobs where kind = 'person' and sub = ?", [sub]);
+      await tx.run(`delete from ${this.#table} where kind = 'person' and sub = ?`, [sub]);
       return rows.map((row) => String((row as Record<string, unknown>).file));
     });
   }

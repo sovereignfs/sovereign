@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { requireConsole } from '../../../src/console/guard';
 import { getInstanceManager } from '../../../src/instance/service';
 import { getExportJobs } from '../../../src/exports/service';
-import { viewOf } from '../../../src/exports/view';
+import { viewOf } from '@sovereignfs/export';
 import { ExportPanel } from '../../export-panel';
 import { startInstanceExportAction } from './export-actions';
 import styles from './data.module.css';

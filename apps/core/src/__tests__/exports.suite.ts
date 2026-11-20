@@ -14,7 +14,14 @@ import { decryptWith, readExport } from '@sovereignfs/export';
 import { generateX25519Identity, identityToRecipient } from 'age-encryption';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { migrateCore } from '../db/migrate';
-import { ExportBusyError, ExportJobs, KEPT_MS } from '../exports/jobs';
+import {
+  ExportBusyError,
+  ExportJobs,
+  exportJobsMigrations,
+  EXPORT_MIGRATIONS_TABLE,
+  KEPT_MS,
+} from '@sovereignfs/export';
+import { migrate } from '@sovereignfs/database';
 import { exportsFolder, makeExport, removeExportFiles } from '../exports/make';
 import { addAppParts } from '../exports/apps';
 import { ExportWriter } from '@sovereignfs/export';
@@ -52,7 +59,7 @@ export function exportsSuite(createDatabase: () => Promise<TestDatabase>): void 
     return () => rm(root, { recursive: true, force: true });
   });
 
-  const jobs = () => new ExportJobs(db, () => clock);
+  const jobs = () => new ExportJobs(db, { now: () => clock, table: 'export_jobs' });
 
   async function person(id: string, email: string) {
     const time = pg() ? new Date(clock) : clock;
@@ -63,6 +70,19 @@ export function exportsSuite(createDatabase: () => Promise<TestDatabase>): void 
   }
 
   describe('jobs', () => {
+    it('works on an app’s own table, made by the package’s migrations, as an app with no core keeps it', async () => {
+      await migrate(db, exportJobsMigrations(pg() ? 'postgres' : 'sqlite'), {
+        table: EXPORT_MIGRATIONS_TABLE,
+      });
+      const own = new ExportJobs(db, { now: () => clock });
+      await db.run('delete from sv_export_jobs');
+      const { job } = await own.request({ kind: 'instance', sessionId: 's1', archive: 'tar.age' });
+      expect((await own.claim())?.id).toBe(job.id);
+      await own.finish(job.id, `${job.id}.tar.age`, 3);
+      expect((await own.take({ id: job.id, kind: 'instance', sessionId: 's1' }))?.size).toBe(3);
+      expect(await jobs().latest('instance')).toBeUndefined();
+    });
+
     it('makes one at a time for the instance and for each person', async () => {
       await jobs().request({ kind: 'instance', sessionId: 's1', archive: 'tar.age' });
       await expect(

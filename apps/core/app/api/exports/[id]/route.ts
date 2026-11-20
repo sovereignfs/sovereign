@@ -1,31 +1,14 @@
-import { createReadStream } from 'node:fs';
-import { rm } from 'node:fs/promises';
-import path from 'node:path';
 import {
   authorizationResponse,
   requireCapability,
   requireSameOrigin,
 } from '../../../../src/auth/authorize';
-import { getDatabase } from '../../../../src/database';
+import { downloadExport } from '@sovereignfs/export';
 import { coreFilesRoot } from '../../../../src/files';
-import { ExportJobs } from '../../../../src/exports/jobs';
 import { exportsFolder } from '../../../../src/exports/make';
+import { getExportJobs } from '../../../../src/exports/service';
 
 export const dynamic = 'force-dynamic';
-
-const TYPES = {
-  'tar.age': 'application/octet-stream',
-  tar: 'application/x-tar',
-  zip: 'application/zip',
-} as const;
-
-function fileName(host: string, kind: string, requestedAt: number, archive: string): string {
-  const time = new Date(requestedAt)
-    .toISOString()
-    .replace(/[-:]/g, '')
-    .replace(/\.\d{3}Z$/, 'Z');
-  return `sovereign-${host.replace(/[^a-z0-9.-]/gi, '-').toLowerCase()}-${time}-${kind}.${archive}`;
-}
 
 /**
  * Hands over an export once (core-app §4.7.3): a `POST` from core's own page, by the session that asked for it, within the hour. The
@@ -44,38 +27,18 @@ export async function POST(
     const session = await requireCapability(
       kind === 'instance' ? 'instance:export' : 'profile:manage',
     );
-    const jobs = new ExportJobs(await getDatabase());
-    const job = await jobs.take({
+    const answer = await downloadExport({
+      jobs: await getExportJobs(),
+      folder: exportsFolder(coreFilesRoot()),
       id,
       kind,
       ...(kind === 'person' ? { sub: session.user.id } : {}),
       sessionId: session.session.id,
+      host: new URL(request.url).hostname,
     });
-    if (!job?.file)
-      return new Response('Not found', { status: 404, headers: { 'cache-control': 'no-store' } });
-    const file = path.join(exportsFolder(coreFilesRoot()), job.file);
-    const stream = createReadStream(file);
-    const done = () => void rm(file, { force: true });
-    stream.on('close', done);
-    const body = new ReadableStream<Uint8Array>({
-      start(controller) {
-        stream.on('data', (chunk) => controller.enqueue(new Uint8Array(chunk as Buffer)));
-        stream.on('end', () => controller.close());
-        stream.on('error', (error) => controller.error(error));
-      },
-      cancel() {
-        stream.destroy();
-      },
-    });
-    return new Response(body, {
-      headers: {
-        'content-type': TYPES[job.archive],
-        'content-length': String(job.size ?? ''),
-        'content-disposition': `attachment; filename="${fileName(new URL(request.url).hostname, job.kind, job.requestedAt, job.archive)}"`,
-        'cache-control': 'no-store',
-        'x-content-type-options': 'nosniff',
-      },
-    });
+    return (
+      answer ?? new Response('Not found', { status: 404, headers: { 'cache-control': 'no-store' } })
+    );
   } catch (error) {
     return authorizationResponse(error) ?? Promise.reject(error);
   }

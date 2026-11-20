@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/export",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Exports of a Sovereign app or core: one archive format, written as a stream, checked, and encrypted to age recipients.",
   "license": "MPL-2.0",
   "repository": {

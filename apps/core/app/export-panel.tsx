@@ -4,7 +4,7 @@ import { startTransition, useActionState, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert, Button, ConfirmDialog, FormField, Input } from '@sovereignfs/ui';
 import { signInValue } from '../src/auth/derive';
-import type { ExportView } from '../src/exports/view';
+import type { ExportView } from '@sovereignfs/export';
 import styles from './export-panel.module.css';
 
 export type ExportActionResult = { ok: true } | { ok: false; error: string };

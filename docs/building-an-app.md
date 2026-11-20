@@ -357,9 +357,9 @@ libSQL's native client (no build for musl). A `/api/health` that answers `200` o
 boots every setup from nothing, and as an instance would host it.
 
 **The app template.** `npm create @sovereignfs app <name> --port <N>` makes a hosted app that runs as it stands (manifest, Dockerfile,
-publish workflow, health route, config, migrations, SDK sign-in). It is **core-only and PostgreSQL-only**, so it suits an app that
-will only ever be hosted. An app that must also run alone is started from Tusk's structure instead. With `--encryption`, its notes are
-encrypted in the browser and shared between people of the instance ([Encrypting an app's data](encrypting-an-app.md)).
+publish workflow, health route, config, migrations, the sign-in of §6). It runs hosted by an instance or on its own, with accounts of
+its own; it is **PostgreSQL-only** (§15). With `--encryption`, its notes are encrypted in the browser and shared between people of the
+instance ([Encrypting an app's data](encrypting-an-app.md)); such an app signs in through core only.
 
 ## 12. Releasing and hosting
 

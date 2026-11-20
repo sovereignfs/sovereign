@@ -5,6 +5,14 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.123.0] - 2026-11-20
+
+### Added
+
+- The Console has a Data page, the owner's alone (a new owner-only permission, "Export the instance's data"). On it the owner saves
+  the keys an export of the instance is encrypted to: age public keys, as `sv key export` prints them, whose private halves stay with the
+  owner. Taking the export itself comes next.
+
 ## [0.122.0] - 2026-11-20
 
 ### Added

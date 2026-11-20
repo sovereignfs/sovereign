@@ -757,8 +757,8 @@ to recipients the owner pastes in (core-app §4.7.1); the toolkit gives them and
   owner to paste into Console > Data. It prints no private key and sends nothing: the toolkit holds no account (§9.5).
 - `sv export open FILE [--key FILE] [--out DIR]` decrypts an export with the operator's key (or `--key`, such as the recovery key) on
   this machine, as a stream, checks it as `contracts/export.md` §5 says, and unpacks it into `DIR` (default: a new folder named after the
-  file, beside it, `0700`). It refuses an export that fails the check and leaves nothing of it. A plain export (a person's) is checked and
-  unpacked the same way.
+  file, beside it, `0700`). It refuses an export that fails the check and leaves nothing of it. A person's export as a tar is checked and
+  unpacked the same way; as a zip, it is opened with any zip tool, and the command says so.
 - An export is not a backup and `sv restore` refuses one, naming `sv backup`.
 
 ## 10. Keeping up, and recovering

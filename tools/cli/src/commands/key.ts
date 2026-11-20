@@ -42,9 +42,10 @@ const isRecovery = (item: unknown) =>
 export async function key(ctx: Context, argv: string[]): Promise<void> {
   const [what, ...rest] = argv;
   if (what === 'escrow') return escrow(ctx, rest);
+  if (what === 'export') return exportKeys(ctx, rest);
   if (what !== 'recovery') {
     throw new Refused(
-      'Usage: sv key recovery [--out FILE] [--remove] | sv key escrow [--out FILE] | sv key escrow open --key FILE --out FILE [RECORD]',
+      'Usage: sv key recovery [--out FILE] [--remove] | sv key escrow [--out FILE] | sv key escrow open --key FILE --out FILE [RECORD] | sv key export',
     );
   }
   const args = parseArgs(rest, { out: 'value', remove: 'switch' });
@@ -119,6 +120,23 @@ export async function key(ctx: Context, argv: string[]): Promise<void> {
   }
   ctx.io.err(
     `Added its public key to secrets.recipients and re-encrypted ${count} secret${count === 1 ? '' : 's'} to it. sv push and sv deploy: backups taken after that open with it too (sv restore PATH --key FILE).`,
+  );
+}
+
+/**
+ * `sv key export` (operator-cli §9.6): the public keys of `secrets.recipients` (the operator's and any recovery key) as one line, for the
+ * owner to paste into Console > Data, so that the owner's export of core is encrypted to the keys that open the instance's backups. It
+ * prints no private key and sends nothing.
+ */
+async function exportKeys(ctx: Context, argv: string[]): Promise<void> {
+  positionals(parseArgs(argv, {}), 0, 'sv key export');
+  const suite = await SuiteFile.load(ctx.root);
+  const recipients = suite.value.secrets.recipients;
+  if (recipients.length === 0)
+    throw new Refused('suite.yml has no secrets.recipients.', 'Run sv setup first.');
+  ctx.io.out(recipients.join(' '));
+  ctx.io.err(
+    `Paste that line into Console > Data, under Encryption. Exports are then encrypted to ${recipients.length === 1 ? 'your key' : `these ${recipients.length} keys`}, and sv export open opens them.`,
   );
 }
 

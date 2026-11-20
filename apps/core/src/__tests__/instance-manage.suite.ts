@@ -461,6 +461,27 @@ export function instanceManageSuite(createDatabase: () => Promise<TestDatabase>)
       });
     });
 
+    describe('the keys the owner’s export is encrypted to (core-app §4.7.1)', () => {
+      const KEY_A = 'age1' + 'q'.repeat(58);
+
+      it('is the owner’s alone, takes only age recipients, and clears to none', async () => {
+        const { generateX25519Identity, identityToRecipient } = await import('age-encryption');
+        const one = await identityToRecipient(await generateX25519Identity());
+        const two = await identityToRecipient(await generateX25519Identity());
+        expect(await refused(() => manager().setExportRecipients(admin, one))).toBe('forbidden');
+        expect(await refused(() => manager().setExportRecipients(person, one))).toBe('forbidden');
+        expect(await refused(() => manager().setExportRecipients(owner, 'ssh-ed25519 AAAA'))).toBe(
+          'invalid',
+        );
+        expect(await refused(() => manager().setExportRecipients(owner, KEY_A))).toBe('invalid');
+        await manager().setExportRecipients(owner, ` ${one},\n${two} `);
+        expect(await manager().exportRecipients(owner)).toEqual([one, two]);
+        expect(await refused(() => manager().exportRecipients(admin))).toBe('forbidden');
+        await manager().setExportRecipients(owner, '');
+        expect(await manager().exportRecipients(owner)).toEqual([]);
+      });
+    });
+
     describe('recovery of encrypted data (core-app §5.8)', () => {
       const LINE = `sv-escrow-1.${'A'.repeat(11)}.${'B'.repeat(43)}`;
 

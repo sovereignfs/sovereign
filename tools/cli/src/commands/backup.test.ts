@@ -373,6 +373,15 @@ describe('sv restore by scope', () => {
     expect((await sv(world, 'restore', file, '--key', keyFile, '--yes')).code).toBe(0);
   });
 
+  it('refuses an export the Console gave, which holds no databases and would empty the instance', async () => {
+    await ready();
+    const file = path.join(temp(), 'sovereign-x-20261120T100000Z-instance.tar');
+    writeFileSync(file, makeArchive({ 'export.json': '{"format":1}', 'contents.json': '{}' }));
+    const done = await sv(world, 'restore', file, '--yes');
+    expect(done.code).toBe(2);
+    expect(done.text).toContain('This is an export, not a backup');
+  });
+
   it('refuses a file that is neither an encrypted nor a plain backup', async () => {
     await ready();
     const file = path.join(temp(), 'notes.txt');

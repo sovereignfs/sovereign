@@ -5,6 +5,20 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.12.0; earlier versions are in the repository's
 history and tags.
 
+## [0.23.0] - 2026-11-20
+
+### Added
+
+- `sv key export` prints the line to paste into the Console's Data page (the public keys of `secrets.recipients`), so that the owner's
+  export of core is encrypted to the keys that already open the instance's backups.
+- `sv export open FILE [--key FILE] [--out DIR]` decrypts an export the Console gave, checks every file against its list, and unpacks it
+  into a folder beside it; an export that fails the check leaves nothing behind.
+
+### Fixed
+
+- `sv restore` refuses an export, which begins with `export.json` and holds no database: it was read as a backup from before
+  `backup.json` and would have been restored as the whole instance.
+
 ## [0.22.0] - 2026-11-20
 
 ### Changed

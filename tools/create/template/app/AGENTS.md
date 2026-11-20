@@ -32,7 +32,7 @@ this app's own; the shared one is written by `npm create @sovereignfs app sync` 
   components, the file `sovereign.json` names for it) and `## [X.Y.Z] - date` in its changelog, in plain words for someone upgrading. A
   promotion titled `Release` with that version's tag publishes it on merge (`RELEASING.md`).
 - **CI runs only for `main`:** on pull requests into it that are not drafts, before a release and by hand; never for `develop` or a
-  feature branch, which the pre-push hook (`npm run verify`) checks locally.
+  feature branch, which the pre-push hook (`__RUN__ verify`) checks locally.
 - **Verify before claiming done,** and show the output. A regression test is trusted only after it has been seen to fail against the code
   it guards.
 - **Docs are part of the change:** a statement a change makes false is fixed in the same change.

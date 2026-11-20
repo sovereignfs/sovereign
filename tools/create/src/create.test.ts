@@ -68,6 +68,7 @@ describe('what npm create was asked', () => {
       dir: 'my-instance',
       remote: undefined,
       encryption: false,
+      packageManager: undefined,
     });
     expect(read(['instance', 'x', '--remote', 'git@sovereign.local:me/x.git']).remote).toBe(
       'git@sovereign.local:me/x.git',
@@ -105,12 +106,22 @@ describe('what npm create was asked', () => {
     expect(read(['app', 'a']).encryption).toBe(false);
   });
 
+  it('may name the app’s package manager, from the arguments or from what npm kept for itself', () => {
+    expect(read(['app', 'a', '--package-manager', 'yarn']).packageManager).toBe('yarn');
+    expect(read(['app', 'a', '--package-manager=npm']).packageManager).toBe('npm');
+    expect(read(['app', 'a'], { npm_config_package_manager: 'pnpm' }).packageManager).toBe('pnpm');
+    expect(read(['app', 'a']).packageManager).toBeUndefined();
+    for (const bad of ['bun', '', 'PNPM'])
+      expect(() => read(['app', 'a', `--package-manager=${bad}`]), bad).toThrow(CreateError);
+  });
+
   it('is nothing to go on when there is no word, and says what is wrong with an odd option or too many words', () => {
     expect(read([])).toEqual({
       kind: undefined,
       dir: undefined,
       remote: undefined,
       encryption: false,
+      packageManager: undefined,
     });
     expect(() => read(['instance', 'a', 'b'])).toThrow('Too many arguments');
     expect(() => read(['instance', 'a', '--force'])).toThrow(CreateError);

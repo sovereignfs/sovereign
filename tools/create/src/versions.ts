@@ -54,3 +54,10 @@ export const CREATE_VERSION: string = pkg.version;
  * commit of its own, when they change; an app takes it with its next `npm create @sovereignfs sync`.
  */
 export const SHARED_WORKFLOWS_REF = 'ef1ddb5f623ba702fc34c8769b4b2f98c6f61ed8';
+
+/**
+ * The managers an app made with pnpm or Yarn pins in its `packageManager` field, which corepack reads in the image and in CI. pnpm is the one
+ * this repository uses (a test holds them together); Yarn is the latest 4.
+ */
+export const PNPM_VERSION = '11.28.9';
+export const YARN_VERSION = '4.18.1';

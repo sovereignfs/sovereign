@@ -1,5 +1,6 @@
 import { chmod, mkdir, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { parsePackageManager, type PackageManager } from './package-manager.js';
 import { GITIGNORE, LAUNCHER, packageJson, readme } from './templates.js';
 
 /** Why the command stopped, and what to do. Nothing was written when it is `refused`. */
@@ -36,6 +37,8 @@ export type Request = {
   port: number | undefined;
   /** An app whose notes are encrypted in the browser (`--encryption`, operator-cli §2.2). */
   encryption: boolean;
+  /** The package manager an app is made with (`--package-manager`, operator-cli §2.2). Absent means the default, or ask. */
+  packageManager: PackageManager | undefined;
 };
 
 /**
@@ -66,6 +69,7 @@ export function readRequest(argv: readonly string[], env: NodeJS.ProcessEnv): Re
   let remote: string | undefined;
   let port: string | undefined;
   let encryption = false;
+  let packageManager: string | undefined;
   const words: string[] = [];
   for (let i = 0; i < argv.length; i += 1) {
     const word = argv[i] as string;
@@ -76,11 +80,14 @@ export function readRequest(argv: readonly string[], env: NodeJS.ProcessEnv): Re
     else if (word === '--port') port = argv[++i] ?? '';
     else if (word.startsWith('--port=')) port = word.slice('--port='.length);
     else if (word === '--encryption') encryption = true;
+    else if (word === '--package-manager') packageManager = argv[++i] ?? '';
+    else if (word.startsWith('--package-manager='))
+      packageManager = word.slice('--package-manager='.length);
     else if (word.startsWith('--'))
       throw new CreateError(
         `There is no option ${word}.`,
         2,
-        'Use: npm create @sovereignfs instance <folder> [--remote URL], or app <folder> [--port N] [--encryption]',
+        'Use: npm create @sovereignfs instance <folder> [--remote URL], or app <folder> [--port N] [--encryption] [--package-manager pnpm|npm|yarn]',
       );
     else words.push(word);
   }
@@ -106,12 +113,18 @@ export function readRequest(argv: readonly string[], env: NodeJS.ProcessEnv): Re
   // npm keeps `--encryption` before `--` for itself too, and hands it over as npm_config_encryption.
   const flag = env.npm_config_encryption;
   if (flag !== undefined && flag !== '' && flag !== 'false') encryption = true;
+  // And `--package-manager`, as npm_config_package_manager.
+  packageManager ??=
+    env.npm_config_package_manager === undefined || env.npm_config_package_manager === ''
+      ? undefined
+      : env.npm_config_package_manager;
   return {
     kind,
     dir: words[0],
     remote,
     port: port === undefined ? undefined : parsePort(port),
     encryption,
+    packageManager: packageManager === undefined ? undefined : parsePackageManager(packageManager),
   };
 }
 

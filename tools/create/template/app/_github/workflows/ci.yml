@@ -41,7 +41,8 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-      - run: npm ci --ignore-scripts --no-audit --no-fund
-      - run: npm run typecheck
-      - run: npm run manifest:check
-      - run: npm run build
+      # __COREPACK_STEP__
+      - run: __CI_INSTALL__
+      - run: __RUN__ typecheck
+      - run: __RUN__ manifest:check
+      - run: __RUN__ build

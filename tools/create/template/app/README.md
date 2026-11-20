@@ -41,8 +41,8 @@ The image's label (which is how an instance reads the manifest without pulling t
 `sovereign.manifest.json` by [`@sovereignfs/manifest`](https://www.npmjs.com/package/@sovereignfs/manifest), so build with what it prints:
 
 ```bash
-npm install
-eval "docker build $(npx sovereign-manifest docker-args) -t ghcr.io/you/__NAME__:0.1.0 ."
+__INSTALL__
+eval "docker build $(__EXEC__ sovereign-manifest docker-args) -t ghcr.io/you/__NAME__:0.1.0 ."
 docker push ghcr.io/you/__NAME__:0.1.0
 ```
 
@@ -60,7 +60,7 @@ then, in your instance repository:
 ```
 
 `sv` reads the manifest from the image's label, shows you the scopes it asks for, gives it its address, its port (as `PORT`), its database and
-its secrets, and registers it with core. Change `sovereign.manifest.json` and build again; `npm run manifest:check` says whether it is
+its secrets, and registers it with core. Change `sovereign.manifest.json` and build again; `__RUN__ manifest:check` says whether it is
 valid.
 
 ## People's files
@@ -101,10 +101,10 @@ people, delete it in `onAccountDeleted` in `lib/notices.ts`, which core calls wh
 
 ```bash
 cp .env.example .env     # point it at a PostgreSQL database, and at a core you can reach to sign in through one
-npm run dev              # http://localhost:__PORT__
+__RUN__ dev              # http://localhost:__PORT__
 ```
 
-The port is `port` in `sovereign.manifest.json`, the one copy: the image listens on it, and `npm run dev`, `npm start` and
+The port is `port` in `sovereign.manifest.json`, the one copy: the image listens on it, and `__RUN__ dev`, `__RUN__ start` and
 `__PREFIX___URL` in `.env.example` were made with it. To change it, change the manifest, the `dev` and `start` scripts and
 `__PREFIX___URL` together.
 

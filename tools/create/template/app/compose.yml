@@ -12,7 +12,7 @@ services:
     build:
       context: .
       args:
-        # The manifest's port, which the image listens on. `npx sovereign-manifest docker-args` prints it, with the image's label.
+        # The manifest's port, which the image listens on. `__EXEC__ sovereign-manifest docker-args` prints it, with the image's label.
         PORT: '__PORT__'
     ports:
       - '__PORT__:__PORT__'

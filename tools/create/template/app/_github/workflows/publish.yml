@@ -61,7 +61,8 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-      - run: npm ci --ignore-scripts --no-audit --no-fund
+      # __COREPACK_STEP__
+      - run: __CI_INSTALL__
 
       # The tag names the version, so it has to be the one the package says. The image is tagged X.Y.Z, without the v.
       - id: version
@@ -77,15 +78,15 @@ jobs:
           echo "version=$expected" >> "$GITHUB_OUTPUT"
 
       # The release notes are the version's CHANGELOG.md section (RELEASING.md); a version without one is not published.
-      - run: npx create app release notes "$TAG" > /dev/null
+      - run: __EXEC__ create app release notes "$TAG" > /dev/null
         env:
           TAG: ${{ inputs.tag || github.ref_name }}
 
       # Fails the build on a manifest an instance would refuse.
-      - run: npx sovereign-manifest check
+      - run: __EXEC__ sovereign-manifest check
 
       - id: manifest
-        run: npx sovereign-manifest docker-args --format github >> "$GITHUB_OUTPUT"
+        run: __EXEC__ sovereign-manifest docker-args --format github >> "$GITHUB_OUTPUT"
 
       - id: image
         run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
@@ -120,12 +121,13 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-      - run: npm ci --ignore-scripts --no-audit --no-fund
+      # __COREPACK_STEP__
+      - run: __CI_INSTALL__
       - env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          npx create app release notes "$TAG" > notes.md
+          __EXEC__ create app release notes "$TAG" > notes.md
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file notes.md
           else

@@ -364,10 +364,11 @@ beside the server; the licences in `/usr/share/licenses/`; `.dockerignore` keeps
 libSQL's native client (no build for musl). A `/api/health` that answers `200` once the database is ready. `scripts/deploy-check.sh`
 boots every setup from nothing, and as an instance would host it.
 
-**The app template.** `npm create @sovereignfs app <name> --port <N>` makes a hosted app that runs as it stands (manifest, Dockerfile,
-publish workflow, health route, config, migrations, the sign-in of §6). It runs hosted by an instance or on its own, with accounts of
-its own; it is **PostgreSQL-only** (§15). With `--encryption`, its notes are encrypted in the browser and shared between people of the
-instance ([Encrypting an app's data](encrypting-an-app.md)); such an app signs in through core only.
+**The app template.** `npm create @sovereignfs app <name> --port <N> [--package-manager pnpm|npm|yarn]` (pnpm by default) makes a
+hosted app that runs as it stands (manifest, Dockerfile, publish workflow, health route, config, migrations, the sign-in of §6). It runs
+hosted by an instance or on its own, with accounts of its own; it is **PostgreSQL-only** (§15). With `--encryption`, its notes are
+encrypted in the browser and shared between people of the instance ([Encrypting an app's data](encrypting-an-app.md)); such an app signs
+in through core only.
 
 ## 12. Releasing and hosting
 

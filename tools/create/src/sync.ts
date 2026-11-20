@@ -9,6 +9,7 @@ import { namesOf } from './app.js';
 import { CreateError, DEFAULT_APP_PORT } from './create.js';
 import { fill, TEMPLATE, targetOf, type Fill } from './fill.js';
 import { readReleases, type Releases } from './components.js';
+import { managerOf, type PackageManager } from './package-manager.js';
 import { isPrefix } from './release.js';
 import { DEFAULT_REQUIRED_CHECKS, repositorySettings } from './settings-file.js';
 import { SHARED_WORKFLOWS_REF } from './versions.js';
@@ -40,6 +41,8 @@ export type AppSettings = {
   /** Shared files the app keeps as its own, by their path from the repository's root. */
   unmanaged: string[];
   port: number;
+  /** The manager the app was made with, from `packageManager`: npm when there is none, as for every app made before there was a choice. */
+  packageManager: PackageManager;
 };
 
 const strings = (value: unknown, what: string): string[] => {
@@ -51,7 +54,7 @@ const strings = (value: unknown, what: string): string[] => {
 };
 
 export async function readAppSettings(appDir: string): Promise<AppSettings> {
-  let manifest: { name?: unknown; sovereign?: Record<string, unknown> };
+  let manifest: { name?: unknown; packageManager?: unknown; sovereign?: Record<string, unknown> };
   try {
     manifest = JSON.parse(await readFile(path.join(appDir, 'package.json'), 'utf8'));
   } catch {
@@ -85,6 +88,7 @@ export async function readAppSettings(appDir: string): Promise<AppSettings> {
         : strings(own.requiredChecks, 'requiredChecks'),
     unmanaged: strings(own.unmanaged, 'unmanaged'),
     port,
+    packageManager: managerOf(manifest.packageManager),
   };
 }
 
@@ -130,6 +134,16 @@ const readText = async (file: string): Promise<string | undefined> => {
   }
 };
 
+/** The manager of a repository of several components, from its root `package.json`: npm when it names none. */
+async function rootManager(gitRoot: string): Promise<PackageManager> {
+  const text = await readText(path.join(gitRoot, 'package.json'));
+  try {
+    return managerOf(text === undefined ? undefined : JSON.parse(text).packageManager);
+  } catch {
+    return 'npm';
+  }
+}
+
 /**
  * Writes (or with `check`, compares) an app's shared files. `appDir` is the app's folder; `gitRoot` is its repository's, where the
  * workflows and settings go. Nothing outside these files is touched, and an `AGENTS.md` keeps everything but its shared section.
@@ -144,7 +158,11 @@ export async function syncApp(
   // A repository of several components keeps its documents at its root; an app, in its folder.
   const docsDir = several ? gitRoot : appDir;
   const settings = several
-    ? { port: DEFAULT_APP_PORT, tagPrefix: '' }
+    ? {
+        port: DEFAULT_APP_PORT,
+        tagPrefix: '',
+        packageManager: await rootManager(gitRoot),
+      }
     : await readAppSettings(appDir);
   const names = namesOf(path.join(path.sep, releases.name || path.basename(appDir)));
   const directory = several ? '.' : path.relative(gitRoot, appDir) || '.';
@@ -154,6 +172,7 @@ export async function syncApp(
     workflowsRef: SHARED_WORKFLOWS_REF,
     directory: directory.split(path.sep).join('/'),
     tagPrefix: settings.tagPrefix,
+    packageManager: settings.packageManager,
   };
   const results: Synced[] = [];
   for (const entry of MANAGED) {

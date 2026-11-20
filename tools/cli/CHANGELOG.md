@@ -16,6 +16,11 @@ history and tags.
   signing out, and forgotten with the account. It depends on `@sovereignfs/push` 0.2, `@sovereignfs/pwa` 0.2 and `@sovereignfs/ui`
   0.104.
 
+### Changed
+
+- The core this toolkit was made for is 0.131.0, the one released with it: `sv setup` starts on it when the registry cannot be
+  asked, where it named 0.111.0, a version never published.
+
 ## [0.26.0] - 2026-11-20
 
 ### Added

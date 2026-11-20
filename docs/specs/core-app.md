@@ -1967,7 +1967,8 @@ people's files, through `@sovereignfs/storage`.
 
 ### 4.7 Exports
 
-Specified ([RFC 0008](../rfcs/0008-exports-and-backups.md), milestone 1; epic [18](../epics/exports.md)); not built yet. An owner can
+Specified ([RFC 0008](../rfcs/0008-exports-and-backups.md), milestone 1; epic [18](../epics/exports.md)). The owner's export (§4.7.1) and
+the jobs (§4.7.3) are built; a person's export is not yet. An owner can
 download core's data, and anyone can download their own, from core and from every app they use. An export is a copy to keep, in the
 format of [`contracts/export.md`](../../contracts/export.md); it is never imported, and it is not a backup: the instance's backup is
 `sv backup` (§4.4).
@@ -2030,7 +2031,8 @@ when a table or column is added that it has not decided.
   starts and every minute, so a job a stopped process left is run again from the start.
 - **The file** is written, as it is made, to `.exports/` under core's storage path (§4.6; `SV_STORAGE_PATH`), which every instance of
   core shares and which is no person's folder. An owner's export is encrypted as it is written: nothing of it is ever on disk in the clear.
-- **The page shows the job's state** and, when it is ready, a download. The download is served **once**, to the session that asked,
+- **The page shows the job's state** (looking again every few seconds while it is made) and, when it is ready, a download: a
+  `POST` to `/api/exports/{id}` (`?kind=instance` for the owner's). The download is served **once**, to the session that asked,
   with `Cache-Control: no-store` and `Content-Disposition: attachment`, by a route that calls the same capability and `requireSameOrigin`
   (it is a `POST`), and the file is deleted when it has been sent. A ready export not downloaded within **an hour** is deleted, and so is
   a failed one's partial file. The service worker stores none of this (§1.3).

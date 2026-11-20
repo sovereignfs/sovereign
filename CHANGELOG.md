@@ -5,6 +5,15 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.124.0] - 2026-11-20
+
+### Added
+
+- The owner can export the instance's data from the Console's Data page, after their password: every account (with no password,
+  passkey or two-factor secret), the apps, consents, settings, notifications, activity, the encrypted data people keep, still encrypted,
+  and everyone's files. It is made in the background, encrypted to the owner's keys as it is written so the server cannot read it, and
+  downloaded once within the hour. `sv export open` opens it. It is not a backup: `sv backup` still is.
+
 ## [0.123.0] - 2026-11-20
 
 ### Added

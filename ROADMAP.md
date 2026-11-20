@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.123.0 · **Last updated:** 2026-11-20
+**Version:** 0.124.0 · **Last updated:** 2026-11-20
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -358,7 +358,7 @@ Backups sent to a destination on a schedule are milestone 2 of the RFC, tasks 13
 | —       | 1        | The specifications                      | ✅     | [18.1](docs/epics/exports.md) |
 | 0.122.0 | 2        | The format and the package `[parallel]` | ✅     | [18.2](docs/epics/exports.md) |
 | 0.123.0 | 3        | The operator's recipients               | ✅     | [18.3](docs/epics/exports.md) |
-| —       | 4        | The operator's export in core           | 📋     | [18.4](docs/epics/exports.md) |
+| 0.124.0 | 4        | The operator's export in core           | ✅     | [18.4](docs/epics/exports.md) |
 | —       | 5        | A person's export in core               | 📋     | [18.5](docs/epics/exports.md) |
 | —       | 6        | Apps' parts                             | 📋     | [18.6](docs/epics/exports.md) |
 | —       | 7        | The template's exports                  | 📋     | [18.7](docs/epics/exports.md) |

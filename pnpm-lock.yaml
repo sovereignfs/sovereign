@@ -51,6 +51,9 @@ catalogs:
     '@types/react-dom':
       specifier: ^19.3.0
       version: 19.3.0
+    age-encryption:
+      specifier: ^0.3.1
+      version: 0.3.1
     drizzle-kit:
       specifier: ^0.31.11
       version: 0.31.11
@@ -503,6 +506,22 @@ importers:
         specifier: 'catalog:'
         version: 6.0.3
 
+  packages/export:
+    dependencies:
+      age-encryption:
+        specifier: 'catalog:'
+        version: 0.3.1
+    devDependencies:
+      '@sovereignfs/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+
   packages/mailer:
     dependencies:
       '@react-email/render':
@@ -739,7 +758,7 @@ importers:
         specifier: ^7.8.0
         version: 7.8.0
       age-encryption:
-        specifier: ^0.3.1
+        specifier: 'catalog:'
         version: 0.3.1
       ajv:
         specifier: ^8.20.0

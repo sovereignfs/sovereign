@@ -58,7 +58,7 @@ specification and not an RFC.
 - The list of what a person's export never holds is explicit, and matches the RFC
 - `pnpm docs:check-links` and `pnpm format:check` pass; no code changes
 
-#### 📋 18.2 — The format and the package `[parallel]`
+#### ✅ 18.2 — The format and the package `[parallel]`
 
 **Goal:** One package writes, reads and checks an export, and encrypts one to age recipients, with no core present.
 
@@ -71,7 +71,8 @@ specification and not an RFC.
   unknown `format` refused); a `.zip` of the same tree for a person's export
 - encryption to age X25519 recipients as a stream, and parsing and checking a recipients line; the age implementation chosen and its
   reason written in the package's README
-- the handler's verification for an app (the `export-request+jwt` checks) as a framework-free function the SDK calls
+- the handler's verification for an app (the `export-request+jwt` checks) as a framework-free function the SDK calls. As built: it
+  lives in the SDK beside the logout and account-deleted checks it shares (18.6), so the package needs no JWT code
 - added to `docs/releasing.md`, `pnpm packages:check`, the Dockerfile's copied manifests, and the catalog for any new dependency
 
 **Dependencies:** 18.1

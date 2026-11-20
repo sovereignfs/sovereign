@@ -56,6 +56,7 @@ export default defineConfig({
       source('manifest', './packages/manifest/src/index.ts'),
       source('sdk', './packages/sdk/src/index.ts'),
       source('storage', './packages/storage/src/index.ts'),
+      source('export', './packages/export/src/index.ts'),
       source('pwa', './packages/pwa/src/index.ts'),
       {
         find: /^@sovereignfs\/pwa\/client$/,

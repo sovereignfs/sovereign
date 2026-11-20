@@ -19,7 +19,7 @@ package. Nothing is sent anywhere and nothing runs on a schedule: those are mile
 ## Definition of done
 
 - [x] `18.1` — The specifications
-- [ ] `18.2` — The format and the package
+- [x] `18.2` — The format and the package
 - [ ] `18.3` — The operator's recipients
 - [ ] `18.4` — The operator's export in core
 - [ ] `18.5` — A person's export in core

@@ -63,10 +63,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@better-auth/passkey": "1.7.18",
+    "@better-auth/passkey": "1.7.23",
     "@sovereignfs/config": "workspace:^",
     "@sovereignfs/sdk": "workspace:^",
-    "better-auth": "1.7.18",
+    "better-auth": "1.7.23",
     "drizzle-orm": "catalog:",
     "libsodium-wrappers-sumo": "catalog:",
     "zod": "^4.6.7"

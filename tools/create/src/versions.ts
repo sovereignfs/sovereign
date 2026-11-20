@@ -9,12 +9,15 @@ export const APP_DEPENDENCIES = {
   // `@sovereignfs/ui` is one bundle that imports these two, which it lists as optional peers: an app has to have them for the bundle to load.
   '@dnd-kit/core': '^6.3.1',
   '@dnd-kit/sortable': '^10.0.0',
+  // The sign-in: the package's preset, pages' flows and core as a way in, on better-auth at the one version the package names.
+  '@sovereignfs/auth': '^0.3.0',
   '@sovereignfs/config': '^0.1.0',
   '@sovereignfs/pwa': '^0.1.0',
-  // 2.8 checks a session against core (`checkEverySeconds`), which the template turns on.
-  '@sovereignfs/sdk': '^2.8.0',
+  // 2.9 signs in for a session the app keeps (`finishSignIn`), which `@sovereignfs/auth/core` is built on.
+  '@sovereignfs/sdk': '^2.9.0',
   '@sovereignfs/storage': '^0.1.0',
   '@sovereignfs/ui': '^0.102.0',
+  'better-auth': '1.7.18',
   next: '^16.4.6',
   pg: '^8.23.1',
   react: '^19.3.1',
@@ -28,6 +31,9 @@ export const APP_DEPENDENCIES = {
 export const ENCRYPTION_DEPENDENCIES = {
   '@sovereignfs/sdk': '^2.5.0',
 } as const;
+
+/** What an app made with `--encryption` does not depend on: it signs in with the SDK's `nextAuth`, as it did before the package. */
+export const ENCRYPTION_LEAVES_OUT = ['@sovereignfs/auth', 'better-auth'] as const;
 
 export const APP_DEV_DEPENDENCIES = {
   // Makes the image's label and port from the manifest, and checks the manifest (`sovereign-manifest`).

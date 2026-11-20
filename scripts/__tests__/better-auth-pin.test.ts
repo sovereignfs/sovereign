@@ -28,5 +28,8 @@ describe('better-auth', () => {
     expect(named.length).toBeGreaterThan(3);
     expect(named.every((range) => /^\d+\.\d+\.\d+$/.test(range))).toBe(true);
     expect(new Set(named).size).toBe(1);
+    // And an app made from the template names the same, in what `npm create @sovereignfs app` writes into its package.json.
+    const versions = readFileSync(path.join(ROOT, 'tools/create/src/versions.ts'), 'utf8');
+    expect(/'better-auth': '([^']+)'/.exec(versions)?.[1]).toBe(named[0]);
   });
 });

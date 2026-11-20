@@ -114,6 +114,8 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
         '--filter',
         '@sovereignfs/pwa...',
         '--filter',
+        '@sovereignfs/auth...',
+        '--filter',
         '@sovereignfs/create',
         'build',
       ],
@@ -126,7 +128,7 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
     });
     const vendor = path.join(app, 'vendor');
     mkdirSync(vendor);
-    for (const name of ['sdk', 'ui', 'pwa', 'manifest', 'config', 'storage', 'create']) {
+    for (const name of ['sdk', 'ui', 'pwa', 'manifest', 'config', 'storage', 'auth', 'create']) {
       execFileSync(
         'pnpm',
         ['--filter', `@sovereignfs/${name}`, 'pack', '--pack-destination', vendor],
@@ -145,14 +147,18 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
       ['pwa', 'dependencies'],
       ['config', 'dependencies'],
       ['storage', 'dependencies'],
+      ['auth', 'dependencies'],
       ['manifest', 'devDependencies'],
       ['create', 'devDependencies'],
     ] as const) {
       pkg[field][`@sovereignfs/${name}`] =
         `file:./vendor/${tarballs.find((file) => file.startsWith(`sovereignfs-${name}-`)) as string}`;
     }
-    // The storage package asks for config by version, which is not published either: it is the tarball too.
-    pkg.overrides = { '@sovereignfs/config': pkg.dependencies['@sovereignfs/config'] as string };
+    // The storage and sign-in packages ask for config and the SDK by version, which are not published either: they are the tarballs too.
+    pkg.overrides = {
+      '@sovereignfs/config': pkg.dependencies['@sovereignfs/config'] as string,
+      '@sovereignfs/sdk': pkg.dependencies['@sovereignfs/sdk'] as string,
+    };
     writeFileSync(path.join(app, 'package.json'), `${JSON.stringify(pkg, null, 2)}\n`);
     execFileSync(
       'npm',
@@ -253,19 +259,19 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
 
   it('sends a person to core to sign in, with the client core registered and PKCE', () => {
     const recorded = JSON.parse(readFileSync(path.join(state, 'state.json'), 'utf8')) as State;
-    const login = probe('GET', '/auth/login');
+    const login = probe('GET', '/api/auth/sign-in/sovereign');
     expect([302, 303, 307]).toContain(login.status);
     const target = new URL(login.location as string);
     expect(target.origin).toBe(`https://${DOMAIN}`);
     expect(target.searchParams.get('client_id')).toBe(recorded.apps.tplnotes?.clientId);
     expect(target.searchParams.get('code_challenge_method')).toBe('S256');
     expect(target.searchParams.get('redirect_uri')).toBe(
-      `https://tplnotes.${DOMAIN}/auth/callback`,
+      `https://tplnotes.${DOMAIN}/api/auth/callback/sovereign`,
     );
   });
 
   it('asks core for scopes core gives it: the sign-in is not refused before a person is asked', () => {
-    const login = probe('GET', '/auth/login');
+    const login = probe('GET', '/api/auth/sign-in/sovereign');
     const answer = fromCore(
       "fetch(process.argv[1], { redirect: 'manual' }).then(async (r) => console.log(JSON.stringify({ status: r.status, location: r.headers.get('location'), body: (await r.text()).slice(0, 400) })))",
       login.location as string,
@@ -277,7 +283,7 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
   });
 
   it('has its back-channel logout and account-deleted routes where the manifest says, and refuses what core did not sign', () => {
-    for (const route of ['/auth/backchannel-logout', '/auth/account-deleted']) {
+    for (const route of ['/api/sovereign/backchannel-logout', '/api/sovereign/account-deleted']) {
       const answer = probe('POST', route);
       expect(answer.status, route).toBeGreaterThanOrEqual(400);
       expect(answer.status, route).toBeLessThan(500);
@@ -288,7 +294,11 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
   it('keeps its page behind sign-in', () => {
     const page = probe('GET', '/');
     expect([302, 303, 307]).toContain(page.status);
-    expect(page.location).toContain('/auth/login');
+    // To the sign-in page, which sends a person on to core when core is the app's only way in.
+    expect(page.location).toContain('/sign-in');
+    const signInPage = probe('GET', '/sign-in');
+    expect([302, 303, 307]).toContain(signInPage.status);
+    expect(signInPage.location).toContain('/api/auth/sign-in/sovereign');
   });
 
   it('keeps people’s files in a folder of its own that the app can write, and answers no one who is not signed in', () => {

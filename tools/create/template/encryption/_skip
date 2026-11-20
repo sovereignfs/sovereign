@@ -1,0 +1,17 @@
+# The base app's files an app with --encryption leaves out: it signs in through core with the SDK's nextAuth, as before, until the
+# sign-in package carries encryption's key secret (auth.md §8). One path to a line.
+lib/sign-in.ts
+lib/session.ts
+lib/sign-in-client.ts
+lib/notices.ts
+app/sign-in/page.tsx
+app/sign-in/panel.tsx
+app/sign-up/page.tsx
+app/sign-up/panel.tsx
+app/security/page.tsx
+app/security/panels.tsx
+app/security/actions.ts
+app/api/auth/[...all]/route.ts
+app/api/sovereign/backchannel-logout/route.ts
+app/api/sovereign/account-deleted/route.ts
+app/api/sign-in-salt/route.ts

@@ -1,8 +1,8 @@
-import { auth } from '@/lib/auth';
+import { requireSignedIn } from '@/lib/session';
 import { db } from '@/lib/db';
 import { files } from '@/lib/files';
-import { addNote, deleteFile, deleteNote } from './actions';
-import { Button, Card, Input, PageHeader } from './ui';
+import { addNote, deleteFile, deleteNote, signOut } from './actions';
+import { Button, ButtonLink, Card, Input, PageHeader } from './ui';
 import { Upload } from './upload';
 
 /** A size as a person reads it: 512 KB, 3.4 MB, 200 GB. */
@@ -21,15 +21,18 @@ function size(bytes: number): string {
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  // Sends a person to sign in with core, and back here.
-  const session = await auth().requireSession('/');
+  // Sends a person to sign in, and back here.
+  const session = await requireSignedIn('/');
   const { rows } = await db().query<{ id: string; body: string }>(
     'SELECT id, body FROM notes WHERE owner = $1 ORDER BY id DESC LIMIT 100',
-    [session.sub],
+    [session.user.id],
   );
   // Their files, kept the suite's way: a folder for this person and a quota for this person (lib/files.ts).
-  const [kept, usage] = await Promise.all([files().list(session.sub), files().usage(session.sub)]);
-  const name = typeof session.claims.name === 'string' ? session.claims.name : 'there';
+  const [kept, usage] = await Promise.all([
+    files().list(session.user.id),
+    files().usage(session.user.id),
+  ]);
+  const name = session.user.name;
 
   return (
     <main>
@@ -82,7 +85,10 @@ export default async function Home() {
           </li>
         ))}
       </ul>
-      <form action="/auth/logout" method="post">
+      <form action={signOut}>
+        <ButtonLink href="/security" variant="secondary">
+          Security
+        </ButtonLink>{' '}
         <Button type="submit" variant="secondary">
           Sign out
         </Button>

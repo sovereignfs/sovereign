@@ -137,7 +137,7 @@ recorded as an ADR in `docs/adrs/`. A documented "not now" is a valid outcome.
     minor; patches are hotfixes between tasks; a single jump to `1.0.0` marks
     public release.
   - **Internal packages and `apps/core`** follow normal semver independently.
-  - **The published packages, `@sovereignfs/ui`, `@sovereignfs/sdk`, `@sovereignfs/manifest`, `@sovereignfs/config`, `@sovereignfs/storage`, `@sovereignfs/export` and `@sovereignfs/pwa`**,
+  - **The published packages, `@sovereignfs/ui`, `@sovereignfs/sdk`, `@sovereignfs/manifest`, `@sovereignfs/config`, `@sovereignfs/storage`, `@sovereignfs/export`, `@sovereignfs/push` and `@sovereignfs/pwa`**,
     and the release-ready `@sovereignfs/bridge`, are contracts (`docs/releasing.md`; the rest
     are `private`): a patch never contains a breaking change; breaking
     needs at least a minor bump plus a migration note (`docs/upgrade.md`), and
@@ -423,6 +423,7 @@ packages/
   config/           env convention and start-up validation
   storage/          people's files: a folder and a quota per person — published
   export/           exports: one archive format, checked, encrypted to age recipients — published
+  push/             Web Push for an app's server: key, encryption, store, outbox, route — published
   pwa/              installing an app: manifest, service worker, announced update — published
   database/         sqld / PostgreSQL / SQLite file
   crypto/           field encryption (later: end-to-end, recovery kit)

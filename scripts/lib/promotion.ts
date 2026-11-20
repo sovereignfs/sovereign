@@ -27,6 +27,7 @@ export const UNITS: readonly Unit[] = [
   { slug: 'config', dir: 'packages/config', published: true },
   { slug: 'storage', dir: 'packages/storage', published: true },
   { slug: 'export', dir: 'packages/export', published: true },
+  { slug: 'push', dir: 'packages/push', published: true },
   { slug: 'pwa', dir: 'packages/pwa', published: true },
   { slug: 'bridge', dir: 'packages/bridge', published: false },
   { slug: 'mailer', dir: 'packages/mailer', published: false },

@@ -33,6 +33,7 @@ COPY packages/pwa/package.json packages/pwa/package.json
 COPY packages/manifest/package.json packages/manifest/package.json
 COPY packages/storage/package.json packages/storage/package.json
 COPY packages/export/package.json packages/export/package.json
+COPY packages/push/package.json packages/push/package.json
 COPY packages/sdk/package.json packages/sdk/package.json
 COPY packages/tsconfig/package.json packages/tsconfig/package.json
 COPY packages/ui/package.json packages/ui/package.json

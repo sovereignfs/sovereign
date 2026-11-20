@@ -38,24 +38,41 @@ export async function signAccountDeletedToken(
   sub: string,
   now: number = Date.now(),
 ): Promise<string> {
+  return signNoticeToken(auth, {
+    clientId,
+    sub,
+    typ: 'account-deleted+jwt',
+    event: ACCOUNT_DELETED_EVENT,
+    now,
+  });
+}
+
+/**
+ * A short-lived token core sends an app about one person (core-app §4.5, §4.7.2): signed with the key that signs logout tokens, naming the
+ * app, the person and one event, with a fresh `jti`, and nothing else of them. The one signed-token pattern core uses with apps.
+ */
+export async function signNoticeToken(
+  auth: Pick<Auth, '$context'>,
+  input: { clientId: string; sub: string; typ: string; event: string; now?: number },
+): Promise<string> {
   const context = await auth.$context;
   const jwt = (
     context.getPlugin('jwt') as { options?: Parameters<typeof signJWT>[1]['options'] } | null
   )?.options;
   const issuer = (jwt as { jwt?: { issuer?: string } } | undefined)?.jwt?.issuer;
-  const iat = Math.floor(now / 1000);
+  const iat = Math.floor((input.now ?? Date.now()) / 1000);
   return signJWT({ context } as Parameters<typeof signJWT>[0], {
     options: jwt,
     payload: {
       iss: issuer,
-      aud: clientId,
-      sub,
+      aud: input.clientId,
+      sub: input.sub,
       iat,
       exp: iat + TOKEN_LIFETIME_SECONDS,
       jti: randomBytes(16).toString('hex'),
-      events: { [ACCOUNT_DELETED_EVENT]: {} },
+      events: { [input.event]: {} },
     },
-    header: { typ: 'account-deleted+jwt' },
+    header: { typ: input.typ },
   });
 }
 

@@ -96,6 +96,8 @@ export function hostedClient(
     ...(signIn.accountDeleted
       ? ['--account-deleted', absolute(suite, name, signIn.accountDeleted)]
       : []),
+    // Where core asks for a person's part of their export (manifest 5, core-app §4.7.2).
+    ...(signIn.export ? ['--export', absolute(suite, name, signIn.export)] : []),
     // An app that keeps its people's data encrypted (manifest 4): core sends a person back here with the app's key, and gives it the
     // keys scope (contracts/app-manifest.md §2.8, core-app §5.6).
     ...('encryption' in manifest && manifest.encryption
@@ -133,6 +135,7 @@ export function externalClient(app: ExternalApp, coreVersion?: string): string[]
     ...(app.postLogout?.length ? ['--post-logout', ...app.postLogout] : []),
     ...(app.backChannel ? ['--back-channel', app.backChannel] : []),
     ...(app.accountDeleted ? ['--account-deleted', app.accountDeleted] : []),
+    ...(app.export ? ['--export', app.export] : []),
     ...(app.keyReturn ? ['--key-return', app.keyReturn] : []),
     ...(app.scopes?.length ? ['--scope', ...app.scopes] : []),
     ...(app.type === 'public' ? ['--public'] : []),

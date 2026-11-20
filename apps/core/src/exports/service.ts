@@ -5,19 +5,22 @@ import { coreFilesRoot } from '../files';
 import { readInstanceId } from '../instance/instance-id';
 import { getSettings } from '../settings';
 import { SETTINGS } from '../settings/definitions';
+import { getAuth } from '../auth';
+import { signNoticeToken } from '../accounts/deletion-delivery';
+import { addAppParts, EXPORT_REQUESTED_EVENT } from './apps';
 import { ExportJobs } from './jobs';
-import { ExportFailure, makeExport, removeExportFiles, type MakeContext } from './make';
+import {
+  ExportFailure,
+  exportsFolder,
+  makeExport,
+  removeExportFiles,
+  type MakeContext,
+} from './make';
 
 const EVERY_MS = 60_000;
 
 export async function getExportJobs(): Promise<ExportJobs> {
   return new ExportJobs(await getDatabase());
-}
-
-let appParts: MakeContext['appParts'];
-/** Set by the apps' requests (17.6's), so this module needs nothing of them. */
-export function setAppParts(fill: MakeContext['appParts']): void {
-  appParts = fill;
 }
 
 async function context(): Promise<MakeContext> {
@@ -32,7 +35,19 @@ async function context(): Promise<MakeContext> {
       const line = await settings.value(SETTINGS.exportRecipients);
       return line ? line.split(' ') : [];
     },
-    appParts,
+    appParts: async (writer, sub) =>
+      addAppParts(writer, sub, {
+        database,
+        spoolDirectory: exportsFolder(coreFilesRoot()),
+        sign: async (clientId, who) =>
+          signNoticeToken(await getAuth(), {
+            clientId,
+            sub: who,
+            typ: 'export-request+jwt',
+            event: EXPORT_REQUESTED_EVENT,
+          }),
+        log: (line) => console.warn(line),
+      }),
   };
 }
 

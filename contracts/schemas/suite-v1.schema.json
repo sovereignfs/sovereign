@@ -176,6 +176,7 @@
         },
         "backChannel": { "$ref": "#/$defs/httpsUrl" },
         "accountDeleted": { "$ref": "#/$defs/httpsUrl" },
+        "export": { "$ref": "#/$defs/httpsUrl" },
         "keyReturn": { "$ref": "#/$defs/httpsUrl" },
         "scopes": {
           "type": "array",

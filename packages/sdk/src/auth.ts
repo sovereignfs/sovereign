@@ -1,7 +1,13 @@
 import * as client from 'openid-client';
 import { createRemoteJWKSet, customFetch as joseFetch } from 'jose';
 import { CoreUnavailableError, NotAuthenticatedError, SignInError } from './errors';
-import { ACCOUNT_DELETED_EVENT, BACK_CHANNEL_EVENT, checkNotice } from './notices';
+import { ExportWriter } from '@sovereignfs/export';
+import {
+  ACCOUNT_DELETED_EVENT,
+  BACK_CHANNEL_EVENT,
+  checkNotice,
+  EXPORT_REQUESTED_EVENT,
+} from './notices';
 import {
   clearCookie,
   cookieName,
@@ -467,6 +473,72 @@ export class Auth {
       return reply(500, 'server_error');
     }
     return reply(200);
+  }
+
+  /**
+   * Handles core's request for a person's part of their export (sdk §9.1, core-app §4.7.2). The token is refused, `400` and
+   * `invalid_request`, by the rules of a logout token for its own type and event, and a replayed one too. For a good one the SDK answers
+   * `200` at once with an export (`contracts/export.md`, `kind: "person"`, this app's `prefix` and the person's `sub`) written as
+   * `handler` adds to it, and finishes it when `handler` resolves; when `handler` throws, the answer ends short, which core's check
+   * refuses, so core lists the part as missing. Asking again changes nothing, so the handler need not guard against it. Nothing of
+   * anyone but `sub` belongs in it, under `apps/<prefix>/`.
+   */
+  async handleExportRequest(
+    request: Request,
+    app: { readonly prefix: string; readonly version: string },
+    handler: (part: { readonly sub: string; readonly writer: ExportWriter }) => Promise<void>,
+  ): Promise<Response> {
+    const reply = (status: number, error?: string) =>
+      new Response(error ? JSON.stringify({ error }) : null, {
+        status,
+        headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+      });
+    if (request.method !== 'POST') return reply(400, 'invalid_request');
+    let token: string | null;
+    try {
+      token = new URLSearchParams(await request.text()).get('export_request_token');
+    } catch {
+      return reply(400, 'invalid_request');
+    }
+    if (!token) return reply(400, 'invalid_request');
+    const verified = await this.#verifyNotice(
+      token,
+      'export-request+jwt',
+      EXPORT_REQUESTED_EVENT,
+    ).catch((error: unknown) => {
+      if (error instanceof CoreUnavailableError) throw error;
+      return undefined;
+    });
+    if (!verified?.sub) return reply(400, 'invalid_request');
+    await this.#o.sessionStore.set(
+      `seen:${verified.jti}`,
+      { kind: 'seen', data: {} },
+      Math.max(verified.exp * 1000, this.#now()) + 1000,
+    );
+    const sub = verified.sub;
+    const writer = new ExportWriter({
+      head: {
+        format: 1,
+        kind: 'person',
+        producer: { name: app.prefix, version: app.version },
+        app: app.prefix,
+        sub,
+        takenAt: new Date(this.#now()).toISOString(),
+      },
+    });
+    writer.addPart({ name: app.prefix, status: 'complete', version: app.version });
+    void (async () => {
+      try {
+        await handler({ sub, writer });
+        await writer.finish();
+      } catch (error) {
+        await writer.abort(error);
+      }
+    })();
+    return new Response(writer.readable, {
+      status: 200,
+      headers: { 'content-type': 'application/x-tar', 'cache-control': 'no-store' },
+    });
   }
 
   async #verifyLogoutToken(token: string) {

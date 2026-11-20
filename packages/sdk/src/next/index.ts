@@ -16,6 +16,15 @@ export type NextAuthOptions = {
    * it that address is not there. It must be safe to run twice, and it must not resolve until the data is gone.
    */
   onAccountDeleted?: (person: { readonly sub: string }) => Promise<void> | void;
+  /** The app's part of a person's export (sdk §9.1): mounted at `/auth/export` when given. */
+  onExport?: {
+    prefix: string;
+    version: string;
+    handler: (part: {
+      readonly sub: string;
+      readonly writer: import('@sovereignfs/export').ExportWriter;
+    }) => Promise<void>;
+  };
 };
 
 type RouteHandler = (request: Request) => Promise<Response>;
@@ -98,6 +107,14 @@ export function nextAuth(sv: Sovereign, options: NextAuthOptions = {}) {
       case 'account-deleted':
         return options.onAccountDeleted
           ? sv.auth.handleAccountDeleted(request, options.onAccountDeleted)
+          : new Response('Not found', { status: 404 });
+      case 'export':
+        return options.onExport
+          ? sv.auth.handleExportRequest(
+              request,
+              { prefix: options.onExport.prefix, version: options.onExport.version },
+              options.onExport.handler,
+            )
           : new Response('Not found', { status: 404 });
       default:
         return new Response('Not found', { status: 404 });

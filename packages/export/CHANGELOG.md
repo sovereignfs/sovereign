@@ -4,6 +4,13 @@ What changed in each version of the export format's package, newest first, in th
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/). A version's section is written
 in the change that sets the version, dated that day, and becomes the release notes when the version is published.
 
+## [0.2.0] - 2026-11-20
+
+### Added
+
+- `addFile` takes a fourth argument, `records`, for a file that is already records written as JSON Lines, so that one export can be
+  placed in another (core putting an app's part in a person's export) with its records still listed as records.
+
 ## [0.1.0] - 2026-11-20
 
 ### Added

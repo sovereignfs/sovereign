@@ -16,6 +16,7 @@ const view = (
   postLogoutRedirectUris: [],
   backchannelLogoutUri: undefined,
   accountDeletedUri: undefined,
+  exportUri: undefined,
   keyReturnUri: undefined,
   endSession: false,
   signOutOfCore: true,

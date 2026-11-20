@@ -52,6 +52,7 @@ const KIND = {
     'post-logout': 'list',
     'back-channel': 'value',
     'account-deleted': 'value',
+    export: 'value',
     'key-return': 'value',
     scope: 'list',
     public: 'switch',
@@ -128,6 +129,7 @@ async function add(ctx: Context, argv: string[]): Promise<void> {
       ...(args.values.has('account-deleted')
         ? { accountDeleted: args.values.get('account-deleted') as string }
         : {}),
+      ...(args.values.has('export') ? { export: args.values.get('export') as string } : {}),
       ...(args.values.has('key-return')
         ? { keyReturn: args.values.get('key-return') as string }
         : {}),
@@ -229,6 +231,7 @@ const UPDATE = {
   'post-logout': 'list',
   'back-channel': 'value',
   'account-deleted': 'value',
+  export: 'value',
   'key-return': 'value',
   scope: 'list',
   trusted: 'switch',
@@ -269,6 +272,7 @@ async function update(ctx: Context, argv: string[]): Promise<void> {
     'post-logout',
     'back-channel',
     'account-deleted',
+    'export',
     'key-return',
     'scope',
   ] as const) {
@@ -320,6 +324,7 @@ async function update(ctx: Context, argv: string[]): Promise<void> {
   setList('post-logout', 'postLogout');
   setValue('back-channel', 'backChannel');
   setValue('account-deleted', 'accountDeleted');
+  setValue('export', 'export');
   setValue('key-return', 'keyReturn');
   setList('scope', 'scopes');
   for (const [flag, trusted] of [

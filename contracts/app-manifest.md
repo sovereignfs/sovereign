@@ -271,6 +271,6 @@ version that reads it.
 
 ### 5.4 Manifest 5
 
-Manifest 5 is `schemas/app-manifest-v5.schema.json` (written with the field's support, epic 18): manifest 4 and one more field, `export` in
+Manifest 5 is [`schemas/app-manifest-v5.schema.json`](schemas/app-manifest-v5.schema.json): manifest 4 and one more field, `export` in
 `signIn` (§2.1), and nothing else. A toolkit that reads 5 reads 1 to 4 as it did, and a toolkit that reads only 1 to 4 refuses a manifest
 5 and names the version that reads it.

@@ -40,6 +40,8 @@ export type ClientSettings = {
    * Kept with the app's other settings core adds to the provider's own, not as a column of the provider.
    */
   accountDeletedUri: string | undefined;
+  /** Where core asks the app for a person's part of their export (core-app §4.7.2). Kept with core's other settings, like the above. */
+  exportUri: string | undefined;
   /**
    * Where core's key release sends a person back with the app's key (core-app §5.6, §5.7). Set means the app may use encryption the
    * server cannot read, and only then does it hold the `keys` scope. Kept with the app's other settings core adds, like the above.
@@ -421,6 +423,12 @@ export class ClientRegistry {
       if (problem) problems.push({ field: 'accountDeletedUri', message: problem });
     }
 
+    const exportAddress = 'exportUri' in input ? input.exportUri : before?.exportUri;
+    if (exportAddress !== undefined && exportAddress !== '') {
+      const problem = urlProblem(exportAddress, this.#development);
+      if (problem) problems.push({ field: 'exportUri', message: problem });
+    }
+
     const keyReturn = 'keyReturnUri' in input ? input.keyReturnUri : before?.keyReturnUri;
     if (keyReturn !== undefined && keyReturn !== '') {
       const problem = urlProblem(keyReturn, this.#development);
@@ -506,6 +514,7 @@ export class ClientRegistry {
       postLogoutRedirectUris,
       backchannelLogoutUri,
       accountDeletedUri: accountDeleted === '' ? undefined : accountDeleted,
+      exportUri: exportAddress === '' ? undefined : exportAddress,
       keyReturnUri: encryption ? keyReturn : undefined,
       // On automatically when an address that needs it is set (core-app §3.7.1).
       endSession:
@@ -578,6 +587,7 @@ export class ClientRegistry {
             ? { backchannelLogoutUri: settings.backchannelLogoutUri }
             : {}),
           ...(settings.accountDeletedUri ? { accountDeletedUri: settings.accountDeletedUri } : {}),
+          ...(settings.exportUri ? { exportUri: settings.exportUri } : {}),
           ...(settings.keyReturnUri ? { keyReturnUri: settings.keyReturnUri } : {}),
           ...(settings.signOutOfCore ? {} : { keepCoreSession: true }),
         },
@@ -601,6 +611,7 @@ export function clientView(row: ClientRow): ClientView {
     postLogoutRedirectUris: list(row.postLogoutRedirectUris),
     backchannelLogoutUri: backchannelAddressOf(row.metadata, row.backchannelLogoutUri),
     accountDeletedUri: blank(metadata.accountDeletedUri),
+    exportUri: blank(metadata.exportUri),
     keyReturnUri: blank(metadata.keyReturnUri),
     endSession: row.enableEndSession === true,
     signOutOfCore: metadata.keepCoreSession !== true,

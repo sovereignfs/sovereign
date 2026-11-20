@@ -212,7 +212,7 @@ Each command MUST state what it changed, and MUST exit as §11 says.
 - A manifest with no `signIn` is added with no scopes to show and no client: `sv app add` MUST say that the app is hosted without sign-in
   through core and has no launcher entry, and MUST refuse `launcher` settings for it (`sv app update`).
 - `sv app add NAME --external` MUST take `--name`, at least one `--redirect`, and MAY take `--post-logout`, `--back-channel`,
-  `--account-deleted`, `--key-return`, `--scope`, `--public` and `--trusted`; `sv app update` changes each of them. An external app is untrusted unless `--trusted` is given.
+  `--account-deleted`, `--export`, `--key-return`, `--scope`, `--public` and `--trusted`; `sv app update` changes each of them. An external app is untrusted unless `--trusted` is given.
 - `sv app add` and `sv app upgrade` MUST say whether an app can be pooled: what its manifest says in `database.pooling`
   (`contracts/app-manifest.md` §2.2), or that it needs a session, and that an app with no database has nothing to pool. They never decide it
   from anything but the manifest.

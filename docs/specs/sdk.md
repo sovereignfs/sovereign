@@ -293,13 +293,14 @@ after its `expiresAt`.
   resolved**. If the handler throws, the SDK answers `500` and core sends the notice again, so the handler MUST be safe to run twice
   and MUST delete everything the app holds of that person before it resolves. The SDK keeps no record of the person once the handler
   has resolved. A token for another app, or for a core other than the one the app was set up with, is refused like any other.
-- `handleExportRequest(request, handler)` takes a `POST` with an `export_request_token` (core-app §4.7.2). The token is refused, with
-  `400` and `invalid_request`, by the rules for a logout token except that its header `typ` is `export-request+jwt` and its `events`
-  carry `urn:sovereignfs:event:export-requested`; a `jti` seen before is refused. For a good one the SDK calls `handler({ sub, writer })`,
-  where `writer` is an export writer from `@sovereignfs/export` already begun for `kind: "person"`, the app's `prefix` and that `sub`,
-  and answers `200` with the archive as it is written (`application/x-tar`). The handler adds the app's records and files for that
-  person and nothing of anyone else's; the SDK writes `contents.json` when it resolves. If the handler throws before anything is sent,
-  the SDK answers `500`; after, it ends the answer short, which core's check refuses. Asking again is harmless: nothing is changed.
+- `handleExportRequest(request, app, handler)` takes a `POST` with an `export_request_token` (core-app §4.7.2). The token is refused,
+  with `400` and `invalid_request`, by the rules for a logout token except that its header `typ` is `export-request+jwt` and its
+  `events` carry `urn:sovereignfs:event:export-requested`; a `jti` seen before is refused. For a good one the SDK answers `200` at once
+  with an export (`contracts/export.md`, `kind: "person"`, `app` the app's `prefix` from `app`, `sub` the person's) as `application/x-tar`,
+  and calls `handler({ sub, writer })` with the `@sovereignfs/export` writer it is written through. The handler adds the app's records
+  and files for that person under `apps/<prefix>/` and nothing of anyone else's; the SDK writes `contents.json` when it resolves. If the
+  handler throws, the answer ends short, which core's check refuses, and core lists the app's part as missing. Asking again changes
+  nothing. The Next.js handlers mount it at `/auth/export` when given `onExport: { prefix, version, handler }`.
 - The session cookie is `HttpOnly; Secure; SameSite=Lax; Path=/` with no `Domain` and the `__Host-` prefix over https. Over `http`
   (a development instance) it has no `Secure` and no prefix, since a browser would refuse the prefix.
 - `sv.links` has the addresses of core's own pages for a person: `profile`, `security`, `preferences`, `connectedApps` and

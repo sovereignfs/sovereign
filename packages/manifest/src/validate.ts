@@ -9,6 +9,7 @@ const validators = {
   2: ajv.compile(schemas[2]),
   3: ajv.compile(schemas[3]),
   4: ajv.compile(schemas[4]),
+  5: ajv.compile(schemas[5]),
 } satisfies Record<ManifestVersion, unknown>;
 
 export type Validated = { ok: true; manifest: Manifest } | { ok: false; problems: Problem[] };

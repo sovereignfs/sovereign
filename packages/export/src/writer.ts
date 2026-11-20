@@ -188,12 +188,33 @@ export class ExportWriter {
     this.#paths.add(path);
   }
 
-  /** Adds a file of bytes. Without `size`, a stream is held on disk first to learn it. */
-  addFile(path: string, source: ByteSource, size?: number): Promise<void> {
+  /**
+   * Adds a file of bytes. Without `size`, a stream is held on disk first to learn it. With `records`, the file is records already written
+   * as JSON Lines (such as another export's, being placed in this one) and is listed as such.
+   */
+  addFile(
+    path: string,
+    source: ByteSource,
+    size?: number,
+    records?: { kind: string; count: number; endToEnd: boolean },
+  ): Promise<void> {
+    if (
+      records &&
+      (!isKind(records.kind) ||
+        !path.endsWith('.jsonl') ||
+        !Number.isSafeInteger(records.count) ||
+        records.count < 0)
+    ) {
+      throw new ExportError(
+        'invalid_path',
+        `${path} cannot be records of ${JSON.stringify(records.kind)}.`,
+      );
+    }
     this.#claim(path);
     return this.#serial(async () => {
       await this.#start();
       await this.#entry(path, source, size, true);
+      if (records) this.#records.push({ path, ...records });
     });
   }
 

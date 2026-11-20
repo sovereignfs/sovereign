@@ -218,6 +218,7 @@ signs the person out of core too, as signing out of core does.
 | `postLogout`     | no       | Addresses core may return a person to after sign-out                                                                           |
 | `backChannel`    | no       | The address core posts a logout notice to                                                                                      |
 | `accountDeleted` | no       | The address core tells when a person who used the app deleted their account (core-app §4.5)                                    |
+| `export`         | no       | The address core asks for a person's part of their export (core-app §4.7.2)                                                    |
 | `keyReturn`      | no       | Where core's key release returns a person with the app's key. Set, the app may use encryption and holds `keys` (core-app §5.6) |
 | `scopes`         | no       | What it may ask for. Default `openid`, `profile`, `email`                                                                      |
 | `type`           | no       | `confidential` (the default) or `public`. It cannot change afterwards                                                          |

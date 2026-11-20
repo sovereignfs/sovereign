@@ -10,6 +10,7 @@ import {
 } from '../index';
 import { createFakeCore, memorySessionStore, type WrongLogoutToken } from '../testing';
 import { checkedAgainstContract, clock, memoryStore } from './helpers';
+import { readExport } from '@sovereignfs/export';
 
 type Options = {
   deletes?: boolean;
@@ -602,6 +603,70 @@ describe('a back-channel logout (sdk §9.1)', () => {
     expect((await world.sv.auth.handleBackChannelLogout(post('not.a.jwt'))).status).toBe(400);
     expect((await world.sv.auth.handleBackChannelLogout(post(token, 'GET'))).status).toBe(400);
     expect(await world.sv.auth.getSession(withCookie(cookie))).toBeNull();
+  });
+});
+
+describe('an export request (sdk §9.1, core-app §4.7.2)', () => {
+  const post = (token: string | undefined) =>
+    new Request('https://notes.sovereign.local/auth/export', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(token ? { export_request_token: token } : {}).toString(),
+    });
+  const app = { prefix: 'notes', version: '1.2.0' };
+
+  it('answers with the person’s part as an export the format accepts, holding what the handler added', async () => {
+    const world = setup();
+    const reply = await world.sv.auth.handleExportRequest(
+      post(await world.core.exportRequestToken({ sub: 'u1' })),
+      app,
+      async ({ sub, writer }) => {
+        await writer.addRecords('apps/notes/records/notes.jsonl', 'notes', [
+          { owner: sub, text: 'hello' },
+        ]);
+      },
+    );
+    expect(reply.status).toBe(200);
+    expect(reply.headers.get('content-type')).toBe('application/x-tar');
+    const read = await readExport(reply.body as ReadableStream<Uint8Array>);
+    expect(read.head).toMatchObject({
+      kind: 'person',
+      app: 'notes',
+      sub: 'u1',
+      producer: { name: 'notes', version: '1.2.0' },
+    });
+    expect(read.contents.records).toEqual([
+      { path: 'apps/notes/records/notes.jsonl', kind: 'notes', count: 1, endToEnd: false },
+    ]);
+  });
+
+  it('refuses a missing token, one of another type, and one seen before', async () => {
+    const world = setup();
+    expect(
+      (await world.sv.auth.handleExportRequest(post(undefined), app, async () => undefined)).status,
+    ).toBe(400);
+    const deletion = await world.core.accountDeletedToken({ sub: 'u1' });
+    expect(
+      (await world.sv.auth.handleExportRequest(post(deletion), app, async () => undefined)).status,
+    ).toBe(400);
+    const token = await world.core.exportRequestToken({ sub: 'u1' });
+    const first = await world.sv.auth.handleExportRequest(post(token), app, async () => undefined);
+    await first.body?.cancel();
+    expect(
+      (await world.sv.auth.handleExportRequest(post(token), app, async () => undefined)).status,
+    ).toBe(400);
+  });
+
+  it('ends the answer short when the handler fails, which a reader refuses', async () => {
+    const world = setup();
+    const reply = await world.sv.auth.handleExportRequest(
+      post(await world.core.exportRequestToken({ sub: 'u1' })),
+      app,
+      async () => {
+        throw new Error('the database is down');
+      },
+    );
+    await expect(readExport(reply.body as ReadableStream<Uint8Array>)).rejects.toBeDefined();
   });
 });
 

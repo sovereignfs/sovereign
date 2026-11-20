@@ -5,6 +5,14 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.130.0] - 2026-11-20
+
+### Added
+
+- Web Push in the worker, the page and the design system ([RFC 0009](docs/rfcs/0009-web-push.md) §2, §3): `@sovereignfs/pwa` 0.2.0's
+  worker shows every push and opens only its own paths, when the app asks for push, and its client turns push on and off for a
+  device (`usePush`); `@sovereignfs/ui` 0.104.0 has `PushControl`, the one switch every app shows. No app uses them yet.
+
 ## [0.129.0] - 2026-11-20
 
 ### Added

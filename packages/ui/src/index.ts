@@ -156,6 +156,7 @@ export { OfflineGate } from './components/OfflineGate/OfflineGate';
 export {
   InstallHint,
   InstallPrompt,
+  IOS_INSTALL_STEPS,
   isInstalledDisplay,
   useInstallPrompt,
 } from './components/InstallPrompt/InstallPrompt';
@@ -167,6 +168,8 @@ export type {
 } from './components/InstallPrompt/InstallPrompt';
 export { UpdateNotice } from './components/UpdateNotice/UpdateNotice';
 export type { UpdateNoticeProps } from './components/UpdateNotice/UpdateNotice';
+export { PushControl } from './components/PushControl/PushControl';
+export type { PushControlProps, PushControlState } from './components/PushControl/PushControl';
 export type { OfflineGateProps } from './components/OfflineGate/OfflineGate';
 export { DeviceOnlyGate } from './components/DeviceOnlyGate/DeviceOnlyGate';
 export type { DeviceOnlyGateProps } from './components/DeviceOnlyGate/DeviceOnlyGate';

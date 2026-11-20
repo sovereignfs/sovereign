@@ -64,6 +64,7 @@ import { Spinner } from '../components/Spinner/Spinner';
 import { SystemBanner } from '../components/SystemBanner/SystemBanner';
 import { InstallHint } from '../components/InstallPrompt/InstallPrompt';
 import { UpdateNotice } from '../components/UpdateNotice/UpdateNotice';
+import { PushControl } from '../components/PushControl/PushControl';
 import { Tabs } from '../components/Tabs/Tabs';
 import { ToastProvider, useToast } from '../components/Toast/Toast';
 import { Toggle } from '../components/Toggle/Toggle';
@@ -2338,6 +2339,28 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                 }}
               >
                 <UpdateNotice appName="Sovereign" onReload={() => undefined} />
+              </div>
+            </ComponentCard>
+
+            {/* PushControl */}
+            <ComponentCard
+              name="PushControl"
+              importLine="import { PushControl } from '@sovereignfs/ui';"
+              usage="Notifications on this device, for an app's settings: why a device can't have them, or one switch. State and actions from usePush in @sovereignfs/pwa/client."
+            >
+              <div style={{ display: 'grid', gap: 16, width: '100%', maxWidth: 420 }}>
+                <PushControl
+                  appName="Tasks"
+                  state="on"
+                  onTurnOn={() => undefined}
+                  onTurnOff={() => undefined}
+                />
+                <PushControl
+                  appName="Tasks"
+                  state="install-first"
+                  onTurnOn={() => undefined}
+                  onTurnOff={() => undefined}
+                />
               </div>
             </ComponentCard>
 

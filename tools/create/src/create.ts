@@ -1,7 +1,14 @@
 import { chmod, mkdir, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { parsePackageManager, type PackageManager } from './package-manager.js';
-import { GITIGNORE, LAUNCHER, packageJson, readme } from './templates.js';
+import {
+  agentsGuide,
+  CLAUDE_GUIDE,
+  GITIGNORE,
+  LAUNCHER,
+  packageJson,
+  readme,
+} from './templates.js';
 
 /** Why the command stopped, and what to do. Nothing was written when it is `refused`. */
 export class CreateError extends Error {
@@ -168,6 +175,9 @@ export async function createInstance(
   await chmod(path.join(target, 'sv'), 0o755);
   await writeFile(path.join(target, '.gitignore'), GITIGNORE);
   await writeFile(path.join(target, 'README.md'), readme(name));
+  // What an agent needs to look after the instance, when its operator hands that over.
+  await writeFile(path.join(target, 'AGENTS.md'), agentsGuide(name));
+  await writeFile(path.join(target, 'CLAUDE.md'), CLAUDE_GUIDE);
   io.err(`Wrote the files of ${name}.`);
 
   const step = async (label: string, command: string, args: string[], hint: string) => {
@@ -210,7 +220,17 @@ export async function createInstance(
   await step(
     'git add',
     'git',
-    ['add', '--', 'package.json', 'package-lock.json', 'sv', '.gitignore', 'README.md'],
+    [
+      'add',
+      '--',
+      'package.json',
+      'package-lock.json',
+      'sv',
+      '.gitignore',
+      'README.md',
+      'AGENTS.md',
+      'CLAUDE.md',
+    ],
     '',
   );
   await step(

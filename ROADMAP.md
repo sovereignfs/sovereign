@@ -355,7 +355,7 @@ Backups sent to a destination on a schedule are milestone 2 of the RFC, tasks 13
 
 | Version | Priority | Task                                    | Status | Epic task                     |
 | ------- | -------- | --------------------------------------- | ------ | ----------------------------- |
-| —       | 1        | The specifications                      | 📋     | [18.1](docs/epics/exports.md) |
+| —       | 1        | The specifications                      | ✅     | [18.1](docs/epics/exports.md) |
 | —       | 2        | The format and the package `[parallel]` | 📋     | [18.2](docs/epics/exports.md) |
 | —       | 3        | The operator's recipients               | 📋     | [18.3](docs/epics/exports.md) |
 | —       | 4        | The operator's export in core           | 📋     | [18.4](docs/epics/exports.md) |

@@ -293,6 +293,13 @@ after its `expiresAt`.
   resolved**. If the handler throws, the SDK answers `500` and core sends the notice again, so the handler MUST be safe to run twice
   and MUST delete everything the app holds of that person before it resolves. The SDK keeps no record of the person once the handler
   has resolved. A token for another app, or for a core other than the one the app was set up with, is refused like any other.
+- `handleExportRequest(request, handler)` takes a `POST` with an `export_request_token` (core-app §4.7.2). The token is refused, with
+  `400` and `invalid_request`, by the rules for a logout token except that its header `typ` is `export-request+jwt` and its `events`
+  carry `urn:sovereignfs:event:export-requested`; a `jti` seen before is refused. For a good one the SDK calls `handler({ sub, writer })`,
+  where `writer` is an export writer from `@sovereignfs/export` already begun for `kind: "person"`, the app's `prefix` and that `sub`,
+  and answers `200` with the archive as it is written (`application/x-tar`). The handler adds the app's records and files for that
+  person and nothing of anyone else's; the SDK writes `contents.json` when it resolves. If the handler throws before anything is sent,
+  the SDK answers `500`; after, it ends the answer short, which core's check refuses. Asking again is harmless: nothing is changed.
 - The session cookie is `HttpOnly; Secure; SameSite=Lax; Path=/` with no `Domain` and the `__Host-` prefix over https. Over `http`
   (a development instance) it has no `Secure` and no prefix, since a browser would refuse the prefix.
 - `sv.links` has the addresses of core's own pages for a person: `profile`, `security`, `preferences`, `connectedApps` and
@@ -410,6 +417,11 @@ vault (core-app §5.3), made by the same routine in the browser, so a person's k
   in. `open()` gives the app key or `{ state: 'locked' }`, as §9.3's does; `kitPending()`, `keepKit(kit)` and `unlockWithKit(typed,
 secret)` are the kit, as core's pages do it; `prepareChange` and `finishChange` a password change. No request carries a password,
   a passphrase or a key that opens anything.
+- **Exports** (core-app §4.7, `contracts/export.md`): with no core to ask it, the app offers both itself, through `@sovereignfs/export`.
+  Its **operator** is the first account made in it. On its **Data** page, the operator saves the age recipients its export is encrypted
+  to, and takes the app's export (`kind: "app"`), encrypted as it is written, after their password again; anyone else gets a page that is
+  not there. On a person's **Your data** page, each person takes their own (`kind: "person"`), not encrypted. Both run and are downloaded
+  once as core's do (core-app §4.7.3), under the app's own data path. The template has both pages.
 - **Not here:** sharing with another person needs their public keys, which only core serves (§9.4); an app with no core shares
   nothing yet.
 
@@ -582,3 +594,4 @@ of its own; an app catalogue.
 | 2026-11-19 | §9.7: checking a session against core (`checkEverySeconds`, `checkedAt`, `needsCheck`, `prompt=none` renewal in place, `SignInError.reason`); the fake core's `loginRequired`.                                                                            |
 | 2026-11-19 | §9.1: a pending sign-in lives an hour, not ten minutes, so an app's sign-in carried through an emailed link is not refused.                                                                                                                               |
 | 2026-11-20 | §9.9: a session's typed `user`, the same shape as `@sovereignfs/auth`'s, and what an app is not told; §9.1: `nextAuth` deprecated.                                                                                                                        |
+| 2026-11-20 | §9.1: `handleExportRequest`, an app's part of a person's export; §9.5: an app with no core offers the owner's and a person's export itself (RFC 0008). Not built.                                                                                         |

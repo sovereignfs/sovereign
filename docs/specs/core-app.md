@@ -165,7 +165,7 @@ Roboto, Helvetica, Arial, sans-serif`. A page or component names a family only
 | **1** | Identity, sign-in server, app registration                                                      | Specified below                              |
 | 2     | Core services for apps: mail, notifications, activity, account-deletion fan-out, backups, files | Specified and built (§4); files on disk only |
 | Keys  | Encryption the server cannot read: signing in with a derived value, the vault, the recovery kit | Specified (§5) and built; not yet audited    |
-| Later | Groups and access policies, export, relay, and more                                             | Not yet specified                            |
+| Later | Groups and access policies, import, relay, and more                                             | Not yet specified                            |
 
 ---
 
@@ -238,6 +238,7 @@ them.
 | `capability:configure`       | Edit the capability matrix                                 | owner only         |
 | `ownership:transfer`         | Transfer ownership                                         | owner only         |
 | `instance:diagnose`          | Open the lock check on a production instance (§3.15.1)     | owner only         |
+| `instance:export`            | Take the owner's export of core's data (§4.7.1)            | owner only         |
 
 #### 3.2.3 The capability matrix
 
@@ -245,7 +246,7 @@ them.
 - The owner MAY edit the `platform:admin` and `platform:user` rows in the
   Console. The owner's row is fixed: the owner always holds every capability.
 - Owner-only capabilities (`instance:configure-secrets`, `role:assign`,
-  `capability:configure`, `ownership:transfer`, `instance:diagnose`) MUST NOT be granted to any
+  `capability:configure`, `ownership:transfer`, `instance:diagnose`, `instance:export`) MUST NOT be granted to any
   other role.
 - Operator-only capabilities (`console:access`) MUST NOT be granted to
   `platform:user`: the Console, its tile on the launcher and what the launcher
@@ -886,6 +887,7 @@ Operators with `client:manage` register clients in the Console.
 | Allowed scopes            | Any of §3.6.2; `roles` only when trusted                                                                                                                                                |
 | Trusted                   | Off by default                                                                                                                                                                          |
 | Enabled                   | On by default                                                                                                                                                                           |
+| Export address            | Optional, `https` like a redirect address. Core asks it for a person's part of their export (§4.7.2)                                                                                    |
 | Key return address        | Optional, `https` like a redirect address. Set, the app may use encryption the server cannot read and holds `keys` (§5.6)                                                               |
 | App scopes                | What a confidential app may do for itself (§3.6.6). None by default; a public app cannot have any                                                                                       |
 
@@ -1251,6 +1253,7 @@ closing them returns there (§1.3).
 | Files          | The files the person keeps in core, how much of their space they use; add one, open one, delete one (§4.6)        |
 | Connected apps | Apps the person has allowed, with the scopes granted; **Remove access** revokes the app's tokens as well (§3.6.4) |
 | Activity       | What apps noted they did for the person, newest first, by app; delete one, an app's or all (§4.3)                 |
+| Your data      | Download everything of theirs, from core and from every app they use (§4.7.2)                                     |
 | Delete account | Requires the password. The owner must transfer ownership first                                                    |
 
 - A name is 1 to 100 characters, trimmed, with no line breaks or other control
@@ -1302,13 +1305,14 @@ closing them returns there (§1.3).
 
 ### 3.12 Console: instance settings
 
-| Setting                                        | Capability                   | Notes                                                                                       |
-| ---------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------- |
-| Instance name                                  | `instance:configure`         | Shown in pages and emails                                                                   |
-| Logo (light and dark), favicon                 | `instance:configure`         | Used by core's pages, the launcher and emails, and published for apps (§3.13)               |
-| App icon, and one for masking (optional)       | `instance:configure`         | The icon an installed core takes (§1.3); the Sovereign mark until one is set                |
-| Invite-only                                    | `instance:configure`         | Overrides `SV_AUTH_INVITE_ONLY` (§3.3.1)                                                    |
-| SMTP: host, port, user, from address, password | `instance:configure-secrets` | Overrides the `SV_SMTP_*` variables; the password is stored encrypted and never shown again |
+| Setting                                        | Capability                   | Notes                                                                                                                |
+| ---------------------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Instance name                                  | `instance:configure`         | Shown in pages and emails                                                                                            |
+| Logo (light and dark), favicon                 | `instance:configure`         | Used by core's pages, the launcher and emails, and published for apps (§3.13)                                        |
+| App icon, and one for masking (optional)       | `instance:configure`         | The icon an installed core takes (§1.3); the Sovereign mark until one is set                                         |
+| Invite-only                                    | `instance:configure`         | Overrides `SV_AUTH_INVITE_ONLY` (§3.3.1)                                                                             |
+| SMTP: host, port, user, from address, password | `instance:configure-secrets` | Overrides the `SV_SMTP_*` variables; the password is stored encrypted and never shown again                          |
+| Export recipients                              | `instance:configure-secrets` | The age recipients the owner's export is encrypted to (§4.7.1); public keys, shown as saved; no environment variable |
 
 How a setting resolves: the value **saved in the Console**; otherwise the
 **environment variable**; otherwise the built-in default (the instance name is
@@ -1844,7 +1848,8 @@ would be wrong about the keys.
   not sign out the people who came back in between. The marker is in `instance_settings` under `instance.restored_at`, is not one of the
   settings the Console shows, and nothing in core writes it but this command. Core's own pages ask the database for the session every
   time (§3.3), so they need no check of their own: a session the command removed is gone.
-- **Core's Console shows nothing about backups.** An operator who wants to know the state of them asks `sv`.
+- **Core's Console takes no backup.** An operator who wants to know the state of the instance's backups asks `sv`. The Console's Data
+  page offers an owner's **export** of core's data (§4.7.1), and says there that it is not a backup and does not restore the instance.
 
 ### 4.5 Account deletion: telling the apps
 
@@ -1959,6 +1964,79 @@ people's files, through `@sovereignfs/storage`.
 - **A partial upload** (`<id>.part`) that nothing has written to for a day is deleted the next time the person's folder is read.
 - **Deleting an account** deletes the person's folder, once the deletion has committed, whoever deletes it and including a deletion a
   restore carries across (§4.5). A failure to delete it is logged and does not undo the deletion.
+
+### 4.7 Exports
+
+Specified ([RFC 0008](../rfcs/0008-exports-and-backups.md), milestone 1; epic [18](../epics/exports.md)); not built yet. An owner can
+download core's data, and anyone can download their own, from core and from every app they use. An export is a copy to keep, in the
+format of [`contracts/export.md`](../../contracts/export.md); it is never imported, and it is not a backup: the instance's backup is
+`sv backup` (§4.4).
+
+**What is at rest is what is exported.** Records and files are exported as they are stored. What a person keeps end-to-end encrypted
+(§5) is exported as its ciphertext, with their vault's records, and opens with their own keys and nothing else; what is not encrypted is
+exported as stored. An export never encrypts a person's data to that person's key on its own account.
+
+**Never exported**, by any export: what `contracts/export.md` §6 lists (passwords' stored hashes, TOTP secrets and backup codes,
+passkeys' credentials, sessions and every token, verification and reset tokens, client secrets in the clear), and the instance's own
+secrets (`SV_AUTH_SECRET`, the field encryption key ring, signing keys). A test lists the tables and columns each export carries and fails
+when a table or column is added that it has not decided.
+
+#### 4.7.1 The owner's export
+
+- **Where:** Console > Data (`/console/data`), for whoever holds `instance:export` (owner-only, §3.2.2); anyone else gets a page that is
+  not there.
+- **The recipients.** The export is encrypted with age to the X25519 recipients (`age1…`) saved in the instance setting **Export
+  recipients** (§3.12): one or more, on one line separated by spaces or commas, each checked for its shape by `InstanceManager`, which
+  alone writes it, with `instance:configure-secrets`. They are public keys; the server never holds what opens them. `sv key export`
+  prints the instance's own (operator-cli §9.6), and any other age recipient is accepted. **Without recipients there is no owner's
+  export**, and the page says how to set them.
+- **Taking one** asks for the password again (`confirmPassword`, §3.2.1) and calls `requireCapability('instance:export')` itself. Before
+  it starts, the page says that the file holds every account there now, that it does not restore the instance, and that `sv backup` does.
+  It is logged with who took it, when, and the fingerprints of the recipients, and nothing of what it holds.
+- **What it holds** (`kind: "instance"`): core's records, as stored, of accounts (address, name, picture's address, role, state, time
+  zone, language, when made), roles and the edited matrix, apps as registered (with no client secret), consents, invitations (with no
+  token), instance settings (a saved secret as its stored ciphertext), the branding pictures, notifications, activity, deletion records,
+  and the vault's records (`key_accounts`, `key_apps`, `key_wraps`, and the files of §5.3); and every person's files (§4.6). Sessions,
+  revocations, `restored_at` and logout and deletion notices are left out.
+- **One at a time** for the instance.
+
+#### 4.7.2 A person's export
+
+- **Where:** the identity page **Your data** (`/data`, §3.11), for the session's own account; nothing in a request names whose. It needs
+  `profile:manage`. Taking one asks for the password again (`confirmPassword`, §3.2.1).
+- **Core's part** (`core/`): the person's account (address, name, picture, role, time zone, language, when made), the apps they have
+  allowed with the scopes and when, their notifications and notification preferences, their activity, their files, and their vault's
+  records. Nothing of another person.
+- **Apps' parts** (`apps/<prefix>/`): for each app the person has used, in §4.5's sense ("Who is told"), that has an **export address**
+  (§3.7.1), core sends a `POST` to it with the form field `export_request_token`: a JWT typed `export-request+jwt`, signed with the key
+  that signs logout tokens (§3.6.5), with `iss`, `aud` (the app's client ID), `sub`, `iat`, an `exp` two minutes on, a fresh `jti`, and
+  `events` holding the single event `urn:sovereignfs:event:export-requested`. It carries nothing else of the person.
+  - The app answers `200` with its part as an export of its own (`contracts/export.md`, `kind: "person"`, `app` its `prefix`, `sub` the
+    same), as `application/x-tar`. A redirect is not followed. An app is given **five minutes** and **2 GiB**; its answer is written to
+    disk as it arrives, checked whole (`contracts/export.md` §5, and `app` and `sub` as asked), and only then placed in the person's
+    export.
+  - An app with no export address, one that does not answer in time, answers otherwise than `200`, sends more than allowed or sends what
+    fails the check is listed in `contents.json` as missing with its reason, and the page names it. The rest of the export is complete.
+  - Apps are asked one after another. Core calls only the export address registered for the app, never one from a request.
+- **Not encrypted.** It is the person's, made in their session; the page says that the file is readable by whoever has it. It is a zip by
+  default, and a tar on request.
+- **One at a time** per person.
+
+#### 4.7.3 Running an export
+
+- An export is a **job**: a row recording whose it is (the instance's, or a person's `sub`), the session that asked, its state
+  (`pending`, `running`, `ready`, `failed`), when it was asked for, when it ended and the file's name and size. It is claimed with a
+  conditional update, as logout notices are (§3.6.5), so that two instances of core do not run one twice, and it is picked up when core
+  starts and every minute, so a job a stopped process left is run again from the start.
+- **The file** is written, as it is made, to `.exports/` under core's storage path (§4.6; `SV_STORAGE_PATH`), which every instance of
+  core shares and which is no person's folder. An owner's export is encrypted as it is written: nothing of it is ever on disk in the clear.
+- **The page shows the job's state** and, when it is ready, a download. The download is served **once**, to the session that asked,
+  with `Cache-Control: no-store` and `Content-Disposition: attachment`, by a route that calls the same capability and `requireSameOrigin`
+  (it is a `POST`), and the file is deleted when it has been sent. A ready export not downloaded within **an hour** is deleted, and so is
+  a failed one's partial file. The service worker stores none of this (§1.3).
+- **A failure** is recorded with its kind, never with what it was writing, and the page offers to try again.
+- **Deleting an account** deletes the person's jobs and files with it; **deactivating** one leaves no way to take an export, since there
+  is no session.
 
 ## 5. Keys — encryption the server cannot read
 
@@ -2277,3 +2355,4 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-19 | §3.5.1: the lock, per device once signed in, with a passkey checked by core on the session; a locked session gets nothing of the person, and is unlocked in place with a passkey or the password; §5.4: its secret is refused while locked (RFC 0006 part B).                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | 2026-11-19 | §3.6.2, §3.6.5, §3.7.1: `amr` and `acr`, and a per-app setting for whether signing out of an app ends the core session (on for hosted apps), written ahead of tasks 6.6 and 6.5 (RFC 0007). Not built.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | 2026-11-19 | §3.6.5, §3.7.1, §3.7.4: signing out of an app ends core's session only when the app's setting says so: on for a hosted app, off for an external one (`--keep-core-session`) and a new one in the Console. Built. §3.6.2: `claims_supported` lists only the claims core sends; `amr` and `acr` are parked.                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| 2026-11-20 | §4.7: exports (RFC 0008, milestone 1): the owner's export of core's data, encrypted to the export recipients, and a person's export from core and every app they use, run as jobs and downloaded once; §2: export leaves "Later"; §3.2.2, §3.2.3: `instance:export`, owner-only; §3.7.1: an app's export address; §3.11: Your data; §3.12: Export recipients; §4.4: the Console offers an export, not a backup. Not built.                                                                                                                                                                                                                                                                                                    |

@@ -29,7 +29,7 @@ instance's backup; an export is a portable copy, never a restore. Milestone 2 (d
 
 ## Tasks
 
-#### 📋 18.1 — The specifications
+#### ✅ 18.1 — The specifications
 
 **Goal:** What RFC 0008's milestone 1 designs is written into the documents that hold authority, so every later task implements a
 specification and not an RFC.

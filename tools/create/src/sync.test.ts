@@ -113,6 +113,27 @@ describe('sync --check', () => {
     expect(sharedSection(text)).toMatch(new RegExp(`^${BEGIN}[\\s\\S]*${END}$`));
   });
 
+  it('keeps the Docker files the same in every app, unless the app keeps one as its own', async () => {
+    const dir = await newApp();
+    const dockerfile = path.join(dir, 'Dockerfile');
+    const made = readFileSync(dockerfile, 'utf8');
+    writeFileSync(dockerfile, made.replace('node:${NODE_VERSION}-alpine AS run', 'node:22 AS run'));
+    writeFileSync(path.join(dir, '.dockerignore'), 'node_modules\n');
+    const checked = states(await syncApp(dir, dir, { check: true }));
+    expect(checked.Dockerfile).toBe('drifted');
+    expect(checked['.dockerignore']).toBe('drifted');
+    expect(checked['compose.yml']).toBe('same');
+    await syncApp(dir, dir, { check: false });
+    expect(readFileSync(dockerfile, 'utf8')).toBe(made);
+
+    const pkgFile = path.join(dir, 'package.json');
+    const pkg = JSON.parse(readFileSync(pkgFile, 'utf8'));
+    pkg.sovereign.unmanaged = ['compose.yml'];
+    writeFileSync(pkgFile, JSON.stringify(pkg));
+    writeFileSync(path.join(dir, 'compose.yml'), 'services: {}\n');
+    expect(states(await syncApp(dir, dir, { check: true }))['compose.yml']).toBe('unmanaged');
+  });
+
   it('leaves alone a file the app keeps as its own', async () => {
     const dir = await newApp();
     const pkg = JSON.parse(readFileSync(path.join(dir, 'package.json'), 'utf8'));

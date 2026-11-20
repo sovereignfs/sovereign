@@ -138,7 +138,9 @@ from the template of the `@sovereignfs/create` it pins, through commands it runs
 
 The shared files are `.github/workflows/promotion.yml` and `release.yml`, which call `app-promotion.yml` and `app-release.yml` in
 sovereignfs/sovereign at the commit this version of `create` names; `.github/workflows/sync-develop.yml`; `.github/repository.json`;
-`CLAUDE.md`; and the sections of `CONTRIBUTING.md`, `RELEASING.md` and `AGENTS.md` between `<!-- sovereign:shared:begin -->` and
+`CLAUDE.md`; the app's `Dockerfile`, `.dockerignore` and `compose.yml`, filled with its name, port and package manager, always in the
+app's folder and not written in a repository of several components, which builds its images its own way; and the sections of
+`CONTRIBUTING.md`, `RELEASING.md` and `AGENTS.md` between `<!-- sovereign:shared:begin -->` and
 `<!-- sovereign:shared:end -->`. Workflows and settings go to the repository's root, the documents to the app's folder, so an app in a
 folder of a larger repository (with a `tagPrefix` such as `web-`) is served too.
 

@@ -36,8 +36,9 @@ this app's own; the shared one is written by `npm create @sovereignfs app sync` 
 - **Verify before claiming done,** and show the output. A regression test is trusted only after it has been seen to fail against the code
   it guards.
 - **Docs are part of the change:** a statement a change makes false is fixed in the same change.
-- **Flag Docker-config impact immediately:** a new or renamed environment variable, port, on-disk path or native dependency updates the
-  `Dockerfile`, `.dockerignore` and Compose files in the same change.
+- **Flag Docker-config impact immediately:** a new or renamed environment variable, port, on-disk path or native dependency may need the
+  `Dockerfile`, `.dockerignore` or `compose.yml` changed. Those are shared files, the same in every app: change them in the template, or
+  list the one this app must keep as its own under `sovereign.unmanaged` and change it here, in the same change.
 - **Shared files are written, not edited:** the files `npm create @sovereignfs app sync` writes (this section among them) are changed
   in the template, in sovereignfs/sovereign, and taken with the next sync; a file this app keeps as its own is listed in `package.json`
   under `sovereign.unmanaged`.

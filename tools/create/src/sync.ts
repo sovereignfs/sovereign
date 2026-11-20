@@ -18,8 +18,8 @@ export const BEGIN = '<!-- sovereign:shared:begin -->';
 export const END = '<!-- sovereign:shared:end -->';
 
 /**
- * The shared files: where each is in the template, whether it belongs at the repository's root (workflows and settings) or in the app's
- * folder (documents), and how it is compared: whole, by content (JSON), or only its shared section (`CONTRIBUTING.md`, `RELEASING.md`, `AGENTS.md`), so
+ * The shared files: where each is in the template, whether it belongs at the repository's root (workflows and settings), with the documents
+ * (`app`: the app's folder, or the root of a repository of several components) or always in the app's folder beside its code (`image`), and how it is compared: whole, by content (JSON), or only its shared section (`CONTRIBUTING.md`, `RELEASING.md`, `AGENTS.md`), so
  * an app keeps its own sections of those around it.
  */
 export const MANAGED = [
@@ -31,6 +31,11 @@ export const MANAGED = [
   { file: 'RELEASING.md', at: 'app', kind: 'section' },
   { file: 'CLAUDE.md', at: 'app', kind: 'text' },
   { file: 'AGENTS.md', at: 'app', kind: 'section' },
+  // The image and running it with Docker: the same in every app, filled with its name, port and package manager. An app that needs its own
+  // (another service, a native dependency) lists the file under `sovereign.unmanaged`.
+  { file: 'Dockerfile', at: 'image', kind: 'text' },
+  { file: '_dockerignore', at: 'image', kind: 'text' },
+  { file: 'compose.yml', at: 'image', kind: 'text' },
 ] as const;
 
 /** What the shared files need of an app, from its `package.json` (`name`, and `sovereign`) and its manifest (`port`). */
@@ -176,7 +181,9 @@ export async function syncApp(
   };
   const results: Synced[] = [];
   for (const entry of MANAGED) {
-    const base = entry.at === 'root' ? gitRoot : docsDir;
+    // A repository of several components builds its images its own way; the template's are for one Next.js app.
+    if (several && entry.at === 'image') continue;
+    const base = entry.at === 'root' ? gitRoot : entry.at === 'image' ? appDir : docsDir;
     const target = path.join(base, targetOf(entry.file));
     const shown = path.relative(gitRoot, target).split(path.sep).join('/');
     if (releases.unmanaged.includes(shown)) {

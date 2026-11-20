@@ -69,7 +69,7 @@ work either way.
 ## Shared files
 
 Some files are the same in every app of the suite and are written, not edited: `.github/workflows/promotion.yml`, `release.yml` and
-`sync-develop.yml`, `.github/repository.json`, `CLAUDE.md`, and the shared sections of this file, `RELEASING.md` and `AGENTS.md`. They come
+`sync-develop.yml`, `.github/repository.json`, `CLAUDE.md`, the `Dockerfile`, `.dockerignore` and `compose.yml`, and the shared sections of this file, `RELEASING.md` and `AGENTS.md`. They come
 from the template of the version of `@sovereignfs/create` that `package.json` pins:
 
 ```bash

@@ -363,3 +363,18 @@ Backups sent to a destination on a schedule are milestone 2 of the RFC, tasks 13
 | 0.126.0 | 6        | Apps' parts                             | ✅     | [18.6](docs/epics/exports.md) |
 | 0.127.0 | 7        | The template's exports                  | ✅     | [18.7](docs/epics/exports.md) |
 | —       | 8        | An app with no core: its exports        | 📋     | [18.8](docs/epics/exports.md) |
+
+### M19 — Every app sends Web Push the same way
+
+[Research 0013](docs/research/0013-web-push.md) · [RFC 0009](docs/rfcs/0009-web-push.md) (Proposed) · epic [19](docs/epics/push.md) ·
+workstream [0010](docs/workstreams/0010-web-push.md)
+
+| Version | Priority | Task                                                           | Status | Epic task                  |
+| ------- | -------- | -------------------------------------------------------------- | ------ | -------------------------- |
+| —       | 1        | `@sovereignfs/push`: keys, encryption and sending              | 📋     | [19.1](docs/epics/push.md) |
+| —       | 2        | `@sovereignfs/push`: the store, the outbox and the route       | 📋     | [19.2](docs/epics/push.md) |
+| —       | 3        | The worker shows a push, and the page turns it on `[parallel]` | 📋     | [19.3](docs/epics/push.md) |
+| —       | 4        | `PushControl` `[parallel]`                                     | 📋     | [19.4](docs/epics/push.md) |
+| —       | 5        | The app template sends notifications                           | 📋     | [19.5](docs/epics/push.md) |
+| —       | 6        | Push seen on devices                                           | 📋     | [19.6](docs/epics/push.md) |
+| —       | 7        | Tusk and Waymark on the packages, and the designs that follow  | 📋     | [19.7](docs/epics/push.md) |

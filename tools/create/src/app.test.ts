@@ -135,6 +135,7 @@ describe('the files of an app', () => {
       manifest: number;
       generate: string[];
       prefix: string;
+      signIn: { export?: string };
     };
     const ajv = new Ajv2020({ allErrors: true, strict: false });
     addFormats(ajv);

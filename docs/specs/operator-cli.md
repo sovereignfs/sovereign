@@ -325,6 +325,8 @@ digests in it are what the instance runs, so it is restored from git.
 | `sv backups`                                                              | Lists the backups at the instance's destination and those kept on the server (§10.2.2)                           | yes, read only     |
 | `sv restore PATH \| --from BACKUP [--core \| --app NAME …] [--key FILE]`  | Restores a backup, or one part of it, to the server, from a file or from the destination (§10.2)                 | yes                |
 | `sv key recovery [--out FILE] [--remove]`                                 | Adds a recovery key, kept offline, to the recipients, or removes it (§9.4)                                       | no                 |
+| `sv key export`                                                           | Prints the recipients an owner's export is encrypted to, for the Console (§9.6)                                  | no                 |
+| `sv export open FILE [--key FILE] [--out DIR]`                            | Decrypts an owner's or an app's export here, checks it, and unpacks it (§9.6)                                    | no                 |
 
 ---
 
@@ -746,6 +748,19 @@ encrypted data, and prints its public half as one line, `sv-escrow-1.<id>.<publi
   `sovereign-admin accounts put-kit EMAIL`, which stores it and marks the kit kept. The person then sets a password through a reset
   link and unlocks with the kit.
 
+### 9.6 Exports
+
+Not built yet ([core-app §4.7](core-app.md), task 18.3). Core's Console offers the owner an export of core's data, encrypted with age
+to recipients the owner pastes in (core-app §4.7.1); the toolkit gives them and opens what comes back.
+
+- `sv key export` prints the public keys of `secrets.recipients` (the operator's own and any recovery key, §9.4) as one line, for the
+  owner to paste into Console > Data. It prints no private key and sends nothing: the toolkit holds no account (§9.5).
+- `sv export open FILE [--key FILE] [--out DIR]` decrypts an export with the operator's key (or `--key`, such as the recovery key) on
+  this machine, as a stream, checks it as `contracts/export.md` §5 says, and unpacks it into `DIR` (default: a new folder named after the
+  file, beside it, `0700`). It refuses an export that fails the check and leaves nothing of it. A plain export (a person's) is checked and
+  unpacked the same way.
+- An export is not a backup and `sv restore` refuses one, naming `sv backup`.
+
 ## 10. Keeping up, and recovering
 
 ### 10.1 Upgrading
@@ -983,3 +998,4 @@ with a DNS provider's module, which the stock image does not carry.
 | 2026-11-17 | §2: `npm create @sovereignfs app` takes `--encryption`, for an app whose notes are encrypted in the browser and shared through core's keys.                                                                                                                                                                                                                                                                                                                                                                             |
 | 2026-11-17 | §10.1: `sv upgrade` moves core to the newest published core it supports, as `sv setup` chooses one, no longer only to the release's `newestCore`; §6: a deployment pulls an image it reads the user of when the server does not have it yet.                                                                                                                                                                                                                                                                            |
 | 2026-11-19 | §4: an external app may name an account-deleted and a key return address (`--account-deleted`, `--key-return`), as a hosted app does through its manifest.                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-11-20 | §4.6, §9.6: `sv key export` and `sv export open`, for the owner's export of core (RFC 0008). Not built.                                                                                                                                                                                                                                                                                                                                                                                                                 |

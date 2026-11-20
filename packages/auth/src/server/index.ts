@@ -55,5 +55,7 @@ export * as postgresAccountSchema from './schema/postgres.js';
 export * as sqliteAccountSchema from './schema/sqlite.js';
 export type { Database, Migration } from '@sovereignfs/database';
 export { resolveWaysIn, WaysInError, type WaysIn } from './ways-in.js';
+export { userOf, type CoreFacts, type SessionUser } from './user.js';
+export type { User } from '@sovereignfs/sdk';
 /** `@sovereignfs/database`'s migrator, for the package's migrations under their own history tables (auth.md §10). */
 export { migrate as runMigrations } from '@sovereignfs/database';

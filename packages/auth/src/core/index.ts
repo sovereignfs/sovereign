@@ -10,12 +10,18 @@
  * - `coreSignOutUrl` is core's sign-out for the session, and `needsCoreCheck` says when to ask core again (sdk §9.7).
  */
 import type { Database, Migration } from '@sovereignfs/database';
-import { verifyAccountDeletedToken, verifyLogoutToken, type SignedIn } from '@sovereignfs/sdk';
+import {
+  verifyAccountDeletedToken,
+  verifyLogoutToken,
+  type SignedIn,
+  type User,
+} from '@sovereignfs/sdk';
 import type { BetterAuthPlugin } from 'better-auth';
 import { createAuthEndpoint, getSessionFromCtx } from 'better-auth/api';
 import { deleteSessionCookie, setSessionCookie } from 'better-auth/cookies';
 import { safeReturnTo, withReturnTo } from '../return-to.js';
 import { asCoreArrival } from '../server/preset.js';
+import { userOf, type SessionUser } from '../server/user.js';
 
 /** better-auth's name for the link between an account and core: the `providerId` of its row in `accounts`, whose `accountId` is `sub`. */
 export const CORE_PROVIDER = 'sovereign';
@@ -205,6 +211,33 @@ export function sovereignSignIn({
       ),
     },
   } satisfies BetterAuthPlugin;
+}
+
+/** The claims of an ID token this package checked and kept (`sv_core_sign_ins`), read without checking it again; nothing when unreadable. */
+function keptClaims(idToken: string | null): Record<string, unknown> {
+  const payload = idToken?.split('.')[1];
+  if (!payload) return {};
+  try {
+    const claims: unknown = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    return claims && typeof claims === 'object' ? (claims as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Who is signed in on a session, typed (sdk §9.9): `userOf` with what core said of the person on this session, when they came through
+ * core. Its roles are those of the ID token core signed for this session, kept when it was checked and renewed with each check.
+ */
+export async function signedInUser(
+  database: Database,
+  session: { session: { id: string }; user: SessionUser },
+): Promise<User> {
+  const signIn = await readSignIn(database, session.session.id);
+  return userOf(
+    session.user,
+    signIn ? { sub: signIn.sub, claims: keptClaims(signIn.idToken) } : undefined,
+  );
 }
 
 /** The app's own user for a person core names by `sub`, or nothing when they never signed in here through core. */

@@ -4,6 +4,13 @@ What changed in each version of the sign-in core and every Sovereign app share, 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/). A version's section is
 written in the change that sets the version, dated that day, and becomes the release notes when the version is published.
 
+## [0.4.0] - 2026-11-20
+
+### Added
+
+- Who is signed in, typed: `userOf` (`./server`) and `signedInUser` (`./core`) give the SDK's `User`, the same shape for an account of
+  the app's own and one from core, with `sub` and the roles core signed only for a session that came through core.
+
 ## [0.3.0] - 2026-11-20
 
 ### Added

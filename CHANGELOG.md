@@ -5,6 +5,14 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.122.0] - 2026-11-20
+
+### Added
+
+- `@sovereignfs/export` 0.1.0, a new published package: the one export format of [`contracts/export.md`](contracts/export.md),
+  written as a stream as a tar (or a zip for a person's export), checked as it is read, and encrypted to age recipients. Core and apps use
+  it for the exports of RFC 0008; nothing offers an export yet.
+
 ## [0.121.0] - 2026-11-20
 
 ### Changed

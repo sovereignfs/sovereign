@@ -73,4 +73,16 @@ describe('SignInForm', () => {
     expect(screen.getByText('Send again to the address')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Signing in…' })).toBeTruthy();
   });
+
+  it('offers no reset link where the app cannot send one, and other ways in where it has them', () => {
+    render(
+      <SignInForm
+        appName="Acme"
+        onSubmit={() => undefined}
+        otherWays={<a href="/api/auth/sign-in/sovereign">Continue with Sovereign</a>}
+      />,
+    );
+    expect(screen.queryByRole('link', { name: 'Forgot password?' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Continue with Sovereign' })).toBeTruthy();
+  });
 });

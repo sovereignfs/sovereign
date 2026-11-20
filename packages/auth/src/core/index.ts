@@ -207,6 +207,15 @@ export function sovereignSignIn({
   } satisfies BetterAuthPlugin;
 }
 
+/** The app's own user for a person core names by `sub`, or nothing when they never signed in here through core. */
+export async function userIdForSub(database: Database, sub: string): Promise<string | undefined> {
+  const { rows } = await database.run(
+    'select user_id from accounts where provider_id = ? and account_id = ?',
+    [CORE_PROVIDER, sub],
+  );
+  return rows[0] ? String(rows[0].user_id) : undefined;
+}
+
 /** Whether a session that came from core is due to be checked against it again (sdk §9.7); a local session never is. */
 export async function needsCoreCheck(
   database: Database,

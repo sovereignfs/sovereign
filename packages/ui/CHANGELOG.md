@@ -13,6 +13,7 @@ history and tags.
   `SignInForm`, `SignUpForm`, `ForgotPasswordForm`, `ResetPasswordForm` and `TwoFactorForm`, and on the account pages `SessionsPanel`
   and `ChangePasswordForm`, with `ActionResult` for what a panel's server action answers and `AuthLinkRenderer` for the consumer's
   links. Each draws and collects, and sends nothing itself. Experimental.
+- `SignInForm` takes `otherWays` ("Continue with Sovereign") and needs no reset link where an app cannot send one.
 
 ## [0.101.0] - 2026-11-18
 

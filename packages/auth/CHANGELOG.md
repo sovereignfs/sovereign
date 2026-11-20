@@ -14,6 +14,8 @@ written in the change that sets the version, dated that day, and becomes the rel
   refusal of the password, second-step and passkey routes to an account that has no password.
 - The flows behind the second step's setup (`twoFactorSettings`) and the profile (`saveName`).
 - Published: the private packages it is built from are bundled in.
+- `resolveWaysIn` (the `AUTH_LOCAL` and `AUTH_SIGNUP` defaults of auth.md §5, and an app with no way in refused), `runMigrations` (the
+  database package's migrator) and `userIdForSub` (the app's user for core's `sub`).
 - `@sovereignfs/auth/postgres`: an app's own PostgreSQL pool as the package's database (`postgresDatabase`), the database package's own
   code, bundled; only this entry loads `pg`.
 

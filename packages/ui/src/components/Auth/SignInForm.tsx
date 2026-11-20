@@ -25,7 +25,10 @@ export interface SignInFormProps {
   passkey?: { pending: boolean; onClick: () => void } | undefined;
   /** The email and password, once the person submits them. The form never sends anything itself. */
   onSubmit: (values: { email: string; password: string }) => void;
-  forgotPasswordHref: string;
+  /** Where to ask for a reset link. Leave out where the app cannot send one (no mail). */
+  forgotPasswordHref?: string | undefined;
+  /** Other ways in, under the passkey: "Continue with Sovereign" for an app that signs in through core too. */
+  otherWays?: ReactNode;
   /** Where to create an account. Leave out where nobody may. */
   signUpHref?: string | undefined;
   renderLink?: AuthLinkRenderer;
@@ -45,6 +48,7 @@ export function SignInForm({
   passkey,
   onSubmit,
   forgotPasswordHref,
+  otherWays,
   signUpHref,
   renderLink = plainLink,
 }: SignInFormProps) {
@@ -76,7 +80,11 @@ export function SignInForm({
         </AuthField>
         <AuthField
           label="Password"
-          aside={renderLink({ href: forgotPasswordHref, children: 'Forgot password?' })}
+          aside={
+            forgotPasswordHref
+              ? renderLink({ href: forgotPasswordHref, children: 'Forgot password?' })
+              : undefined
+          }
         >
           {(control) => (
             <Input
@@ -111,6 +119,12 @@ export function SignInForm({
           <AuthButton variant="secondary" loading={passkey.pending} onClick={passkey.onClick}>
             {passkey.pending ? 'Waiting for your device…' : 'Sign in with a passkey'}
           </AuthButton>
+        </>
+      ) : null}
+      {otherWays ? (
+        <>
+          <AuthDivider />
+          {otherWays}
         </>
       ) : null}
       {signUpHref ? (

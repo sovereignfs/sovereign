@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { currentLock, getSession } from '../src/auth/session';
 import { getInstanceIdentity } from '../src/instance/service';
 import { getNotificationService } from '../src/notifications';
@@ -28,10 +27,11 @@ export async function AccountHeader({ bordered = false }: { bordered?: boolean }
 
   return (
     <header className={bordered ? `${styles.header} ${styles.bordered}` : styles.header}>
-      <Link href="/" className={styles.brand}>
+      {/* A document load, not next/link: only the launcher's own policy shows app icons from other sites. */}
+      <a href="/" className={styles.brand}>
         <BrandMark size="sm" />
         <span className={styles.brandName}>{identity.name}</span>
-      </Link>
+      </a>
       {lock ? <LockWatcher idleSeconds={lock.idleSeconds} onLeave={lock.onLeave} /> : null}
       <div className={styles.actions}>
         {hasNotifications ? <NotificationsBell /> : null}

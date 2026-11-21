@@ -402,6 +402,9 @@ pointing here.
   (and `http://localhost:*` on a development instance) to `img-src` for the
   path `/` alone, since the icon is an address an operator gave; every other
   path keeps `'self' blob: data:`, and no other directive changes.
+  A document keeps the policy it arrived with, so a client-side navigation to `/`
+  would show the launcher under another page's policy and refuse every icon: every
+  link to `/` is a plain `<a>`, never `next/link` (a test fails when one is).
 - **A person's connected apps are read and removed for the session's own account
   only.** `listConnectedApps` (`src/oauth/connected.ts`) takes the account from
   the session the page checked, never from a request, reads the consent's scopes

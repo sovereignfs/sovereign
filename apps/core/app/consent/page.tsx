@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { verifyOAuthQueryParams } from '@better-auth/oauth-provider';
 import { getAuth, getAuthSettings } from '../../src/auth';
 import { requireSignedIn } from '../../src/auth/require-signed-in';
@@ -40,9 +39,9 @@ export default async function ConsentPage({
         legal={false}
       >
         <p className={styles.footer}>
-          <Link className={styles.link} href="/">
+          <a className={styles.link} href="/">
             Back to the home page
-          </Link>
+          </a>
         </p>
       </AuthCard>
     );

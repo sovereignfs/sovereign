@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { ButtonLink } from '@sovereignfs/ui';
 import { AuthBrand } from './(auth)/auth-card';
 import { AuthShell } from './(auth)/auth-shell';
@@ -14,7 +13,7 @@ export default function NotFound() {
         The address may be wrong, or the page may have moved. Nothing is lost.
       </p>
       <div className={styles.form}>
-        <ButtonLink href="/" className={styles.wide} renderLink={(props) => <Link {...props} />}>
+        <ButtonLink href="/" className={styles.wide}>
           Go to the start
         </ButtonLink>
       </div>

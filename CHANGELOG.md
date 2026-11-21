@@ -12,6 +12,9 @@ history and tags.
 - The image left out every folder named `data`, its own pages among them: "Your data" (`/data`) and the Console's Data page
   (`/console/data`) were not in it, and answered "This page is not here". The build context now leaves out only the files core keeps
   at run time, and a test fails when it would leave out any source file.
+- The launcher, reached from another page by the instance's name in the header (or "Go to the start", or "Apps"), showed
+  each app's initials instead of its icon until the page was reloaded: it kept the other page's security policy, which refuses
+  pictures from other sites. Every link to the launcher now loads it afresh.
 
 ## [0.131.0] - 2026-11-20
 

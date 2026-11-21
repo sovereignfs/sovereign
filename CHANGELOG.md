@@ -5,6 +5,16 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.131.3] - 2026-11-21
+
+### Fixed
+
+- The Security page logged React error #418 and was drawn again in the browser: the times of a person's sessions were written in the
+  server's language and zone, then in the browser's. They are now in the person's own zone (UTC until they set one), the same on
+  both, with `@sovereignfs/ui` 0.105.0; so are the days on the passkey, connected-app and file lists, which had the same fault.
+- An export downloaded as `sovereign-0.0.0.0-…`, named after the address the server listens on in the image. It is named after the
+  instance's own host, from `SV_URL`.
+
 ## [0.131.2] - 2026-11-21
 
 ### Changed

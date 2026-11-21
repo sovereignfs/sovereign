@@ -5,6 +5,18 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.96.0; earlier versions are in the repository's
 history and tags.
 
+## [0.105.0] - 2026-11-21
+
+### Added
+
+- `SessionsPanel` takes `timeZone`, the person's own, for the times it writes.
+
+### Fixed
+
+- `SessionsPanel` wrote "Signed in" and "Last active" in the runtime's own language and zone, which differ between the server and the
+  browser, so React threw the server's page away and logged error #418. It now writes them the same way everywhere: in `timeZone`,
+  or in UTC without one.
+
 ## [0.104.0] - 2026-11-20
 
 ### Added

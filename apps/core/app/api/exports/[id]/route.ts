@@ -4,6 +4,7 @@ import {
   requireSameOrigin,
 } from '../../../../src/auth/authorize';
 import { downloadExport } from '@sovereignfs/export';
+import { getAuthSettings } from '../../../../src/auth/settings';
 import { coreFilesRoot } from '../../../../src/files';
 import { exportsFolder } from '../../../../src/exports/make';
 import { getExportJobs } from '../../../../src/exports/service';
@@ -13,7 +14,8 @@ export const dynamic = 'force-dynamic';
 /**
  * Hands over an export once (core-app §4.7.3): a `POST` from core's own page, by the session that asked for it, within the hour. The
  * owner's needs `instance:export`; a person's, `profile:manage` and their own. Anything else, or a second time, is not there. The file is
- * removed once it has been sent.
+ * removed once it has been sent. Its name carries the instance's own host, from `SV_URL`: the request's address is the one this server
+ * listens on (`0.0.0.0` in the image), not the one people use.
  */
 export async function POST(
   request: Request,
@@ -34,7 +36,7 @@ export async function POST(
       kind,
       ...(kind === 'person' ? { sub: session.user.id } : {}),
       sessionId: session.session.id,
-      host: new URL(request.url).hostname,
+      host: new URL(getAuthSettings().baseUrl).hostname,
     });
     return (
       answer ?? new Response('Not found', { status: 404, headers: { 'cache-control': 'no-store' } })

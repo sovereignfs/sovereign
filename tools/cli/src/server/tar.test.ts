@@ -157,6 +157,19 @@ describe('extracting a stream', () => {
     expect(existsSync(path.join(into, 'files/a.tar'))).toBe(false);
   });
 
+  it('leaves no file behind when the archive ends before the file has even opened', async () => {
+    // Cut straight after the header: the file is refused before its stream has opened, and the open must not create it afterwards.
+    for (let round = 0; round < 20; round += 1) {
+      const into = place();
+      const cut = makeArchive({ 'files/a.tar': 'z'.repeat(4000) }).subarray(0, 512);
+      await expect(
+        extractStream(new ChunkReader(chunks(cut, 512)), into, { allowed: any }),
+      ).rejects.toThrow(/ends before/);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(existsSync(path.join(into, 'files/a.tar'))).toBe(false);
+    }
+  });
+
   it('asks the guard now and then, so a restore that would fill the disk can stop', async () => {
     const big = makeArchive({ 'files/a.tar': 'q'.repeat(200_000) });
     const seen: number[] = [];

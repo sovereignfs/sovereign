@@ -29,7 +29,7 @@ export default async function ConnectedAppsPage() {
             description="When an app asks to use your account and you allow it, it is listed here. An app run by whoever manages this instance may sign you in without asking, and is not listed."
           />
         ) : (
-          <ConnectedAppsList apps={apps} />
+          <ConnectedAppsList apps={apps} timeZone={session.user.timezone} />
         )}
       </div>
     </Card>

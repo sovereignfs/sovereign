@@ -113,7 +113,7 @@ export default async function SecurityPage() {
       <Card padding="lg">
         <div className={styles.content}>
           <h2 className={styles.heading}>Where you are signed in</h2>
-          <SessionsPanel sessions={sessions} />
+          <SessionsPanel sessions={sessions} timeZone={session.user.timezone} />
         </div>
       </Card>
     </div>

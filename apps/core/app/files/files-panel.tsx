@@ -6,6 +6,7 @@ import { Alert, Button, ConfirmDialog, EmptyState, FileDropzone, Progress } from
 import { deleteFileAction, type DeleteFileResult } from './actions';
 import styles from '../security/security.module.css';
 import listStyles from './files.module.css';
+import { writtenDate } from '../../src/time/written';
 
 export type FileRow = {
   id: string;
@@ -30,9 +31,6 @@ export function sizeOf(bytes: number): string {
   return unit === 0 ? `${value} bytes` : `${value.toFixed(value < 10 ? 1 : 0)} ${units[unit]}`;
 }
 
-const when = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-
 /** What a person is told when an upload is refused, whatever the reason: the server's words when it gave some. */
 async function refusal(reply: Response): Promise<string> {
   const body = (await reply.json().catch(() => ({}))) as { message?: string };
@@ -44,10 +42,13 @@ export function FilesPanel({
   files,
   usage,
   maxUploadBytes,
+  timeZone,
 }: {
   files: FileRow[];
   usage: Usage;
   maxUploadBytes: number;
+  /** The person's zone, for the day each file was added. */
+  timeZone?: string | null | undefined;
 }) {
   const router = useRouter();
   const [error, setError] = useState('');
@@ -108,7 +109,7 @@ export function FilesPanel({
       ) : (
         <ul className={listStyles.list}>
           {files.map((file) => (
-            <FileItem key={file.id} file={file} />
+            <FileItem key={file.id} file={file} timeZone={timeZone} />
           ))}
         </ul>
       )}
@@ -116,7 +117,7 @@ export function FilesPanel({
   );
 }
 
-function FileItem({ file }: { file: FileRow }) {
+function FileItem({ file, timeZone }: { file: FileRow; timeZone: string | null | undefined }) {
   const [open, setOpen] = useState(false);
   const [state, remove, pending] = useActionState<DeleteFileResult | null, null>(
     (previous) => deleteFileAction(file.id, previous),
@@ -136,7 +137,7 @@ function FileItem({ file }: { file: FileRow }) {
           </a>
         </p>
         <p className={styles.footer}>
-          {sizeOf(file.size)}, added {when(file.createdAt)}.
+          {sizeOf(file.size)}, added {writtenDate(file.createdAt, timeZone)}.
         </p>
       </div>
       <div className={listStyles.actions}>

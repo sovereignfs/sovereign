@@ -13,6 +13,7 @@ import {
 } from '../../../src/keys/session';
 import { passkeyProblem } from '../../(auth)/messages';
 import styles from '../security.module.css';
+import { writtenDate } from '../../../src/time/written';
 
 export type PasskeyRow = {
   id: string;
@@ -36,9 +37,12 @@ const reload = () => window.location.reload();
 export function PasskeyPanel({
   passkeys,
   keys,
+  timeZone,
 }: {
   passkeys: PasskeyRow[];
   keys?: PasskeyKeys | undefined;
+  /** The person's zone, for the day each passkey was added. */
+  timeZone?: string | null | undefined;
 }) {
   // Known only in the browser, so it is read after the first render, never during it.
   const [supported, setSupported] = useState<boolean | undefined>();
@@ -52,7 +56,7 @@ export function PasskeyPanel({
       {passkeys.length > 0 ? (
         <ul className={styles.passkeys}>
           {passkeys.map((passkey) => (
-            <PasskeyItem key={passkey.id} passkey={passkey} keys={keys} />
+            <PasskeyItem key={passkey.id} passkey={passkey} keys={keys} timeZone={timeZone} />
           ))}
         </ul>
       ) : null}
@@ -122,7 +126,15 @@ function AddPasskey({ keys }: { keys?: PasskeyKeys | undefined }) {
   );
 }
 
-function PasskeyItem({ passkey, keys }: { passkey: PasskeyRow; keys?: PasskeyKeys | undefined }) {
+function PasskeyItem({
+  passkey,
+  keys,
+  timeZone,
+}: {
+  passkey: PasskeyRow;
+  keys?: PasskeyKeys | undefined;
+  timeZone: string | null | undefined;
+}) {
   const [mode, setMode] = useState<'view' | 'rename' | 'remove' | 'unlock'>('view');
   const [name, setName] = useState(passkey.name ?? '');
   const [error, setError] = useState<string | undefined>();
@@ -207,7 +219,7 @@ function PasskeyItem({ passkey, keys }: { passkey: PasskeyRow; keys?: PasskeyKey
           <div>
             <p className={styles.passkeyName}>{title}</p>
             <p className={styles.footer}>
-              {passkey.createdAt ? `Added ${formatDate(passkey.createdAt)}. ` : ''}
+              {passkey.createdAt ? `Added ${writtenDate(passkey.createdAt, timeZone)}. ` : ''}
               {passkey.synced ? 'Synced between your devices.' : 'Stays on one device.'}
               {unlockNote}
             </p>
@@ -316,9 +328,4 @@ function UnlockFirst({
       </div>
     </form>
   );
-}
-
-/** A date for people, in the browser's language: the day only. */
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' });
 }

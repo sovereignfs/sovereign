@@ -6,28 +6,33 @@ import type { ConnectedApp } from '../../src/oauth/connected';
 import { removeAccessAction, type RemoveResult } from './actions';
 import styles from '../security/security.module.css';
 import listStyles from './connected-apps.module.css';
-
-const when = (time: number | undefined) =>
-  time === undefined
-    ? ''
-    : new Date(time).toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      });
+import { writtenDate } from '../../src/time/written';
 
 /** The apps a person has allowed, each with what it can do and a way to take its access away. */
-export function ConnectedAppsList({ apps }: { apps: ConnectedApp[] }) {
+export function ConnectedAppsList({
+  apps,
+  timeZone,
+}: {
+  apps: ConnectedApp[];
+  /** The person's zone, for the day each app was allowed. */
+  timeZone?: string | null | undefined;
+}) {
   return (
     <ul className={styles.passkeys}>
       {apps.map((app) => (
-        <ConnectedAppItem key={app.clientId} app={app} />
+        <ConnectedAppItem key={app.clientId} app={app} timeZone={timeZone} />
       ))}
     </ul>
   );
 }
 
-function ConnectedAppItem({ app }: { app: ConnectedApp }) {
+function ConnectedAppItem({
+  app,
+  timeZone,
+}: {
+  app: ConnectedApp;
+  timeZone: string | null | undefined;
+}) {
   const [open, setOpen] = useState(false);
   const [state, remove, pending] = useActionState<RemoveResult | null, null>(
     (previous) => removeAccessAction(app.clientId, previous),
@@ -50,7 +55,9 @@ function ConnectedAppItem({ app }: { app: ConnectedApp }) {
           </ul>
         ) : null}
         {app.since !== undefined ? (
-          <p className={styles.footer}>Allowed on {when(app.since)}.</p>
+          <p className={styles.footer}>
+            Allowed on {app.since === undefined ? '' : writtenDate(app.since, timeZone)}.
+          </p>
         ) : null}
       </div>
       {state?.ok ? <Alert variant="success">{state.message}</Alert> : null}

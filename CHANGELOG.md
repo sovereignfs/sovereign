@@ -7,6 +7,11 @@ history and tags.
 
 ## [0.131.1] - 2026-11-21
 
+### Changed
+
+- On the launcher, the Console's tile comes right after "Add", before the apps, and "Add" has the divider and a kind (**new**) like
+  every other tile.
+
 ### Fixed
 
 - The image left out every folder named `data`, its own pages among them: "Your data" (`/data`) and the Console's Data page

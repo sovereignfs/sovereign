@@ -107,7 +107,7 @@ describe('the launcher', () => {
     expect(screen.queryByRole('link', { name: /console/i })).toBeNull();
   });
 
-  it('has the Console after the apps, as a platform app, for an operator, and marks every other tile as a Sovereign app', () => {
+  it('has the Console first, as a platform app, for an operator, and marks every other tile as a Sovereign app', () => {
     render(
       <Launcher
         title="Apps"
@@ -119,9 +119,9 @@ describe('the launcher', () => {
     );
     const links = opening();
     expect(links).toHaveLength(4);
-    expect(links[3]?.getAttribute('href')).toBe('/console');
-    expect(links[3]?.textContent).toContain('Console');
-    expect(links[3]?.textContent).toContain('platform');
+    expect(links[0]?.getAttribute('href')).toBe('/console');
+    expect(links[0]?.textContent).toContain('Console');
+    expect(links[0]?.textContent).toContain('platform');
     expect(screen.getAllByText('sovereign')).toHaveLength(3);
     expect(screen.getAllByText('platform')).toHaveLength(1);
   });
@@ -160,6 +160,7 @@ describe('the launcher', () => {
     expect(links).toHaveLength(4);
     expect(links[0]?.className).toContain('ghost');
     expect(links[0]?.getAttribute('href')).toBe('/launcher/add');
+    expect(links[0]?.textContent).toContain('new');
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'not' } });
     expect(screen.queryByRole('link', { name: /^Add/ })).toBeNull();
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: '' } });
@@ -181,7 +182,7 @@ describe('the launcher', () => {
 });
 
 describe('the order of the tiles', () => {
-  it('is "Add", then the apps and shortcuts together by name, then the Console', () => {
+  it('is "Add", then the Console, then the apps and shortcuts together by name', () => {
     render(
       <Launcher
         title="Apps"
@@ -196,7 +197,7 @@ describe('the order of the tiles', () => {
       .getAllByRole('link')
       .map((link) => link.querySelector('[class*="name"]')?.firstChild?.textContent)
       .filter((name) => name !== undefined);
-    expect(names).toEqual(['Add', 'Calendar', 'Drive', 'Mail', 'Notes', 'Photos', 'Console']);
+    expect(names).toEqual(['Add', 'Console', 'Calendar', 'Drive', 'Mail', 'Notes', 'Photos']);
   });
 });
 

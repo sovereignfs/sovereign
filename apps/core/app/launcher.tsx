@@ -18,7 +18,7 @@ import { openApp, openShortcut } from './launch';
 import { ShortcutIcon } from './shortcuts/shortcut-icon';
 import styles from './launcher.module.css';
 
-/** Core's own app for operators, which is not a client in the registry: it opens in the same place, and is listed after the apps. */
+/** Core's own app for operators, which is not a client in the registry: it opens in the same place, and is listed first, after "Add". */
 const CONSOLE = {
   id: 'console',
   name: 'Console',
@@ -32,12 +32,13 @@ const tag = (label: string) => (
   </Badge>
 );
 
-/** What kind of thing a tile is: core's own apps are platform apps, an app an operator added is a Sovereign app, and a site is a shortcut. */
+/** What kind of thing a tile is: core's own apps are platform apps, an app an operator added is a Sovereign app, a site is a shortcut, and "Add" makes a new one. */
 const KIND = {
   platform: tag('platform'),
   sovereign: tag('sovereign'),
   shortcut: tag('shortcut'),
   yours: tag('yours'),
+  new: tag('new'),
 } as const;
 
 /** A shortcut as the launcher shows it (core-app §3.8.1): `own` when it is the person's, which only they see. */
@@ -57,9 +58,8 @@ type Tile =
   | { kind: 'shortcut'; id: string; name: string; shortcut: LauncherShortcut };
 
 /**
- * The apps and shortcuts a person can open, with search by name: first a dashed "Add" tile (when not searching),
- * then the apps and shortcuts together in name order, then, for an operator (`canOpenConsole`), the Console, a
- * platform app. An app's tile is a link to its launch address, followed in the same tab in a browser; in an installed
+ * The apps and shortcuts a person can open, with search by name: first a dashed "Add" tile (when not searching), then,
+ * for an operator (`canOpenConsole`), the Console, a platform app, then the apps and shortcuts together in name order. An app's tile is a link to its launch address, followed in the same tab in a browser; in an installed
  * core a click opens it in a new window instead, which a device that can hands to the installed app (`launch.ts`). The app
  * signs the person in through core, which completes without a prompt when they already have a session. A shortcut is another site, so its
  * tile opens a new tab and tells the site nothing of where it came from. Every icon is drawn in greys, so the grid is
@@ -161,6 +161,17 @@ export function Launcher({
               name="Add"
               description={addDescription}
               icon={<Icon name="plus" size="lg" aria-hidden={true} />}
+              tags={KIND.new}
+            />
+          ) : null}
+          {showConsole ? (
+            <AppTile
+              href={CONSOLE.href}
+              name={CONSOLE.name}
+              description={CONSOLE.description}
+              icon={<Icon name="layout-dashboard" size="lg" aria-hidden={true} />}
+              tags={KIND.platform}
+              monochrome
             />
           ) : null}
           {shown.map((tile) =>
@@ -195,16 +206,6 @@ export function Launcher({
               />
             ),
           )}
-          {showConsole ? (
-            <AppTile
-              href={CONSOLE.href}
-              name={CONSOLE.name}
-              description={CONSOLE.description}
-              icon={<Icon name="layout-dashboard" size="lg" aria-hidden={true} />}
-              tags={KIND.platform}
-              monochrome
-            />
-          ) : null}
         </CardTileGrid>
       )}
       {hasOwn && needle === '' ? (

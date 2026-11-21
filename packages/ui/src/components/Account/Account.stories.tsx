@@ -50,6 +50,14 @@ export const Sessions: Story = {
   },
 };
 
+/** Times in the person's own zone; without `timeZone` they are in UTC, as in the story above. */
+export const SessionsInTheirZone: Story = {
+  args: {
+    ...Sessions.args,
+    timeZone: 'Asia/Tokyo',
+  },
+};
+
 export const OnlyThisDevice: Story = {
   args: {
     sessions: [

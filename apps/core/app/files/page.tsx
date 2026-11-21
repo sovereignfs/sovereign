@@ -45,7 +45,12 @@ export default async function FilesPage() {
           Files you keep in your account. Only you can open them: not the people who run this
           instance, and not the apps.
         </p>
-        <FilesPanel files={rows} usage={usage} maxUploadBytes={MAX_UPLOAD_BYTES} />
+        <FilesPanel
+          files={rows}
+          usage={usage}
+          maxUploadBytes={MAX_UPLOAD_BYTES}
+          timeZone={session.user.timezone}
+        />
       </div>
     </Card>
   );

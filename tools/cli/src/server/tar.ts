@@ -288,7 +288,12 @@ export async function extractStream(
         await once(out, 'close');
       }
     } catch (error) {
-      out?.destroy();
+      if (out) {
+        // The stream opens its file asynchronously: removing it before the stream has closed lets a pending open create it afterwards.
+        const closed = out.closed ? Promise.resolve() : once(out, 'close');
+        out.destroy();
+        await closed.catch(() => undefined);
+      }
       await rm(target, { force: true });
       throw error;
     }

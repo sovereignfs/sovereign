@@ -22,10 +22,20 @@ export interface SessionsPanelProps {
   endSession: (id: string, previous: ActionResult | null, form: FormData) => Promise<ActionResult>;
   /** Ends every session but this one. */
   endOthers: PanelAction;
+  /**
+   * The time zone the times are written in: the person's own, where the app knows it. Default UTC. Times are written the same way on
+   * the server and in the browser, so the page the server sent is the page the browser shows.
+   */
+  timeZone?: string;
 }
 
 /** The person's open sessions, with a way to end any of them, or all but this one (auth.md §7). */
-export function SessionsPanel({ sessions, endSession, endOthers }: SessionsPanelProps) {
+export function SessionsPanel({
+  sessions,
+  endSession,
+  endOthers,
+  timeZone = 'UTC',
+}: SessionsPanelProps) {
   const [others, endAllOthers, endingOthers] = useActionState<ActionResult | null, FormData>(
     endOthers,
     null,
@@ -36,7 +46,12 @@ export function SessionsPanel({ sessions, endSession, endOthers }: SessionsPanel
     <div className={styles.form}>
       <ul className={styles.list}>
         {sessions.map((session) => (
-          <SessionItem key={session.id} session={session} endSession={endSession} />
+          <SessionItem
+            key={session.id}
+            session={session}
+            endSession={endSession}
+            timeZone={timeZone}
+          />
         ))}
       </ul>
       {others?.ok && others.message ? <Alert variant="success">{others.message}</Alert> : null}
@@ -55,9 +70,11 @@ export function SessionsPanel({ sessions, endSession, endOthers }: SessionsPanel
 function SessionItem({
   session,
   endSession,
+  timeZone,
 }: {
   session: SessionRow;
   endSession: SessionsPanelProps['endSession'];
+  timeZone: string;
 }) {
   const [state, action, pending] = useActionState<ActionResult | null, FormData>(
     endSession.bind(null, session.id),
@@ -71,8 +88,9 @@ function SessionItem({
           {session.current ? ' (this device)' : ''}
         </p>
         <p className={styles.footer}>
-          {session.ipAddress ? `${session.ipAddress}. ` : ''}Signed in {when(session.signedInAt)}
-          {session.current ? '' : `. Last active ${when(session.lastActiveAt)}`}.
+          {session.ipAddress ? `${session.ipAddress}. ` : ''}Signed in{' '}
+          {when(session.signedInAt, timeZone)}
+          {session.current ? '' : `. Last active ${when(session.lastActiveAt, timeZone)}`}.
         </p>
       </div>
       {state && !state.ok ? <Alert variant="error">{state.error}</Alert> : null}
@@ -85,10 +103,20 @@ function SessionItem({
   );
 }
 
-/** A moment for people, in the browser's language: the day and the time. */
-function when(milliseconds: number): string {
-  return new Date(milliseconds).toLocaleString(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
+/**
+ * A moment for people: the day and the time, in the given zone (UTC for a zone this runtime does not know). Never in the runtime's own
+ * language or zone, which differ between the server and the browser and would make the two disagree.
+ */
+function when(milliseconds: number, timeZone: string): string {
+  const format = (zone: string) =>
+    new Intl.DateTimeFormat('en-GB', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone: zone,
+    }).format(milliseconds);
+  try {
+    return format(timeZone);
+  } catch {
+    return format('UTC');
+  }
 }

@@ -7,10 +7,12 @@
 **/.turbo
 **/dist
 **/coverage
-**/data
+# Runtime data only, as .gitignore has it: a bare **/data would also drop source folders named data (app/data).
+**/data/s3
 **/*.db
 **/*.db-shm
 **/*.db-wal
+**/*.db-journal
 **/.env
 **/.env.*
 !**/.env.example

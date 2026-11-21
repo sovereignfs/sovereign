@@ -46,6 +46,52 @@ describe('SessionsPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign out everywhere else' }));
     expect(await screen.findByText('Signed out of 1 other session.')).toBeTruthy();
   });
+
+  it('writes times in the zone it is given, never in the runtime’s, so the server and the browser agree', () => {
+    // The server and the browser run in different zones and languages: neither may show through.
+    const zone = process.env.TZ;
+    process.env.TZ = 'America/New_York';
+    try {
+      const session = {
+        id: 'a',
+        current: false,
+        device: 'Chrome on macOS',
+        ipAddress: null,
+        signedInAt: 0,
+        lastActiveAt: 0,
+      };
+      const noop = vi.fn();
+      const { rerender } = render(
+        <SessionsPanel sessions={[session]} endSession={noop} endOthers={noop} />,
+      );
+      expect(
+        screen.getByText('Signed in 1 Jan 1970, 00:00. Last active 1 Jan 1970, 00:00.'),
+      ).toBeTruthy();
+      rerender(
+        <SessionsPanel
+          sessions={[session]}
+          endSession={noop}
+          endOthers={noop}
+          timeZone="Asia/Tokyo"
+        />,
+      );
+      expect(
+        screen.getByText('Signed in 1 Jan 1970, 09:00. Last active 1 Jan 1970, 09:00.'),
+      ).toBeTruthy();
+      rerender(
+        <SessionsPanel
+          sessions={[session]}
+          endSession={noop}
+          endOthers={noop}
+          timeZone="Not/AZone"
+        />,
+      );
+      expect(screen.getByText(/Signed in 1 Jan 1970, 00:00/)).toBeTruthy();
+    } finally {
+      if (zone === undefined) delete process.env.TZ;
+      else process.env.TZ = zone;
+    }
+  });
 });
 
 describe('ChangePasswordForm', () => {

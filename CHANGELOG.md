@@ -5,6 +5,37 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.131.3] - 2026-11-21
+
+### Fixed
+
+- The Security page logged React error #418 and was drawn again in the browser: the times of a person's sessions were written in the
+  server's language and zone, then in the browser's. They are now in the person's own zone (UTC until they set one), the same on
+  both, with `@sovereignfs/ui` 0.105.0; so are the days on the passkey, connected-app and file lists, which had the same fault.
+- An export downloaded as `sovereign-0.0.0.0-…`, named after the address the server listens on in the image. It is named after the
+  instance's own host, from `SV_URL`.
+
+## [0.131.2] - 2026-11-21
+
+### Changed
+
+- On the launcher, the Console's tile comes right after "Add", before the apps, and "Add" has the divider and a kind (**new**) like
+  every other tile.
+
+### Fixed
+
+- The launcher, reached from another page by the instance's name in the header (or "Go to the start", or "Apps"), showed
+  each app's initials instead of its icon until the page was reloaded: it kept the other page's security policy, which refuses
+  pictures from other sites. Every link to the launcher now loads it afresh.
+
+## [0.131.1] - 2026-11-21
+
+### Fixed
+
+- The image left out every folder named `data`, its own pages among them: "Your data" (`/data`) and the Console's Data page
+  (`/console/data`) were not in it, and answered "This page is not here". The build context now leaves out only the files core keeps
+  at run time, and a test fails when it would leave out any source file.
+
 ## [0.131.0] - 2026-11-20
 
 ### Added

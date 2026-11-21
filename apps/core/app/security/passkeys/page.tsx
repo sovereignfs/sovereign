@@ -39,6 +39,7 @@ export default async function PasskeysPage() {
         </p>
         <PasskeyPanel
           passkeys={passkeys}
+          timeZone={session.user.timezone}
           keys={
             vault.account
               ? { rpId: getAuthSettings().webauthn.rpId, email: session.user.email }

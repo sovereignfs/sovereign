@@ -5,6 +5,20 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.12.0; earlier versions are in the repository's
 history and tags.
 
+## [0.27.1] - 2026-11-21
+
+### Changed
+
+- The core this toolkit was made for is 0.131.3: `sv setup` starts on it when the registry cannot be asked, where it named 0.131.0,
+  whose image has no "Your data" or Console Data page.
+- An app made by `npm create @sovereignfs app` depends on `@sovereignfs/ui` 0.105, whose `SessionsPanel` writes its times the same
+  on the server and in the browser (in UTC), where 0.104 made React log error #418 on the app's security page.
+
+### Fixed
+
+- `sv restore` from an archive that ends early could leave an empty, partial file behind: it removed the file while the file was
+  still being opened, and the open then made it. It now waits for the file to close before removing it.
+
 ## [0.27.0] - 2026-11-20
 
 ### Added

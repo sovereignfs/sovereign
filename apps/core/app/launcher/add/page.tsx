@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { AppTile, CardTileGrid, Icon, PageContainer } from '@sovereignfs/ui';
 import { requireSignedIn } from '../../../src/auth/require-signed-in';
@@ -30,10 +29,10 @@ export default async function AddPage() {
       <div className={styles.page}>
         <AccountHeader />
         <div>
-          <Link href="/" className={styles.back}>
+          <a href="/" className={styles.back}>
             <Icon name="chevron-left" size="sm" aria-hidden={true} />
             Apps
-          </Link>
+          </a>
         </div>
         <h1 className={styles.title}>What do you want to add?</h1>
         <CardTileGrid minTileWidth={260}>

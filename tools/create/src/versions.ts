@@ -20,8 +20,8 @@ export const APP_DEPENDENCIES = {
   // `userOf` gives, on 2.9's sign-in for a session the app keeps (`finishSignIn`).
   '@sovereignfs/sdk': '^2.11.0',
   '@sovereignfs/storage': '^0.1.0',
-  // 0.104 has `PushControl`.
-  '@sovereignfs/ui': '^0.104.0',
+  // 0.104 has `PushControl`; 0.105 writes `SessionsPanel`'s times the same on the server and in the browser.
+  '@sovereignfs/ui': '^0.105.0',
   'better-auth': '1.7.18',
   next: '^16.4.6',
   pg: '^8.23.1',

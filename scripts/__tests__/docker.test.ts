@@ -109,11 +109,89 @@ describe('the Docker build context', () => {
   });
 
   it('leaves out what is local: dependencies, build output, databases and the repository', () => {
-    for (const entry of ['.git', '**/node_modules', '**/.next', '**/data', '**/*.db']) {
+    for (const entry of ['.git', '**/node_modules', '**/.next', '**/data/s3', '**/*.db']) {
       expect(lines, entry).toContain(entry);
     }
   });
+
+  it('leaves in every source file: a pattern meant for local data never drops a page', () => {
+    // `**/data` once dropped app/data and app/console/data from the image; the build passed and the pages were 404.
+    const excluded = sourceFiles().filter((file) => isDockerIgnored(lines, file));
+    expect(excluded).toEqual([]);
+  });
+
+  it('is read the way Docker reads it, so the check above can fail', () => {
+    expect(isDockerIgnored(['**/data'], 'apps/core/app/data/page.tsx')).toBe(true);
+    expect(isDockerIgnored(['**/data/s3'], 'apps/core/app/data/page.tsx')).toBe(false);
+    expect(isDockerIgnored(['**/data/s3'], 'apps/core/data/s3/core/a.png')).toBe(true);
+    expect(isDockerIgnored(['**/.env.*', '!**/.env.example'], 'apps/core/.env.example')).toBe(
+      false,
+    );
+  });
 });
+
+/** The source trees the image is built from: each app's `app` and `src`, each package's and tool's `src`. */
+function sourceFiles(): string[] {
+  const trees: string[] = [];
+  for (const [group, folders] of [
+    ['apps', ['app', 'src']],
+    ['packages', ['src']],
+    ['tools', ['src']],
+  ] as const) {
+    for (const name of readdirSync(path.join(root, group))) {
+      for (const folder of folders) trees.push(`${group}/${name}/${folder}`);
+    }
+  }
+  const files: string[] = [];
+  for (const tree of trees) {
+    let entries: string[];
+    try {
+      entries = readdirSync(path.join(root, tree), { recursive: true, encoding: 'utf8' });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const file = `${tree}/${entry.split(path.sep).join('/')}`;
+      if (!file.includes('/node_modules/') && !file.includes('/__tests__/')) files.push(file);
+    }
+  }
+  expect(files.length).toBeGreaterThan(100);
+  return files;
+}
+
+/**
+ * Whether Docker leaves `file` out of the build context: the last pattern that matches the file or a folder above it
+ * decides, and a `!` pattern keeps what an earlier one left out.
+ */
+function isDockerIgnored(patterns: readonly string[], file: string): boolean {
+  const parts = file.split('/');
+  const candidates = parts.map((_, index) => parts.slice(0, index + 1).join('/'));
+  let ignored = false;
+  for (const raw of patterns) {
+    if (raw === '' || raw.startsWith('#')) continue;
+    const keep = raw.startsWith('!');
+    const pattern = new RegExp(`^${toRegExp(keep ? raw.slice(1) : raw)}$`);
+    if (candidates.some((candidate) => pattern.test(candidate))) ignored = !keep;
+  }
+  return ignored;
+}
+
+function toRegExp(glob: string): string {
+  let out = '';
+  for (let index = 0; index < glob.length; index += 1) {
+    const char = glob[index] ?? '';
+    if (glob.startsWith('**/', index)) {
+      out += '(?:.*/)?';
+      index += 2;
+    } else if (glob.startsWith('**', index)) {
+      out += '.*';
+      index += 1;
+    } else if (char === '*') out += '[^/]*';
+    else if (char === '?') out += '[^/]';
+    else out += char.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+  }
+  return out;
+}
 
 describe('the compose files', () => {
   const defaults = compose('docker-compose.yml');

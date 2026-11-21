@@ -5,6 +5,14 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.131.1] - 2026-11-21
+
+### Fixed
+
+- The image left out every folder named `data`, its own pages among them: "Your data" (`/data`) and the Console's Data page
+  (`/console/data`) were not in it, and answered "This page is not here". The build context now leaves out only the files core keeps
+  at run time, and a test fails when it would leave out any source file.
+
 ## [0.131.0] - 2026-11-20
 
 ### Added

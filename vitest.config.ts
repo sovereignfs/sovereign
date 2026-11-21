@@ -18,6 +18,27 @@ export default defineConfig({
   resolve: {
     alias: [
       source('api-client', './packages/api-client/src/index.ts'),
+      source('auth', './packages/auth/src/index.ts'),
+      {
+        find: /^@sovereignfs\/auth\/server$/,
+        replacement: fileURLToPath(new URL('./packages/auth/src/server/index.ts', import.meta.url)),
+      },
+      {
+        find: /^@sovereignfs\/auth\/client$/,
+        replacement: fileURLToPath(new URL('./packages/auth/src/client/index.ts', import.meta.url)),
+      },
+      {
+        find: /^@sovereignfs\/auth\/postgres$/,
+        replacement: fileURLToPath(new URL('./packages/auth/src/postgres.ts', import.meta.url)),
+      },
+      {
+        find: /^@sovereignfs\/auth\/core$/,
+        replacement: fileURLToPath(new URL('./packages/auth/src/core/index.ts', import.meta.url)),
+      },
+      {
+        find: /^@sovereignfs\/auth\/next$/,
+        replacement: fileURLToPath(new URL('./packages/auth/src/next/index.ts', import.meta.url)),
+      },
       source('config', './packages/config/src/index.ts'),
       source('crypto', './packages/crypto/src/index.ts'),
       {
@@ -35,6 +56,14 @@ export default defineConfig({
       source('manifest', './packages/manifest/src/index.ts'),
       source('sdk', './packages/sdk/src/index.ts'),
       source('storage', './packages/storage/src/index.ts'),
+      source('export', './packages/export/src/index.ts'),
+      source('push', './packages/push/src/index.ts'),
+      {
+        find: /^@sovereignfs\/push\/testing$/,
+        replacement: fileURLToPath(
+          new URL('./packages/push/src/testing/index.ts', import.meta.url),
+        ),
+      },
       source('pwa', './packages/pwa/src/index.ts'),
       {
         find: /^@sovereignfs\/pwa\/client$/,

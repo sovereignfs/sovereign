@@ -2,7 +2,7 @@ import { validate } from '@sovereignfs/manifest';
 import { satisfies, validRange } from 'semver';
 import { Failed, Refused } from './errors.js';
 import { MANIFEST_LABEL, RELEASE } from './release.js';
-import type { Registry } from './registry.js';
+import { imageName, type Registry } from './registry.js';
 import type { HostedApp, Manifest } from './suite/types.js';
 
 const MAX_BYTES = 64 * 1024;
@@ -25,7 +25,7 @@ export async function readManifest(
   if (app.manifest) {
     text = await fetchText(app.manifest, fetchImpl);
   } else {
-    const ref = pinnedDigest ? `${app.image.replace(/[:@][^/]*$/, '')}@${pinnedDigest}` : app.image;
+    const ref = pinnedDigest ? `${imageName(app.image)}@${pinnedDigest}` : app.image;
     text = await registry.label(ref, MANIFEST_LABEL);
     if (text === undefined) {
       throw new Refused(

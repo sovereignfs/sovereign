@@ -23,6 +23,7 @@ export const STABLE = {
 export const EXPERIMENTAL = {
   '.': [
     'hasRole',
+    'personFromClaims',
     'NotAuthenticatedError',
     'SignInError',
     'InvalidNoticeError',

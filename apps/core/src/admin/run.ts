@@ -44,10 +44,12 @@ export function inputOf(app: Extract<Command, { name: 'ensure' }>['app']): Regis
     postLogoutRedirectUris: app.postLogout,
     backchannelLogoutUri: app.backChannel ?? '',
     accountDeletedUri: app.accountDeleted ?? '',
+    exportUri: app.export ?? '',
     keyReturnUri: app.keyReturn ?? '',
     scopes: app.scopes.length > 0 ? app.scopes : [...DEFAULT_SCOPES],
     appScopes: app.appScopes,
     trusted: app.trusted,
+    signOutOfCore: !app.keepCoreSession,
     enabled: true,
     launcher: {
       description: app.description ?? '',

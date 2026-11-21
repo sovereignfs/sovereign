@@ -38,6 +38,7 @@ assumptions:
 - `docs/architecture-rules.md` — full detail behind every hard rule listed
   below.
 - `docs/specs/sdk.md` — what `@sovereignfs/sdk` does.
+- `docs/specs/auth.md` — what `@sovereignfs/auth` does: the sign-in core and every app share (RFC 0007).
 - `docs/specs/design-system.md` — what `@sovereignfs/ui` promises, and
   `docs/design-system.md` — the guide to using it.
 - `docs/releasing.md` — what is published (npm, the image) and how it is released.
@@ -136,7 +137,7 @@ recorded as an ADR in `docs/adrs/`. A documented "not now" is a valid outcome.
     minor; patches are hotfixes between tasks; a single jump to `1.0.0` marks
     public release.
   - **Internal packages and `apps/core`** follow normal semver independently.
-  - **The published packages, `@sovereignfs/ui`, `@sovereignfs/sdk`, `@sovereignfs/manifest`, `@sovereignfs/config`, `@sovereignfs/storage` and `@sovereignfs/pwa`**,
+  - **The published packages, `@sovereignfs/ui`, `@sovereignfs/sdk`, `@sovereignfs/manifest`, `@sovereignfs/config`, `@sovereignfs/storage`, `@sovereignfs/export`, `@sovereignfs/push` and `@sovereignfs/pwa`**,
     and the release-ready `@sovereignfs/bridge`, are contracts (`docs/releasing.md`; the rest
     are `private`): a patch never contains a breaking change; breaking
     needs at least a minor bump plus a migration note (`docs/upgrade.md`), and
@@ -210,6 +211,15 @@ each: `docs/architecture-rules.md`.
   ended session stops working at once everywhere.
 - **Sign-up's terms and time zone are checked in the user-create hook and
   recorded by the server;** every page is rendered per request, for the nonce.
+- **A locked session is no session:** `getSession` applies the lock, so pages, actions and routes get
+  nothing for it; only the lock page reads it (`getSessionEvenIfLocked`). better-auth's routes refuse
+  a browser's locked session but signing out, signing in afresh and the emailed links; the lock follows the session, not
+  the device cookie; unlocking is a passkey checked on that session (`src/lock/passkey.ts`) or the
+  password, never a new sign-in.
+- **A rule every sign-in holds lives in `@sovereignfs/auth`** (auth.md §4), never in core's `auth.ts`:
+  core's better-auth is `createAuthPreset` plus core's additions, given as hooks and plugins; only
+  `src/auth/session.ts` reads a session unchecked (`readSessionUnchecked`); better-auth is named at one
+  exact version in every manifest (each held by a test).
 - **Every way of opening a session must pass the second step** when TOTP is on,
   and core offers no "trust this device".
 - **Passkeys must be user-verified** (checked in core's hooks, not left to
@@ -412,6 +422,8 @@ packages/
   bridge/           device bridge — release-ready, not published yet
   config/           env convention and start-up validation
   storage/          people's files: a folder and a quota per person — published
+  export/           exports: one archive format, checked, encrypted to age recipients — published
+  push/             Web Push for an app's server: key, encryption, store, outbox, route — published
   pwa/              installing an app: manifest, service worker, announced update — published
   database/         sqld / PostgreSQL / SQLite file
   crypto/           field encryption (later: end-to-end, recovery kit)
@@ -421,7 +433,7 @@ packages/
   tsconfig/         shared TS configs — extend these
 contracts/          core-api/ (OpenAPI), env.md, suite.md, app-manifest.md, schemas/
 docs/
-  specs/            core-app.md, operator-cli.md, design-system.md, sdk.md — source of truth for each
+  specs/            core-app.md, operator-cli.md, design-system.md, sdk.md, auth.md — source of truth for each
   epics/            task detail;  rfcs/  research/  adrs/
 scripts/            repository tooling
 Dockerfile, docker-compose*.yml   the image and its three compose setups (docs/deploying.md)

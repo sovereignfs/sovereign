@@ -9,6 +9,7 @@ import { trimTrailingSlashes } from './slashes.js';
 
 export const BACK_CHANNEL_EVENT = 'http://schemas.openid.net/event/backchannel-logout';
 export const ACCOUNT_DELETED_EVENT = 'urn:sovereignfs:event:account-deleted';
+export const EXPORT_REQUESTED_EVENT = 'urn:sovereignfs:event:export-requested';
 /** How far an `iat` may be ahead of this clock before a notice is refused. */
 const SKEW_SECONDS = 60;
 /** How long core's discovery document and keys may take to answer. */

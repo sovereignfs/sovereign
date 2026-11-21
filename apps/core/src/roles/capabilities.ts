@@ -24,6 +24,7 @@ export const CAPABILITIES = {
   'capability:configure': { ownerOnly: true, operatorOnly: false },
   'ownership:transfer': { ownerOnly: true, operatorOnly: false },
   'instance:diagnose': { ownerOnly: true, operatorOnly: false },
+  'instance:export': { ownerOnly: true, operatorOnly: false },
 } as const;
 
 export type Capability = keyof typeof CAPABILITIES;

@@ -26,12 +26,15 @@ export const UNITS: readonly Unit[] = [
   { slug: 'manifest', dir: 'packages/manifest', published: true },
   { slug: 'config', dir: 'packages/config', published: true },
   { slug: 'storage', dir: 'packages/storage', published: true },
+  { slug: 'export', dir: 'packages/export', published: true },
+  { slug: 'push', dir: 'packages/push', published: true },
   { slug: 'pwa', dir: 'packages/pwa', published: true },
   { slug: 'bridge', dir: 'packages/bridge', published: false },
   { slug: 'mailer', dir: 'packages/mailer', published: false },
   { slug: 'crypto', dir: 'packages/crypto', published: false },
   { slug: 'database', dir: 'packages/database', published: false },
   { slug: 'api-client', dir: 'packages/api-client', published: false },
+  { slug: 'auth', dir: 'packages/auth', published: true },
 ];
 
 export type Change = { unit: Unit; from: string | undefined; to: string };

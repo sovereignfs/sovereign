@@ -64,6 +64,7 @@ import { Spinner } from '../components/Spinner/Spinner';
 import { SystemBanner } from '../components/SystemBanner/SystemBanner';
 import { InstallHint } from '../components/InstallPrompt/InstallPrompt';
 import { UpdateNotice } from '../components/UpdateNotice/UpdateNotice';
+import { PushControl } from '../components/PushControl/PushControl';
 import { Tabs } from '../components/Tabs/Tabs';
 import { ToastProvider, useToast } from '../components/Toast/Toast';
 import { Toggle } from '../components/Toggle/Toggle';
@@ -86,6 +87,15 @@ import {
 import { Alert } from '../components/Alert/Alert';
 import { Breadcrumb } from '../components/Breadcrumb/Breadcrumb';
 import { LegalLinks } from '../components/LegalLinks/LegalLinks';
+import { SignInForm } from '../components/Auth/SignInForm';
+import { SignUpForm } from '../components/Auth/SignUpForm';
+import { ForgotPasswordForm } from '../components/Auth/ForgotPasswordForm';
+import { ResetPasswordForm } from '../components/Auth/ResetPasswordForm';
+import { TwoFactorForm } from '../components/Auth/TwoFactorForm';
+import { SessionsPanel } from '../components/Account/SessionsPanel';
+import { ChangePasswordForm } from '../components/Account/ChangePasswordForm';
+import { TwoFactorPanel } from '../components/Account/TwoFactorPanel';
+import { ProfilePanel } from '../components/Account/ProfilePanel';
 import { ConsentPrompt } from '../components/ConsentPrompt/ConsentPrompt';
 import { Markdown } from '../components/Markdown/Markdown';
 import { Pagination } from '../components/Pagination/Pagination';
@@ -120,6 +130,7 @@ import { FileDropzone } from '../components/FileDropzone/FileDropzone';
 import { OverlayHeader } from '../components/OverlayHeader/OverlayHeader';
 import { Sheet } from '../components/Sheet/Sheet';
 import { ConfirmDialog } from '../components/ConfirmDialog/ConfirmDialog';
+import { ExportPanel } from '../components/ExportPanel/ExportPanel';
 import { Menu, MenuEntries } from '../components/Menu/Menu';
 import { Calendar } from '../components/Calendar/Calendar';
 import { DatePicker } from '../components/DatePicker/DatePicker';
@@ -2217,6 +2228,28 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               <ConfirmDialogDemo />
             </ComponentCard>
 
+            {/* ExportPanel */}
+            <ComponentCard
+              name="ExportPanel"
+              importLine="import { ExportPanel } from '@sovereignfs/ui';"
+              usage="Taking an export and downloading it once, for an operator's export or a person's: the password asked again, a confirmation, the state while it is made, and a download that works once. The consumer gives onStart (with the password typed), downloadAction and onRefresh."
+            >
+              <ExportPanel
+                status={{
+                  state: 'ready',
+                  id: 'demo',
+                  size: 7_340_032,
+                  until: Date.UTC(2026, 10, 20, 11, 0),
+                  here: true,
+                }}
+                onStart={async () => ({ ok: true })}
+                downloadAction={() => '#'}
+                confirmTitle="Download your data?"
+                confirmMessage="Ready to download once, within the hour."
+                startLabel="Get my data"
+              />
+            </ComponentCard>
+
             {/* Popover */}
             <ComponentCard
               name="Popover"
@@ -2306,6 +2339,28 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                 }}
               >
                 <UpdateNotice appName="Sovereign" onReload={() => undefined} />
+              </div>
+            </ComponentCard>
+
+            {/* PushControl */}
+            <ComponentCard
+              name="PushControl"
+              importLine="import { PushControl } from '@sovereignfs/ui';"
+              usage="Notifications on this device, for an app's settings: why a device can't have them, or one switch. State and actions from usePush in @sovereignfs/pwa/client."
+            >
+              <div style={{ display: 'grid', gap: 16, width: '100%', maxWidth: 420 }}>
+                <PushControl
+                  appName="Tasks"
+                  state="on"
+                  onTurnOn={() => undefined}
+                  onTurnOff={() => undefined}
+                />
+                <PushControl
+                  appName="Tasks"
+                  state="install-first"
+                  onTurnOn={() => undefined}
+                  onTurnOff={() => undefined}
+                />
               </div>
             </ComponentCard>
 
@@ -3311,6 +3366,114 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               usage="Privacy Policy / Terms of Service link row for standalone auth pages (login, register, forgot/reset password). Pass renderLink to keep navigation client-side if ever mounted inside an SPA-like shell."
             >
               <LegalLinks />
+            </ComponentCard>
+
+            {/* The sign-in forms (RFC 0007) */}
+            <ComponentCard
+              name="SignInForm"
+              importLine="import { SignInForm } from '@sovereignfs/ui';"
+              usage="The sign-in of core and every app. It draws and collects; the app signs in with @sovereignfs/auth/client and passes back pending, error and unverified. renderLink keeps links client-side."
+            >
+              <SignInForm
+                appName="Sovereign"
+                onSubmit={() => undefined}
+                forgotPasswordHref="#"
+                signUpHref="#"
+              />
+            </ComponentCard>
+            <ComponentCard
+              name="SignUpForm"
+              importLine="import { SignUpForm } from '@sovereignfs/ui';"
+              usage="Creating an account: a name, the address (an invitation's, kept), the password typed twice, and the terms when the app has them; then the wait for a verification link."
+            >
+              <SignUpForm
+                appName="Sovereign"
+                passwordHint="At least 8 characters."
+                onSubmit={() => undefined}
+                signInHref="#"
+              />
+            </ComponentCard>
+            <ComponentCard
+              name="ForgotPasswordForm"
+              importLine="import { ForgotPasswordForm } from '@sovereignfs/ui';"
+              usage="Asking for a reset link. What it says once sent is the same whether or not the address has an account."
+            >
+              <ForgotPasswordForm onSubmit={() => undefined} signInHref="#" />
+            </ComponentCard>
+            <ComponentCard
+              name="ResetPasswordForm"
+              importLine="import { ResetPasswordForm } from '@sovereignfs/ui';"
+              usage="A new password from the emailed link, typed twice; a link that ran out offers a new one."
+            >
+              <ResetPasswordForm
+                passwordHint="At least 8 characters."
+                onSubmit={() => undefined}
+                signInHref="#"
+                newLinkHref="#"
+              />
+            </ComponentCard>
+            <ComponentCard
+              name="TwoFactorForm"
+              importLine="import { TwoFactorForm } from '@sovereignfs/ui';"
+              usage="The second sign-in step: the authenticator's six digits, a backup code, or a passkey instead. No 'trust this device'."
+            >
+              <TwoFactorForm onSubmit={() => undefined} signInAgainHref="#" />
+            </ComponentCard>
+            <ComponentCard
+              name="SessionsPanel"
+              importLine="import { SessionsPanel } from '@sovereignfs/ui';"
+              usage="A person's own sessions, each ended by the app's server action (which checks it is theirs); ActionResult is the answer's shape."
+            >
+              <SessionsPanel
+                sessions={[
+                  {
+                    id: 'a',
+                    current: true,
+                    device: 'Safari on iOS',
+                    ipAddress: null,
+                    signedInAt: 0,
+                    lastActiveAt: 0,
+                  },
+                ]}
+                endSession={() => Promise.resolve({ ok: true })}
+                endOthers={() => Promise.resolve({ ok: true })}
+              />
+            </ComponentCard>
+            <ComponentCard
+              name="ChangePasswordForm"
+              importLine="import { ChangePasswordForm } from '@sovereignfs/ui';"
+              usage="Changing the password: the current one, then the new. The app changes it with @sovereignfs/auth/client and passes back done or error."
+            >
+              <ChangePasswordForm onSubmit={() => undefined} />
+            </ComponentCard>
+
+            <ComponentCard
+              name="TwoFactorPanel"
+              importLine="import { TwoFactorPanel } from '@sovereignfs/ui';"
+              usage="Turning the second sign-in step on and off, and its backup codes. The app gives the steps (twoFactorSettings from @sovereignfs/auth/client) and the QR code's encoder."
+            >
+              <TwoFactorPanel
+                enabled={false}
+                verified
+                start={() => Promise.resolve({ off: true })}
+                confirm={() => Promise.resolve({})}
+                renderQr={() => null}
+                onDone={() => undefined}
+              />
+            </ComponentCard>
+            <ComponentCard
+              name="ProfilePanel"
+              importLine="import { ProfilePanel } from '@sovereignfs/ui';"
+              usage="A person's picture, name and address. The app saves the name (saveName) and prepares and keeps the picture on its own route."
+            >
+              <ProfilePanel
+                name="Ada Lovelace"
+                email="ada@example.com"
+                image={null}
+                saveName={() => Promise.resolve({})}
+                preparePicture={(file) => Promise.resolve(file)}
+                savePicture={() => Promise.resolve({ image: null })}
+              />
             </ComponentCard>
 
             {/* ConsentPrompt */}

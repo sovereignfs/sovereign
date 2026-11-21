@@ -15,6 +15,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { namesOf, writeApp } from '../../../create/src/app.js';
+import { DEFAULT_APP_PORT } from '../../../create/src/create.js';
 import { Registry } from '../registry.js';
 import { makeSource, type Source } from '../testing/source.js';
 import { fakeRegistry } from '../testing/world.js';
@@ -99,7 +100,8 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
     // The app, as the template makes it.
     work = mkdtempSync(path.join(os.tmpdir(), 'sv-template-'));
     const app = path.join(work, 'tplnotes');
-    await writeApp(app, namesOf(app));
+    // npm, which writes the lockfile below with no install; what the test checks is sv apply, the same for every manager.
+    await writeApp(app, namesOf(app), DEFAULT_APP_PORT, { packageManager: 'npm' });
 
     // The Sovereign packages of this repository, packed, since the published ones do not exist yet.
     execFileSync(
@@ -114,6 +116,10 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
         '--filter',
         '@sovereignfs/pwa...',
         '--filter',
+        '@sovereignfs/push',
+        '--filter',
+        '@sovereignfs/auth...',
+        '--filter',
         '@sovereignfs/create',
         'build',
       ],
@@ -126,7 +132,18 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
     });
     const vendor = path.join(app, 'vendor');
     mkdirSync(vendor);
-    for (const name of ['sdk', 'ui', 'pwa', 'manifest', 'config', 'storage', 'create']) {
+    for (const name of [
+      'sdk',
+      'ui',
+      'pwa',
+      'push',
+      'export',
+      'manifest',
+      'config',
+      'storage',
+      'auth',
+      'create',
+    ]) {
       execFileSync(
         'pnpm',
         ['--filter', `@sovereignfs/${name}`, 'pack', '--pack-destination', vendor],
@@ -143,16 +160,24 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
       ['sdk', 'dependencies'],
       ['ui', 'dependencies'],
       ['pwa', 'dependencies'],
+      ['push', 'dependencies'],
+      ['export', 'dependencies'],
       ['config', 'dependencies'],
       ['storage', 'dependencies'],
+      ['auth', 'dependencies'],
       ['manifest', 'devDependencies'],
       ['create', 'devDependencies'],
     ] as const) {
       pkg[field][`@sovereignfs/${name}`] =
         `file:./vendor/${tarballs.find((file) => file.startsWith(`sovereignfs-${name}-`)) as string}`;
     }
-    // The storage package asks for config by version, which is not published either: it is the tarball too.
-    pkg.overrides = { '@sovereignfs/config': pkg.dependencies['@sovereignfs/config'] as string };
+    // The storage and sign-in packages ask for config and the SDK by version, and the SDK for the export package, which are not
+    // published either: they are the tarballs too. The export package is named here only so its tarball can stand in for it.
+    pkg.overrides = {
+      '@sovereignfs/config': pkg.dependencies['@sovereignfs/config'] as string,
+      '@sovereignfs/sdk': pkg.dependencies['@sovereignfs/sdk'] as string,
+      '@sovereignfs/export': pkg.dependencies['@sovereignfs/export'] as string,
+    };
     writeFileSync(path.join(app, 'package.json'), `${JSON.stringify(pkg, null, 2)}\n`);
     execFileSync(
       'npm',
@@ -180,8 +205,17 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
     manifest = JSON.parse(readFileSync(path.join(app, 'sovereign.manifest.json'), 'utf8'));
 
     state = mkdtempSync(path.join(os.tmpdir(), 'sv-template-state-'));
+    // The core this checkout builds, which is the image the test runs: the template's `core` range asks for a recent one.
+    const coreVersion = (
+      JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8')) as { version: string }
+    ).version;
     source = await makeSource({
-      suite: { domain: DOMAIN, tls: { mode: 'internal' }, apps: { tplnotes: { image: REF } } },
+      suite: {
+        domain: DOMAIN,
+        core: { version: coreVersion },
+        tls: { mode: 'internal' },
+        apps: { tplnotes: { image: REF } },
+      },
       resolve: (ref) =>
         ref.startsWith('ghcr.io/')
           ? Promise.resolve(`sha256:${'1'.repeat(64)}`)
@@ -247,25 +281,31 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
       '-c',
       'SELECT name FROM schema_migrations ORDER BY name',
     );
-    expect(migrated.stdout.trim()).toBe('001_init.sql');
+    // Every migration the template ships, applied in order (002 is the push tables).
+    expect(migrated.stdout.trim()).toBe(
+      readdirSync(path.join(appDir, 'migrations'))
+        .filter((file) => file.endsWith('.sql'))
+        .sort()
+        .join('\n'),
+    );
     expect(docker('exec', 'sv-app-tplnotes', 'id', '-u').stdout.trim()).not.toBe('0');
   });
 
   it('sends a person to core to sign in, with the client core registered and PKCE', () => {
     const recorded = JSON.parse(readFileSync(path.join(state, 'state.json'), 'utf8')) as State;
-    const login = probe('GET', '/auth/login');
+    const login = probe('GET', '/api/auth/sign-in/sovereign');
     expect([302, 303, 307]).toContain(login.status);
     const target = new URL(login.location as string);
     expect(target.origin).toBe(`https://${DOMAIN}`);
     expect(target.searchParams.get('client_id')).toBe(recorded.apps.tplnotes?.clientId);
     expect(target.searchParams.get('code_challenge_method')).toBe('S256');
     expect(target.searchParams.get('redirect_uri')).toBe(
-      `https://tplnotes.${DOMAIN}/auth/callback`,
+      `https://tplnotes.${DOMAIN}/api/auth/callback/sovereign`,
     );
   });
 
   it('asks core for scopes core gives it: the sign-in is not refused before a person is asked', () => {
-    const login = probe('GET', '/auth/login');
+    const login = probe('GET', '/api/auth/sign-in/sovereign');
     const answer = fromCore(
       "fetch(process.argv[1], { redirect: 'manual' }).then(async (r) => console.log(JSON.stringify({ status: r.status, location: r.headers.get('location'), body: (await r.text()).slice(0, 400) })))",
       login.location as string,
@@ -277,7 +317,7 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
   });
 
   it('has its back-channel logout and account-deleted routes where the manifest says, and refuses what core did not sign', () => {
-    for (const route of ['/auth/backchannel-logout', '/auth/account-deleted']) {
+    for (const route of ['/api/sovereign/backchannel-logout', '/api/sovereign/account-deleted']) {
       const answer = probe('POST', route);
       expect(answer.status, route).toBeGreaterThanOrEqual(400);
       expect(answer.status, route).toBeLessThan(500);
@@ -288,7 +328,11 @@ describe.skipIf(!runnable)('an app made from the template, hosted by sv apply', 
   it('keeps its page behind sign-in', () => {
     const page = probe('GET', '/');
     expect([302, 303, 307]).toContain(page.status);
-    expect(page.location).toContain('/auth/login');
+    // To the sign-in page, which sends a person on to core when core is the app's only way in.
+    expect(page.location).toContain('/sign-in');
+    const signInPage = probe('GET', '/sign-in');
+    expect([302, 303, 307]).toContain(signInPage.status);
+    expect(signInPage.location).toContain('/api/auth/sign-in/sovereign');
   });
 
   it('keeps people’s files in a folder of its own that the app can write, and answers no one who is not signed in', () => {

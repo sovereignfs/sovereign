@@ -1,21 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { type FormEvent, useState } from 'react';
-import { Button, Input } from '@sovereignfs/ui';
+import { useState } from 'react';
+import { ResetPasswordForm as Form } from '@sovereignfs/ui';
+import { resetPassword } from '@sovereignfs/auth/client';
 import { authClient } from '../../../src/auth/client';
 import { signInValue } from '../../../src/auth/derive';
 import { withReturnTo } from '../../../src/auth/return-to';
-import {
-  newPasswordProblem,
-  PAGE_NOT_READY,
-  type PasswordPolicy,
-} from '../../../src/auth/password-policy';
-import { AuthField } from '../auth-field';
-import { AuthError, AuthNotice } from '../auth-notice';
-import { emailRequestProblem } from '../messages';
-import styles from '../auth.module.css';
+import { newPasswordProblem, type PasswordPolicy } from '../../../src/auth/password-policy';
 
+/** Core's new password from a reset link: the design system's form and the sign-in package's reset, with an app's request carried on. */
 export function ResetPasswordForm({
   token,
   passwordHint,
@@ -31,104 +25,45 @@ export function ResetPasswordForm({
   /** Where signing in goes next: an app's sign-in, when one led here. */
   returnTo: string;
 }) {
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [expired, setExpired] = useState(false);
   const [pending, setPending] = useState(false);
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const problem = newPasswordProblem(password, confirm, policy);
+  async function onSubmit(values: { password: string; confirm: string }) {
+    // Said at once, before anything is derived or sent.
+    const problem = newPasswordProblem(values.password, values.confirm, policy);
     if (problem) {
       setError(problem);
       return;
     }
     setPending(true);
     setError(undefined);
-    let value: string;
-    try {
-      value = await signInValue(password, address);
-    } catch {
-      setPending(false);
-      setError(PAGE_NOT_READY);
+    const result = await resetPassword(authClient, signInValue, {
+      ...values,
+      address,
+      token,
+      policy,
+    });
+    if (result.outcome === 'done') {
+      // Every session was ended, so the next step is signing in with the new password.
+      window.location.assign(withReturnTo('/sign-in?reset=1', returnTo));
       return;
     }
-    const result = await authClient.resetPassword({ newPassword: value, token });
-    if (result.error) {
-      setPending(false);
-      if (result.error.code === 'INVALID_TOKEN') setExpired(true);
-      else setError(messageFor(result.error));
-      return;
-    }
-    // Every session was ended, so the next step is signing in with the new password.
-    window.location.assign(withReturnTo('/sign-in?reset=1', returnTo));
-  }
-
-  if (expired) {
-    return (
-      <>
-        <AuthNotice tone="warning">
-          This link has expired or was already used. A link works once, for an hour.
-        </AuthNotice>
-        <p className={styles.footer}>
-          <Link className={styles.link} href={withReturnTo('/forgot-password', returnTo)}>
-            Request a new link
-          </Link>
-        </p>
-      </>
-    );
+    setPending(false);
+    if (result.outcome === 'expired') setExpired(true);
+    else setError(result.message);
   }
 
   return (
-    <>
-      <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
-        <AuthField label="New password" hint={passwordHint}>
-          {(control) => (
-            <Input
-              {...control}
-              type="password"
-              name="password"
-              autoComplete="new-password"
-              required
-              disabled={pending}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-          )}
-        </AuthField>
-        <AuthField label="Confirm new password">
-          {(control) => (
-            <Input
-              {...control}
-              type="password"
-              name="confirm"
-              autoComplete="new-password"
-              required
-              disabled={pending}
-              value={confirm}
-              onChange={(event) => setConfirm(event.target.value)}
-            />
-          )}
-        </AuthField>
-        {error ? <AuthError>{error}</AuthError> : null}
-        <Button type="submit" className={styles.submit} loading={pending}>
-          {pending ? 'Saving…' : 'Set new password'}
-        </Button>
-      </form>
-      <p className={styles.footer}>
-        <Link className={styles.link} href="/sign-in">
-          Back to sign in
-        </Link>
-      </p>
-    </>
+    <Form
+      passwordHint={passwordHint}
+      error={error}
+      expired={expired}
+      pending={pending}
+      onSubmit={(values) => void onSubmit(values)}
+      signInHref="/sign-in"
+      newLinkHref={withReturnTo('/forgot-password', returnTo)}
+      renderLink={({ href, ...props }) => <Link href={href} {...props} />}
+    />
   );
-}
-
-/** What went wrong, in words a person can act on. The server's password message is already that. */
-function messageFor(error: { status: number; code?: string; message?: string }): string {
-  const common = emailRequestProblem(error);
-  if (common) return common;
-  if (error.code === 'PASSWORD_DOES_NOT_MEET_POLICY' && error.message) return error.message;
-  return 'The password could not be changed. Try again.';
 }

@@ -189,10 +189,20 @@ async function connectPostgres(
   connectionString: string,
   poolMax: number,
 ): Promise<PostgresDatabase> {
-  const { drizzle } = await import('drizzle-orm/node-postgres');
   const pool = createPool(connectionString, poolMax);
   // An idle client that errors (the server restarted, say) must not crash the process.
   pool.on('error', () => undefined);
+  return fromPostgresPool(pool);
+}
+
+/**
+ * The database over a PostgreSQL pool that already exists: what `connect` makes for its own pool, and what an app that opens its own
+ * (`pg`) hands to a package that takes a `Database` (`@sovereignfs/auth`). The pool stays the caller's, and closing this ends it. A pool
+ * made by `connect` reads `bigint` as a number; one made elsewhere reads it as node-postgres does, as text, unless it was given the
+ * same type parser.
+ */
+export async function fromPostgresPool(pool: pg.Pool): Promise<PostgresDatabase> {
+  const { drizzle } = await import('drizzle-orm/node-postgres');
   const executor = pgExecutor(pool);
   const guard = scopeGuard();
 

@@ -288,7 +288,9 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
         const { registry, asOwner } = await instance();
         const { client } = await registry.register(asOwner, settings());
         expect(client.idTokenAlgorithm).toBe('EdDSA');
-        expect(String((await rowOf(client.clientId))?.metadata)).not.toContain('idTokenAlgorithm');
+        expect(JSON.stringify((await rowOf(client.clientId))?.metadata ?? null)).not.toContain(
+          'idTokenAlgorithm',
+        );
       });
 
       it('can be RS256 for either kind of app, changed either way, and kept when something else is saved', async () => {
@@ -621,6 +623,36 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
       )) as ClientRegistryError;
       expect(error.code).toBe('invalid');
       expect((await registry.get(asOwner, client.clientId)).trusted).toBe(true);
+    });
+  });
+
+  describe('signing out of core (core-app §3.6.5)', () => {
+    it('is on unless set off, kept only when off, and stays as set through other changes', async () => {
+      const { registry, asOwner } = await instance();
+      const { client } = await registry.register(asOwner, settings());
+      expect(client.signOutOfCore).toBe(true);
+      expect(JSON.stringify((await rowOf(client.clientId))?.metadata ?? null)).not.toContain(
+        'keepCoreSession',
+      );
+      const off = await registry.update(asOwner, client.clientId, { signOutOfCore: false });
+      expect(off.signOutOfCore).toBe(false);
+      expect(JSON.stringify((await rowOf(client.clientId))?.metadata ?? null)).toContain(
+        'keepCoreSession',
+      );
+      expect(
+        (await registry.update(asOwner, client.clientId, { name: 'Renamed' })).signOutOfCore,
+      ).toBe(false);
+      expect(
+        (await registry.update(asOwner, client.clientId, { signOutOfCore: true })).signOutOfCore,
+      ).toBe(true);
+    });
+
+    it('is refused when it is not on or off', async () => {
+      const { registry, asOwner } = await instance();
+      const error = (await refused(() =>
+        registry.register(asOwner, settings({ signOutOfCore: 'no' as unknown as boolean })),
+      )) as ClientRegistryError;
+      expect(error.code).toBe('invalid');
     });
   });
 
@@ -1306,8 +1338,8 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
         .map(({ file }) => file);
       expect(writers).toEqual(['src/clients/registry.ts']);
       // Reading a client by the provider's adapter is allowed in these places (the consent page, the launcher's
-      // tiles, the registry, the guards, the step that signs an app's ID tokens, and key release's check of an app's
-      // return address); writing it is allowed in one.
+      // tiles, the registry, the guards, the step that signs an app's ID tokens, key release's check of an app's
+      // return address, and signing out of an app that keeps the core session); writing it is allowed in one.
       const readers = sources
         .filter(({ text }) => /model: 'oauthClient'/.test(text))
         .map(({ file }) => file)
@@ -1317,6 +1349,7 @@ export function clientsSuite(createDatabase: () => Promise<TestDatabase>): void 
         'src/clients/launcher.ts',
         'src/clients/registry.ts',
         'src/keys/release-target.ts',
+        'src/oauth/app-only-sign-out.ts',
         'src/oauth/guards.ts',
         'src/oauth/id-token-alg.ts',
       ]);

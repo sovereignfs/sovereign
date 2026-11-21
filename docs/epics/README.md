@@ -47,6 +47,9 @@ the task is corrected.
 | 14  | [SDK](sdk.md)                                 | ⏳ In Progress | `@sovereignfs/sdk`: tokens, failure, version support and sign-in over the Core API                                                                                       |
 | 15  | [Core services](core-services.md)             | 📋 Planned     | Specifying Phase 2: notifications, mail, activity, backups and people's files                                                                                            |
 | 16  | [Encryption](encryption.md)                   | 📋 Planned     | Encryption the server cannot read: signing in with a derived value, keys, core's vault, key release, sharing, escrow ([RFC 0005](../rfcs/0005-end-to-end-encryption.md)) |
+| 17  | [One sign-in](one-sign-in.md)                 | ⏳ In Progress | `@sovereignfs/auth`: core's sign-in in a package core and every app use, core and local accounts as two ways in ([RFC 0007](../rfcs/0007-one-sign-in.md))                |
+| 18  | [Exports](exports.md)                         | 📋 Planned     | An owner and every person download their data, from core and every app ([RFC 0008](../rfcs/0008-exports-and-backups.md))                                                 |
+| 19  | [Web Push](push.md)                           | 📋 Planned     | `@sovereignfs/push`, the worker and `PushControl`: every app notifies a closed device the same way ([RFC 0009](../rfcs/0009-web-push.md))                                |
 
 _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked · ❌ Rejected_
 

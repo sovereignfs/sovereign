@@ -3,6 +3,7 @@ import { isSender } from '@sovereignfs/mailer';
 import { brandingPath, type BrandingKind, type BrandingStore } from '../branding/store';
 import { can, type Capability } from '../roles/capabilities';
 import { loadMatrix } from '../roles/matrix';
+import { ExportError, parseRecipients } from '@sovereignfs/export';
 import { SETTINGS } from '../settings/definitions';
 import { SettingsError, type SettingsStore } from '../settings/store';
 
@@ -178,6 +179,33 @@ export class InstanceManager {
     const problem = SETTINGS.escrowPublicKey.problem(trimmed);
     if (problem) throw new InstanceError('invalid', `The escrow key ${problem}.`);
     await this.#settings.set(SETTINGS.escrowPublicKey, trimmed, actor.id);
+  }
+
+  /**
+   * Saves the age recipients the owner's export is encrypted to (core-app §4.7.1), as pasted: one or more `age1…`, apart by spaces,
+   * commas or lines; `undefined` or an empty line clears them, and with them the owner's export. The owner's alone.
+   */
+  async setExportRecipients(actor: Actor, line: string | undefined): Promise<void> {
+    await this.#allow(actor, 'instance:configure-secrets');
+    if (line === undefined || line.trim() === '') {
+      await this.#settings.clear(SETTINGS.exportRecipients);
+      return;
+    }
+    let recipients: string[];
+    try {
+      recipients = parseRecipients(line);
+    } catch (error) {
+      if (error instanceof ExportError) throw new InstanceError('invalid', error.message);
+      throw error;
+    }
+    await this.#settings.set(SETTINGS.exportRecipients, recipients.join(' '), actor.id);
+  }
+
+  /** The recipients saved for the owner's export, or none. Read by whoever may change them, and by the export itself. */
+  async exportRecipients(actor: Actor): Promise<string[]> {
+    await this.#allow(actor, 'instance:configure-secrets');
+    const line = await this.#settings.value(SETTINGS.exportRecipients);
+    return line ? line.split(' ') : [];
   }
 
   /** How many accounts with keys have no escrow way in for the key in force: those a recovery could not yet reach. */

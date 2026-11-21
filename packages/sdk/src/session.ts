@@ -21,12 +21,68 @@ export interface SessionStore {
   deleteMatching(match: { sub?: string; sid?: string }): Promise<void> | void;
 }
 
+/**
+ * Who a signed-in person is, typed (sdk §9.9): the same shape whether the app keeps its sessions with the SDK or with
+ * `@sovereignfs/auth`, and for an account of the app's own as for one from core. A field core was not asked for, or did not
+ * send, is missing; `roles` is empty for an app core does not trust.
+ */
+export type User = {
+  /** The app's own id for the person: identify them by it and by nothing else. With the SDK's sessions it is core's `sub`. */
+  readonly id: string;
+  /** Core's id for the person, when they came through core; missing for an account of the app's own. */
+  readonly sub?: string;
+  readonly name?: string;
+  readonly email?: string;
+  readonly emailVerified?: boolean;
+  /** An absolute address of their picture. */
+  readonly picture?: string;
+  /** A BCP 47 language tag, such as `en-GB`. */
+  readonly locale?: string;
+  /** An IANA time zone, such as `Europe/Berlin`. */
+  readonly zoneinfo?: string;
+  /** The roles core gave a trusted app, from the token core signed; never from anything a request carries. */
+  readonly roles: readonly string[];
+};
+
+const text = (value: unknown) => (typeof value === 'string' && value !== '' ? value : undefined);
+
+/** The roles in a set of claims core signed: the strings of `roles`, and nothing when there is none. */
+export function rolesFromClaims(claims: Readonly<Record<string, unknown>>): string[] {
+  return Array.isArray(claims.roles)
+    ? (claims.roles as unknown[]).filter((role): role is string => typeof role === 'string')
+    : [];
+}
+
+/**
+ * The person core's claims describe (sdk §9.9). `id` is the app's own id for them, which is `sub` unless the app keeps accounts
+ * of its own. Nothing is taken that is not of the type the claim has in OpenID Connect.
+ */
+export function personFromClaims(claims: Readonly<Record<string, unknown>>, id?: string): User {
+  const sub = text(claims.sub);
+  const fields = {
+    sub,
+    name: text(claims.name),
+    email: text(claims.email),
+    emailVerified: typeof claims.email_verified === 'boolean' ? claims.email_verified : undefined,
+    picture: text(claims.picture),
+    locale: text(claims.locale),
+    zoneinfo: text(claims.zoneinfo),
+  };
+  return {
+    id: id ?? sub ?? '',
+    ...Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined)),
+    roles: rolesFromClaims(claims),
+  };
+}
+
 /** A signed-in person, as the app sees them (sdk §9). The claims are those of the scopes granted. */
 export type Session = {
   /** Who the person is. It is stable: identify a person by it and by nothing else. */
   readonly sub: string;
   /** The core session this one belongs to, when core gave one. */
   readonly sid: string | undefined;
+  /** Who the person is, typed (sdk §9.9): read this rather than `claims`. */
+  readonly user: User;
   /** What the ID token said: `name`, `email`, `picture`, and so on, for the scopes granted. */
   readonly claims: Readonly<Record<string, unknown>>;
   /** The scopes granted. */

@@ -8,7 +8,14 @@ import { satisfies } from 'semver';
 import { afterEach, describe, expect, it } from 'vitest';
 import { appPackageJson, createApp, namesOf, writeApp } from './app.js';
 import { CreateError, DEFAULT_APP_PORT, type CreateIo, type Exec } from './create.js';
-import { APP_DEPENDENCIES, APP_DEV_DEPENDENCIES, ENCRYPTION_DEPENDENCIES } from './versions.js';
+import { DEFAULT_PACKAGE_MANAGER, MANAGERS, managerOf } from './package-manager.js';
+import {
+  APP_DEPENDENCIES,
+  APP_DEV_DEPENDENCIES,
+  ENCRYPTION_DEPENDENCIES,
+  PNPM_VERSION,
+  YARN_VERSION,
+} from './versions.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const dirs: string[] = [];
@@ -60,7 +67,12 @@ describe('the files of an app', () => {
         'Dockerfile',
         '.github/workflows/publish.yml',
         'sovereign.manifest.json',
-        'app/auth/[action]/route.ts',
+        'app/api/auth/[...all]/route.ts',
+        'app/sign-in/page.tsx',
+        'app/sign-up/page.tsx',
+        'app/security/page.tsx',
+        'app/api/sovereign/backchannel-logout/route.ts',
+        'app/api/sovereign/account-deleted/route.ts',
         'app/api/health/route.ts',
         'instrumentation.ts',
         'migrations/001_init.sql',
@@ -85,6 +97,10 @@ describe('the files of an app', () => {
     expect(read(target, 'app/page.tsx')).toContain('title="My Notes"');
     // The manifest is the one copy: nothing in the app repeats it, or the sync script that kept a second one.
     expect(written).not.toContain('scripts/manifest.mjs');
+    // Its sign-in is the package's; the SDK's sign-in routes, and the overlay's list of what it leaves out, are not written.
+    expect(written).not.toContain('app/auth/[action]/route.ts');
+    expect(written).not.toContain('lib/auth.ts');
+    expect(written).not.toContain('_skip');
   });
 
   it('listen on one port, written wherever it is needed: the default, clear of the suite, or the one asked for', async () => {
@@ -124,19 +140,24 @@ describe('the files of an app', () => {
     await writeApp(target, namesOf(target));
     const manifest = JSON.parse(read(target, 'sovereign.manifest.json')) as {
       manifest: number;
-      generate: string[];
+      generate: (string | { name: string; bytes: number })[];
       prefix: string;
+      signIn: { export?: string };
     };
     const ajv = new Ajv2020({ allErrors: true, strict: false });
     addFormats(ajv);
     const validate = ajv.compile(
       JSON.parse(
-        readFileSync(path.join(root, 'contracts/schemas/app-manifest-v3.schema.json'), 'utf8'),
+        readFileSync(path.join(root, 'contracts/schemas/app-manifest-v5.schema.json'), 'utf8'),
       ),
     );
     expect(validate(manifest), JSON.stringify(validate.errors)).toBe(true);
     // The manifest names the app in lower case, and the variables are its upper case (app-manifest §2.4).
-    expect(manifest.manifest).toBe(3);
+    expect(manifest.manifest).toBe(5);
+    // Where core asks for a person's part of their export, which the SDK answers (core-app §4.7.2).
+    expect(manifest.signIn.export).toBe('/api/sovereign/export');
+    expect(read(target, 'lib/notices.ts')).toContain('handleExportRequest');
+    expect(read(target, 'app/api/sovereign/export/route.ts')).toContain('exportPart');
     expect(manifest.prefix).toBe('mynotes');
     // What the code reads is what the manifest gives it (contracts/app-manifest.md §3).
     const code = all(target)
@@ -146,7 +167,11 @@ describe('the files of an app', () => {
     const variables = manifest.prefix.toUpperCase();
     for (const name of ['POSTGRES_URL', 'AUTH_SECRET'])
       expect(code).toContain(`${variables}_${name}`);
-    expect(manifest.generate).toEqual([`${variables}_AUTH_SECRET`]);
+    // The push key is a P-256 key, 32 bytes: the instance makes it once, as it makes the secret.
+    expect(manifest.generate).toEqual([
+      `${variables}_AUTH_SECRET`,
+      { name: `${variables}_VAPID_PRIVATE_KEY`, bytes: 32 },
+    ]);
     expect(code).toContain("prefix: 'MYNOTES'");
   });
 
@@ -211,7 +236,7 @@ describe('the files of an app', () => {
     expect(ci).toMatch(/on:\n {2}pull_request:\n {4}branches: \[main\]/);
     expect(ci).not.toMatch(/^ {2}push:/m);
     expect(ci).toContain('github.event.pull_request.draft == false');
-    for (const step of ['npm run typecheck', 'npm run manifest:check', 'npm run build'])
+    for (const step of ['pnpm run typecheck', 'pnpm run manifest:check', 'pnpm run build'])
       expect(ci).toContain(step);
     for (const action of ci.matchAll(/uses: (\S+)/g))
       expect(action[1], 'an action').toMatch(/@[0-9a-f]{40}$/);
@@ -219,16 +244,45 @@ describe('the files of an app', () => {
     const publish = read(target, '.github/workflows/publish.yml');
     expect(publish).toContain('uses: ./.github/workflows/ci.yml');
     expect(publish).toMatch(/image:\n {4}needs: validate/);
-    // The hook is executable, runs verify, and npm install turns it on.
+    // The hook is executable, runs verify, and an install turns it on.
     const hook = path.join(target, '.githooks', 'pre-push');
     expect(statSync(hook).mode & 0o111).not.toBe(0);
-    expect(read(target, '.githooks/pre-push')).toContain('npm run --silent verify');
+    expect(read(target, '.githooks/pre-push')).toContain('exec pnpm run verify');
     const scripts = (
       JSON.parse(read(target, 'package.json')) as { scripts: Record<string, string> }
     ).scripts;
-    expect(scripts.verify).toBe('npm run typecheck && npm run manifest:check');
+    expect(scripts.verify).toBe('pnpm run typecheck && pnpm run manifest:check');
     expect(scripts.prepare).toBe('git config core.hooksPath .githooks || true');
     expect(read(target, 'CONTRIBUTING.md')).toContain('## Continuous integration');
+  });
+
+  it('tell an agent the suite’s conventions in the shared section of AGENTS.md, with this app’s commands', async () => {
+    const target = path.join(temp(), 'my-notes');
+    await writeApp(target, namesOf(target));
+    const agents = read(target, 'AGENTS.md');
+    const shared = agents.slice(
+      agents.indexOf('<!-- sovereign:shared:begin -->'),
+      agents.indexOf('<!-- sovereign:shared:end -->'),
+    );
+    for (const rule of [
+      'Two branches',
+      'Commits explain why',
+      'The version follows the change, by semver',
+      'One task, one branch, one pull request',
+      '`pnpm install`, `pnpm run dev`',
+      'No secret has a default',
+      'Every server action and route decides for itself',
+      'names the owner',
+      '@sovereignfs/storage',
+      'constant time',
+      'Every outbound `fetch` has a timeout',
+      'never `NEXT_PUBLIC_*`',
+      '`--sv-*` tokens',
+      'node_modules/next/dist/docs/',
+      '`MYNOTES_`',
+    ])
+      expect(shared, rule).toContain(rule);
+    expect(read(target, 'CLAUDE.md')).toContain('@AGENTS.md');
   });
 
   it('name the package in the @sovereignfs scope, private, so it claims nothing on npm', async () => {
@@ -253,7 +307,7 @@ describe('the files of an app', () => {
     expect(workflow).toContain('git merge-base --is-ancestor HEAD origin/main');
     // Called by release.yml with the tag a merged Release promotion made, and making the GitHub release from the changelog.
     expect(workflow).toMatch(/workflow_call:\n {4}inputs:\n {6}tag:/);
-    expect(workflow).toContain('npx create app release notes "$TAG" > notes.md');
+    expect(workflow).toContain('pnpm exec create app release notes "$TAG" > notes.md');
     expect(workflow).toContain('fetch-depth: 0');
     expect(workflow.indexOf('git merge-base')).toBeLessThan(
       workflow.indexOf('docker/login-action'),
@@ -282,7 +336,7 @@ describe('the files of an app', () => {
     expect(stores).toContain('seal(next)');
     expect(stores).toContain('pg_advisory_lock');
     expect(read(target, 'app/actions.ts')).toContain('AND owner = $2');
-    expect(read(target, 'lib/auth.ts')).toContain('onAccountDeleted');
+    expect(read(target, 'lib/notices.ts')).toContain('onAccountDeleted');
   });
 
   it('keep what needs a session on the direct address, in a small pool, and say they can be pooled', async () => {
@@ -344,7 +398,8 @@ describe('the files an app keeps for people', () => {
     const target = await made();
     for (const file of ['app/api/files/route.ts', 'app/api/files/[id]/route.ts']) {
       const code = read(target, file);
-      expect(code, file).toContain('auth().getSession()');
+      expect(code, file).toContain('getSession()');
+      expect(code, file).toContain("from '@/lib/session'");
       expect(code, file).toContain('unauthorised()');
       // Every handler that changes something asks where the request came from before it asks who made it.
       for (const method of ['POST', 'DELETE']) {
@@ -369,16 +424,16 @@ describe('the files an app keeps for people', () => {
       for (const call of read(target, file).match(
         /files\(\)\.(put|list|usage|remove|serve)\([^,)]*/g,
       ) ?? [])
-        expect(call, `${file}: ${call}`).toMatch(/session\.sub|sub$/);
+        expect(call, `${file}: ${call}`).toMatch(/session\.user\.id|sub$/);
     }
     expect(read(target, 'lib/files.ts')).toContain("request.headers.get('origin')");
   });
 
   it('are deleted with the person, in the handler of the notice that they deleted their account', async () => {
     const target = await made();
-    const auth = read(target, 'lib/auth.ts');
-    expect(auth).toContain('await files().removeAll(sub)');
-    expect(auth.indexOf('DELETE FROM notes')).toBeLessThan(auth.indexOf('removeAll(sub)'));
+    const notices = read(target, 'lib/notices.ts');
+    expect(notices).toContain('await files().removeAll(userId)');
+    expect(notices.indexOf('DELETE FROM notes')).toBeLessThan(notices.indexOf('removeAll(userId)'));
   });
 
   it('run with docker compose on a volume where an instance mounts the app’s folder, and the port the manifest names', async () => {
@@ -411,7 +466,7 @@ describe('an app made with --encryption', () => {
     return target;
   };
 
-  it('meets manifest 4, with its key return address, the Directory for sharing, and the core that has them', async () => {
+  it('meets manifest 5, with its key return address, the Directory for sharing, and the core that has them', async () => {
     const target = await made();
     const manifest = JSON.parse(read(target, 'sovereign.manifest.json')) as {
       manifest: number;
@@ -423,11 +478,11 @@ describe('an app made with --encryption', () => {
     addFormats(ajv);
     const validate = ajv.compile(
       JSON.parse(
-        readFileSync(path.join(root, 'contracts/schemas/app-manifest-v4.schema.json'), 'utf8'),
+        readFileSync(path.join(root, 'contracts/schemas/app-manifest-v5.schema.json'), 'utf8'),
       ),
     );
     expect(validate(manifest), JSON.stringify(validate.errors)).toBe(true);
-    expect(manifest.manifest).toBe(4);
+    expect(manifest.manifest).toBe(5);
     expect(manifest.encryption).toEqual({ return: '/keys/return' });
     expect(existsSync(path.join(target, 'app/keys/return/page.tsx'))).toBe(true);
     // Sharing finds people in the Directory; `keys` is not asked for, it comes with `encryption` once the operator allows it (§2.8).
@@ -439,7 +494,7 @@ describe('an app made with --encryption', () => {
     expect(read(target, 'lib/sovereign.ts')).toContain(
       "scopes: ['openid', 'profile', 'email', 'offline_access', 'directory', 'keys']",
     );
-    expect(manifest.core.startsWith('>=0.68.0')).toBe(true);
+    expect(manifest.core.startsWith('>=0.126.0')).toBe(true);
   });
 
   it('depends on the SDK whose keys entry encrypts a document, which this repository satisfies', async () => {
@@ -454,6 +509,31 @@ describe('an app made with --encryption', () => {
       }
     ).version;
     expect(satisfies(sdk, ENCRYPTION_DEPENDENCIES['@sovereignfs/sdk'])).toBe(true);
+  });
+
+  it('signs in through core with the SDK, leaving out the package’s sign-in and what it depends on', async () => {
+    const target = await made();
+    const written = all(target);
+    for (const file of [
+      'lib/sign-in.ts',
+      'lib/session.ts',
+      'app/sign-in/page.tsx',
+      'app/api/auth/[...all]/route.ts',
+      '_skip',
+    ])
+      expect(written, file).not.toContain(file);
+    expect(written).toEqual(expect.arrayContaining(['lib/auth.ts', 'app/auth/[action]/route.ts']));
+    // Nothing it keeps imports what was left out.
+    for (const file of written.filter((f) => /\.tsx?$/.test(f)))
+      expect(read(target, file), file).not.toMatch(
+        /@\/lib\/(sign-in|session|notices|sign-in-client)'/,
+      );
+    const pkg = JSON.parse(read(target, 'package.json')) as {
+      dependencies: Record<string, string>;
+    };
+    expect(pkg.dependencies['@sovereignfs/auth']).toBeUndefined();
+    expect(pkg.dependencies['better-auth']).toBeUndefined();
+    expect(read(target, '.env.example')).not.toContain('_AUTH_LOCAL');
   });
 
   it('writes its own files over the app’s, with the names put in and nothing of the template left', async () => {
@@ -529,7 +609,7 @@ describe('an app made with --encryption', () => {
     await writeApp(target, namesOf(target));
     expect(existsSync(path.join(target, 'app/notes.tsx'))).toBe(false);
     expect(existsSync(path.join(target, 'ENCRYPTION.md'))).toBe(false);
-    expect(JSON.parse(read(target, 'sovereign.manifest.json')).manifest).toBe(3);
+    expect(JSON.parse(read(target, 'sovereign.manifest.json')).encryption).toBeUndefined();
   });
 });
 
@@ -546,7 +626,7 @@ describe('installing the app', () => {
     );
     expect(read(target, 'app/manifest.ts')).toContain("manifest({\n    name: 'My Notes',");
     const worker = read(target, 'app/sw.js/route.ts');
-    expect(worker).toContain('serviceWorkerSource({ version: buildId(), precache: builtFiles() })');
+    expect(worker).toContain('version: buildId(),\n      precache: builtFiles(),');
     expect(worker).toContain('serviceWorkerResponse(');
     const layout = read(target, 'app/layout.tsx');
     expect(layout).toContain("...pwaMetadata({ name: 'My Notes' })");
@@ -582,6 +662,117 @@ describe('installing the app', () => {
   });
 });
 
+describe('notifications in an app', () => {
+  const variants = [false, true] as const;
+
+  it('turn on with a key the instance makes, read from the app’s own variables, in both variants', async () => {
+    for (const encryption of variants) {
+      const target = path.join(temp(), 'my-notes');
+      await writeApp(target, namesOf(target), DEFAULT_APP_PORT, { encryption });
+      const manifest = JSON.parse(read(target, 'sovereign.manifest.json')) as {
+        generate: unknown[];
+      };
+      expect(manifest.generate, String(encryption)).toContainEqual({
+        name: 'MYNOTES_VAPID_PRIVATE_KEY',
+        bytes: 32,
+      });
+      expect(read(target, 'lib/push.ts')).toContain("pushSettings('MYNOTES')");
+      const env = read(target, '.env.example');
+      expect(env).toContain('MYNOTES_VAPID_PRIVATE_KEY=\n');
+      expect(env).toContain('MYNOTES_VAPID_SUBJECT=\n');
+      expect(env).toContain('npx @sovereignfs/push keys');
+    }
+  });
+
+  it('keep devices in two tables, the keys sealed under a purpose of their own, and a push only for the account’s device', async () => {
+    const target = path.join(temp(), 'my-notes');
+    await writeApp(target, namesOf(target));
+    const migration = read(target, 'migrations/002_push.sql');
+    expect(migration).toContain('CREATE TABLE push_devices');
+    expect(migration).toContain('REFERENCES push_devices (endpoint) ON DELETE CASCADE');
+    const store = read(target, 'lib/push.ts');
+    expect(store).toContain("const PURPOSE = 'push devices'");
+    expect(store).toMatch(
+      /seal\(\s*JSON\.stringify\(\{ p256dh: subscription\.p256dh, auth: subscription\.auth \}\),\s*PURPOSE,?\s*\)/,
+    );
+    expect(store).toContain(
+      'WHERE EXISTS (SELECT 1 FROM push_devices WHERE endpoint = $3 AND account = $2)',
+    );
+    expect(store).toContain('FOR UPDATE SKIP LOCKED');
+    // A refresh token keeps the key it had before devices were sealed too.
+    expect(read(target, 'lib/crypto.ts')).toContain("purpose = 'refresh tokens'");
+  });
+
+  it('give a device one route, for the signed-in account, from the app’s own origin, in both variants', async () => {
+    for (const encryption of variants) {
+      const target = path.join(temp(), 'my-notes');
+      await writeApp(target, namesOf(target), DEFAULT_APP_PORT, { encryption });
+      const route = read(target, 'app/api/push/subscription/route.ts');
+      expect(route).toContain('pushSubscriptionHandlers({');
+      expect(route).toContain("originOf(setting('MYNOTES_URL'))");
+      expect(route).toContain('account: () => currentAccount()');
+      expect(read(target, 'lib/account.ts'), String(encryption)).toContain(
+        encryption ? 'auth().getSession())?.sub' : 'getSession())?.user.id',
+      );
+      const action = read(target, 'app/push-actions.ts');
+      expect(action.startsWith("'use server';")).toBe(true);
+      expect(action).toContain('const account = await currentAccount();');
+      // Queued in a transaction, as a change's push would be, and sent after it commits.
+      expect(action.indexOf("client.query('BEGIN')")).toBeLessThan(action.indexOf('enqueuePush('));
+      expect(action.indexOf("client.query('COMMIT')")).toBeLessThan(
+        action.indexOf('sendDuePushes()'),
+      );
+    }
+  });
+
+  it('show the switch and the test, start the outbox, and turn the device off before signing out, in both variants', async () => {
+    for (const encryption of variants) {
+      const target = path.join(temp(), 'my-notes');
+      await writeApp(target, namesOf(target), DEFAULT_APP_PORT, { encryption });
+      const page = read(target, 'app/page.tsx');
+      expect(page, String(encryption)).toContain('<Notifications />');
+      expect(page).toContain('<SignOutForm>');
+      expect(read(target, 'app/notifications.tsx')).toContain('Send me a test notification');
+      expect(read(target, 'app/notifications.tsx')).toContain('appName="My Notes"');
+      expect(read(target, 'app/ui.tsx')).toContain('PushControl');
+      // The device is turned off first, then the sign-out goes on: the server action, or the SDK's form.
+      const signOut = read(target, 'app/sign-out.tsx');
+      const off = signOut.indexOf('turnOffPush()');
+      expect(off).toBeGreaterThan(-1);
+      expect(off).toBeLessThan(signOut.indexOf(encryption ? 'form.submit()' : 'await signOut()'));
+      expect(read(target, 'instrumentation.ts')).toContain('startPushOutbox();');
+      expect(read(target, 'app/sw.js/route.ts')).toContain(
+        "...(appPush() ? { push: { name: 'My Notes', icon: '/pwa-icon/192' } } : {})",
+      );
+    }
+  });
+
+  it('forget a person’s devices with their account, in both variants', async () => {
+    for (const encryption of variants) {
+      const target = path.join(temp(), 'my-notes');
+      await writeApp(target, namesOf(target), DEFAULT_APP_PORT, { encryption });
+      expect(read(target, encryption ? 'lib/auth.ts' : 'lib/notices.ts')).toContain(
+        `await pushStore().removeAccount(${encryption ? 'sub' : 'userId'});`,
+      );
+    }
+  });
+
+  it('need no new content security policy: the route is the app’s own and the push services are the browser’s', async () => {
+    const { contentSecurityPolicy } = await import('../template/app/lib/csp');
+    const policy = contentSecurityPolicy({ nonce: 'n', secure: true, development: false });
+    const directive = (name: string) => policy.split('; ').find((d) => d.startsWith(`${name} `));
+    expect(directive('connect-src')).toMatch(/^connect-src 'self'/);
+    expect(directive('worker-src')).toBe("worker-src 'self'");
+    expect(policy).not.toMatch(/googleapis|mozilla|apple\.com|windows\.com/);
+  });
+
+  it('depend on @sovereignfs/push', () => {
+    expect(
+      JSON.parse(appPackageJson(namesOf('/x/my-notes'))).dependencies['@sovereignfs/push'],
+    ).toBe(APP_DEPENDENCIES['@sovereignfs/push']);
+  });
+});
+
 describe('the content security policy of an app', () => {
   it('is set on every page by a proxy, from the app’s own variables', async () => {
     const target = path.join(temp(), 'my-notes');
@@ -613,9 +804,12 @@ describe('the content security policy of an app', () => {
       core: originOf('https://core.example.org/some/path'),
     });
     const directive = (name: string) => policy.split('; ').find((d) => d.startsWith(`${name} `));
-    expect(directive('script-src')).toBe("script-src 'self' 'nonce-abc' 'strict-dynamic'");
+    // WebAssembly, for the sign-in value the browser derives (auth.md §6); never eval.
+    expect(directive('script-src')).toBe(
+      "script-src 'self' 'nonce-abc' 'strict-dynamic' 'wasm-unsafe-eval'",
+    );
     expect(policy).not.toMatch(/script-src[^;]*'unsafe-inline'/);
-    expect(policy).not.toContain('unsafe-eval');
+    expect(policy).not.toContain("'unsafe-eval'");
     expect(directive('worker-src')).toBe("worker-src 'self'");
     expect(directive('manifest-src')).toBe("manifest-src 'self'");
     expect(directive('form-action')).toBe("form-action 'self' https://core.example.org");
@@ -646,6 +840,7 @@ describe('what the app depends on', () => {
     for (const [name, dir] of [
       ['@sovereignfs/config', 'config'],
       ['@sovereignfs/pwa', 'pwa'],
+      ['@sovereignfs/push', 'push'],
       ['@sovereignfs/sdk', 'sdk'],
       ['@sovereignfs/storage', 'storage'],
       ['@sovereignfs/ui', 'ui'],
@@ -716,7 +911,7 @@ describe('npm create @sovereignfs app', () => {
     expect(existsSync(path.join(cwd, 'my-notes', 'Dockerfile'))).toBe(true);
     expect(ran.map((line) => line.split(' ').slice(0, 2).join(' '))).toEqual([
       'git init',
-      'npm install',
+      'pnpm install',
       'git add',
       'git commit',
       'git switch',
@@ -725,8 +920,9 @@ describe('npm create @sovereignfs app', () => {
     expect(ran[0]).toBe('git init --initial-branch=main');
     expect(ran[4]).toBe('git switch --create develop');
     expect(io.said.join('\n')).toContain('on the branch develop');
-    expect(ran[1]).toContain('--package-lock-only');
+    expect(ran[1]).toContain('--lockfile-only');
     expect(ran[1]).toContain('--ignore-scripts');
+    expect(ran[2]).toContain('pnpm-lock.yaml');
     expect(io.said.join('\n')).toContain('./sv app add my-notes');
     expect(
       statSync(path.join(cwd, 'my-notes', '.github', 'workflows', 'publish.yml')).isFile(),
@@ -736,12 +932,131 @@ describe('npm create @sovereignfs app', () => {
   it('says what to do when a step fails, and what it wrote stays', async () => {
     const cwd = temp();
     const exec: Exec = async (command, args) =>
-      command === 'npm' && args[0] === 'install'
-        ? { code: 1, stdout: '', stderr: 'npm error 404 @sovereignfs/sdk' }
+      command === 'pnpm' && args[0] === 'install'
+        ? { code: 1, stdout: '', stderr: 'ERR_PNPM_FETCH_404 @sovereignfs/sdk' }
         : { code: 0, stdout: '', stderr: '' };
     const failure = await createApp({ dir: 'my-notes' }, io, exec, cwd).catch((e: unknown) => e);
     expect(failure).toBeInstanceOf(CreateError);
     expect((failure as CreateError).message).toContain('404');
+    expect((failure as CreateError).hint).toContain('corepack enable pnpm');
     expect(existsSync(path.join(cwd, 'my-notes', 'package.json'))).toBe(true);
+  });
+});
+
+describe('the package manager of an app', () => {
+  const cases = [
+    {
+      manager: 'pnpm',
+      pin: `pnpm@${PNPM_VERSION}`,
+      lockfile: 'pnpm-lock.yaml',
+      copy: 'COPY package.json pnpm-lock.yaml ./',
+      install: 'RUN pnpm install --frozen-lockfile --ignore-scripts',
+      run: 'pnpm run',
+      exec: 'pnpm exec',
+      corepack: true,
+    },
+    {
+      manager: 'npm',
+      pin: undefined,
+      lockfile: 'package-lock.json',
+      copy: 'COPY package.json package-lock.json ./',
+      install: 'RUN npm ci --ignore-scripts --no-audit --no-fund',
+      run: 'npm run',
+      exec: 'npx',
+      corepack: false,
+    },
+    {
+      manager: 'yarn',
+      pin: `yarn@${YARN_VERSION}`,
+      lockfile: 'yarn.lock',
+      copy: 'COPY package.json yarn.lock .yarnrc.yml ./',
+      install: 'RUN yarn install --immutable --mode=skip-build',
+      run: 'yarn run',
+      exec: 'yarn exec',
+      corepack: true,
+    },
+  ] as const;
+
+  it('is pnpm when none is named', async () => {
+    const target = path.join(temp(), 'my-notes');
+    await writeApp(target, namesOf(target));
+    expect(JSON.parse(read(target, 'package.json')).packageManager).toBe(`pnpm@${PNPM_VERSION}`);
+    expect(MANAGERS[DEFAULT_PACKAGE_MANAGER].lockfile).toBe('pnpm-lock.yaml');
+  });
+
+  it('pins the pnpm this repository uses', () => {
+    const pkg = JSON.parse(read(root, 'package.json')) as { packageManager: string };
+    expect(pkg.packageManager).toBe(`pnpm@${PNPM_VERSION}`);
+  });
+
+  for (const c of cases)
+    it(`names ${c.manager} in every file that runs it, and leaves no placeholder`, async () => {
+      const target = path.join(temp(), 'my-notes');
+      await writeApp(target, namesOf(target), DEFAULT_APP_PORT, { packageManager: c.manager });
+      const pkg = JSON.parse(read(target, 'package.json')) as {
+        packageManager?: string;
+        scripts: Record<string, string>;
+      };
+      expect(pkg.packageManager).toBe(c.pin);
+      expect(pkg.scripts.verify).toBe(`${c.run} typecheck && ${c.run} manifest:check`);
+      // Yarn 4 does not run `prepare` on an install, so the hooks are turned on after it.
+      const hookScript = c.manager === 'yarn' ? 'postinstall' : 'prepare';
+      expect(pkg.scripts[hookScript]).toBe('git config core.hooksPath .githooks || true');
+
+      const dockerfile = read(target, 'Dockerfile');
+      expect(dockerfile).toContain(c.copy);
+      expect(dockerfile).toContain(c.install);
+      expect(dockerfile).toContain(`RUN ${c.run} build`);
+      expect(dockerfile).toContain(`$(${c.exec} sovereign-manifest docker-args)`);
+      expect(dockerfile.includes('RUN corepack enable')).toBe(c.corepack);
+
+      for (const workflow of ['ci.yml', 'publish.yml']) {
+        const text = read(target, `.github/workflows/${workflow}`);
+        expect(text.includes('- run: corepack enable'), workflow).toBe(c.corepack);
+        expect(text, workflow).toContain(c.install.replace(/^RUN /, '- run: '));
+      }
+      expect(read(target, '.github/workflows/ci.yml')).toContain(`- run: ${c.run} build`);
+      expect(read(target, '.githooks/pre-push')).toContain(`exec ${c.run} verify`);
+      expect(read(target, 'AGENTS.md')).toContain(`(\`${c.run} verify\`)`);
+      expect(read(target, 'README.md')).toContain(`${c.run} dev`);
+      expect(existsSync(path.join(target, '.yarnrc.yml'))).toBe(c.manager === 'yarn');
+
+      for (const file of all(target))
+        expect(read(target, file), file).not.toMatch(/__[A-Z_]+__|# __COREPACK/);
+    });
+
+  for (const c of cases)
+    it(`writes the ${c.manager} lockfile and commits it`, async () => {
+      const cwd = temp();
+      const ran: string[] = [];
+      const exec: Exec = async (command, args) => {
+        ran.push([command, ...args].join(' '));
+        return { code: 0, stdout: '', stderr: '' };
+      };
+      const io: CreateIo = { err: () => {}, interactive: false, ask: async () => '' };
+      await createApp({ dir: 'my-notes', packageManager: c.manager }, io, exec, cwd);
+      expect(ran[1]?.split(' ')[0]).toBe(c.manager);
+      expect(ran[2]).toContain(c.lockfile);
+    });
+
+  it('runs a manager that is not installed through corepack, which comes with Node', async () => {
+    const cwd = temp();
+    const ran: string[] = [];
+    const exec: Exec = async (command, args) => {
+      ran.push([command, ...args].join(' '));
+      return command === 'yarn'
+        ? { code: 1, stdout: '', stderr: 'spawn yarn ENOENT' }
+        : { code: 0, stdout: '', stderr: '' };
+    };
+    const io: CreateIo = { err: () => {}, interactive: false, ask: async () => '' };
+    await createApp({ dir: 'my-notes', packageManager: 'yarn' }, io, exec, cwd);
+    expect(ran[2]).toBe('corepack yarn install --mode=update-lockfile');
+  });
+
+  it('is read back from packageManager, and is npm for an app made before there was a choice', () => {
+    expect(managerOf('pnpm@11.0.0')).toBe('pnpm');
+    expect(managerOf('yarn@4.18.1+sha512.abc')).toBe('yarn');
+    expect(managerOf(undefined)).toBe('npm');
+    expect(managerOf('bun@1.0.0')).toBe('npm');
   });
 });

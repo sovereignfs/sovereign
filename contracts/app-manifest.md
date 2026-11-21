@@ -79,13 +79,14 @@ would have no effect is refused as well: `icon` and `launch` belong to a launche
 
 An app that has `signIn` is signed in through core, which makes it a client there (core-app §1.2). An app that has none is not (§2.3).
 
-| Field            | Required | Meaning                                                                                                                                                                                                               |
-| ---------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `redirect`       | yes      | Paths core may send a person back to after sign-in, at least one                                                                                                                                                      |
-| `postLogout`     | no       | Paths core may return a person to after sign-out                                                                                                                                                                      |
-| `backChannel`    | no       | The path core posts a logout notice to. An app SHOULD have one, or signing out of core leaves it signed in until its tokens stop working                                                                              |
-| `accountDeleted` | no       | The path core posts an account-deletion notice to ([core-app §4.5](../docs/specs/core-app.md)). An app that holds anything of a person SHOULD have one, or what it holds stays after the person deletes their account |
-| `scopes`         | yes      | What it asks for, from [core-app §3.6.2](../docs/specs/core-app.md). `openid` is required                                                                                                                             |
+| Field            | Required | Meaning                                                                                                                                                                                                                                                            |
+| ---------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `redirect`       | yes      | Paths core may send a person back to after sign-in, at least one                                                                                                                                                                                                   |
+| `postLogout`     | no       | Paths core may return a person to after sign-out                                                                                                                                                                                                                   |
+| `backChannel`    | no       | The path core posts a logout notice to. An app SHOULD have one, or signing out of core leaves it signed in until its tokens stop working                                                                                                                           |
+| `accountDeleted` | no       | The path core posts an account-deletion notice to ([core-app §4.5](../docs/specs/core-app.md)). An app that holds anything of a person SHOULD have one, or what it holds stays after the person deletes their account                                              |
+| `export`         | no       | Manifest 5 only. The path core posts a person's export request to ([core-app §4.7.2](../docs/specs/core-app.md)), answered with what the app holds of them. An app that holds anything of a person SHOULD have one, or their export says the app's part is missing |
+| `scopes`         | yes      | What it asks for, from [core-app §3.6.2](../docs/specs/core-app.md). `openid` is required                                                                                                                                                                          |
 
 Every one is a path, which the CLI joins to `https://<name>.<domain>`. An app does not know its own address when it is built, so
 a manifest holds no host. A path MUST begin with `/`, and MUST NOT hold `..`, a query or a fragment.
@@ -220,8 +221,10 @@ Anything else comes from the operator: `env` in `suite.yml`, or `secrets.age.yml
 - An app that declares `signIn` MUST accept sign-in through core, with PKCE, as [`docs/connecting-an-app.md`](../docs/connecting-an-app.md)
   describes, and MUST NOT need core's session cookie. It MAY offer other ways in as well. An app that declares none MUST NOT read core's
   variables, which it is not given.
-- An app that declares `backChannel` or `accountDeleted` MUST verify core's notice as [`sdk.md`](../docs/specs/sdk.md) §9.1 describes, whatever
-  keeps its sessions, and for `accountDeleted` MUST answer `200` only after it has deleted what it holds of the person.
+- An app that declares `backChannel`, `accountDeleted` or `export` MUST verify core's request as [`sdk.md`](../docs/specs/sdk.md) §9.1 describes,
+  whatever keeps its sessions; for `accountDeleted` it MUST answer `200` only after it has deleted what it holds of the person, and for
+  `export` it MUST answer `200` only with an export in the format of [`export.md`](export.md) holding what it holds of that person and
+  nothing of anyone else.
 - It MUST keep what must survive an upgrade only in its database or under `data`. Each `data` path MUST exist in the image and be writable
   by the user the app runs as, because Docker makes a new volume from the image's folder at that path and owns it as root otherwise.
 - It MUST stop cleanly on `SIGTERM`.
@@ -265,3 +268,9 @@ names the version that reads it.
 Manifest 4 is [`schemas/app-manifest-v4.schema.json`](schemas/app-manifest-v4.schema.json): manifest 3 and one more field, `encryption` (§2.8), and
 nothing else. A toolkit that reads 4 reads 1 to 3 as it did, and a toolkit that reads only 1 to 3 refuses a manifest 4 and names the
 version that reads it.
+
+### 5.4 Manifest 5
+
+Manifest 5 is [`schemas/app-manifest-v5.schema.json`](schemas/app-manifest-v5.schema.json): manifest 4 and one more field, `export` in
+`signIn` (§2.1), and nothing else. A toolkit that reads 5 reads 1 to 4 as it did, and a toolkit that reads only 1 to 4 refuses a manifest
+5 and names the version that reads it.

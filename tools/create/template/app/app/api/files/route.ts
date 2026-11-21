@@ -1,13 +1,16 @@
-import { auth } from '@/lib/auth';
+import { getSession } from '@/lib/session';
 import { failure, files, refuseCrossOrigin, unauthorised } from '@/lib/files';
 
 export const dynamic = 'force-dynamic';
 
 /** The signed-in person's own files, newest first, and how much of their space they use. */
 export async function GET() {
-  const session = await auth().getSession();
+  const session = await getSession();
   if (!session) return unauthorised();
-  const [list, usage] = await Promise.all([files().list(session.sub), files().usage(session.sub)]);
+  const [list, usage] = await Promise.all([
+    files().list(session.user.id),
+    files().usage(session.user.id),
+  ]);
   return Response.json(
     { files: list.map((file) => ({ ...file, url: `/api/files/${file.id}` })), usage },
     { headers: { 'cache-control': 'no-store' } },
@@ -18,7 +21,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const refused = refuseCrossOrigin(request);
   if (refused) return refused;
-  const session = await auth().getSession();
+  const session = await getSession();
   if (!session) return unauthorised();
   try {
     const length = Number(request.headers.get('content-length') ?? Number.NaN);
@@ -29,7 +32,7 @@ export async function POST(request: Request) {
       name = undefined;
     }
     const record = await files().put(
-      session.sub,
+      session.user.id,
       (request.body ?? new Uint8Array(0)) as unknown as AsyncIterable<Uint8Array>,
       // Without a length the upload reserves all the room the person has left, so uploads of unknown size run one at a time.
       { name, ...(Number.isSafeInteger(length) && length >= 0 ? { size: length } : {}) },

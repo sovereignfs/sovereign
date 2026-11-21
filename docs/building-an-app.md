@@ -59,17 +59,18 @@ through core. No app imports another, and core names no app.
 
 ### What Sovereign publishes
 
-| Published                                            | For                                                                                                                                        |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `ghcr.io/sovereignfs/sovereign`                      | Core's image. Its tag is the **platform version** (`0.83.0`), which is what a manifest's `core` range means                                |
-| `@sovereignfs/ui`                                    | The design system: tokens and React components. Pre-1.0: apps pin it exactly                                                               |
-| `@sovereignfs/sdk`                                   | An app's **server** calling core: sign-in, verifying core's notices, notifications, email, activity, directory. Throws in a browser        |
-| `@sovereignfs/config`                                | The environment convention of `contracts/env.md`: settings declared once, read with a prefix, refused at start-up                          |
-| `@sovereignfs/storage`                               | People's files: a folder and a quota for each person, served only to them, with `Range` ([keeping files](keeping-files.md))                |
-| `@sovereignfs/pwa`                                   | Installing the app: its manifest, a service worker that keeps nothing of a person, an announced update ([installing](#installing-the-app)) |
-| `@sovereignfs/manifest`                              | The manifest's schemas, a validator, and `sovereign-manifest` (`check`, `label`, `docker-args`)                                            |
-| `@sovereignfs/cli` (`sv`), `ghcr.io/sovereignfs/cli` | The operator's toolkit, and the image the server runs it from                                                                              |
-| `@sovereignfs/create`                                | `npm create @sovereignfs` (an instance repository) and `npm create @sovereignfs app <name>` (an app, §11)                                  |
+| Published                                            | For                                                                                                                                                         |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ghcr.io/sovereignfs/sovereign`                      | Core's image. Its tag is the **platform version** (`0.83.0`), which is what a manifest's `core` range means                                                 |
+| `@sovereignfs/ui`                                    | The design system: tokens and React components. Pre-1.0: apps pin it exactly                                                                                |
+| `@sovereignfs/sdk`                                   | An app's **server** calling core: sign-in, verifying core's notices, notifications, email, activity, directory. Throws in a browser                         |
+| `@sovereignfs/config`                                | The environment convention of `contracts/env.md`: settings declared once, read with a prefix, refused at start-up                                           |
+| `@sovereignfs/storage`                               | People's files: a folder and a quota for each person, served only to them, with `Range` ([keeping files](keeping-files.md))                                 |
+| `@sovereignfs/push`                                  | Notifications on a device where the app is not open (Web Push): the key, a store, an outbox and the route ([sending notifications](#sending-notifications)) |
+| `@sovereignfs/pwa`                                   | Installing the app: its manifest, a service worker that keeps nothing of a person, an announced update ([installing](#installing-the-app))                  |
+| `@sovereignfs/manifest`                              | The manifest's schemas, a validator, and `sovereign-manifest` (`check`, `label`, `docker-args`)                                                             |
+| `@sovereignfs/cli` (`sv`), `ghcr.io/sovereignfs/cli` | The operator's toolkit, and the image the server runs it from                                                                                               |
+| `@sovereignfs/create`                                | `npm create @sovereignfs` (an instance repository) and `npm create @sovereignfs app <name>` (an app, §11)                                                   |
 
 `@sovereignfs/database`, `crypto`, `mailer`, `bridge` and `api-client` are **private**: core uses them, apps cannot. Each app
 carries its own database, encryption and mail code today ([research 0004](research/0004-a-kit-for-apps-of-their-own.md) plans to
@@ -131,6 +132,8 @@ The port is written once, in `sovereign.manifest.json`; everything else reads it
   public page, a kiosk), and `icon`/`launch` are refused.
 - **`backChannel` and `accountDeleted`**: have both. Without the first, signing out of core leaves the app signed in; without the
   second, what the app holds of a person outlives their account.
+- **`export`** (manifest 5): have it if the app holds anything of people. Core asks it for a person's part when they download their data
+  from core; without it, their download says the app's part is missing (§8).
 - **`database`**: `true` gives a PostgreSQL database and role. `{ "pooling": "transaction" }` only if every statement is safe on any
   pooled connection (no advisory lock, `SET`, `LISTEN`, temporary table or named prepared statement).
 - **`generate`**: secrets the server makes once and keeps. An app with sessions generates `<PREFIX>_AUTH_SECRET`; one that stores
@@ -205,21 +208,18 @@ What Tusk and Fjord Web use, and a new app should, unless its design says why no
 
 ## 6. Signing people in
 
-There are two shapes. Choose in the design, before anything is built.
+One session layer, [`@sovereignfs/auth`](specs/auth.md), whatever the ways in. better-auth keeps the app's sessions and accounts; core is
+one way in, turned on when `<P>_CORE_URL` is set (`@sovereignfs/auth/core`, on the SDK's sign-in, with core's back-channel logout and
+account-deleted notices); the app's own accounts when `<P>_AUTH_LOCAL=true`, which is the default only when there is no core. One image
+does all three. This is what the app template makes: thin pages in `app/sign-in`, `app/sign-up` and `app/security` on the package and
+`@sovereignfs/ui`'s forms, with the setup in `lib/sign-in.ts` and `lib/session.ts`. Choose in the design which ways in the app offers.
 
-**Core only.** The app has no accounts of its own; core is the only way in. The SDK does everything: `createSovereign({ prefix,
-sessionStore, tokenStore })` and `nextAuth(sv).handlers` mounted at `app/auth/[action]/route.ts` (login, callback, logout, and the
-back-channel route). This is what the app template makes ([using the SDK](using-the-sdk.md)). It cannot run without an instance.
-
-**Local and/or core** (Tusk and Fjord: an app of its own). better-auth keeps the sessions and accounts; core is one provider, turned on
-when `<P>_CORE_URL` is set; local accounts when `<P>_AUTH_LOCAL=1` (off by default, and then the sign-in pages answer 404); one
-image does all three. The SDK is still used, for the notices:
-`verifyLogoutToken` and `verifyAccountDeletedToken` do every check and return who the notice names, and the app ends or deletes. `seen`
-records each notice's `jti` in a table, so a replay is refused after a restart.
+An app made with `--encryption`, and an app already on it, sign in through core with the SDK's `nextAuth` (core only), which stays for
+them ([using the SDK](using-the-sdk.md)).
 
 Rules that hold for both:
 
-- **A person is their `sub`**, opaque and stable. Never match an account by email at sign-in: link a core identity only from a signed-in
+- **A person is the app's own id for them** (`session.user.id`); core's `sub`, opaque and stable, is linked to it. Never match an account by email at sign-in: link a core identity only from a signed-in
   session, and only to the account's own verified address. Core gives `sub`, `name`, `email`; **no `preferred_username` and no `groups`**.
 - **One function deletes everything of a person** (Tusk: `People.deletePerson`), safe to run twice. A new table that holds something of
   a person is added to it in the same change, with a test.
@@ -260,6 +260,12 @@ its own") when hosting it:
 - Start-up waits for a database that is still starting (`<P>_DB_CONNECT_TIMEOUT_MS`), with retries.
 - **People's files are not in the database.** They are kept with `@sovereignfs/storage` in the app's own folder, `/data/s3/<name>`, when the
   manifest says `"storage": true`: a folder and a quota for each person, deleted with them. See [Keeping people's files](keeping-files.md).
+- **A person can take their data with them.** When someone downloads their data from core (core-app §4.7.2), core posts a signed
+  request to the app's `export` path, and the SDK's `handleExportRequest` (or `onExport` with the Next.js handlers) answers with an
+  export in the [one format](../contracts/export.md), written through `@sovereignfs/export`: the person's records under
+  `apps/<prefix>/records/` as JSON Lines and their files under `apps/<prefix>/files/`, nothing of anyone else, encrypted data as
+  stored. The app template does this for its notes and files. An app with no core offers its operator's export and each person's
+  export itself (sdk §9.5); the template does not have that form yet.
 
 ## 9. Secrets and encryption
 
@@ -339,6 +345,29 @@ app made with `npm create @sovereignfs app` has all of it already:
 - On iPhone and iPad, and in macOS Safari, an installed core cannot open your installed app: it opens a browser view. On desktop Chrome
   and Edge it can, and on Android Chrome it is expected to (research 0010).
 
+### Sending notifications
+
+An app tells a person something on a phone or a computer where it is not open with Web Push, the same way in every app
+([RFC 0009](rfcs/0009-web-push.md)): `@sovereignfs/push` on the server, the worker's and the page's side in `@sovereignfs/pwa`, and the
+switch, `PushControl`, in `@sovereignfs/ui`. An app made with `npm create @sovereignfs app` has all of it, and sends notifications as
+soon as its key exists:
+
+- **The key** is `<PREFIX>_VAPID_PRIVATE_KEY`, one variable: the public key is derived from it. A hosted app lists
+  `{ "name": "<PREFIX>_VAPID_PRIVATE_KEY", "bytes": 32 }` in its manifest's `generate`, and the instance makes it once; running it
+  yourself, `npx @sovereignfs/push keys` makes one. `<PREFIX>_VAPID_SUBJECT` (`mailto:` or `https:`) is whom push services may contact,
+  and defaults to the app's `https` address; `localhost` is refused at start-up, as Apple's service refuses it. With no key, the app
+  sends nothing and the control shows nothing. **Changing the key ends every device's subscription.**
+- **Devices and waiting pushes are in the app's database** (`lib/push.ts`, `migrations/002_push.sql`), through the `PushStore` the
+  package asks for; a device's keys are sealed (`lib/crypto.ts`). The store passes the package's conformance suite.
+- **A push is queued in the transaction of the change that raised it**, with `enqueuePush(pushStore(client), { account, message, now })`,
+  so a change rolled back sends nothing, and sent by the outbox, which `instrumentation.ts` starts every fifteen seconds. A message is
+  `{ title, body?, path?, tag?, kind?, data? }`; `path` is a page of the app, never another site. An app that keeps what it is told
+  encrypted puts nothing of it in a push: "A card is due", or a `kind` its worker resolves on the device (`push.handlers`).
+- **The route** `app/api/push/subscription` is `pushSubscriptionHandlers`, for the signed-in account and from the app's own origin;
+  the page uses it through `usePush`, and `PushControl` says what the device can do (on an iPhone, add the app to the Home Screen
+  first). **Signing out turns the device off first** (`turnOffPush`), and deleting an account forgets its devices.
+- The template's "Send me a test notification" shows the whole path; replace it with the notifications your app sends.
+
 ## 11. Repository and image
 
 **A new repository** takes Tusk's shape:
@@ -359,10 +388,11 @@ beside the server; the licences in `/usr/share/licenses/`; `.dockerignore` keeps
 libSQL's native client (no build for musl). A `/api/health` that answers `200` once the database is ready. `scripts/deploy-check.sh`
 boots every setup from nothing, and as an instance would host it.
 
-**The app template.** `npm create @sovereignfs app <name> --port <N>` makes a hosted app that runs as it stands (manifest, Dockerfile,
-publish workflow, health route, config, migrations, SDK sign-in). It is **core-only and PostgreSQL-only**, so it suits an app that
-will only ever be hosted. An app that must also run alone is started from Tusk's structure instead. With `--encryption`, its notes are
-encrypted in the browser and shared between people of the instance ([Encrypting an app's data](encrypting-an-app.md)).
+**The app template.** `npm create @sovereignfs app <name> --port <N> [--package-manager pnpm|npm|yarn]` (pnpm by default) makes a
+hosted app that runs as it stands (manifest, Dockerfile, publish workflow, health route, config, migrations, the sign-in of §6). It runs
+hosted by an instance or on its own, with accounts of its own; it is **PostgreSQL-only** (§15). With `--encryption`, its notes are
+encrypted in the browser and shared between people of the instance ([Encrypting an app's data](encrypting-an-app.md)); such an app signs
+in through core only.
 
 ## 12. Releasing and hosting
 
@@ -444,9 +474,9 @@ instance.
   settings (done: `@sovereignfs/config`), the notice handlers in the SDK, two stores and the boot sequence in `database`, the envelope
   format in `crypto`, then a template for an app of its own. Until then, copy from Tusk, and say in the design which files were copied.
 - **`env.md`'s `FIELD_ENCRYPTION_KEYS`** is not what the apps use (`<P>_ENCRYPTION_KEY` and `_PREVIOUS`); research 0004 step 4 reconciles them.
-- **The template** makes a core-only PostgreSQL app; an app of its own does not start there yet.
-- **`AUTH_LOCAL` takes `1`** (Tusk also accepts `true`), which `env.md` §4's booleans (exactly `true` or `false`) do not allow. Until
-  the contract and the apps agree, accept both.
+- **The template** is PostgreSQL only; an app of its own on sqld or a SQLite file still copies Tusk's database boot.
+- **`AUTH_LOCAL` is `true` or `false`** (`env.md` §2, settled by [RFC 0007](rfcs/0007-one-sign-in.md)). Tusk and Fjord read `1` today;
+  until they move onto `@sovereignfs/auth`, which refuses it, accept both.
 
 ## Where to read more
 

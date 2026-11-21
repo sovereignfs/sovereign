@@ -14,17 +14,6 @@
   box-sizing: border-box;
 }
 
-.card {
-  width: 100%;
-  max-width: 360px;
-  background-color: var(--sv-color-surface);
-  border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-lg);
-  box-shadow: var(--sv-shadow-card, 0 1px 2px rgba(0, 0, 0, 0.04));
-  padding: var(--sv-space-8);
-  box-sizing: border-box;
-}
-
 /* ── Brand mark ──────────────────────────────────────────────────────────── */
 
 .brand {
@@ -51,31 +40,7 @@
 
 /* ── Notices ─────────────────────────────────────────────────────────────── */
 
-.notice {
-  margin-top: var(--sv-space-3);
-  padding: var(--sv-space-3) var(--sv-space-4);
-  border-radius: var(--sv-radius-md);
-  background: var(--sv-color-surface-sunken);
-  border: 1px solid var(--sv-color-border);
-}
-
-.noticeText {
-  margin: 0;
-  font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-muted);
-  line-height: 1.5;
-}
-
 /* A notice that something is not as the person expects: amber, as the offline notice has always been. */
-.warning {
-  background: var(--sv-color-warning-surface);
-  border-color: var(--sv-color-warning-border);
-}
-
-.warning .noticeText {
-  color: var(--sv-color-warning-text);
-}
-
 /* ── Form ────────────────────────────────────────────────────────────────── */
 
 .form {
@@ -85,36 +50,12 @@
   margin-top: var(--sv-space-6);
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-}
-
 .label {
   display: block;
   margin-bottom: var(--sv-space-2);
   font-size: var(--sv-font-size-sm);
   font-weight: var(--sv-font-weight-medium);
   color: var(--sv-color-text-muted);
-}
-
-.labelRow {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: var(--sv-space-2);
-}
-
-.labelRow .label {
-  margin-bottom: 0;
-}
-
-.aside {
-  font-size: var(--sv-font-size-xs);
-  color: var(--sv-color-text-muted);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  text-decoration-color: var(--sv-color-border);
 }
 
 .hint {
@@ -129,41 +70,7 @@
   color: var(--sv-color-error-text);
 }
 
-.fieldError {
-  margin: var(--sv-space-1) 0 0;
-  font-size: var(--sv-font-size-xs);
-  color: var(--sv-color-error-text);
-}
-
-.terms {
-  display: flex;
-  gap: var(--sv-space-2);
-  align-items: flex-start;
-  font-size: var(--sv-font-size-sm);
-  color: var(--sv-color-text-primary);
-}
-
-.terms input {
-  margin-top: 3px;
-}
-
 /* ── Divider ─────────────────────────────────────────────────────────────── */
-
-.divider {
-  display: flex;
-  align-items: center;
-  gap: var(--sv-space-3);
-  margin: var(--sv-space-4) 0;
-  color: var(--sv-color-text-muted);
-  font-size: var(--sv-font-size-sm);
-}
-
-.divider::before,
-.divider::after {
-  content: '';
-  flex: 1;
-  border-top: 1px solid var(--sv-color-border);
-}
 
 /* ── Buttons, links ──────────────────────────────────────────────────────── */
 
@@ -189,79 +96,6 @@
   text-underline-offset: 2px;
 }
 
-.linkButton {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--sv-color-text-primary);
-  font: inherit;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
 /* ── Invitation ──────────────────────────────────────────────────────────── */
 
-.invite {
-  margin-top: var(--sv-space-5);
-}
-
-.inviteTitle {
-  margin: 0;
-  font-size: var(--sv-font-size-sm);
-  font-weight: var(--sv-font-weight-medium);
-  color: var(--sv-color-text-primary);
-  line-height: 1.4;
-}
-
-.fromInvite {
-  font-family: var(--sv-font-family-mono);
-  font-size: 10px;
-  color: var(--sv-color-text-muted);
-  background-color: var(--sv-color-surface-sunken);
-  border-radius: var(--sv-radius-sm);
-  padding: 2px 7px;
-}
-
 /* ── Second step: one box for each digit of a code ───────────────────────── */
-
-.codeRow {
-  display: flex;
-  gap: var(--sv-space-2);
-}
-
-.codeCell {
-  width: 100%;
-  min-width: 0;
-  height: 52px;
-  text-align: center;
-  font-family: var(--sv-font-family-mono);
-  font-size: 21px;
-  font-weight: var(--sv-font-weight-semibold);
-  border: 1px solid var(--sv-color-border);
-  border-radius: var(--sv-radius-md);
-  background: var(--sv-color-surface);
-  color: var(--sv-color-text-primary);
-  outline: none;
-  caret-color: transparent;
-}
-
-.codeCell:focus {
-  border-color: var(--sv-color-accent);
-  box-shadow: 0 0 0 3px var(--sv-color-focus-ring);
-}
-
-.codeCellError {
-  border-color: var(--sv-color-error-text);
-}
-
-.backupInput {
-  font-family: var(--sv-font-family-mono);
-  letter-spacing: 0.08em;
-}
-
-@media (max-width: 400px) {
-  .card {
-    padding: var(--sv-space-6);
-  }
-}

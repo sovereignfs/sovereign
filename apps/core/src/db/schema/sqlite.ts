@@ -285,6 +285,54 @@ export const activity = sqliteTable(
 );
 
 /**
+ * A person's lock on one device (RFC 0006 B1): the device is the browser, named by a random id in a host-only cookie, and the setting is
+ * the idle time and whether leaving the app locks too. One row for each account and device; written only by `src/lock/store.ts`.
+ */
+export const deviceLocks = sqliteTable(
+  'device_locks',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    deviceId: text('device_id').notNull(),
+    idleSeconds: integer('idle_seconds').notNull(),
+    onLeave: integer('on_leave', { mode: 'boolean' }).notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => [uniqueIndex('device_locks_user_device_idx').on(table.userId, table.deviceId)],
+);
+
+/**
+ * The lock's state of one session (RFC 0006 B2): the device whose lock it is under, when it was last used, when its page was last left
+ * (hidden), and when it was locked, if it is. Written the first time the session is seen on a device with a lock, and from then on the lock follows the session, not the
+ * browser's cookie. Kept beside better-auth's own `sessions` row and deleted with it. Times are milliseconds since the epoch. Written only
+ * by `src/lock/store.ts`.
+ */
+export const sessionLocks = sqliteTable('session_locks', {
+  sessionId: text('session_id')
+    .primaryKey()
+    .references(() => sessions.id, { onDelete: 'cascade' }),
+  deviceId: text('device_id').notNull(),
+  lastActiveAt: integer('last_active_at').notNull(),
+  lockedAt: integer('locked_at'),
+  leftAt: integer('left_at'),
+});
+
+/**
+ * A passkey challenge core gave a session, to check a passkey without signing in (RFC 0006 B1, B4): turning the lock on, and unlocking.
+ * One at a time per session, used once, and good for five minutes. Times are milliseconds since the epoch. Written only by
+ * `src/lock/passkey.ts`.
+ */
+export const lockChallenges = sqliteTable('lock_challenges', {
+  sessionId: text('session_id')
+    .primaryKey()
+    .references(() => sessions.id, { onDelete: 'cascade' }),
+  challenge: text('challenge').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+});
+
+/**
  * Telling an app that a person's session at core ended (OpenID Connect Back-Channel Logout, core-app §3.6.5): one row for each app and
  * core session (`sid`), written when the session ends and kept until the app answers, or the notice is given up. Not tied to the account
  * or the session, which may be gone. `state` is `pending`, `delivered` or `given_up`. Times are milliseconds since the epoch.
@@ -745,4 +793,32 @@ export const launcherShortcuts = sqliteTable(
     createdBy: text('created_by'),
   },
   (table) => [index('launcher_shortcuts_owner_idx').on(table.ownerId)],
+);
+
+/**
+ * Exports being made or waiting to be downloaded (core-app §4.7.3): one row for each, whose (`kind` `instance`, or `person` with the
+ * person's `sub`), the session that asked, and where it stands (`pending`, `running`, `ready`, `failed`). Times are milliseconds since the
+ * epoch. `file` is the name under `.exports/` in core's storage path; `lease_until` stops two instances of core making one twice;
+ * `failure` is the kind of failure and never what was being written. Written only by `ExportJobs`.
+ */
+export const exportJobs = sqliteTable(
+  'export_jobs',
+  {
+    id: text('id').primaryKey(),
+    kind: text('kind').notNull(),
+    sub: text('sub'),
+    sessionId: text('session_id').notNull(),
+    state: text('state').notNull(),
+    archive: text('archive').notNull(),
+    file: text('file'),
+    size: integer('size'),
+    requestedAt: integer('requested_at').notNull(),
+    finishedAt: integer('finished_at'),
+    leaseUntil: integer('lease_until'),
+    failure: text('failure'),
+  },
+  (table) => [
+    index('export_jobs_state_idx').on(table.state),
+    index('export_jobs_sub_idx').on(table.sub),
+  ],
 );

@@ -69,8 +69,11 @@ npm create @sovereignfs instance my-instance
 - `--encryption` (or `npm_config_encryption`) makes an app whose notes are encrypted in the browser (RFC 0005): manifest 4 with
   `encryption`, the notes shared between people of the instance, and `ENCRYPTION.md` saying what is protected and that it is not yet
   audited. It is written over the app's files, which are otherwise the same. `--encryption` with `instance` is refused.
+- `--package-manager pnpm|npm|yarn` (or `npm_config_package_manager`) names the package manager an app is made with (§2.2). With none it
+  MUST ask when there is a terminal, and otherwise use **pnpm**, whatever tool started `create`. Yarn is Yarn 4 with its packages in
+  `node_modules`. Any other value, and `--package-manager` with `instance`, is refused.
 
-`instance` MUST, in order: write the files of §2.1, run `git init`, install the toolkit from the lockfile it wrote, add
+`instance` MUST, in order: write the files of §2.1 (`package.json`, the launcher, `.gitignore`, `README.md`, `AGENTS.md` and `CLAUDE.md`), run `git init`, install the toolkit from the lockfile it wrote, add
 `--remote URL` as `origin` if given, and make the first commit. It MUST NOT push.
 
 ### 2.2 An app
@@ -99,7 +102,11 @@ It MUST meet [`contracts/app-manifest.md`](../../contracts/app-manifest.md), and
   `database.pooling: transaction`;
 - a `package.json` named `@sovereignfs/<name>` and marked `private`, so the name claims nothing on npm;
 - an image that does not run as root, listens on `PORT` and is configured by its environment alone;
-- one port, the manifest's `port`, that `npm run dev`, `npm start` and `<PREFIX>_URL` in `.env.example` are made with, so the app runs on
+- one package manager, the one it is made with, that every file naming a command uses: the Dockerfile, the workflows, the pre-push hook,
+  the scripts and the guides. pnpm and Yarn are pinned in `packageManager`, which the image and CI run through corepack; an app made with
+  npm has no such field, and `app sync` reads a missing one as npm. The script that turns the hooks on is `prepare`, or `postinstall`
+  for Yarn, which does not run `prepare` on an install;
+- one port, the manifest's `port`, that the `dev` and `start` scripts and `<PREFIX>_URL` in `.env.example` are made with, so the app runs on
   a developer's machine where the instance will run it;
 - a workflow, `.github/workflows/publish.yml`, that builds that image for linux/amd64 and linux/arm64, with the arguments
   `sovereign-manifest docker-args` prints, publishes it to `ghcr.io/<owner>/<repository>` tagged `X.Y.Z`, which is where `sv app add
@@ -108,7 +115,8 @@ It MUST meet [`contracts/app-manifest.md`](../../contracts/app-manifest.md), and
 - the shared files of §2.3, as `app sync` would write them, and `@sovereignfs/create` pinned exactly among its development dependencies,
   with its settings for them under `sovereign` in `package.json` (`tagPrefix`, `requiredChecks`, `unmanaged`).
 
-`create` writes the files, runs `git init`, resolves the lockfile, makes the first commit on `main`, and creates and checks out
+`create` writes the files, runs `git init`, resolves the lockfile with the app's package manager (through corepack when pnpm or Yarn is not
+installed), makes the first commit on `main`, and creates and checks out
 `develop`, the branch work lands on (the app's `CONTRIBUTING.md`: `main` takes release pull requests). It MUST NOT install or build, and it
 writes nothing outside the folder. The versions it writes are held by a test to the packages of this repository.
 
@@ -130,7 +138,9 @@ from the template of the `@sovereignfs/create` it pins, through commands it runs
 
 The shared files are `.github/workflows/promotion.yml` and `release.yml`, which call `app-promotion.yml` and `app-release.yml` in
 sovereignfs/sovereign at the commit this version of `create` names; `.github/workflows/sync-develop.yml`; `.github/repository.json`;
-`CLAUDE.md`; and the sections of `CONTRIBUTING.md`, `RELEASING.md` and `AGENTS.md` between `<!-- sovereign:shared:begin -->` and
+`CLAUDE.md`; the app's `Dockerfile`, `.dockerignore` and `compose.yml`, filled with its name, port and package manager, always in the
+app's folder and not written in a repository of several components, which builds its images its own way; and the sections of
+`CONTRIBUTING.md`, `RELEASING.md` and `AGENTS.md` between `<!-- sovereign:shared:begin -->` and
 `<!-- sovereign:shared:end -->`. Workflows and settings go to the repository's root, the documents to the app's folder, so an app in a
 folder of a larger repository (with a `tagPrefix` such as `web-`) is served too.
 
@@ -154,11 +164,19 @@ overrides/            optional additions (contracts/suite.md)
 .github/workflows/    a thin deployment workflow
 .gitignore
 README.md
+AGENTS.md             the guide for an AI agent the operator asks to look after the instance
+CLAUDE.md             Claude Code's way to AGENTS.md
 .backups/             backups sv backup took (§10.2); git-ignored, never committed
 ```
 
 `package.json` MUST pin `@sovereignfs/cli` to an exact version. Every file here belongs to the operator. `.gitignore` MUST
 ignore `.backups/`: `create` writes it so, and `sv backup` adds the line to a repository that lacks it.
+
+`AGENTS.md` is written by `create`, once, like the rest: it says what each file is, how a change is made (look, change the repository,
+push and deploy when the operator says so, check), and which commands an agent may run alone (those that only read), prepare for the
+operator to see (those that change only the repository), run only when asked each time (those that reach the server), and never run
+(those that show a secret's value, destroy data, or read an age key). `CLAUDE.md` imports it. An instance made before has neither, and
+`sv push` commits them when the operator adds them.
 
 ---
 
@@ -212,7 +230,7 @@ Each command MUST state what it changed, and MUST exit as §11 says.
 - A manifest with no `signIn` is added with no scopes to show and no client: `sv app add` MUST say that the app is hosted without sign-in
   through core and has no launcher entry, and MUST refuse `launcher` settings for it (`sv app update`).
 - `sv app add NAME --external` MUST take `--name`, at least one `--redirect`, and MAY take `--post-logout`, `--back-channel`,
-  `--account-deleted`, `--key-return`, `--scope`, `--public` and `--trusted`; `sv app update` changes each of them. An external app is untrusted unless `--trusted` is given.
+  `--account-deleted`, `--export`, `--key-return`, `--scope`, `--public` and `--trusted`; `sv app update` changes each of them. An external app is untrusted unless `--trusted` is given.
 - `sv app add` and `sv app upgrade` MUST say whether an app can be pooled: what its manifest says in `database.pooling`
   (`contracts/app-manifest.md` §2.2), or that it needs a session, and that an app with no database has nothing to pool. They never decide it
   from anything but the manifest.
@@ -325,6 +343,8 @@ digests in it are what the instance runs, so it is restored from git.
 | `sv backups`                                                              | Lists the backups at the instance's destination and those kept on the server (§10.2.2)                           | yes, read only     |
 | `sv restore PATH \| --from BACKUP [--core \| --app NAME …] [--key FILE]`  | Restores a backup, or one part of it, to the server, from a file or from the destination (§10.2)                 | yes                |
 | `sv key recovery [--out FILE] [--remove]`                                 | Adds a recovery key, kept offline, to the recipients, or removes it (§9.4)                                       | no                 |
+| `sv key export`                                                           | Prints the recipients an owner's export is encrypted to, for the Console (§9.6)                                  | no                 |
+| `sv export open FILE [--key FILE] [--out DIR]`                            | Decrypts an owner's or an app's export here, checks it, and unpacks it (§9.6)                                    | no                 |
 
 ---
 
@@ -746,6 +766,19 @@ encrypted data, and prints its public half as one line, `sv-escrow-1.<id>.<publi
   `sovereign-admin accounts put-kit EMAIL`, which stores it and marks the kit kept. The person then sets a password through a reset
   link and unlocks with the kit.
 
+### 9.6 Exports
+
+Not built yet ([core-app §4.7](core-app.md), task 18.3). Core's Console offers the owner an export of core's data, encrypted with age
+to recipients the owner pastes in (core-app §4.7.1); the toolkit gives them and opens what comes back.
+
+- `sv key export` prints the public keys of `secrets.recipients` (the operator's own and any recovery key, §9.4) as one line, for the
+  owner to paste into Console > Data. It prints no private key and sends nothing: the toolkit holds no account (§9.5).
+- `sv export open FILE [--key FILE] [--out DIR]` decrypts an export with the operator's key (or `--key`, such as the recovery key) on
+  this machine, as a stream, checks it as `contracts/export.md` §5 says, and unpacks it into `DIR` (default: a new folder named after the
+  file, beside it, `0700`). It refuses an export that fails the check and leaves nothing of it. A person's export as a tar is checked and
+  unpacked the same way; as a zip, it is opened with any zip tool, and the command says so.
+- An export is not a backup and `sv restore` refuses one, naming `sv backup`.
+
 ## 10. Keeping up, and recovering
 
 ### 10.1 Upgrading
@@ -983,3 +1016,4 @@ with a DNS provider's module, which the stock image does not carry.
 | 2026-11-17 | §2: `npm create @sovereignfs app` takes `--encryption`, for an app whose notes are encrypted in the browser and shared through core's keys.                                                                                                                                                                                                                                                                                                                                                                             |
 | 2026-11-17 | §10.1: `sv upgrade` moves core to the newest published core it supports, as `sv setup` chooses one, no longer only to the release's `newestCore`; §6: a deployment pulls an image it reads the user of when the server does not have it yet.                                                                                                                                                                                                                                                                            |
 | 2026-11-19 | §4: an external app may name an account-deleted and a key return address (`--account-deleted`, `--key-return`), as a hosted app does through its manifest.                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-11-20 | §4.6, §9.6: `sv key export` and `sv export open`, for the owner's export of core (RFC 0008). Not built.                                                                                                                                                                                                                                                                                                                                                                                                                 |

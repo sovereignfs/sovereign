@@ -34,6 +34,13 @@ export const viewport = pwaViewport();
   of its own (or the shell).
 - **A new version waits.** `ServiceWorkerRegistration` (from `@sovereignfs/pwa/client`, with `@sovereignfs/ui`'s `UpdateNotice`) says a new
   version is ready; Reload has it take over. It registers only in production, over https or on `localhost`.
+- **Notifications (Web Push)**, when the app asks: `serviceWorkerSource({ …, push: { name, icon, badge?, handlers? } })` adds a
+  `push` handler that shows every push (one it cannot read shows the app's name; it stores nothing) and a `notificationclick` handler
+  that opens only a path on the app's own origin. `handlers` is the app's own JavaScript defining
+  `async function onPushKind(kind, data, message)`, which may return what to show instead. From `@sovereignfs/pwa/client`, `usePush()`
+  gives the state of this device and `turnOn` and `turnOff`, for `@sovereignfs/ui`'s `PushControl`; `turnOffPush()` is called before
+  signing out. The server's side is [`@sovereignfs/push`](https://www.npmjs.com/package/@sovereignfs/push)
+  ([RFC 0009](https://github.com/sovereignfs/sovereign/blob/main/docs/rfcs/0009-web-push.md)).
 - **A content security policy** needs `PWA_CSP_DIRECTIVES`: `worker-src 'self'` and `manifest-src 'self'`.
 
 The main entry has no React and no Node built-in, so a `proxy.ts` can import it. Licence MPL-2.0.

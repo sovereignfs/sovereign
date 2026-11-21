@@ -245,6 +245,9 @@ The SDK signs people in through core with an established OpenID Connect client, 
 
 ### 9.1 What the app provides, and what the SDK does with it
 
+`nextAuth` (`/next`) is **deprecated** from 2.10.0: a new app signs people in with `@sovereignfs/auth` (§9.8). It keeps working, and is
+removed only in a major version ([`docs/upgrade.md`](../upgrade.md)).
+
 The app gives `createSovereign` a `sessionStore` (the app owns its data; the SDK ships none outside `/testing`):
 
 ```ts
@@ -290,6 +293,14 @@ after its `expiresAt`.
   resolved**. If the handler throws, the SDK answers `500` and core sends the notice again, so the handler MUST be safe to run twice
   and MUST delete everything the app holds of that person before it resolves. The SDK keeps no record of the person once the handler
   has resolved. A token for another app, or for a core other than the one the app was set up with, is refused like any other.
+- `handleExportRequest(request, app, handler)` takes a `POST` with an `export_request_token` (core-app §4.7.2). The token is refused,
+  with `400` and `invalid_request`, by the rules for a logout token except that its header `typ` is `export-request+jwt` and its
+  `events` carry `urn:sovereignfs:event:export-requested`; a `jti` seen before is refused. For a good one the SDK answers `200` at once
+  with an export (`contracts/export.md`, `kind: "person"`, `app` the app's `prefix` from `app`, `sub` the person's) as `application/x-tar`,
+  and calls `handler({ sub, writer })` with the `@sovereignfs/export` writer it is written through. The handler adds the app's records
+  and files for that person under `apps/<prefix>/` and nothing of anyone else's; the SDK writes `contents.json` when it resolves. If the
+  handler throws, the answer ends short, which core's check refuses, and core lists the app's part as missing. Asking again changes
+  nothing. The Next.js handlers mount it at `/auth/export` when given `onExport: { prefix, version, handler }`.
 - The session cookie is `HttpOnly; Secure; SameSite=Lax; Path=/` with no `Domain` and the `__Host-` prefix over https. Over `http`
   (a development instance) it has no `Secure` and no prefix, since a browser would refuse the prefix.
 - `sv.links` has the addresses of core's own pages for a person: `profile`, `security`, `preferences`, `connectedApps` and
@@ -407,6 +418,13 @@ vault (core-app §5.3), made by the same routine in the browser, so a person's k
   in. `open()` gives the app key or `{ state: 'locked' }`, as §9.3's does; `kitPending()`, `keepKit(kit)` and `unlockWithKit(typed,
 secret)` are the kit, as core's pages do it; `prepareChange` and `finishChange` a password change. No request carries a password,
   a passphrase or a key that opens anything.
+- **Exports** (core-app §4.7, `contracts/export.md`): with no core to ask it, the app offers both itself, through `@sovereignfs/export`.
+  Its **operator** is the first account made in it. On its **Data** page, the operator saves the age recipients its export is encrypted
+  to, and takes the app's export (`kind: "app"`), encrypted as it is written, after their password again; anyone else gets a page that is
+  not there. On a person's **Your data** page, each person takes their own (`kind: "person"`), not encrypted. Both run and are downloaded
+  once as core's do (core-app §4.7.3), under the app's own data path, with the same shared pieces core uses:
+  `ExportJobs` on the app's own database (its table from `exportJobsMigrations`), `ExportRunner`, `downloadExport` and `viewOf` from
+  `@sovereignfs/export`, and `ExportPanel` from `@sovereignfs/ui`.
 - **Not here:** sharing with another person needs their public keys, which only core serves (§9.4); an app with no core shares
   nothing yet.
 
@@ -444,6 +462,43 @@ part A). The template sets an hour; unset, nothing is checked.
   session in that browser.
 - `checkEverySeconds` must be a whole number of seconds, 1 or more (`ConfigurationError`).
 - The fake core's `loginRequired(authorizationUrl)` answers a `prompt=none` sign-in as core does for someone with no session.
+
+### 9.8 Signing in for a session the app keeps
+
+For an app that keeps its people's sessions itself (`@sovereignfs/auth`, [`auth.md`](auth.md) §8, RFC 0007), the SDK gives the steps of
+§9.1 without a session of its own:
+
+- `beginSignIn` as in §9.1: the pending record is the SDK's, in its store, and its cookie the SDK's.
+- `finishSignIn(request)` checks the answer as `completeSignIn` does (state, nonce, PKCE, `max_age`), keeps core's refresh token in the
+  `TokenStore` as §5.1 says, and returns who signed in (`sub`, `sid`, the claims, the scopes, the ID token) and where they were going,
+  with the one cookie that clears the pending sign-in. It makes no session. A sign-in with `prompt=none` that finds the person signed
+  out at core throws a `SignInError` whose reason is `login_required`, so the caller ends its own session (§9.7).
+- `endSessionUrl(idToken)` is core's sign-out for an ID token the caller kept; core decides what it ends (core-app §3.6.5).
+- The notices are §9.2's (`verifyLogoutToken`, `verifyAccountDeletedToken`), and a session's secret is the caller's (`newSessionSecret`).
+
+`completeSignIn` is `finishSignIn` with the SDK's session made from it, so the two cannot drift. Everything §5.1 promises of the refresh
+token holds unchanged: the SDK is still the only thing that sends it.
+
+### 9.9 Who is signed in, typed
+
+A session's `user` is who the person is, the same shape for the SDK's sessions and for `@sovereignfs/auth`'s ([`auth.md`](auth.md)),
+and for an account of the app's own as for one from core (RFC 0007 §10):
+
+| Field      | Is                                                                                                                  |
+| ---------- | ------------------------------------------------------------------------------------------------------------------- |
+| `id`       | The app's own id for the person, and the only thing to identify them by. With the SDK's sessions it is core's `sub` |
+| `sub`      | Core's id for the person, when they came through core; missing for an account of the app's own                      |
+| `name`     | With `profile`                                                                                                      |
+| `email`    | With `email`, and `emailVerified` with it                                                                           |
+| `picture`  | With `profile`: an absolute, versioned address                                                                      |
+| `locale`   | With `profile`: a BCP 47 tag                                                                                        |
+| `zoneinfo` | With `profile`: an IANA time zone                                                                                   |
+| `roles`    | With `roles`, for a trusted app only, from the token core signed; empty otherwise                                   |
+
+A field core was not asked for or did not send is missing, and a claim of the wrong type is left out (`personFromClaims`). `claims`
+stays for what is not typed. **An app is not told** another person's email beyond a Directory match on the whole address, anything
+of their passkeys, second step or sessions, or anything of the lock but that the person must sign in again. How a person signed in
+(`amr`) waits for core to send it (6.6, parked).
 
 ## 10. From the legacy SDK
 
@@ -541,3 +596,5 @@ of its own; an app catalogue.
 | 2026-11-18 | §9.6: a fresh sign-in (`prompt`, `maxAgeSeconds`, `authTime`, `signedInWithin`, `requireSession`'s age); §9.1: core ending a session ends it in the app (`SessionEndedError.byCore`), and a logout notice for the whole person removes the refresh token. |
 | 2026-11-19 | §9.7: checking a session against core (`checkEverySeconds`, `checkedAt`, `needsCheck`, `prompt=none` renewal in place, `SignInError.reason`); the fake core's `loginRequired`.                                                                            |
 | 2026-11-19 | §9.1: a pending sign-in lives an hour, not ten minutes, so an app's sign-in carried through an emailed link is not refused.                                                                                                                               |
+| 2026-11-20 | §9.9: a session's typed `user`, the same shape as `@sovereignfs/auth`'s, and what an app is not told; §9.1: `nextAuth` deprecated.                                                                                                                        |
+| 2026-11-20 | §9.1: `handleExportRequest`, an app's part of a person's export; §9.5: an app with no core offers the owner's and a person's export itself (RFC 0008). Not built.                                                                                         |

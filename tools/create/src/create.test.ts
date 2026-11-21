@@ -68,6 +68,7 @@ describe('what npm create was asked', () => {
       dir: 'my-instance',
       remote: undefined,
       encryption: false,
+      packageManager: undefined,
     });
     expect(read(['instance', 'x', '--remote', 'git@sovereign.local:me/x.git']).remote).toBe(
       'git@sovereign.local:me/x.git',
@@ -105,12 +106,22 @@ describe('what npm create was asked', () => {
     expect(read(['app', 'a']).encryption).toBe(false);
   });
 
+  it('may name the app’s package manager, from the arguments or from what npm kept for itself', () => {
+    expect(read(['app', 'a', '--package-manager', 'yarn']).packageManager).toBe('yarn');
+    expect(read(['app', 'a', '--package-manager=npm']).packageManager).toBe('npm');
+    expect(read(['app', 'a'], { npm_config_package_manager: 'pnpm' }).packageManager).toBe('pnpm');
+    expect(read(['app', 'a']).packageManager).toBeUndefined();
+    for (const bad of ['bun', '', 'PNPM'])
+      expect(() => read(['app', 'a', `--package-manager=${bad}`]), bad).toThrow(CreateError);
+  });
+
   it('is nothing to go on when there is no word, and says what is wrong with an odd option or too many words', () => {
     expect(read([])).toEqual({
       kind: undefined,
       dir: undefined,
       remote: undefined,
       encryption: false,
+      packageManager: undefined,
     });
     expect(() => read(['instance', 'a', 'b'])).toThrow('Too many arguments');
     expect(() => read(['instance', 'a', '--force'])).toThrow(CreateError);
@@ -143,16 +154,58 @@ describe('making an instance repository', () => {
       'git init --initial-branch=main',
       'npm install --package-lock-only --ignore-scripts --no-audit --no-fund',
       'npm ci --ignore-scripts --no-audit --no-fund',
-      'git add -- package.json package-lock.json sv .gitignore README.md',
+      'git add -- package.json package-lock.json sv .gitignore README.md AGENTS.md CLAUDE.md',
       'git commit -m Create the instance',
     ]);
     const files = execFileSync('git', ['ls-files'], { cwd: made.dir, encoding: 'utf8' })
       .trim()
       .split('\n')
       .sort();
-    expect(files).toEqual(['.gitignore', 'README.md', 'package-lock.json', 'package.json', 'sv']);
+    expect(files).toEqual([
+      '.gitignore',
+      'AGENTS.md',
+      'CLAUDE.md',
+      'README.md',
+      'package-lock.json',
+      'package.json',
+      'sv',
+    ]);
     expect(execFileSync('git', ['remote'], { cwd: made.dir, encoding: 'utf8' })).toBe('');
     expect(made.said.join('\n')).toContain('./sv setup');
+  });
+
+  it('writes a guide for an agent the operator asks to look after the instance, which Claude Code reads too', async () => {
+    const made = await make('my-instance');
+    const agents = readFileSync(path.join(made.dir, 'AGENTS.md'), 'utf8');
+    expect(agents).toContain('**my-instance**');
+    for (const rule of [
+      // How a change is made, and nothing done on the server around the toolkit.
+      './sv status',
+      './sv push -m',
+      './sv deploy',
+      './sv rollback',
+      'Never reach the server around it',
+      // What it never does: secrets, keys, data.
+      './sv app show --secret',
+      './sv backup --unencrypted',
+      'age.key',
+      './sv app remove --purge',
+      './sv restore',
+      'writing `suite.lock` or `secrets.age.yml` by hand',
+      // Commits, and the operator's own rules.
+      'Co-Authored-By: Claude Code <noreply@anthropic.com>',
+      '## Rules of this instance',
+    ])
+      expect(agents, rule).toContain(rule);
+    // Every command it names is one the toolkit has.
+    const commands = new Set(
+      [...agents.matchAll(/\.\/sv ([a-z]+(?: [a-z]+)?)/g)].map((m) => m[1] as string),
+    );
+    const known =
+      /^(status|doctor|logs|push|deploy|rollback|backup|backups|restore|seed|setup|upgrade|database( set)?|app (add|update|remove|upgrade|list|show)|secret( list| set| rotate)?|server bootstrap|key recovery)$/;
+    for (const command of commands) expect(command, command).toMatch(known);
+    const claude = readFileSync(path.join(made.dir, 'CLAUDE.md'), 'utf8');
+    expect(claude).toContain('@AGENTS.md');
   });
 
   it('adds the remote as origin when given one, and still does not push', async () => {

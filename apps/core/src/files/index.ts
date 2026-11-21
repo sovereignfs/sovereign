@@ -27,3 +27,8 @@ export function getFileStore(): FileStore {
   store ??= createFileStore(getConfig(), { prefix: config.prefix, defaultPath: CORE_FILES_PATH });
   return store;
 }
+
+/** The folder core's store keeps people's files in: `SV_STORAGE_PATH`, or the default above. Exports wait in it too (§4.7.3). */
+export function coreFilesRoot(): string {
+  return path.resolve(getConfig().storagePath ?? CORE_FILES_PATH);
+}

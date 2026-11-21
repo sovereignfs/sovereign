@@ -44,6 +44,16 @@ export function parseImageRef(ref: string): ImageRef {
   return { host: host === 'docker.io' ? 'registry-1.docker.io' : host, repository, reference };
 }
 
+/** The image's name without its tag or digest: `ghcr.io/example/notes:1.2.0@sha256:...` is `ghcr.io/example/notes`. */
+export function imageName(ref: string): string {
+  // An index scan, as parseImageRef's: a pattern anchored at the end is quadratic on a reference of many colons.
+  const at = ref.indexOf('@');
+  const rest = at === -1 ? ref : ref.slice(0, at);
+  const slash = rest.lastIndexOf('/');
+  const colon = rest.indexOf(':', slash === -1 ? 0 : slash);
+  return colon === -1 ? rest : rest.slice(0, colon);
+}
+
 const ACCEPT = [
   'application/vnd.oci.image.index.v1+json',
   'application/vnd.docker.distribution.manifest.list.v2+json',

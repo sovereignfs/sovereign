@@ -206,6 +206,10 @@ whose manifest has `database`.
 
 An **external app**:
 
+Signing out of an external app ends that app's session and leaves the person's core session (core-app §3.6.5): `sv apply`
+registers it with `--keep-core-session` on a core of 0.119.0 or later, and on an older one leaves it as it was. A hosted app
+signs the person out of core too, as signing out of core does.
+
 | Field            | Required | Meaning                                                                                                                        |
 | ---------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `external`       | yes      | `true`                                                                                                                         |
@@ -214,6 +218,7 @@ An **external app**:
 | `postLogout`     | no       | Addresses core may return a person to after sign-out                                                                           |
 | `backChannel`    | no       | The address core posts a logout notice to                                                                                      |
 | `accountDeleted` | no       | The address core tells when a person who used the app deleted their account (core-app §4.5)                                    |
+| `export`         | no       | The address core asks for a person's part of their export (core-app §4.7.2)                                                    |
 | `keyReturn`      | no       | Where core's key release returns a person with the app's key. Set, the app may use encryption and holds `keys` (core-app §5.6) |
 | `scopes`         | no       | What it may ask for. Default `openid`, `profile`, `email`                                                                      |
 | `type`           | no       | `confidential` (the default) or `public`. It cannot change afterwards                                                          |

@@ -28,4 +28,7 @@ export async function register(): Promise<void> {
   // Logout notices are core's alone, and those not answered before core stopped are sent again (core-app §3.6.5).
   const { startLogoutDelivery } = await import('./src/oauth/logout-scheduler');
   await startLogoutDelivery();
+  // Exports asked for before core stopped are made again from the start, and old ones are removed (core-app §4.7.3).
+  const { startExports } = await import('./src/exports/service');
+  startExports();
 }

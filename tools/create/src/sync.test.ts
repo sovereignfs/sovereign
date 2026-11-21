@@ -4,12 +4,13 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { writeApp, namesOf } from './app.js';
+import { PACKAGE_MANAGERS, type PackageManager } from './package-manager.js';
 import { BEGIN, END, MANAGED, sharedSection, syncApp } from './sync.js';
 import { SHARED_WORKFLOWS_REF } from './versions.js';
 
-async function newApp(name = 'my-notes') {
+async function newApp(name = 'my-notes', packageManager?: PackageManager) {
   const dir = path.join(mkdtempSync(path.join(tmpdir(), 'sv-sync-')), name);
-  await writeApp(dir, namesOf(dir));
+  await writeApp(dir, namesOf(dir), undefined, packageManager ? { packageManager } : {});
   return dir;
 }
 const states = (results: { path: string; state: string }[]) =>
@@ -21,6 +22,26 @@ describe('an app made by create app', () => {
     const results = await syncApp(dir, dir, { check: true });
     expect(results).toHaveLength(MANAGED.length);
     expect(results.every((r) => r.state === 'same')).toBe(true);
+  });
+
+  for (const manager of PACKAGE_MANAGERS)
+    it(`made with ${manager} holds them as sync writes them for ${manager}`, async () => {
+      const dir = await newApp('my-notes', manager);
+      const results = await syncApp(dir, dir, { check: true });
+      expect(results.filter((r) => r.state !== 'same')).toEqual([]);
+    });
+
+  it('made with npm before packageManager existed is synced as npm, not drifted', async () => {
+    const dir = await newApp('my-notes', 'npm');
+    const pkg = JSON.parse(readFileSync(path.join(dir, 'package.json'), 'utf8'));
+    expect(pkg.packageManager).toBeUndefined();
+    expect((await syncApp(dir, dir, { check: true })).every((r) => r.state === 'same')).toBe(true);
+    // The same app, called pnpm, would be told its guides name the wrong manager.
+    writeFileSync(
+      path.join(dir, 'package.json'),
+      JSON.stringify({ ...pkg, packageManager: 'pnpm@11.28.9' }),
+    );
+    expect(states(await syncApp(dir, dir, { check: true }))['AGENTS.md']).toBe('drifted');
   });
 
   it('calls the shared workflows at the pinned commit', async () => {
@@ -90,6 +111,27 @@ describe('sync --check', () => {
     const text = readFileSync(path.join(dir, 'AGENTS.md'), 'utf8');
     expect(text.startsWith('# AGENTS.md\n\nOur own rules.')).toBe(true);
     expect(sharedSection(text)).toMatch(new RegExp(`^${BEGIN}[\\s\\S]*${END}$`));
+  });
+
+  it('keeps the Docker files the same in every app, unless the app keeps one as its own', async () => {
+    const dir = await newApp();
+    const dockerfile = path.join(dir, 'Dockerfile');
+    const made = readFileSync(dockerfile, 'utf8');
+    writeFileSync(dockerfile, made.replace('node:${NODE_VERSION}-alpine AS run', 'node:22 AS run'));
+    writeFileSync(path.join(dir, '.dockerignore'), 'node_modules\n');
+    const checked = states(await syncApp(dir, dir, { check: true }));
+    expect(checked.Dockerfile).toBe('drifted');
+    expect(checked['.dockerignore']).toBe('drifted');
+    expect(checked['compose.yml']).toBe('same');
+    await syncApp(dir, dir, { check: false });
+    expect(readFileSync(dockerfile, 'utf8')).toBe(made);
+
+    const pkgFile = path.join(dir, 'package.json');
+    const pkg = JSON.parse(readFileSync(pkgFile, 'utf8'));
+    pkg.sovereign.unmanaged = ['compose.yml'];
+    writeFileSync(pkgFile, JSON.stringify(pkg));
+    writeFileSync(path.join(dir, 'compose.yml'), 'services: {}\n');
+    expect(states(await syncApp(dir, dir, { check: true }))['compose.yml']).toBe('unmanaged');
   });
 
   it('leaves alone a file the app keeps as its own', async () => {

@@ -5,6 +5,96 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.12.0; earlier versions are in the repository's
 history and tags.
 
+## [0.27.0] - 2026-11-20
+
+### Added
+
+- An app made by `npm create @sovereignfs app` sends notifications (Web Push, RFC 0009), with and without `--encryption`: the key
+  `<PREFIX>_VAPID_PRIVATE_KEY` in the manifest's `generate`, so an instance makes it; devices and waiting pushes in its database
+  (`migrations/002_push.sql`, `lib/push.ts`, the keys sealed); the route a device turns them on with; the worker showing them;
+  `PushControl` on the home page with "Send me a test notification"; the outbox started at start-up; the device turned off before
+  signing out, and forgotten with the account. It depends on `@sovereignfs/push` 0.2, `@sovereignfs/pwa` 0.2 and `@sovereignfs/ui`
+  0.104.
+
+### Changed
+
+- The core this toolkit was made for is 0.131.0, the one released with it: `sv setup` starts on it when the registry cannot be
+  asked, where it named 0.111.0, a version never published.
+
+### Fixed
+
+- Reading an app's manifest from a pinned image takes the image's tag off by scanning it, where a pattern took time in proportion to
+  the square of a reference made of many colons (CodeQL's polynomial regular expression).
+
+## [0.26.0] - 2026-11-20
+
+### Added
+
+- `npm create @sovereignfs app --package-manager pnpm|npm|yarn` chooses the app's package manager, pnpm by default (Yarn 4, with
+  `node_modules`). The app's `packageManager` field, lockfile, Dockerfile, pre-push hook, workflows, README and AGENTS.md use its
+  commands. An app without the field is taken as npm, so an existing app is unchanged by `app sync`.
+- `npm create @sovereignfs instance` writes `AGENTS.md` and `CLAUDE.md`, a guide for an AI agent an operator hands the instance to: what
+  each file is, how a change is made, and what an agent may do alone, only when asked, and never. `sv push` commits both.
+
+### Changed
+
+- `npm create @sovereignfs app sync` keeps the `Dockerfile`, `.dockerignore` and `compose.yml` the same in every app; an app that needs
+  its own lists the file under `sovereign.unmanaged`.
+- The shared section of an app's `AGENTS.md` covers versions, one task per branch, naming, secrets, people's data, timeouts,
+  migrations, configuration at run time and the design system.
+
+## [0.25.0] - 2026-11-20
+
+### Added
+
+- `npm create @sovereignfs app` makes a manifest 5 app that answers core's export request: a person's notes and files go into the data
+  they download from core. It depends on `@sovereignfs/sdk` 2.9, `@sovereignfs/manifest` 0.4 and `@sovereignfs/ui` 0.102, and asks for core 0.121 or later.
+
+## [0.24.0] - 2026-11-20
+
+### Added
+
+- An app's manifest 5 `signIn.export`, and an external app's `export` in `suite.yml` (`--export` on `sv app add` and `sv app update`),
+  register where core asks the app for a person's part of their export.
+
+## [0.23.0] - 2026-11-20
+
+### Added
+
+- `sv key export` prints the line to paste into the Console's Data page (the public keys of `secrets.recipients`), so that the owner's
+  export of core is encrypted to the keys that already open the instance's backups.
+- `sv export open FILE [--key FILE] [--out DIR]` decrypts an export the Console gave, checks every file against its list, and unpacks it
+  into a folder beside it; an export that fails the check leaves nothing behind.
+
+### Fixed
+
+- `sv restore` refuses an export, which begins with `export.json` and holds no database: it was read as a backup from before
+  `backup.json` and would have been restored as the whole instance.
+
+## [0.22.0] - 2026-11-20
+
+### Changed
+
+- An app made by `npm create @sovereignfs app` reads who is signed in from one typed user (`userOfSession` in `lib/session.ts`), the
+  same for an account of its own and one from core.
+
+## [0.21.0] - 2026-11-20
+
+### Changed
+
+- An app made by `npm create @sovereignfs app` signs people in with `@sovereignfs/auth`: with accounts of its own, through the instance's
+  core, or both, chosen by `<PREFIX>_AUTH_LOCAL` and `<PREFIX>_CORE_URL`, so it runs with no instance at all. It has its own sign-in,
+  sign-up and security pages; hosted by an instance, it sends people straight on to core, as before. Its sign-in routes move under
+  `/api/auth` and core's notices under `/api/sovereign`, and its manifest says so. An app made with `--encryption` signs in through
+  core with the SDK, as before.
+
+## [0.20.0] - 2026-11-19
+
+### Changed
+
+- `sv apply` registers an external app so that signing out of it leaves the person's core session, on core 0.119.0 or later; on an
+  older core the app is registered as before.
+
 ## [0.19.0] - 2026-11-19
 
 ### Added

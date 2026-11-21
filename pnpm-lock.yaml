@@ -51,6 +51,9 @@ catalogs:
     '@types/react-dom':
       specifier: ^19.3.0
       version: 19.3.0
+    age-encryption:
+      specifier: ^0.3.1
+      version: 0.3.1
     drizzle-kit:
       specifier: ^0.31.11
       version: 0.31.11
@@ -222,9 +225,15 @@ importers:
       '@better-auth/passkey':
         specifier: 1.7.18
         version: 1.7.18(@better-auth/core@1.7.18(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-call@1.4.5(zod@4.6.7))(jose@6.2.17)(kysely@0.29.9)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-auth@1.7.18(drizzle-kit@0.31.11)(drizzle-orm@0.45.4(@libsql/client@0.18.0)(@types/pg@8.23.1)(kysely@0.29.9)(pg@8.23.1))(next@16.4.6(@babel/core@7.29.13)(@playwright/test@1.65.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@types/node@24.19.2)(jsdom@30.1.3(@noble/hashes@2.4.0))(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))))(better-call@1.4.5(zod@4.6.7))(nanostores@1.5.5)
+      '@simplewebauthn/server':
+        specifier: 13.3.3
+        version: 13.3.3
       '@sovereignfs/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@sovereignfs/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@sovereignfs/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -234,6 +243,9 @@ importers:
       '@sovereignfs/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@sovereignfs/export':
+        specifier: workspace:*
+        version: link:../../packages/export
       '@sovereignfs/mailer':
         specifier: workspace:*
         version: link:../../packages/mailer
@@ -283,6 +295,9 @@ importers:
       '@types/react-dom':
         specifier: 'catalog:'
         version: 19.3.0(@types/react@19.3.0)
+      age-encryption:
+        specifier: 'catalog:'
+        version: 0.3.1
       drizzle-kit:
         specifier: 'catalog:'
         version: 0.31.11
@@ -334,6 +349,73 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.2
+      tsup:
+        specifier: 'catalog:'
+        version: 9.0.0(jiti@2.7.0)(postcss@8.5.23)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+
+  packages/auth:
+    dependencies:
+      '@better-auth/passkey':
+        specifier: 1.7.18
+        version: 1.7.18(@better-auth/core@1.7.18(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-call@1.4.5(zod@4.6.7))(jose@6.2.17)(kysely@0.29.9)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-auth@1.7.18(drizzle-kit@0.31.11)(drizzle-orm@0.45.4(@libsql/client@0.18.0)(@types/pg@8.23.1)(kysely@0.29.9)(pg@8.23.1))(next@16.4.6(@babel/core@7.29.13)(@playwright/test@1.65.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@types/node@24.19.2)(jsdom@30.1.3(@noble/hashes@2.4.0))(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))))(better-call@1.4.5(zod@4.6.7))(nanostores@1.5.5)
+      '@sovereignfs/config':
+        specifier: workspace:^
+        version: link:../config
+      '@sovereignfs/sdk':
+        specifier: workspace:^
+        version: link:../sdk
+      better-auth:
+        specifier: 1.7.18
+        version: 1.7.18(drizzle-kit@0.31.11)(drizzle-orm@0.45.4(@libsql/client@0.18.0)(@types/pg@8.23.1)(kysely@0.29.9)(pg@8.23.1))(next@16.4.6(@babel/core@7.29.13)(@playwright/test@1.65.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@types/node@24.19.2)(jsdom@30.1.3(@noble/hashes@2.4.0))(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.4(@libsql/client@0.18.0)(@types/pg@8.23.1)(kysely@0.29.9)(pg@8.23.1)
+      libsodium-wrappers-sumo:
+        specifier: 'catalog:'
+        version: 0.8.4
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@sovereignfs/crypto':
+        specifier: workspace:*
+        version: link:../crypto
+      '@sovereignfs/database':
+        specifier: workspace:*
+        version: link:../database
+      '@sovereignfs/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      '@types/pg':
+        specifier: 'catalog:'
+        version: 8.23.1
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.3.0(@types/react@19.3.0)
+      drizzle-kit:
+        specifier: 'catalog:'
+        version: 0.31.11
+      next:
+        specifier: 'catalog:'
+        version: 16.4.6(@babel/core@7.29.13)(@playwright/test@1.65.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      pg:
+        specifier: 'catalog:'
+        version: 8.23.1
+      react:
+        specifier: 'catalog:'
+        version: 19.3.1
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.3.1(react@19.3.1)
       tsup:
         specifier: 'catalog:'
         version: 9.0.0(jiti@2.7.0)(postcss@8.5.23)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1)
@@ -430,6 +512,22 @@ importers:
         specifier: 'catalog:'
         version: 6.0.3
 
+  packages/export:
+    dependencies:
+      age-encryption:
+        specifier: 'catalog:'
+        version: 0.3.1
+    devDependencies:
+      '@sovereignfs/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+
   packages/mailer:
     dependencies:
       '@react-email/render':
@@ -494,6 +592,18 @@ importers:
         specifier: 'catalog:'
         version: 6.0.3
 
+  packages/push:
+    devDependencies:
+      '@sovereignfs/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+
   packages/pwa:
     devDependencies:
       '@sovereignfs/tsconfig':
@@ -532,6 +642,9 @@ importers:
 
   packages/sdk:
     dependencies:
+      '@sovereignfs/export':
+        specifier: workspace:*
+        version: link:../export
       jose:
         specifier: ^6.2.13
         version: 6.2.17
@@ -653,6 +766,9 @@ importers:
       '@sovereignfs/crypto':
         specifier: workspace:*
         version: link:../../packages/crypto
+      '@sovereignfs/export':
+        specifier: workspace:*
+        version: link:../../packages/export
       '@sovereignfs/manifest':
         specifier: workspace:*
         version: link:../../packages/manifest
@@ -666,7 +782,7 @@ importers:
         specifier: ^7.8.0
         version: 7.8.0
       age-encryption:
-        specifier: ^0.3.1
+        specifier: 'catalog:'
         version: 0.3.1
       ajv:
         specifier: ^8.20.0
@@ -689,6 +805,9 @@ importers:
 
   tools/create:
     devDependencies:
+      '@sovereignfs/push':
+        specifier: workspace:*
+        version: link:../../packages/push
       '@sovereignfs/pwa':
         specifier: workspace:*
         version: link:../../packages/pwa

@@ -1,7 +1,9 @@
+import { existsSync } from 'node:fs';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { CreateError, DEFAULT_APP_PORT, checkEmpty, type CreateIo, type Exec } from './create.js';
-import { ENCRYPTION_TEMPLATE, fill, TEMPLATE, targetOf } from './fill.js';
+import { ENCRYPTION_TEMPLATE, fill, managerTemplate, TEMPLATE, targetOf } from './fill.js';
+import { DEFAULT_PACKAGE_MANAGER, MANAGERS, type PackageManager } from './package-manager.js';
 import { TOOL_COMMANDS } from './commands.js';
 import { DEFAULT_REQUIRED_CHECKS, repositorySettings } from './settings-file.js';
 import {
@@ -9,6 +11,7 @@ import {
   APP_DEV_DEPENDENCIES,
   CREATE_VERSION,
   ENCRYPTION_DEPENDENCIES,
+  ENCRYPTION_LEAVES_OUT,
   SHARED_WORKFLOWS_REF,
 } from './versions.js';
 
@@ -61,12 +64,26 @@ async function* walk(dir: string, base = dir): AsyncGenerator<string> {
   }
 }
 
+/** The file of an overlay that names the base app's files it leaves out, one path to a line; `#` starts a comment. */
+const SKIP_FILE = '_skip';
+
+async function skipList(overlay: string): Promise<Set<string>> {
+  const text = await readFile(path.join(overlay, SKIP_FILE), 'utf8').catch(() => '');
+  return new Set(
+    text
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line !== '' && !line.startsWith('#')),
+  );
+}
+
 /** The `package.json` of a new app. */
 export function appPackageJson(
   names: AppNames,
   port: number = DEFAULT_APP_PORT,
-  options: { encryption?: boolean } = {},
+  options: { encryption?: boolean; packageManager?: PackageManager } = {},
 ): string {
+  const manager = MANAGERS[options.packageManager ?? DEFAULT_PACKAGE_MANAGER];
   return `${JSON.stringify(
     {
       // Every app of the suite is named in the @sovereignfs scope. It is private, so the name claims nothing on npm.
@@ -75,20 +92,26 @@ export function appPackageJson(
       private: true,
       description: `${names.title}, an app for a Sovereign instance`,
       engines: { node: '>=24.15' },
+      // The manager and its version, which corepack runs in the image and in CI. An app made with npm has none.
+      ...(manager.pin ? { packageManager: manager.pin } : {}),
       scripts: {
-        // The manifest's port, so `npm run dev` and the image listen where the instance and .env.example say.
+        // The manifest's port, so `dev` and the image listen where the instance and .env.example say.
         dev: `next dev --port ${port}`,
         build: 'next build',
         start: `PORT=\${PORT:-${port}} node .next/standalone/server.js`,
         typecheck: 'tsc --noEmit',
         'manifest:check': 'sovereign-manifest check',
         // What the pre-push hook runs: CI does not run for `develop` or a feature branch (CONTRIBUTING.md).
-        verify: 'npm run typecheck && npm run manifest:check',
+        verify: `${manager.run} typecheck && ${manager.run} manifest:check`,
         // Turns the versioned hooks on for whoever installs; harmless where there is no repository (the image's build).
-        prepare: 'git config core.hooksPath .githooks || true',
+        [manager.hookScript]: 'git config core.hooksPath .githooks || true',
       },
       dependencies: options.encryption
-        ? { ...APP_DEPENDENCIES, ...ENCRYPTION_DEPENDENCIES }
+        ? Object.fromEntries(
+            Object.entries({ ...APP_DEPENDENCIES, ...ENCRYPTION_DEPENDENCIES }).filter(
+              ([name]) => !(ENCRYPTION_LEAVES_OUT as readonly string[]).includes(name),
+            ),
+          )
         : APP_DEPENDENCIES,
       // `@sovereignfs/create` is pinned exactly: `npm create @sovereignfs sync` and the shared workflows run this version (research 0007).
       devDependencies: { ...APP_DEV_DEPENDENCIES, '@sovereignfs/create': CREATE_VERSION },
@@ -105,18 +128,35 @@ export async function writeApp(
   target: string,
   names: AppNames,
   port: number = DEFAULT_APP_PORT,
-  options: { encryption?: boolean } = {},
+  options: { encryption?: boolean; packageManager?: PackageManager } = {},
 ): Promise<string[]> {
   await checkEmpty(target);
   const written = new Set<string>();
-  const values = { names, port, workflowsRef: SHARED_WORKFLOWS_REF, directory: '.', tagPrefix: '' };
+  const packageManager = options.packageManager ?? DEFAULT_PACKAGE_MANAGER;
+  const values = {
+    names,
+    port,
+    workflowsRef: SHARED_WORKFLOWS_REF,
+    directory: '.',
+    tagPrefix: '',
+    packageManager,
+  };
   const replace = (text: string) => fill(text, values);
 
-  // With `--encryption`, its files are written over the app's: the same names replace, new ones are added.
-  const sources = [TEMPLATE, ...(options.encryption ? [ENCRYPTION_TEMPLATE] : [])];
+  // With `--encryption`, its files are written over the app's: the same names replace, new ones are added, and the app's files its
+  // `_skip` names are left out. The manager's own files (Yarn's settings) are written last, over both.
+  const managerFiles = managerTemplate(packageManager);
+  const sources = [
+    TEMPLATE,
+    ...(options.encryption ? [ENCRYPTION_TEMPLATE] : []),
+    ...(existsSync(managerFiles) ? [managerFiles] : []),
+  ];
+  const skipped = options.encryption ? await skipList(ENCRYPTION_TEMPLATE) : new Set<string>();
   for (const source of sources)
     for await (const file of walk(source)) {
+      if (file === SKIP_FILE) continue;
       const out = targetOf(file);
+      if (source === TEMPLATE && skipped.has(out.split(path.sep).join('/'))) continue;
       const target_ = path.join(target, out);
       await mkdir(path.dirname(target_), { recursive: true });
       let text = replace(await readFile(path.join(source, file), 'utf8'));
@@ -130,7 +170,10 @@ export async function writeApp(
       });
       written.add(out);
     }
-  await writeFile(path.join(target, 'package.json'), appPackageJson(names, port, options));
+  await writeFile(
+    path.join(target, 'package.json'),
+    appPackageJson(names, port, { ...options, packageManager }),
+  );
   written.add('package.json');
   return [...written].sort();
 }
@@ -140,7 +183,7 @@ export async function writeApp(
  * as it stands. The files, `git init`, the lockfile, the first commit on `main`, and `develop` checked out. It does not install or build.
  */
 export async function createApp(
-  request: { dir: string; port?: number; encryption?: boolean },
+  request: { dir: string; port?: number; encryption?: boolean; packageManager?: PackageManager },
   io: CreateIo,
   exec: Exec,
   cwd: string,
@@ -148,20 +191,25 @@ export async function createApp(
   const target = path.resolve(cwd, request.dir);
   const names = namesOf(target);
   const port = request.port ?? DEFAULT_APP_PORT;
-  const written = await writeApp(target, names, port, { encryption: request.encryption ?? false });
+  const packageManager = request.packageManager ?? DEFAULT_PACKAGE_MANAGER;
+  const manager = MANAGERS[packageManager];
+  const written = await writeApp(target, names, port, {
+    encryption: request.encryption ?? false,
+    packageManager,
+  });
   io.err(
-    `Wrote the files of ${names.name}, on port ${port}${request.encryption ? ', with its notes encrypted' : ''}.`,
+    `Wrote the files of ${names.name}, on port ${port}, with ${packageManager}${request.encryption ? ', with its notes encrypted' : ''}.`,
   );
 
+  const failed = (label: string, done: { stdout: string; stderr: string }, hint: string) =>
+    new CreateError(
+      `${label} failed: ${(done.stderr || done.stdout).trim().split('\n').slice(-3).join(' ')}`,
+      1,
+      hint,
+    );
   const step = async (label: string, command: string, args: string[], hint: string) => {
     const done = await exec(command, args, { cwd: target });
-    if (done.code !== 0) {
-      throw new CreateError(
-        `${label} failed: ${(done.stderr || done.stdout).trim().split('\n').slice(-3).join(' ')}`,
-        1,
-        hint,
-      );
-    }
+    if (done.code !== 0) throw failed(label, done, hint);
   };
   await step(
     'git init',
@@ -169,13 +217,18 @@ export async function createApp(
     ['init', '--initial-branch=main'],
     'Is git installed? Then run the rest by hand: see README.md.',
   );
-  await step(
-    'Resolving the packages',
-    'npm',
-    ['install', '--package-lock-only', '--ignore-scripts', '--no-audit', '--no-fund'],
-    `Check the network, then run npm install in ${request.dir}.`,
-  );
-  await step('git add', 'git', ['add', '--', ...written, 'package-lock.json'], '');
+  // pnpm and Yarn are often not installed, but come with Node through corepack, which runs the version `packageManager` pins.
+  const [command, ...args] = manager.lockfileOnly as [string, ...string[]];
+  const resolving = `Check the network, and that ${packageManager} is installed (${
+    manager.corepack ? `corepack enable ${packageManager}, or ` : ''
+  }choose another with --package-manager); then run ${manager.install} in ${request.dir}.`;
+  const direct = await exec(command, args, { cwd: target });
+  if (direct.code !== 0) {
+    if (!(manager.corepack && /ENOENT/.test(direct.stderr)))
+      throw failed('Resolving the packages', direct, resolving);
+    await step('Resolving the packages', 'corepack', [command, ...args], resolving);
+  }
+  await step('git add', 'git', ['add', '--', ...written, manager.lockfile], '');
   await step(
     'The first commit',
     'git',
@@ -190,6 +243,6 @@ export async function createApp(
     'Run git switch --create develop by hand.',
   );
   io.err(
-    `Made ${names.name}, on the branch develop (CONTRIBUTING.md: main takes release pull requests). Next:\n  cd ${request.dir}\n  npm install && npm run dev   (http://localhost:${port})\n  npm run build\n  docker build -t ${names.name} .\nThen host it with ./sv app add ${names.name} --image <the image> in your instance. See README.md.`,
+    `Made ${names.name}, on the branch develop (CONTRIBUTING.md: main takes release pull requests). Next:\n  cd ${request.dir}\n  ${manager.install} && ${manager.run} dev   (http://localhost:${port})\n  ${manager.run} build\n  eval "docker build $(${manager.exec} sovereign-manifest docker-args) -t ${names.name} ."\nThen host it with ./sv app add ${names.name} --image <the image> in your instance. See README.md.`,
   );
 }

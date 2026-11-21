@@ -5,6 +5,34 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.96.0; earlier versions are in the repository's
 history and tags.
 
+## [0.104.0] - 2026-11-20
+
+### Added
+
+- `PushControl`: "Notifications on this device", for an app's settings
+  ([RFC 0009](https://github.com/sovereignfs/sovereign/blob/main/docs/rfcs/0009-web-push.md) §3). It says why a device can't have
+  notifications (a browser without them, a page off https, an iPhone where the app must be added to the Home Screen first, a blocked
+  permission) or offers one `Toggle`, busy while working and with the reason beside it when it fails; nothing while checking or when
+  the app sends none. The state and actions come from `usePush` in `@sovereignfs/pwa/client`. `IOS_INSTALL_STEPS` is the one sentence
+  it shares with `InstallPrompt`.
+
+## [0.103.0] - 2026-11-20
+
+### Added
+
+- `ExportPanel` (experimental): taking an export after the password and downloading it once, for an operator's export or a person's,
+  in core or in an app with no core. The consumer gives `onStart`, `downloadAction` and `onRefresh`; it knows no framework.
+
+## [0.102.0] - 2026-11-19
+
+### Added
+
+- The sign-in forms of core and every app ([RFC 0007](https://github.com/sovereignfs/sovereign/blob/main/docs/rfcs/0007-one-sign-in.md)):
+  `SignInForm`, `SignUpForm`, `ForgotPasswordForm`, `ResetPasswordForm` and `TwoFactorForm`, and on the account pages `SessionsPanel`
+  and `ChangePasswordForm`, with `ActionResult` for what a panel's server action answers and `AuthLinkRenderer` for the consumer's
+  links. Each draws and collects, and sends nothing itself. Experimental.
+- `SignInForm` takes `otherWays` ("Continue with Sovereign") and needs no reset link where an app cannot send one.
+
 ## [0.101.0] - 2026-11-18
 
 ### Added

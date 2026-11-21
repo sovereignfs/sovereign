@@ -1,4 +1,5 @@
 import type { CoreConfig } from '../config';
+import { ExportError, parseRecipients } from '@sovereignfs/export';
 
 /**
  * The settings an operator can change in the Console (core-app §3.12). A setting resolves,
@@ -114,6 +115,26 @@ export const SETTINGS = {
       /^sv-escrow-1\.[A-Za-z0-9_-]{11}\.[A-Za-z0-9_-]{43}$/.test(value)
         ? undefined
         : 'must be the line `sv key escrow` printed, starting sv-escrow-1',
+  }),
+  /**
+   * The age recipients the owner's export is encrypted to (core-app §4.7.1), as `sv key export` prints them: public keys, so not a
+   * secret, and only the owner sets them (`instance:configure-secrets`). Stored one space apart, as `parseRecipients` gives them.
+   */
+  exportRecipients: define<string>({
+    key: 'export.recipients',
+    kind: 'string',
+    secret: false,
+    fromEnvironment: () => undefined,
+    builtin: undefined,
+    problem: (value) => {
+      try {
+        return parseRecipients(value).join(' ') === value
+          ? undefined
+          : 'must be age recipients, one space apart';
+      } catch (error) {
+        return error instanceof ExportError ? error.message : 'must be age recipients (age1…)';
+      }
+    },
   }),
 } as const;
 

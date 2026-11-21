@@ -47,8 +47,8 @@ CI runs only where a change is about to reach what is released:
 - by hand, for any branch: **Actions → CI → Run workflow**.
 
 It never runs on a push to `develop` or a feature branch, nor on a pull request into `develop`, so runner time is not spent on every
-commit. Those are checked on your machine instead: where the repository has versioned hooks in `.githooks/` (an app's `npm install` turns
-them on), the pre-push hook runs its checks (`npm run verify`) before anything is pushed. This is the CI strategy of every repository of
+commit. Those are checked on your machine instead: where the repository has versioned hooks in `.githooks/` (an app's `__INSTALL__` turns
+them on), the pre-push hook runs its checks (`__RUN__ verify`) before anything is pushed. This is the CI strategy of every repository of
 the suite.
 
 ## Promoting `develop` into `main`
@@ -69,7 +69,7 @@ work either way.
 ## Shared files
 
 Some files are the same in every app of the suite and are written, not edited: `.github/workflows/promotion.yml`, `release.yml` and
-`sync-develop.yml`, `.github/repository.json`, `CLAUDE.md`, and the shared sections of this file, `RELEASING.md` and `AGENTS.md`. They come
+`sync-develop.yml`, `.github/repository.json`, `CLAUDE.md`, the `Dockerfile`, `.dockerignore` and `compose.yml`, and the shared sections of this file, `RELEASING.md` and `AGENTS.md`. They come
 from the template of the version of `@sovereignfs/create` that `package.json` pins:
 
 ```bash

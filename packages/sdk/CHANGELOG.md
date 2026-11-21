@@ -5,6 +5,36 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 2.1.0; earlier versions are in the repository's
 history and tags.
 
+## [2.11.0] - 2026-11-20
+
+### Added
+
+- `handleExportRequest(request, app, handler)` answers core's request for a person's part of their export (sdk §9.1, core-app §4.7.2):
+  it checks the signed `export-request+jwt` and streams an export, in the format of `@sovereignfs/export`, written by the app's
+  `handler`. The Next.js handlers mount it at `/auth/export` with `onExport`. `@sovereignfs/sdk/testing`'s fake core signs such
+  requests (`exportRequestToken`).
+
+## [2.10.0] - 2026-11-20
+
+### Added
+
+- `session.user`: who is signed in, typed (`id`, `sub`, `name`, `email`, `emailVerified`, `picture`, `locale`, `zoneinfo`, `roles`), the
+  same shape `@sovereignfs/auth` gives (sdk §9.9); `personFromClaims` makes it from core's claims. `sub`, `claims` and `roles` stay.
+
+### Deprecated
+
+- `nextAuth` (`@sovereignfs/sdk/next`): a new app signs people in with `@sovereignfs/auth`. It keeps working and is removed only in a
+  major version; `docs/upgrade.md` says how to move off it.
+
+## [2.9.0] - 2026-11-20
+
+### Added
+
+- Signing in for an app that keeps its own sessions (sdk §9.8): `finishSignIn` checks core's answer as `completeSignIn` does and keeps
+  the refresh token, then says who signed in without making a session, and `endSessionUrl` gives core's sign-out for an ID token the
+  app kept. `completeSignIn` is now `finishSignIn` with the SDK's session made from it; nothing of it changes for an app using it.
+- The fake core (`@sovereignfs/sdk/testing`) takes a person's `email`, and sends it, verified, to a sign-in granted the `email` scope.
+
 ## [2.8.0] - 2026-11-19
 
 ### Added

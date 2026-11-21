@@ -5,7 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ROLE_ADMIN, ROLE_OWNER, ROLE_USER } from '../auth/roles';
 
 const getSession = vi.fn();
-vi.mock('../auth/session', () => ({ getSession: () => getSession() as unknown }));
+const currentLock = vi.fn(async () => ({ lock: undefined, locked: false }) as unknown);
+vi.mock('../auth/session', () => ({
+  getSession: () => getSession() as unknown,
+  currentLock: () => currentLock(),
+}));
 const signOut = vi.fn();
 vi.mock('../auth/client', () => ({ authClient: { signOut: () => signOut() as unknown } }));
 const apps = vi.fn();

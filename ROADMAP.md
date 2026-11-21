@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.115.0 · **Last updated:** 2026-11-18
+**Version:** 0.131.0 · **Last updated:** 2026-11-20
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -313,8 +313,68 @@ workstream [0007](docs/workstreams/0007-sign-in.md)
 | 0.114.0 | 8        | Asking core for a fresh sign-in                                 | ✅     | [14.12](docs/epics/sdk.md)          |
 | 0.114.0 | 9        | An ended session ends in the app                                | ✅     | [14.13](docs/epics/sdk.md)          |
 | 0.114.0 | 10       | Logout notices that arrive                                      | ✅     | [6.4](docs/epics/oidc-provider.md)  |
-| —       | 11       | A lock on the devices `[parallel]`                              | ⏳     | [4.15](docs/epics/identity-auth.md) |
-| —       | 12       | The specification: sessions across apps, and a lock             | ⏳     | [4.16](docs/epics/identity-auth.md) |
+| —       | 11       | A lock on the devices `[parallel]`                              | ✅     | [4.15](docs/epics/identity-auth.md) |
+| —       | 12       | The specification: sessions across apps, and a lock             | ✅     | [4.16](docs/epics/identity-auth.md) |
 | —       | 13       | Core's lock                                                     | ⏳     | [4.17](docs/epics/identity-auth.md) |
-| —       | 14       | Keys closed while core is locked                                | 📋     | [16.24](docs/epics/encryption.md)   |
+| 0.116.0 | 14       | Keys closed while core is locked                                | ✅     | [16.24](docs/epics/encryption.md)   |
 | —       | 15       | App sessions that follow core's, and an app's lock              | ⏳     | [14.14](docs/epics/sdk.md)          |
+
+### M17 — One sign-in for core and every app
+
+[RFC 0007](docs/rfcs/0007-one-sign-in.md) (Accepted) · [research 0004](docs/research/0004-a-kit-for-apps-of-their-own.md) · epics
+[17](docs/epics/one-sign-in.md), [2](docs/epics/design-system.md), [6](docs/epics/oidc-provider.md), [13](docs/epics/operator-cli.md) and
+[14](docs/epics/sdk.md) · workstream [0008](docs/workstreams/0008-one-sign-in.md)
+
+Built on core's lock (4.17's code), one of core's additions on top of the package: on one branch stacked on the lock's, at the goal
+owner's request (workstream 0008, 0.2). Tusk and Fjord move onto
+the package in their own repositories, after 13.35.
+
+| Version | Priority | Task                                                       | Status | Epic task                           |
+| ------- | -------- | ---------------------------------------------------------- | ------ | ----------------------------------- |
+| —       | 1        | The specification                                          | ✅     | [17.1](docs/epics/one-sign-in.md)   |
+| 0.117.0 | 2        | The package, and core's sign-in made from it               | ✅     | [17.2](docs/epics/one-sign-in.md)   |
+| 0.117.0 | 3        | Session helpers with a check of their own                  | ✅     | [17.3](docs/epics/one-sign-in.md)   |
+| 0.118.0 | 4        | Sign-in forms and account panels `[parallel]`              | ✅     | [2.6](docs/epics/design-system.md)  |
+| 0.118.0 | 5        | The pages' actions, and core's pages thin                  | ✅     | [17.4](docs/epics/one-sign-in.md)   |
+| 0.120.0 | 6        | The account panels that remain `[parallel]`                | ✅     | [2.7](docs/epics/design-system.md)  |
+| 0.119.0 | 7        | Signing out of an app follows whose app it is `[parallel]` | ✅     | [6.5](docs/epics/oidc-provider.md)  |
+| —       | 8        | How a person signed in, in the token `[parallel]`          | 🚧     | [6.6](docs/epics/oidc-provider.md)  |
+| 0.120.0 | 9        | Signing in for a session the app keeps `[parallel]`        | ✅     | [14.16](docs/epics/sdk.md)          |
+| 0.120.0 | 10       | Core as a way in, and an app's own accounts                | ✅     | [17.5](docs/epics/one-sign-in.md)   |
+| 0.120.0 | 11       | The template makes an app of its own                       | ✅     | [13.35](docs/epics/operator-cli.md) |
+| 0.121.0 | 12       | A typed person, and `nextAuth` deprecated                  | ✅     | [14.15](docs/epics/sdk.md)          |
+| —       | 13       | The template on sqld and a SQLite file                     | 📋     | [13.36](docs/epics/operator-cli.md) |
+
+### M18 — People and operators take their data with them
+
+[RFC 0008](docs/rfcs/0008-exports-and-backups.md) (Accepted) · epic [18](docs/epics/exports.md) · workstream
+[0009](docs/workstreams/0009-exports.md)
+
+Exports on demand, as downloads: the owner's of core's data, encrypted to their key, and each person's, from core and every app they use.
+Backups sent to a destination on a schedule are milestone 2 of the RFC, tasks 13.17 and 13.18 in M10.
+
+| Version | Priority | Task                                    | Status | Epic task                     |
+| ------- | -------- | --------------------------------------- | ------ | ----------------------------- |
+| —       | 1        | The specifications                      | ✅     | [18.1](docs/epics/exports.md) |
+| 0.122.0 | 2        | The format and the package `[parallel]` | ✅     | [18.2](docs/epics/exports.md) |
+| 0.123.0 | 3        | The operator's recipients               | ✅     | [18.3](docs/epics/exports.md) |
+| 0.124.0 | 4        | The operator's export in core           | ✅     | [18.4](docs/epics/exports.md) |
+| 0.125.0 | 5        | A person's export in core               | ✅     | [18.5](docs/epics/exports.md) |
+| 0.126.0 | 6        | Apps' parts                             | ✅     | [18.6](docs/epics/exports.md) |
+| 0.127.0 | 7        | The template's exports                  | ✅     | [18.7](docs/epics/exports.md) |
+| —       | 8        | An app with no core: its exports        | 📋     | [18.8](docs/epics/exports.md) |
+
+### M19 — Every app sends Web Push the same way
+
+[Research 0013](docs/research/0013-web-push.md) · [RFC 0009](docs/rfcs/0009-web-push.md) (Partially implemented) · epic [19](docs/epics/push.md) ·
+workstream [0010](docs/workstreams/0010-web-push.md)
+
+| Version | Priority | Task                                                           | Status | Epic task                  |
+| ------- | -------- | -------------------------------------------------------------- | ------ | -------------------------- |
+| 0.129.0 | 1        | `@sovereignfs/push`: keys, encryption and sending              | ✅     | [19.1](docs/epics/push.md) |
+| 0.129.0 | 2        | `@sovereignfs/push`: the store, the outbox and the route       | ✅     | [19.2](docs/epics/push.md) |
+| 0.130.0 | 3        | The worker shows a push, and the page turns it on `[parallel]` | ✅     | [19.3](docs/epics/push.md) |
+| 0.130.0 | 4        | `PushControl` `[parallel]`                                     | ✅     | [19.4](docs/epics/push.md) |
+| 0.131.0 | 5        | The app template sends notifications                           | ✅     | [19.5](docs/epics/push.md) |
+| —       | 6        | Push seen on devices                                           | ⏳     | [19.6](docs/epics/push.md) |
+| —       | 7        | Tusk and Waymark on the packages, and the designs that follow  | 📋     | [19.7](docs/epics/push.md) |

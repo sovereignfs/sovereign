@@ -72,8 +72,8 @@ export function normalise(manifest: Manifest): Normalised {
     },
     generate: secretsOf(manifest),
     data: manifest.data ?? [],
-    storage: (manifest.manifest === 3 || manifest.manifest === 4) && manifest.storage === true,
-    ...(manifest.manifest === 4 && manifest.encryption !== undefined
+    storage: manifest.manifest >= 3 && 'storage' in manifest && manifest.storage === true,
+    ...((manifest.manifest === 4 || manifest.manifest === 5) && manifest.encryption !== undefined
       ? { encryption: { return: manifest.encryption.return } }
       : {}),
     ...(manifest.core === undefined ? {} : { core: manifest.core }),

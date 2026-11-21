@@ -77,6 +77,7 @@ catalog:
   libsodium-wrappers-sumo: ^0.8.4
   '@noble/hashes': ^2.4.0
   '@hpke/core': ^1.10.0
+  age-encryption: ^0.3.1
 
 # Storybook's packages must stay on one version, so they are one named catalog.
 catalogs:

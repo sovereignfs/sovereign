@@ -1,0 +1,100 @@
+{
+  "name": "@sovereignfs/auth",
+  "version": "0.4.0",
+  "description": "How core and every Sovereign app sign people in: core's own sign-in, the part of it that is not about core.",
+  "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sovereignfs/sovereign.git",
+    "directory": "packages/auth"
+  },
+  "homepage": "https://github.com/sovereignfs/sovereign/tree/main/packages/auth#readme",
+  "bugs": {
+    "url": "https://github.com/sovereignfs/sovereign/issues"
+  },
+  "type": "module",
+  "sideEffects": [
+    "./dist/browser.js"
+  ],
+  "engines": {
+    "node": ">=22.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "browser": "./dist/browser.js",
+      "default": "./dist/server/index.js"
+    },
+    "./next": {
+      "types": "./dist/next/index.d.ts",
+      "browser": "./dist/browser.js",
+      "default": "./dist/next/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "default": "./dist/client/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "browser": "./dist/browser.js",
+      "default": "./dist/core/index.js"
+    },
+    "./postgres": {
+      "types": "./dist/postgres.d.ts",
+      "browser": "./dist/browser.js",
+      "default": "./dist/postgres.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@better-auth/passkey": "1.7.18",
+    "@sovereignfs/config": "workspace:^",
+    "@sovereignfs/sdk": "workspace:^",
+    "better-auth": "1.7.18",
+    "drizzle-orm": "catalog:",
+    "libsodium-wrappers-sumo": "catalog:",
+    "zod": "^4.6.7"
+  },
+  "peerDependencies": {
+    "next": "catalog:",
+    "react": "catalog:",
+    "pg": "^8.13.0"
+  },
+  "peerDependenciesMeta": {
+    "pg": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@sovereignfs/crypto": "workspace:*",
+    "@sovereignfs/database": "workspace:*",
+    "@sovereignfs/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "drizzle-kit": "catalog:",
+    "next": "catalog:",
+    "pg": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "tsup": "catalog:",
+    "typescript": "catalog:"
+  }
+}

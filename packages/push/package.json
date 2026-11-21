@@ -1,0 +1,54 @@
+{
+  "name": "@sovereignfs/push",
+  "version": "0.2.0",
+  "description": "Web Push for a Sovereign app's server: its key, encryption and signing with no dependency, a store the app gives, an outbox and the subscription route.",
+  "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sovereignfs/sovereign.git",
+    "directory": "packages/push"
+  },
+  "homepage": "https://github.com/sovereignfs/sovereign/tree/main/packages/push#readme",
+  "bugs": {
+    "url": "https://github.com/sovereignfs/sovereign/issues"
+  },
+  "type": "module",
+  "sideEffects": [
+    "./dist/browser.js"
+  ],
+  "engines": {
+    "node": ">=22.3"
+  },
+  "bin": {
+    "sovereign-push": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "browser": "./dist/browser.js",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "default": "./dist/testing/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@sovereignfs/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}

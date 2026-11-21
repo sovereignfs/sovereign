@@ -612,7 +612,41 @@ pointing here.
   answered with a page the worker builds itself. A new path is cached only by being
   added to the list, and the tests (the worker's source is evaluated; the
   acceptance suite lists every cache after a signed-in tour) fail when something
-  else gets in.
+  else gets in. An app's worker from `@sovereignfs/pwa` follows the same rule, and
+  when the app asks for push (RFC 0009 §2.1) it gains exactly two handlers more:
+  `push`, which shows every push (one it cannot read shows the app's name) and
+  stores nothing of it, and `notificationclick`, which opens only a path on the
+  worker's own origin. Without `push` the worker's text has neither.
+- **A locked session is no session** (core-app §3.5.1, RFC 0006 B3). `getSession`
+  applies the lock, so every page, server action and route that reads the session
+  through it, `requireSession` and `requireCapability` included, gets nothing for a
+  locked one; only the lock page and its actions read it with
+  `getSessionEvenIfLocked` or `requireSession({ evenIfLocked: true })`. better-auth's
+  `hooks.before` refuses a browser's request from a locked session on every route
+  but signing out (here or from an app), signing in afresh and the emailed links,
+  and sends the authorization endpoint to the lock page. It applies to requests from a browser (`ctx.request`) only: core's
+  own server calls to `auth.api` go through `getSession` first (a test lists every
+  file that passes the request's headers), and the lock page must read the locked
+  session. Leaving the app locks only after a grace, since a navigation hides the
+  page too. The lock follows the session once it is put under
+  one (`session_locks`), never only the device cookie, which a browser can drop.
+  Unlocking clears the lock on the same session: a passkey is checked against it
+  (`src/lock/passkey.ts`), never by a passkey sign-in, which would end the session
+  and every app's session with it. A lock lookup that fails is raised, never taken
+  for "not locked".
+- **A rule every sign-in holds lives in the sign-in package** (`@sovereignfs/auth`,
+  auth.md §4, RFC 0007). Core's `createAuth` is `createAuthPreset` with core's own
+  additions given as hooks and plugins (the lock first among the request hooks, the
+  owner and invitations as the registration decision, the terms, logout notices, the
+  passkey's way into the keys, the OIDC provider); a rule added to core's `auth.ts`
+  instead would hold for core and for no app. Core's old module paths re-export the
+  package, so tests and imports keep their targets. The session read has two steps
+  (`readSessionUnchecked`, `checkSession`) so core's lock sits between them, and only
+  `src/auth/session.ts` may use the unchecked one (a test). The tests that scan core
+  for calls with the request's headers and for cookie names scan the package too.
+  better-auth is named at one exact version in every workspace manifest (a test): two
+  copies would split its errors, its context and its types; a refusal at start-up was
+  considered and dropped, since a second copy cannot be told reliably from inside.
 
 ## Data layer
 

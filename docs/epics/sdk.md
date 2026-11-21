@@ -339,3 +339,51 @@ two deliveries of one genuine token can only end the same sessions twice.
 **Review checklist:**
 
 - A role changed in the Console reaches an app within one renewal
+
+#### ✅ 14.15 — A typed person, and `nextAuth` deprecated
+
+**Goal:** An app reads who someone is from one typed `user`, and new apps no longer start on the SDK's own sign-in.
+
+**Deliverables:**
+
+- `user` on the session (`id`, `sub`, `name`, `email`, `emailVerified`, `picture`, `locale`, `zoneinfo`, `roles`), the same shape in
+  `@sovereignfs/auth` for a local account and one from core (`amr` waits for 6.6, which is parked)
+- `nextAuth` marked deprecated in the SDK and its guide, still working; removed in a later major version, with a `docs/upgrade.md`
+  note on moving to `@sovereignfs/auth`
+- sdk §9 and `docs/using-the-sdk.md` say what an app is told about a person, and what it is not
+
+**Dependencies:** 13.35
+
+**Spec reference:** sdk §9; RFC 0007 §4, §10
+
+**Review checklist:**
+
+- An app using `nextAuth` builds and signs in unchanged, with a deprecation warning from its types
+- The SDK's version is a minor bump: nothing is removed
+
+**Done:** the typed person is `User` (the SDK's `Person` was already its actor, `{ sub }`): `session.user` in the SDK, from
+`personFromClaims`, and `userOf` / `signedInUser` in `@sovereignfs/auth`, mapped from what is already stored (the preset's user fields
+and the session's core sign-in row with its kept ID token), so no column was added; `sub` and `roles` come only from a session that
+came through core. The template reads it through `userOfSession`. `nextAuth` carries `@deprecated` in the built types; the repository's
+lint does not turn that into an error, and the `--encryption` scaffold, still on `nextAuth`, typechecks unchanged. SDK 2.10.0, sign-in
+package 0.4.0.
+
+#### ✅ 14.16 — Signing in for a session the app keeps
+
+**Goal:** `@sovereignfs/auth` signs people in through core on the SDK, with the session its own and core's refresh token the SDK's alone.
+
+**Deliverables:**
+
+- the sign-in steps of sdk §9.1 without an SDK session (sdk §9.8): begin, complete (returning `sub`, `sid`, claims, scopes and the ID
+  token, the refresh token stored in the `TokenStore`), the §9.7 check, the §9.2 notices and sign-out, each from what the caller kept
+- `nextAuth` built on the same steps, so the two cannot drift; nothing of it changes for an app using it
+
+**Dependencies:** 17.1
+
+**Spec reference:** sdk §9.8; RFC 0007 §3
+
+**Review checklist:**
+
+- Twenty parallel calls still make one refresh when the session is the caller's
+- An app on `nextAuth` signs in, renews and signs out unchanged
+- The SDK's version is a minor bump

@@ -9,12 +9,20 @@ export const APP_DEPENDENCIES = {
   // `@sovereignfs/ui` is one bundle that imports these two, which it lists as optional peers: an app has to have them for the bundle to load.
   '@dnd-kit/core': '^6.3.1',
   '@dnd-kit/sortable': '^10.0.0',
+  // The sign-in: the package's preset, pages' flows and core as a way in, on better-auth at the one version the package names.
+  '@sovereignfs/auth': '^0.4.0',
   '@sovereignfs/config': '^0.1.0',
-  '@sovereignfs/pwa': '^0.1.0',
-  // 2.8 checks a session against core (`checkEverySeconds`), which the template turns on.
-  '@sovereignfs/sdk': '^2.8.0',
+  // 0.2 has the worker's push handlers and `usePush`, which the template's notifications use.
+  '@sovereignfs/pwa': '^0.2.0',
+  // Web Push for the app's server: the key, the store's shape, the outbox and the subscription route.
+  '@sovereignfs/push': '^0.2.0',
+  // 2.11 answers core's export request (`handleExportRequest`), which the template mounts; 2.10 has the typed `User` the package's
+  // `userOf` gives, on 2.9's sign-in for a session the app keeps (`finishSignIn`).
+  '@sovereignfs/sdk': '^2.11.0',
   '@sovereignfs/storage': '^0.1.0',
-  '@sovereignfs/ui': '^0.101.0',
+  // 0.104 has `PushControl`.
+  '@sovereignfs/ui': '^0.104.0',
+  'better-auth': '1.7.18',
   next: '^16.4.6',
   pg: '^8.23.1',
   react: '^19.3.1',
@@ -26,12 +34,15 @@ export const APP_DEPENDENCIES = {
  * repository's SDK by the same test.
  */
 export const ENCRYPTION_DEPENDENCIES = {
-  '@sovereignfs/sdk': '^2.5.0',
+  '@sovereignfs/sdk': '^2.11.0',
 } as const;
+
+/** What an app made with `--encryption` does not depend on: it signs in with the SDK's `nextAuth`, as it did before the package. */
+export const ENCRYPTION_LEAVES_OUT = ['@sovereignfs/auth', 'better-auth'] as const;
 
 export const APP_DEV_DEPENDENCIES = {
   // Makes the image's label and port from the manifest, and checks the manifest (`sovereign-manifest`).
-  '@sovereignfs/manifest': '^0.3.0',
+  '@sovereignfs/manifest': '^0.4.0',
   '@types/node': '^24.19.2',
   '@types/pg': '^8.23.1',
   '@types/react': '^19.3.0',
@@ -47,3 +58,10 @@ export const CREATE_VERSION: string = pkg.version;
  * commit of its own, when they change; an app takes it with its next `npm create @sovereignfs sync`.
  */
 export const SHARED_WORKFLOWS_REF = 'ef1ddb5f623ba702fc34c8769b4b2f98c6f61ed8';
+
+/**
+ * The managers an app made with pnpm or Yarn pins in its `packageManager` field, which corepack reads in the image and in CI. pnpm is the one
+ * this repository uses (a test holds them together); Yarn is the latest 4.
+ */
+export const PNPM_VERSION = '11.28.9';
+export const YARN_VERSION = '4.18.1';

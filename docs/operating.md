@@ -329,6 +329,14 @@ With `deploy: github` in `suite.yml`, a push to `main` deploys. `sv setup` write
 and do nothing else there, and the runner holds no key that opens your secrets. The machine's SSH host key is kept in `suite.yml`, so the
 runner checks it is deploying to the right machine. `./sv deploy --github` starts the workflow without a push.
 
+## Handing it to an AI agent
+
+The repository has an `AGENTS.md` (and a `CLAUDE.md` that imports it, for Claude Code) that tells an agent how to look after the instance
+for you: what each file is, how a change is made, and what it may do. It runs what only reads on its own, prepares changes to the
+repository for you to see, pushes, deploys or rolls back only when you ask, each time, and never touches a secret's value, your age key or
+anyone's data: those commands stay yours. Its last section is yours, for what is particular to your instance. An instance made before
+the toolkit wrote it can take the file from a new one (`npm create @sovereignfs instance` in an empty folder), and `sv push` commits it.
+
 ## What lives where
 
 ```text

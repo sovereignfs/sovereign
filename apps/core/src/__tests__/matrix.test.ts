@@ -47,6 +47,7 @@ describe('applyOverrides', () => {
         'capability:configure',
         'ownership:transfer',
         'instance:diagnose',
+        'instance:export',
       ];
       if (ownerOnly.includes(capability)) {
         expect(matrix[ROLE_ADMIN].has(capability)).toBe(false);

@@ -3,7 +3,29 @@ import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Failed, Refused } from './errors.js';
-import { parseImageRef, Registry } from './registry.js';
+import { imageName, parseImageRef, Registry } from './registry.js';
+
+describe('an image reference without its tag or digest', () => {
+  it.each([
+    ['ghcr.io/example/notes:1.2.0', 'ghcr.io/example/notes'],
+    ['ghcr.io/example/notes@sha256:abc', 'ghcr.io/example/notes'],
+    ['ghcr.io/example/notes:1.2.0@sha256:abc', 'ghcr.io/example/notes'],
+    ['localhost:5000/app:1', 'localhost:5000/app'],
+    ['localhost:5000/app', 'localhost:5000/app'],
+    ['postgres:18', 'postgres'],
+    ['postgres', 'postgres'],
+  ])('%s is %s', (ref, name) => {
+    expect(imageName(ref)).toBe(name);
+  });
+
+  it('takes time in proportion to the reference, however many colons it has', () => {
+    // A pattern anchored at the end, `[:@][^/]*$`, retries from every colon: these 200,000 took a minute.
+    const ref = `${':'.repeat(200_000)}/app:1`;
+    const start = performance.now();
+    expect(imageName(ref)).toBe(`${':'.repeat(200_000)}/app`);
+    expect(performance.now() - start).toBeLessThan(500);
+  });
+});
 
 describe('taking an image reference apart', () => {
   it.each([

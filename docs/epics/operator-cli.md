@@ -943,3 +943,49 @@ can have a plain copy when they ask for one, and cannot lose every backup by los
 
 - A scaffold builds, starts with `docker compose up`, uploads a file and serves it to its owner only
 - A scaffold is a valid manifest 3 under the published `@sovereignfs/manifest`
+
+#### ✅ 13.35 — The template makes an app of its own
+
+**Goal:** A new app signs people in through core, with accounts of its own, or both, and runs with no instance at all.
+
+**Deliverables:**
+
+- `tools/create`'s template on `@sovereignfs/auth`: thin `app/sign-in`, `app/sign-up` and `app/security` pages, the account migrations,
+  both ways in from the environment, on PostgreSQL (the other two database forms are 13.36); a scaffold that signs in through core, with a
+  local account, and both, in a browser (17.5's browser proof)
+- the template off the SDK's `nextAuth`; `building-an-app` §6 and §15 rewritten for one shape
+
+**Dependencies:** 17.5, 2.6, 2.7
+
+**Spec reference:** RFC 0007 §9; app-manifest §2.3, §4
+
+**Review checklist:**
+
+- A scaffold signs in with a local account and no `CORE_*` settings, and through core with them
+- A scaffold is a valid manifest under the published `@sovereignfs/manifest`
+
+**Done:** the template's sign-in is `@sovereignfs/auth`: `lib/sign-in.ts` reads the ways in (`resolveWaysIn`) and makes the preset on
+the app's own pool (`@sovereignfs/auth/postgres`, the database package's adapter, so no second pool), with core as a way in when
+`<P>_CORE_URL` is set; `lib/session.ts` is the guard, checking a session from core against it at most hourly. The salt of the sign-in
+value is the app's vault id. With core the only way in, the sign-in page sends a person straight on to it. An app made with
+`--encryption` keeps the SDK's `nextAuth` until the package carries encryption's key secret: the overlay's `_skip` names the base files
+it leaves out, and it does not depend on the package. A scaffold, built from the packed packages, was signed up and in locally,
+refused a wrong password and a second sign-up, and signed in through a local core and out of both, in a browser.
+
+#### 📋 13.36 — The template on sqld and a SQLite file
+
+**Goal:** An app made from the template runs on any of the three database forms, as Tusk does.
+
+**Deliverables:**
+
+- the template's database, migrations and SDK token store for sqld and a SQLite file as well as PostgreSQL, chosen by `<P>_DB_DIALECT`,
+  the token store encrypted and written conditionally on each
+- `building-an-app` §15's line on the template removed
+
+**Dependencies:** 13.35
+
+**Spec reference:** RFC 0007 §9; research 0004 step 3
+
+**Review checklist:**
+
+- A scaffold signs in and keeps notes on each of the three

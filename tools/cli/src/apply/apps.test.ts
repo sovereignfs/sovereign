@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { manifestOf } from '../testing/world.js';
 import type { ExternalApp, HostedApp, Manifest, Suite } from '../suite/types.js';
-import { databaseOf, externalClient, hostedClient } from './apps.js';
+import { CORE_KEEPS_SESSION, databaseOf, externalClient, hostedClient } from './apps.js';
 
 const suite: Suite = {
   schema: 1,
@@ -139,6 +139,13 @@ describe('what an external app is registered as', () => {
     expect(full['--back-channel']).toEqual(['https://wiki.sovereign.local/out']);
     expect(full['--account-deleted']).toBeUndefined();
     expect(full['--key-return']).toBeUndefined();
+  });
+
+  it('leaves the person’s core session when signing out of it, on a core that knows how, and asks nothing of an older one', () => {
+    expect(flags(externalClient(app, CORE_KEEPS_SESSION))['--keep-core-session']).toEqual([]);
+    expect(flags(externalClient(app, '1.2.0'))['--keep-core-session']).toEqual([]);
+    expect(flags(externalClient(app, '0.118.0'))['--keep-core-session']).toBeUndefined();
+    expect(flags(externalClient(app))['--keep-core-session']).toBeUndefined();
   });
 
   it('passes on where core tells it of a deleted account and returns its key, when the operator gave them', () => {

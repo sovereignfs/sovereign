@@ -1,0 +1,122 @@
+/* The panels of a person's own account (the security and profile pages), the same in core and every app. */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sv-space-2);
+}
+
+.footer {
+  margin: 0;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-sm);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+  padding: var(--sv-space-3);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface-sunken);
+}
+
+.itemName {
+  margin: 0;
+  font-weight: var(--sv-font-weight-semibold);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--sv-font-size-lg);
+  font-weight: var(--sv-font-weight-semibold);
+}
+
+.text {
+  margin: 0;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-md);
+  line-height: 1.5;
+}
+
+.steps {
+  margin: 0;
+  padding-left: var(--sv-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-md);
+  line-height: 1.5;
+}
+
+.key {
+  margin: 0;
+  font-family: var(--sv-font-family-mono);
+  font-size: var(--sv-font-size-md);
+  letter-spacing: 0.08em;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.codes {
+  margin: 0;
+  padding: var(--sv-space-3);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface-sunken);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sv-space-2);
+  list-style: none;
+  font-family: var(--sv-font-family-mono);
+  font-size: var(--sv-font-size-md);
+  user-select: all;
+}
+
+.avatarRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-4);
+}
+
+.avatar {
+  flex: none;
+  width: 6rem;
+  height: 6rem;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--sv-color-surface-sunken);
+  color: var(--sv-color-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--sv-font-size-2xl);
+  font-weight: var(--sv-font-weight-semibold);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

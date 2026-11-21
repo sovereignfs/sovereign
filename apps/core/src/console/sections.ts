@@ -68,6 +68,14 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
     capability: 'instance:view',
   },
   {
+    id: 'data',
+    description: 'Download a copy of everything this instance holds.',
+    label: 'Data',
+    href: '/console/data',
+    icon: 'database',
+    capability: 'instance:export',
+  },
+  {
     id: 'permissions',
     description: 'Choose what admins and ordinary users can do.',
     label: 'Permissions',

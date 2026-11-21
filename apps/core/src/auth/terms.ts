@@ -1,7 +1,6 @@
 import { APIError } from 'better-auth/api';
 import { legalVersion } from '../legal/version';
-import { localeOrNull } from './locale';
-import { canonicalTimezone } from './timezone';
+import { localeOrNull, timezoneOrNull } from '@sovereignfs/auth/server';
 
 /**
  * What sign-up must carry besides the person's details (core-app §3.3.2, §3.3.5): that the terms were
@@ -26,15 +25,4 @@ export function signUpRecord(user: Record<string, unknown>, now = new Date()) {
   };
 }
 
-/** A time zone to store, in its canonical spelling, or nothing when none was given. Refuses a bad one. */
-export function timezoneOrNull(value: unknown): string | null {
-  if (value === undefined || value === null) return null;
-  const zone = canonicalTimezone(value);
-  if (zone === undefined) {
-    throw new APIError('BAD_REQUEST', {
-      message: 'The time zone is not one of the standard time zone names, such as Europe/London.',
-      code: 'INVALID_TIMEZONE',
-    });
-  }
-  return zone;
-}
+export { timezoneOrNull };

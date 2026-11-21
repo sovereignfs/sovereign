@@ -11,7 +11,9 @@ import type { TestDatabase } from '@sovereignfs/database/testing';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Auth } from '../auth/auth';
 import { migrateCore } from '../db/migrate';
+import { CHALLENGE_MS, checkPasskey, passkeyChallenge } from '../lock/passkey';
 import {
+  authSettings,
   BASE_URL,
   call,
   freshAddress,
@@ -46,6 +48,7 @@ export function passkeySuite(createDatabase: () => Promise<TestDatabase>): void 
   beforeEach(async () => {
     for (const table of [
       'rate_limits',
+      'lock_challenges',
       'sessions',
       'two_factors',
       'passkeys',
@@ -432,6 +435,109 @@ export function passkeySuite(createDatabase: () => Promise<TestDatabase>): void 
       expect(await count('passkeys')).toBe(1);
       await db.run('delete from users where email = ?', [email]);
       expect(await count('passkeys')).toBe(0);
+    });
+  });
+
+  describe('checking a passkey for the session it is in (the lock, RFC 0006 B1, B4)', () => {
+    const webauthn = () => authSettings().webauthn;
+    /** A person with a passkey on `dev`, and who their session is. */
+    async function person(dev: VirtualAuthenticator) {
+      const a = auth();
+      const { jar, email } = await signUp(a);
+      expect((await addPasskey(a, jar, dev)).status).toBe(200);
+      const { rows } = await db.run(
+        'select s.id as session_id, u.id as user_id from sessions s join users u on u.id = s.user_id where u.email = ?',
+        [email],
+      );
+      return { sessionId: String(rows[0]?.session_id), userId: String(rows[0]?.user_id) };
+    }
+    const asked = async (who: { sessionId: string; userId: string }, now?: number) => {
+      const request = await passkeyChallenge(db, webauthn(), who, now);
+      expect(request).toBeDefined();
+      return request as NonNullable<typeof request>;
+    };
+
+    it('accepts one of the account’s passkeys, verified on the device, answering this session’s challenge', async () => {
+      const dev = device();
+      const who = await person(dev);
+      const request = await asked(who);
+      expect(request.credentialIds).toEqual([dev.id]);
+      expect(request.rpId).toBe(webauthn().rpId);
+      const sessions = await count('sessions');
+      expect(await checkPasskey(db, webauthn(), who, dev.authenticate(request))).toBe(true);
+      // Nothing is signed in: the session that asked is the one that goes on.
+      expect(await count('sessions')).toBe(sessions);
+      const { rows } = await db.run('select counter from passkeys');
+      expect(Number(rows[0]?.counter)).toBe(dev.counter);
+    });
+
+    it('counts an answer once', async () => {
+      const dev = device();
+      const who = await person(dev);
+      const answer = dev.authenticate(await asked(who));
+      expect(await checkPasskey(db, webauthn(), who, answer)).toBe(true);
+      expect(await checkPasskey(db, webauthn(), who, answer)).toBe(false);
+    });
+
+    it('refuses a passkey that did not verify the person, a forged answer, and another site’s', async () => {
+      const dev = device();
+      const who = await person(dev);
+      dev.settings = { ...dev.settings, userVerified: false };
+      expect(await checkPasskey(db, webauthn(), who, dev.authenticate(await asked(who)))).toBe(
+        false,
+      );
+      dev.settings = { ...dev.settings, userVerified: true };
+      expect(
+        await checkPasskey(db, webauthn(), who, dev.authenticate(await asked(who), true)),
+      ).toBe(false);
+      dev.settings = { ...dev.settings, origin: 'https://elsewhere.example' };
+      expect(await checkPasskey(db, webauthn(), who, dev.authenticate(await asked(who)))).toBe(
+        false,
+      );
+    });
+
+    it('refuses another account’s passkey, and an answer to another session’s challenge', async () => {
+      const mine = device();
+      const theirs = device();
+      const who = await person(mine);
+      const other = await person(theirs);
+      expect(await checkPasskey(db, webauthn(), who, theirs.authenticate(await asked(who)))).toBe(
+        false,
+      );
+      const forOther = mine.authenticate(await asked(other));
+      await asked(who);
+      expect(await checkPasskey(db, webauthn(), who, forOther)).toBe(false);
+    });
+
+    it('refuses an answer with no challenge, or one that waited too long', async () => {
+      const dev = device();
+      const who = await person(dev);
+      expect(
+        await checkPasskey(db, webauthn(), who, dev.authenticate({ challenge: 'made-up' })),
+      ).toBe(false);
+      const now = Date.now();
+      const late = dev.authenticate(await asked(who, now));
+      expect(await checkPasskey(db, webauthn(), who, late, now + CHALLENGE_MS + 1)).toBe(false);
+    });
+
+    it('refuses what is not an answer at all', async () => {
+      const dev = device();
+      const who = await person(dev);
+      for (const answer of [undefined, null, 'text', {}, { id: dev.id, type: 'public-key' }]) {
+        await asked(who);
+        expect(await checkPasskey(db, webauthn(), who, answer)).toBe(false);
+      }
+    });
+
+    it('gives no challenge to an account with no passkey', async () => {
+      const a = auth();
+      const { email } = await signUp(a);
+      const { rows } = await db.run(
+        'select s.id as session_id, u.id as user_id from sessions s join users u on u.id = s.user_id where u.email = ?',
+        [email],
+      );
+      const who = { sessionId: String(rows[0]?.session_id), userId: String(rows[0]?.user_id) };
+      expect(await passkeyChallenge(db, webauthn(), who)).toBeUndefined();
     });
   });
 }

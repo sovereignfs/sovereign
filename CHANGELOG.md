@@ -5,6 +5,143 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.131.0] - 2026-11-20
+
+### Added
+
+- An app made by `npm create @sovereignfs app` (toolkit 0.27.0) sends notifications, with and without `--encryption`
+  ([RFC 0009](docs/rfcs/0009-web-push.md) §4): its key is in the manifest's `generate`, devices and waiting pushes are in its database
+  with their keys sealed, a push is queued in the change's own transaction and sent from an outbox, `PushControl` is on its home page
+  with "Send me a test notification", and signing out turns the device off first. `docs/building-an-app.md` has "Sending
+  notifications".
+
+## [0.130.0] - 2026-11-20
+
+### Added
+
+- Web Push in the worker, the page and the design system ([RFC 0009](docs/rfcs/0009-web-push.md) §2, §3): `@sovereignfs/pwa` 0.2.0's
+  worker shows every push and opens only its own paths, when the app asks for push, and its client turns push on and off for a
+  device (`usePush`); `@sovereignfs/ui` 0.104.0 has `PushControl`, the one switch every app shows. No app uses them yet.
+
+## [0.129.0] - 2026-11-20
+
+### Added
+
+- `@sovereignfs/push` 0.2.0, a new published package: Web Push for an app's server with no dependency
+  ([RFC 0009](docs/rfcs/0009-web-push.md) §1). The app's key is one variable, `<PREFIX>_VAPID_PRIVATE_KEY`, its public key derived;
+  messages are encrypted (RFC 8291) and signed (RFC 8292) on `node:crypto` and sent only to the browsers' push services; the app gives
+  a store, with an in-memory one and a conformance suite under `/testing`; pushes are queued in the change's own transaction and sent
+  from an outbox claimed by a lease; and the subscription route is three framework-free handlers. No app uses it yet.
+
+## [0.128.0] - 2026-11-20
+
+### Changed
+
+- Core's exports run on shared pieces an app with no core can use too: the jobs, the runner and the one-time download from
+  `@sovereignfs/export` 0.3.0, and the export panel from `@sovereignfs/ui` 0.103.0. Nothing a person or the owner sees changes, except
+  that times on the export pages are written in the person's own time zone.
+
+## [0.127.0] - 2026-11-20
+
+### Added
+
+- A new app made with `npm create @sovereignfs app` answers core when a person downloads their data: their notes and files from the app
+  go into the download, encrypted notes still encrypted.
+
+## [0.126.0] - 2026-11-20
+
+### Added
+
+- A person's download from Your data now holds what each app they use keeps of them. Core asks each app at the export address it
+  registered (a new setting in an app's technical settings, and `signIn.export` in manifest 5), checks what the app sends, and adds it;
+  an app that offers nothing, does not answer or answers wrongly is named in the download as missing.
+
+## [0.125.0] - 2026-11-20
+
+### Added
+
+- Anyone can download their own data from a new account page, Your data, after their password: their profile and settings, the apps
+  they allowed, their notifications and activity, their files, and their encrypted data, still encrypted. Their password, passkeys and
+  two-factor codes are never in it. It is a zip (or a tar), made in the background and downloaded once within the hour, and it goes
+  with the account when the account is deleted.
+
+## [0.124.0] - 2026-11-20
+
+### Added
+
+- The owner can export the instance's data from the Console's Data page, after their password: every account (with no password,
+  passkey or two-factor secret), the apps, consents, settings, notifications, activity, the encrypted data people keep, still encrypted,
+  and everyone's files. It is made in the background, encrypted to the owner's keys as it is written so the server cannot read it, and
+  downloaded once within the hour. `sv export open` opens it. It is not a backup: `sv backup` still is.
+
+## [0.123.0] - 2026-11-20
+
+### Added
+
+- The Console has a Data page, the owner's alone (a new owner-only permission, "Export the instance's data"). On it the owner saves
+  the keys an export of the instance is encrypted to: age public keys, as `sv key export` prints them, whose private halves stay with the
+  owner. Taking the export itself comes next.
+
+## [0.122.0] - 2026-11-20
+
+### Added
+
+- `@sovereignfs/export` 0.1.0, a new published package: the one export format of [`contracts/export.md`](contracts/export.md),
+  written as a stream as a tar (or a zip for a person's export), checked as it is read, and encrypted to age recipients. Core and apps use
+  it for the exports of RFC 0008; nothing offers an export yet.
+
+## [0.121.0] - 2026-11-20
+
+### Changed
+
+- Nothing in core changes. This version carries the SDK's typed user and its deprecation of `nextAuth`, and the sign-in package's
+  typed user, for apps.
+
+## [0.120.0] - 2026-11-20
+
+### Changed
+
+- The panels for the second sign-in step and a person's profile come from the design system, which apps share; nothing a person sees
+  changes.
+
+## [0.119.0] - 2026-11-19
+
+### Changed
+
+- Signing out of an app that is not part of the suite (an external app) no longer signs the person out of Sovereign and every other
+  app: only that app's session ends. Signing out of an app the instance runs still signs them out everywhere, as signing out of
+  Sovereign does. An operator can change this for each app in the Console. Apps already registered keep what they did until the next
+  `sv apply`.
+- The sign-in server no longer lists `given_name` and `family_name` among the claims it supports: it never sent them.
+
+## [0.118.0] - 2026-11-19
+
+### Changed
+
+- Core's sign-in, sign-up, forgotten and reset password and second-step pages, and the sessions and change-password panels, are drawn
+  with the design system's forms, which every Sovereign app will use, and run on the sign-in package. They say and do what they did.
+  Two small things look different: on a screen between 401 and 768 pixels wide the sign-in card has a little more room inside, and a
+  box of a sign-in code selects its digit when it is focused, so typing replaces it.
+
+## [0.117.0] - 2026-11-19
+
+### Changed
+
+- Core's sign-in now runs on `@sovereignfs/auth`, the sign-in package every Sovereign app will share
+  ([RFC 0007](https://github.com/sovereignfs/sovereign/blob/main/docs/rfcs/0007-one-sign-in.md)). Nothing a person or an app sees
+  changes: the same pages, the same rules, the same sessions and the same database.
+
+## [0.116.0] - 2026-11-19
+
+### Added
+
+- A lock on a device. Once signed in, a person can turn it on from the Security page under "Lock on this device", with a passkey that
+  works on that device. Core then locks their session after 15 minutes without use (or 1, 5 or 60, as they choose), and, if they ask,
+  when they leave the app. A locked session shows nothing of the person, to core's pages or to apps signing in through core, until it is
+  unlocked with the passkey or the password; signing out is always offered. Unlocking carries on in the same session, so the person's
+  apps stay signed in, and their encrypted data stays closed while the session is locked. Nothing changes for anyone who does not turn
+  it on.
+
 ## [0.115.0] - 2026-11-19
 
 ### Added

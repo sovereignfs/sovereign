@@ -1,4 +1,5 @@
 import { secretsOf, variablePrefix, type SignIn } from '@sovereignfs/manifest';
+import { gte } from 'semver';
 import { mkdir, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Failed, Refused } from '../errors.js';
@@ -95,6 +96,8 @@ export function hostedClient(
     ...(signIn.accountDeleted
       ? ['--account-deleted', absolute(suite, name, signIn.accountDeleted)]
       : []),
+    // Where core asks for a person's part of their export (manifest 5, core-app §4.7.2).
+    ...(signIn.export ? ['--export', absolute(suite, name, signIn.export)] : []),
     // An app that keeps its people's data encrypted (manifest 4): core sends a person back here with the app's key, and gives it the
     // keys scope (contracts/app-manifest.md §2.8, core-app §5.6).
     ...('encryption' in manifest && manifest.encryption
@@ -112,8 +115,17 @@ export function hostedClient(
   ];
 }
 
-/** The same for an external app: what the operator wrote, and nothing it was not told. */
-export function externalClient(app: ExternalApp): string[] {
+/**
+ * The first core that knows `--keep-core-session` (core-app §3.6.5). An older core refuses an option it does not know, so it is sent
+ * only to this one or later; an external app on an older core keeps signing people out of core, as it always has.
+ */
+export const CORE_KEEPS_SESSION = '0.119.0';
+
+/**
+ * The same for an external app: what the operator wrote, and nothing it was not told. Signing out of it leaves the person's core
+ * session (core-app §3.6.5), where the suite's core knows how.
+ */
+export function externalClient(app: ExternalApp, coreVersion?: string): string[] {
   const launcher = app.launcher ?? {};
   return [
     '--name',
@@ -123,10 +135,14 @@ export function externalClient(app: ExternalApp): string[] {
     ...(app.postLogout?.length ? ['--post-logout', ...app.postLogout] : []),
     ...(app.backChannel ? ['--back-channel', app.backChannel] : []),
     ...(app.accountDeleted ? ['--account-deleted', app.accountDeleted] : []),
+    ...(app.export ? ['--export', app.export] : []),
     ...(app.keyReturn ? ['--key-return', app.keyReturn] : []),
     ...(app.scopes?.length ? ['--scope', ...app.scopes] : []),
     ...(app.type === 'public' ? ['--public'] : []),
     ...(app.trusted ? ['--trusted'] : []),
+    ...(coreVersion !== undefined && gte(coreVersion, CORE_KEEPS_SESSION)
+      ? ['--keep-core-session']
+      : []),
     ...(launcher.launchUrl ? ['--launch-url', launcher.launchUrl] : []),
     ...(launcher.description ? ['--description', launcher.description] : []),
     ...(launcher.icon ? ['--icon', launcher.icon] : []),
@@ -356,7 +372,7 @@ export async function applyExternalApp(
     run.host,
     run.generated,
     name,
-    externalClient(app),
+    externalClient(app, run.suite.core.version),
     app.type !== 'public',
   );
   return { kind: 'external', clientId: client.clientId, created: client.created };

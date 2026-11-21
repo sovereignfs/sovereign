@@ -251,3 +251,41 @@
     padding: var(--sv-space-6);
   }
 }
+
+/* ── Sign-up: the terms to accept, and an invitation ─────────────────────── */
+
+.terms {
+  display: flex;
+  gap: var(--sv-space-2);
+  align-items: flex-start;
+  font-size: var(--sv-font-size-sm);
+  color: var(--sv-color-text-primary);
+}
+
+.terms input {
+  margin-top: 3px;
+}
+
+.inviteTitle {
+  margin: 0;
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  color: var(--sv-color-text-primary);
+  line-height: 1.4;
+}
+
+.fromInvite {
+  font-family: var(--sv-font-family-mono);
+  font-size: 10px;
+  color: var(--sv-color-text-muted);
+  background-color: var(--sv-color-surface-sunken);
+  border-radius: var(--sv-radius-sm);
+  padding: 2px 7px;
+}
+
+/* ── The second step: a backup code ──────────────────────────────────────── */
+
+.backupInput {
+  font-family: var(--sv-font-family-mono);
+  letter-spacing: 0.08em;
+}

@@ -144,6 +144,14 @@ async function heldBy(
 ): Promise<{ scope: BackupScope; files: string[] }> {
   const first = await firstEntry(stream);
   if (!first) throw new Refused('The backup is empty or damaged.');
+  // An export the Console gave begins with export.json and holds no databases or secrets: restoring it as a backup from before
+  // backup.json would empty the instance (operator-cli §9.6).
+  if (first.name === 'export.json') {
+    throw new Refused(
+      'This is an export, not a backup: it cannot restore an instance.',
+      'Open it with sv export open. Restore from what sv backup made.',
+    );
+  }
   if (first.name !== MANIFEST_FILE) return { scope: ALL, files: [] };
   const manifest = readManifest(first.data.toString('utf8'));
   return { scope: manifest.scope, files: manifest.files ?? [] };

@@ -9,6 +9,7 @@ import { namesOf } from './app.js';
 import { CreateError, DEFAULT_APP_PORT } from './create.js';
 import { fill, TEMPLATE, targetOf, type Fill } from './fill.js';
 import { readReleases, type Releases } from './components.js';
+import { managerOf, type PackageManager } from './package-manager.js';
 import { isPrefix } from './release.js';
 import { DEFAULT_REQUIRED_CHECKS, repositorySettings } from './settings-file.js';
 import { SHARED_WORKFLOWS_REF } from './versions.js';
@@ -17,8 +18,8 @@ export const BEGIN = '<!-- sovereign:shared:begin -->';
 export const END = '<!-- sovereign:shared:end -->';
 
 /**
- * The shared files: where each is in the template, whether it belongs at the repository's root (workflows and settings) or in the app's
- * folder (documents), and how it is compared: whole, by content (JSON), or only its shared section (`CONTRIBUTING.md`, `RELEASING.md`, `AGENTS.md`), so
+ * The shared files: where each is in the template, whether it belongs at the repository's root (workflows and settings), with the documents
+ * (`app`: the app's folder, or the root of a repository of several components) or always in the app's folder beside its code (`image`), and how it is compared: whole, by content (JSON), or only its shared section (`CONTRIBUTING.md`, `RELEASING.md`, `AGENTS.md`), so
  * an app keeps its own sections of those around it.
  */
 export const MANAGED = [
@@ -30,6 +31,11 @@ export const MANAGED = [
   { file: 'RELEASING.md', at: 'app', kind: 'section' },
   { file: 'CLAUDE.md', at: 'app', kind: 'text' },
   { file: 'AGENTS.md', at: 'app', kind: 'section' },
+  // The image and running it with Docker: the same in every app, filled with its name, port and package manager. An app that needs its own
+  // (another service, a native dependency) lists the file under `sovereign.unmanaged`.
+  { file: 'Dockerfile', at: 'image', kind: 'text' },
+  { file: '_dockerignore', at: 'image', kind: 'text' },
+  { file: 'compose.yml', at: 'image', kind: 'text' },
 ] as const;
 
 /** What the shared files need of an app, from its `package.json` (`name`, and `sovereign`) and its manifest (`port`). */
@@ -40,6 +46,8 @@ export type AppSettings = {
   /** Shared files the app keeps as its own, by their path from the repository's root. */
   unmanaged: string[];
   port: number;
+  /** The manager the app was made with, from `packageManager`: npm when there is none, as for every app made before there was a choice. */
+  packageManager: PackageManager;
 };
 
 const strings = (value: unknown, what: string): string[] => {
@@ -51,7 +59,7 @@ const strings = (value: unknown, what: string): string[] => {
 };
 
 export async function readAppSettings(appDir: string): Promise<AppSettings> {
-  let manifest: { name?: unknown; sovereign?: Record<string, unknown> };
+  let manifest: { name?: unknown; packageManager?: unknown; sovereign?: Record<string, unknown> };
   try {
     manifest = JSON.parse(await readFile(path.join(appDir, 'package.json'), 'utf8'));
   } catch {
@@ -85,6 +93,7 @@ export async function readAppSettings(appDir: string): Promise<AppSettings> {
         : strings(own.requiredChecks, 'requiredChecks'),
     unmanaged: strings(own.unmanaged, 'unmanaged'),
     port,
+    packageManager: managerOf(manifest.packageManager),
   };
 }
 
@@ -130,6 +139,16 @@ const readText = async (file: string): Promise<string | undefined> => {
   }
 };
 
+/** The manager of a repository of several components, from its root `package.json`: npm when it names none. */
+async function rootManager(gitRoot: string): Promise<PackageManager> {
+  const text = await readText(path.join(gitRoot, 'package.json'));
+  try {
+    return managerOf(text === undefined ? undefined : JSON.parse(text).packageManager);
+  } catch {
+    return 'npm';
+  }
+}
+
 /**
  * Writes (or with `check`, compares) an app's shared files. `appDir` is the app's folder; `gitRoot` is its repository's, where the
  * workflows and settings go. Nothing outside these files is touched, and an `AGENTS.md` keeps everything but its shared section.
@@ -144,7 +163,11 @@ export async function syncApp(
   // A repository of several components keeps its documents at its root; an app, in its folder.
   const docsDir = several ? gitRoot : appDir;
   const settings = several
-    ? { port: DEFAULT_APP_PORT, tagPrefix: '' }
+    ? {
+        port: DEFAULT_APP_PORT,
+        tagPrefix: '',
+        packageManager: await rootManager(gitRoot),
+      }
     : await readAppSettings(appDir);
   const names = namesOf(path.join(path.sep, releases.name || path.basename(appDir)));
   const directory = several ? '.' : path.relative(gitRoot, appDir) || '.';
@@ -154,10 +177,13 @@ export async function syncApp(
     workflowsRef: SHARED_WORKFLOWS_REF,
     directory: directory.split(path.sep).join('/'),
     tagPrefix: settings.tagPrefix,
+    packageManager: settings.packageManager,
   };
   const results: Synced[] = [];
   for (const entry of MANAGED) {
-    const base = entry.at === 'root' ? gitRoot : docsDir;
+    // A repository of several components builds its images its own way; the template's are for one Next.js app.
+    if (several && entry.at === 'image') continue;
+    const base = entry.at === 'root' ? gitRoot : entry.at === 'image' ? appDir : docsDir;
     const target = path.join(base, targetOf(entry.file));
     const shown = path.relative(gitRoot, target).split(path.sep).join('/');
     if (releases.unmanaged.includes(shown)) {

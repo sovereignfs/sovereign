@@ -42,8 +42,10 @@ export const NEW_APP: Pick<
   | 'postLogoutRedirectUris'
   | 'backchannelLogoutUri'
   | 'accountDeletedUri'
+  | 'exportUri'
   | 'keyReturnUri'
   | 'endSession'
+  | 'signOutOfCore'
   | 'scopes'
   | 'appScopes'
   | 'trusted'
@@ -57,8 +59,11 @@ export const NEW_APP: Pick<
   postLogoutRedirectUris: [],
   backchannelLogoutUri: undefined,
   accountDeletedUri: undefined,
+  exportUri: undefined,
   keyReturnUri: undefined,
   endSession: false,
+  // A new app here starts off: signing out of it leaves the person's core session (core-app §3.6.5).
+  signOutOfCore: false,
   scopes: ['openid', 'profile', 'email'],
   appScopes: [],
   trusted: false,
@@ -85,8 +90,10 @@ export function AppForm({ id, initial }: { id?: string; initial: Initial }) {
   const [postLogout, setPostLogout] = useState(initial.postLogoutRedirectUris.join('\n'));
   const [backchannel, setBackchannel] = useState(initial.backchannelLogoutUri ?? '');
   const [accountDeleted, setAccountDeleted] = useState(initial.accountDeletedUri ?? '');
+  const [exportAddress, setExportAddress] = useState(initial.exportUri ?? '');
   const [keyReturn, setKeyReturn] = useState(initial.keyReturnUri ?? '');
   const [endSession, setEndSession] = useState(initial.endSession);
+  const [signOutOfCore, setSignOutOfCore] = useState(initial.signOutOfCore);
   const [scopes, setScopes] = useState(new Set(initial.scopes));
   const [appScopes, setAppScopes] = useState(new Set(initial.appScopes));
   const [trusted, setTrusted] = useState(initial.trusted);
@@ -335,6 +342,21 @@ export function AppForm({ id, initial }: { id?: string; initial: Initial }) {
             )}
           </FormField>
           <FormField
+            label="Export address"
+            hint="When a person downloads their data, core calls this with a signed request, and the app answers with what it holds of them, which goes into their download. Leave it empty if the app holds nothing of people; their download then says this app’s part is missing."
+            error={fields.exportUri}
+          >
+            {(field) => (
+              <Input
+                {...field}
+                name="exportUri"
+                inputMode="url"
+                value={exportAddress}
+                onChange={(event) => setExportAddress(event.target.value)}
+              />
+            )}
+          </FormField>
+          <FormField
             label="Key return address"
             hint="Set for an app that keeps what people give it encrypted so this server cannot read it. Core sends a person back here with the app’s own key. Setting it lets the app use encryption; clearing it stops new keys, and makes nothing stored readable or unreadable. Not yet reviewed or audited."
             error={fields.keyReturnUri}
@@ -355,6 +377,12 @@ export function AppForm({ id, initial }: { id?: string; initial: Initial }) {
             checked={endSession || postLogout.trim() !== '' || backchannel.trim() !== ''}
             disabled={postLogout.trim() !== '' || backchannel.trim() !== ''}
             onChange={setEndSession}
+          />
+          <Checkbox
+            name="signOutOfCore"
+            label="Signing out of this app signs people out of core, and of every other app"
+            checked={signOutOfCore}
+            onChange={setSignOutOfCore}
           />
           <fieldset className={styles.scopes}>
             <legend className={styles.legend}>What the app may ask to see</legend>

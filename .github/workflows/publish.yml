@@ -7,7 +7,10 @@ name: Publish
 #   manifest-vX.Y.Z -> @sovereignfs/manifest
 #   config-vX.Y.Z  -> @sovereignfs/config
 #   storage-vX.Y.Z -> @sovereignfs/storage
+#   export-vX.Y.Z  -> @sovereignfs/export
+#   push-vX.Y.Z    -> @sovereignfs/push
 #   pwa-vX.Y.Z     -> @sovereignfs/pwa
+#   auth-vX.Y.Z    -> @sovereignfs/auth
 # Every other package is private and never published (@sovereignfs/bridge is private for now;
 # publishing it later means removing "private" and adding its tag and case here).
 # docs/releasing.md has the whole process.
@@ -27,7 +30,10 @@ on:
       - 'manifest-v*.*.*'
       - 'config-v*.*.*'
       - 'storage-v*.*.*'
+      - 'export-v*.*.*'
+      - 'push-v*.*.*'
       - 'pwa-v*.*.*'
+      - 'auth-v*.*.*'
   workflow_call:
     inputs:
       tag:
@@ -111,7 +117,10 @@ jobs:
             manifest-v*) dir=manifest; prefix=manifest-v ;;
             config-v*) dir=config; prefix=config-v ;;
             storage-v*) dir=storage; prefix=storage-v ;;
+            export-v*) dir=export; prefix=export-v ;;
+            push-v*) dir=push; prefix=push-v ;;
             pwa-v*) dir=pwa; prefix=pwa-v ;;
+            auth-v*) dir=auth; prefix=auth-v ;;
             *) echo "The tag $TAG is not a package release tag." >&2; exit 1 ;;
           esac
           expected="${TAG#"$prefix"}"

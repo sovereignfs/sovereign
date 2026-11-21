@@ -14,6 +14,11 @@ import {
   AuthLinkButton,
 } from './AuthForm';
 import { BrandBadge } from './BrandBadge';
+import { ForgotPasswordForm } from './ForgotPasswordForm';
+import { ResetPasswordForm } from './ResetPasswordForm';
+import { SignInForm } from './SignInForm';
+import { SignUpForm } from './SignUpForm';
+import { TwoFactorForm } from './TwoFactorForm';
 
 const meta = {
   title: 'Components/Auth',
@@ -92,4 +97,147 @@ export const SecondStep: Story = {
       </AuthCard>
     );
   },
+};
+
+// ---------------------------------------------------------------------------
+
+/** The whole sign-in form, as core and every app use it: the consumer signs in and passes back what happened. */
+export const SignInFormStory: Story = {
+  name: 'SignInForm',
+  render: () => (
+    <AuthCard brand={<BrandBadge name="Sovereign" />} title="Sign in to Sovereign">
+      <SignInForm
+        appName="Sovereign"
+        onSubmit={() => undefined}
+        passkey={{ pending: false, onClick: () => undefined }}
+        forgotPasswordHref="/forgot-password"
+        signUpHref="/sign-up"
+      />
+    </AuthCard>
+  ),
+};
+
+/** Refused, with an address to verify first and no passkey on this browser. */
+export const SignInFormRefused: Story = {
+  name: 'SignInForm, refused',
+  render: () => (
+    <AuthCard brand={<BrandBadge name="Sovereign" />} title="Sign in to Sovereign">
+      <SignInForm
+        appName="Sovereign"
+        error="The email or password is incorrect."
+        unverified
+        renderUnverified={() => <AuthLinkButton>Send the link again</AuthLinkButton>}
+        onSubmit={() => undefined}
+        forgotPasswordHref="/forgot-password"
+        signUpHref="/sign-up"
+      />
+    </AuthCard>
+  ),
+};
+
+/** Asking for a reset link, and what it says once sent. */
+export const ForgotPasswordFormStory: Story = {
+  name: 'ForgotPasswordForm',
+  render: () => (
+    <AuthCard brand={<BrandBadge name="Sovereign" />} title="Reset your password">
+      <ForgotPasswordForm onSubmit={() => undefined} signInHref="/sign-in" />
+    </AuthCard>
+  ),
+};
+
+export const ForgotPasswordFormSent: Story = {
+  name: 'ForgotPasswordForm, sent',
+  render: () => (
+    <AuthCard brand={<BrandBadge name="Sovereign" />} title="Reset your password">
+      <ForgotPasswordForm
+        sentTo="ada@example.com"
+        onSubmit={() => undefined}
+        signInHref="/sign-in"
+      />
+    </AuthCard>
+  ),
+};
+
+/** A new password from the emailed link, and the link run out. */
+export const ResetPasswordFormStory: Story = {
+  name: 'ResetPasswordForm',
+  render: () => (
+    <AuthCard brand={<BrandBadge name="Sovereign" />} title="Choose a new password">
+      <ResetPasswordForm
+        passwordHint="At least 8 characters."
+        onSubmit={() => undefined}
+        signInHref="/sign-in"
+        newLinkHref="/forgot-password"
+      />
+    </AuthCard>
+  ),
+};
+
+export const ResetPasswordFormExpired: Story = {
+  name: 'ResetPasswordForm, expired',
+  render: () => (
+    <AuthCard brand={<BrandBadge name="Sovereign" />} title="Choose a new password">
+      <ResetPasswordForm
+        passwordHint="At least 8 characters."
+        expired
+        onSubmit={() => undefined}
+        signInHref="/sign-in"
+        newLinkHref="/forgot-password"
+      />
+    </AuthCard>
+  ),
+};
+
+/** Creating an account, with the terms to accept; and from an invitation. */
+export const SignUpFormStory: Story = {
+  name: 'SignUpForm',
+  render: () => (
+    <AuthCard brand={<BrandBadge name="Sovereign" />} title="Create your account">
+      <SignUpForm
+        appName="Sovereign"
+        passwordHint="At least 8 characters."
+        terms={{ privacyHref: '/privacy', tosHref: '/tos' }}
+        onSubmit={() => undefined}
+        signInHref="/sign-in"
+      />
+    </AuthCard>
+  ),
+};
+
+export const SignUpFormInvited: Story = {
+  name: 'SignUpForm, invited',
+  render: () => (
+    <AuthCard brand={<BrandBadge name="Sovereign" />} title="Create your account">
+      <SignUpForm
+        appName="Sovereign"
+        passwordHint="At least 8 characters."
+        invitedEmail="ada@example.com"
+        onSubmit={() => undefined}
+        signInHref="/sign-in"
+      />
+    </AuthCard>
+  ),
+};
+
+/** The second step, and a sign-in that can no longer be finished. */
+export const TwoFactorFormStory: Story = {
+  name: 'TwoFactorForm',
+  render: () => (
+    <AuthCard brand={<BrandBadge name="Sovereign" />} title="Two-step sign-in" legal={false}>
+      <TwoFactorForm
+        passkey={{ pending: false, onClick: () => undefined }}
+        onSubmit={() => undefined}
+        signInAgainHref="/sign-in"
+      />
+    </AuthCard>
+  ),
+};
+
+export const TwoFactorFormOver: Story = {
+  name: 'TwoFactorForm, over',
+  render: () => (
+    <AuthCard brand={<BrandBadge name="Sovereign" />} title="Two-step sign-in" legal={false}>
+      <TwoFactorForm over onSubmit={() => undefined} signInAgainHref="/sign-in" />
+    </AuthCard>
+  ),
 };

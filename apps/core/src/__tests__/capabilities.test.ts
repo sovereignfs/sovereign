@@ -61,8 +61,8 @@ describe('the roles', () => {
 });
 
 describe('the capability registry and the default matrix, against spec §3.2.2', () => {
-  it('read fourteen rows from the spec, or this test would pass on nothing', () => {
-    expect(spec.size).toBe(14);
+  it('read fifteen rows from the spec, or this test would pass on nothing', () => {
+    expect(spec.size).toBe(15);
   });
 
   it('has exactly the capabilities the spec lists', () => {
@@ -72,7 +72,7 @@ describe('the capability registry and the default matrix, against spec §3.2.2',
   it('marks as owner-only exactly the ones the spec says', () => {
     const fromSpec = [...spec].filter(([, row]) => row.ownerOnly).map(([name]) => name);
     expect([...OWNER_ONLY_CAPABILITIES].sort()).toEqual(fromSpec.sort());
-    expect(OWNER_ONLY_CAPABILITIES).toHaveLength(5);
+    expect(OWNER_ONLY_CAPABILITIES).toHaveLength(6);
   });
 
   it.each(
@@ -81,10 +81,10 @@ describe('the capability registry and the default matrix, against spec §3.2.2',
     expect(can(role, capability)).toBe(spec.get(capability)?.roles.has(SHORT[role]));
   });
 
-  it('gives the sizes the spec implies: user 3, admin 9, owner 14', () => {
+  it('gives the sizes the spec implies: user 3, admin 9, owner 15', () => {
     expect(capabilitiesOf(ROLE_USER)).toHaveLength(3);
     expect(capabilitiesOf(ROLE_ADMIN)).toHaveLength(9);
-    expect(capabilitiesOf(ROLE_OWNER)).toHaveLength(14);
+    expect(capabilitiesOf(ROLE_OWNER)).toHaveLength(15);
   });
 
   it('has nothing in the default matrix for a role that is not editable, or that is owner-only', () => {

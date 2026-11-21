@@ -7,3 +7,7 @@ node_modules/
 .DS_Store
 # People's files, when you run the app on your own machine (see .env.example).
 data/
+# What Yarn keeps of an install that is not the lockfile.
+.yarn/*
+!.yarn/releases
+.pnp.*

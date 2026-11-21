@@ -1,0 +1,61 @@
+/**
+ * `@sovereignfs/auth/server` — the sign-in on the app's server (auth.md §2): the better-auth preset, the session helpers, the
+ * checks every account and session passes, and the account tables.
+ */
+export {
+  asCoreArrival,
+  createAuthPreset,
+  signUpPolicy,
+  SECOND_STEP,
+  SESSION_LIFETIME,
+  type AuthPresetHooks,
+  type AuthPresetOptions,
+  type Registration,
+  type UserInput,
+  type RequestContext,
+} from './preset.js';
+export {
+  resolveAuthSettings,
+  type AuthConfigValues,
+  type AuthSettings,
+  type ResolveAuthOptions,
+} from './settings.js';
+export type { AuthMail, Recipient } from './mail.js';
+export { assertMayOpenSession } from './session-gate.js';
+export {
+  CONFIRM_LIMIT,
+  confirmPassword,
+  type PasswordCheck,
+  type PasswordVerifier,
+} from './confirm-password.js';
+export {
+  cleanName,
+  localeOrNull,
+  MAX_NAME_LENGTH,
+  refuseImageInput,
+  timezoneOrNull,
+} from './validators.js';
+export { describeAddress, describeDevice } from './device.js';
+export {
+  endOtherSessions,
+  endSession,
+  listSessions,
+  type SessionEndpoints,
+  type SessionSummary,
+} from './sessions.js';
+export {
+  checkSession,
+  readSession,
+  readSessionUnchecked,
+  type SessionOf,
+  type SessionReader,
+} from './session.js';
+export { ACCOUNT_MIGRATIONS_TABLE, accountMigrations, accountTables } from './migrations.js';
+export * as postgresAccountSchema from './schema/postgres.js';
+export * as sqliteAccountSchema from './schema/sqlite.js';
+export type { Database, Migration } from '@sovereignfs/database';
+export { resolveWaysIn, WaysInError, type WaysIn } from './ways-in.js';
+export { userOf, type CoreFacts, type SessionUser } from './user.js';
+export type { User } from '@sovereignfs/sdk';
+/** `@sovereignfs/database`'s migrator, for the package's migrations under their own history tables (auth.md §10). */
+export { migrate as runMigrations } from '@sovereignfs/database';

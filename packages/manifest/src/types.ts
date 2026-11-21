@@ -7,6 +7,8 @@ export type SignIn = {
   postLogout?: string[];
   backChannel?: string;
   accountDeleted?: string;
+  /** Manifest 5 only: where core asks for a person's part of their export (core-app §4.7.2). */
+  export?: string;
   scopes: string[];
 };
 
@@ -57,5 +59,10 @@ export type Manifest4 = Omit<Manifest3, 'manifest'> & {
   encryption?: { return: string };
 };
 
+/** Manifest 5 (§5.4): manifest 4, and `export` in `signIn`, where core asks for a person's part of their export (core-app §4.7.2). */
+export type Manifest5 = Omit<Manifest4, 'manifest'> & {
+  manifest: 5;
+};
+
 /** A manifest, of any version this package reads. */
-export type Manifest = Manifest1 | Manifest2 | Manifest3 | Manifest4;
+export type Manifest = Manifest1 | Manifest2 | Manifest3 | Manifest4 | Manifest5;

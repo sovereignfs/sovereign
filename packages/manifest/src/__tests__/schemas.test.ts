@@ -27,7 +27,8 @@ describe('the schemas', () => {
     expect(versionOf({ manifest: 2 })).toBe(2);
     expect(versionOf({ manifest: 3 })).toBe(3);
     expect(versionOf({ manifest: 4 })).toBe(4);
-    for (const manifest of [0, 5, '2', null, undefined])
+    expect(versionOf({ manifest: 5 })).toBe(5);
+    for (const manifest of [0, 6, '2', null, undefined])
       expect(versionOf({ manifest })).toBe(undefined);
     expect(versionOf(null)).toBe(undefined);
   });

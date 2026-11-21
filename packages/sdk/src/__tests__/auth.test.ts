@@ -6,9 +6,11 @@ import {
   SignInError,
   createSovereign,
   hasRole,
+  personFromClaims,
 } from '../index';
 import { createFakeCore, memorySessionStore, type WrongLogoutToken } from '../testing';
 import { checkedAgainstContract, clock, memoryStore } from './helpers';
+import { readExport } from '@sovereignfs/export';
 
 type Options = {
   deletes?: boolean;
@@ -191,6 +193,59 @@ describe('signing in (sdk §9)', () => {
       new Request(inside, { headers: { cookie: cookieHeader(begin.setCookies) } }),
     );
     expect(done.session.sub).toBe('u1');
+  });
+});
+
+describe('who is signed in, typed (sdk §9.9)', () => {
+  it('is the session’s user: core’s sub as the id, and the claims of the scopes granted', async () => {
+    const world = setup();
+    world.core.addPerson({ sub: 'u2', name: 'Grace Hopper', email: 'grace@example.org' });
+    const { done, cookie } = await signIn(world, 'u2');
+    const user = {
+      id: 'u2',
+      sub: 'u2',
+      name: 'Grace Hopper',
+      email: 'grace@example.org',
+      emailVerified: true,
+      roles: [],
+    };
+    expect(done.session.user).toEqual(user);
+    // The same when the session is read again from its cookie.
+    expect((await world.sv.auth.getSession(withCookie(cookie)))?.user).toEqual(user);
+  });
+
+  it('leaves out what core was not asked for, and takes nothing of the wrong type', () => {
+    expect(
+      personFromClaims({
+        sub: 's',
+        name: 7,
+        email: '',
+        email_verified: 'yes',
+        picture: 'https://core.test/p.png',
+        locale: 'en-GB',
+        zoneinfo: 'Europe/Berlin',
+        roles: ['platform:admin', 3],
+      }),
+    ).toEqual({
+      id: 's',
+      sub: 's',
+      picture: 'https://core.test/p.png',
+      locale: 'en-GB',
+      zoneinfo: 'Europe/Berlin',
+      roles: ['platform:admin'],
+    });
+    // An app that keeps accounts of its own gives its id for the person.
+    expect(personFromClaims({ sub: 's' }, 'local-1')).toEqual({
+      id: 'local-1',
+      sub: 's',
+      roles: [],
+    });
+  });
+
+  it('carries the roles core gave a trusted app', async () => {
+    const world = setup({ scopes: ['openid', 'profile', 'roles'] });
+    const { done } = await signIn(world, 'u1', { roles: ['platform:owner'] });
+    expect(done.session.user.roles).toEqual(['platform:owner']);
   });
 });
 
@@ -551,6 +606,70 @@ describe('a back-channel logout (sdk §9.1)', () => {
   });
 });
 
+describe('an export request (sdk §9.1, core-app §4.7.2)', () => {
+  const post = (token: string | undefined) =>
+    new Request('https://notes.sovereign.local/auth/export', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(token ? { export_request_token: token } : {}).toString(),
+    });
+  const app = { prefix: 'notes', version: '1.2.0' };
+
+  it('answers with the person’s part as an export the format accepts, holding what the handler added', async () => {
+    const world = setup();
+    const reply = await world.sv.auth.handleExportRequest(
+      post(await world.core.exportRequestToken({ sub: 'u1' })),
+      app,
+      async ({ sub, writer }) => {
+        await writer.addRecords('apps/notes/records/notes.jsonl', 'notes', [
+          { owner: sub, text: 'hello' },
+        ]);
+      },
+    );
+    expect(reply.status).toBe(200);
+    expect(reply.headers.get('content-type')).toBe('application/x-tar');
+    const read = await readExport(reply.body as ReadableStream<Uint8Array>);
+    expect(read.head).toMatchObject({
+      kind: 'person',
+      app: 'notes',
+      sub: 'u1',
+      producer: { name: 'notes', version: '1.2.0' },
+    });
+    expect(read.contents.records).toEqual([
+      { path: 'apps/notes/records/notes.jsonl', kind: 'notes', count: 1, endToEnd: false },
+    ]);
+  });
+
+  it('refuses a missing token, one of another type, and one seen before', async () => {
+    const world = setup();
+    expect(
+      (await world.sv.auth.handleExportRequest(post(undefined), app, async () => undefined)).status,
+    ).toBe(400);
+    const deletion = await world.core.accountDeletedToken({ sub: 'u1' });
+    expect(
+      (await world.sv.auth.handleExportRequest(post(deletion), app, async () => undefined)).status,
+    ).toBe(400);
+    const token = await world.core.exportRequestToken({ sub: 'u1' });
+    const first = await world.sv.auth.handleExportRequest(post(token), app, async () => undefined);
+    await first.body?.cancel();
+    expect(
+      (await world.sv.auth.handleExportRequest(post(token), app, async () => undefined)).status,
+    ).toBe(400);
+  });
+
+  it('ends the answer short when the handler fails, which a reader refuses', async () => {
+    const world = setup();
+    const reply = await world.sv.auth.handleExportRequest(
+      post(await world.core.exportRequestToken({ sub: 'u1' })),
+      app,
+      async () => {
+        throw new Error('the database is down');
+      },
+    );
+    await expect(readExport(reply.body as ReadableStream<Uint8Array>)).rejects.toBeDefined();
+  });
+});
+
 describe('an account-deleted notice (sdk §9.1, core-app §4.5)', () => {
   const post = (token: string | undefined, method = 'POST') =>
     new Request('https://notes.sovereign.local/auth/account-deleted', {
@@ -709,5 +828,55 @@ describe('when core ends a person’s session (sdk §9.1)', () => {
     expect(failure).toBeInstanceOf(SessionEndedError);
     expect((failure as SessionEndedError).byCore).toBe(false);
     expect((await world.sv.auth.getSession(withCookie(cookie)))?.sub).toBe('u1');
+  });
+});
+
+describe('signing in for a session the app keeps (sdk §9.8)', () => {
+  it('says who signed in and keeps the refresh token, with no session of the SDK’s', async () => {
+    const world = setup({ scopes: ['openid', 'profile', 'offline_access'] });
+    const begin = await world.sv.auth.beginSignIn({ returnTo: '/notes' });
+    const back = world.core.authorize(begin.url, 'u1');
+    const signedIn = await world.sv.auth.finishSignIn(
+      new Request(back, { headers: { cookie: cookieHeader(begin.setCookies) } }),
+    );
+    expect(signedIn).toMatchObject({ sub: 'u1', returnTo: '/notes' });
+    expect(signedIn.claims.name).toBe('Ada Lovelace');
+    expect(typeof signedIn.idToken).toBe('string');
+    // The only cookie it sets clears the pending sign-in: the session is the caller's to make.
+    expect(signedIn.setCookies).toHaveLength(1);
+    expect(signedIn.setCookies[0]).toMatch(/Max-Age=0/);
+    expect(await world.tokens.store.read('u1')).toBeTypeOf('string');
+    // And the callback works once.
+    await expect(
+      world.sv.auth.finishSignIn(
+        new Request(back, { headers: { cookie: cookieHeader(begin.setCookies) } }),
+      ),
+    ).rejects.toBeInstanceOf(SignInError);
+  });
+
+  it('says when core finds the person signed out, for the caller to end its own session', async () => {
+    const world = setup();
+    const begin = await world.sv.auth.beginSignIn({ prompt: 'none', returnTo: '/notes' });
+    const back = world.core.loginRequired(begin.url);
+    const failure = await world.sv.auth
+      .finishSignIn(new Request(back, { headers: { cookie: cookieHeader(begin.setCookies) } }))
+      .catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(SignInError);
+    expect(failure).toMatchObject({ reason: 'login_required', returnTo: '/notes' });
+  });
+
+  it('gives core’s sign-out for an ID token the caller kept, and the app’s own page without one', async () => {
+    const world = setup();
+    const begin = await world.sv.auth.beginSignIn();
+    const back = world.core.authorize(begin.url, 'u1');
+    const { idToken } = await world.sv.auth.finishSignIn(
+      new Request(back, { headers: { cookie: cookieHeader(begin.setCookies) } }),
+    );
+    const out = new URL(await world.sv.auth.endSessionUrl(idToken));
+    expect(out.searchParams.get('id_token_hint')).toBe(idToken);
+    expect(out.searchParams.get('post_logout_redirect_uri')).toBe(
+      world.sv.auth.postLogoutRedirectUri,
+    );
+    expect(await world.sv.auth.endSessionUrl(undefined)).toBe(world.sv.auth.postLogoutRedirectUri);
   });
 });

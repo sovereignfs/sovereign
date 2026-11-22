@@ -10,7 +10,7 @@ export const APP_DEPENDENCIES = {
   '@dnd-kit/core': '^6.3.1',
   '@dnd-kit/sortable': '^10.0.0',
   // The sign-in: the package's preset, pages' flows and core as a way in, on better-auth at the one version the package names.
-  '@sovereignfs/auth': '^0.4.0',
+  '@sovereignfs/auth': '^0.5.0',
   '@sovereignfs/config': '^0.1.0',
   // 0.2 has the worker's push handlers and `usePush`, which the template's notifications use.
   '@sovereignfs/pwa': '^0.2.0',
@@ -22,7 +22,7 @@ export const APP_DEPENDENCIES = {
   '@sovereignfs/storage': '^0.1.0',
   // 0.104 has `PushControl`; 0.105 writes `SessionsPanel`'s times the same on the server and in the browser.
   '@sovereignfs/ui': '^0.105.0',
-  'better-auth': '1.7.18',
+  'better-auth': '1.7.27',
   next: '^16.4.6',
   pg: '^8.23.1',
   react: '^19.3.1',

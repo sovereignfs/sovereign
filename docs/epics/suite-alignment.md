@@ -67,7 +67,7 @@ and the task here is marked done when the app's change is on its `develop`.
 
 - An app's handler runs in a worker test, and an allow-list widened to a person's data still fails the package's test
 
-#### 📋 20.3 — `@sovereignfs/auth` on the newest better-auth `[parallel]`
+#### ✅ 20.3 — `@sovereignfs/auth` on the newest better-auth `[parallel]`
 
 **Goal:** No app moves onto the package with a downgrade of better-auth.
 
@@ -85,6 +85,11 @@ and the task here is marked done when the app's change is on its `develop`.
 **Review checklist:**
 
 - `pnpm test:db` on each database and `pnpm e2e` pass; the populated stores open
+
+**Done as (0.132.0):** 1.7.27, the newest 1.7 patch. The store it writes has the same shape as 1.7.18's; its capture is kept beside the
+older two. One change in behaviour: the provider now refuses a web app's `http` redirect address unless `allowInsecureRedirectUri`
+says yes, which broke a development instance's `localhost` apps (two tests in `oauth.suite.ts` and `clients.test.ts` failed); core
+passes its own rule (core-app §3.7.1). `@sovereignfs/auth` 0.5.0, core 0.85.4, the toolkit 0.28.0.
 
 #### 📋 20.4 — The specification: accounts an app already has, and the key secret
 

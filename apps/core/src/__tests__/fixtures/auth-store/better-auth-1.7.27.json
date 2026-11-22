@@ -1,0 +1,57 @@
+{
+  "betterAuth": "1.7.27",
+  "secret": "a-secret-that-is-long-enough-to-pass-validation",
+  "email": "captured@sovereign.local",
+  "password": "svp1.kCjqDRXeyqNbLaIcApCvOxpboKMKWRkG-JtQdOIJ6nI",
+  "cookie": "better-auth.session_token=thPOCATYTzrWpdzsx4xY8ZKJjNo0xxkE.sR47NF8sGjKz4sSX6vPeldG1sGDst702B0hLNpSWlVk%3D",
+  "tables": {
+    "users": [
+      {
+        "id": "PyYx5h7XDReS63TpXGRjjUfT9BpQBpis",
+        "name": "Captured Person",
+        "email": "captured@sovereign.local",
+        "email_verified": false,
+        "image": null,
+        "created_at": 1795338920960,
+        "updated_at": 1795338920960,
+        "role": "platform:owner",
+        "timezone": null,
+        "agreed_to_terms": 1,
+        "terms_accepted_at": 1795338920960,
+        "terms_version": "0864d4362d07166e2c2323f6078297b7ef437619f0ce68639e0a4d64134d3d87",
+        "two_factor_enabled": 0,
+        "deactivated_at": null,
+        "locale": null
+      }
+    ],
+    "accounts": [
+      {
+        "id": "tu9WGaV3CfGm9eH3FATl9KzW42CntjGM",
+        "account_id": "PyYx5h7XDReS63TpXGRjjUfT9BpQBpis",
+        "provider_id": "credential",
+        "user_id": "PyYx5h7XDReS63TpXGRjjUfT9BpQBpis",
+        "access_token": null,
+        "refresh_token": null,
+        "id_token": null,
+        "access_token_expires_at": null,
+        "refresh_token_expires_at": null,
+        "scope": null,
+        "password": "1312f6b1475e56d2242138580d720d34:f7e18693a7ddc14856c814bc05c9237b73e0418c85538c43eca5dfcfcdd5d56cc038c4e295678e9f07098f29690f9b9acf7f54f6146c73aac93b5920287d7af4",
+        "created_at": 1795338920962,
+        "updated_at": 1795338920962
+      }
+    ],
+    "sessions": [
+      {
+        "id": "D3UwcfccYnyiJQNus8k5jzsfeqEmFSsV",
+        "expires_at": 4102444800000,
+        "token": "thPOCATYTzrWpdzsx4xY8ZKJjNo0xxkE",
+        "created_at": 1795338920962,
+        "updated_at": 1795338920962,
+        "ip_address": "198.51.100.1",
+        "user_agent": "",
+        "user_id": "PyYx5h7XDReS63TpXGRjjUfT9BpQBpis"
+      }
+    ]
+  }
+}

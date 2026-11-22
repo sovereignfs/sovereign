@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/auth",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "How core and every Sovereign app sign people in: core's own sign-in, the part of it that is not about core.",
   "license": "MPL-2.0",
   "repository": {
@@ -63,10 +63,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@better-auth/passkey": "1.7.18",
+    "@better-auth/passkey": "1.7.27",
     "@sovereignfs/config": "workspace:^",
     "@sovereignfs/sdk": "workspace:^",
-    "better-auth": "1.7.18",
+    "better-auth": "1.7.27",
     "drizzle-orm": "catalog:",
     "libsodium-wrappers-sumo": "catalog:",
     "zod": "^4.6.7"

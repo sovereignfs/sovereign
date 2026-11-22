@@ -4,6 +4,13 @@ What changed in each version of the sign-in core and every Sovereign app share, 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/). A version's section is
 written in the change that sets the version, dated that day, and becomes the release notes when the version is published.
 
+## [0.5.0] - 2026-11-22
+
+### Changed
+
+- better-auth and `@better-auth/passkey` 1.7.27, named exactly. An app on the package names the same better-auth version, so moving
+  to 0.5.0 means moving the app's better-auth to 1.7.27 with it; no app on a newer 1.7 patch has to go down to use the package.
+
 ## [0.4.0] - 2026-11-20
 
 ### Added

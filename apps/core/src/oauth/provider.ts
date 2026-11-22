@@ -84,6 +84,11 @@ export function oidcPlugins(database: Database, settings: AuthSettings) {
       refreshTokenExpiresIn: REFRESH_TOKEN_SECONDS,
       m2mAccessTokenExpiresIn: ACCESS_TOKEN_SECONDS,
       validateRedirectUri: (uri, registered) => registered.includes(uri),
+      // Since better-auth 1.7.27 a web client's `http` address is refused unless this says yes. Core's own rule (core-app §3.7.1,
+      // `urlProblem`): `http` on `localhost` and `*.localhost`, on a development instance only, where `SV_URL` is itself `http`.
+      allowInsecureRedirectUri: (url) =>
+        new URL(settings.baseUrl).protocol === 'http:' &&
+        (url.hostname === 'localhost' || url.hostname.endsWith('.localhost')),
       // The Core API is a protected resource (core-app §3.9). An app that asks for a token with
       // `resource=<origin>/api/v1` is given a signed JWT addressed to it, limited to the `directory` scope; a
       // token asked for without it stays opaque and is refused by the API. Any app may ask for the resource

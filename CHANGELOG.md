@@ -5,6 +5,21 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.132.0] - 2026-11-22
+
+### Changed
+
+- better-auth 1.7.27, with every package of it pinned exactly, in core, `@sovereignfs/auth` and the app template; checked against the
+  stores 1.7.13 and 1.7.18 wrote, and the store 1.7.27 writes kept beside them.
+- An app's `http` address on `localhost` is still accepted on a development instance: better-auth 1.7.27 refuses a web app's `http`
+  address unless the server says otherwise, and core now says so by its own rule (`http` on `localhost` and `*.localhost`, only where
+  `SV_URL` is `http`). Every other instance accepts only `https`, as before.
+
+### Documentation
+
+- The manifest contract describes manifest 5; the environment contract names the Web Push key and its subject, and the
+  `ENCRYPTION_KEY` pair older apps read; the guide lists `@sovereignfs/auth` and `@sovereignfs/export`.
+
 ## [0.131.3] - 2026-11-21
 
 ### Fixed

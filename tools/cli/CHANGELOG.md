@@ -5,6 +5,12 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.12.0; earlier versions are in the repository's
 history and tags.
 
+## [0.28.0] - 2026-11-22
+
+### Changed
+
+- An app made by `npm create @sovereignfs app` depends on better-auth 1.7.27 and `@sovereignfs/auth` 0.5, which names it.
+
 ## [0.27.1] - 2026-11-21
 
 ### Changed

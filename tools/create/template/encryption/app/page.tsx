@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth';
+import { requirePerson } from '@/lib/person';
 import { files } from '@/lib/files';
 import { keySettings } from '@/lib/keys';
 import { deleteFile } from './actions';
@@ -25,10 +25,10 @@ export const dynamic = 'force-dynamic';
 
 export default async function Home() {
   // Sends a person to sign in with core, and back here.
-  const session = await auth().requireSession('/');
+  const session = await requirePerson('/');
   // Their files, kept the suite's way: a folder for this person and a quota for this person (lib/files.ts).
   const [kept, usage] = await Promise.all([files().list(session.sub), files().usage(session.sub)]);
-  const name = typeof session.claims.name === 'string' ? session.claims.name : 'there';
+  const name = session.name || 'there';
 
   return (
     <main>

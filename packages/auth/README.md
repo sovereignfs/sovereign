@@ -46,6 +46,9 @@ An app that kept better-auth's tables before the package (`user`, `session`…) 
 - `resetLink(auth, email, baseUrl)` from a command of the app's, for whoever does not come back within the 90 days.
 - `coreSubOf(database, userId)` (`./core`) for the `sub` core knows a person by; keep no copy.
 
+An app that keeps people's keys (`@sovereignfs/sdk/keys`, `localVault`) adds `keySecrets({ database, core })` among the preset's `plugins`
+and passes `secretPath: '/api/auth/sv/key-secret'` to them.
+
 ## Licence
 
 MPL-2.0.

@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth';
+import { person } from '@/lib/person';
 import { failure, files, refuseCrossOrigin, unauthorised } from '@/lib/files';
 
 export const dynamic = 'force-dynamic';
@@ -9,9 +9,7 @@ type Context = { params: Promise<{ id: string }> };
 export async function GET(request: Request, { params }: Context) {
   const { id } = await params;
   const query = new URL(request.url).searchParams;
-  const sub = query.has('signature')
-    ? files().signedFor(id, query)
-    : (await auth().getSession())?.sub;
+  const sub = query.has('signature') ? files().signedFor(id, query) : (await person())?.sub;
   if (!sub) return query.has('signature') ? expired() : unauthorised();
   try {
     return await files().serve(sub, id, request);
@@ -26,7 +24,7 @@ export async function GET(request: Request, { params }: Context) {
 export async function DELETE(request: Request, { params }: Context) {
   const refused = refuseCrossOrigin(request);
   if (refused) return refused;
-  const session = await auth().getSession();
+  const session = await person();
   if (!session) return unauthorised();
   try {
     await files().remove(session.sub, (await params).id);

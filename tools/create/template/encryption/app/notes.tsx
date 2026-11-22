@@ -30,6 +30,9 @@ type Stored = {
 };
 type Note = Stored & { title: string; text: string };
 type Keys = ReturnType<typeof appKeys>;
+
+/** Where this app's server gives the session's key secret (`@sovereignfs/auth`, auth.md §8.1). */
+const KEY_SECRET = '/api/auth/sv/key-secret';
 type Ready = { keys: Keys; identity: OpenedIdentity; me: MyKeys };
 
 const enc = new TextEncoder();
@@ -56,7 +59,13 @@ export function Notes(props: {
   appName: string;
 }) {
   const keys = useMemo(
-    () => appKeys({ core: props.core, clientId: props.clientId, returnTo: props.returnTo }),
+    () =>
+      appKeys({
+        core: props.core,
+        clientId: props.clientId,
+        returnTo: props.returnTo,
+        secretPath: KEY_SECRET,
+      }),
     [props.core, props.clientId, props.returnTo],
   );
   const [phase, setPhase] = useState<'opening' | 'locked' | 'open' | 'failed'>('opening');

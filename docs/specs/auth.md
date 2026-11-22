@@ -208,13 +208,12 @@ keeps (sdk §9.8), so the app's session is the package's and the SDK keeps only 
   whether that ends core's session too (core-app §3.6.5): yes for a hosted app, no for an external one.
 - **An account from core has no password**, so the routes that set up a password's second step, a passkey or a new password refuse it
   (`NO_PASSWORD_ACCOUNT`); its second step is core's. `localAccounts: false` switches every route of an own account off.
-- **Not built yet:** §8.1's key secret, and linking a local account to core from a signed-in session (until then an address that is a local account's is
+- **Not built yet:** linking a local account to core from a signed-in session (until then an address that is a local account's is
   refused), and encryption's per-session key secret and key release for an app on the package.
 
 ### 8.1 Accounts an app had before the package
 
-RFC 0007 amendment 1 (A1 to A4, and A7 for what building it found). Built in task 20.5 but the key secret (20.6); nothing of it applies
-to core.
+RFC 0007 amendment 1 (A1 to A4, and A7 for what building it found). Built in tasks 20.5 and 20.6; nothing of it applies to core.
 
 - **Moving the store** (`adoptAccountTables`, `./server`): run once at start-up, before the package's migrations. It renames an app's own
   better-auth tables (`user`, `session`…) onto the package's, adds the columns the package has, makes the second step's and passkeys'
@@ -233,7 +232,7 @@ to core.
 - **Accounts from core made by `genericOAuth`** keep their `sovereign` rows (the account id is the `sub`); the migration clears their
   tokens, and gives each session of an account whose only way in is core a `sv_core_sign_ins` row to be checked at its next request.
 - **A person's core `sub`** comes from `coreSubOf(database, userId)` (`./core`), the inverse of `userIdForSub`; an app keeps no copy.
-- **The key secret** (not built yet, task 20.6) is served at `GET /api/auth/sv/key-secret` (same-origin only, `no-store`, `401` with no session), made on the first
+- **The key secret** (`keySecrets({ database, core })`, `./server`, since an app with no core needs it for its own vault) is served at `GET /api/auth/sv/key-secret` (same-origin only, `no-store`, `401` with no session), made on the first
   ask and kept in `sv_key_secrets`, which ends with the session. Its `sub` is the core `sub` for a session that came through core, the
   app's user id for a local one.
 
@@ -288,3 +287,4 @@ session gives it as one typed `user`: `id`, `sub` (linked accounts), `name`, `em
 | November 2026 | Draft, from RFC 0007 (task 17.1)                                                                                           |
 | November 2026 | §8.1 and rule 1's exception, from RFC 0007 amendment 1 (task 20.4); to be built                                            |
 | November 2026 | §8.1 built but the key secret (task 20.5): `adoptAccountTables`, `movePasswords`, `passwordMove`, `resetLink`, `coreSubOf` |
+| November 2026 | §8.1's key secret built (task 20.6): `keySecrets`, `0002_key_secrets`; the template's `--encryption` form on the package   |

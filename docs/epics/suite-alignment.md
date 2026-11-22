@@ -149,7 +149,7 @@ is Tusk's own auth migrations (`app-auth-store.ts`) with four people (a password
 `adopt.db.test.ts` passes on SQLite, sqld and PostgreSQL, each rule seen to fail with its guard removed. The security check found no
 violation.
 
-#### 📋 20.6 — The key secret over the package's session
+#### ✅ 20.6 — The key secret over the package's session
 
 **Goal:** An app on `@sovereignfs/auth` gets its keys from core, so the template has one design.
 
@@ -167,6 +167,15 @@ violation.
 
 - A generated `--encryption` app releases keys and encrypts a note, signed in through the package
 - The secret is gone when the session ends by sign-out or a back-channel notice
+
+**Done as (0.135.0, `@sovereignfs/auth` 0.6.0, unreleased):** `keySecrets` in `./server` (an app with no core needs it too), in
+`sv_key_secrets` with `ON DELETE CASCADE`, keyed by core's `sub` for a session from core; tested for one secret per session, the two
+`sub`s, its end with a logout notice, and refusal of another site and of no session, each seen to fail with its guard removed, and the
+cascade on SQLite, sqld and PostgreSQL. The template's `--encryption` overlay now keeps the base app's sign-in (core only,
+`AUTH_LOCAL=false`), reads people through `lib/person.ts` (`coreSubOf`), and replaces only `notices.ts`, `actions.ts` and `ui.tsx` among the
+base's files, with what they had added. Both variants were generated, installed from packed tarballs, type-checked and built; building them
+found that the overlay's `ui.tsx` and `actions.ts` dropped what the base pages import, and that `ways.core` is an address, not a flag. Not
+run end to end against a core in a browser.
 
 #### 📋 20.7 — Linking a local account to core `[parallel]`
 

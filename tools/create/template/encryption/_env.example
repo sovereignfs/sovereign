@@ -1,6 +1,7 @@
 # What the instance gives this app (contracts/app-manifest.md §3), for running it on your own machine against a core you can reach.
 # A secret may be given as NAME_FILE=/path instead of NAME=value.
 __PREFIX___URL=http://localhost:__PORT__
+# Core, to sign people in through an instance too: its address and this app's client there. Leave them empty for no core.
 __PREFIX___CORE_URL=https://core.sovereign.local
 __PREFIX___CORE_CLIENT_ID=
 __PREFIX___CORE_CLIENT_SECRET=
@@ -12,6 +13,10 @@ __PREFIX___POSTGRES_DIRECT_URL=postgres://user:password@localhost:5432/__NAME__
 # database role to that number plus 2. Without it, 10.
 __PREFIX___POSTGRES_POOL_MAX=10
 __PREFIX___AUTH_SECRET=change-me-to-something-long-and-random
+# How people sign in (@sovereignfs/auth): through core only. The notes are encrypted with keys core releases, so an account of the app's
+# own would have none (auth.md §8.1).
+__PREFIX___AUTH_LOCAL=false
+__PREFIX___AUTH_SIGNUP=closed
 # People's files (contracts/app-manifest.md §2.7). An instance mounts this app's folder at /data/s3/__NAME__ and sets these; running it yourself,
 # the folder is here (docker compose mounts a volume at /data/s3/__NAME__ instead). Each person's quota: megabytes and files.
 __PREFIX___STORAGE_DRIVER=fs

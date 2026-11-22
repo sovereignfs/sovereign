@@ -511,29 +511,35 @@ describe('an app made with --encryption', () => {
     expect(satisfies(sdk, ENCRYPTION_DEPENDENCIES['@sovereignfs/sdk'])).toBe(true);
   });
 
-  it('signs in through core with the SDK, leaving out the package’s sign-in and what it depends on', async () => {
+  it('signs in on the package, through core only, which serves the key secret its pages keep the keys with (auth.md §8.1)', async () => {
     const target = await made();
     const written = all(target);
-    for (const file of [
-      'lib/sign-in.ts',
-      'lib/session.ts',
-      'app/sign-in/page.tsx',
-      'app/api/auth/[...all]/route.ts',
-      '_skip',
-    ])
+    expect(written).toEqual(
+      expect.arrayContaining([
+        'lib/sign-in.ts',
+        'lib/session.ts',
+        'lib/person.ts',
+        'app/sign-in/page.tsx',
+        'app/api/auth/[...all]/route.ts',
+      ]),
+    );
+    for (const file of ['lib/auth.ts', 'app/auth/[action]/route.ts', '_skip'])
       expect(written, file).not.toContain(file);
-    expect(written).toEqual(expect.arrayContaining(['lib/auth.ts', 'app/auth/[action]/route.ts']));
-    // Nothing it keeps imports what was left out.
     for (const file of written.filter((f) => /\.tsx?$/.test(f)))
-      expect(read(target, file), file).not.toMatch(
-        /@\/lib\/(sign-in|session|notices|sign-in-client)'/,
-      );
+      expect(read(target, file), file).not.toMatch(/nextAuth|@sovereignfs\/sdk\/next/);
+    expect(read(target, 'lib/sign-in.ts')).toContain(
+      'keySecrets({ database, core: Boolean(ways.core) })',
+    );
+    for (const file of ['app/notes.tsx', 'app/keys/return/received.tsx'])
+      expect(read(target, file), file).toContain("'/api/auth/sv/key-secret'");
     const pkg = JSON.parse(read(target, 'package.json')) as {
       dependencies: Record<string, string>;
     };
-    expect(pkg.dependencies['@sovereignfs/auth']).toBeUndefined();
-    expect(pkg.dependencies['better-auth']).toBeUndefined();
-    expect(read(target, '.env.example')).not.toContain('_AUTH_LOCAL');
+    expect(pkg.dependencies['@sovereignfs/auth']).toBeDefined();
+    expect(pkg.dependencies['better-auth']).toBeDefined();
+    expect(read(target, '.env.example')).toContain('MYNOTES_AUTH_LOCAL=false');
+    // Everything of a person is kept by core's sub, found from the account each time.
+    expect(read(target, 'lib/person.ts')).toContain('coreSubOf(database, session.user.id)');
   });
 
   it('writes its own files over the app’s, with the names put in and nothing of the template left', async () => {
@@ -579,7 +585,7 @@ describe('an app made with --encryption', () => {
     for (const method of ['PUT', 'DELETE']) {
       const body = route.slice(route.indexOf(`export async function ${method}`));
       expect(body.indexOf('refuseCrossOrigin(request)'), method).toBeGreaterThan(-1);
-      expect(body.indexOf('refuseCrossOrigin(request)')).toBeLessThan(body.indexOf('getSession()'));
+      expect(body.indexOf('refuseCrossOrigin(request)')).toBeLessThan(body.indexOf('person()'));
     }
     for (const file of [
       'app/api/notes/route.ts',
@@ -587,7 +593,7 @@ describe('an app made with --encryption', () => {
       'app/api/people/[sub]/keys/route.ts',
       'app/api/me/keys/route.ts',
     ]) {
-      expect(read(target, file), file).toContain('auth().getSession()');
+      expect(read(target, file), file).toContain('await person()');
       expect(read(target, file), file).toContain('unauthorised()');
     }
     const store = read(target, 'lib/notes.ts');
@@ -598,9 +604,9 @@ describe('an app made with --encryption', () => {
 
   it('deletes a person’s notes and the keys sealed to them when their account is deleted', async () => {
     const target = await made();
-    const auth = read(target, 'lib/auth.ts');
-    expect(auth).toContain('await notes().deleteAll(sub)');
-    expect(auth).toContain('await files().removeAll(sub)');
+    const notices = read(target, 'lib/notices.ts');
+    expect(notices).toContain('await notes().deleteAll(sub)');
+    expect(notices).toContain('await files().removeAll(sub)');
     expect(read(target, 'lib/notes.ts')).toContain('OR reader = $1');
   });
 
@@ -712,7 +718,7 @@ describe('notifications in an app', () => {
       expect(route).toContain("originOf(setting('MYNOTES_URL'))");
       expect(route).toContain('account: () => currentAccount()');
       expect(read(target, 'lib/account.ts'), String(encryption)).toContain(
-        encryption ? 'auth().getSession())?.sub' : 'getSession())?.user.id',
+        encryption ? '(await person())?.sub' : 'getSession())?.user.id',
       );
       const action = read(target, 'app/push-actions.ts');
       expect(action.startsWith("'use server';")).toBe(true);
@@ -739,7 +745,7 @@ describe('notifications in an app', () => {
       const signOut = read(target, 'app/sign-out.tsx');
       const off = signOut.indexOf('turnOffPush()');
       expect(off).toBeGreaterThan(-1);
-      expect(off).toBeLessThan(signOut.indexOf(encryption ? 'form.submit()' : 'await signOut()'));
+      expect(off).toBeLessThan(signOut.indexOf('await signOut()'));
       expect(read(target, 'instrumentation.ts')).toContain('startPushOutbox();');
       expect(read(target, 'app/sw.js/route.ts')).toContain(
         "...(appPush() ? { push: { name: 'My Notes', icon: '/pwa-icon/192' } } : {})",
@@ -751,7 +757,7 @@ describe('notifications in an app', () => {
     for (const encryption of variants) {
       const target = path.join(temp(), 'my-notes');
       await writeApp(target, namesOf(target), DEFAULT_APP_PORT, { encryption });
-      expect(read(target, encryption ? 'lib/auth.ts' : 'lib/notices.ts')).toContain(
+      expect(read(target, 'lib/notices.ts')).toContain(
         `await pushStore().removeAccount(${encryption ? 'sub' : 'userId'});`,
       );
     }

@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.135.0] - 2026-11-22
+
+### Added
+
+- `@sovereignfs/auth` serves the session's key secret (`keySecrets`), which an app's pages keep a person's keys with, so an app that
+  encrypts no longer needs the SDK's `nextAuth`. The app template's `--encryption` form now signs in on the package, through core only.
+
 ## [0.134.0] - 2026-11-22
 
 ### Added

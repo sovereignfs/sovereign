@@ -2,7 +2,7 @@
 
 |              |                                                                                                                                                                                                                                                       |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**   | Partially implemented (2026-11-20): every task built but 6.6, parked (better-auth's provider owns `amr`). Amendment 1 accepted, to be built                                                                                                           |
+| **Status**   | Partially implemented (2026-11-20): every task built but 6.6, parked (better-auth's provider owns `amr`). Amendment 1 accepted and built                                                                                                              |
 | **Date**     | November 2026                                                                                                                                                                                                                                         |
 | **Author**   | Claude Code, for review                                                                                                                                                                                                                               |
 | **Scope**    | A new published package, `@sovereignfs/auth`; `apps/core`'s sign-in, account and security pages; `@sovereignfs/ui`; `@sovereignfs/sdk`; the app template in `tools/create`; `contracts/core-api/`, `contracts/env.md`; `docs/specs/core-app.md` §3.6  |
@@ -368,6 +368,8 @@ Building A1 to A3 against the apps' stores found four things the text above did 
   package, so its stored hashes are of that value, and its page sends it (`previous`), never the password itself. `previous` is never
   taken when it is a sign-in value, so an account whose hash is already of one (Shopper's moved accounts, marked like every account with
   a password) cannot have its password replaced through the route by someone who knows that value.
+- **The key secret is in `./server`, not `./core`** (task 20.6): an app with no core needs it too, for `localVault`; with `core` it keys a
+  session that came through core by core's `sub`, read from its sign-in record.
 - **A reset leaves the mark, harmless:** after a reset the stored hash is of a sign-in value, which the route never takes, and the mark
   runs out at its time. Tries are counted per address (five an hour, under a hash of it) as well as per asking IP.
 
@@ -381,3 +383,6 @@ Building A1 to A3 against the apps' stores found four things the text above did 
 | November 2026 | The last open questions settled (a fresh session; an app's own lock left out); the specification written         |
 | November 2026 | Accepted by the goal owner                                                                                       |
 | November 2026 | Amendment 1 proposed: accounts an app already has, a person's core `sub`, and the key secret (task 20.4)         |
+| November 2026 | Amendment 1 accepted by the goal owner                                                                           |
+| November 2026 | Amendment 1 A7: as built in 20.5 (tables renamed, the route opens no session, `previous`, tries per address)     |
+| November 2026 | Amendment 1 built: the key secret (20.6), in `./server`; the template's `--encryption` form on the package       |

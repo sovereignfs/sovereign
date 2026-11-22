@@ -21,6 +21,7 @@ import {
   accountTables,
   createAuthPreset,
   resolveAuthSettings,
+  keySecrets,
   signUpPolicy,
   userOf,
 } from '../server/index';
@@ -115,7 +116,10 @@ async function world(options: { localAccounts?: boolean; roles?: string[] } = {}
       // Closed to sign-ups of the app's own: who may sign in through core is core's to say.
       registration: signUpPolicy(db, 'closed'),
       ...(options.localAccounts === false ? { localAccounts: false } : {}),
-      plugins: [sovereignSignIn({ sovereign, database: db })],
+      plugins: [
+        sovereignSignIn({ sovereign, database: db }),
+        keySecrets({ database: db, core: true }),
+      ],
     }),
   );
   const get = (address: string, cookie = '') =>
@@ -389,5 +393,82 @@ describe('core’s notices (auth.md §8)', () => {
     expect(gone.status).toBe(200);
     expect(deleted).toEqual(['u1']);
     expect(await sessionOf(cookie)).toBeNull();
+  });
+});
+
+describe('the key secret over the package’s session (auth.md §8.1)', () => {
+  const ask = (get: (address: string, cookie?: string) => Promise<Response>, cookie = '') =>
+    get('/api/auth/sv/key-secret', cookie);
+
+  it('is made once per session, keyed by core’s sub for a session that came through core, and never in the session’s own row', async () => {
+    const { signIn, get, db } = await world();
+    const { cookie } = await signIn();
+    const first = await ask(get, cookie);
+    expect(first.status).toBe(200);
+    expect(first.headers.get('cache-control')).toBe('no-store');
+    const body = (await first.json()) as { sub: string; secret: string };
+    expect(body.sub).toBe('u1');
+    expect(Buffer.from(body.secret, 'base64url')).toHaveLength(32);
+    expect(((await (await ask(get, cookie)).json()) as { secret: string }).secret).toBe(
+      body.secret,
+    );
+    // Another session of the same person has its own.
+    const other = await signIn();
+    expect(((await (await ask(get, other.cookie)).json()) as { secret: string }).secret).not.toBe(
+      body.secret,
+    );
+    const { rows } = await db.run('select * from sessions');
+    expect(JSON.stringify(rows)).not.toContain(body.secret);
+  });
+
+  it('is keyed by the app’s own id for a session of the app’s own account', async () => {
+    const { get, auth, db } = await world();
+    await db.run(
+      "insert into users (id, name, email, email_verified, two_factor_enabled, created_at, updated_at) values ('local', 'Bea', 'bea@example.com', 1, 0, 0, 0)",
+    );
+    const ctx = await auth.$context;
+    const session = await ctx.internalAdapter.createSession('local');
+    const cookie = `${ctx.authCookies.sessionToken.name}=${await signed(session.token)}`;
+    expect(((await (await ask(get, cookie)).json()) as { sub: string }).sub).toBe('local');
+  });
+
+  it('goes with the session, however it ends', async () => {
+    const { signIn, get, db, core, auth, tokens } = await world();
+    const { cookie } = await signIn();
+    await ask(get, cookie);
+    expect((await db.run('select 1 from sv_key_secrets')).rows).toHaveLength(1);
+    const notices = coreNotices({
+      database: db,
+      auth,
+      coreUrl: core.url,
+      clientId: core.credentials.clientId,
+      fetch: core.fetch,
+      dropRefreshToken: (sub) => {
+        tokens.delete(sub);
+        return Promise.resolve();
+      },
+    });
+    await notices.backChannelLogout(
+      new Request(`${APP}/api/sovereign/backchannel-logout`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ logout_token: await core.logoutToken({ sub: 'u1' }) }),
+      }),
+    );
+    expect((await db.run('select 1 from sv_key_secrets')).rows).toEqual([]);
+    expect((await ask(get, cookie)).status).toBe(401);
+  });
+
+  it('is given to the app’s own pages only, and to nobody without a session', async () => {
+    const { signIn, auth } = await world();
+    const { cookie } = await signIn();
+    const fromElsewhere = await auth.handler(
+      new Request(new URL('/api/auth/sv/key-secret', APP), {
+        headers: { cookie, 'sec-fetch-site': 'cross-site' },
+      }),
+    );
+    expect(fromElsewhere.status).toBe(404);
+    const { get } = await world();
+    expect((await ask(get)).status).toBe(401);
   });
 });

@@ -37,9 +37,6 @@ export const ENCRYPTION_DEPENDENCIES = {
   '@sovereignfs/sdk': '^2.11.0',
 } as const;
 
-/** What an app made with `--encryption` does not depend on: it signs in with the SDK's `nextAuth`, as it did before the package. */
-export const ENCRYPTION_LEAVES_OUT = ['@sovereignfs/auth', 'better-auth'] as const;
-
 export const APP_DEV_DEPENDENCIES = {
   // Makes the image's label and port from the manifest, and checks the manifest (`sovereign-manifest`).
   '@sovereignfs/manifest': '^0.4.0',

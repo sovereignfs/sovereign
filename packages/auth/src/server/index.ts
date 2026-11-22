@@ -59,6 +59,7 @@ export {
 } from './adopt.js';
 export { MOVE_PASSWORD_PATH, movePasswords, passwordsMoving } from './move-password.js';
 export { resetLink, type ResetLinkAuth } from './reset-link.js';
+export { KEY_SECRET_PATH, keySecrets } from './key-secrets.js';
 export * as postgresAccountSchema from './schema/postgres.js';
 export * as sqliteAccountSchema from './schema/sqlite.js';
 export type { Database, Migration } from '@sovereignfs/database';

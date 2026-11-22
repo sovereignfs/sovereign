@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.134.0 · **Last updated:** 2026-11-22
+**Version:** 0.135.0 · **Last updated:** 2026-11-22
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -399,7 +399,7 @@ Tasks 20.8 to 20.15 are built in each app's own repository and committed directl
 | —       | 9        | Fjord Web on the current packages                                  | ✅     | [20.13](docs/epics/suite-alignment.md) |
 | —       | 10       | The specification: accounts an app already has, and the key secret | ✅     | [20.4](docs/epics/suite-alignment.md)  |
 | 0.134.0 | 11       | Accounts an app already has, across to the package                 | ✅     | [20.5](docs/epics/suite-alignment.md)  |
-| —       | 12       | The key secret over the package's session                          | 📋     | [20.6](docs/epics/suite-alignment.md)  |
+| 0.135.0 | 12       | The key secret over the package's session                          | ✅     | [20.6](docs/epics/suite-alignment.md)  |
 | —       | 13       | Linking a local account to core `[parallel]`                       | 📋     | [20.7](docs/epics/suite-alignment.md)  |
 | —       | 14       | Shopper on `@sovereignfs/auth`                                     | 📋     | [20.14](docs/epics/suite-alignment.md) |
 | —       | 15       | The six apps on `@sovereignfs/auth`                                | 📋     | [20.15](docs/epics/suite-alignment.md) |

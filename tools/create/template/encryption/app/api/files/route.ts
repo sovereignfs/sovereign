@@ -1,11 +1,11 @@
-import { auth } from '@/lib/auth';
+import { person } from '@/lib/person';
 import { failure, files, refuseCrossOrigin, unauthorised } from '@/lib/files';
 
 export const dynamic = 'force-dynamic';
 
 /** The signed-in person's own files, newest first, and how much of their space they use. */
 export async function GET() {
-  const session = await auth().getSession();
+  const session = await person();
   if (!session) return unauthorised();
   const [list, usage] = await Promise.all([files().list(session.sub), files().usage(session.sub)]);
   return Response.json(
@@ -18,7 +18,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const refused = refuseCrossOrigin(request);
   if (refused) return refused;
-  const session = await auth().getSession();
+  const session = await person();
   if (!session) return unauthorised();
   try {
     const length = Number(request.headers.get('content-length') ?? Number.NaN);

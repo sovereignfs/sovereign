@@ -14,6 +14,8 @@ written in the change that sets the version, dated that day, and becomes the rel
   `passwordsMoving`; `resetLink` for an app's own command.
 - `coreSubOf` (`./core`): the `sub` core knows a person by, from the app's user id.
 - `0001_legacy_passwords` in `accountMigrations`: an empty table in an app made on the package.
+- `keySecrets` (`./server`): the session's key secret for `@sovereignfs/sdk/keys` and `localVault` at `/api/auth/sv/key-secret`, kept in
+  `sv_key_secrets` (`0002_key_secrets`) and gone with the session; keyed by core's `sub` for a session that came through core.
 
 ## [0.5.0] - 2026-11-22
 

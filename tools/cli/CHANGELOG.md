@@ -11,6 +11,8 @@ history and tags.
 
 - An app made by `npm create @sovereignfs app` depends on better-auth 1.7.27 and `@sovereignfs/auth` 0.6, which names it.
 - It depends on `@sovereignfs/pwa` 0.3, whose worker takes the app's own Background Sync and fetch handlers.
+- An app made with `--encryption` signs in on `@sovereignfs/auth` (through core only) instead of the SDK's `nextAuth`, keeps everything of
+  a person under core's `sub` and gets its key secret from the package; every app serves the key secret its pages may ask for.
 
 ## [0.27.1] - 2026-11-21
 

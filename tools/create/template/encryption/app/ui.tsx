@@ -4,7 +4,13 @@
 // re-exported from here, a Client Component module, and pages import the parts they use from "./ui". They still render on the server.
 export {
   Alert,
+  AuthCard,
+  AuthFooter,
+  AuthLink,
+  AuthNotice,
+  BrandBadge,
   Button,
+  ButtonLink,
   Card,
   Dialog,
   EmptyState,

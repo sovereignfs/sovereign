@@ -136,7 +136,8 @@ way in, the sign-in page sends a person straight on to it. Without a core addres
 instance hosting the app gives it a core address, so there it signs people in through core. Signing out of an app an instance hosts
 signs out of core too.
 
-An app made with `--encryption` signs in through core with the SDK's `nextAuth` instead (`ENCRYPTION.md`).
+An app made with `--encryption` signs in through core only, on the same package, which serves the key secret its pages keep the keys
+with; it keeps everything of a person under the `sub` core knows them by (`ENCRYPTION.md`).
 
 See [Using the SDK](https://github.com/sovereignfs/sovereign/blob/main/docs/using-the-sdk.md) for what `sv.as(person)` can call, and
 [the app manifest](https://github.com/sovereignfs/sovereign/blob/main/contracts/app-manifest.md) for what the instance gives and expects.

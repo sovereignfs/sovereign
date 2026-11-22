@@ -11,6 +11,7 @@ import {
   accountMigrations,
   accountTables,
   createAuthPreset,
+  keySecrets,
   resolveAuthSettings,
   resolveWaysIn,
   runMigrations,
@@ -80,6 +81,8 @@ async function make() {
       localAccounts: ways.local,
       plugins: [
         ...(ways.core ? [sovereignSignIn({ sovereign: sovereign(), database })] : []),
+        // The session's key secret for the pages that keep a person's keys (auth.md §8.1): made only when a page asks.
+        keySecrets({ database, core: Boolean(ways.core) }),
         // Last: it turns the cookies a server action sets into the response's.
         nextCookies(),
       ],

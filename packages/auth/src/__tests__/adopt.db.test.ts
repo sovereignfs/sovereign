@@ -253,6 +253,18 @@ describe('moving an app’s own store onto the package', () => {
     expect(await needsCoreCheck(db, 's-linus', NOW)).toBe(false);
   });
 
+  it('keeps a session’s key secret apart, and drops it with the session', async () => {
+    const db = await appStore();
+    await adoptAccountTables(db, { core: coreMigrations, now: NOW });
+    await db.run('insert into sv_key_secrets (session_id, secret, created_at) values (?, ?, ?)', [
+      's-ada',
+      'a secret',
+      NOW,
+    ]);
+    await db.run('delete from sessions where id = ?', ['s-ada']);
+    expect((await db.run('select 1 from sv_key_secrets')).rows).toEqual([]);
+  });
+
   it('does nothing to a store with no accounts of its own yet', async () => {
     const target = await createTestDatabase();
     const db = await target.open();

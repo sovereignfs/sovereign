@@ -19,6 +19,12 @@ export function accountMigrations(family: 'sqlite' | 'postgres'): Migration[] {
       name: '0001_legacy_passwords',
       sql: `CREATE TABLE sv_legacy_passwords (\n\tuser_id text PRIMARY KEY NOT NULL REFERENCES users(id) ON DELETE CASCADE,\n\tuntil ${family === 'postgres' ? 'bigint' : 'integer'} NOT NULL\n)`,
     },
+    {
+      // A session's key secret (RFC 0007 amendment 1 A4, auth.md §8.1): kept apart from the session's own row, which better-auth hands
+      // to the browser, and gone with the session however it ends.
+      name: '0002_key_secrets',
+      sql: `CREATE TABLE sv_key_secrets (\n\tsession_id text PRIMARY KEY NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,\n\tsecret text NOT NULL,\n\tcreated_at ${family === 'postgres' ? 'bigint' : 'integer'} NOT NULL\n)`,
+    },
   ];
 }
 

@@ -21,7 +21,7 @@ wherever you describe it, and never promise more than this file does. The rules 
   person whose keys changed is shown as such, and is shared with only if the person sharing says so.
 - **Removing someone** makes a new key for the note, sealed only to those who remain. What they already read cannot be taken back, and
   the dialog says so.
-- **A deleted account** takes its notes and every key sealed to it (`lib/auth.ts`).
+- **A deleted account** takes its notes and every key sealed to it (`lib/notices.ts`).
 
 ## Rules to keep as the app grows (RFC 0005 §8)
 

@@ -7,7 +7,7 @@ import { coreSignOutUrl } from '@sovereignfs/auth/core';
 import { getSession } from '@/lib/session';
 import { signIn, waysIn } from '@/lib/sign-in';
 import { sovereign } from '@/lib/sovereign';
-import { db } from '@/lib/db';
+import { database } from '@/lib/db';
 import { files } from '@/lib/files';
 import { StorageError } from '@sovereignfs/storage';
 
@@ -39,7 +39,13 @@ export async function addNote(formData: FormData): Promise<void> {
     .trim()
     .slice(0, 2000);
   if (body === '') return;
-  await db().query('INSERT INTO notes (owner, body) VALUES ($1, $2)', [session.user.id, body]);
+  await (
+    await database()
+  ).run('INSERT INTO notes (owner, body, created_at) VALUES (?, ?, ?)', [
+    session.user.id,
+    body,
+    Date.now(),
+  ]);
   revalidatePath('/');
 }
 
@@ -48,7 +54,9 @@ export async function deleteNote(formData: FormData): Promise<void> {
   const id = Number(formData.get('id'));
   if (!Number.isSafeInteger(id)) return;
   // Only the person's own: the owner is part of the condition and not a check made before it.
-  await db().query('DELETE FROM notes WHERE id = $1 AND owner = $2', [id, session.user.id]);
+  await (
+    await database()
+  ).run('DELETE FROM notes WHERE id = ? AND owner = ?', [id, session.user.id]);
   revalidatePath('/');
 }
 

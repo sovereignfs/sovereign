@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsup';
 
 /**
- * The entries the specification names (auth.md §2): the root, `/server`, `/next`, `/client`, `/core`, `/postgres`, and the browser guard the server
+ * The entries the specification names (auth.md §2): the root, `/server`, `/next`, `/client`, `/core`, `/postgres`, `/database`, and the browser guard the server
  * entries resolve to in a page. `@sovereignfs/crypto` and `@sovereignfs/database` are private today, so they are bundled in, code and
  * types, and a published package needs neither; `@sovereignfs/config` and `@sovereignfs/sdk` are published, and are dependencies.
  */
@@ -14,6 +14,7 @@ export default defineConfig({
     'client/index': 'src/client/index.ts',
     'core/index': 'src/core/index.ts',
     postgres: 'src/postgres.ts',
+    database: 'src/database.ts',
   },
   format: ['esm'],
   dts: {

@@ -1,4 +1,4 @@
-import { db } from './db';
+import { database } from './db';
 
 /**
  * The notes, as the browser sends them (ENCRYPTION.md): a title and a text each encrypted with the note's own key, and that key sealed
@@ -98,34 +98,36 @@ export function checkWrite(owner: string, id: string, input: unknown): NoteWrite
 export const notes = () => ({
   /** The notes the person can read, newest first: their own, and those shared with them. */
   async list(sub: string): Promise<NoteRow[]> {
-    const { rows } = await db().query<{
-      id: string;
-      owner: string;
-      version: number;
-      meta: Buffer;
-      body: Buffer;
-      record: string;
-    }>(
+    const db = await database();
+    const { rows } = await db.run(
       `SELECT n.id, n.owner, n.version, n.meta, n.body, r.record
-         FROM notes n JOIN note_readers r ON r.note_id = n.id AND r.reader = $1
+         FROM notes n JOIN note_readers r ON r.note_id = n.id AND r.reader = ?
         ORDER BY n.updated_at DESC LIMIT 200`,
       [sub],
     );
-    const owned = rows.filter((row) => row.owner === sub).map((row) => row.id);
+    const notes = rows as {
+      id: string;
+      owner: string;
+      version: number;
+      meta: string;
+      body: string;
+      record: string;
+    }[];
+    const owned = notes.filter((row) => row.owner === sub).map((row) => row.id);
     const readers = owned.length
-      ? (
-          await db().query<{ note_id: string; reader: string }>(
-            'SELECT note_id, reader FROM note_readers WHERE note_id = ANY($1) ORDER BY reader',
-            [owned],
+      ? ((
+          await db.run(
+            `SELECT note_id, reader FROM note_readers WHERE note_id IN (${owned.map(() => '?').join(', ')}) ORDER BY reader`,
+            owned,
           )
-        ).rows
+        ).rows as { note_id: string; reader: string }[])
       : [];
-    return rows.map((row) => ({
+    return notes.map((row) => ({
       id: row.id,
       owner: row.owner,
-      version: row.version,
-      meta: row.meta.toString('base64url'),
-      body: row.body.toString('base64url'),
+      version: Number(row.version),
+      meta: row.meta,
+      body: row.body,
       record: row.record,
       readers:
         row.owner === sub ? readers.filter((r) => r.note_id === row.id).map((r) => r.reader) : [],
@@ -134,68 +136,51 @@ export const notes = () => ({
 
   /**
    * Writes a note of the person's, new or changed, with all its readers, in one transaction. A note of someone else's under the same id,
-   * or an older version than the one stored, is refused as not there.
+   * or an older version than the one stored, is refused as not there. What the browser encrypted is kept as it came, in base64url.
    */
   async save(owner: string, note: NoteWrite & { id: string }): Promise<void> {
-    const client = await db().connect();
-    try {
-      await client.query('BEGIN');
-      const written = await client.query(
-        `INSERT INTO notes (id, owner, version, meta, body) VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (id) DO UPDATE SET version = EXCLUDED.version, meta = EXCLUDED.meta, body = EXCLUDED.body, updated_at = now()
+    await (
+      await database()
+    ).transaction(async (tx) => {
+      const written = await tx.run(
+        `INSERT INTO notes (id, owner, version, meta, body, updated_at) VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT (id) DO UPDATE SET version = EXCLUDED.version, meta = EXCLUDED.meta, body = EXCLUDED.body,
+           updated_at = EXCLUDED.updated_at
           WHERE notes.owner = EXCLUDED.owner AND notes.version <= EXCLUDED.version`,
-        [
-          note.id,
-          owner,
-          note.version,
-          Buffer.from(note.meta, 'base64url'),
-          Buffer.from(note.body, 'base64url'),
-        ],
+        [note.id, owner, note.version, note.meta, note.body, Date.now()],
       );
-      if (written.rowCount !== 1) throw new NoteError(404, 'There is no such note.');
-      await client.query('DELETE FROM note_readers WHERE note_id = $1', [note.id]);
+      if (written.rowsAffected !== 1) throw new NoteError(404, 'There is no such note.');
+      await tx.run('DELETE FROM note_readers WHERE note_id = ?', [note.id]);
       for (const reader of note.readers) {
-        await client.query(
-          'INSERT INTO note_readers (note_id, reader, record) VALUES ($1, $2, $3)',
-          [note.id, reader.sub, reader.record],
-        );
+        await tx.run('INSERT INTO note_readers (note_id, reader, record) VALUES (?, ?, ?)', [
+          note.id,
+          reader.sub,
+          reader.record,
+        ]);
       }
-      await client.query('COMMIT');
-    } catch (error) {
-      await client.query('ROLLBACK').catch(() => undefined);
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   },
 
   /** Deletes a note of the person's, and every key sealed for it. */
   async remove(owner: string, id: string): Promise<boolean> {
-    const client = await db().connect();
-    try {
-      await client.query('BEGIN');
-      const deleted = await client.query('DELETE FROM notes WHERE id = $1 AND owner = $2', [
-        id,
-        owner,
-      ]);
-      if (deleted.rowCount === 1)
-        await client.query('DELETE FROM note_readers WHERE note_id = $1', [id]);
-      await client.query('COMMIT');
-      return deleted.rowCount === 1;
-    } catch (error) {
-      await client.query('ROLLBACK').catch(() => undefined);
-      throw error;
-    } finally {
-      client.release();
-    }
+    return (await database()).transaction(async (tx) => {
+      const deleted = await tx.run('DELETE FROM notes WHERE id = ? AND owner = ?', [id, owner]);
+      if (deleted.rowsAffected === 1)
+        await tx.run('DELETE FROM note_readers WHERE note_id = ?', [id]);
+      return deleted.rowsAffected === 1;
+    });
   },
 
   /** Everything of a person, when their account is deleted: their notes, the keys for them, and the keys sealed to them. */
   async deleteAll(sub: string): Promise<void> {
-    await db().query(
-      'DELETE FROM note_readers WHERE note_id IN (SELECT id FROM notes WHERE owner = $1) OR reader = $1',
-      [sub],
-    );
-    await db().query('DELETE FROM notes WHERE owner = $1', [sub]);
+    await (
+      await database()
+    ).transaction(async (tx) => {
+      await tx.run(
+        'DELETE FROM note_readers WHERE note_id IN (SELECT id FROM notes WHERE owner = ?) OR reader = ?',
+        [sub, sub],
+      );
+      await tx.run('DELETE FROM notes WHERE owner = ?', [sub]);
+    });
   },
 });

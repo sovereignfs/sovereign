@@ -2,7 +2,7 @@
 
 import { enqueuePush } from '@sovereignfs/push';
 import { currentAccount } from '@/lib/account';
-import { db } from '@/lib/db';
+import { database } from '@/lib/db';
 import { appPush, pushStore, sendDuePushes } from '@/lib/push';
 
 /**
@@ -13,12 +13,10 @@ export async function sendTestNotification(): Promise<{ ok: boolean; message: st
   const account = await currentAccount();
   if (!account) return { ok: false, message: 'Sign in again to send a test notification.' };
   if (!appPush()) return { ok: false, message: 'This app doesn’t send notifications.' };
-  const client = await db().connect();
-  let queued = 0;
-  try {
-    await client.query('BEGIN');
-    // Your change would be written here, on the same client: if it fails, the push is never sent.
-    queued = await enqueuePush(pushStore(client), {
+  const db = await database();
+  const queued = await db.transaction(async (tx) =>
+    // Your change would be written here, on the same transaction (`tx.run`): if it fails, the push is never sent.
+    enqueuePush(pushStore(tx), {
       account,
       message: {
         title: 'Test notification',
@@ -27,14 +25,8 @@ export async function sendTestNotification(): Promise<{ ok: boolean; message: st
       },
       now: Date.now(),
       ttlMs: 10 * 60_000,
-    });
-    await client.query('COMMIT');
-  } catch (error) {
-    await client.query('ROLLBACK').catch(() => undefined);
-    throw error;
-  } finally {
-    client.release();
-  }
+    }),
+  );
   if (queued === 0) return { ok: false, message: 'Turn notifications on for this device first.' };
   await sendDuePushes();
   return { ok: true, message: 'Sent. It should arrive in a moment.' };

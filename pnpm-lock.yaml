@@ -380,6 +380,9 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
     devDependencies:
+      '@libsql/client':
+        specifier: 'catalog:'
+        version: 0.18.0
       '@sovereignfs/crypto':
         specifier: workspace:*
         version: link:../crypto
@@ -805,6 +808,12 @@ importers:
 
   tools/create:
     devDependencies:
+      '@sovereignfs/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
+      '@sovereignfs/database':
+        specifier: workspace:*
+        version: link:../../packages/database
       '@sovereignfs/push':
         specifier: workspace:*
         version: link:../../packages/push

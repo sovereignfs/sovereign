@@ -28,6 +28,8 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@sovereignfs/auth": "workspace:*",
+    "@sovereignfs/database": "workspace:*",
     "@sovereignfs/push": "workspace:*",
     "@sovereignfs/pwa": "workspace:*",
     "@sovereignfs/tsconfig": "workspace:*",

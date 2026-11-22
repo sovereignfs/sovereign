@@ -1,7 +1,7 @@
 # **TITLE**
 
 An app for a [Sovereign](https://github.com/sovereignfs/sovereign) instance, made with `npm create @sovereignfs app`. It signs people
-in with accounts of its own, through the instance's core, or both (`@sovereignfs/auth`), keeps its own data in its own PostgreSQL database, and can be hosted by the instance's toolkit as it
+in with accounts of its own, through the instance's core, or both (`@sovereignfs/auth`), keeps its own data in its own database (a SQLite file, sqld, or PostgreSQL, as `__PREFIX___DB_DIALECT` says), and can be hosted by the instance's toolkit as it
 stands. It is a starting point: a notes page, to show the pieces. Change it into your app.
 
 ## What is here
@@ -92,7 +92,7 @@ address, set `__PREFIX___VAPID_SUBJECT` to a `mailto:` address.
 
 - A person turns them on for a device with the switch on the home page (`app/notifications.tsx`), which sends the device's subscription
   to `app/api/push/subscription`; "Send me a test notification" shows the whole path.
-- `lib/push.ts` keeps devices and waiting pushes in your database (`migrations/002_push.sql`), a device's keys sealed. To notify someone,
+- `lib/push.ts` keeps devices and waiting pushes in your database (`0002_push.sql` in `migrations/postgres` and `migrations/sqlite`), a device's keys sealed. To notify someone,
   call `enqueuePush(pushStore(client), { account, message, now: Date.now() })` with the client of the transaction that makes the change,
   as `app/push-actions.ts` does: a change rolled back sends nothing. The outbox, started in `instrumentation.ts`, sends what is waiting.
 - Signing out turns the device off first, and a deleted account's devices are forgotten (`lib/notices.ts`).
@@ -119,7 +119,7 @@ people, delete it in `onAccountDeleted` in `lib/notices.ts`, which core calls wh
 ## Run it on your machine
 
 ```bash
-cp .env.example .env     # point it at a PostgreSQL database, and at a core you can reach to sign in through one
+cp .env.example .env     # choose a database (a SQLite file needs no server), and a core you can reach to sign in through one
 __RUN__ dev              # http://localhost:__PORT__
 ```
 

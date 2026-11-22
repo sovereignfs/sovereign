@@ -1,33 +1,32 @@
 import type { SessionStore, StoredRecord, TokenStore } from '@sovereignfs/sdk';
-import { db, directDb } from './db';
+import { database } from './db';
 import { fingerprint, open, seal } from './crypto';
 
-/** The SDK's sessions, in the app's database (sdk §9.1). Nothing is returned after its expiry. */
+/** The SDK's sessions, in the app's database (sdk §9.1): the sign-ins through core still pending. Nothing is returned after its expiry. */
 export const sessionStore: SessionStore = {
   async get(id) {
-    const { rows } = await db().query<{
-      kind: StoredRecord['kind'];
-      sub: string | null;
-      sid: string | null;
-      data: Record<string, unknown>;
-    }>('SELECT kind, sub, sid, data FROM sv_sessions WHERE id = $1 AND expires_at > $2', [
+    const { rows } = await (
+      await database()
+    ).run('SELECT kind, sub, sid, data FROM sv_sessions WHERE id = ? AND expires_at > ?', [
       id,
       Date.now(),
     ]);
     const row = rows[0];
     if (!row) return undefined;
     return {
-      kind: row.kind,
-      ...(row.sub ? { sub: row.sub } : {}),
-      ...(row.sid ? { sid: row.sid } : {}),
-      data: row.data,
+      kind: row.kind as StoredRecord['kind'],
+      ...(row.sub ? { sub: String(row.sub) } : {}),
+      ...(row.sid ? { sid: String(row.sid) } : {}),
+      data: JSON.parse(String(row.data)) as Record<string, unknown>,
     };
   },
 
   async set(id, record, expiresAt) {
-    await db().query(
-      `INSERT INTO sv_sessions (id, kind, sub, sid, data, expires_at) VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (id) DO UPDATE SET kind = $2, sub = $3, sid = $4, data = $5, expires_at = $6`,
+    const db = await database();
+    await db.run(
+      `INSERT INTO sv_sessions (id, kind, sub, sid, data, expires_at) VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT (id) DO UPDATE SET kind = EXCLUDED.kind, sub = EXCLUDED.sub, sid = EXCLUDED.sid, data = EXCLUDED.data,
+         expires_at = EXCLUDED.expires_at`,
       [
         id,
         record.kind,
@@ -39,64 +38,80 @@ export const sessionStore: SessionStore = {
     );
     // What has expired is of no use to anyone; a small share of writes clears it.
     if (Math.random() < 0.02)
-      await db().query('DELETE FROM sv_sessions WHERE expires_at <= $1', [Date.now()]);
+      await db.run('DELETE FROM sv_sessions WHERE expires_at <= ?', [Date.now()]);
   },
 
   async delete(id) {
-    await db().query('DELETE FROM sv_sessions WHERE id = $1', [id]);
+    await (await database()).run('DELETE FROM sv_sessions WHERE id = ?', [id]);
   },
 
   async deleteMatching(match) {
-    if (match.sub !== undefined)
-      await db().query('DELETE FROM sv_sessions WHERE sub = $1', [match.sub]);
-    if (match.sid !== undefined)
-      await db().query('DELETE FROM sv_sessions WHERE sid = $1', [match.sid]);
+    const db = await database();
+    if (match.sub !== undefined) await db.run('DELETE FROM sv_sessions WHERE sub = ?', [match.sub]);
+    if (match.sid !== undefined) await db.run('DELETE FROM sv_sessions WHERE sid = ?', [match.sid]);
   },
 };
 
+/** How long one copy of the app may hold a person's refresh token while it refreshes it, and how often another looks again. */
+const LEASE_MS = 30_000;
+const WAIT_MS = 100;
+
 /**
  * A person's refresh token, encrypted. Core rotates it on every use and takes one used twice for theft, so `write` is a conditional
- * update, and `lock` holds a database lock so that two copies of the app never refresh at once (sdk §5.1).
+ * update, and `lock` takes a lease on the token's row so that two copies of the app never refresh at once (sdk §5.1). The lease is a
+ * column, not a database lock, so it holds the same on a SQLite file, sqld and PostgreSQL, behind a pooler too.
  */
 export const tokenStore: TokenStore = {
   async read(sub) {
-    const { rows } = await db().query<{ sealed: string }>(
-      'SELECT sealed FROM sv_tokens WHERE sub = $1',
-      [sub],
-    );
-    return rows[0] ? open(rows[0].sealed) : undefined;
+    const { rows } = await (
+      await database()
+    ).run('SELECT sealed FROM sv_tokens WHERE sub = ?', [sub]);
+    return rows[0] ? open(String(rows[0].sealed)) : undefined;
   },
 
   async write(sub, next, previous) {
+    const db = await database();
     if (previous === undefined) {
-      const done = await db().query(
-        'INSERT INTO sv_tokens (sub, sealed, fingerprint) VALUES ($1, $2, $3) ON CONFLICT (sub) DO NOTHING',
+      const done = await db.run(
+        'INSERT INTO sv_tokens (sub, sealed, fingerprint) VALUES (?, ?, ?) ON CONFLICT (sub) DO NOTHING',
         [sub, seal(next), fingerprint(next)],
       );
-      return done.rowCount === 1;
+      return done.rowsAffected === 1;
     }
-    const done = await db().query(
-      'UPDATE sv_tokens SET sealed = $2, fingerprint = $3 WHERE sub = $1 AND fingerprint = $4',
-      [sub, seal(next), fingerprint(next), fingerprint(previous)],
+    const done = await db.run(
+      'UPDATE sv_tokens SET sealed = ?, fingerprint = ? WHERE sub = ? AND fingerprint = ?',
+      [seal(next), fingerprint(next), sub, fingerprint(previous)],
     );
-    return done.rowCount === 1;
+    return done.rowsAffected === 1;
   },
 
   async lock(sub, work) {
-    // A session lock, held across a call to core: on the direct address, which a pooler is never in front of.
-    const client = await directDb().connect();
+    const db = await database();
+    const take = async () =>
+      (
+        await db.run('UPDATE sv_tokens SET lease_until = ? WHERE sub = ? AND lease_until < ?', [
+          Date.now() + LEASE_MS,
+          sub,
+          Date.now(),
+        ])
+      ).rowsAffected === 1;
+    const exists = async () =>
+      (await db.run('SELECT 1 AS found FROM sv_tokens WHERE sub = ?', [sub])).rows.length > 0;
+    // A token nobody holds yet needs no lease: its first write is conditional. Otherwise wait for the lease, at most as long as one lasts.
+    const until = Date.now() + LEASE_MS;
+    let held = await take();
+    while (!held && (await exists()) && Date.now() <= until) {
+      await new Promise((resolve) => setTimeout(resolve, WAIT_MS));
+      held = await take();
+    }
     try {
-      await client.query('SELECT pg_advisory_lock(hashtext($1))', [`__NAME__-token:${sub}`]);
       return await work();
     } finally {
-      await client
-        .query('SELECT pg_advisory_unlock(hashtext($1))', [`__NAME__-token:${sub}`])
-        .catch(() => undefined);
-      client.release();
+      if (held) await db.run('UPDATE sv_tokens SET lease_until = 0 WHERE sub = ?', [sub]);
     }
   },
 
   async delete(sub) {
-    await db().query('DELETE FROM sv_tokens WHERE sub = $1', [sub]);
+    await (await database()).run('DELETE FROM sv_tokens WHERE sub = ?', [sub]);
   },
 };

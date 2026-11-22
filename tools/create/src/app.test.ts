@@ -75,7 +75,8 @@ describe('the files of an app', () => {
         'app/api/sovereign/account-deleted/route.ts',
         'app/api/health/route.ts',
         'instrumentation.ts',
-        'migrations/001_init.sql',
+        'migrations/postgres/0001_init.sql',
+        'migrations/sqlite/0001_init.sql',
         'compose.yml',
         'lib/files.ts',
         'app/api/files/route.ts',
@@ -90,10 +91,11 @@ describe('the files of an app', () => {
     for (const file of all(target)) {
       expect(read(target, file), file).not.toMatch(/__(PREFIX|PREFIX_LOWER|NAME|TITLE|PORT)__/);
     }
-    expect(read(target, 'lib/db.ts')).toContain("required('MYNOTES_POSTGRES_URL')");
-    // The pool is the size the instance gives it, whose role's limit is set from the same number (operator-cli §6.4.4).
-    expect(read(target, 'lib/db.ts')).toContain('MYNOTES_POSTGRES_POOL_MAX');
-    expect(read(target, 'lib/db.ts')).not.toContain('max: 10 }');
+    // The database is the form MYNOTES_DB_DIALECT names, read with the app's prefix as core reads its own (contracts/env.md §2); the
+    // pool is the size the instance gives it (MYNOTES_POSTGRES_POOL_MAX, read by the package), whose role's limit is set from it.
+    expect(read(target, 'lib/db.ts')).toContain("openDatabase({ prefix: 'MYNOTES' })");
+    expect(read(target, '.env.example')).toContain('MYNOTES_POSTGRES_POOL_MAX');
+    expect(read(target, '.env.example')).toContain('MYNOTES_SQLITE_URL');
     expect(read(target, 'app/page.tsx')).toContain('title="My Notes"');
     // The manifest is the one copy: nothing in the app repeats it, or the sync script that kept a second one.
     expect(written).not.toContain('scripts/manifest.mjs');
@@ -165,8 +167,9 @@ describe('the files of an app', () => {
       .map((file) => read(target, file))
       .join('\n');
     const variables = manifest.prefix.toUpperCase();
-    for (const name of ['POSTGRES_URL', 'AUTH_SECRET'])
-      expect(code).toContain(`${variables}_${name}`);
+    expect(code).toContain(`${variables}_AUTH_SECRET`);
+    // The database's variables are read with the app's prefix by the package (`openDatabase`).
+    expect(code).toContain(`openDatabase({ prefix: '${variables}' })`);
     // The push key is a P-256 key, 32 bytes: the instance makes it once, as it makes the secret.
     expect(manifest.generate).toEqual([
       `${variables}_AUTH_SECRET`,
@@ -332,10 +335,11 @@ describe('the files of an app', () => {
     const target = path.join(temp(), 'my-notes');
     await writeApp(target, namesOf(target));
     const stores = read(target, 'lib/stores.ts');
-    expect(stores).toContain('AND fingerprint = $4');
+    expect(stores).toContain('WHERE sub = ? AND fingerprint = ?');
     expect(stores).toContain('seal(next)');
-    expect(stores).toContain('pg_advisory_lock');
-    expect(read(target, 'app/actions.ts')).toContain('AND owner = $2');
+    // One refresh at a time, by a lease on the token's own row: the same on every form, and behind a pooler.
+    expect(stores).toContain('SET lease_until = ? WHERE sub = ? AND lease_until < ?');
+    expect(read(target, 'app/actions.ts')).toContain('WHERE id = ? AND owner = ?');
     expect(read(target, 'lib/notices.ts')).toContain('onAccountDeleted');
   });
 
@@ -346,19 +350,14 @@ describe('the files of an app', () => {
       database: { pooling?: string };
     };
     expect(manifest.database).toEqual({ pooling: 'transaction' });
-    const db = read(target, 'lib/db.ts');
-    expect(db).toContain("setting('MYNOTES_POSTGRES_DIRECT_URL')");
-    expect(db).toContain('export function directDb()');
-    expect(read(target, 'lib/migrate.ts')).toContain('directDb()');
-    expect(read(target, 'lib/stores.ts')).toContain('directDb()');
-    // Nothing that holds a session is left on the pooled address.
-    for (const file of ['lib/migrate.ts', 'lib/stores.ts']) {
-      const text = read(target, file);
-      const lockLines = text.split('\n').filter((line) => line.includes('pg_advisory'));
-      expect(lockLines.length, file).toBeGreaterThan(0);
-    }
-    expect(read(target, 'lib/migrate.ts')).not.toMatch(/\bdb\(\)\.connect/);
-    expect(read(target, 'lib/stores.ts')).not.toMatch(/\bdb\(\)\.connect/);
+    // Every migration, the app's and the sign-in's, runs on the direct address, where the migrations' session lock holds; nothing
+    // else holds a session (the token's lock is a lease on its row).
+    const migrate = read(target, 'lib/migrate.ts');
+    expect(migrate).toContain("openDatabase({ prefix: 'MYNOTES', direct: true })");
+    expect(migrate).toContain('await migrateSignIn(direct)');
+    expect(read(target, 'instrumentation.ts')).not.toContain('migrateSignIn');
+    for (const file of all(target).filter((f) => /\.tsx?$/.test(f)))
+      expect(read(target, file), file).not.toMatch(/pg_advisory|\.connect\(\)/);
     expect(read(target, '.env.example')).toContain('MYNOTES_POSTGRES_DIRECT_URL');
   });
 
@@ -568,10 +567,15 @@ describe('an app made with --encryption', () => {
 
   it('keeps no column a note’s text could be in, and renders nothing of a note on the server', async () => {
     const target = await made();
-    const migration = read(target, 'migrations/001_init.sql');
-    const notes = migration.slice(migration.indexOf('CREATE TABLE notes'));
-    expect(notes.slice(0, notes.indexOf(');'))).not.toMatch(/\b(title|text|body)\s+text\b/);
-    expect(notes).toMatch(/body\s+bytea/);
+    for (const form of ['postgres', 'sqlite']) {
+      const migration = read(target, `migrations/${form}/0001_init.sql`);
+      const notes = migration.slice(migration.indexOf('CREATE TABLE notes'));
+      const columns = notes.slice(0, notes.indexOf(');'));
+      // What the browser encrypted, in base64url: a title and a text, each under the note's key, and nothing in the clear.
+      expect(columns, form).not.toMatch(/\b(title|text)\s+text\b/);
+      expect(columns, form).toMatch(/meta\s+text/);
+      expect(columns, form).toMatch(/body\s+text/);
+    }
     const page = read(target, 'app/page.tsx');
     expect(page).not.toContain('notes()');
     expect(page).not.toContain('FROM notes');
@@ -597,9 +601,9 @@ describe('an app made with --encryption', () => {
       expect(read(target, file), file).toContain('unauthorised()');
     }
     const store = read(target, 'lib/notes.ts');
-    expect(store).toContain('DELETE FROM notes WHERE id = $1 AND owner = $2');
+    expect(store).toContain('DELETE FROM notes WHERE id = ? AND owner = ?');
     expect(store).toContain('WHERE notes.owner = EXCLUDED.owner');
-    expect(store).toContain('r.reader = $1');
+    expect(store).toContain('r.reader = ?');
   });
 
   it('deletes a person’s notes and the keys sealed to them when their account is deleted', async () => {
@@ -607,7 +611,7 @@ describe('an app made with --encryption', () => {
     const notices = read(target, 'lib/notices.ts');
     expect(notices).toContain('await notes().deleteAll(sub)');
     expect(notices).toContain('await files().removeAll(sub)');
-    expect(read(target, 'lib/notes.ts')).toContain('OR reader = $1');
+    expect(read(target, 'lib/notes.ts')).toContain('OR reader = ?');
   });
 
   it('is not written without the option', async () => {
@@ -693,18 +697,21 @@ describe('notifications in an app', () => {
   it('keep devices in two tables, the keys sealed under a purpose of their own, and a push only for the account’s device', async () => {
     const target = path.join(temp(), 'my-notes');
     await writeApp(target, namesOf(target));
-    const migration = read(target, 'migrations/002_push.sql');
-    expect(migration).toContain('CREATE TABLE push_devices');
-    expect(migration).toContain('REFERENCES push_devices (endpoint) ON DELETE CASCADE');
+    for (const form of ['postgres', 'sqlite']) {
+      const migration = read(target, `migrations/${form}/0002_push.sql`);
+      expect(migration, form).toContain('CREATE TABLE push_devices');
+      expect(migration, form).toContain('REFERENCES push_devices (endpoint) ON DELETE CASCADE');
+    }
     const store = read(target, 'lib/push.ts');
     expect(store).toContain("const PURPOSE = 'push devices'");
     expect(store).toMatch(
       /seal\(\s*JSON\.stringify\(\{ p256dh: subscription\.p256dh, auth: subscription\.auth \}\),\s*PURPOSE,?\s*\)/,
     );
     expect(store).toContain(
-      'WHERE EXISTS (SELECT 1 FROM push_devices WHERE endpoint = $3 AND account = $2)',
+      'WHERE EXISTS (SELECT 1 FROM push_devices WHERE endpoint = ? AND account = ?)',
     );
-    expect(store).toContain('FOR UPDATE SKIP LOCKED');
+    // Two runners never claim one push: each is taken by an update that holds only while it is not claimed.
+    expect(store).toContain('WHERE id = ? AND due_at <= ? AND claimed_until <= ?');
     // A refresh token keeps the key it had before devices were sealed too.
     expect(read(target, 'lib/crypto.ts')).toContain("purpose = 'refresh tokens'");
   });
@@ -955,7 +962,7 @@ describe('the package manager of an app', () => {
       manager: 'pnpm',
       pin: `pnpm@${PNPM_VERSION}`,
       lockfile: 'pnpm-lock.yaml',
-      copy: 'COPY package.json pnpm-lock.yaml ./',
+      copy: 'COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./',
       install: 'RUN pnpm install --frozen-lockfile --ignore-scripts',
       run: 'pnpm run',
       exec: 'pnpm exec',

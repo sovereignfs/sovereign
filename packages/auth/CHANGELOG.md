@@ -16,6 +16,9 @@ written in the change that sets the version, dated that day, and becomes the rel
 - `0001_legacy_passwords` in `accountMigrations`: an empty table in an app made on the package.
 - `keySecrets` (`./server`): the session's key secret for `@sovereignfs/sdk/keys` and `localVault` at `/api/auth/sv/key-secret`, kept in
   `sv_key_secrets` (`0002_key_secrets`) and gone with the session; keyed by core's `sub` for a session that came through core.
+- `@sovereignfs/auth/database`: `openDatabase({ prefix })` opens the app's database on the form `<PREFIX>_DB_DIALECT` names, a SQLite
+  file, sqld (its namespace made when there is an admin address) or PostgreSQL (`direct` for its direct address); `runMigrations`,
+  `readMigrations`. `@libsql/client` is an optional peer dependency, as `pg` is.
 
 ## [0.5.0] - 2026-11-22
 

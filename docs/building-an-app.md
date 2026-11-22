@@ -482,7 +482,6 @@ instance.
   their tokens dropped (`adoptAccountTables`, `movePasswords`, auth.md §8.1).
 - **The apps made before the template's current design** (Ledger, Tally, Tusk, Wallet, Waymark, Fjord Web) are brought onto it by
   [workstream 0011](workstreams/0011-suite-alignment.md): the current packages first, then `@sovereignfs/auth`.
-- **The template** is PostgreSQL only; an app of its own on sqld or a SQLite file still copies Tusk's database boot, until 13.36.
 - **`AUTH_LOCAL` is `true` or `false`** (`env.md` §2, settled by [RFC 0007](rfcs/0007-one-sign-in.md)). Tusk and Fjord read `1` today;
   until they move onto `@sovereignfs/auth`, which refuses it, accept both.
 

@@ -5,13 +5,19 @@ __PREFIX___URL=http://localhost:__PORT__
 __PREFIX___CORE_URL=https://core.sovereign.local
 __PREFIX___CORE_CLIENT_ID=
 __PREFIX___CORE_CLIENT_SECRET=
+# The database: sqlite (a file), sqld, or postgres (contracts/env.md §2). An instance gives PostgreSQL.
 __PREFIX___DB_DIALECT=postgres
 __PREFIX___POSTGRES_URL=postgres://user:password@localhost:5432/__NAME__
-# The same database on the server itself, never behind a pooler: the migrations and the token lock use it. Without it, the line above is used.
+# The same database on the server itself, never behind a pooler: the migrations' lock uses it. Without it, the line above is used.
 __PREFIX___POSTGRES_DIRECT_URL=postgres://user:password@localhost:5432/__NAME__
-# The most connections the app may hold in all (2 or more), 2 of them for the direct address. An instance sets it, and limits the app's
-# database role to that number plus 2. Without it, 10.
+# The most connections the app may hold in all (2 or more). An instance sets it, and limits the app's database role to it. Without it, 10.
 __PREFIX___POSTGRES_POOL_MAX=10
+# A SQLite file instead (__PREFIX___DB_DIALECT=sqlite): no server to run.
+# __PREFIX___SQLITE_URL=file:./data/__NAME__.db
+# Or sqld (__PREFIX___DB_DIALECT=sqld): its address, its admin address (the namespace is made when it is not there), and the namespace.
+# __PREFIX___SQLD_URL=http://localhost:8080
+# __PREFIX___SQLD_ADMIN_URL=http://localhost:8081
+# __PREFIX___SQLD_NAMESPACE=__NAME__
 __PREFIX___AUTH_SECRET=change-me-to-something-long-and-random
 # How people sign in (@sovereignfs/auth): through core only. The notes are encrypted with keys core releases, so an account of the app's
 # own would have none (auth.md §8.1).

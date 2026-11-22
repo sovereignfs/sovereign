@@ -1,7 +1,7 @@
 import { coreNotices, userIdForSub } from '@sovereignfs/auth/core';
 import pkg from '../package.json' with { type: 'json' };
 import { required } from './config';
-import { db } from './db';
+import { database as appDatabase } from './db';
 import { files } from './files';
 import { notes } from './notes';
 import { pushStore } from './push';
@@ -47,17 +47,24 @@ export async function exportPart(request: Request) {
     request,
     { prefix: '__PREFIX_LOWER__', version: pkg.version },
     async ({ sub, writer }) => {
-      const owned = await db().query(
-        "SELECT id, version, encode(meta, 'base64') AS meta, encode(body, 'base64') AS body, updated_at FROM notes WHERE owner = $1 ORDER BY id",
+      const db = await appDatabase();
+      // As stored: what the browser encrypted, in base64url, and the time in ISO 8601.
+      const owned = await db.run(
+        'SELECT id, version, meta, body, updated_at FROM notes WHERE owner = ? ORDER BY id',
         [sub],
       );
-      await writer.addRecords('apps/__PREFIX_LOWER__/records/notes.jsonl', 'notes', owned.rows, {
-        endToEnd: true,
-      });
-      const readers = await db().query(
-        'SELECT * FROM note_readers WHERE reader = $1 ORDER BY note_id',
-        [sub],
+      await writer.addRecords(
+        'apps/__PREFIX_LOWER__/records/notes.jsonl',
+        'notes',
+        owned.rows.map((row) => ({
+          ...row,
+          updated_at: new Date(Number(row.updated_at)).toISOString(),
+        })),
+        { endToEnd: true },
       );
+      const readers = await db.run('SELECT * FROM note_readers WHERE reader = ? ORDER BY note_id', [
+        sub,
+      ]);
       await writer.addRecords(
         'apps/__PREFIX_LOWER__/records/note_readers.jsonl',
         'note_readers',

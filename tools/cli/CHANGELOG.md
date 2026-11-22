@@ -13,6 +13,10 @@ history and tags.
 - It depends on `@sovereignfs/pwa` 0.3, whose worker takes the app's own Background Sync and fetch handlers.
 - An app made with `--encryption` signs in on `@sovereignfs/auth` (through core only) instead of the SDK's `nextAuth`, keeps everything of
   a person under core's `sub` and gets its key secret from the package; every app serves the key secret its pages may ask for.
+- An app made by `npm create @sovereignfs app` runs on a SQLite file, sqld or PostgreSQL (`<PREFIX>_DB_DIALECT`), with its migrations in
+  `migrations/postgres` and `migrations/sqlite`. Its refresh token is held by a lease on its row rather than a PostgreSQL lock, and the
+  sign-in's migrations run on the direct address with the app's, where the migrations' lock holds behind a pooler. A pnpm app gets a
+  `pnpm-workspace.yaml`, and a yarn app's `.yarnrc.yml` names the platforms, so the image's Alpine finds libsql's build.
 
 ## [0.27.1] - 2026-11-21
 

@@ -1,41 +1,16 @@
-import { Pool } from 'pg';
-import { required, setting } from './config';
+import { openDatabase, type Database } from '@sovereignfs/auth/database';
 
-let pool: Pool | undefined;
-let direct: Pool | undefined;
-
-/** What of the pool goes to `directDb()`: a lock held across a call needs a connection of its own, and it counts against the same limit. */
-const DIRECT_MAX = 2;
-
-/** How many connections the app may hold in all: what the instance gives it, whose limit for the app's database role is set from the same number, or 10. */
-function poolMax(): number {
-  const given = Number(process.env.__PREFIX___POSTGRES_POOL_MAX);
-  return Number.isInteger(given) && given >= 2 ? given : 10;
-}
+let made: Promise<Database> | undefined;
 
 /**
- * The app's own database, as its own role, for everything that is safe when each statement may run on a different server connection: this
- * is the address an instance may put behind a transaction pooler (`database.pooling` in the manifest). One pool for the process, made when
- * it is first used so that building needs none.
+ * The app's database, on the form `__PREFIX___DB_DIALECT` names: a SQLite file, sqld, or PostgreSQL (contracts/env.md §2). One for the
+ * process, opened when it is first used so that building needs none. The sign-in's tables, the SDK's and the app's own are all in it.
+ * Statements use `?` placeholders on every form; `database.transaction(tx => …)` gives the executor a transaction runs on.
  */
-export function db(): Pool {
-  pool ??= new Pool({
-    connectionString: required('__PREFIX___POSTGRES_URL'),
-    max: Math.max(poolMax() - DIRECT_MAX, 2),
+export function database(): Promise<Database> {
+  made ??= openDatabase({ prefix: '__PREFIX__' }).catch((error: unknown) => {
+    made = undefined;
+    throw error;
   });
-  return pool;
-}
-
-/**
- * The same database on the server itself, never through a pooler, for what needs one connection throughout: the advisory locks of the
- * migrations and of the token refresh. An instance made before the direct address existed does not give it, and has no pooler, so the
- * pooled address is the server and is used instead.
- */
-export function directDb(): Pool {
-  direct ??= new Pool({
-    connectionString:
-      setting('__PREFIX___POSTGRES_DIRECT_URL') ?? required('__PREFIX___POSTGRES_URL'),
-    max: DIRECT_MAX,
-  });
-  return direct;
+  return made;
 }

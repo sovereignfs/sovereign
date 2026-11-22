@@ -10,6 +10,8 @@ export const APP_DEPENDENCIES = {
   '@dnd-kit/core': '^6.3.1',
   '@dnd-kit/sortable': '^10.0.0',
   // The sign-in: the package's preset, pages' flows and core as a way in, on better-auth at the one version the package names.
+  // The database driver for a SQLite file and sqld (`@sovereignfs/auth/database`); pg is PostgreSQL's.
+  '@libsql/client': '^0.18.0',
   '@sovereignfs/auth': '^0.6.0',
   '@sovereignfs/config': '^0.1.0',
   // 0.2 has the worker's push handlers and `usePush`, which the template's notifications use.

@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.136.0] - 2026-11-22
+
+### Added
+
+- An app made from the template runs on a SQLite file, sqld or PostgreSQL, as `<PREFIX>_DB_DIALECT` says, through
+  `@sovereignfs/auth/database`; its migrations come in one folder per form, and every migration runs on PostgreSQL's direct address.
+
 ## [0.135.0] - 2026-11-22
 
 ### Added

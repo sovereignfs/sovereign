@@ -177,7 +177,7 @@ base's files, with what they had added. Both variants were generated, installed 
 found that the overlay's `ui.tsx` and `actions.ts` dropped what the base pages import, and that `ways.core` is an address, not a flag. Not
 run end to end against a core in a browser.
 
-#### 📋 20.7 — Linking a local account to core `[parallel]`
+#### ✅ 20.7 — Linking a local account to core `[parallel]`
 
 **Goal:** A person with a local account in an app links it to core from a signed-in session, as Tusk does today.
 
@@ -192,6 +192,15 @@ run end to end against a core in a browser.
 **Review checklist:**
 
 - Implicit linking stays off; a link needs the signed-in person's password or second step
+
+**Done as (0.137.0, `@sovereignfs/auth` 0.6.0 and `@sovereignfs/ui` 0.106.0, unreleased):** `POST /api/auth/sv/link-sovereign` in `./core`
+checks the password through `confirmPassword` and sets a signed cookie naming the session that asked, for ten minutes; core is asked with
+`prompt=login`, and the callback links only for that session, refusing a `sub` another account has (`taken`) and an address another
+account has (`address`), and makes the session one through core. auth.md §8.2. `LinkSovereignPanel` in `@sovereignfs/ui` (stories, a
+gallery card, tests); `linkToSovereign` in `./client`; the template's security page shows it for an account with a password when core is
+a way in. An account with no password (passkey only) is not offered it. Tested for the link, a wrong password, an account already
+linked, another site, both refusals, the cookie carried to another session (seen to fail without the session check) and implicit
+linking staying off. Not run against a core in a browser.
 
 #### ✅ 20.8 — Ledger on the current packages
 

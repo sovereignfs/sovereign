@@ -165,7 +165,8 @@ This changes core-app §3.6.5 and §3.7.1, `contracts/suite.md` (what `sv apply`
 
 - The app's own user id is better-auth's, for every account; `sub` is kept on the account linked to core.
 - A sign-in through core is matched by `sub`, never by email (`building-an-app` §6). An email that is already a local account's is
-  refused until the person links the two from a signed-in session, as Tusk does today (`disableImplicitLinking`).
+  refused until the person links the two from a signed-in session, as Tusk does today (`disableImplicitLinking`). Built in 20.7
+  (auth.md §8.2).
 - An account that came only from core has no password: the password, second-step and passkey pages say it signs in through core.
 
 ### 6. The tables and their migrations
@@ -386,3 +387,4 @@ Building A1 to A3 against the apps' stores found four things the text above did 
 | November 2026 | Amendment 1 accepted by the goal owner                                                                           |
 | November 2026 | Amendment 1 A7: as built in 20.5 (tables renamed, the route opens no session, `previous`, tries per address)     |
 | November 2026 | Amendment 1 built: the key secret (20.6), in `./server`; the template's `--encryption` form on the package       |
+| November 2026 | §5's linking built (20.7): the person links from a signed-in session, after their password                       |

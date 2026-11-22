@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.137.0] - 2026-11-22
+
+### Added
+
+- A person signed in to an app's own account links it to their Sovereign account from the app's security page, after their password,
+  and signs in through Sovereign to it from then on (`@sovereignfs/auth`, auth.md §8.2). Nothing is linked because two addresses match.
+
 ## [0.136.0] - 2026-11-22
 
 ### Added

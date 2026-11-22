@@ -276,6 +276,49 @@ export async function signInWithPassword(
   return { outcome: 'signed-in', data: result.data, secret };
 }
 
+/**
+ * Linking the signed-in person's own account to their Sovereign account (auth.md §8.2): the password is checked first, as its sign-in
+ * value made with the account's address, never the password itself; then the page goes to Sovereign, where the person signs in, and comes
+ * back to `returnTo` with `link=done`, `link=taken` or `link=address`. Only a refusal comes back from here, in one sentence.
+ */
+export async function linkToSovereign(
+  derive: ReturnType<typeof signInDerivation>['deriveForSignIn'],
+  input: { password: string; email: string; returnTo: string },
+  {
+    path = '/api/auth/sv/link-sovereign',
+    go = (url: string) => window.location.assign(url),
+  }: { path?: string; go?: (url: string) => void } = {},
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  let value: string;
+  try {
+    ({ signIn: value } = await derive(input.password, input.email));
+  } catch {
+    return { ok: false, message: 'The page is not ready yet. Try again in a moment.' };
+  }
+  const response = await fetch(path, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ password: value, returnTo: input.returnTo }),
+  }).catch(() => undefined);
+  if (response?.ok) {
+    const { url } = (await response.json()) as { url?: unknown };
+    if (typeof url === 'string') {
+      go(url);
+      return { ok: true };
+    }
+  }
+  const message =
+    response?.status === 401
+      ? 'The password is incorrect.'
+      : response?.status === 429
+        ? 'Too many wrong passwords. Wait ten minutes, then try again.'
+        : response?.status === 400
+          ? 'This account already signs in through Sovereign.'
+          : 'Sovereign could not be reached. Try again.';
+  return { ok: false, message };
+}
+
 /** What asking for a reset link needs of the client. */
 type ResetRequestClient = {
   requestPasswordReset(input: {

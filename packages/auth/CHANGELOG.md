@@ -19,6 +19,8 @@ written in the change that sets the version, dated that day, and becomes the rel
 - `@sovereignfs/auth/database`: `openDatabase({ prefix })` opens the app's database on the form `<PREFIX>_DB_DIALECT` names, a SQLite
   file, sqld (its namespace made when there is an admin address) or PostgreSQL (`direct` for its direct address); `runMigrations`,
   `readMigrations`. `@libsql/client` is an optional peer dependency, as `pg` is.
+- Linking an account of the app's own to core (auth.md §8.2): `POST /api/auth/sv/link-sovereign` (`./core`) after the password, for the
+  session that asked and for ten minutes, refused for a `sub` or an address another account has; `linkToSovereign` (`./client`).
 
 ## [0.5.0] - 2026-11-22
 

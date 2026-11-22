@@ -209,8 +209,8 @@ keeps (sdk §9.8), so the app's session is the package's and the SDK keeps only 
   whether that ends core's session too (core-app §3.6.5): yes for a hosted app, no for an external one.
 - **An account from core has no password**, so the routes that set up a password's second step, a passkey or a new password refuse it
   (`NO_PASSWORD_ACCOUNT`); its second step is core's. `localAccounts: false` switches every route of an own account off.
-- **Not built yet:** linking a local account to core from a signed-in session (until then an address that is a local account's is
-  refused), and encryption's per-session key secret and key release for an app on the package.
+- **An address that is a local account's** is refused at a sign-in through core (`account_not_linked`) until the person links the two
+  from a signed-in session (§8.2). Nothing is ever linked because two addresses match.
 
 ### 8.1 Accounts an app had before the package
 
@@ -236,6 +236,26 @@ RFC 0007 amendment 1 (A1 to A4, and A7 for what building it found). Built in tas
 - **The key secret** (`keySecrets({ database, core })`, `./server`, since an app with no core needs it for its own vault) is served at `GET /api/auth/sv/key-secret` (same-origin only, `no-store`, `401` with no session), made on the first
   ask and kept in `sv_key_secrets`, which ends with the session. Its `sub` is the core `sub` for a session that came through core, the
   app's user id for a local one.
+
+### 8.2 Linking an account of the app's own to core
+
+Built in task 20.7. For an app with both ways in: a person signed in to an account of the app's own links it to their Sovereign account,
+so that signing in through core opens that account from then on.
+
+- **The route** is `POST /api/auth/sv/link-sovereign` (`./core`), with the password's sign-in value and `returnTo`. It needs a session
+  (`401` without one), refuses an account already linked (`400`, `ALREADY_LINKED`) and checks the password through `confirmPassword`,
+  which counts wrong answers (`401` `INVALID_PASSWORD`, `429` `PASSWORD_LIMITED`). better-auth's own origin check refuses another site.
+  It then sets a signed cookie, `sv_core_link`, naming the session that asked and running out after ten minutes, and answers with
+  core's authorization address, asked with `prompt=login`, so the link is to whoever signs in at core now. The page goes there itself
+  (`linkToSovereign`, `./client`); the browser client never follows a redirect.
+- **The callback** reads the cookie once and clears it. It links only when the session it arrives with is the one that asked, before
+  the time runs out: the cookie carried to another browser links nothing. A `sub` another account here already has is never moved
+  (`?link=taken`), and a Sovereign account whose address is another account's here is joined to neither (`?link=address`). Otherwise
+  the account gets a `sovereign` row whose account id is the `sub`, the session becomes one through core (a `sv_core_sign_ins` row,
+  checked against core as any other), and the person comes back to `returnTo` with `?link=done`.
+- **The page** is `LinkSovereignPanel` (`@sovereignfs/ui`), on the template's security page for an account with a password when core is
+  a way in; it says what came back from `link`.
+- **Implicit linking stays off.** A sign-in through core still matches only by `sub` (§9).
 
 ## 9. Who a person is
 
@@ -283,10 +303,11 @@ session gives it as one typed `user`: `id`, `sub` (linked accounts), `name`, `em
 
 ## Changelog
 
-| Date          | Change                                                                                                                     |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| November 2026 | Draft, from RFC 0007 (task 17.1)                                                                                           |
-| November 2026 | §8.1 and rule 1's exception, from RFC 0007 amendment 1 (task 20.4); to be built                                            |
-| November 2026 | §8.1 built but the key secret (task 20.5): `adoptAccountTables`, `movePasswords`, `passwordMove`, `resetLink`, `coreSubOf` |
-| November 2026 | §8.1's key secret built (task 20.6): `keySecrets`, `0002_key_secrets`; the template's `--encryption` form on the package   |
-| November 2026 | §2: `./database`, the app's database on any of the three forms (task 13.36)                                                |
+| Date          | Change                                                                                                                       |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| November 2026 | Draft, from RFC 0007 (task 17.1)                                                                                             |
+| November 2026 | §8.1 and rule 1's exception, from RFC 0007 amendment 1 (task 20.4); to be built                                              |
+| November 2026 | §8.1 built but the key secret (task 20.5): `adoptAccountTables`, `movePasswords`, `passwordMove`, `resetLink`, `coreSubOf`   |
+| November 2026 | §8.1's key secret built (task 20.6): `keySecrets`, `0002_key_secrets`; the template's `--encryption` form on the package     |
+| November 2026 | §2: `./database`, the app's database on any of the three forms (task 13.36)                                                  |
+| November 2026 | §8.2: linking an account of the app's own to core (task 20.7): `/sv/link-sovereign`, `linkToSovereign`, `LinkSovereignPanel` |

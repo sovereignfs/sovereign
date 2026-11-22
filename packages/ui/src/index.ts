@@ -29,6 +29,8 @@ export type { ActionResult, PanelAction } from './components/Account/ActionResul
 export { SessionsPanel } from './components/Account/SessionsPanel';
 export type { SessionRow, SessionsPanelProps } from './components/Account/SessionsPanel';
 export { ChangePasswordForm } from './components/Account/ChangePasswordForm';
+export { LinkSovereignPanel } from './components/Account/LinkSovereignPanel';
+export type { LinkOutcome, LinkSovereignPanelProps } from './components/Account/LinkSovereignPanel';
 export { TwoFactorPanel } from './components/Account/TwoFactorPanel';
 export { ProfilePanel } from './components/Account/ProfilePanel';
 export type { ProfilePanelProps } from './components/Account/ProfilePanel';

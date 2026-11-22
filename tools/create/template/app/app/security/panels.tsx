@@ -1,8 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { ChangePasswordForm, SessionsPanel, type SessionRow } from '@sovereignfs/ui';
-import { changePassword } from '@sovereignfs/auth/client';
+import {
+  ChangePasswordForm,
+  LinkSovereignPanel,
+  SessionsPanel,
+  type LinkOutcome,
+  type SessionRow,
+} from '@sovereignfs/ui';
+import { changePassword, linkToSovereign } from '@sovereignfs/auth/client';
 import { newPasswordProblem, type PasswordPolicy } from '@sovereignfs/auth';
 import { authClient, deriveForSignIn } from '@/lib/sign-in-client';
 import { endOtherSessionsAction, endSessionAction } from './actions';
@@ -45,6 +51,45 @@ export function Sessions({ sessions }: { sessions: SessionRow[] }) {
       sessions={sessions}
       endSession={endSessionAction}
       endOthers={endOtherSessionsAction}
+    />
+  );
+}
+
+/** Linking this account to the person's Sovereign account, after their password (auth.md §8.2); the outcome comes back in the address. */
+export function LinkSovereign({
+  address,
+  linked,
+  outcome,
+}: {
+  address: string;
+  linked: boolean;
+  outcome?: LinkOutcome | undefined;
+}) {
+  const [error, setError] = useState<string | undefined>();
+  const [pending, setPending] = useState(false);
+
+  async function onSubmit({ password }: { password: string }) {
+    setError(undefined);
+    setPending(true);
+    const result = await linkToSovereign(deriveForSignIn, {
+      password,
+      email: address,
+      returnTo: '/security',
+    });
+    // On success the page is on its way to Sovereign.
+    if (!result.ok) {
+      setPending(false);
+      setError(result.message);
+    }
+  }
+
+  return (
+    <LinkSovereignPanel
+      linked={linked}
+      outcome={outcome}
+      error={error}
+      pending={pending}
+      onSubmit={(v) => void onSubmit(v)}
     />
   );
 }

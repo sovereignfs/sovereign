@@ -7,6 +7,7 @@
  *   address core knows as `<app>/api/auth/callback/sovereign`).
  * - `coreNotices(options)` answers core's two notices as plain routes (`POST /api/sovereign/backchannel-logout` and
  *   `POST /api/sovereign/account-deleted`), which no browser makes.
+ * - `POST /sv/link-sovereign` links the signed-in person's own account to core, after their password (auth.md §8.2).
  * - `coreSignOutUrl` is core's sign-out for the session, and `needsCoreCheck` says when to ask core again (sdk §9.7).
  */
 import type { Database, Migration } from '@sovereignfs/database';
@@ -20,11 +21,16 @@ import type { BetterAuthPlugin } from 'better-auth';
 import { createAuthEndpoint, getSessionFromCtx } from 'better-auth/api';
 import { deleteSessionCookie, setSessionCookie } from 'better-auth/cookies';
 import { safeReturnTo, withReturnTo } from '../return-to.js';
+import { confirmPassword, type PasswordVerifier } from '../server/confirm-password.js';
 import { asCoreArrival } from '../server/preset.js';
 import { userOf, type SessionUser } from '../server/user.js';
 
 /** better-auth's name for the link between an account and core: the `providerId` of its row in `accounts`, whose `accountId` is `sub`. */
 export const CORE_PROVIDER = 'sovereign';
+
+/** The cookie that says this session asked to link its account to core, signed, for ten minutes, and read once (auth.md §8.2). */
+const LINK_COOKIE = 'sv_core_link';
+const LINK_SECONDS = 10 * 60;
 
 /** How long a session goes before it is checked against core again (sdk §9.7). */
 const CHECK_EVERY_MS = 60 * 60 * 1000;
@@ -117,6 +123,49 @@ export function sovereignSignIn({
           throw ctx.redirect(step.url);
         },
       ),
+      linkSovereign: createAuthEndpoint(
+        '/sv/link-sovereign',
+        { method: 'POST', metadata: { isAction: false } },
+        async (ctx) => {
+          // Linking is the person's own, from a session of theirs, after their password (auth.md §8.2): never by an address that matches.
+          const current = await getSessionFromCtx(ctx);
+          if (!current) throw ctx.error('UNAUTHORIZED', { message: 'Sign in first.' });
+          const body = (ctx.body ?? {}) as Record<string, unknown>;
+          const accounts = await ctx.context.internalAdapter.findAccounts(current.user.id);
+          if (accounts.some((account) => account.providerId === CORE_PROVIDER))
+            throw ctx.error('BAD_REQUEST', {
+              message: 'This account already signs in through Sovereign.',
+              code: 'ALREADY_LINKED',
+            });
+          const verifier = {
+            $context: Promise.resolve(ctx.context),
+          } as unknown as PasswordVerifier;
+          const check = await confirmPassword(database, verifier, current.user.id, body.password);
+          if (check === 'limited')
+            throw ctx.error('TOO_MANY_REQUESTS', {
+              message: 'Too many wrong passwords. Wait ten minutes, then try again.',
+              code: 'PASSWORD_LIMITED',
+            });
+          if (check !== 'ok')
+            throw ctx.error('UNAUTHORIZED', {
+              message: 'The password is incorrect.',
+              code: 'INVALID_PASSWORD',
+            });
+          const returnTo = safeReturnTo(text(body.returnTo));
+          const cookie = ctx.context.createAuthCookie(LINK_COOKIE, { maxAge: LINK_SECONDS });
+          await ctx.setSignedCookie(
+            cookie.name,
+            `${current.session.id}|${Date.now() + LINK_SECONDS * 1000}`,
+            ctx.context.secret,
+            cookie.attributes,
+          );
+          // Core asks the person to sign in there, whatever session it has: the link is to whoever signs in now.
+          const step = await sovereign.auth.beginSignIn({ returnTo, prompt: 'login' });
+          for (const set of step.setCookies) ctx.responseHeaders?.append('set-cookie', set);
+          // The page goes there itself: the browser client never follows a redirect (auth.md §4, rule 14).
+          return ctx.json({ url: step.url });
+        },
+      ),
       sovereignCallback: createAuthEndpoint(
         '/callback/sovereign',
         { method: 'GET', metadata: { isAction: false } },
@@ -145,6 +194,51 @@ export function sovereignSignIn({
             ctx.responseHeaders?.append('set-cookie', cookie);
           const email = text(signedIn.claims.email);
           if (!email) throw ctx.redirect(failed('sovereign_email', signedIn.returnTo));
+
+          // Linking, when this session asked to (auth.md §8.2): read once, and only for the session that asked, before it runs out.
+          const cookie = ctx.context.createAuthCookie(LINK_COOKIE);
+          const asked = await ctx.getSignedCookie(cookie.name, ctx.context.secret);
+          if (asked) ctx.setCookie(cookie.name, '', { ...cookie.attributes, maxAge: 0 });
+          const [askedBy, until] = typeof asked === 'string' ? asked.split('|') : [];
+          if (current && askedBy === current.session.id && Number(until) > Date.now()) {
+            const back = (reason?: string) =>
+              reason
+                ? `${signedIn.returnTo}${signedIn.returnTo.includes('?') ? '&' : '?'}link=${reason}`
+                : `${signedIn.returnTo}${signedIn.returnTo.includes('?') ? '&' : '?'}link=done`;
+            const owner = (await ctx.context.adapter.findOne<{ userId: string }>({
+              model: 'account',
+              where: [
+                { field: 'providerId', value: CORE_PROVIDER },
+                { field: 'accountId', value: signedIn.sub },
+              ],
+            })) as { userId: string } | null;
+            // That Sovereign account is already another account's here: it is never moved.
+            if (owner && owner.userId !== current.user.id) throw ctx.redirect(back('taken'));
+            const byAddress = await ctx.context.internalAdapter.findUserByEmail(email);
+            // Its address is another account's here: neither is joined to the other.
+            if (byAddress && byAddress.user.id !== current.user.id)
+              throw ctx.redirect(back('address'));
+            if (!owner)
+              await ctx.context.internalAdapter.linkAccount({
+                userId: current.user.id,
+                providerId: CORE_PROVIDER,
+                accountId: signedIn.sub,
+              });
+            // The person just signed in at core: this session is one through core from now on, checked against it as any other.
+            await database.run(
+              `insert into sv_core_sign_ins (session_id, sub, sid, id_token, checked_at) values (?, ?, ?, ?, ?)
+                 on conflict (session_id) do update set sub = excluded.sub, sid = excluded.sid, id_token = excluded.id_token,
+                   checked_at = excluded.checked_at`,
+              [
+                current.session.id,
+                signedIn.sub,
+                signedIn.sid ?? null,
+                signedIn.idToken ?? null,
+                Date.now(),
+              ],
+            );
+            throw ctx.redirect(back());
+          }
 
           // The account is the one linked to core's `sub`, never one that has the same address (auth.md §9).
           const linked = (await ctx.context.adapter.findOne<{ userId: string }>({

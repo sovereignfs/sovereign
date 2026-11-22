@@ -17,6 +17,8 @@ history and tags.
   `migrations/postgres` and `migrations/sqlite`. Its refresh token is held by a lease on its row rather than a PostgreSQL lock, and the
   sign-in's migrations run on the direct address with the app's, where the migrations' lock holds behind a pooler. A pnpm app gets a
   `pnpm-workspace.yaml`, and a yarn app's `.yarnrc.yml` names the platforms, so the image's Alpine finds libsql's build.
+- An app made by `npm create @sovereignfs app` with both ways in lets a person link their own account to core from its security page,
+  with `@sovereignfs/ui` 0.106's `LinkSovereignPanel`.
 
 ## [0.27.1] - 2026-11-21
 

@@ -290,7 +290,7 @@ is not in it:** a local repository is Git objects in Fjord's store and a journal
 recorded as Fjord's own task H5. Its browser tests that load the WASM module were not run (no `wasm-pack` on the machine); the rest passed but two
 that fail before the change too, for the same missing build.
 
-#### 📋 20.14 — Shopper on `@sovereignfs/auth`
+#### ✅ 20.14 — Shopper on `@sovereignfs/auth`
 
 **Goal:** Shopper's sign-in is the package's: the pilot for every app with people already signed in.
 
@@ -304,6 +304,17 @@ accepted.
 **Review checklist:**
 
 - A 0.2.x database's accounts, local and through core, sign in after the move on each database; core's accounts get their keys
+
+**Done as (Shopper 0.3.0, on its `develop`; ADR 0001 accepted by the goal owner, 2026-11-22):** Shopper's task 17.5 on the released
+`@sovereignfs/auth` 0.6.0. Its auth store stays a store of its own, opened again in the package's shape (`@sovereignfs/auth/database` for the file
+and sqld, `./postgres` with `search_path` for PostgreSQL); at every start `adoptAccountTables` moves 0.2.x's tables, and Shopper's one step of its
+own unmarks the passwords it had already moved to sign-in values. Core is `./core` on the SDK's steps, the notices `coreNotices`, the key secret
+`keySecrets`; Shopper keeps its sign-in screens (they carry its recovery-kit step) on the package's client flows. A test moves a 0.2.x store with
+an unmoved password, a moved one and a core account and signs each in, on a file, sqld and PostgreSQL. Two things came out of it: every session
+open at the upgrade ends, since the package names its cookies itself; and **`@sovereignfs/sdk` 2.11's `finishSignIn` does not check the ID token's
+signature** (openid-client checks it only with `enableNonRepudiationChecks`), though sdk §9.1 says it does, which Shopper's test of a forged key
+now records as an expected failure. A session through core gets its key secret under core's `sub` (tested), which is what core's key
+release is bound to; not run against a real core.
 
 #### 📋 20.15 — The six apps on `@sovereignfs/auth`
 

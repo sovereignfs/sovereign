@@ -401,6 +401,6 @@ Tasks 20.8 to 20.15 are built in each app's own repository and committed directl
 | 0.134.0 | 11       | Accounts an app already has, across to the package                 | ✅     | [20.5](docs/epics/suite-alignment.md)  |
 | 0.135.0 | 12       | The key secret over the package's session                          | ✅     | [20.6](docs/epics/suite-alignment.md)  |
 | 0.137.0 | 13       | Linking a local account to core `[parallel]`                       | ✅     | [20.7](docs/epics/suite-alignment.md)  |
-| —       | 14       | Shopper on `@sovereignfs/auth`                                     | 📋     | [20.14](docs/epics/suite-alignment.md) |
+| —       | 14       | Shopper on `@sovereignfs/auth`                                     | ✅     | [20.14](docs/epics/suite-alignment.md) |
 | —       | 15       | The six apps on `@sovereignfs/auth`                                | 📋     | [20.15](docs/epics/suite-alignment.md) |
 | —       | 16       | The planned apps' designs name the packages `[parallel]`           | 📋     | [20.16](docs/epics/suite-alignment.md) |

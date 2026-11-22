@@ -96,7 +96,7 @@ older two. One change in behaviour: the provider now refuses a web app's `http` 
 says yes, which broke a development instance's `localhost` apps (two tests in `oauth.suite.ts` and `clients.test.ts` failed); core
 passes its own rule (core-app §3.7.1). `@sovereignfs/auth` 0.5.0, core 0.85.4, the toolkit 0.28.0.
 
-#### 📋 20.4 — The specification: accounts an app already has, and the key secret
+#### ⏳ 20.4 — The specification: accounts an app already has, and the key secret
 
 **Goal:** How an app with people already signed in moves onto the package is decided before it is built.
 
@@ -114,6 +114,11 @@ passes its own rule (core-app §3.7.1). `@sovereignfs/auth` 0.5.0, core 0.85.4, 
 **Review checklist:**
 
 - The open questions of research 0014 are answered or carried as the amendment's own
+
+**Written, waiting on acceptance:** RFC 0007 amendment 1 (A1 to A6), auth.md rule 1 and §8.1, §10, sdk §9.3 and `building-an-app` §15. It
+proposes option C: passwords moved at the next sign-in for 90 days through one route that exists only while a mark is open, then a reset
+(mail, or `resetLink` from an app's own command); `genericOAuth` rows kept with their tokens cleared and their sessions checked against
+core; `coreSubOf`; the key secret at `/api/auth/sv/key-secret`, in `sv_key_secrets`, keyed by the core `sub` for a core session.
 
 #### 📋 20.5 — Accounts an app already has, across to the package
 

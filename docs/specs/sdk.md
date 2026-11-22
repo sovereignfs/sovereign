@@ -364,7 +364,8 @@ in each browser session, through `@sovereignfs/sdk/keys`, the entry a page impor
   answer signed by another is refused.
 - **It keeps the key** as core-app §5.4 keeps the account key: wrapped by a device key and by the session's key secret, which the
   app's server makes on the first ask and keeps with the app's own session (`auth.keySecret(request)`, served by `nextAuth` at
-  `/auth/key-secret` to the app's own pages only). The app's session ending, by back-channel logout or otherwise, leaves nothing
+  `/auth/key-secret` to the app's own pages only, or by `@sovereignfs/auth/core` at `/api/auth/sv/key-secret` for an app on that package,
+  auth.md §8.1, which the page names as `secretPath`). The app's session ending, by back-channel logout or otherwise, leaves nothing
   that opens.
 - `@sovereignfs/crypto` stays private and is bundled into the entry, as `@sovereignfs/api-client` is.
 
@@ -598,3 +599,4 @@ of its own; an app catalogue.
 | 2026-11-19 | §9.1: a pending sign-in lives an hour, not ten minutes, so an app's sign-in carried through an emailed link is not refused.                                                                                                                               |
 | 2026-11-20 | §9.9: a session's typed `user`, the same shape as `@sovereignfs/auth`'s, and what an app is not told; §9.1: `nextAuth` deprecated.                                                                                                                        |
 | 2026-11-20 | §9.1: `handleExportRequest`, an app's part of a person's export; §9.5: an app with no core offers the owner's and a person's export itself (RFC 0008). Not built.                                                                                         |
+| 2026-11-22 | §9.3: the key secret is also served by `@sovereignfs/auth/core` (RFC 0007 amendment 1 A4). Not built.                                                                                                                                                     |

@@ -2,7 +2,7 @@
 
 |              |                                                                                                                                                                                                                                                       |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**   | Partially implemented (2026-11-20): every task built but 6.6, parked (better-auth's provider owns `amr`)                                                                                                                                              |
+| **Status**   | Partially implemented (2026-11-20): every task built but 6.6, parked (better-auth's provider owns `amr`). Amendment 1 proposed                                                                                                                        |
 | **Date**     | November 2026                                                                                                                                                                                                                                         |
 | **Author**   | Claude Code, for review                                                                                                                                                                                                                               |
 | **Scope**    | A new published package, `@sovereignfs/auth`; `apps/core`'s sign-in, account and security pages; `@sovereignfs/ui`; `@sovereignfs/sdk`; the app template in `tools/create`; `contracts/core-api/`, `contracts/env.md`; `docs/specs/core-app.md` §3.6  |
@@ -266,6 +266,91 @@ and a lock in the package is a later proposal if an app on its own needs one.
   fresh session change when it moves onto the package.
 - **The specification** is [`docs/specs/auth.md`](../specs/auth.md) (task 17.1).
 
+## Amendment 1 — accounts an app already has, and the key secret (November 2026)
+
+**Status: proposed** (task 20.4, [research 0014](../research/0014-suite-alignment.md)). Accepted by the goal owner before 20.5 and 20.6 are built.
+
+The RFC moves a sign-in that already has people (§6: Tusk's and Fjord's stores) by its tables only, and leaves two things out that every
+released app meets when it moves: the passwords it stored, which are hashes of the password and not of the sign-in value, and accounts
+that came from core through `genericOAuth`. It also left the key secret of §4's table as "`./core`, kept with the better-auth session"
+without saying how, so the template's `--encryption` form still signs in with `nextAuth`. Shopper found the cost of a third gap on
+2026-11-22: an app needs a person's core `sub` from its own user id, the package gives only the reverse, and Shopper's own lookup read a
+column nothing wrote, so no account through core had keys. This amendment settles all four. Nothing in it applies to core, which moved its
+own passwords by reset (`docs/upgrade.md`, 0.100.0) and turns none of it on.
+
+### A1. A password an app stored before the package
+
+**Proposed: moved at the next sign-in for a period, then a reset** (research 0014, option C).
+
+- **Marked when the app moves.** The app's checking migration (§6) records every account that has a password (`accounts.provider_id`
+  `credential`) in `sv_legacy_passwords` (`user_id`, `until`), with `until` 90 days after it runs. Only that migration writes the table;
+  an account made on the package is never in it.
+- **Signing in is unchanged** for everyone: the browser derives the sign-in value and sends it (auth.md §4, rule 1). A marked account's
+  stored hash is of the password, so that value does not match, and the answer is the usual wrong password; nothing says the account is
+  marked.
+- **The one exception to rule 1.** While any marked account's `until` is ahead, the salt document the sign-in page already reads says so
+  (`moving: true`, nothing about any account). Then, and only after a sign-in that was answered as a wrong password, the form sends
+  once more to `POST /api/auth/sv/move-password` the address, the password itself and the sign-in value derived from it. The server
+  answers as a wrong password unless the account is marked, its `until` is ahead and the password matches the stored hash; then, in
+  one transaction, it stores the hash of the sign-in value, removes the mark, and opens the session through every rule a password
+  sign-in passes (the second step, `assertMayOpenSession`, the key store's hooks). The password is used for that one comparison and is
+  never stored or logged; the route is rate limited as signing in is, counts toward the same limit, and refuses a request whose `Origin`
+  is not the app's. It compares against a stored hash for every request, a fixed one where the account is not marked, so an answer
+  takes as long whichever way it goes. It does not exist once no account is marked, nor where the app did not run the checking migration (core).
+- **A person who mistypes** during the period also sends their password once more, to the same app over the same connection; that is the
+  exception's cost, and why it ends. A mark whose `until` has passed is never moved.
+- **After the period** a marked account signs in only after a reset: by the app's forgot-password page where it sends mail, or by a reset link an operator makes on the server, as core's `sovereign-admin accounts reset-link` does. The package gives
+  `resetLink(userId)` (one use, one hour); each app exposes it through its own command, never a route. A reset removes the mark.
+- **Passkeys and the second step** are untouched: a passkey signs in a marked account as before, and it stays marked until its password
+  is used or reset.
+
+**Rejected:** a reset for everyone (rule 1 whole, but most apps have no mail and every person would need an operator); moving at
+sign-in with no end (the exception would never close); a client that sends the password on every sign-in during the period (it would
+send everyone's, not only those who mistype).
+
+### A2. Accounts that came from core through `genericOAuth`
+
+- **The rows are kept.** `genericOAuth` wrote `accounts` rows with `provider_id` `sovereign` and the account id core's `sub`, which is
+  what `./core` reads (`userIdForSub`), so no person gets a second account.
+- **Their tokens are dropped.** The checking migration clears `access_token`, `refresh_token`, `id_token` and their expiry columns on
+  those rows; core's refresh token is the SDK's alone (§3). An app that used a person's refresh token (Tally's directory) gets a new one
+  the next time the person signs in through core, and says until then that the feature needs a sign-in.
+- **Their sessions continue, and are checked.** For each session of an account whose only way in is core, the migration writes a
+  `sv_core_sign_ins` row with no `sid` or ID token and `checked_at` 0, so the session is checked against core at its next request
+  (`prompt=none`, sdk §9.7): renewed in place while core's session lasts, ended on `login_required`. A session of an account that has a
+  password as well is left as it is: it cannot be told which way it was opened, and it ends at its own expiry. Nothing is deleted from
+  `sessions` (auth.md §4, rule 13).
+
+### A3. A person's core `sub`
+
+`./core` gives `coreSubOf(database, userId)`, the inverse of `userIdForSub`: the account id of the user's `sovereign` row, or nothing for
+a person who never signed in through core. It is the only way an app finds it. An app keeps no copy of the `sub` in its own tables; one
+that has a column for it (Shopper's `person.core_sub`) reads this instead and drops the column.
+
+### A4. The key secret and key release over the package's session
+
+- **`./core` serves the key secret** that `@sovereignfs/sdk/keys` and `localVault` ask for (sdk §9.3, §9.5), at `GET /api/auth/sv/key-secret`,
+  with the rules `nextAuth` has: 32 random bytes, made the first time a page of this session asks, refused for a request a browser marks as
+  not `same-origin` (`Sec-Fetch-Site`), `no-store`, `401` with no session. The pages pass its address as `secretPath`.
+- **It is kept in `sv_key_secrets`** (`session_id` referencing `sessions(id)` `ON DELETE CASCADE`, `secret`, `created_at`), never in the
+  session's own row (better-auth returns that row to the browser with the session), and goes when the session ends, however it ends.
+- **Whose `sub`.** For a session that came through core it is the core `sub` (A3), so core's key release and the keys it gives match;
+  for a local session it is the app's user id, the `sub` `localVault` and `AppVault` key the person by. An account linked both ways is
+  keyed by the way the session was opened.
+- **The template's `--encryption` form moves onto the package** with it, and `nextAuth` is then used by no template (§4).
+
+### A5. What changes elsewhere
+
+- auth.md §4 rule 1 names A1's exception; §8 gains A2 to A4; §10 lists `sv_legacy_passwords` and `sv_key_secrets`.
+- sdk.md §9.3: the key secret is served by `@sovereignfs/auth/core` as well as `nextAuth`.
+- `building-an-app.md` §15: an app's existing accounts move as A1 and A2 say; Shopper's ADR 0001 follows when Shopper moves (20.14).
+
+### A6. Questions this answers
+
+From research 0014: **the salt** — an app that moves needs the sign-in salt route the template has (the vault id, sdk §9.5), and it is
+part of the move; **the period** — 90 days from the migration, the same for every app, recorded per account; **Tusk's fresh session** —
+settled in review (the password asked again), with nothing further here.
+
 ## Changelog
 
 | Date          | Change                                                                                                           |
@@ -275,3 +360,4 @@ and a lock in the package is a later proposal if an app on its own needs one.
 | November 2026 | Decided: `nextAuth` deprecated; tasks written into the epics, workstream 0008                                    |
 | November 2026 | The last open questions settled (a fresh session; an app's own lock left out); the specification written         |
 | November 2026 | Accepted by the goal owner                                                                                       |
+| November 2026 | Amendment 1 proposed: accounts an app already has, a person's core `sub`, and the key secret (task 20.4)         |

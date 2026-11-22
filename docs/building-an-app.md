@@ -477,6 +477,9 @@ instance.
   format in `crypto`, then a template for an app of its own. Until then, copy from Tusk, and say in the design which files were copied.
 - **`<P>_ENCRYPTION_KEY` and `_PREVIOUS`**, which the apps made before the key ring read, stay valid for them (`env.md` §3, "Field
   encryption keys"); a new app uses `FIELD_ENCRYPTION_KEYS`.
+- **An app with people already signed in** moves onto `@sovereignfs/auth` as [RFC 0007](rfcs/0007-one-sign-in.md) amendment 1
+  proposes (auth.md §8.1): its passwords moved at each person's next sign-in for 90 days, then by a reset; its accounts from core kept,
+  their tokens dropped. Not built yet (20.5).
 - **The apps made before the template's current design** (Ledger, Tally, Tusk, Wallet, Waymark, Fjord Web) are brought onto it by
   [workstream 0011](workstreams/0011-suite-alignment.md): the current packages first, then `@sovereignfs/auth`.
 - **The template** is PostgreSQL only; an app of its own on sqld or a SQLite file still copies Tusk's database boot, until 13.36.

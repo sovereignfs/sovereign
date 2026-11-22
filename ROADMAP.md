@@ -397,7 +397,7 @@ Tasks 20.8 to 20.15 are built in each app's own repository and committed directl
 | —       | 7        | Wallet on the current packages                                     | ✅     | [20.11](docs/epics/suite-alignment.md) |
 | —       | 8        | Waymark on the current packages                                    | ✅     | [20.12](docs/epics/suite-alignment.md) |
 | —       | 9        | Fjord Web on the current packages                                  | ✅     | [20.13](docs/epics/suite-alignment.md) |
-| —       | 10       | The specification: accounts an app already has, and the key secret | ⏳     | [20.4](docs/epics/suite-alignment.md)  |
+| —       | 10       | The specification: accounts an app already has, and the key secret | ✅     | [20.4](docs/epics/suite-alignment.md)  |
 | —       | 11       | Accounts an app already has, across to the package                 | 📋     | [20.5](docs/epics/suite-alignment.md)  |
 | —       | 12       | The key secret over the package's session                          | 📋     | [20.6](docs/epics/suite-alignment.md)  |
 | —       | 13       | Linking a local account to core `[parallel]`                       | 📋     | [20.7](docs/epics/suite-alignment.md)  |

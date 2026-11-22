@@ -2,7 +2,7 @@
 
 |              |                                                                                                                                                                                                                                                       |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**   | Partially implemented (2026-11-20): every task built but 6.6, parked (better-auth's provider owns `amr`). Amendment 1 proposed                                                                                                                        |
+| **Status**   | Partially implemented (2026-11-20): every task built but 6.6, parked (better-auth's provider owns `amr`). Amendment 1 accepted, to be built                                                                                                           |
 | **Date**     | November 2026                                                                                                                                                                                                                                         |
 | **Author**   | Claude Code, for review                                                                                                                                                                                                                               |
 | **Scope**    | A new published package, `@sovereignfs/auth`; `apps/core`'s sign-in, account and security pages; `@sovereignfs/ui`; `@sovereignfs/sdk`; the app template in `tools/create`; `contracts/core-api/`, `contracts/env.md`; `docs/specs/core-app.md` §3.6  |
@@ -268,7 +268,7 @@ and a lock in the package is a later proposal if an app on its own needs one.
 
 ## Amendment 1 — accounts an app already has, and the key secret (November 2026)
 
-**Status: proposed** (task 20.4, [research 0014](../research/0014-suite-alignment.md)). Accepted by the goal owner before 20.5 and 20.6 are built.
+**Status: accepted** by the goal owner on 2026-11-22 (task 20.4, [research 0014](../research/0014-suite-alignment.md)); built in 20.5 and 20.6.
 
 The RFC moves a sign-in that already has people (§6: Tusk's and Fjord's stores) by its tables only, and leaves two things out that every
 released app meets when it moves: the passwords it stored, which are hashes of the password and not of the sign-in value, and accounts
@@ -280,7 +280,7 @@ own passwords by reset (`docs/upgrade.md`, 0.100.0) and turns none of it on.
 
 ### A1. A password an app stored before the package
 
-**Proposed: moved at the next sign-in for a period, then a reset** (research 0014, option C).
+**Decided: moved at the next sign-in for a period, then a reset** (research 0014, option C).
 
 - **Marked when the app moves.** The app's checking migration (§6) records every account that has a password (`accounts.provider_id`
   `credential`) in `sv_legacy_passwords` (`user_id`, `until`), with `until` 90 days after it runs. Only that migration writes the table;

@@ -5,7 +5,14 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
-## [0.132.0] - 2026-11-22
+## [0.133.0] - 2026-11-22
+
+### Added
+
+- `@sovereignfs/pwa` 0.3.0: an app's worker answers Background Sync for its own tags, and may answer requests the shared worker leaves
+  to the network with handlers of its own, so no app keeps a worker of its own for them.
+
+- 2026-11-22
 
 ### Changed
 

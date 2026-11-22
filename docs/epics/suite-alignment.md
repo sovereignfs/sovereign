@@ -47,7 +47,7 @@ and the task here is marked done when the app's change is on its `develop`.
 - Every variable the template's `_env.example` names is in `contracts/env.md`
 - `pnpm docs:check-links` passes
 
-#### 📋 20.2 — The shared worker takes an app's own handlers `[parallel]`
+#### ✅ 20.2 — The shared worker takes an app's own handlers `[parallel]`
 
 **Goal:** An app on `@sovereignfs/pwa` adds Background Sync and its own fetch rules without appending to the package's text.
 
@@ -66,6 +66,11 @@ and the task here is marked done when the app's change is on its `develop`.
 **Review checklist:**
 
 - An app's handler runs in a worker test, and an allow-list widened to a person's data still fails the package's test
+
+**Done as (0.133.0):** `@sovereignfs/pwa` 0.3.0. `sync: { tags, message?, handlers? }` posts `{ type, tag }` to every open window
+(`SYNC_MESSAGE` by default), or runs the app's `onSync(tag)`; `fetchHandlers` defines `onFetch(request, url)`, asked only about what the
+worker leaves to the network, never a navigation or a kept file. The worker's own allow-list and its tests are unchanged; the new tests
+(`worker-extend.test.ts`) fail against 0.2.0's worker. The template takes `^0.3.0` and does not use either.
 
 #### ✅ 20.3 — `@sovereignfs/auth` on the newest better-auth `[parallel]`
 

@@ -4,7 +4,16 @@ What changed in each version of what makes an app installable, newest first, in 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/). A version's section is written in
 the change that sets the version, dated that day, and becomes the release notes when the version is published.
 
-## [0.2.0] - 2026-11-20
+## [0.3.0] - 2026-11-22
+
+### Added
+
+- Background Sync: `serviceWorkerSource({ sync: { tags, message?, handlers? } })` answers a sync with one of the app's tags by posting
+  `{ type, tag }` to every open window (`SYNC_MESSAGE` by default, exported from both entries), or runs the app's `onSync(tag)`.
+- `fetchHandlers`: the app's own `onFetch(request, url)`, asked only about requests the worker would leave to the network, never a
+  navigation or a kept file, for what is the app's and the same for everyone (map tiles, a file a wake reads).
+
+- 2026-11-20
 
 ### Added
 

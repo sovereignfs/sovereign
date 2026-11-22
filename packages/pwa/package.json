@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/pwa",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "What makes a Sovereign app installable: its manifest, a service worker that keeps nothing of a person, and an announced update.",
   "license": "MPL-2.0",
   "repository": {

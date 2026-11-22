@@ -41,6 +41,13 @@ export const viewport = pwaViewport();
   gives the state of this device and `turnOn` and `turnOff`, for `@sovereignfs/ui`'s `PushControl`; `turnOffPush()` is called before
   signing out. The server's side is [`@sovereignfs/push`](https://www.npmjs.com/package/@sovereignfs/push)
   ([RFC 0009](https://github.com/sovereignfs/sovereign/blob/main/docs/rfcs/0009-web-push.md)).
+- **Background Sync**, when the app asks: `sync: { tags, message?, handlers? }` answers a sync with one of the app's tags by posting
+  `{ type: message, tag }` (default `SYNC_MESSAGE`) to every open window, which syncs through its own code; or, with `handlers` defining
+  `async function onSync(tag)`, runs that instead. A sync with any other tag is left alone.
+- **The app's own answers**: `fetchHandlers`, JavaScript defining `function onFetch(request, url)`, is asked about a request the worker
+  would leave to the network (never a navigation, never a kept file) and returns a promise of a response, or nothing. It is for what is
+  the app's and the same for everyone, such as map tiles; it never stores anything of a person, and a cache it keeps is named with
+  `cachePrefix` so a new version deletes it.
 - **A content security policy** needs `PWA_CSP_DIRECTIVES`: `worker-src 'self'` and `manifest-src 'self'`.
 
 The main entry has no React and no Node built-in, so a `proxy.ts` can import it. Licence MPL-2.0.

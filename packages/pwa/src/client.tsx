@@ -83,7 +83,7 @@ export function ServiceWorkerRegistration({
 }
 
 export { InstallPrompt } from '@sovereignfs/ui';
-export { TAKE_OVER_MESSAGE } from './message.js';
+export { SYNC_MESSAGE, TAKE_OVER_MESSAGE } from './message.js';
 export {
   PUSH_ROUTE,
   PushError,

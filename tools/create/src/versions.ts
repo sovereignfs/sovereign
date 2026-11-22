@@ -13,7 +13,7 @@ export const APP_DEPENDENCIES = {
   '@sovereignfs/auth': '^0.5.0',
   '@sovereignfs/config': '^0.1.0',
   // 0.2 has the worker's push handlers and `usePush`, which the template's notifications use.
-  '@sovereignfs/pwa': '^0.2.0',
+  '@sovereignfs/pwa': '^0.3.0',
   // Web Push for the app's server: the key, the store's shape, the outbox and the subscription route.
   '@sovereignfs/push': '^0.2.0',
   // 2.11 answers core's export request (`handleExportRequest`), which the template mounts; 2.10 has the typed `User` the package's

@@ -2,8 +2,9 @@
 
 What an app provides so that it can be hosted on an instance, and what it is given in return. It is the contract between an app
 and the operator CLI, so that this repository can host any app and names none. The shape is defined by a JSON Schema for each version,
-the latest being [`schemas/app-manifest-v2.schema.json`](schemas/app-manifest-v2.schema.json). This document is manifest **2**; §5.1 says
-how manifest 1 differs, and it stays readable for good.
+the latest being [`schemas/app-manifest-v5.schema.json`](schemas/app-manifest-v5.schema.json). This document is manifest **5**: manifest 2's
+fields, and those each later version added, marked where they arrived (`storage` in 3, `encryption` in 4, `signIn.export` in 5); §5 says
+how each earlier version differs, and every one stays readable for good.
 
 An app is a program of its own. What ties it to an instance is this manifest and the environment it is given (§3), the shared packages it
 chooses to use (`@sovereignfs/ui`, `@sovereignfs/sdk`), and, if it declares `signIn`, sign-in through core. Nothing else.
@@ -35,7 +36,7 @@ for one, for an image that has no label. When an image has both, the address is 
 
 ```json
 {
-  "manifest": 2,
+  "manifest": 5,
   "prefix": "notes",
   "name": "Notes",
   "description": "Notes for the whole household",
@@ -57,7 +58,7 @@ for one, for an image that has no label. When an image has both, the address is 
 
 | Field         | Required      | Meaning                                                                                               |
 | ------------- | ------------- | ----------------------------------------------------------------------------------------------------- |
-| `manifest`    | yes           | This document's format version. `2` here                                                              |
+| `manifest`    | yes           | This document's format version. `5` here; 1 to 4 stay valid (§5)                                      |
 | `prefix`      | yes           | The app's name for itself, in lower case (§2.4). It MUST NOT be `sv`                                  |
 | `name`        | yes           | The name people see, on the consent page and the launcher                                             |
 | `description` | no            | A short line for the launcher, at most 280 characters                                                 |
@@ -69,7 +70,8 @@ for one, for an image that has no label. When an image has both, the address is 
 | `database`    | no            | Whether it needs a PostgreSQL database, and how it may be reached (§2.2). Default `false`             |
 | `generate`    | no            | Variables, with the app's variable prefix, for which the server generates a random secret once (§2.5) |
 | `data`        | no            | Absolute paths in the container to keep across upgrades                                               |
-| `storage`     | no            | Manifest 3 only. `true` when the app keeps people's files the suite's way (§2.7). Default `false`     |
+| `storage`     | no            | From manifest 3. `true` when the app keeps people's files the suite's way (§2.7). Default `false`     |
+| `encryption`  | no            | From manifest 4. The app uses keys from core (§2.8)                                                   |
 | `core`        | with `signIn` | The core versions it works with, as an npm-style semver range (§2.6). Optional without `signIn`       |
 
 A manifest MUST NOT be extended with fields of its own. An unknown field is refused, so that a future field is never ignored. A field that

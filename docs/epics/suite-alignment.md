@@ -26,7 +26,7 @@ and the task here is marked done when the app's change is on its `develop`.
 
 ## Tasks
 
-#### 📋 20.1 — The contracts and the guide say what apps use `[parallel]`
+#### ✅ 20.1 — The contracts and the guide say what apps use `[parallel]`
 
 **Goal:** An app's author finds in the contracts and the guide what the template and the packages actually use.
 

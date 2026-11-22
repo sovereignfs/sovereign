@@ -980,6 +980,8 @@ refused a wrong password and a second sign-up, and signed in through a local cor
 
 - the template's database, migrations and SDK token store for sqld and a SQLite file as well as PostgreSQL, chosen by `<P>_DB_DIALECT`,
   the token store encrypted and written conditionally on each
+- `@sovereignfs/auth` given a SQLite and sqld database through a published entry, as `./postgres` gives PostgreSQL (research 0014
+  §4; leg 3 of [workstream 0011](../workstreams/0011-suite-alignment.md))
 - `building-an-app` §15's line on the template removed
 
 **Dependencies:** 13.35

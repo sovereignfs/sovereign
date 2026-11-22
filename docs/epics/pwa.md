@@ -485,6 +485,9 @@ core's origin is needed.
 
 #### 📋 11.15 — The deployed apps on `@sovereignfs/pwa`
 
+**Carried out by** 20.8 to 20.13 ([epic 20](suite-alignment.md)), one app each; Shopper's own 17.2 did it for Shopper. Marked ✅
+when the last of them is.
+
 **Goal:** The seven apps carry no copy of the manifest, the worker or its registration of their own.
 
 **Deliverables:**

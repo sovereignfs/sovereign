@@ -378,3 +378,29 @@ workstream [0010](docs/workstreams/0010-web-push.md)
 | 0.131.0 | 5        | The app template sends notifications                           | ✅     | [19.5](docs/epics/push.md) |
 | —       | 6        | Push seen on devices                                           | ⏳     | [19.6](docs/epics/push.md) |
 | —       | 7        | Tusk and Waymark on the packages, and the designs that follow  | 📋     | [19.7](docs/epics/push.md) |
+
+### M20 — Every app in development is on the suite's design
+
+[Research 0014](docs/research/0014-suite-alignment.md) · epic [20](docs/epics/suite-alignment.md) · workstream
+[0011](docs/workstreams/0011-suite-alignment.md)
+
+Tasks 20.8 to 20.15 are built in each app's own repository and committed directly on its `develop`; 13.36 (M17) is part of leg 3.
+
+| Version | Priority | Task                                                               | Status | Epic task                              |
+| ------- | -------- | ------------------------------------------------------------------ | ------ | -------------------------------------- |
+| —       | 1        | The contracts and the guide say what apps use `[parallel]`         | 📋     | [20.1](docs/epics/suite-alignment.md)  |
+| —       | 2        | The shared worker takes an app's own handlers `[parallel]`         | 📋     | [20.2](docs/epics/suite-alignment.md)  |
+| —       | 3        | `@sovereignfs/auth` on the newest better-auth `[parallel]`         | 📋     | [20.3](docs/epics/suite-alignment.md)  |
+| —       | 4        | Ledger on the current packages                                     | 📋     | [20.8](docs/epics/suite-alignment.md)  |
+| —       | 5        | Tally on the current packages                                      | 📋     | [20.9](docs/epics/suite-alignment.md)  |
+| —       | 6        | Tusk on the current packages                                       | 📋     | [20.10](docs/epics/suite-alignment.md) |
+| —       | 7        | Wallet on the current packages                                     | 📋     | [20.11](docs/epics/suite-alignment.md) |
+| —       | 8        | Waymark on the current packages                                    | 📋     | [20.12](docs/epics/suite-alignment.md) |
+| —       | 9        | Fjord Web on the current packages                                  | 📋     | [20.13](docs/epics/suite-alignment.md) |
+| —       | 10       | The specification: accounts an app already has, and the key secret | 📋     | [20.4](docs/epics/suite-alignment.md)  |
+| —       | 11       | Accounts an app already has, across to the package                 | 📋     | [20.5](docs/epics/suite-alignment.md)  |
+| —       | 12       | The key secret over the package's session                          | 📋     | [20.6](docs/epics/suite-alignment.md)  |
+| —       | 13       | Linking a local account to core `[parallel]`                       | 📋     | [20.7](docs/epics/suite-alignment.md)  |
+| —       | 14       | Shopper on `@sovereignfs/auth`                                     | 📋     | [20.14](docs/epics/suite-alignment.md) |
+| —       | 15       | The six apps on `@sovereignfs/auth`                                | 📋     | [20.15](docs/epics/suite-alignment.md) |
+| —       | 16       | The planned apps' designs name the packages `[parallel]`           | 📋     | [20.16](docs/epics/suite-alignment.md) |

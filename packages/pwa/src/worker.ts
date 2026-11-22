@@ -1,4 +1,4 @@
-import { TAKE_OVER_MESSAGE } from './message.js';
+import { SYNC_MESSAGE, TAKE_OVER_MESSAGE } from './message.js';
 
 /**
  * A Sovereign app's service worker, as the text served at `/sw.js` (RFC 0001 A7). It is plain JavaScript in a string, not a module
@@ -33,6 +33,22 @@ export type WorkerPushOptions = {
   handlers?: string;
 };
 
+/** Background Sync in the worker: the browser wakes it when a connection is back after the app asked for a sync while it had none. */
+export type WorkerSyncOptions = {
+  /** The tags the app registers (`registration.sync.register(tag)`); a sync with any other tag is not the app's and is left alone. */
+  tags: readonly string[];
+  /**
+   * What the worker posts to every window of the app that is open, as `{ type: message, tag }`, when no `handlers` are given: the pages
+   * then sync through their own code, which a worker does not have. Default `SYNC_MESSAGE`.
+   */
+  message?: string;
+  /**
+   * JavaScript text defining `async function onSync(tag)`, run in place of the message, for an app whose worker can sync by itself. It is
+   * the app's code, as trusted as the rest of the worker, and is held to the worker's one rule: nothing of a person is stored.
+   */
+  handlers?: string;
+};
+
 export type WorkerOptions = {
   /** Changes with each build (Next's `BUILD_ID`): the cache's name carries it, and a new one deletes the old caches. */
   version: string;
@@ -58,6 +74,16 @@ export type WorkerOptions = {
   offlineColors?: { light?: [string, string]; dark?: [string, string] };
   /** Shows Web Push (RFC 0009 §2.1). Without it the worker has no push handlers at all. */
   push?: WorkerPushOptions;
+  /** Answers Background Sync for the app's tags. Without it the worker has no sync handler. */
+  sync?: WorkerSyncOptions;
+  /**
+   * JavaScript text defining `function onFetch(request, url)`, for requests the worker would otherwise leave to the network: not a
+   * navigation and not a kept file. It returns a promise of a `Response` to answer with, or nothing to leave the request alone. It is for
+   * what is the app's and the same for everyone (map tiles, a file a wake reads); it is the app's code, as trusted as the rest of the
+   * worker, and is held to the worker's one rule: **it never stores a page, an API answer, or anything else of a person.** A cache it
+   * keeps should be named with `cachePrefix`, so a new version deletes it.
+   */
+  fetchHandlers?: string;
 };
 
 /** What the worker keeps unless told more. */
@@ -86,6 +112,37 @@ function offlinePage(colors: Required<NonNullable<WorkerOptions['offlineColors']
   for (const color of [lightPage, lightText, darkPage, darkText])
     if (!COLOR.test(color)) throw new TypeError(`offlineColors must be hex colours: got ${color}`);
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>You’re offline</title><style>html{background:${lightPage};color:${lightText}}@media (prefers-color-scheme:dark){html{background:${darkPage};color:${darkText}}}body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;box-sizing:border-box;font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;text-align:center}main{max-width:22rem}h1{margin:0 0 .5rem;font-size:1.25rem}p{margin:0 0 1.5rem;opacity:.7}a{display:inline-block;padding:.6rem 1.2rem;border-radius:.5rem;border:1px solid currentColor;color:inherit;text-decoration:none}</style></head><body><main><h1>You’re offline</h1><p>This page can’t reach the server right now. Check your connection, then try again.</p><a href="">Try again</a></main></body></html>`;
+}
+
+/** The worker's sync handler, appended to its text only when the app asks for Background Sync. */
+function syncSource(sync: WorkerSyncOptions): string {
+  if (!Array.isArray(sync.tags) || sync.tags.length === 0)
+    throw new TypeError('sync.tags must name at least one tag');
+  for (const tag of sync.tags)
+    if (typeof tag !== 'string' || tag === '') throw new TypeError('sync.tags must be strings');
+  if (sync.handlers !== undefined && typeof sync.handlers !== 'string')
+    throw new TypeError('sync.handlers must be JavaScript text');
+  const message = sync.message ?? SYNC_MESSAGE;
+  return `
+// Background Sync: the browser wakes the worker when a connection is back. A sync with one of the app's tags is the app's; any other is left alone.
+var SYNC_TAGS = ${JSON.stringify(sync.tags)};
+var SYNC_MESSAGE = ${JSON.stringify(message)};
+${sync.handlers ?? ''}
+
+self.addEventListener('sync', function (event) {
+  if (SYNC_TAGS.indexOf(event.tag) === -1) return;
+  ${
+    sync.handlers === undefined
+      ? `// The pages that are open sync through their own code; with none open, what waits waits for the next time the app is opened.
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (pages) {
+      for (var i = 0; i < pages.length; i += 1) pages[i].postMessage({ type: SYNC_MESSAGE, tag: event.tag });
+    })
+  );`
+      : 'event.waitUntil(onSync(event.tag));'
+  }
+});
+`;
 }
 
 /** The worker's push and notificationclick handlers, appended to its text only when the app asks for push. */
@@ -191,6 +248,9 @@ export function serviceWorkerSource(options: WorkerOptions): string {
     light: options.offlineColors?.light ?? ['#ffffff', '#18181b'],
     dark: options.offlineColors?.dark ?? ['#09090b', '#fafafa'],
   } as Required<NonNullable<WorkerOptions['offlineColors']>>;
+
+  if (options.fetchHandlers !== undefined && typeof options.fetchHandlers !== 'string')
+    throw new TypeError('fetchHandlers must be JavaScript text');
 
   return `'use strict';
 var PREFIX = ${JSON.stringify(prefix)};
@@ -299,9 +359,26 @@ self.addEventListener('fetch', function (event) {
     event.respondWith(navigate(request));
     return;
   }
-  if (keptRequest(request)) event.respondWith(fromCache(request));
+  if (keptRequest(request)) {
+    event.respondWith(fromCache(request));
+    return;
+  }${
+    options.fetchHandlers === undefined
+      ? ''
+      : `
+  // The app's own answers, for what the worker would leave to the network (\`fetchHandlers\`).
+  var own = onFetch(request, new URL(request.url));
+  if (own) event.respondWith(own);`
+  }
 });
-${options.push ? pushSource(options.push) : ''}`;
+${options.push ? pushSource(options.push) : ''}${options.sync ? syncSource(options.sync) : ''}${
+    options.fetchHandlers === undefined
+      ? ''
+      : `
+// The app's own fetch handlers (\`fetchHandlers\`).
+${options.fetchHandlers}
+`
+  }`;
 }
 
 /** The answer for `/sw.js`: script, fetched afresh every time, allowed to control the whole origin. */

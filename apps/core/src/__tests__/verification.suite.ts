@@ -98,7 +98,9 @@ export function verificationSuite(createDatabase: () => Promise<TestDatabase>): 
     }
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // A test's mail is sent in the background: it ends inside that test, never on the next one's transport.
+    while (pending.length > 0) await Promise.allSettled(pending.splice(0));
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -138,7 +140,9 @@ export function verificationSuite(createDatabase: () => Promise<TestDatabase>): 
       config: cfg,
       cacheMs: 0,
     });
-    const mail = new MailService(store, { createTransport: () => options.via ?? transport });
+    // The transport of the test that called start(), held here: a send that finishes late cannot land on another test's.
+    const via = options.via ?? transport;
+    const mail = new MailService(store, { createTransport: () => via });
     const emails = new EmailService({ mail, settings: store, config: cfg });
     const auth: Auth = createAuth(db, resolveAuthSettings(cfg), {
       registration: registrationFrom(store),

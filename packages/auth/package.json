@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/auth",
-  "version": "0.4.0",
+  "version": "0.6.0",
   "description": "How core and every Sovereign app sign people in: core's own sign-in, the part of it that is not about core.",
   "license": "MPL-2.0",
   "repository": {
@@ -47,6 +47,11 @@
       "types": "./dist/postgres.d.ts",
       "browser": "./dist/browser.js",
       "default": "./dist/postgres.js"
+    },
+    "./database": {
+      "types": "./dist/database.d.ts",
+      "browser": "./dist/browser.js",
+      "default": "./dist/database.js"
     }
   },
   "files": [
@@ -63,10 +68,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@better-auth/passkey": "1.7.18",
+    "@better-auth/passkey": "1.7.27",
     "@sovereignfs/config": "workspace:^",
     "@sovereignfs/sdk": "workspace:^",
-    "better-auth": "1.7.18",
+    "better-auth": "1.7.27",
     "drizzle-orm": "catalog:",
     "libsodium-wrappers-sumo": "catalog:",
     "zod": "^4.6.7"
@@ -74,10 +79,14 @@
   "peerDependencies": {
     "next": "catalog:",
     "react": "catalog:",
-    "pg": "^8.13.0"
+    "pg": "^8.13.0",
+    "@libsql/client": "^0.18.0"
   },
   "peerDependenciesMeta": {
     "pg": {
+      "optional": true
+    },
+    "@libsql/client": {
       "optional": true
     }
   },
@@ -95,6 +104,7 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "tsup": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "@libsql/client": "catalog:"
   }
 }

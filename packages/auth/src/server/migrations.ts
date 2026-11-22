@@ -11,7 +11,21 @@ export const ACCOUNT_MIGRATIONS_TABLE = 'sv_auth_migrations';
  * Core keeps its own history and does not run these: a test holds its tables to the same schema.
  */
 export function accountMigrations(family: 'sqlite' | 'postgres'): Migration[] {
-  return [{ name: '0000_accounts', sql: family === 'postgres' ? POSTGRES : SQLITE }];
+  return [
+    { name: '0000_accounts', sql: family === 'postgres' ? POSTGRES : SQLITE },
+    {
+      // A password an app stored before the package, marked when the app moves onto it, until it is moved at a sign-in or its time is
+      // up (RFC 0007 amendment 1 A1, auth.md §8.1). Empty in an app made on the package.
+      name: '0001_legacy_passwords',
+      sql: `CREATE TABLE sv_legacy_passwords (\n\tuser_id text PRIMARY KEY NOT NULL REFERENCES users(id) ON DELETE CASCADE,\n\tuntil ${family === 'postgres' ? 'bigint' : 'integer'} NOT NULL\n)`,
+    },
+    {
+      // A session's key secret (RFC 0007 amendment 1 A4, auth.md §8.1): kept apart from the session's own row, which better-auth hands
+      // to the browser, and gone with the session however it ends.
+      name: '0002_key_secrets',
+      sql: `CREATE TABLE sv_key_secrets (\n\tsession_id text PRIMARY KEY NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,\n\tsecret text NOT NULL,\n\tcreated_at ${family === 'postgres' ? 'bigint' : 'integer'} NOT NULL\n)`,
+    },
+  ];
 }
 
 /**

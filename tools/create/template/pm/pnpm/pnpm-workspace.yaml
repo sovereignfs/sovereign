@@ -1,0 +1,14 @@
+# pnpm's settings for this app (it is one package, not a workspace).
+
+# Without this, pnpm records only the host's builds of a package with native code (libsql's, for a SQLite file and sqld), so a lockfile
+# made on a Mac has nothing for the image's Alpine to install. Covers macOS, Linux on glibc and musl, arm64 and x64.
+supportedArchitectures:
+  os:
+    - darwin
+    - linux
+  cpu:
+    - arm64
+    - x64
+  libc:
+    - glibc
+    - musl

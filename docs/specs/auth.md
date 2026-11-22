@@ -38,16 +38,17 @@ an app                          + its own data and pages
 
 ## 2. Entries
 
-| Entry        | Where it runs | What it holds                                                                                                                                                                                                    |
-| ------------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.`          | Anywhere      | What imports nothing and runs on a server, in a browser or on the Edge: the cookie names (rule 10), the password policy, the time zone and language checks, `safeReturnTo`                                       |
-| `./server`   | Server        | `createAuthPreset(options)` (§4); the settings resolver (§5); the session read (§6); the checks of rules 3, 6 and 7; a person's sessions; the account tables' schema for each dialect and their migrations (§10) |
-| `./next`     | Server        | The page guards (§6)                                                                                                                                                                                             |
-| `./client`   | Browser       | The browser client's plugins and fields; the sign-in value (`signInDerivation`, `saltReader`); the flows of §7.1 and their messages; the passkey sign-in with the key store's PRF hooks                          |
-| `./core`     | Server        | Core as a way in for an app (§8)                                                                                                                                                                                 |
-| `./postgres` | Server        | `postgresDatabase(pool)`: an app's own PostgreSQL pool as the database of §3, the database package's own code; only this entry loads `pg`                                                                        |
+| Entry        | Where it runs | What it holds                                                                                                                                                                                                                                                                               |
+| ------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.`          | Anywhere      | What imports nothing and runs on a server, in a browser or on the Edge: the cookie names (rule 10), the password policy, the time zone and language checks, `safeReturnTo`                                                                                                                  |
+| `./server`   | Server        | `createAuthPreset(options)` (§4); the settings resolver (§5); the session read (§6); the checks of rules 3, 6 and 7; a person's sessions; the account tables' schema for each dialect and their migrations (§10)                                                                            |
+| `./next`     | Server        | The page guards (§6)                                                                                                                                                                                                                                                                        |
+| `./client`   | Browser       | The browser client's plugins and fields; the sign-in value (`signInDerivation`, `saltReader`); the flows of §7.1 and their messages; the passkey sign-in with the key store's PRF hooks                                                                                                     |
+| `./core`     | Server        | Core as a way in for an app (§8)                                                                                                                                                                                                                                                            |
+| `./postgres` | Server        | `postgresDatabase(pool)`: an app's own PostgreSQL pool as the database of §3, the database package's own code; only this entry loads `pg`                                                                                                                                                   |
+| `./database` | Server        | `openDatabase({ prefix })`: the app's database on the form `<PREFIX>_DB_DIALECT` names (a SQLite file, sqld, or PostgreSQL), read from its variables as core reads its own; `runMigrations`, `readMigrations`. The driver (`@libsql/client` or `pg`) is the app's, loaded for its form only |
 
-A browser that imports `./server`, `./next` or `./core` MUST fail at once, as the SDK's server entry does.
+A browser that imports `./server`, `./next`, `./core`, `./postgres` or `./database` MUST fail at once, as the SDK's server entry does.
 
 ## 3. What an app gives it
 
@@ -76,25 +77,25 @@ are the browser's (`./client`, §7.2), not the preset's.
 Every rule core's sign-in holds is either the package's, or core's addition on top of it. The package's, and where core's spec says
 each:
 
-| #   | Rule                                                                                                                                                                                                                                                                                               | core-app       |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| 1   | **The server never receives a password.** Every form sends the sign-in value the browser derives (`./client` `derive`), the policy is checked there, the hash function (`policedHash`) refuses anything else, and signing in with anything else is answered as a wrong password, before any lookup | §5.2           |
-| 2   | better-auth's origin and CSRF checks are never switched off; requests are accepted only from the app's origin and its trusted origins                                                                                                                                                              | §3.5, §5.2     |
-| 3   | **No fresh session** (`session.freshAge: 0`): a sensitive action asks for the password again, through `confirmPassword`, which counts wrong answers (5 in 10 minutes)                                                                                                                              | §3.2.1, §3.5   |
-| 4   | **Every way of opening a session passes the second step** when it is on, and there is no "trust this device"                                                                                                                                                                                       | §3.4.1         |
-| 5   | **Passkeys MUST be user-verified**, checked in the package's hooks, not left to better-auth                                                                                                                                                                                                        | §3.4.2         |
-| 6   | **Every session passes `assertMayOpenSession`** (the address verified where verification is required, the account not deactivated), the hook on creating one                                                                                                                                       | §3.3.6         |
-| 7   | **Registration is decided in the user-create hook**, which every account passes through; a role or any other privilege is never taken from a request; a name, time zone and locale are checked there; a picture is never taken as input                                                            | §3.3.1, §3.3.5 |
-| 8   | **The cookie cache is off**: a session is read from the database on every request, so an ended session stops working at once                                                                                                                                                                       | §3.5           |
-| 9   | **Mail is sent in the background, and its availability checked first**, so verification, resend and reset answer alike for known and unknown addresses                                                                                                                                             | §3.3.3, §3.3.4 |
-| 10  | **Cookies** are host-only and `__Host-` over https, their names decided in one place                                                                                                                                                                                                               | §3.5           |
-| 11  | **A session lasts seven days without use**, pushed back once a day while used, set explicitly                                                                                                                                                                                                      | §3.5           |
-| 12  | **Rate limits** on the authentication routes, counted in the database                                                                                                                                                                                                                              | §3.5           |
-| 13  | **A session is ended through better-auth's endpoints**, by its id and only for its owner, never by deleting its row; a list of sessions never carries a token                                                                                                                                      | §3.5           |
-| 14  | **The browser client never follows a redirect by itself**: the forms navigate, so a callback is never requested twice with one code                                                                                                                                                                | §3.6.1         |
-| 15  | **A secret is required, with no default**: the app MUST NOT start without `AUTH_SECRET` (at least 32 characters)                                                                                                                                                                                   | §3.5           |
-| 16  | **Every comparison of a key or token is timing-safe**                                                                                                                                                                                                                                              | —              |
-| 17  | **A picture is judged by its bytes**, and `users.image` is set only by uploading one                                                                                                                                                                                                               | §3.11          |
+| #   | Rule                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | core-app       |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| 1   | **The server never receives a password.** Every form sends the sign-in value the browser derives (`./client` `derive`), the policy is checked there, the hash function (`policedHash`) refuses anything else, and signing in with anything else is answered as a wrong password, before any lookup. **One exception, in an app only:** a password the app stored before the package is moved once, at its next sign-in, within 90 days of the move (§8.1, RFC 0007 amendment 1 A1); core has none | §5.2           |
+| 2   | better-auth's origin and CSRF checks are never switched off; requests are accepted only from the app's origin and its trusted origins                                                                                                                                                                                                                                                                                                                                                             | §3.5, §5.2     |
+| 3   | **No fresh session** (`session.freshAge: 0`): a sensitive action asks for the password again, through `confirmPassword`, which counts wrong answers (5 in 10 minutes)                                                                                                                                                                                                                                                                                                                             | §3.2.1, §3.5   |
+| 4   | **Every way of opening a session passes the second step** when it is on, and there is no "trust this device"                                                                                                                                                                                                                                                                                                                                                                                      | §3.4.1         |
+| 5   | **Passkeys MUST be user-verified**, checked in the package's hooks, not left to better-auth                                                                                                                                                                                                                                                                                                                                                                                                       | §3.4.2         |
+| 6   | **Every session passes `assertMayOpenSession`** (the address verified where verification is required, the account not deactivated), the hook on creating one                                                                                                                                                                                                                                                                                                                                      | §3.3.6         |
+| 7   | **Registration is decided in the user-create hook**, which every account passes through; a role or any other privilege is never taken from a request; a name, time zone and locale are checked there; a picture is never taken as input                                                                                                                                                                                                                                                           | §3.3.1, §3.3.5 |
+| 8   | **The cookie cache is off**: a session is read from the database on every request, so an ended session stops working at once                                                                                                                                                                                                                                                                                                                                                                      | §3.5           |
+| 9   | **Mail is sent in the background, and its availability checked first**, so verification, resend and reset answer alike for known and unknown addresses                                                                                                                                                                                                                                                                                                                                            | §3.3.3, §3.3.4 |
+| 10  | **Cookies** are host-only and `__Host-` over https, their names decided in one place                                                                                                                                                                                                                                                                                                                                                                                                              | §3.5           |
+| 11  | **A session lasts seven days without use**, pushed back once a day while used, set explicitly                                                                                                                                                                                                                                                                                                                                                                                                     | §3.5           |
+| 12  | **Rate limits** on the authentication routes, counted in the database                                                                                                                                                                                                                                                                                                                                                                                                                             | §3.5           |
+| 13  | **A session is ended through better-auth's endpoints**, by its id and only for its owner, never by deleting its row; a list of sessions never carries a token                                                                                                                                                                                                                                                                                                                                     | §3.5           |
+| 14  | **The browser client never follows a redirect by itself**: the forms navigate, so a callback is never requested twice with one code                                                                                                                                                                                                                                                                                                                                                               | §3.6.1         |
+| 15  | **A secret is required, with no default**: the app MUST NOT start without `AUTH_SECRET` (at least 32 characters)                                                                                                                                                                                                                                                                                                                                                                                  | §3.5           |
+| 16  | **Every comparison of a key or token is timing-safe**                                                                                                                                                                                                                                                                                                                                                                                                                                             | —              |
+| 17  | **A picture is judged by its bytes**, and `users.image` is set only by uploading one                                                                                                                                                                                                                                                                                                                                                                                                              | §3.11          |
 
 Core's additions, which stay in core and in `core-app.md`: the OIDC provider and everything of §3.6 and §3.7; invitations, the first
 account as owner and the owner's guarantees (§3.2, §3.3.1, §3.10); roles, the capability matrix and `requireCapability` (§3.2);
@@ -208,8 +209,53 @@ keeps (sdk §9.8), so the app's session is the package's and the SDK keeps only 
   whether that ends core's session too (core-app §3.6.5): yes for a hosted app, no for an external one.
 - **An account from core has no password**, so the routes that set up a password's second step, a passkey or a new password refuse it
   (`NO_PASSWORD_ACCOUNT`); its second step is core's. `localAccounts: false` switches every route of an own account off.
-- **Not built yet:** linking a local account to core from a signed-in session (until then an address that is a local account's is
-  refused), and encryption's per-session key secret and key release for an app on the package.
+- **An address that is a local account's** is refused at a sign-in through core (`account_not_linked`) until the person links the two
+  from a signed-in session (§8.2). Nothing is ever linked because two addresses match.
+
+### 8.1 Accounts an app had before the package
+
+RFC 0007 amendment 1 (A1 to A4, and A7 for what building it found). Built in tasks 20.5 and 20.6; nothing of it applies to core.
+
+- **Moving the store** (`adoptAccountTables`, `./server`): run once at start-up, before the package's migrations. It renames an app's own
+  better-auth tables (`user`, `session`…) onto the package's, adds the columns the package has, makes the second step's and passkeys'
+  tables where there were none, records the package's first migration as run, then marks every account with a password in
+  `sv_legacy_passwords` for 90 days (`LEGACY_PASSWORD_PERIOD_MS`). Each step is recorded in `sv_auth_adoption` and a stopped move goes
+  on; a store made on the package is left alone. One-way.
+- **Passwords stored before the package** are hashes of what the app's page sent then: the password itself, or a value of the app's own
+  (Tally's). While a mark is open the app's salt document says `moving: true` (`passwordsMoving`), and after a sign-in answered as a wrong
+  password the form (`signInWithPassword` with `passwordMove`) sends the address, that previous value and the sign-in value once to
+  `POST /api/auth/sv/move-password` (`movePasswords`, a plugin core never adds), then signs in again. A marked account whose stored hash
+  opens the previous value gets the sign-in value's hash and loses its mark; **the route opens no session**, so the second sign-in passes
+  every rule of §4. A previous value that is itself a sign-in value is never taken. The answer is the same whatever happened and takes as
+  long; tries are limited by asking address and by account (five an hour); `Origin` is checked; nothing it is sent is stored or
+  logged. After 90 days a marked account signs in only after a reset: by mail, or by `resetLink(auth, email, baseUrl)`, which the app
+  exposes through a command of its own, never a route. A reset leaves the mark, which then moves nothing.
+- **Accounts from core made by `genericOAuth`** keep their `sovereign` rows (the account id is the `sub`); the migration clears their
+  tokens, and gives each session of an account whose only way in is core a `sv_core_sign_ins` row to be checked at its next request.
+- **A person's core `sub`** comes from `coreSubOf(database, userId)` (`./core`), the inverse of `userIdForSub`; an app keeps no copy.
+- **The key secret** (`keySecrets({ database, core })`, `./server`, since an app with no core needs it for its own vault) is served at `GET /api/auth/sv/key-secret` (same-origin only, `no-store`, `401` with no session), made on the first
+  ask and kept in `sv_key_secrets`, which ends with the session. Its `sub` is the core `sub` for a session that came through core, the
+  app's user id for a local one.
+
+### 8.2 Linking an account of the app's own to core
+
+Built in task 20.7. For an app with both ways in: a person signed in to an account of the app's own links it to their Sovereign account,
+so that signing in through core opens that account from then on.
+
+- **The route** is `POST /api/auth/sv/link-sovereign` (`./core`), with the password's sign-in value and `returnTo`. It needs a session
+  (`401` without one), refuses an account already linked (`400`, `ALREADY_LINKED`) and checks the password through `confirmPassword`,
+  which counts wrong answers (`401` `INVALID_PASSWORD`, `429` `PASSWORD_LIMITED`). better-auth's own origin check refuses another site.
+  It then sets a signed cookie, `sv_core_link`, naming the session that asked and running out after ten minutes, and answers with
+  core's authorization address, asked with `prompt=login`, so the link is to whoever signs in at core now. The page goes there itself
+  (`linkToSovereign`, `./client`); the browser client never follows a redirect.
+- **The callback** reads the cookie once and clears it. It links only when the session it arrives with is the one that asked, before
+  the time runs out: the cookie carried to another browser links nothing. A `sub` another account here already has is never moved
+  (`?link=taken`), and a Sovereign account whose address is another account's here is joined to neither (`?link=address`). Otherwise
+  the account gets a `sovereign` row whose account id is the `sub`, the session becomes one through core (a `sv_core_sign_ins` row,
+  checked against core as any other), and the person comes back to `returnTo` with `?link=done`.
+- **The page** is `LinkSovereignPanel` (`@sovereignfs/ui`), on the template's security page for an account with a password when core is
+  a way in; it says what came back from `link`.
+- **Implicit linking stays off.** A sign-in through core still matches only by `sub` (§9).
 
 ## 9. Who a person is
 
@@ -233,8 +279,10 @@ session gives it as one typed `user`: `id`, `sub` (linked accounts), `name`, `em
 - **Core** keeps its own migration history: its `users` table has columns no app has (`role` and the terms; `timezone`, `locale` and
   `deactivatedAt` are the package's, since its rules use them), and a migration that changes refuses to boot. A
   test holds core's tables to the package's schema, so the two cannot drift.
-- An app that kept better-auth's tables before moves onto the package's migrations with one of its own that checks the tables are what
-  the package expects and records them as done; it never changes data.
+- An app that kept better-auth's tables before moves onto the package's with `adoptAccountTables` (§8.1), which renames them and adds
+  what the package has; it deletes nothing.
+- The package's own tables: `sv_core_sign_ins` and `sv_core_notices` (`./core`); and, from RFC 0007 amendment 1, `sv_legacy_passwords`
+  (`user_id`, `until`), `sv_auth_adoption` (a move's steps), and `sv_key_secrets` (`session_id` referencing `sessions(id)` `ON DELETE CASCADE`, `secret`, `created_at`).
 
 ## 11. better-auth
 
@@ -255,6 +303,11 @@ session gives it as one typed `user`: `id`, `sub` (linked accounts), `name`, `em
 
 ## Changelog
 
-| Date          | Change                           |
-| ------------- | -------------------------------- |
-| November 2026 | Draft, from RFC 0007 (task 17.1) |
+| Date          | Change                                                                                                                       |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| November 2026 | Draft, from RFC 0007 (task 17.1)                                                                                             |
+| November 2026 | §8.1 and rule 1's exception, from RFC 0007 amendment 1 (task 20.4); to be built                                              |
+| November 2026 | §8.1 built but the key secret (task 20.5): `adoptAccountTables`, `movePasswords`, `passwordMove`, `resetLink`, `coreSubOf`   |
+| November 2026 | §8.1's key secret built (task 20.6): `keySecrets`, `0002_key_secrets`; the template's `--encryption` form on the package     |
+| November 2026 | §2: `./database`, the app's database on any of the three forms (task 13.36)                                                  |
+| November 2026 | §8.2: linking an account of the app's own to core (task 20.7): `/sv/link-sovereign`, `linkToSovereign`, `LinkSovereignPanel` |

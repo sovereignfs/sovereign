@@ -5,6 +5,21 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.12.0; earlier versions are in the repository's
 history and tags.
 
+## [0.28.0] - 2026-11-22
+
+### Changed
+
+- An app made by `npm create @sovereignfs app` depends on better-auth 1.7.27 and `@sovereignfs/auth` 0.6, which names it.
+- It depends on `@sovereignfs/pwa` 0.3, whose worker takes the app's own Background Sync and fetch handlers.
+- An app made with `--encryption` signs in on `@sovereignfs/auth` (through core only) instead of the SDK's `nextAuth`, keeps everything of
+  a person under core's `sub` and gets its key secret from the package; every app serves the key secret its pages may ask for.
+- An app made by `npm create @sovereignfs app` runs on a SQLite file, sqld or PostgreSQL (`<PREFIX>_DB_DIALECT`), with its migrations in
+  `migrations/postgres` and `migrations/sqlite`. Its refresh token is held by a lease on its row rather than a PostgreSQL lock, and the
+  sign-in's migrations run on the direct address with the app's, where the migrations' lock holds behind a pooler. A pnpm app gets a
+  `pnpm-workspace.yaml`, and a yarn app's `.yarnrc.yml` names the platforms, so the image's Alpine finds libsql's build.
+- An app made by `npm create @sovereignfs app` with both ways in lets a person link their own account to core from its security page,
+  with `@sovereignfs/ui` 0.106's `LinkSovereignPanel`.
+
 ## [0.27.1] - 2026-11-21
 
 ### Changed

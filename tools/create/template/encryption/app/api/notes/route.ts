@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth';
+import { person } from '@/lib/person';
 import { unauthorised } from '@/lib/files';
 import { notes } from '@/lib/notes';
 import { sovereign } from '@/lib/sovereign';
@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
  * instance's Directory) so the page can say who shared what with whom. Nothing here opens a note.
  */
 export async function GET() {
-  const session = await auth().getSession();
+  const session = await person();
   if (!session) return unauthorised();
   const list = await notes().list(session.sub);
   const subs = [

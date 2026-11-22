@@ -1,5 +1,5 @@
 import { requireSignedIn, userOfSession } from '@/lib/session';
-import { db } from '@/lib/db';
+import { database } from '@/lib/db';
 import { files } from '@/lib/files';
 import { addNote, deleteFile, deleteNote } from './actions';
 import { Notifications } from './notifications';
@@ -25,10 +25,9 @@ export const dynamic = 'force-dynamic';
 export default async function Home() {
   // Sends a person to sign in, and back here.
   const session = await requireSignedIn('/');
-  const { rows } = await db().query<{ id: string; body: string }>(
-    'SELECT id, body FROM notes WHERE owner = $1 ORDER BY id DESC LIMIT 100',
-    [session.user.id],
-  );
+  const { rows } = await (
+    await database()
+  ).run('SELECT id, body FROM notes WHERE owner = ? ORDER BY id DESC LIMIT 100', [session.user.id]);
   // Their files, kept the suite's way: a folder for this person and a quota for this person (lib/files.ts).
   const [kept, usage] = await Promise.all([
     files().list(session.user.id),
@@ -47,7 +46,7 @@ export default async function Home() {
         </form>
       </Card>
       <ul>
-        {rows.map((note) => (
+        {(rows as { id: number; body: string }[]).map((note) => (
           <li key={note.id}>
             <Card>
               <form action={deleteNote}>

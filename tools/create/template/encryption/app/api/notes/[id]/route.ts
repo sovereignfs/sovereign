@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth';
+import { person } from '@/lib/person';
 import { refuseCrossOrigin, unauthorised } from '@/lib/files';
 import { checkWrite, NoteError, notes } from '@/lib/notes';
 
@@ -15,7 +15,7 @@ const refused = (error: unknown) =>
 export async function PUT(request: Request, { params }: Context) {
   const cross = refuseCrossOrigin(request);
   if (cross) return cross;
-  const session = await auth().getSession();
+  const session = await person();
   if (!session) return unauthorised();
   try {
     const note = checkWrite(session.sub, (await params).id, await request.json().catch(() => null));
@@ -32,7 +32,7 @@ export async function PUT(request: Request, { params }: Context) {
 export async function DELETE(request: Request, { params }: Context) {
   const cross = refuseCrossOrigin(request);
   if (cross) return cross;
-  const session = await auth().getSession();
+  const session = await person();
   if (!session) return unauthorised();
   const removed = await notes().remove(session.sub, (await params).id);
   return new Response(null, { status: removed ? 204 : 404 });

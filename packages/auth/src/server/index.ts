@@ -51,6 +51,15 @@ export {
   type SessionReader,
 } from './session.js';
 export { ACCOUNT_MIGRATIONS_TABLE, accountMigrations, accountTables } from './migrations.js';
+export {
+  adoptAccountTables,
+  LEGACY_PASSWORD_PERIOD_MS,
+  type AdoptionOptions,
+  type AdoptionResult,
+} from './adopt.js';
+export { MOVE_PASSWORD_PATH, movePasswords, passwordsMoving } from './move-password.js';
+export { resetLink, type ResetLinkAuth } from './reset-link.js';
+export { KEY_SECRET_PATH, keySecrets } from './key-secrets.js';
 export * as postgresAccountSchema from './schema/postgres.js';
 export * as sqliteAccountSchema from './schema/sqlite.js';
 export type { Database, Migration } from '@sovereignfs/database';

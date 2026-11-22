@@ -43,7 +43,7 @@ through core. No app imports another, and core names no app.
                        └────────────────────────────────────────────────────────────────────────────────────┘
 
  apps ── OIDC + PKCE ──► core            apps ── @sovereignfs/sdk (server only) ──► Core API
- apps ── import ───────► @sovereignfs/ui, config, manifest, sdk  (npm)
+ apps ── import ───────► @sovereignfs/ui, auth, sdk, pwa, push, storage, export, config, manifest  (npm)
 ```
 
 ## 2. The components
@@ -59,18 +59,20 @@ through core. No app imports another, and core names no app.
 
 ### What Sovereign publishes
 
-| Published                                            | For                                                                                                                                                         |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ghcr.io/sovereignfs/sovereign`                      | Core's image. Its tag is the **platform version** (`0.83.0`), which is what a manifest's `core` range means                                                 |
-| `@sovereignfs/ui`                                    | The design system: tokens and React components. Pre-1.0: apps pin it exactly                                                                                |
-| `@sovereignfs/sdk`                                   | An app's **server** calling core: sign-in, verifying core's notices, notifications, email, activity, directory. Throws in a browser                         |
-| `@sovereignfs/config`                                | The environment convention of `contracts/env.md`: settings declared once, read with a prefix, refused at start-up                                           |
-| `@sovereignfs/storage`                               | People's files: a folder and a quota for each person, served only to them, with `Range` ([keeping files](keeping-files.md))                                 |
-| `@sovereignfs/push`                                  | Notifications on a device where the app is not open (Web Push): the key, a store, an outbox and the route ([sending notifications](#sending-notifications)) |
-| `@sovereignfs/pwa`                                   | Installing the app: its manifest, a service worker that keeps nothing of a person, an announced update ([installing](#installing-the-app))                  |
-| `@sovereignfs/manifest`                              | The manifest's schemas, a validator, and `sovereign-manifest` (`check`, `label`, `docker-args`)                                                             |
-| `@sovereignfs/cli` (`sv`), `ghcr.io/sovereignfs/cli` | The operator's toolkit, and the image the server runs it from                                                                                               |
-| `@sovereignfs/create`                                | `npm create @sovereignfs` (an instance repository) and `npm create @sovereignfs app <name>` (an app, §11)                                                   |
+| Published                                            | For                                                                                                                                                                                                                                         |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ghcr.io/sovereignfs/sovereign`                      | Core's image. Its tag is the **platform version** (`0.83.0`), which is what a manifest's `core` range means                                                                                                                                 |
+| `@sovereignfs/ui`                                    | The design system: tokens and React components. Pre-1.0: apps pin it exactly                                                                                                                                                                |
+| `@sovereignfs/auth`                                  | The sign-in every app shares with core: local accounts and core as a way in, on better-auth at one exact version ([auth.md](specs/auth.md)). Not built yet: linking a local account to core, and the key secret for encryption (auth.md §8) |
+| `@sovereignfs/sdk`                                   | An app's **server** calling core: sign-in, verifying core's notices, notifications, email, activity, directory. Throws in a browser                                                                                                         |
+| `@sovereignfs/config`                                | The environment convention of `contracts/env.md`: settings declared once, read with a prefix, refused at start-up                                                                                                                           |
+| `@sovereignfs/storage`                               | People's files: a folder and a quota for each person, served only to them, with `Range` ([keeping files](keeping-files.md))                                                                                                                 |
+| `@sovereignfs/push`                                  | Notifications on a device where the app is not open (Web Push): the key, a store, an outbox and the route ([sending notifications](#sending-notifications))                                                                                 |
+| `@sovereignfs/export`                                | People's exports in the [one format](../contracts/export.md): written, checked, and encrypted to age recipients                                                                                                                             |
+| `@sovereignfs/pwa`                                   | Installing the app: its manifest, a service worker that keeps nothing of a person, an announced update ([installing](#installing-the-app))                                                                                                  |
+| `@sovereignfs/manifest`                              | The manifest's schemas, a validator, and `sovereign-manifest` (`check`, `label`, `docker-args`)                                                                                                                                             |
+| `@sovereignfs/cli` (`sv`), `ghcr.io/sovereignfs/cli` | The operator's toolkit, and the image the server runs it from                                                                                                                                                                               |
+| `@sovereignfs/create`                                | `npm create @sovereignfs` (an instance repository) and `npm create @sovereignfs app <name>` (an app, §11)                                                                                                                                   |
 
 `@sovereignfs/database`, `crypto`, `mailer`, `bridge` and `api-client` are **private**: core uses them, apps cannot. Each app
 carries its own database, encryption and mail code today ([research 0004](research/0004-a-kit-for-apps-of-their-own.md) plans to
@@ -192,19 +194,19 @@ From [`app-manifest.md`](../contracts/app-manifest.md) §4, the ones a plan has 
 
 What Tusk and Fjord Web use, and a new app should, unless its design says why not:
 
-| Concern          | Choice                                                                                                                                           |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Framework        | **Next.js 16**, latest stable, App Router, `output: 'standalone'`. It is not the Next.js of anyone's memory: read `node_modules/next/dist/docs/` |
-| Language         | TypeScript, strict. React 19                                                                                                                     |
-| Runtime, manager | Node 24.15+, **pnpm 11**, with `minimumReleaseAge` (a release under a day old does not install) and `allowBuilds`                                |
-| Sign-in          | **better-auth**: local accounts (password, passkey, TOTP) and core as a `genericOAuth` provider with PKCE                                        |
-| Data             | **Drizzle**, one schema per dialect; `@libsql/client` (sqld and SQLite files), `pg` (PostgreSQL)                                                 |
-| Core             | `@sovereignfs/sdk`: the notice verifiers, and app-scope calls (bell, email, activity)                                                            |
-| UI               | `@sovereignfs/ui`, pinned exactly, with its peers `@dnd-kit/core` and `@dnd-kit/sortable`                                                        |
-| Settings         | `@sovereignfs/config`                                                                                                                            |
-| Tests            | Vitest (units, and the data layer on all three databases); Playwright (Chromium and WebKit)                                                      |
-| Quality          | Prettier, ESLint (the suite's rules), `tsc --noEmit`, in CI                                                                                      |
-| Licence          | **AGPL-3.0-or-later**. Bundling `@sovereignfs/ui` makes it so; every dependency's licence must be compatible                                     |
+| Concern          | Choice                                                                                                                                                                                                                                   |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework        | **Next.js 16**, latest stable, App Router, `output: 'standalone'`. It is not the Next.js of anyone's memory: read `node_modules/next/dist/docs/`                                                                                         |
+| Language         | TypeScript, strict. React 19                                                                                                                                                                                                             |
+| Runtime, manager | Node 24.15+, **pnpm 11**, with `minimumReleaseAge` (a release under a day old does not install) and `allowBuilds`                                                                                                                        |
+| Sign-in          | **`@sovereignfs/auth`** on better-auth: local accounts (password, passkey, TOTP) and core as a way in. Apps made before it keep better-auth with `genericOAuth` until they move ([workstream 0011](workstreams/0011-suite-alignment.md)) |
+| Data             | **Drizzle**, one schema per dialect; `@libsql/client` (sqld and SQLite files), `pg` (PostgreSQL)                                                                                                                                         |
+| Core             | `@sovereignfs/sdk`: the notice verifiers, and app-scope calls (bell, email, activity)                                                                                                                                                    |
+| UI               | `@sovereignfs/ui`, pinned exactly, with its peers `@dnd-kit/core` and `@dnd-kit/sortable`                                                                                                                                                |
+| Settings         | `@sovereignfs/config`                                                                                                                                                                                                                    |
+| Tests            | Vitest (units, and the data layer on all three databases); Playwright (Chromium and WebKit)                                                                                                                                              |
+| Quality          | Prettier, ESLint (the suite's rules), `tsc --noEmit`, in CI                                                                                                                                                                              |
+| Licence          | **AGPL-3.0-or-later**. Bundling `@sovereignfs/ui` makes it so; every dependency's licence must be compatible                                                                                                                             |
 
 ## 6. Signing people in
 
@@ -302,8 +304,8 @@ of its own (sdk §9.5), the same records core keeps, so the person's keys can mo
    `keepKit(kit)` once the person has kept it. After a reset, `unlockWithKit(typed, secret)` opens the keys and gives the new password
    its way in.
 6. **Using the key.** `open()` gives the app key or `locked`, as with core: show `LockedState`, whose action asks for the password or
-   passphrase again. Keep nothing of a document in a notification, an activity entry or mail (RFC 0005 §8). An app made from the
-   template that encrypts a document end to end is task 16.14, not yet built.
+   passphrase again. Keep nothing of a document in a notification, an activity entry or mail (RFC 0005 §8). The template's
+   `--encryption` form encrypts a document end to end, but with core; there is no template for an app with no core yet.
 
 Passkeys that unlock, escrow and sharing with other people need core, and are not offered with no core.
 
@@ -473,8 +475,13 @@ instance.
   the copies have drifted. [Research 0004](research/0004-a-kit-for-apps-of-their-own.md) recommends publishing it as a kit, in steps:
   settings (done: `@sovereignfs/config`), the notice handlers in the SDK, two stores and the boot sequence in `database`, the envelope
   format in `crypto`, then a template for an app of its own. Until then, copy from Tusk, and say in the design which files were copied.
-- **`env.md`'s `FIELD_ENCRYPTION_KEYS`** is not what the apps use (`<P>_ENCRYPTION_KEY` and `_PREVIOUS`); research 0004 step 4 reconciles them.
-- **The template** is PostgreSQL only; an app of its own on sqld or a SQLite file still copies Tusk's database boot.
+- **`<P>_ENCRYPTION_KEY` and `_PREVIOUS`**, which the apps made before the key ring read, stay valid for them (`env.md` §3, "Field
+  encryption keys"); a new app uses `FIELD_ENCRYPTION_KEYS`.
+- **An app with people already signed in** moves onto `@sovereignfs/auth` as [RFC 0007](rfcs/0007-one-sign-in.md) amendment 1
+  proposes (auth.md §8.1): its passwords moved at each person's next sign-in for 90 days, then by a reset; its accounts from core kept,
+  their tokens dropped (`adoptAccountTables`, `movePasswords`, auth.md §8.1).
+- **The apps made before the template's current design** (Ledger, Tally, Tusk, Wallet, Waymark, Fjord Web) are brought onto it by
+  [workstream 0011](workstreams/0011-suite-alignment.md): the current packages first, then `@sovereignfs/auth`.
 - **`AUTH_LOCAL` is `true` or `false`** (`env.md` §2, settled by [RFC 0007](rfcs/0007-one-sign-in.md)). Tusk and Fjord read `1` today;
   until they move onto `@sovereignfs/auth`, which refuses it, accept both.
 

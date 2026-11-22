@@ -1,5 +1,5 @@
 import { CoreApiError } from '@sovereignfs/sdk';
-import { auth } from '@/lib/auth';
+import { person } from '@/lib/person';
 import { unauthorised } from '@/lib/files';
 import { sovereign } from '@/lib/sovereign';
 
@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
  * never opened this app, since their keys are made then. The page checks the account's signature itself; it does not trust this route.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ sub: string }> }) {
-  const session = await auth().getSession();
+  const session = await person();
   if (!session) return unauthorised();
   try {
     const keys = await sovereign()

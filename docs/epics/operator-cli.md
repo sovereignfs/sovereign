@@ -972,7 +972,7 @@ value is the app's vault id. With core the only way in, the sign-in page sends a
 it leaves out, and it does not depend on the package. A scaffold, built from the packed packages, was signed up and in locally,
 refused a wrong password and a second sign-up, and signed in through a local core and out of both, in a browser.
 
-#### 📋 13.36 — The template on sqld and a SQLite file
+#### ✅ 13.36 — The template on sqld and a SQLite file
 
 **Goal:** An app made from the template runs on any of the three database forms, as Tusk does.
 
@@ -980,6 +980,8 @@ refused a wrong password and a second sign-up, and signed in through a local cor
 
 - the template's database, migrations and SDK token store for sqld and a SQLite file as well as PostgreSQL, chosen by `<P>_DB_DIALECT`,
   the token store encrypted and written conditionally on each
+- `@sovereignfs/auth` given a SQLite and sqld database through a published entry, as `./postgres` gives PostgreSQL (research 0014
+  §4; leg 3 of [workstream 0011](../workstreams/0011-suite-alignment.md))
 - `building-an-app` §15's line on the template removed
 
 **Dependencies:** 13.35
@@ -989,3 +991,13 @@ refused a wrong password and a second sign-up, and signed in through a local cor
 **Review checklist:**
 
 - A scaffold signs in and keeps notes on each of the three
+
+**Done as (0.136.0):** `@sovereignfs/auth/database` (`openDatabase`, `runMigrations`, `readMigrations`) bundles the database package core
+runs on, so an app gives its prefix and gets the form its `<PREFIX>_DB_DIALECT` names. The template has one `Database` for everything (its
+tables, the SDK's, the sign-in's), `?` placeholders throughout, and migrations in `migrations/postgres` and `migrations/sqlite`, the
+encrypted overlay's too (its notes as base64url text). The refresh token's lock is a lease on its row, the same on all three and behind a
+pooler; the push outbox is claimed by conditional updates, which still share the work between runners (the conformance suite, now run on
+each form); the sign-in's migrations moved onto the direct address with the app's. A generated app, installed from packed tarballs, signed
+up, kept a note and read it back after a reload on a SQLite file, sqld and PostgreSQL; both variants type-check and build. The image's
+Alpine needs libsql's musl build in the lockfile: a pnpm app now gets a `pnpm-workspace.yaml` naming the platforms, a yarn app its
+`.yarnrc.yml`. The encrypted variant was not run, as it needs a core.

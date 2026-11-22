@@ -4,6 +4,31 @@ What changed in each version of the sign-in core and every Sovereign app share, 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/). A version's section is
 written in the change that sets the version, dated that day, and becomes the release notes when the version is published.
 
+## [0.6.0] - 2026-11-22
+
+### Added
+
+- Moving an app that had a sign-in of its own onto the package (RFC 0007 amendment 1, auth.md §8.1): `adoptAccountTables` renames its
+  better-auth tables onto the package's and marks its passwords for 90 days; `movePasswords` (a plugin for such an app only) and
+  `passwordMove` with `signInWithPassword` move a password at the person's next sign-in, opening no session of their own;
+  `passwordsMoving`; `resetLink` for an app's own command.
+- `coreSubOf` (`./core`): the `sub` core knows a person by, from the app's user id.
+- `0001_legacy_passwords` in `accountMigrations`: an empty table in an app made on the package.
+- `keySecrets` (`./server`): the session's key secret for `@sovereignfs/sdk/keys` and `localVault` at `/api/auth/sv/key-secret`, kept in
+  `sv_key_secrets` (`0002_key_secrets`) and gone with the session; keyed by core's `sub` for a session that came through core.
+- `@sovereignfs/auth/database`: `openDatabase({ prefix })` opens the app's database on the form `<PREFIX>_DB_DIALECT` names, a SQLite
+  file, sqld (its namespace made when there is an admin address) or PostgreSQL (`direct` for its direct address); `runMigrations`,
+  `readMigrations`. `@libsql/client` is an optional peer dependency, as `pg` is.
+- Linking an account of the app's own to core (auth.md §8.2): `POST /api/auth/sv/link-sovereign` (`./core`) after the password, for the
+  session that asked and for ten minutes, refused for a `sub` or an address another account has; `linkToSovereign` (`./client`).
+
+## [0.5.0] - 2026-11-22
+
+### Changed
+
+- better-auth and `@better-auth/passkey` 1.7.27, named exactly. An app on the package names the same better-auth version, so moving
+  to 0.5.0 means moving the app's better-auth to 1.7.27 with it; no app on a newer 1.7 patch has to go down to use the package.
+
 ## [0.4.0] - 2026-11-20
 
 ### Added

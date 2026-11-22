@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth';
+import { person } from '@/lib/person';
 import { unauthorised } from '@/lib/files';
 import { sovereign } from '@/lib/sovereign';
 
@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 /** People on the instance to share with, found by name (or a whole address) in its Directory, as the signed-in person. */
 export async function GET(request: Request) {
-  const session = await auth().getSession();
+  const session = await person();
   if (!session) return unauthorised();
   const q = (new URL(request.url).searchParams.get('q') ?? '').trim().slice(0, 100);
   if (q.length < 2) return Response.json({ people: [] });

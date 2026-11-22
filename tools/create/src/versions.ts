@@ -10,19 +10,22 @@ export const APP_DEPENDENCIES = {
   '@dnd-kit/core': '^6.3.1',
   '@dnd-kit/sortable': '^10.0.0',
   // The sign-in: the package's preset, pages' flows and core as a way in, on better-auth at the one version the package names.
-  '@sovereignfs/auth': '^0.4.0',
+  // The database driver for a SQLite file and sqld (`@sovereignfs/auth/database`); pg is PostgreSQL's.
+  '@libsql/client': '^0.18.0',
+  '@sovereignfs/auth': '^0.6.0',
   '@sovereignfs/config': '^0.1.0',
   // 0.2 has the worker's push handlers and `usePush`, which the template's notifications use.
-  '@sovereignfs/pwa': '^0.2.0',
+  '@sovereignfs/pwa': '^0.3.0',
   // Web Push for the app's server: the key, the store's shape, the outbox and the subscription route.
   '@sovereignfs/push': '^0.2.0',
   // 2.11 answers core's export request (`handleExportRequest`), which the template mounts; 2.10 has the typed `User` the package's
   // `userOf` gives, on 2.9's sign-in for a session the app keeps (`finishSignIn`).
   '@sovereignfs/sdk': '^2.11.0',
   '@sovereignfs/storage': '^0.1.0',
-  // 0.104 has `PushControl`; 0.105 writes `SessionsPanel`'s times the same on the server and in the browser.
-  '@sovereignfs/ui': '^0.105.0',
-  'better-auth': '1.7.18',
+  // 0.104 has `PushControl`; 0.105 writes `SessionsPanel`'s times the same on the server and in the browser; 0.106 has
+  // `LinkSovereignPanel`, on the security page.
+  '@sovereignfs/ui': '^0.106.0',
+  'better-auth': '1.7.27',
   next: '^16.4.6',
   pg: '^8.23.1',
   react: '^19.3.1',
@@ -36,9 +39,6 @@ export const APP_DEPENDENCIES = {
 export const ENCRYPTION_DEPENDENCIES = {
   '@sovereignfs/sdk': '^2.11.0',
 } as const;
-
-/** What an app made with `--encryption` does not depend on: it signs in with the SDK's `nextAuth`, as it did before the package. */
-export const ENCRYPTION_LEAVES_OUT = ['@sovereignfs/auth', 'better-auth'] as const;
 
 export const APP_DEV_DEPENDENCIES = {
   // Makes the image's label and port from the manifest, and checks the manifest (`sovereign-manifest`).

@@ -33,6 +33,22 @@ export const auth = betterAuth(
 
 Run `accountMigrations(database.family)` at start-up under `ACCOUNT_MIGRATIONS_TABLE`, apart from the app's own.
 
+### An app that had a sign-in of its own
+
+An app that kept better-auth's tables before the package (`user`, `session`…) moves onto it once
+([auth.md §8.1](https://github.com/sovereignfs/sovereign/blob/main/docs/specs/auth.md)):
+
+- `adoptAccountTables(database, { core })` at start-up, before the migrations: it renames the tables, adds what the package has, and
+  marks every password for 90 days. One-way.
+- `movePasswords({ database })` among the preset's `plugins`, `passwordsMoving(database)` as `moving` in the app's salt document, and
+  `passwordMove({ saltDocument, previous })` passed to `signInWithPassword` on the sign-in page: a person's password is moved at their
+  next sign-in. `previous` is what the page sent before the package, the password unless the app derived a value of its own.
+- `resetLink(auth, email, baseUrl)` from a command of the app's, for whoever does not come back within the 90 days.
+- `coreSubOf(database, userId)` (`./core`) for the `sub` core knows a person by; keep no copy.
+
+An app that keeps people's keys (`@sovereignfs/sdk/keys`, `localVault`) adds `keySecrets({ database, core })` among the preset's `plugins`
+and passes `secretPath: '/api/auth/sv/key-secret'` to them.
+
 ## Licence
 
 MPL-2.0.

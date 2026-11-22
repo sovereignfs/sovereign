@@ -94,6 +94,7 @@ import { ResetPasswordForm } from '../components/Auth/ResetPasswordForm';
 import { TwoFactorForm } from '../components/Auth/TwoFactorForm';
 import { SessionsPanel } from '../components/Account/SessionsPanel';
 import { ChangePasswordForm } from '../components/Account/ChangePasswordForm';
+import { LinkSovereignPanel } from '../components/Account/LinkSovereignPanel';
 import { TwoFactorPanel } from '../components/Account/TwoFactorPanel';
 import { ProfilePanel } from '../components/Account/ProfilePanel';
 import { ConsentPrompt } from '../components/ConsentPrompt/ConsentPrompt';
@@ -3445,6 +3446,13 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               usage="Changing the password: the current one, then the new. The app changes it with @sovereignfs/auth/client and passes back done or error."
             >
               <ChangePasswordForm onSubmit={() => undefined} />
+            </ComponentCard>
+            <ComponentCard
+              name="LinkSovereignPanel"
+              importLine="import { LinkSovereignPanel } from '@sovereignfs/ui';"
+              usage="Linking an account of the app's own to the person's Sovereign account, after their password. The app starts it with linkToSovereign from @sovereignfs/auth/client and passes back the outcome from the page's address."
+            >
+              <LinkSovereignPanel linked={false} onSubmit={() => undefined} />
             </ComponentCard>
 
             <ComponentCard

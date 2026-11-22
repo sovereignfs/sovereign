@@ -32,6 +32,10 @@ export default defineConfig({
         replacement: fileURLToPath(new URL('./packages/auth/src/postgres.ts', import.meta.url)),
       },
       {
+        find: /^@sovereignfs\/auth\/database$/,
+        replacement: fileURLToPath(new URL('./packages/auth/src/database.ts', import.meta.url)),
+      },
+      {
         find: /^@sovereignfs\/auth\/core$/,
         replacement: fileURLToPath(new URL('./packages/auth/src/core/index.ts', import.meta.url)),
       },

@@ -11,7 +11,6 @@ import {
   APP_DEV_DEPENDENCIES,
   CREATE_VERSION,
   ENCRYPTION_DEPENDENCIES,
-  ENCRYPTION_LEAVES_OUT,
   SHARED_WORKFLOWS_REF,
 } from './versions.js';
 
@@ -106,12 +105,9 @@ export function appPackageJson(
         // Turns the versioned hooks on for whoever installs; harmless where there is no repository (the image's build).
         [manager.hookScript]: 'git config core.hooksPath .githooks || true',
       },
+      // An app with --encryption signs in on the same package (auth.md §8.1), with the SDK's keys on top.
       dependencies: options.encryption
-        ? Object.fromEntries(
-            Object.entries({ ...APP_DEPENDENCIES, ...ENCRYPTION_DEPENDENCIES }).filter(
-              ([name]) => !(ENCRYPTION_LEAVES_OUT as readonly string[]).includes(name),
-            ),
-          )
+        ? { ...APP_DEPENDENCIES, ...ENCRYPTION_DEPENDENCIES }
         : APP_DEPENDENCIES,
       // `@sovereignfs/create` is pinned exactly: `npm create @sovereignfs sync` and the shared workflows run this version (research 0007).
       devDependencies: { ...APP_DEV_DEPENDENCIES, '@sovereignfs/create': CREATE_VERSION },

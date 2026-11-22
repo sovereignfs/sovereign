@@ -38,7 +38,7 @@ export const MANAGERS: Record<PackageManager, ManagerCommands> = {
   pnpm: {
     pin: `pnpm@${PNPM_VERSION}`,
     lockfile: 'pnpm-lock.yaml',
-    installFiles: ['pnpm-lock.yaml'],
+    installFiles: ['pnpm-lock.yaml', 'pnpm-workspace.yaml'],
     install: 'pnpm install',
     ciInstall: 'pnpm install --frozen-lockfile --ignore-scripts',
     lockfileOnly: ['pnpm', 'install', '--lockfile-only', '--ignore-scripts'],

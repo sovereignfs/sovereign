@@ -5,6 +5,57 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.137.0] - 2026-11-22
+
+### Added
+
+- A person signed in to an app's own account links it to their Sovereign account from the app's security page, after their password,
+  and signs in through Sovereign to it from then on (`@sovereignfs/auth`, auth.md §8.2). Nothing is linked because two addresses match.
+
+## [0.136.0] - 2026-11-22
+
+### Added
+
+- An app made from the template runs on a SQLite file, sqld or PostgreSQL, as `<PREFIX>_DB_DIALECT` says, through
+  `@sovereignfs/auth/database`; its migrations come in one folder per form, and every migration runs on PostgreSQL's direct address.
+
+## [0.135.0] - 2026-11-22
+
+### Added
+
+- `@sovereignfs/auth` serves the session's key secret (`keySecrets`), which an app's pages keep a person's keys with, so an app that
+  encrypts no longer needs the SDK's `nextAuth`. The app template's `--encryption` form now signs in on the package, through core only.
+
+## [0.134.0] - 2026-11-22
+
+### Added
+
+- `@sovereignfs/auth` 0.6.0: an app that had a sign-in of its own moves onto the package without its people starting again. Its tables
+  are renamed onto the package's, a password is moved at the person's next sign-in for 90 days, then a reset link the app's operator
+  makes; accounts from core keep their rows and lose the tokens `genericOAuth` kept (RFC 0007 amendment 1).
+
+- 2026-11-22
+
+### Added
+
+- `@sovereignfs/pwa` 0.3.0: an app's worker answers Background Sync for its own tags, and may answer requests the shared worker leaves
+  to the network with handlers of its own, so no app keeps a worker of its own for them.
+
+- 2026-11-22
+
+### Changed
+
+- better-auth 1.7.27, with every package of it pinned exactly, in core, `@sovereignfs/auth` and the app template; checked against the
+  stores 1.7.13 and 1.7.18 wrote, and the store 1.7.27 writes kept beside them.
+- An app's `http` address on `localhost` is still accepted on a development instance: better-auth 1.7.27 refuses a web app's `http`
+  address unless the server says otherwise, and core now says so by its own rule (`http` on `localhost` and `*.localhost`, only where
+  `SV_URL` is `http`). Every other instance accepts only `https`, as before.
+
+### Documentation
+
+- The manifest contract describes manifest 5; the environment contract names the Web Push key and its subject, and the
+  `ENCRYPTION_KEY` pair older apps read; the guide lists `@sovereignfs/auth` and `@sovereignfs/export`.
+
 ## [0.131.3] - 2026-11-21
 
 ### Fixed

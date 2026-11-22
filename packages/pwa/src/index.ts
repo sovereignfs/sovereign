@@ -7,7 +7,7 @@ export type {
   WebAppManifest,
 } from './manifest.js';
 export { DEFAULT_KEEP, serviceWorkerResponse, serviceWorkerSource } from './worker.js';
-export type { WorkerOptions, WorkerPushOptions } from './worker.js';
+export type { WorkerOptions, WorkerPushOptions, WorkerSyncOptions } from './worker.js';
 export { PWA_CSP_DIRECTIVES, pwaMetadata, pwaViewport } from './metadata.js';
 export type { PwaMetadata, PwaViewport } from './metadata.js';
-export { TAKE_OVER_MESSAGE } from './message.js';
+export { SYNC_MESSAGE, TAKE_OVER_MESSAGE } from './message.js';

@@ -21,6 +21,7 @@ import {
   accountTables,
   createAuthPreset,
   resolveAuthSettings,
+  keySecrets,
   signUpPolicy,
   userOf,
 } from '../server/index';
@@ -115,7 +116,10 @@ async function world(options: { localAccounts?: boolean; roles?: string[] } = {}
       // Closed to sign-ups of the app's own: who may sign in through core is core's to say.
       registration: signUpPolicy(db, 'closed'),
       ...(options.localAccounts === false ? { localAccounts: false } : {}),
-      plugins: [sovereignSignIn({ sovereign, database: db })],
+      plugins: [
+        sovereignSignIn({ sovereign, database: db }),
+        keySecrets({ database: db, core: true }),
+      ],
     }),
   );
   const get = (address: string, cookie = '') =>
@@ -389,5 +393,236 @@ describe('core’s notices (auth.md §8)', () => {
     expect(gone.status).toBe(200);
     expect(deleted).toEqual(['u1']);
     expect(await sessionOf(cookie)).toBeNull();
+  });
+});
+
+describe('the key secret over the package’s session (auth.md §8.1)', () => {
+  const ask = (get: (address: string, cookie?: string) => Promise<Response>, cookie = '') =>
+    get('/api/auth/sv/key-secret', cookie);
+
+  it('is made once per session, keyed by core’s sub for a session that came through core, and never in the session’s own row', async () => {
+    const { signIn, get, db } = await world();
+    const { cookie } = await signIn();
+    const first = await ask(get, cookie);
+    expect(first.status).toBe(200);
+    expect(first.headers.get('cache-control')).toBe('no-store');
+    const body = (await first.json()) as { sub: string; secret: string };
+    expect(body.sub).toBe('u1');
+    expect(Buffer.from(body.secret, 'base64url')).toHaveLength(32);
+    expect(((await (await ask(get, cookie)).json()) as { secret: string }).secret).toBe(
+      body.secret,
+    );
+    // Another session of the same person has its own.
+    const other = await signIn();
+    expect(((await (await ask(get, other.cookie)).json()) as { secret: string }).secret).not.toBe(
+      body.secret,
+    );
+    const { rows } = await db.run('select * from sessions');
+    expect(JSON.stringify(rows)).not.toContain(body.secret);
+  });
+
+  it('is keyed by the app’s own id for a session of the app’s own account', async () => {
+    const { get, auth, db } = await world();
+    await db.run(
+      "insert into users (id, name, email, email_verified, two_factor_enabled, created_at, updated_at) values ('local', 'Bea', 'bea@example.com', 1, 0, 0, 0)",
+    );
+    const ctx = await auth.$context;
+    const session = await ctx.internalAdapter.createSession('local');
+    const cookie = `${ctx.authCookies.sessionToken.name}=${await signed(session.token)}`;
+    expect(((await (await ask(get, cookie)).json()) as { sub: string }).sub).toBe('local');
+  });
+
+  it('goes with the session, however it ends', async () => {
+    const { signIn, get, db, core, auth, tokens } = await world();
+    const { cookie } = await signIn();
+    await ask(get, cookie);
+    expect((await db.run('select 1 from sv_key_secrets')).rows).toHaveLength(1);
+    const notices = coreNotices({
+      database: db,
+      auth,
+      coreUrl: core.url,
+      clientId: core.credentials.clientId,
+      fetch: core.fetch,
+      dropRefreshToken: (sub) => {
+        tokens.delete(sub);
+        return Promise.resolve();
+      },
+    });
+    await notices.backChannelLogout(
+      new Request(`${APP}/api/sovereign/backchannel-logout`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ logout_token: await core.logoutToken({ sub: 'u1' }) }),
+      }),
+    );
+    expect((await db.run('select 1 from sv_key_secrets')).rows).toEqual([]);
+    expect((await ask(get, cookie)).status).toBe(401);
+  });
+
+  it('is given to the app’s own pages only, and to nobody without a session', async () => {
+    const { signIn, auth } = await world();
+    const { cookie } = await signIn();
+    const fromElsewhere = await auth.handler(
+      new Request(new URL('/api/auth/sv/key-secret', APP), {
+        headers: { cookie, 'sec-fetch-site': 'cross-site' },
+      }),
+    );
+    expect(fromElsewhere.status).toBe(404);
+    const { get } = await world();
+    expect((await ask(get)).status).toBe(401);
+  });
+});
+
+describe('linking an account of the app’s own to core (auth.md §8.2)', () => {
+  const VALUE = `svp1.${Buffer.alloc(32, 7).toString('base64url')}`;
+
+  /** A person with an account of the app's own, signed in: Bea, the app's first account. */
+  async function local(w: Awaited<ReturnType<typeof world>>, email = 'bea@example.com') {
+    const made = await w.auth.handler(
+      new Request(new URL('/api/auth/sign-up/email', APP), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: APP },
+        body: JSON.stringify({ email, password: VALUE, name: 'Bea' }),
+      }),
+    );
+    expect(made.status).toBe(200);
+    return cookiesOf(made);
+  }
+
+  /** Asks to link, then goes through core as `sub`, as the browser would: the address the person ends at. */
+  async function link(
+    w: Awaited<ReturnType<typeof world>>,
+    cookie: string,
+    sub: string,
+    password = VALUE,
+  ) {
+    const asked = await w.auth.handler(
+      new Request(new URL('/api/auth/sv/link-sovereign', APP), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: APP, cookie },
+        body: JSON.stringify({ password, returnTo: '/security' }),
+      }),
+    );
+    if (asked.status !== 200) return { asked, at: undefined };
+    const { url } = (await asked.json()) as { url: string };
+    const back = w.core.authorize(url, sub);
+    const done = await w.get(back, [cookie, cookiesOf(asked)].join('; '));
+    return { asked, at: done.headers.get('location') ?? undefined };
+  }
+
+  const coreAccountOf = async (w: Awaited<ReturnType<typeof world>>, sub: string) =>
+    (
+      await w.db.run(
+        "select user_id from accounts where provider_id = 'sovereign' and account_id = ?",
+        [sub],
+      )
+    ).rows[0]?.user_id;
+
+  it('links the signed-in person’s own account to whoever signs in at core, after their password', async () => {
+    const w = await world();
+    const cookie = await local(w);
+    const bea = (await w.sessionOf(cookie))?.user.id;
+    const { at } = await link(w, cookie, 'u1');
+    expect(at).toBe('/security?link=done');
+    expect(await coreAccountOf(w, 'u1')).toBe(bea);
+    // From now on, signing in through core opens the same account.
+    const { cookie: again } = await w.signIn('u1');
+    expect((await w.sessionOf(again))?.user.id).toBe(bea);
+  });
+
+  it('links nothing with a wrong password, and nothing to an account already linked', async () => {
+    const w = await world();
+    const cookie = await local(w);
+    const { asked } = await link(
+      w,
+      cookie,
+      'u1',
+      `svp1.${Buffer.alloc(32, 8).toString('base64url')}`,
+    );
+    expect(asked.status).toBe(401);
+    expect(await coreAccountOf(w, 'u1')).toBeUndefined();
+    await link(w, cookie, 'u1');
+    const { asked: second } = await link(w, cookie, 'u1');
+    expect(second.status).toBe(400);
+  });
+
+  it('refuses a request from another site, before anything else', async () => {
+    const w = await world();
+    const cookie = await local(w);
+    const asked = await w.auth.handler(
+      new Request(new URL('/api/auth/sv/link-sovereign', APP), {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          origin: 'https://elsewhere.example',
+          cookie,
+        },
+        body: JSON.stringify({ password: VALUE, returnTo: '/security' }),
+      }),
+    );
+    expect(asked.status).toBe(403);
+    expect(cookiesOf(asked)).not.toContain('sv_core_link');
+  });
+
+  it('refuses a Sovereign account another account here has, and an address another account here has', async () => {
+    const w = await world();
+    // Bea has the app's first account; u1 (ada@example.com) then signs in through core, and so has an account of its own here.
+    const cookie = await local(w, 'bea@example.com');
+    await w.signIn('u1');
+    const bea = (await w.sessionOf(cookie))?.user.id;
+    expect((await link(w, cookie, 'u1')).at).toBe('/security?link=taken');
+    expect(await coreAccountOf(w, 'u1')).not.toBe(bea);
+    // u2's address is Bea's other account's here: neither is joined to the other.
+    w.core.addPerson({ sub: 'u2', name: 'Cy', email: 'cy@example.com' });
+    await w.db.run(
+      "insert into users (id, name, email, email_verified, two_factor_enabled, created_at, updated_at) values ('cy', 'Cy', 'cy@example.com', 1, 0, 0, 0)",
+    );
+    expect((await link(w, cookie, 'u2')).at).toBe('/security?link=address');
+    expect(await coreAccountOf(w, 'u2')).toBeUndefined();
+  });
+
+  it('links only for the session that asked: the mark carried to another session links nothing', async () => {
+    const w = await world();
+    const cookie = await local(w);
+    const asked = await w.auth.handler(
+      new Request(new URL('/api/auth/sv/link-sovereign', APP), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: APP, cookie },
+        body: JSON.stringify({ password: VALUE, returnTo: '/security' }),
+      }),
+    );
+    const { url } = (await asked.json()) as { url: string };
+    const mark = cookiesOf(asked)
+      .split('; ')
+      .filter((part) => part.includes('sv_core_link'))
+      .join('; ');
+    // Another browser, signed in as someone else, with the mark copied into it.
+    await w.db.run(
+      "insert into users (id, name, email, email_verified, two_factor_enabled, created_at, updated_at) values ('dee', 'Dee', 'dee@example.com', 1, 0, 0, 0)",
+    );
+    const ctx = await w.auth.$context;
+    const other = await ctx.internalAdapter.createSession('dee');
+    const otherCookie = `${ctx.authCookies.sessionToken.name}=${await signed(other.token)}`;
+    const back = w.core.authorize(url, 'u1');
+    await w.get(
+      back,
+      [
+        otherCookie,
+        mark,
+        cookiesOf(asked)
+          .split('; ')
+          .filter((p) => !p.includes('sv_core_link'))
+          .join('; '),
+      ].join('; '),
+    );
+    expect(await coreAccountOf(w, 'u1')).not.toBe('dee');
+  });
+
+  it('never links by an address that matches: without the person asking, a sign-in through core is refused', async () => {
+    const w = await world();
+    await local(w, 'ada@example.com');
+    const { done } = await w.signIn('u1');
+    expect(done.headers.get('location')).toContain('error=account_not_linked');
+    expect(await coreAccountOf(w, 'u1')).toBeUndefined();
   });
 });

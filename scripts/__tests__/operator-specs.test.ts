@@ -18,7 +18,7 @@ const schema = (name: string) =>
 const ajv = new Ajv2020({ allErrors: true });
 const validSuite = ajv.compile(schema('suite-v1'));
 const validLock = ajv.compile(schema('suite-lock-v1'));
-const validManifest = ajv.compile(schema('app-manifest-v2'));
+const validManifest = ajv.compile(schema('app-manifest-v5'));
 const validManifest1 = ajv.compile(schema('app-manifest-v1'));
 
 /** The fenced blocks of a language in a document, in order. */
@@ -192,7 +192,7 @@ describe('the manifest', () => {
     for (const field of ['manifest', 'prefix', 'name', 'port', 'health']) {
       expect(validManifest(without(manifest(), field)), field).toBe(false);
     }
-    const bare = { manifest: 2, prefix: 'notes', name: 'Notes', port: 3000, health: '/h' };
+    const bare = { manifest: 5, prefix: 'notes', name: 'Notes', port: 3000, health: '/h' };
     expect(validManifest(bare), JSON.stringify(validManifest.errors)).toBe(true);
   });
 
@@ -232,7 +232,7 @@ describe('the manifest', () => {
   });
 
   it('may have no sign-in, and then has no client, so nothing for a launcher entry', () => {
-    const hosted = { manifest: 2, prefix: 'kiosk', name: 'Kiosk', port: 3000, health: '/h' };
+    const hosted = { manifest: 5, prefix: 'kiosk', name: 'Kiosk', port: 3000, health: '/h' };
     expect(validManifest(hosted)).toBe(true);
     expect(validManifest({ ...hosted, database: true, data: ['/data'] })).toBe(true);
     expect(validManifest({ ...hosted, core: '>=0.57.0' })).toBe(true);

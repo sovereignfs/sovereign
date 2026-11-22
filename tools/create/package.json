@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/create",
-  "version": "0.27.1",
+  "version": "0.28.0",
   "type": "module",
   "description": "npm create @sovereignfs: makes an instance repository, pinned to the toolkit (sv) of the same version.",
   "license": "AGPL-3.0-or-later",
@@ -28,6 +28,8 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@sovereignfs/auth": "workspace:*",
+    "@sovereignfs/database": "workspace:*",
     "@sovereignfs/push": "workspace:*",
     "@sovereignfs/pwa": "workspace:*",
     "@sovereignfs/tsconfig": "workspace:*",

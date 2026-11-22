@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { ChangePasswordForm } from './ChangePasswordForm';
+import { LinkSovereignPanel } from './LinkSovereignPanel';
 import { SessionsPanel } from './SessionsPanel';
 import { TwoFactorPanel } from './TwoFactorPanel';
 import { ProfilePanel } from './ProfilePanel';
@@ -75,6 +76,18 @@ export const OnlyThisDevice: Story = {
 
 export const ChangePassword: Story = {
   render: () => <ChangePasswordForm onSubmit={() => undefined} />,
+};
+
+export const LinkSovereign: Story = {
+  render: () => <LinkSovereignPanel linked={false} onSubmit={() => undefined} />,
+};
+
+export const LinkSovereignRefused: Story = {
+  render: () => <LinkSovereignPanel linked={false} outcome="address" onSubmit={() => undefined} />,
+};
+
+export const LinkSovereignLinked: Story = {
+  render: () => <LinkSovereignPanel linked outcome="done" onSubmit={() => undefined} />,
 };
 
 export const ChangePasswordRefused: Story = {

@@ -5,12 +5,12 @@ import {
   CORE_SIGN_IN_MIGRATIONS_TABLE,
   sovereignSignIn,
 } from '@sovereignfs/auth/core';
-import { postgresDatabase } from '@sovereignfs/auth/postgres';
 import {
   ACCOUNT_MIGRATIONS_TABLE,
   accountMigrations,
   accountTables,
   createAuthPreset,
+  keySecrets,
   resolveAuthSettings,
   resolveWaysIn,
   runMigrations,
@@ -18,7 +18,8 @@ import {
 } from '@sovereignfs/auth/server';
 import { AppVault, VAULT_MIGRATIONS_TABLE, vaultMigrations } from '@sovereignfs/sdk/vault';
 import { required, setting } from './config';
-import { db } from './db';
+import type { Database } from '@sovereignfs/auth/database';
+import { database as appDatabase } from './db';
 import { sovereign } from './sovereign';
 
 /** How this app signs people in (`@sovereignfs/auth`, auth.md §5): accounts of its own, core, or both, from its settings. */
@@ -60,14 +61,15 @@ export function signInSettings() {
 }
 
 async function make() {
-  const database = await postgresDatabase(db());
+  // The app's own database, on the form its settings name: the sign-in's tables live in it beside the app's.
+  const database = await appDatabase();
   const ways = waysIn();
   const settings = signInSettings();
   const auth = betterAuth(
     createAuthPreset({
       appName: '__TITLE__',
       database,
-      tables: accountTables('postgres'),
+      tables: accountTables(database.family),
       settings,
       // This app sends no mail, so it cannot verify an address or send a reset link, and says so before anything is looked up.
       mail: {
@@ -80,6 +82,8 @@ async function make() {
       localAccounts: ways.local,
       plugins: [
         ...(ways.core ? [sovereignSignIn({ sovereign: sovereign(), database })] : []),
+        // The session's key secret for the pages that keep a person's keys (auth.md §8.1): made only when a page asks.
+        keySecrets({ database, core: Boolean(ways.core) }),
         // Last: it turns the cookies a server action sets into the response's.
         nextCookies(),
       ],
@@ -99,15 +103,22 @@ export function signIn(): ReturnType<typeof make> {
   return made;
 }
 
-/** The sign-in's tables, under their own histories (auth.md §10), after the app's own migrations. */
-export async function migrateSignIn(): Promise<void> {
-  const { database, ways } = await signIn();
-  await runMigrations(database, accountMigrations('postgres'), { table: ACCOUNT_MIGRATIONS_TABLE });
+/**
+ * The sign-in's tables, under their own histories (auth.md §10), after the app's own migrations, on the database `lib/migrate.ts` gives:
+ * the direct address on PostgreSQL, where the migrations' lock holds.
+ */
+export async function migrateSignIn(database: Database): Promise<void> {
+  const ways = waysIn();
+  await runMigrations(database, accountMigrations(database.family), {
+    table: ACCOUNT_MIGRATIONS_TABLE,
+  });
   if (ways.core) {
-    await runMigrations(database, coreSignInMigrations('postgres'), {
+    await runMigrations(database, coreSignInMigrations(database.family), {
       table: CORE_SIGN_IN_MIGRATIONS_TABLE,
     });
   }
   // The vault id is the salt of the sign-in value (sdk §9.5): the same one the app's vault uses if it adds encryption.
-  await runMigrations(database, vaultMigrations('postgres'), { table: VAULT_MIGRATIONS_TABLE });
+  await runMigrations(database, vaultMigrations(database.family), {
+    table: VAULT_MIGRATIONS_TABLE,
+  });
 }

@@ -8,16 +8,26 @@
   "icon": "/pwa-icon/192",
   "launch": "/",
   "signIn": {
-    "redirect": ["/auth/callback"],
-    "postLogout": ["/"],
-    "backChannel": "/auth/backchannel-logout",
-    "accountDeleted": "/auth/account-deleted",
-    "export": "/auth/export",
+    "redirect": ["/api/auth/callback/sovereign"],
+    "postLogout": ["/sign-in"],
+    "backChannel": "/api/sovereign/backchannel-logout",
+    "accountDeleted": "/api/sovereign/account-deleted",
+    "export": "/api/sovereign/export",
     "scopes": ["openid", "profile", "email", "offline_access", "directory"]
   },
-  "encryption": { "return": "/keys/return" },
-  "database": { "pooling": "transaction" },
+  "encryption": {
+    "return": "/keys/return"
+  },
+  "database": {
+    "pooling": "transaction"
+  },
   "storage": true,
-  "generate": ["__PREFIX___AUTH_SECRET", { "name": "__PREFIX___VAPID_PRIVATE_KEY", "bytes": 32 }],
+  "generate": [
+    "__PREFIX___AUTH_SECRET",
+    {
+      "name": "__PREFIX___VAPID_PRIVATE_KEY",
+      "bytes": 32
+    }
+  ],
   "core": ">=0.126.0 <1.0.0"
 }

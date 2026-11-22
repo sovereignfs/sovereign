@@ -5,7 +5,15 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
-## [0.133.0] - 2026-11-22
+## [0.134.0] - 2026-11-22
+
+### Added
+
+- `@sovereignfs/auth` 0.6.0: an app that had a sign-in of its own moves onto the package without its people starting again. Its tables
+  are renamed onto the package's, a password is moved at the person's next sign-in for 90 days, then a reset link the app's operator
+  makes; accounts from core keep their rows and lose the tokens `genericOAuth` kept (RFC 0007 amendment 1).
+
+- 2026-11-22
 
 ### Added
 

@@ -4,6 +4,17 @@ What changed in each version of the sign-in core and every Sovereign app share, 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/). A version's section is
 written in the change that sets the version, dated that day, and becomes the release notes when the version is published.
 
+## [0.6.0] - 2026-11-22
+
+### Added
+
+- Moving an app that had a sign-in of its own onto the package (RFC 0007 amendment 1, auth.md §8.1): `adoptAccountTables` renames its
+  better-auth tables onto the package's and marks its passwords for 90 days; `movePasswords` (a plugin for such an app only) and
+  `passwordMove` with `signInWithPassword` move a password at the person's next sign-in, opening no session of their own;
+  `passwordsMoving`; `resetLink` for an app's own command.
+- `coreSubOf` (`./core`): the `sub` core knows a person by, from the app's user id.
+- `0001_legacy_passwords` in `accountMigrations`: an empty table in an app made on the package.
+
 ## [0.5.0] - 2026-11-22
 
 ### Changed

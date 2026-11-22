@@ -170,6 +170,54 @@ export type PasswordSignIn =
   | { outcome: 'other'; error: Refusal };
 
 /**
+ * Moving a password an app stored before the package (RFC 0007 amendment 1 A1, auth.md §8.1), for `signInWithPassword`: whether the
+ * app's salt document says any can still move (`moving`), what the page used to send in the password's place (the password itself unless
+ * the app derived a value of its own), and the request to the move route.
+ */
+export type PasswordMove = {
+  moving(): Promise<boolean>;
+  previous(password: string, email: string): Promise<string>;
+  send(body: { email: string; previous: string; signIn: string }): Promise<void>;
+};
+
+/**
+ * The move as most apps need it: `moving` read from the app's salt document (the same address as its salt, under `field`, once per
+ * page), the password itself as what was sent before unless `previous` says otherwise, and the package's route under `/api/auth`.
+ */
+export function passwordMove({
+  saltDocument,
+  field = 'moving',
+  previous = (password: string) => Promise.resolve(password),
+  path = '/api/auth/sv/move-password',
+}: {
+  saltDocument: string;
+  field?: string;
+  previous?: (password: string, email: string) => Promise<string>;
+  path?: string;
+}): PasswordMove {
+  let moving: Promise<boolean> | undefined;
+  return {
+    moving: () =>
+      (moving ??= fetch(saltDocument, { cache: 'no-store' })
+        .then(async (response) =>
+          response.ok
+            ? ((await response.json()) as Record<string, unknown>)[field] === true
+            : false,
+        )
+        .catch(() => false)),
+    previous,
+    send: async (body) => {
+      await fetch(path, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      }).catch(() => undefined);
+    },
+  };
+}
+
+/**
  * Signing in with a password (auth.md §4, rule 1): the sign-in value is derived from it and sent, never the password. The answer is
  * told apart the way the page needs it, and the same sentence goes to an address with an account and one without. `isOther` lets the
  * app take a refusal of its own first (core: an app's sign-in request that ran out), before anything about the account is said.
@@ -179,6 +227,7 @@ export async function signInWithPassword(
   derive: ReturnType<typeof signInDerivation>['deriveForSignIn'],
   { email, password }: { email: string; password: string },
   isOther: (error: Refusal) => boolean = () => false,
+  move?: PasswordMove,
 ): Promise<PasswordSignIn> {
   let value: string;
   let secret: WebKey;
@@ -188,7 +237,22 @@ export async function signInWithPassword(
   } catch {
     return { outcome: 'not-ready' };
   }
-  const result = await client.signIn.email({ email, password: value });
+  let result = await client.signIn.email({ email, password: value });
+  // A password the app stored before the package does not match its sign-in value. Only while one can still move, and only after an
+  // answer that is a wrong password, the page sends what it used to send and the sign-in value once to be moved, and signs in again:
+  // that second answer says whether it worked (auth.md §8.1). The one time a password may leave the browser (rule 1's exception).
+  if (
+    move &&
+    result.error &&
+    !isOther(result.error) &&
+    result.error.status !== 429 &&
+    result.error.code !== 'ACCOUNT_DEACTIVATED' &&
+    result.error.code !== 'EMAIL_NOT_VERIFIED' &&
+    (await move.moving())
+  ) {
+    await move.send({ email, previous: await move.previous(password, email), signIn: value });
+    result = await client.signIn.email({ email, password: value });
+  }
   if (result.error) {
     // Checked before the password, so it says nothing about the account.
     if (isOther(result.error)) return { outcome: 'other', error: result.error };

@@ -249,6 +249,18 @@ export async function userIdForSub(database: Database, sub: string): Promise<str
   return rows[0] ? String(rows[0].user_id) : undefined;
 }
 
+/**
+ * The `sub` core knows a person by, from the app's own user id (RFC 0007 amendment 1 A3): the account id of their `sovereign` row, or
+ * nothing when they never signed in here through core. The inverse of `userIdForSub`, and the only way an app finds it: it keeps no copy.
+ */
+export async function coreSubOf(database: Database, userId: string): Promise<string | undefined> {
+  const { rows } = await database.run(
+    'select account_id from accounts where provider_id = ? and user_id = ?',
+    [CORE_PROVIDER, userId],
+  );
+  return rows[0] ? String(rows[0].account_id) : undefined;
+}
+
 /** Whether a session that came from core is due to be checked against it again (sdk §9.7); a local session never is. */
 export async function needsCoreCheck(
   database: Database,

@@ -120,7 +120,7 @@ proposes option C: passwords moved at the next sign-in for 90 days through one r
 (mail, or `resetLink` from an app's own command); `genericOAuth` rows kept with their tokens cleared and their sessions checked against
 core; `coreSubOf`; the key secret at `/api/auth/sv/key-secret`, in `sv_key_secrets`, keyed by the core `sub` for a core session.
 
-#### 📋 20.5 — Accounts an app already has, across to the package
+#### ✅ 20.5 — Accounts an app already has, across to the package
 
 **Goal:** An app's people keep signing in after the app moves onto `@sovereignfs/auth`, without a reset unless 20.4 chose one.
 
@@ -140,6 +140,14 @@ core; `coreSubOf`; the key secret at `/api/auth/sv/key-secret`, in `sv_key_secre
 
 - A store made by a 0.1.0 app's sign-in signs in with the same password after the move, on each database
 - A moved account refuses the password itself; no token is left in an `accounts` row
+
+**Done as (0.134.0, `@sovereignfs/auth` 0.6.0):** `adoptAccountTables`, `movePasswords`, `passwordsMoving`, `passwordMove` with
+`signInWithPassword`, `resetLink`, `coreSubOf`, and `0001_legacy_passwords`. Building it found what RFC 0007 amendment 1 A7 records: the
+apps' tables are singular and are renamed onto the package's (the goal owner's choice); the route only swaps the hash and the page signs in
+again; what is compared is what the page sent before (Tally's own value, not its password); tries are counted per address too. The fixture
+is Tusk's own auth migrations (`app-auth-store.ts`) with four people (a password, core only, both, the second step) and a session each;
+`adopt.db.test.ts` passes on SQLite, sqld and PostgreSQL, each rule seen to fail with its guard removed. The security check found no
+violation.
 
 #### 📋 20.6 — The key secret over the package's session
 

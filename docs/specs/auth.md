@@ -208,24 +208,32 @@ keeps (sdk §9.8), so the app's session is the package's and the SDK keeps only 
   whether that ends core's session too (core-app §3.6.5): yes for a hosted app, no for an external one.
 - **An account from core has no password**, so the routes that set up a password's second step, a passkey or a new password refuse it
   (`NO_PASSWORD_ACCOUNT`); its second step is core's. `localAccounts: false` switches every route of an own account off.
-- **Not built yet:** what §8.1 designs, and linking a local account to core from a signed-in session (until then an address that is a local account's is
+- **Not built yet:** §8.1's key secret, and linking a local account to core from a signed-in session (until then an address that is a local account's is
   refused), and encryption's per-session key secret and key release for an app on the package.
 
 ### 8.1 Accounts an app had before the package
 
-Designed in RFC 0007 amendment 1 (A1 to A4), to be built in tasks 20.5 and 20.6; nothing of it applies to core.
+RFC 0007 amendment 1 (A1 to A4, and A7 for what building it found). Built in task 20.5 but the key secret (20.6); nothing of it applies
+to core.
 
-- **Passwords stored before the package** are hashes of the password, not of the sign-in value. The app's checking migration (§10)
-  marks every account with a password in `sv_legacy_passwords`, for 90 days. While a mark is open the salt document says `moving: true`,
-  and after a sign-in answered as a wrong password the form sends the address, the password and its sign-in value once to
-  `POST /api/auth/sv/move-password`: a marked account whose password matches gets the sign-in value's hash, loses its mark and is
-  signed in, through every rule of §4; anything else is a wrong password, in the same time. The route is rate limited with signing in,
-  checks `Origin`, logs nothing of what it is sent, and is gone once no mark is open. After 90 days a marked account signs in only after a
-  reset: by mail, or by `resetLink(userId)`, which the app exposes through a command of its own, never a route.
+- **Moving the store** (`adoptAccountTables`, `./server`): run once at start-up, before the package's migrations. It renames an app's own
+  better-auth tables (`user`, `session`…) onto the package's, adds the columns the package has, makes the second step's and passkeys'
+  tables where there were none, records the package's first migration as run, then marks every account with a password in
+  `sv_legacy_passwords` for 90 days (`LEGACY_PASSWORD_PERIOD_MS`). Each step is recorded in `sv_auth_adoption` and a stopped move goes
+  on; a store made on the package is left alone. One-way.
+- **Passwords stored before the package** are hashes of what the app's page sent then: the password itself, or a value of the app's own
+  (Tally's). While a mark is open the app's salt document says `moving: true` (`passwordsMoving`), and after a sign-in answered as a wrong
+  password the form (`signInWithPassword` with `passwordMove`) sends the address, that previous value and the sign-in value once to
+  `POST /api/auth/sv/move-password` (`movePasswords`, a plugin core never adds), then signs in again. A marked account whose stored hash
+  opens the previous value gets the sign-in value's hash and loses its mark; **the route opens no session**, so the second sign-in passes
+  every rule of §4. A previous value that is itself a sign-in value is never taken. The answer is the same whatever happened and takes as
+  long; tries are limited by asking address and by account (five an hour); `Origin` is checked; nothing it is sent is stored or
+  logged. After 90 days a marked account signs in only after a reset: by mail, or by `resetLink(auth, email, baseUrl)`, which the app
+  exposes through a command of its own, never a route. A reset leaves the mark, which then moves nothing.
 - **Accounts from core made by `genericOAuth`** keep their `sovereign` rows (the account id is the `sub`); the migration clears their
   tokens, and gives each session of an account whose only way in is core a `sv_core_sign_ins` row to be checked at its next request.
-- **A person's core `sub`** comes from `coreSubOf(database, userId)`, the inverse of `userIdForSub`; an app keeps no copy.
-- **The key secret** is served at `GET /api/auth/sv/key-secret` (same-origin only, `no-store`, `401` with no session), made on the first
+- **A person's core `sub`** comes from `coreSubOf(database, userId)` (`./core`), the inverse of `userIdForSub`; an app keeps no copy.
+- **The key secret** (not built yet, task 20.6) is served at `GET /api/auth/sv/key-secret` (same-origin only, `no-store`, `401` with no session), made on the first
   ask and kept in `sv_key_secrets`, which ends with the session. Its `sub` is the core `sub` for a session that came through core, the
   app's user id for a local one.
 
@@ -251,11 +259,10 @@ session gives it as one typed `user`: `id`, `sub` (linked accounts), `name`, `em
 - **Core** keeps its own migration history: its `users` table has columns no app has (`role` and the terms; `timezone`, `locale` and
   `deactivatedAt` are the package's, since its rules use them), and a migration that changes refuses to boot. A
   test holds core's tables to the package's schema, so the two cannot drift.
-- An app that kept better-auth's tables before moves onto the package's migrations with one of its own that checks the tables are what
-  the package expects and records them as done; it changes no data but what §8.1 says (the marks, the cleared tokens, the sessions to
-  check).
+- An app that kept better-auth's tables before moves onto the package's with `adoptAccountTables` (§8.1), which renames them and adds
+  what the package has; it deletes nothing.
 - The package's own tables: `sv_core_sign_ins` and `sv_core_notices` (`./core`); and, from RFC 0007 amendment 1, `sv_legacy_passwords`
-  (`user_id`, `until`) and `sv_key_secrets` (`session_id` referencing `sessions(id)` `ON DELETE CASCADE`, `secret`, `created_at`).
+  (`user_id`, `until`), `sv_auth_adoption` (a move's steps), and `sv_key_secrets` (`session_id` referencing `sessions(id)` `ON DELETE CASCADE`, `secret`, `created_at`).
 
 ## 11. better-auth
 
@@ -276,7 +283,8 @@ session gives it as one typed `user`: `id`, `sub` (linked accounts), `name`, `em
 
 ## Changelog
 
-| Date          | Change                                                                          |
-| ------------- | ------------------------------------------------------------------------------- |
-| November 2026 | Draft, from RFC 0007 (task 17.1)                                                |
-| November 2026 | §8.1 and rule 1's exception, from RFC 0007 amendment 1 (task 20.4); to be built |
+| Date          | Change                                                                                                                     |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| November 2026 | Draft, from RFC 0007 (task 17.1)                                                                                           |
+| November 2026 | §8.1 and rule 1's exception, from RFC 0007 amendment 1 (task 20.4); to be built                                            |
+| November 2026 | §8.1 built but the key secret (task 20.5): `adoptAccountTables`, `movePasswords`, `passwordMove`, `resetLink`, `coreSubOf` |

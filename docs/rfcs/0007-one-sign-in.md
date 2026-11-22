@@ -174,8 +174,8 @@ This changes core-app §3.6.5 and §3.7.1, `contracts/suite.md` (what `sv apply`
   `migrate(…, { table })`, recorded apart from the app's own, as the vault already is.
 - **Core keeps its own history.** Its `users` table has columns no app has (`role` and the terms), and a changed migration
   refuses to boot. The package's schema is the shape core's must keep; a test holds core's tables to it.
-- **Tusk's and Fjord's stores** move onto the package's set by a migration of their own that checks the tables are what it expects and
-  records them as done; a populated store is the test.
+- **Tusk's and Fjord's stores** move onto the package's set with `adoptAccountTables`, which renames their tables onto the package's
+  (amendment 1 A7); a populated store is the test.
 
 ### 7. The rules that follow the code
 
@@ -350,6 +350,26 @@ that has a column for it (Shopper's `person.core_sub`) reads this instead and dr
 From research 0014: **the salt** — an app that moves needs the sign-in salt route the template has (the vault id, sdk §9.5), and it is
 part of the move; **the period** — 90 days from the migration, the same for every app, recorded per account; **Tusk's fresh session** —
 settled in review (the password asked again), with nothing further here.
+
+### A7. As built (task 20.5, November 2026)
+
+Building A1 to A3 against the apps' stores found four things the text above did not foresee; the goal owner chose the first.
+
+- **The apps' tables are renamed onto the package's.** Every app named better-auth's tables in the singular (`user`, `session`,
+  `account`…; on PostgreSQL in a schema of its own), the package in the plural, so §6's "checks the tables are what it expects" could
+  not hold. `adoptAccountTables` renames them, adds the columns the package has and the app did not, makes the second step's and
+  passkeys' tables where an app had none, and records the package's first migration as run: decided with the goal owner over the
+  package taking each app's names. It is one-way: an older release of the app cannot read the renamed tables. On PostgreSQL the app gives
+  the package a pool whose `search_path` is its auth schema.
+- **The move route opens no session.** It only swaps the hash and drops the mark; the page then signs in with the sign-in value, so every
+  rule of a password sign-in applies unchanged (the second step included), as Shopper's own move did. A1's "opens the session" is
+  read so.
+- **What is compared is what the page used to send**, not always the password: Tally's pages derived a value of their own before the
+  package, so its stored hashes are of that value, and its page sends it (`previous`), never the password itself. `previous` is never
+  taken when it is a sign-in value, so an account whose hash is already of one (Shopper's moved accounts, marked like every account with
+  a password) cannot have its password replaced through the route by someone who knows that value.
+- **A reset leaves the mark, harmless:** after a reset the stored hash is of a sign-in value, which the route never takes, and the mark
+  runs out at its time. Tries are counted per address (five an hour, under a hash of it) as well as per asking IP.
 
 ## Changelog
 

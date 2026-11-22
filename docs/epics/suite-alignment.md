@@ -171,7 +171,7 @@ passes its own rule (core-app §3.7.1). `@sovereignfs/auth` 0.5.0, core 0.85.4, 
 
 - Implicit linking stays off; a link needs the signed-in person's password or second step
 
-#### 📋 20.8 — Ledger on the current packages
+#### ✅ 20.8 — Ledger on the current packages
 
 **Goal:** Ledger is on the template's packages and manifest, answers core's export and installs from `@sovereignfs/pwa`; its sign-in
 is unchanged.
@@ -193,6 +193,14 @@ is unchanged.
 
 - The app's `verify`, `manifest:check` and browser tests pass; `create sync --check` reports nothing
 - No response with a person's data is cached by the worker (its test, seen to fail with the allow-list widened)
+
+**Done as (Ledger 0.3.0, `7715836` on Ledger's `develop`):** sdk 2.11.0, ui 0.105.0, manifest 0.4.0 (manifest 5, core `>=0.126.0`), pwa
+0.2.0, create 0.27.1 synced with Ledger's image files unmanaged. Core's export holds the person's book (`src/portability/core-export.ts`): the
+book file Ledger already exported, its settings as `book` and a records file per table, times in ISO 8601. The worker is the package's with
+Ledger's cache prefix, build files and colours, no shell, so offline is the suite's page (503, "You’re offline"); Ledger's own worker tests were
+kept and run against it, with the sandbox given what a browser has (`basic` responses, `clients`, timers). What changed for the person: a new
+version is announced with Reload, and the offline page's words. For the five apps that follow: the sandbox fixes in `src/sw/source.test.ts`,
+the `/api/sovereign/export` access row, and the e2e offline heading.
 
 #### 📋 20.9 — Tally on the current packages
 

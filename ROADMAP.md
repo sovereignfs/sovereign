@@ -391,7 +391,7 @@ Tasks 20.8 to 20.15 are built in each app's own repository and committed directl
 | —       | 1        | The contracts and the guide say what apps use `[parallel]`         | ✅     | [20.1](docs/epics/suite-alignment.md)  |
 | 0.133.0 | 2        | The shared worker takes an app's own handlers `[parallel]`         | ✅     | [20.2](docs/epics/suite-alignment.md)  |
 | 0.132.0 | 3        | `@sovereignfs/auth` on the newest better-auth `[parallel]`         | ✅     | [20.3](docs/epics/suite-alignment.md)  |
-| —       | 4        | Ledger on the current packages                                     | 📋     | [20.8](docs/epics/suite-alignment.md)  |
+| —       | 4        | Ledger on the current packages                                     | ✅     | [20.8](docs/epics/suite-alignment.md)  |
 | —       | 5        | Tally on the current packages                                      | 📋     | [20.9](docs/epics/suite-alignment.md)  |
 | —       | 6        | Tusk on the current packages                                       | 📋     | [20.10](docs/epics/suite-alignment.md) |
 | —       | 7        | Wallet on the current packages                                     | 📋     | [20.11](docs/epics/suite-alignment.md) |

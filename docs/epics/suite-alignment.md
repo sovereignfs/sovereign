@@ -202,37 +202,62 @@ kept and run against it, with the sandbox given what a browser has (`basic` resp
 version is announced with Reload, and the offline page's words. For the five apps that follow: the sandbox fixes in `src/sw/source.test.ts`,
 the `/api/sovereign/export` access row, and the e2e offline heading.
 
-#### 📋 20.9 — Tally on the current packages
+#### ✅ 20.9 — Tally on the current packages
 
 **Goal, deliverables and checklist:** as 20.8, in Tally's repository.
 
 **Dependencies:** 20.8 (its notes)
 
-#### 📋 20.10 — Tusk on the current packages
+**Done as (Tally 0.3.0, `6024415`):** as 20.8, with Tally's shell (`/shell`). The package answers every offline navigation with the shell, so
+`OfflineShell` now says an address that is not a screen of the groups needs a connection. Background Sync is appended after the package's text until
+pwa 0.3.0 is released. Core's export reads the person's groups on the server with what people wrote still sealed, marked end to end. The shared
+worker claims the page as it starts, and WebKit does not apply Playwright's `page.route` to a controlled page: the two key tests that rewrite
+`/api/keys` on a second device run it with `serviceWorkers: 'block'` (they failed after the change and passed before it).
+
+#### ✅ 20.10 — Tusk on the current packages
 
 **Goal, deliverables and checklist:** as 20.8, in Tusk's repository; its wake keeps a handler of its own until 20.2 is released.
 19.7 (push) may land with it and stays workstream 0010's.
 
 **Dependencies:** 20.8 (its notes)
 
-#### 📋 20.11 — Wallet on the current packages
+**Done as (Tusk 0.5.0, `2e8adef`):** as 20.8, with Tusk's shell. Core's export is the "Everything" file a backup holds (`takeSnapshot`), a Desk
+sealed with the person's own key marked end to end. Background Sync, Web Push and the wake are appended after the package's text until 20.2's
+release and 19.7. `OfflineApp` says an address that is not the Desk needs a connection. 8 of 368 browser tests failed in the long run and passed
+on a rerun.
+
+#### ✅ 20.11 — Wallet on the current packages
 
 **Goal, deliverables and checklist:** as 20.8, in Wallet's repository; its stale task for a VAPID key in `generate` is closed.
 
 **Dependencies:** 20.8 (its notes)
 
-#### 📋 20.12 — Waymark on the current packages
+**Done as (Wallet 0.3.0, `0fd5164`):** as 20.8, with Wallet's shell and its sync appended. Core's export is the vault and the entries, sealed as
+stored, in base64url, marked end to end. Wallet's 21.6 (a VAPID key in `generate`) is closed. Its camera scan browser test fails on this machine
+before and after the change.
+
+#### ✅ 20.12 — Waymark on the current packages
 
 **Goal, deliverables and checklist:** as 20.8, in Waymark's repository; its map tiles keep a handler of their own until 20.2 is
 released. 19.7 may land with it.
 
 **Dependencies:** 20.8 (its notes)
 
-#### 📋 20.13 — Fjord Web on the current packages
+**Done as (Waymark 0.3.0, `5138aff`):** as 20.8, with Waymark's shell. The map's files are answered by a second fetch listener and Web Push is
+appended, until 20.2's release and 19.7. Core's export is what its own export gathers (`gather`), with photos and attachments as files. The planning
+browser test that rewrites the place search runs with `serviceWorkers: 'block'`, as Tally's key tests do.
+
+#### ✅ 20.13 — Fjord Web on the current packages
 
 **Goal, deliverables and checklist:** as 20.8, in `fjord/clients/web`; the Rust crates are untouched.
 
 **Dependencies:** 20.8 (its notes)
+
+**Done as (Fjord Web 0.7.0, `4b41ac7`, after `bc6565b`, Next.js 16.4.6, which `next build` now requires):** the packages, manifest 5 and the
+shared worker, with Fjord's cache name by release and `/offline` as the kept page; `create` 0.27.1 synced at the repository's root. **Core's export
+is not in it:** a local repository is Git objects in Fjord's store and a journal may be encrypted, so what goes in is the owner's decision first,
+recorded as Fjord's own task H5. Its browser tests that load the WASM module were not run (no `wasm-pack` on the machine); the rest passed but two
+that fail before the change too, for the same missing build.
 
 #### 📋 20.14 — Shopper on `@sovereignfs/auth`
 

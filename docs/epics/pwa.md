@@ -483,7 +483,7 @@ and consent, a note written, sign-out, and for `--encryption` key release with t
 violation on any of the app's pages. A copy built without core in `form-action` could not sign out (the form never left the app), so
 core's origin is needed.
 
-#### 📋 11.15 — The deployed apps on `@sovereignfs/pwa`
+#### ✅ 11.15 — The deployed apps on `@sovereignfs/pwa`
 
 **Carried out by** 20.8 to 20.13 ([epic 20](suite-alignment.md)), one app each; Shopper's own 17.2 did it for Shopper. Marked ✅
 when the last of them is.

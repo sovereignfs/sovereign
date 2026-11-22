@@ -118,7 +118,7 @@ epic [11](docs/epics/pwa.md) · workstream [0006](docs/workstreams/0006-pwa.md)
 | 0.112.0 | 12       | Tiles open installed apps                                  | ✅     | [11.9](docs/epics/pwa.md)  |
 | 0.112.0 | 13       | Shortcuts that open a native app                           | ✅     | [11.10](docs/epics/pwa.md) |
 | 0.111.0 | 14       | A content security policy in the app template `[parallel]` | ✅     | [11.14](docs/epics/pwa.md) |
-| —       | 15       | The deployed apps on `@sovereignfs/pwa`                    | 📋     | [11.15](docs/epics/pwa.md) |
+| —       | 15       | The deployed apps on `@sovereignfs/pwa`                    | ✅     | [11.15](docs/epics/pwa.md) |
 
 ### M5 — Core can be deployed
 
@@ -392,11 +392,11 @@ Tasks 20.8 to 20.15 are built in each app's own repository and committed directl
 | 0.133.0 | 2        | The shared worker takes an app's own handlers `[parallel]`         | ✅     | [20.2](docs/epics/suite-alignment.md)  |
 | 0.132.0 | 3        | `@sovereignfs/auth` on the newest better-auth `[parallel]`         | ✅     | [20.3](docs/epics/suite-alignment.md)  |
 | —       | 4        | Ledger on the current packages                                     | ✅     | [20.8](docs/epics/suite-alignment.md)  |
-| —       | 5        | Tally on the current packages                                      | 📋     | [20.9](docs/epics/suite-alignment.md)  |
-| —       | 6        | Tusk on the current packages                                       | 📋     | [20.10](docs/epics/suite-alignment.md) |
-| —       | 7        | Wallet on the current packages                                     | 📋     | [20.11](docs/epics/suite-alignment.md) |
-| —       | 8        | Waymark on the current packages                                    | 📋     | [20.12](docs/epics/suite-alignment.md) |
-| —       | 9        | Fjord Web on the current packages                                  | 📋     | [20.13](docs/epics/suite-alignment.md) |
+| —       | 5        | Tally on the current packages                                      | ✅     | [20.9](docs/epics/suite-alignment.md)  |
+| —       | 6        | Tusk on the current packages                                       | ✅     | [20.10](docs/epics/suite-alignment.md) |
+| —       | 7        | Wallet on the current packages                                     | ✅     | [20.11](docs/epics/suite-alignment.md) |
+| —       | 8        | Waymark on the current packages                                    | ✅     | [20.12](docs/epics/suite-alignment.md) |
+| —       | 9        | Fjord Web on the current packages                                  | ✅     | [20.13](docs/epics/suite-alignment.md) |
 | —       | 10       | The specification: accounts an app already has, and the key secret | 📋     | [20.4](docs/epics/suite-alignment.md)  |
 | —       | 11       | Accounts an app already has, across to the package                 | 📋     | [20.5](docs/epics/suite-alignment.md)  |
 | —       | 12       | The key secret over the package's session                          | 📋     | [20.6](docs/epics/suite-alignment.md)  |

@@ -5,6 +5,12 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.139.0] - 2026-11-23
+
+### Added
+
+- An app whose data only the browser can open writes a person's export there, in the same format (`@sovereignfs/export/browser`).
+
 ## [0.138.0] - 2026-11-23
 
 ### Added

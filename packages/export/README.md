@@ -4,7 +4,7 @@ The one export format of [Sovereign](https://github.com/sovereignfs/sovereign): 
 keep their data. It is specified in [`contracts/export.md`](https://github.com/sovereignfs/sovereign/blob/main/contracts/export.md);
 this package writes it, checks it and encrypts it. Core uses it, and so does any app, with core or without.
 
-Server-only (Node 22.3+), ESM. It never reads a database: you give it records and file streams.
+Node 22.3+, ESM; its `/browser` entry writes in a page. It never reads a database: you give it records and file streams.
 
 ## Writing an export
 
@@ -34,6 +34,22 @@ await done;
 
 `export.json` is written first and `contents.json`, with each file's SHA-256, last. A file whose size is not given is held in a temporary
 file first, since a tar needs the size before the bytes.
+
+## Writing an export in a page
+
+An app whose data only the browser can open (it is encrypted end to end) writes a person's export there, from
+`@sovereignfs/export/browser`, which imports no `node:` module. The data is in memory, as the page holds it; the archive is the same,
+byte for byte, as `ExportWriter` writes from the same records and files.
+
+```ts
+import { BrowserExportWriter, exportFileName } from '@sovereignfs/export/browser';
+
+const writer = new BrowserExportWriter({ head, archive: 'zip' });
+writer.addPart({ name: 'shopper', status: 'complete', version: '0.4.0' });
+writer.addRecords('apps/shopper/records/lists.jsonl', 'lists', openedLists);
+const { bytes } = await writer.finish();
+// Give `bytes` to the person as a file (a Blob and a download link).
+```
 
 An owner's or operator's export is encrypted as it is written:
 

@@ -246,7 +246,7 @@ no switching inside a value. Black and white are `--sv-black` and `--sv-white`, 
 
 - An invitation-only instance still asks for an invitation; the resume address is a path on core
 
-#### 📋 21.10 — Writing an export in the browser
+#### ✅ 21.10 — Writing an export in the browser
 
 **Goal:** An app whose data only the browser can open writes the contract's export there.
 
@@ -261,3 +261,9 @@ no switching inside a value. Black and white are `--sv-black` and `--sv-white`, 
 **Review checklist:**
 
 - A test fails if the browser entry reaches a `node:` module; what it writes reads back with `readExport`
+
+**Notes:** `BrowserExportWriter` is a class of its own, not `ExportWriter` made portable: the server's writer streams, hashes as it
+goes with `node:crypto` and spools a stream of unknown size to disk, none of which a page needs or has. It shares the headers, the
+checks and `contents.json`'s shape, takes SHA-256 from `crypto.subtle` and computes zip's CRC-32 itself. Tests: it writes the same
+archive as `ExportWriter`, byte for byte, as a tar and as a zip; `readExport` reads it back; its CRC-32 is `node:zlib`'s; and every
+module its entry reaches imports nothing outside the package. `@sovereignfs/export` 0.4.0, platform 0.139.0.

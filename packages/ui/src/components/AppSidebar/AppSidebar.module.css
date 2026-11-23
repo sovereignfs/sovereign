@@ -180,3 +180,18 @@
 .rail .railButton {
   align-self: center;
 }
+
+/* In a phone's drawer: the drawer is the surface, the width is the drawer's, and every row is a touch target. */
+.drawer {
+  width: 100%;
+  height: auto;
+  padding: var(--sv-space-2) var(--sv-space-3) var(--sv-space-6);
+  overflow: visible;
+  background: transparent;
+  border-right: 0;
+}
+
+.drawer .row,
+.drawer .action {
+  min-height: var(--sv-touch-target-min);
+}

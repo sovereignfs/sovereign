@@ -172,6 +172,8 @@ export { UpdateNotice } from './components/UpdateNotice/UpdateNotice';
 export type { UpdateNoticeProps } from './components/UpdateNotice/UpdateNotice';
 export { PushControl } from './components/PushControl/PushControl';
 export type { PushControlProps, PushControlState } from './components/PushControl/PushControl';
+export { AppFrame } from './components/AppFrame/AppFrame';
+export type { AppFrameFooter, AppFrameLabels, AppFrameProps } from './components/AppFrame/AppFrame';
 export { AppSidebar } from './components/AppSidebar/AppSidebar';
 export type {
   AppSidebarAction,

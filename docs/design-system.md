@@ -1451,6 +1451,42 @@ Blocks have an optional heading and an optional trailing _+ New …_ row; a row 
 never a background or the text), a `count` and a `description` under its label. On a rail each row is
 named by its label, which the pointer shows as the browser's own tooltip. Every word is the app's.
 
+### `AppFrame`
+
+The frame of an app's signed-in page, wired once. On a wide screen: `Header` (the sidebar's button and
+the app's `brand`; the launcher, bell and avatar when given), `AppSidebar`, the content, and an optional
+right column (`detail`). On a phone: `MobileHeader` (a menu button and the brand), the content (or
+`detail` over it, the content kept mounted), `MobileFooter` and a `Drawer` holding the sidebar's blocks.
+The header's button and the footer's middle button open the drawer unless the app gives the footer its
+own `onOpenApps`. Only what is drawn differs by the screen: the routes, the blocks and what each row
+opens are the same.
+
+```tsx
+<AppFrame
+  appId="shopper"
+  name="Shopper"
+  brand={<Link href="/">shopper.</Link>}
+  pageKind={pathname === '/' ? 'home' : 'page'}
+  blocks={blocks}
+  renderLink={(item, props) => <Link {...props} />}
+  avatarMenu={<AccountMenu placement="header" {...userProps} />}
+  footer={{
+    leftIcons: [home],
+    rightIcons: [cards],
+    launcherLabel: 'Lists',
+    launcherIcon: <Icon name="list" aria-hidden />,
+  }}
+  detail={item ? <ItemColumn item={item} /> : undefined}
+>
+  {children}
+</AppFrame>
+```
+
+It is the shell root (`#sv-app-shell`) overlays portal into, and it publishes the header's and the
+footer's heights (`--sv-shell-header-height`, `--sv-dialog-inset-top`, `--sv-shell-footer-height`) so
+that dialogs, drawers, toasts and a floating button clear them. Its own words (`labels`) are English by
+default.
+
 ### `MobileHeader` and `MobileFooter` components
 
 The shell's mobile header and footer are built from two

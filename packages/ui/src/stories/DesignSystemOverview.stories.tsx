@@ -2367,6 +2367,17 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               </div>
             </ComponentCard>
 
+            {/* AppFrame */}
+            <ComponentCard
+              name="AppFrame"
+              importLine="import { AppFrame } from '@sovereignfs/ui';"
+              usage="The frame of an app's signed-in page: Header with the app's brand, AppSidebar, the content and a right column; on a phone MobileHeader, MobileFooter and a Drawer with the same blocks. It fills the viewport, so it is shown in its own story (Components/AppFrame)."
+            >
+              <p style={{ margin: 0, color: 'var(--sv-color-text-muted)' }}>
+                Fills the viewport: see Components/AppFrame.
+              </p>
+            </ComponentCard>
+
             {/* AppSidebar */}
             <ComponentCard
               name="AppSidebar"

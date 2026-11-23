@@ -68,6 +68,8 @@ export interface AppSidebarProps {
     item: AppSidebarItem | AppSidebarAction,
     linkProps: AppSidebarLinkProps,
   ) => ReactNode;
+  /** `side` (default): a column at the left of the page. `drawer`: the same blocks filling a phone's drawer, with room to touch. */
+  placement?: 'side' | 'drawer';
   className?: string;
 }
 
@@ -91,6 +93,7 @@ export function AppSidebar({
   footer,
   onNavigate,
   renderLink,
+  placement = 'side',
   className,
 }: AppSidebarProps) {
   if (state === 'hidden') return null;
@@ -99,7 +102,14 @@ export function AppSidebar({
 
   return (
     <nav
-      className={[styles.sidebar, rail ? styles.rail : '', className].filter(Boolean).join(' ')}
+      className={[
+        styles.sidebar,
+        rail ? styles.rail : '',
+        placement === 'drawer' ? styles.drawer : '',
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
       aria-label={ariaLabel}
       data-sidebar={state}
     >

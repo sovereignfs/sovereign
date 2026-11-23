@@ -22,6 +22,9 @@ history and tags.
 - `AppSidebar` and `useAppSidebar`: the sidebar every app has, full, a rail of icons or hidden, kept on the device per app and per
   kind of page; blocks of rows with an optional heading, an icon in a colour, a count and a trailing _+ New …_ row. The rules are
   exported (`sidebarStateFor`, `toggleSidebarHidden`, `toggleSidebarRail`, `parseSidebarStored`).
+- `AppFrame`: the frame of an app's signed-in page, wired once. `Header`, `AppSidebar`, the content and a right column on a wide
+  screen; `MobileHeader`, `MobileFooter` and a `Drawer` with the same blocks on a phone; the shell root, publishing the header's and
+  the footer's heights for overlays. `AppSidebar`'s `placement="drawer"` fills a phone's drawer.
 
 ## [0.106.0] - 2026-11-22
 

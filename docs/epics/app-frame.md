@@ -155,7 +155,7 @@ Shopper's used `useSyncExternalStore`, so the first paint is always the default.
 accessible name and its `title`: the design system's `Tooltip` is drawn inside the sidebar, whose scrolling cut it off. Seen in
 Storybook, full and as a rail.
 
-#### 📋 21.6 — `AppFrame`
+#### ✅ 21.6 — `AppFrame`
 
 **Goal:** The header, the sidebar, the content and a right column, wired, for every app.
 
@@ -175,6 +175,13 @@ Storybook, full and as a rail.
 **Review checklist:**
 
 - Nothing changes a route by viewport; the drawer closes on choosing an item; overlays portal into the shell root
+
+**Notes:** the columns are the frame's own flex row, not `ThreeColumnLayout`, whose first column has a fixed width where the sidebar
+is full or a rail. Which header, footer and drawer are drawn follows `useIsMobile` (a fork of what is rendered, never of a route); the
+wide screen's header row publishes its height in a component of its own, so that it takes it back when the phone's header replaces
+it. On a phone the right column covers the content, which stays mounted. `AppSidebar` gained `placement="drawer"` for the drawer.
+The header's sidebar button and the phone's menu button are the frame's, named by `labels`. Seen in Storybook on a wide screen with
+a right column and at phone width with the drawer open.
 
 #### 📋 21.7 — `Barcode`
 

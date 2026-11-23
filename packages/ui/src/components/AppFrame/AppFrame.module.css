@@ -1,0 +1,87 @@
+/* AppFrame — the shell root: a header row, the main area (sidebar, content, right column) and, on a phone, the footer. The main
+ * area is as tall as what is left of the viewport and does not scroll itself: its columns do. Tokens only. */
+
+.shell {
+  /* Until the header has been measured: the design system's Header's height. Overlays stop below it. */
+  --sv-shell-header-height: 48px;
+  --sv-dialog-inset-top: var(--sv-shell-header-height);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  background-color: var(--sv-color-surface);
+}
+
+.headerRow,
+.mobileHeader {
+  flex-shrink: 0;
+}
+
+.lead {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  min-width: 0;
+}
+
+/* The header's sidebar button: drawn in line with the rail's icons beneath it. */
+.toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  margin-left: calc(-1 * var(--sv-space-2));
+  color: var(--sv-color-text-primary);
+  background: transparent;
+  border: 0;
+  border-radius: var(--sv-radius-md);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .toggle:hover {
+    background: var(--sv-color-surface-sunken);
+  }
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.detail {
+  flex: 0 0 22.5rem;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--sv-color-surface);
+  border-left: var(--sv-border-width-hairline) solid var(--sv-color-border);
+}
+
+/* On a phone the right column is the screen: the content stays mounted under it, so that nothing it holds is lost. */
+@media (max-width: 768px) {
+  .covered {
+    display: none;
+  }
+
+  .detail {
+    flex: 1 1 auto;
+    border-left: 0;
+  }
+}

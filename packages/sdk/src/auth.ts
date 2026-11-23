@@ -630,6 +630,9 @@ export class Auth {
         },
       );
       config[client.customFetch] = send;
+      // openid-client checks an ID token's signature only when asked to: without this, an ID token from the token endpoint
+      // is believed unchecked (sdk §9.1). The keys are core's published JWKS, fetched through `send`, so the SDK's transport.
+      client.enableNonRepudiationChecks(config);
       return config;
     } catch (error) {
       throw this.#failure(error);

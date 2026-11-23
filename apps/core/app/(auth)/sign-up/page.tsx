@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { describePasswordPolicy } from '../../../src/auth/password-policy';
 import { getAuthSettings } from '../../../src/auth/settings';
 import { getRegistrationMode } from '../../../src/auth/mode';
-import { safeReturnTo } from '../../../src/auth/return-to';
+import { signInReturnTo } from '../../../src/auth/return-to';
 import { sendOnIfSignedIn } from '../../../src/auth/require-signed-in';
 import { getDatabase } from '../../../src/database';
 import { lookupInvite } from '../../../src/invites/manage';
@@ -19,10 +19,12 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SignUpPage({
   searchParams,
 }: {
-  searchParams: Promise<{ returnTo?: string | string[]; invite?: string | string[] }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const returnTo = safeReturnTo(params.returnTo);
+  // An app that asked for its sign-up (`prompt=create`) sent its request here signed, as to the sign-in page: the
+  // person goes back into the app's sign-in once their account is made.
+  const returnTo = signInReturnTo(params);
   await sendOnIfSignedIn(returnTo);
   const mode = await getRegistrationMode();
   // An invitation link carries its id; the address it was sent to is filled in. The server still decides

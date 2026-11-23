@@ -182,6 +182,10 @@ describe('the Next.js adapter (sdk §9)', () => {
     );
     expect(asked.searchParams.get('prompt')).toBe('login');
     expect(asked.searchParams.get('max_age')).toBe('300');
+    const create = new URL(
+      (await handlers.GET(at('/auth/login?prompt=create'))).headers.get('location') ?? '',
+    );
+    expect(create.searchParams.get('prompt')).toBe('create');
     const junk = new URL(
       (await handlers.GET(at('/auth/login?prompt=consent&max_age=soon'))).headers.get('location') ??
         '',

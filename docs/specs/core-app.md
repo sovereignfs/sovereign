@@ -666,7 +666,12 @@ the device's PIN) or their password (RFC 0006 part B). Signing in does not chang
 - When an app sends someone to sign in, core's sign-in page carries the app's
   request through the password, the second step and a passkey, and sends the
   browser back to the app with its code. Someone already signed in who is sent
-  back with `prompt=login` is shown the form.
+  back with `prompt=login` is shown the form. An app that asks with `prompt=create`
+  (OpenID Connect Prompt Create 1.0) sends the person to core's sign-up instead,
+  with its request signed into the address as the sign-in page has it; the
+  sign-up page carries it on as its return address, so the new account ends in
+  the app's sign-in. Registration's rules (an invitation, the first account) are
+  the sign-up's, unchanged.
 - A sign-in page left open longer than the ten minutes the provider signs the
   app's request for is refused with `invalid_signature` before anything else
   is looked at. The page then says the sign-in waited too long and offers to
@@ -677,7 +682,7 @@ the device's PIN) or their password (RFC 0006 part B). Signing in does not chang
   creating an account, verifying the address by email, and forgetting the
   password and setting a new one. The sign-in page turns the signed request
   back into the app's own request to the authorization endpoint, without the
-  signature and with `login` taken out of `prompt`, and carries that as the
+  signature and with `login` and `create` taken out of `prompt`, and carries that as the
   page to return to through each of those pages and their emails. Once the
   person has a session it is opened, and the provider checks the whole request
   again, so it can send the browser nowhere the app's own request could not.
@@ -1039,6 +1044,22 @@ message`), 2 when the command line is wrong or core is not configured, and 3 whe
 - In Phase 1 every signed-in person sees every listed app. **The launcher is
   not access control:** an app that should be restricted decides that itself,
   for example from the `roles` claim.
+- **An app can show the same list in its own header** (`listMyApps`,
+  `GET /api/v1/apps` in the Core API): the launcher's tiles (id, name,
+  description, icon, launch address) for the person a token is for, read
+  through `listLauncherApps`. Any of the person's access tokens will do: it
+  asks for `openid`, which every one carries, and no scope of its own, since the
+  list is what every signed-in person sees. It is empty for a person whose role
+  lacks `launcher:access` in the matrix in force, read from the account. **An
+  icon is core's own address for it,** `/api/branding/apps/<id>`, so that an
+  app's page shows images from core alone: core fetches the address the launcher
+  entry names (five seconds at most, no redirect followed, 1 MB at most), keeps
+  what the bytes prove to be a PNG, JPEG or WebP picture, or an SVG rebuilt by
+  `sanitiseSvg`, for an hour (a failure for five minutes), and serves it public,
+  as the instance's logo is, with `nosniff` under a policy that forbids
+  everything. Only an app the launcher lists has an icon there; any other id is
+  not there, and nothing a request names is fetched. The instance document
+  lists the `apps` capability.
 - The page has the instance's name and logo, a way to each of the person's
   own account pages, and one tile for each
   app: a link, so it works with the keyboard and opens in a new tab on request.

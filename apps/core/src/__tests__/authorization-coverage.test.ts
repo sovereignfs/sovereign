@@ -11,7 +11,8 @@ const APP = path.join(import.meta.dirname, '../../app');
 
 /**
  * Routes that are public on purpose: better-auth's own (it checks sessions and tokens itself), a person's
- * picture and the instance's logos and favicon (shown by apps and emails with no credentials, read only), the default icons an instance has until it sets a favicon and the service worker (the same for everyone, read only), the two discovery documents (an app finds the
+ * picture, the instance's logos and favicon, and the launcher's apps' icons (shown by apps and emails with no credentials, read
+ * only; an app's icon only for an app the launcher lists), the default icons an instance has until it sets a favicon and the service worker (the same for everyone, read only), the two discovery documents (an app finds the
  * instance there with no account), the instance's branding document (the same, for what an app shows), and health.
  */
 const PUBLIC_ROUTES = new Set([
@@ -24,6 +25,7 @@ const PUBLIC_ROUTES = new Set([
   'api/auth/[...all]/route.ts',
   'api/avatars/[userId]/route.ts',
   'api/branding/[kind]/route.ts',
+  'api/branding/apps/[id]/route.ts',
   'api/health/route.ts',
 ]);
 
@@ -44,7 +46,9 @@ const authorizes = (source: string) => /\brequire(Session|Capability)\(/.test(so
  */
 const isTokenRoute = (file: string) => relative(file).startsWith('api/v1/');
 const guardsByToken = (source: string) =>
-  /\b(directoryGuard|notificationsGuard|emailGuard|activityGuard|keysGuard)\(/.test(source);
+  /\b(directoryGuard|notificationsGuard|emailGuard|activityGuard|keysGuard|appsGuard)\(/.test(
+    source,
+  );
 
 describe('server actions and route handlers authorize inside', () => {
   const routes = all.filter((file) => /(^|\/)route\.ts$/.test(relative(file)));
@@ -76,7 +80,7 @@ describe('server actions and route handlers authorize inside', () => {
     },
   );
 
-  it('keeps the public routes to the ten that are public on purpose', () => {
+  it('keeps the public routes to the eleven that are public on purpose', () => {
     // Adding to the list is a decision to make in review, not a way to make this pass.
     expect([...PUBLIC_ROUTES].sort()).toEqual([
       '.well-known/oauth-authorization-server/route.ts',
@@ -85,6 +89,7 @@ describe('server actions and route handlers authorize inside', () => {
       'api/auth/[...all]/route.ts',
       'api/avatars/[userId]/route.ts',
       'api/branding/[kind]/route.ts',
+      'api/branding/apps/[id]/route.ts',
       'api/health/route.ts',
       'favicon.ico/route.ts',
       'icons/[name]/route.ts',

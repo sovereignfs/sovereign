@@ -11,6 +11,7 @@ import {
   coreNotices,
   coreSignInMigrations,
   coreSignOutUrl,
+  coreSignedInAt,
   needsCoreCheck,
   signedInUser,
   sovereignSignIn,
@@ -175,6 +176,18 @@ describe('signing in through core (auth.md §8)', () => {
     );
   });
 
+  it('asks core for its sign-up when the app does (prompt=create), and for nothing it does not know', async () => {
+    const { get } = await world();
+    const create = new URL(
+      (await get('/api/auth/sign-in/sovereign?prompt=create')).headers.get('location') as string,
+    );
+    expect(create.searchParams.get('prompt')).toBe('create');
+    const junk = new URL(
+      (await get('/api/auth/sign-in/sovereign?prompt=consent')).headers.get('location') as string,
+    );
+    expect(junk.searchParams.has('prompt')).toBe(false);
+  });
+
   it('signs in through core though the app’s own sign-up is closed, and signs the same person in to the same account again', async () => {
     const { signIn, sessionOf, db } = await world();
     const first = await signIn();
@@ -219,6 +232,19 @@ describe('signing in through core (auth.md §8)', () => {
     const back = core.loginRequired(start.headers.get('location') as string);
     await get(back, `${cookie}; ${cookiesOf(start)}`);
     expect(await sessionOf(cookie)).not.toBeNull();
+  });
+
+  it('says when the person last signed in at core, from the token core signed, and nothing for a local session', async () => {
+    const { get, core, db, sessionOf } = await world();
+    const signedAt = Date.now() - 7 * 60 * 1000;
+    const start = await get('/api/auth/sign-in/sovereign');
+    const back = core.authorize(start.headers.get('location') as string, 'u1', {
+      authTime: signedAt,
+    });
+    const done = await get(back, cookiesOf(start));
+    const sessionId = (await sessionOf(cookiesOf(done)))?.session.id as string;
+    expect(await coreSignedInAt(db, sessionId)).toBe(Math.floor(signedAt / 1000) * 1000);
+    expect(await coreSignedInAt(db, 'a-local-session')).toBeUndefined();
   });
 
   it('says when a session is due a check against core, and where signing out sends the person', async () => {

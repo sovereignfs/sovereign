@@ -107,8 +107,12 @@ export type {
 } from './components/Menu/Menu';
 export { UserMenu } from './components/UserMenu/UserMenu';
 export type { UserMenuProps, UserMenuItem } from './components/UserMenu/UserMenu';
-export { AppsLauncher } from './components/AppsLauncher/AppsLauncher';
-export type { AppsLauncherProps, AppsLauncherItem } from './components/AppsLauncher/AppsLauncher';
+export { AppsLauncher, appsLauncherItems } from './components/AppsLauncher/AppsLauncher';
+export type {
+  AppsLauncherProps,
+  AppsLauncherItem,
+  LauncherAppTile,
+} from './components/AppsLauncher/AppsLauncher';
 export { NotificationsPanel } from './components/NotificationsPanel/NotificationsPanel';
 export type {
   NotificationsPanelProps,
@@ -172,6 +176,41 @@ export { UpdateNotice } from './components/UpdateNotice/UpdateNotice';
 export type { UpdateNoticeProps } from './components/UpdateNotice/UpdateNotice';
 export { PushControl } from './components/PushControl/PushControl';
 export type { PushControlProps, PushControlState } from './components/PushControl/PushControl';
+export { Barcode } from './components/Barcode/Barcode';
+export type { BarcodeProps } from './components/Barcode/Barcode';
+export { encodeBarcode, gs1CheckDigit } from './components/Barcode/encode';
+export type { BarcodeFormat, EncodedBarcode } from './components/Barcode/encode';
+export { AppFrame } from './components/AppFrame/AppFrame';
+export type { AppFrameFooter, AppFrameLabels, AppFrameProps } from './components/AppFrame/AppFrame';
+export { AppSidebar } from './components/AppSidebar/AppSidebar';
+export type {
+  AppSidebarAction,
+  AppSidebarBlock,
+  AppSidebarItem,
+  AppSidebarLinkProps,
+  AppSidebarProps,
+} from './components/AppSidebar/AppSidebar';
+export { useAppSidebar } from './components/AppSidebar/useAppSidebar';
+export type { AppSidebarControl } from './components/AppSidebar/useAppSidebar';
+export {
+  parseSidebarStored,
+  sidebarStateFor,
+  sidebarStorageKey,
+  toggleSidebarHidden,
+  toggleSidebarRail,
+} from './components/AppSidebar/sidebar-state';
+export type {
+  SidebarMemory,
+  SidebarState,
+  SidebarStored,
+} from './components/AppSidebar/sidebar-state';
+export { SettingsDialog } from './components/SettingsDialog/SettingsDialog';
+export type {
+  SettingsDialogProps,
+  SettingsGroup,
+  SettingsLinkProps,
+  SettingsSection,
+} from './components/SettingsDialog/SettingsDialog';
 export type { OfflineGateProps } from './components/OfflineGate/OfflineGate';
 export { DeviceOnlyGate } from './components/DeviceOnlyGate/DeviceOnlyGate';
 export type { DeviceOnlyGateProps } from './components/DeviceOnlyGate/DeviceOnlyGate';

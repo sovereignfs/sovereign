@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { AppsLauncher } from '../AppsLauncher';
+import { AppsLauncher, appsLauncherItems } from '../AppsLauncher';
 
 afterEach(() => {
   cleanup();
@@ -48,5 +48,32 @@ describe('AppsLauncher', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Apps' }));
     expect(screen.queryByText('Home')).toBeNull();
     expect(screen.getByText('Nope')).toBeTruthy();
+  });
+});
+
+describe('appsLauncherItems', () => {
+  const apps = [
+    {
+      id: 'notes',
+      name: 'Notes',
+      icon: 'https://notes.sovereign.local/icon.png',
+      launchUrl: 'https://notes.sovereign.local/',
+    },
+    { id: 'shopper', name: 'Shopper', icon: null, launchUrl: 'https://shopper.sovereign.local/' },
+    { id: 'tusk', name: 'tusk', icon: null, launchUrl: 'https://tusk.sovereign.local/' },
+  ];
+
+  it('opens each app at its launch address, with its icon or its first letter, leaving out the app it is in', () => {
+    const items = appsLauncherItems(apps, { current: 'shopper' });
+    expect(items.map((item) => [item.key, item.label, item.href])).toEqual([
+      ['notes', 'Notes', 'https://notes.sovereign.local/'],
+      ['tusk', 'tusk', 'https://tusk.sovereign.local/'],
+    ]);
+    render(<>{items[0]?.icon}</>);
+    expect(document.querySelector('img')?.getAttribute('src')).toBe(
+      'https://notes.sovereign.local/icon.png',
+    );
+    expect(items[1]?.icon).toBe('T');
+    expect(appsLauncherItems(apps)).toHaveLength(3);
   });
 });

@@ -1,0 +1,197 @@
+/* AppSidebar — full (a fixed width) or a rail of icons; hidden draws nothing. It sits on the raised surface; the current row and
+ * the hovered one are tints of the accent, which show in either theme (as `NavList`'s do). Tokens only. */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: var(--sv-space-3);
+  width: 17.5rem;
+  height: 100%;
+  padding: var(--sv-space-3);
+  overflow-y: auto;
+  background: var(--sv-color-surface-raised);
+  border-right: var(--sv-border-width-hairline) solid var(--sv-color-border);
+  scrollbar-width: thin;
+  scrollbar-color: var(--sv-color-border-strong) transparent;
+}
+
+.rail {
+  align-items: center;
+  width: 3.5rem;
+  padding-right: var(--sv-space-1);
+  padding-left: var(--sv-space-1);
+}
+
+.blocks {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+  width: 100%;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-1);
+}
+
+.heading {
+  margin: 0;
+  padding: var(--sv-space-1) var(--sv-space-3);
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-xs);
+  font-weight: var(--sv-font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row,
+.action {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+  width: 100%;
+  min-height: 2.25rem;
+  padding: var(--sv-space-2) var(--sv-space-3);
+  color: var(--sv-color-text-primary);
+  font: inherit;
+  font-size: var(--sv-font-size-sm);
+  text-align: start;
+  text-decoration: none;
+  background: transparent;
+  border: 0;
+  border-radius: var(--sv-radius-md);
+  cursor: pointer;
+}
+
+.action {
+  color: var(--sv-color-text-muted);
+}
+
+@media (hover: hover) {
+  .row:hover,
+  .action:hover {
+    color: var(--sv-color-text-primary);
+    background-color: color-mix(in srgb, var(--sv-color-accent) 6%, transparent);
+  }
+}
+
+.row:focus-visible,
+.action:focus-visible,
+.railButton:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: -2px;
+}
+
+.rowActive {
+  font-weight: var(--sv-font-weight-semibold);
+  background-color: var(--sv-color-accent-subtle);
+}
+
+.icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.initial {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  font-weight: var(--sv-font-weight-semibold);
+}
+
+.label {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name,
+.description {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.description {
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-xs);
+}
+
+/* Counts in tabular figures, so that a column of them lines up. */
+.count {
+  flex-shrink: 0;
+  color: var(--sv-color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.railButton {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  align-self: flex-end;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  color: var(--sv-color-text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: var(--sv-radius-md);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .railButton:hover {
+    color: var(--sv-color-text-primary);
+    background: var(--sv-color-surface-sunken);
+  }
+}
+
+/* The rail: the icons alone, centred; headings, labels and counts are left out, and each row is named by its label. */
+.rail .heading,
+.rail .label,
+.rail .count {
+  display: none;
+}
+
+.rail .row,
+.rail .action {
+  justify-content: center;
+  width: 2.5rem;
+  padding: var(--sv-space-2);
+}
+
+.rail .railButton {
+  align-self: center;
+}
+
+/* In a phone's drawer: the drawer is the surface, the width is the drawer's, and every row is a touch target. */
+.drawer {
+  width: 100%;
+  height: auto;
+  padding: var(--sv-space-2) var(--sv-space-3) var(--sv-space-6);
+  overflow: visible;
+  background: transparent;
+  border-right: 0;
+}
+
+.drawer .row,
+.drawer .action {
+  min-height: var(--sv-touch-target-min);
+}

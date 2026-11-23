@@ -72,6 +72,13 @@ describe('resumeAddress', () => {
     expect(new URL(both, 'https://x.local').searchParams.get('prompt')).toBe('consent');
   });
 
+  it('takes `create` out of `prompt`, since whoever opens it has just made their account', () => {
+    const only = resumeAddress(signedPage({ ...REQUEST, prompt: 'create' })) as string;
+    expect(new URL(only, 'https://x.local').searchParams.has('prompt')).toBe(false);
+    const both = resumeAddress(signedPage({ ...REQUEST, prompt: 'create consent' })) as string;
+    expect(new URL(both, 'https://x.local').searchParams.get('prompt')).toBe('consent');
+  });
+
   it('is nothing without a signed request, or without an app', () => {
     expect(resumeAddress(new URLSearchParams(REQUEST))).toBeUndefined();
     expect(resumeAddress(new URLSearchParams({ ...REQUEST, sig: 'x' }))).toBeUndefined();

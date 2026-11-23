@@ -185,7 +185,7 @@ With `CORE_URL` set, an app signs people in through core. `./core` is a better-a
 keeps (sdk §9.8), so the app's session is the package's and the SDK keeps only the pending sign-in and core's refresh token:
 
 - **The addresses** are one convention for every app, the ones core already knows from the manifest: `GET /api/auth/sign-in/sovereign`
-  (with `returnTo` and `prompt`) starts a sign-in, `GET /api/auth/callback/sovereign` is the redirect address, and core's notices go to
+  (with `returnTo` and `prompt`: `login`, `none`, or `create` for core's sign-up) starts a sign-in, `GET /api/auth/callback/sovereign` is the redirect address, and core's notices go to
   `POST /api/sovereign/backchannel-logout` and `POST /api/sovereign/account-deleted`, plain routes of the app's that call
   `coreNotices`, since no browser makes them.
 - **Signing in** is the SDK's (sdk §9.1): PKCE, state, nonce, `returnTo`, `prompt`, `max_age`, and a callback used once. It ends by
@@ -199,6 +199,10 @@ keeps (sdk §9.8), so the app's session is the package's and the SDK keeps only 
   `genericOAuth` is not used.
 - **What a session from core keeps** is in the plugin's table, `sv_core_sign_ins` (`coreSignInMigrations`), ended with its session:
   core's `sid`, the ID token for signing out, and when it was last checked.
+- **When the person last signed in at core** is `coreSignedInAt(database, sessionId)`: the ID token's `auth_time` for the session, in
+  milliseconds, or nothing for a local session or a token that does not say. An app that wants a recent sign-in before something (an export, a
+  deletion) sends the person to `/api/auth/sign-in/sovereign?prompt=login` and, on their return, checks that this is within the last few minutes:
+  core's claim, never the app's clock or anything a request says.
 - **The session follows core's** (sdk §9.7): `needsCoreCheck` says when an hour has passed; the app's guard then sends the person to
   `/api/auth/sign-in/sovereign?prompt=none`, which renews the session in place and its name from the new claims, or, on
   `login_required`, ends it.

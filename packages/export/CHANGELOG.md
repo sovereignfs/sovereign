@@ -4,6 +4,14 @@ What changed in each version of the export format's package, newest first, in th
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/). A version's section is written
 in the change that sets the version, dated that day, and becomes the release notes when the version is published.
 
+## [0.4.0] - 2026-11-23
+
+### Added
+
+- `@sovereignfs/export/browser`: `BrowserExportWriter` writes a person's export in a page, for an app whose data only the browser can
+  open. It imports no `node:` module, holds the data in memory, and writes the same archive, byte for byte, as `ExportWriter` does from
+  the same records and files, as a tar or a zip; `readExport` reads it back. `crc32` is the browser's own.
+
 ## [0.3.0] - 2026-11-20
 
 ### Added

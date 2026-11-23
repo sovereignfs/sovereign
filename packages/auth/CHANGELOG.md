@@ -4,6 +4,15 @@ What changed in each version of the sign-in core and every Sovereign app share, 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semver](https://semver.org/). A version's section is
 written in the change that sets the version, dated that day, and becomes the release notes when the version is published.
 
+## [0.7.0] - 2026-11-23
+
+### Added
+
+- `coreSignedInAt(database, sessionId)`: when the person last signed in at core on a session, from the ID token's `auth_time`, for an app that
+  asks for a recent sign-in before an export or a deletion.
+- `/api/auth/sign-in/sovereign?prompt=create` opens core's sign-up rather than its sign-in, for an app's _Create an account_; the new
+  account ends in the app's sign-in.
+
 ## [0.6.0] - 2026-11-22
 
 ### Added

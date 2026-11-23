@@ -479,3 +479,28 @@ export const StandaloneApp: StoryDetail = {
     notifications: undefined,
   },
 };
+
+/**
+ * An app's own wordmark in place of the badge (Shopper's RFC 0005): the sidebar's button, then the app's
+ * name as its own link home; on the right the launcher, the bell and the avatar, each only when given.
+ */
+export const AppBrand: StoryDetail = {
+  args: {
+    instanceName: 'Shopper',
+    homeHref: '/',
+    plugin: undefined,
+    brand: (
+      <a
+        href="/"
+        style={{
+          color: 'var(--sv-color-text-primary)',
+          fontWeight: 600,
+          textDecoration: 'none',
+        }}
+      >
+        Shopper
+      </a>
+    ),
+    leading: StandaloneApp.args?.leading,
+  },
+};

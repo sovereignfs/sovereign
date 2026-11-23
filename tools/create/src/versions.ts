@@ -19,12 +19,12 @@ export const APP_DEPENDENCIES = {
   // Web Push for the app's server: the key, the store's shape, the outbox and the subscription route.
   '@sovereignfs/push': '^0.2.0',
   // 2.11 answers core's export request (`handleExportRequest`), which the template mounts; 2.10 has the typed `User` the package's
-  // `userOf` gives, on 2.9's sign-in for a session the app keeps (`finishSignIn`).
-  '@sovereignfs/sdk': '^2.11.0',
+  // `userOf` gives, on 2.9's sign-in for a session the app keeps (`finishSignIn`). 2.11.1 checks the ID token's signature.
+  '@sovereignfs/sdk': '^2.11.1',
   '@sovereignfs/storage': '^0.1.0',
   // 0.104 has `PushControl`; 0.105 writes `SessionsPanel`'s times the same on the server and in the browser; 0.106 has
-  // `LinkSovereignPanel`, on the security page.
-  '@sovereignfs/ui': '^0.106.0',
+  // `LinkSovereignPanel`, on the security page; 0.107 has the app frame (`AppFrame`, `AppSidebar`, `SettingsDialog`).
+  '@sovereignfs/ui': '^0.107.0',
   'better-auth': '1.7.27',
   next: '^16.4.6',
   pg: '^8.23.1',
@@ -37,7 +37,7 @@ export const APP_DEPENDENCIES = {
  * repository's SDK by the same test.
  */
 export const ENCRYPTION_DEPENDENCIES = {
-  '@sovereignfs/sdk': '^2.11.0',
+  '@sovereignfs/sdk': '^2.11.1',
 } as const;
 
 export const APP_DEV_DEPENDENCIES = {

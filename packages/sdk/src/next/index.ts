@@ -153,7 +153,7 @@ export function nextAuth(sv: Sovereign, options: NextAuthOptions = {}) {
 }
 
 /**
- * What `/auth/login` passes on from its query: `returnTo`, `prompt` (`login` or `none`, anything else ignored) and `max_age` (a
+ * What `/auth/login` passes on from its query: `returnTo`, `prompt` (`login`, `none` or `create`, anything else ignored) and `max_age` (a
  * whole number of seconds, anything else ignored). None of it can do harm: core checks the request, and the callback the age.
  */
 function signInOptionsFrom(query: URLSearchParams): SignInOptions {
@@ -162,7 +162,7 @@ function signInOptionsFrom(query: URLSearchParams): SignInOptions {
   const maxAge = query.get('max_age');
   return {
     ...(returnTo ? { returnTo } : {}),
-    ...(prompt === 'login' || prompt === 'none' ? { prompt } : {}),
+    ...(prompt === 'login' || prompt === 'none' || prompt === 'create' ? { prompt } : {}),
     ...(maxAge !== null && /^\d{1,9}$/.test(maxAge) ? { maxAgeSeconds: Number(maxAge) } : {}),
   };
 }

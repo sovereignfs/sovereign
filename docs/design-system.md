@@ -1393,6 +1393,113 @@ content region is already padded. Wrap the page in `PageContainer` as usual; a
 its own, so the same tree is correctly padded exactly once in both hosts. This
 is automatic — no prop, no per-context branching in page code.
 
+### `Header`
+
+The web top bar: on the left, an optional `leading` control (an app's sidebar button), then the brand,
+then an optional active plugin; on the right, in this order, `launcher`, `notifications` and
+`avatarMenu`, each drawn only when given. The brand is core's badge (an instance's logo or its initial,
+linking to `homeHref`) unless an app gives its own wordmark as `brand`, already built and with its own
+link home:
+
+```tsx
+<Header
+  instanceName="Shopper"
+  homeHref="/"
+  leading={<SidebarButton />}
+  brand={<Link href="/">Shopper</Link>}
+  avatarMenu={<AccountMenu placement="header" {...userProps} />}
+/>
+```
+
+### `AppSidebar` and `useAppSidebar`
+
+The sidebar every app has, drawn once: full, a rail of icons or hidden. How it is shown is a choice
+about a screen, so it is kept on the device, per app and per kind of page (the app names its kinds),
+by pure rules (`sidebarStateFor`, `toggleSidebarHidden`, `toggleSidebarRail`, `parseSidebarStored`)
+that `useAppSidebar` reads in an effect, after the first paint, and writes. It is never shown on a
+phone, whose navigation is a drawer.
+
+```tsx
+const sidebar = useAppSidebar('shopper', pathname === '/' ? 'home' : 'page');
+
+<AppSidebar
+  aria-label="Shopper"
+  state={sidebar.state}
+  onToggleRail={sidebar.toggleRail}
+  blocks={[
+    { id: 'places', items: [{ id: 'home', label: 'Home', icon: 'house', href: '/', active }] },
+    {
+      id: 'mine',
+      heading: 'My lists',
+      items: lists.map((l) => ({
+        id: l.id,
+        label: l.name,
+        icon: l.icon,
+        iconColor: l.colour,
+        count: l.open,
+        href: `/l/${l.id}`,
+      })),
+      action: { label: 'New list', onClick: newList },
+    },
+  ]}
+  renderLink={(item, props) => <Link {...props} />}
+/>;
+```
+
+Blocks have an optional heading and an optional trailing _+ New …_ row; a row has an optional icon
+(on a rail a row with none shows its first letter), drawn in `iconColor` when given (the icon only,
+never a background or the text), a `count` and a `description` under its label. On a rail each row is
+named by its label, which the pointer shows as the browser's own tooltip. Every word is the app's.
+
+### `Barcode`
+
+A linear barcode drawn as `QrCode` draws a QR code: an inline SVG, black on white in every theme, with
+its quiet zone, scaled to its width, the value written under it unless `showText` is off. EAN-13,
+EAN-8 and UPC-A take a value with or without its check digit and refuse a wrong one; Code 128 writes
+printable ASCII (digits two to a symbol); Code 39 its own 43 characters. A value its kind cannot hold
+draws no bars and says so (`invalidText`). `encodeBarcode(format, value)` answers whether a value can
+be drawn before it is kept, and gives the bars.
+
+```tsx
+<Barcode format="ean13" value={card.number} label={`${card.name}'s barcode`} />
+```
+
+### `AppFrame`
+
+The frame of an app's signed-in page, wired once. On a wide screen: `Header` (the sidebar's button and
+the app's `brand`; the launcher, bell and avatar when given), `AppSidebar`, the content, and an optional
+right column (`detail`). On a phone: `MobileHeader` (a menu button and the brand), the content (or
+`detail` over it, the content kept mounted), `MobileFooter` and a `Drawer` holding the sidebar's blocks.
+The header's button and the footer's middle button open the drawer unless the app gives the footer its
+own `onOpenApps`. Only what is drawn differs by the screen: the routes, the blocks and what each row
+opens are the same.
+
+```tsx
+<AppFrame
+  appId="shopper"
+  name="Shopper"
+  brand={<Link href="/">shopper.</Link>}
+  pageKind={pathname === '/' ? 'home' : 'page'}
+  blocks={blocks}
+  renderLink={(item, props) => <Link {...props} />}
+  avatarMenu={<AccountMenu placement="header" {...userProps} />}
+  footer={{
+    leftIcons: [home],
+    rightIcons: [cards],
+    launcherLabel: 'Lists',
+    launcherIcon: <Icon name="list" aria-hidden />,
+  }}
+  detail={item ? <ItemColumn item={item} /> : undefined}
+>
+  {children}
+</AppFrame>
+```
+
+It is the shell root (`#sv-app-shell`) overlays portal into, and it publishes the header's and the
+footer's heights (`--sv-shell-header-height`, `--sv-dialog-inset-top`, `--sv-shell-footer-height`) so
+that dialogs, drawers, toasts and a floating button clear them. Its own words (`labels`) are English by
+default.
+
 ### `MobileHeader` and `MobileFooter` components
 
 The shell's mobile header and footer are built from two
@@ -1400,10 +1507,10 @@ presentational, prop-driven components — `MobileHeader` and `MobileFooter`.
 Both draw a deliberate line between what's **immutable** (rendered
 unconditionally, no prop controls it) and what's **overridable**:
 
-| Component      | Immutable                               | Overridable                                                                                                              |
-| -------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `MobileHeader` | Bell, avatar menu                       | `logo` — defaults to an "S" badge (matches the shell's own logo-less fallback) when omitted; `title` — absent by default |
-| `MobileFooter` | Centered "Apps" launcher (`onOpenApps`) | `leftIcons` / `rightIcons` — 1 or 2 items each, symmetric                                                                |
+| Component      | Immutable                        | Overridable                                                                                                                             |
+| -------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `MobileHeader` | Bell, avatar menu                | `logo` — defaults to an "S" badge (matches the shell's own logo-less fallback) when omitted; `title` — absent by default                |
+| `MobileFooter` | A centered button (`onOpenApps`) | `leftIcons` / `rightIcons` — 1 or 2 items each, symmetric; the centered button's `launcherLabel` ("Apps" by default) and `launcherIcon` |
 
 ```tsx
 import { MobileHeader, MobileFooter } from '@sovereignfs/ui';
@@ -1430,6 +1537,10 @@ framework-agnostic. `MobileFooter` logs a dev-mode-only `console.error`
 (never thrown) if `leftIcons.length !== rightIcons.length`, since a mismatch
 would visually uncenter the launcher — the same non-fatal guard pattern used
 by `SwipableMobileCarousel`'s non-`Slide`-children check.
+
+The centered button opens the apps by default. An app whose middle button opens something of its own
+(Shopper's opens its lists) names it with `launcherLabel`, its accessible name, and draws it with
+`launcherIcon`; `onOpenApps` is still what it calls.
 
 Both components own their own chrome — background, border, safe-area-aware
 padding, sticky positioning, and a 768px max-width (so neither stretches
@@ -1563,6 +1674,55 @@ technique `OverlayHeader` itself already uses, not `position: sticky` — so
 `.content` remains the single scrollable region in every shape. `footer` is
 layout-agnostic (no built-in button alignment); arrange its content same as
 `children`.
+
+`flush` makes the body a frame for content that lays out and scrolls its own regions: no padding, no
+scrolling of its own. `SettingsDialog` uses it.
+
+### `SettingsDialog`
+
+Settings as one dialog with a side navigation, the same in core and every app. A title row and close
+across the width; sections in groups, with a divider between groups, each with an icon; an optional
+search over the sections' labels; the section's content, with no heading of its own, scrolling inside a
+frame that never changes size. On a phone it is the whole screen: the sections, then one section with a
+back arrow.
+
+```tsx
+import { SettingsDialog } from '@sovereignfs/ui';
+
+<SettingsDialog
+  open={open}
+  onClose={close}
+  active={section} // null: the sections alone on a phone, the first section on a wider screen
+  onSelect={(id) => router.push(id ? `/settings/${id}` : '/settings')}
+  groups={[
+    {
+      id: 'you',
+      sections: [
+        {
+          id: 'profile',
+          label: 'Profile',
+          icon: 'user',
+          content: <Profile />,
+          href: '/settings/profile',
+        },
+      ],
+    },
+    {
+      id: 'app',
+      sections: [
+        { id: 'data', label: 'Data', icon: 'download', content: <Data />, href: '/settings/data' },
+      ],
+    },
+  ]}
+  renderLink={(section, props) => <Link {...props} />}
+/>;
+```
+
+It is controlled, so that an app can give each section an address (Next's intercepting routes, for one).
+`null` is right on every screen, so nothing about the route depends on the viewport. A section with an
+`href` is a link (through `renderLink` when given), one without is a button; either calls `onSelect`.
+`size` is `lg` (the screen, with a margin) or `fixed` (capped); `title`, `searchLabel` and `backLabel`
+are the app's words, in English by default.
 
 ### `useOverlaySecondRow` — the double-header problem
 
@@ -1925,6 +2085,10 @@ Stories live under two roots inside `packages/ui/src/`:
 | `CopyButton.stories.tsx`           | Default; custom labels; ghost. Copies on press; says so when the browser refuses                                                                                                                                                    |
 | `DesignSystemOverview.stories.tsx` | Full component gallery with live demos and import lines; colour palette; type scale; shadow scale; design rules                                                                                                                     |
 | `QrCode.stories.tsx`               | A module matrix drawn black on white in both themes; labelled for a screen reader                                                                                                                                                   |
+| `SettingsDialog.stories.tsx`       | Sections in groups; with search; capped (`fixed`); at phone width, the sections then one with a back arrow                                                                                                                          |
+| `AppSidebar.stories.tsx`           | Full; a rail; remembered on the device, hidden and shown again                                                                                                                                                                      |
+| `AppFrame.stories.tsx`             | A wide screen; with a right column; at phone width, the drawer from the footer                                                                                                                                                      |
+| `Barcode.stories.tsx`              | Each of EAN-13, EAN-8, UPC-A, Code 128 and Code 39; a value that cannot be drawn                                                                                                                                                    |
 | `TokenGallery.stories.tsx`         | Live gallery of every `--sv-*` token tier — colours, space, typography, radius, icon sizes, shadows — read from computed styles                                                                                                     |
 | `MobilePatterns.stories.tsx`       | Mobile layout reference: breakpoints (640/768 px), constrained column, auto-adapting components, shell chrome anatomy (header/footer/drawer/search overlay), touch targets, safe-area insets, typography scale, readiness checklist |
 

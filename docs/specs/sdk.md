@@ -206,6 +206,11 @@ not list `activity` raises `NotSupportedError` without sending.
 | ------------- | ------ | ------ | --------------- |
 | `keys.me`     | person | `keys` | `getMyKeys`     |
 | `keys.person` | person | `keys` | `getPersonKeys` |
+| `apps.list`   | person | (none) | `listMyApps`    |
+
+`apps.list` ([core-app §3.8](core-app.md)) gives the apps core's launcher lists for the person, with a tile's fields, for an app's own
+launcher; any of the person's tokens will do. `appsLauncherItems` in `@sovereignfs/ui` turns them into `AppsLauncher`'s items. A core that
+does not list `apps` raises `NotSupportedError` without sending.
 
 The key calls ([core-app §5.7](core-app.md)) give public keys and the person's own wrapped keys for the token's app, and nothing a server
 could read a document with. A person who has not opened the app is a `CoreApiError` with status `404`; the app says so, and may hold a
@@ -435,13 +440,14 @@ An app can ask core for a sign-in that is recent, before something that wants on
 
 - `beginSignIn({ returnTo?, prompt?, maxAgeSeconds? })`: `prompt: 'login'` asks core to have the person sign in again even with a session
   there; `prompt: 'none'` asks core to show nothing, and the callback fails with `SignInError` when the person would have had to sign in;
-  `maxAgeSeconds` asks for a sign-in no older than that (OpenID Connect `max_age`), which core gives by asking again when its session is
+  `prompt: 'create'` asks core to open its sign-up rather than its sign-in (OpenID Connect Prompt Create 1.0), for an app's _Create an
+  account_; `maxAgeSeconds` asks for a sign-in no older than that (OpenID Connect `max_age`), which core gives by asking again when its session is
   older. An age that is not a whole number of seconds, 0 or more, is refused with `TypeError`.
 - `completeSignIn` holds a sign-in asked with `maxAgeSeconds` to it: the ID token's `auth_time` MUST be within the age, or the callback
   fails with `SignInError`, whatever core answered.
 - A session carries `authTime`, when the person last signed in at core in milliseconds, from `auth_time`; it is missing when core did
   not say. `sv.auth.signedInWithin(session, seconds)` says whether that is within the last `seconds`, by the client's clock.
-- `@sovereignfs/sdk/next`: `/auth/login` passes on `prompt` (`login` or `none`) and `max_age` (whole seconds) from its query, and
+- `@sovereignfs/sdk/next`: `/auth/login` passes on `prompt` (`login`, `none` or `create`) and `max_age` (whole seconds) from its query, and
   ignores anything else; `requireSession(returnTo, { maxAgeSeconds })` sends a person whose sign-in is older, or unknown, to sign in
   again with that age.
 

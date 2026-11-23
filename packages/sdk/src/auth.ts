@@ -58,8 +58,11 @@ export type AuthOptions = {
 export type SignInOptions = {
   /** A path on the app to come back to. */
   returnTo?: string;
-  /** `login`: sign in again at core even with a session there. `none`: show nothing, and fail if that is not possible. */
-  prompt?: 'login' | 'none';
+  /**
+   * `login`: sign in again at core even with a session there. `none`: show nothing, and fail if that is not possible. `create`: open
+   * core's sign-up rather than its sign-in (OpenID Connect Prompt Create 1.0), for an app's _Create an account_.
+   */
+  prompt?: 'login' | 'none' | 'create';
   /** The oldest sign-in at core the app accepts, in seconds; checked against the ID token's `auth_time`. */
   maxAgeSeconds?: number;
 };
@@ -630,6 +633,9 @@ export class Auth {
         },
       );
       config[client.customFetch] = send;
+      // openid-client checks an ID token's signature only when asked to: without this, an ID token from the token endpoint
+      // is believed unchecked (sdk §9.1). The keys are core's published JWKS, fetched through `send`, so the SDK's transport.
+      client.enableNonRepudiationChecks(config);
       return config;
     } catch (error) {
       throw this.#failure(error);

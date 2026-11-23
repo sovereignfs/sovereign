@@ -24,6 +24,10 @@ export interface HeaderProps extends HTMLAttributes<HTMLElement> {
   instanceLogoUrl?: string;
   /** Where the brand badge links — typically the Launcher plugin's route. */
   homeHref: string;
+  /** An app's own wordmark, drawn in place of the brand badge: already built by the app, its own link included (to its
+   * home). Omit for the badge, which is core's. `instanceName` still names the header's home for assistive technology
+   * only when the badge is drawn. */
+  brand?: ReactNode;
   /** The active plugin, rendered next to the brand badge. Omit for a page
    * with no single active plugin (e.g. the Launcher itself). */
   plugin?: HeaderPlugin;
@@ -63,6 +67,7 @@ export function Header({
   instanceName,
   instanceLogoUrl,
   homeHref,
+  brand,
   plugin,
   leading,
   launcher,
@@ -78,13 +83,15 @@ export function Header({
     <header className={cls} {...rest}>
       <div className={styles.left}>
         {leading}
-        <a href={homeHref} className={styles.brandBadge} aria-label={`${instanceName} home`}>
-          {instanceLogoUrl ? (
-            <img src={instanceLogoUrl} alt="" className={styles.brandLogoImg} />
-          ) : (
-            brandInitial
-          )}
-        </a>
+        {brand ?? (
+          <a href={homeHref} className={styles.brandBadge} aria-label={`${instanceName} home`}>
+            {instanceLogoUrl ? (
+              <img src={instanceLogoUrl} alt="" className={styles.brandLogoImg} />
+            ) : (
+              brandInitial
+            )}
+          </a>
+        )}
         {plugin &&
           (plugin.href ? (
             <a href={plugin.href} className={styles.plugin}>

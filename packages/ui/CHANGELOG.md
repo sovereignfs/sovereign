@@ -5,6 +5,31 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.96.0; earlier versions are in the repository's
 history and tags.
 
+## [0.107.0] - 2026-11-23
+
+### Added
+
+- `SettingsDialog`: settings as one dialog with a side navigation, the same in core and every app. Sections in groups with a divider
+  between them, each with an icon; an optional search; the section scrolling in a frame that never changes size; on a phone, the
+  sections, then one with a back arrow. Controlled (`active`, `onSelect`), so that an app gives each section an address.
+- `Dialog`'s `flush`: a body with no padding and no scrolling of its own, for content that scrolls its own regions.
+- Twenty icons for lists, categories and cards beyond groceries: `square-pen`, `shopping-cart`, `store`, `hammer`, `wrench`, `plug`,
+  `laptop`, `headphones`, `shirt`, `gift`, `sprout`, `flower-2`, `briefcase`, `paperclip`, `pill`, `baby`, `dog`, `sofa`,
+  `wallet-cards` and `scan-barcode`.
+- `MobileFooter`'s `launcherLabel`: the centered button's name, "Apps" by default, for an app whose middle button opens its own
+  drawer.
+- `Header`'s `brand`: an app's own wordmark in place of the badge, which stays core's default.
+- `AppSidebar` and `useAppSidebar`: the sidebar every app has, full, a rail of icons or hidden, kept on the device per app and per
+  kind of page; blocks of rows with an optional heading, an icon in a colour, a count and a trailing _+ New …_ row. The rules are
+  exported (`sidebarStateFor`, `toggleSidebarHidden`, `toggleSidebarRail`, `parseSidebarStored`).
+- `AppFrame`: the frame of an app's signed-in page, wired once. `Header`, `AppSidebar`, the content and a right column on a wide
+  screen; `MobileHeader`, `MobileFooter` and a `Drawer` with the same blocks on a phone; the shell root, publishing the header's and
+  the footer's heights for overlays. `AppSidebar`'s `placement="drawer"` fills a phone's drawer.
+- `appsLauncherItems`: the apps the Core API's `listMyApps` answers, as `AppsLauncher`'s items, each with its icon or its first letter,
+  leaving out the app the launcher is in.
+- `Barcode` and `encodeBarcode`: EAN-13, EAN-8, UPC-A, Code 128 and Code 39 as an SVG, black on white in every theme, with no
+  dependency; check digits added or checked.
+
 ## [0.106.0] - 2026-11-22
 
 ### Added

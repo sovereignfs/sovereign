@@ -122,6 +122,26 @@ import { SaveIcon } from './save';
 import { HardDriveIcon } from './hard-drive';
 import { NotebookPenIcon } from './notebook-pen';
 import { FingerprintPatternIcon } from './fingerprint-pattern';
+import { SquarePenIcon } from './square-pen';
+import { ShoppingCartIcon } from './shopping-cart';
+import { StoreIcon } from './store';
+import { HammerIcon } from './hammer';
+import { WrenchIcon } from './wrench';
+import { PlugIcon } from './plug';
+import { LaptopIcon } from './laptop';
+import { HeadphonesIcon } from './headphones';
+import { ShirtIcon } from './shirt';
+import { GiftIcon } from './gift';
+import { SproutIcon } from './sprout';
+import { Flower2Icon } from './flower-2';
+import { BriefcaseIcon } from './briefcase';
+import { PaperclipIcon } from './paperclip';
+import { PillIcon } from './pill';
+import { BabyIcon } from './baby';
+import { DogIcon } from './dog';
+import { SofaIcon } from './sofa';
+import { WalletCardsIcon } from './wallet-cards';
+import { ScanBarcodeIcon } from './scan-barcode';
 
 export type IconName =
   | 'house'
@@ -245,7 +265,27 @@ export type IconName =
   | 'save'
   | 'hard-drive'
   | 'notebook-pen'
-  | 'fingerprint-pattern';
+  | 'fingerprint-pattern'
+  | 'square-pen'
+  | 'shopping-cart'
+  | 'store'
+  | 'hammer'
+  | 'wrench'
+  | 'plug'
+  | 'laptop'
+  | 'headphones'
+  | 'shirt'
+  | 'gift'
+  | 'sprout'
+  | 'flower-2'
+  | 'briefcase'
+  | 'paperclip'
+  | 'pill'
+  | 'baby'
+  | 'dog'
+  | 'sofa'
+  | 'wallet-cards'
+  | 'scan-barcode';
 
 export type IconComponent = (props: SVGProps<SVGSVGElement>) => ReactElement;
 
@@ -372,6 +412,26 @@ export const ICONS: Record<IconName, IconComponent> = {
   'hard-drive': HardDriveIcon,
   'notebook-pen': NotebookPenIcon,
   'fingerprint-pattern': FingerprintPatternIcon,
+  'square-pen': SquarePenIcon,
+  'shopping-cart': ShoppingCartIcon,
+  store: StoreIcon,
+  hammer: HammerIcon,
+  wrench: WrenchIcon,
+  plug: PlugIcon,
+  laptop: LaptopIcon,
+  headphones: HeadphonesIcon,
+  shirt: ShirtIcon,
+  gift: GiftIcon,
+  sprout: SproutIcon,
+  'flower-2': Flower2Icon,
+  briefcase: BriefcaseIcon,
+  paperclip: PaperclipIcon,
+  pill: PillIcon,
+  baby: BabyIcon,
+  dog: DogIcon,
+  sofa: SofaIcon,
+  'wallet-cards': WalletCardsIcon,
+  'scan-barcode': ScanBarcodeIcon,
 };
 
 export { HouseIcon } from './house';
@@ -496,3 +556,23 @@ export { SaveIcon } from './save';
 export { HardDriveIcon } from './hard-drive';
 export { NotebookPenIcon } from './notebook-pen';
 export { FingerprintPatternIcon } from './fingerprint-pattern';
+export { SquarePenIcon } from './square-pen';
+export { ShoppingCartIcon } from './shopping-cart';
+export { StoreIcon } from './store';
+export { HammerIcon } from './hammer';
+export { WrenchIcon } from './wrench';
+export { PlugIcon } from './plug';
+export { LaptopIcon } from './laptop';
+export { HeadphonesIcon } from './headphones';
+export { ShirtIcon } from './shirt';
+export { GiftIcon } from './gift';
+export { SproutIcon } from './sprout';
+export { Flower2Icon } from './flower-2';
+export { BriefcaseIcon } from './briefcase';
+export { PaperclipIcon } from './paperclip';
+export { PillIcon } from './pill';
+export { BabyIcon } from './baby';
+export { DogIcon } from './dog';
+export { SofaIcon } from './sofa';
+export { WalletCardsIcon } from './wallet-cards';
+export { ScanBarcodeIcon } from './scan-barcode';

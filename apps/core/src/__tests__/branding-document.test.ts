@@ -15,7 +15,10 @@ describe('the branding document', () => {
       url: 'https://core.sovereign.local',
       logo: { light: null, dark: null },
       favicon: null,
-      api: { versions: ['v1'], capabilities: ['directory', 'notifications', 'activity', 'keys'] },
+      api: {
+        versions: ['v1'],
+        capabilities: ['directory', 'notifications', 'activity', 'keys', 'apps'],
+      },
     });
     expectMatchesContract('getInstanceBranding', 200, document);
   });
@@ -24,7 +27,7 @@ describe('the branding document', () => {
     const { api } = brandingDocument(PLAIN_IDENTITY, 'https://core.sovereign.local');
     expect(api).toEqual(SERVED_API);
     // Every capability named is one the contract describes, so the list cannot promise what is not there.
-    expect(api.capabilities).toEqual(['directory', 'notifications', 'activity', 'keys']);
+    expect(api.capabilities).toEqual(['directory', 'notifications', 'activity', 'keys', 'apps']);
   });
 
   it('lists email only while the instance can send mail, so an app can tell no mail from a failure', () => {
@@ -36,6 +39,7 @@ describe('the branding document', () => {
       'notifications',
       'activity',
       'keys',
+      'apps',
       'email',
     ]);
     expectMatchesContract('getInstanceBranding', 200, mail);

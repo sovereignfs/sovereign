@@ -5,6 +5,24 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 2.1.0; earlier versions are in the repository's
 history and tags.
 
+## [2.12.0] - 2026-11-23
+
+### Added
+
+- `sv.as(person).apps.list()` (`listMyApps`): the apps core's launcher lists for the person, for an app's own launcher. Any of the
+  person's tokens will do. The fake core answers it from `setApps`.
+- `beginSignIn({ prompt: 'create' })` asks core to open its sign-up rather than its sign-in (OpenID Connect Prompt Create 1.0), for an
+  app's _Create an account_; `@sovereignfs/sdk/next`'s `/auth/login` passes it on.
+
+## [2.11.1] - 2026-11-23
+
+### Fixed
+
+- `finishSignIn` and `completeSignIn` check the signature of the ID token core's token endpoint returns, against the keys core publishes
+  (sdk §9.1). They did not: `openid-client` checks it only when asked, so an ID token signed with any key was believed, and someone able
+  to answer for core's token endpoint could sign a person in as anyone. The keys are fetched through the SDK's own transport, with its
+  timeout. An app takes the fix by updating; nothing in its code changes.
+
 ## [2.11.0] - 2026-11-20
 
 ### Added

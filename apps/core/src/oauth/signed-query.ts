@@ -43,7 +43,8 @@ const AUTHORIZE_PATH = '/api/auth/oauth2/authorize';
  * on sign-up, a verification email and a password reset. This address is not: it is a path on core, carried
  * as `returnTo` like any other, and the provider checks it all again when it is opened (the app, its return
  * address, the scopes, PKCE), so it can send the browser nowhere the app's own request could not. `login`
- * is taken out of `prompt`, as the provider does after a sign-in: whoever opens it has just signed in.
+ * and `create` are taken out of `prompt`, as the provider does after a sign-in or a sign-up: whoever opens it
+ * has just signed in or made their account, and asking again would send them back to the same page.
  *
  * Nothing when the address carries no signed request, or the rebuilt address is too long to keep.
  */
@@ -58,7 +59,7 @@ export function resumeAddress(query: URLSearchParams): string | undefined {
   const prompt = request
     .get('prompt')
     ?.split(' ')
-    .filter((word) => word !== '' && word !== 'login')
+    .filter((word) => word !== '' && word !== 'login' && word !== 'create')
     .join(' ');
   if (prompt) request.set('prompt', prompt);
   else request.delete('prompt');

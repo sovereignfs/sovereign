@@ -5,6 +5,42 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.142.0] - 2026-11-23
+
+### Added
+
+- An app signed in through core can tell when the person last signed in there (`@sovereignfs/auth`'s `coreSignedInAt`), which an export or a
+  deletion asks for after a fresh sign-in at core.
+
+## [0.141.0] - 2026-11-23
+
+### Added
+
+- An app can show the apps a person may open in its own header: the Core API's `GET /api/v1/apps` (`listMyApps`) answers the launcher's
+  tiles for the person a token is for, with any of their tokens and no new scope; the instance document lists `apps`. Each app's icon
+  is served from core's own address (`/api/branding/apps/<id>`), fetched once from the app's launcher entry and checked as a picture.
+
+## [0.140.0] - 2026-11-23
+
+### Added
+
+- An app's _Create an account_ opens core's sign-up (`prompt=create`, OpenID Connect Prompt Create 1.0), and the new account ends in
+  the app's sign-in; an invitation-only instance still asks for an invitation. The SDK and `@sovereignfs/auth` ask for it.
+
+## [0.139.0] - 2026-11-23
+
+### Added
+
+- An app whose data only the browser can open writes a person's export there, in the same format (`@sovereignfs/export/browser`).
+
+## [0.138.0] - 2026-11-23
+
+### Added
+
+- The app frame in `@sovereignfs/ui` (epic 21): a settings dialog with a side navigation, the same in core and every app; a
+  header with an app's own wordmark, a sidebar and the frame they make; icons for lists,
+  categories and cards beyond groceries; and a linear barcode for loyalty cards.
+
 ## [0.137.0] - 2026-11-22
 
 ### Added

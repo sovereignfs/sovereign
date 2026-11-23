@@ -162,6 +162,29 @@ export const ICON_LIST = [
   'hard-drive',
   'notebook-pen',
   'fingerprint-pattern',
+  // Lists, Inventory's categories and loyalty cards beyond groceries (Shopper's RFC 0005 and 0007): editing a list, the
+  // cart a new list has, shops, hardware, electronics, clothing, gifts, garden, office, the pharmacy, a baby, a pet, home,
+  // and a card and scanning it.
+  'square-pen',
+  'shopping-cart',
+  'store',
+  'hammer',
+  'wrench',
+  'plug',
+  'laptop',
+  'headphones',
+  'shirt',
+  'gift',
+  'sprout',
+  'flower-2',
+  'briefcase',
+  'paperclip',
+  'pill',
+  'baby',
+  'dog',
+  'sofa',
+  'wallet-cards',
+  'scan-barcode',
 ] as const;
 
 export type IconName = (typeof ICON_LIST)[number];

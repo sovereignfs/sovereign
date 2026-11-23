@@ -75,6 +75,23 @@ export type ErrorResponse = {
   message: string;
 };
 
+export type LauncherApp = {
+  /**
+   * The app's client id.
+   */
+  id: string;
+  name: string;
+  description: string | null;
+  /**
+   * Core's own address for the app's launcher icon, or null when it has none (draw a default from the name).
+   */
+  icon: string | null;
+  /**
+   * Where opening the app sends the person.
+   */
+  launchUrl: string;
+};
+
 export type DirectoryUser = {
   /**
    * The person's stable identifier, the same `sub` an ID token carries. Never reused.
@@ -136,6 +153,6 @@ export type InstanceBranding = {
      * The groups of calls served, such as `directory`. A capability is listed when every call of it is
      * served.
      */
-    capabilities: ('directory' | 'notifications' | 'email' | 'activity' | 'keys')[];
+    capabilities: ('directory' | 'notifications' | 'email' | 'activity' | 'keys' | 'apps')[];
   };
 };

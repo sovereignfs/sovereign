@@ -49,13 +49,42 @@ const GROCERY_ICONS: IconName[] = [
   'shopping-basket',
 ];
 
-function ControlledIconPicker({ initial = null }: { initial?: IconName | null }) {
+/** A list's icon, beyond groceries (Shopper's RFC 0005): what a list, a category or a card is for. */
+const LIST_ICONS: IconName[] = [
+  'shopping-cart',
+  'shopping-basket',
+  'store',
+  'hammer',
+  'wrench',
+  'plug',
+  'laptop',
+  'headphones',
+  'shirt',
+  'gift',
+  'sprout',
+  'flower-2',
+  'briefcase',
+  'paperclip',
+  'pill',
+  'baby',
+  'dog',
+  'sofa',
+  'wallet-cards',
+];
+
+function ControlledIconPicker({
+  initial = null,
+  options = GROCERY_ICONS,
+}: {
+  initial?: IconName | null;
+  options?: IconName[];
+}) {
   const [value, setValue] = useState<IconName | null>(initial);
   return (
     <IconPicker
       value={value}
       onChange={setValue}
-      options={GROCERY_ICONS}
+      options={options}
       aria-label="Item icon"
       triggerLabel={value ?? 'Choose icon'}
     />
@@ -68,6 +97,10 @@ export const Default: Story = {
 
 export const Preselected: Story = {
   render: () => <ControlledIconPicker initial="banana" />,
+};
+
+export const ListIcons: Story = {
+  render: () => <ControlledIconPicker initial="shopping-cart" options={LIST_ICONS} />,
 };
 
 export const Disabled: Story = {

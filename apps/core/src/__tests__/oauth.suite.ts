@@ -313,6 +313,33 @@ export function oauthSuite(createDatabase: () => Promise<TestDatabase>): void {
       expect(url.searchParams.get('client_id')).toBe(client.clientId);
       expect(url.searchParams.get('sig')).toBeTruthy();
     });
+
+    it('sends someone an app asked to sign up (prompt=create) to the sign-up page, with the request kept', async () => {
+      const { auth, owner } = await instance();
+      const client = await registerClient(auth, owner);
+      const reply = await call(
+        auth,
+        'GET',
+        `/oauth2/authorize?${new URLSearchParams({
+          client_id: client.clientId,
+          response_type: 'code',
+          redirect_uri: REDIRECT,
+          scope: 'openid',
+          state: 's',
+          prompt: 'create',
+          code_challenge: pkce().challenge,
+          code_challenge_method: 'S256',
+        })}`,
+        { jar: new Jar(), origin: null },
+      );
+      expect(reply.status).toBe(302);
+      const url = new URL(reply.headers.get('location') ?? '', BASE_URL);
+      expect(url.pathname).toBe('/sign-up');
+      expect(url.searchParams.get('client_id')).toBe(client.clientId);
+      expect(url.searchParams.get('prompt')).toBe('create');
+      expect(url.searchParams.get('sig')).toBeTruthy();
+      expect(url.searchParams.get('code')).toBeNull();
+    });
   });
 
   describe('signing in on the page an app sent the person to', () => {

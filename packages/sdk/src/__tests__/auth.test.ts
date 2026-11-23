@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ConfigurationError,
+  CoreUnavailableError,
   NotAuthenticatedError,
   SessionEndedError,
   SignInError,
@@ -11,9 +12,12 @@ import {
 import { createFakeCore, memorySessionStore, type WrongLogoutToken } from '../testing';
 import { checkedAgainstContract, clock, memoryStore } from './helpers';
 import { readExport } from '@sovereignfs/export';
+import { SignJWT, decodeJwt, decodeProtectedHeader, generateKeyPair } from 'jose';
 
 type Options = {
   deletes?: boolean;
+  /** Stands between the SDK and core, as a forged token endpoint would. */
+  intercept?: (fetch: typeof globalThis.fetch) => typeof globalThis.fetch;
   appUrl?: string;
   coreUrl?: string;
   scopes?: string[];
@@ -36,7 +40,7 @@ function setup(options: Options = {}) {
     ...core.credentials,
     sessionStore: sessions,
     tokenStore: tokens.store,
-    fetch: checkedAgainstContract(core.fetch),
+    fetch: (options.intercept ?? ((fetch) => fetch))(checkedAgainstContract(core.fetch)),
     environment: time.environment,
     timeoutMs: 100,
     ...(options.scopes ? { scopes: options.scopes } : {}),
@@ -184,6 +188,69 @@ describe('signing in (sdk §9)', () => {
     ).rejects.toBeInstanceOf(SignInError);
   });
 
+  it('refuses an ID token signed with a key core does not publish, and keeps no refresh token', async () => {
+    // The token endpoint answers with core's claims, signed by another key under core's key id: only the signature is wrong.
+    const forger = await generateKeyPair('EdDSA');
+    const world = setup({
+      intercept: (fetch) => async (input, init) => {
+        const response = await fetch(input, init);
+        if (
+          !new URL(String(input instanceof Request ? input.url : input)).pathname.endsWith('/token')
+        )
+          return response;
+        const body = (await response.json()) as { id_token?: string };
+        if (body.id_token) {
+          body.id_token = await new SignJWT(decodeJwt(body.id_token))
+            .setProtectedHeader(decodeProtectedHeader(body.id_token) as { alg: string })
+            .sign(forger.privateKey);
+        }
+        return new Response(JSON.stringify(body), {
+          status: response.status,
+          headers: response.headers,
+        });
+      },
+    });
+    const begin = await world.sv.auth.beginSignIn();
+    const back = world.core.authorize(begin.url, 'u1');
+    await expect(
+      world.sv.auth.completeSignIn(
+        new Request(back, { headers: { cookie: cookieHeader(begin.setCookies) } }),
+      ),
+    ).rejects.toBeInstanceOf(SignInError);
+    expect(world.tokens.tokens.get('u1')).toBeUndefined();
+    expect(world.tokens.writes).toHaveLength(0);
+  });
+
+  it('checks the ID token against the keys core publishes, fetched through the SDK', async () => {
+    const world = setup();
+    await signIn(world);
+    expect(world.core.seen.requests.some((request) => request.path === '/api/auth/jwks')).toBe(
+      true,
+    );
+  });
+
+  it('gives up on core’s keys at the SDK’s limit, and keeps no refresh token', async () => {
+    // Core's keys never come: the request waits until the transport's limit aborts it.
+    const world = setup({
+      intercept: (fetch) => (input, init) =>
+        String(input instanceof Request ? input.url : input).endsWith('/api/auth/jwks')
+          ? new Promise((_, reject) =>
+              init?.signal?.addEventListener('abort', () => reject(init.signal?.reason)),
+            )
+          : fetch(input, init),
+    });
+    const begin = await world.sv.auth.beginSignIn();
+    const back = world.core.authorize(begin.url, 'u1');
+    const started = Date.now();
+    await expect(
+      world.sv.auth.completeSignIn(
+        new Request(back, { headers: { cookie: cookieHeader(begin.setCookies) } }),
+      ),
+    ).rejects.toBeInstanceOf(CoreUnavailableError);
+    expect(Date.now() - started).toBeLessThan(2000);
+    expect(world.tokens.writes).toHaveLength(0);
+  });
+
   it('reads the app’s own address from the callback, not the one a proxy gave the request', async () => {
     const world = setup();
     const begin = await world.sv.auth.beginSignIn();
@@ -253,7 +320,7 @@ describe('asking core for a fresh sign-in (sdk §9.6)', () => {
   /** A round trip that asks with `options`, the person having signed in at core at `authTime`. */
   async function signInAsking(
     world: World,
-    options: { prompt?: 'login' | 'none'; maxAgeSeconds?: number },
+    options: { prompt?: 'login' | 'none' | 'create'; maxAgeSeconds?: number },
     authTime?: number,
   ) {
     const begin = await world.sv.auth.beginSignIn(options);
@@ -268,6 +335,8 @@ describe('asking core for a fresh sign-in (sdk §9.6)', () => {
     const asked = new URL((await sv.auth.beginSignIn({ prompt: 'login', maxAgeSeconds: 300 })).url);
     expect(asked.searchParams.get('prompt')).toBe('login');
     expect(asked.searchParams.get('max_age')).toBe('300');
+    const create = new URL((await sv.auth.beginSignIn({ prompt: 'create' })).url);
+    expect(create.searchParams.get('prompt')).toBe('create');
     const plain = new URL((await sv.auth.beginSignIn()).url);
     expect(plain.searchParams.has('prompt')).toBe(false);
     expect(plain.searchParams.has('max_age')).toBe(false);

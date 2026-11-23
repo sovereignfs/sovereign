@@ -45,3 +45,12 @@ export const LauncherOpen: Story = {
     return <MobileFooter {...args} launcherOpen={open} onOpenApps={() => setOpen((v) => !v)} />;
   },
 };
+
+/** An app's own middle button: it opens the app's lists, and is named and drawn for them. */
+export const NamedByTheApp: Story = {
+  args: {
+    launcherLabel: 'Lists',
+    launcherIcon: <Icon name="list" size="md" aria-hidden />,
+    rightIcons: [{ icon: <Icon name="wallet-cards" size="md" aria-hidden />, label: 'Cards' }],
+  },
+};

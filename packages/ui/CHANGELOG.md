@@ -16,6 +16,8 @@ history and tags.
 - Twenty icons for lists, categories and cards beyond groceries: `square-pen`, `shopping-cart`, `store`, `hammer`, `wrench`, `plug`,
   `laptop`, `headphones`, `shirt`, `gift`, `sprout`, `flower-2`, `briefcase`, `paperclip`, `pill`, `baby`, `dog`, `sofa`,
   `wallet-cards` and `scan-barcode`.
+- `MobileFooter`'s `launcherLabel`: the centered button's name, "Apps" by default, for an app whose middle button opens its own
+  drawer.
 
 ## [0.106.0] - 2026-11-22
 

@@ -14,9 +14,12 @@ export interface FooterIcon {
 }
 
 export interface MobileFooterProps extends HTMLAttributes<HTMLElement> {
-  /** Opens the app drawer/launcher. Always rendered as the centered slot;
-   * not overridable. */
+  /** Opens what the centered button opens: the apps by default, or what `launcherLabel` names (an app's own drawer).
+   * Always rendered as the centered slot. */
   onOpenApps: () => void;
+  /** The centered button's name, read by assistive technology: "Apps" when not given. An app whose middle button opens
+   * something of its own (its lists, say) names it here, with `launcherIcon` to match. */
+  launcherLabel?: string;
   /** Custom launcher icon (e.g. a plugin-supplied image). Defaults to a
    * generic grid icon. */
   launcherIcon?: ReactNode;
@@ -74,6 +77,7 @@ function FooterNavItem({ icon, label, href, onClick, active }: FooterIcon) {
 export function MobileFooter({
   onOpenApps,
   launcherIcon,
+  launcherLabel = 'Apps',
   launcherOpen,
   leftIcons,
   rightIcons,
@@ -107,7 +111,7 @@ export function MobileFooter({
       <button
         type="button"
         className={launcherClassName}
-        aria-label="Apps"
+        aria-label={launcherLabel}
         aria-expanded={launcherOpen}
         aria-haspopup="dialog"
         onClick={onOpenApps}

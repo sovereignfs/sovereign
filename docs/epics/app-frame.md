@@ -82,13 +82,14 @@ given. The title, search and back labels are the app's, English by default. Seen
 nappy); `wallet-cards` and `scan-barcode` (a card, and scanning one). `IconPicker` has no search, so the epic's first wording
 (keywords for its search) was dropped; the app gives the options. Regenerating changed no existing icon.
 
-#### 📋 21.3 — `MobileFooter`'s middle button, named by the app
+#### ✅ 21.3 — `MobileFooter`'s middle button, named by the app
 
 **Goal:** The phone's middle button can open something other than the apps.
 
 **Deliverables:**
 
-- An optional `middleLabel` (its text and accessible name, "Apps" when not given) and `middleIcon`; `onOpenApps` keeps working
+- An optional `launcherLabel` (its accessible name, "Apps" when not given) beside the existing `launcherIcon`; `onOpenApps` keeps
+  working
 - The story shows both
 
 **Dependencies:** none
@@ -98,6 +99,9 @@ nappy); `wallet-cards` and `scan-barcode` (a card, and scanning one). `IconPicke
 **Review checklist:**
 
 - Core's footer renders exactly as before; the label is the button's accessible name
+
+**Notes:** named `launcherLabel` to sit beside the `launcherIcon` the footer already took, rather than a new `middle…` pair. The
+footer's existing tests pass unchanged; one more names the button "Lists" and checks it still calls `onOpenApps`.
 
 #### 📋 21.4 — `Header` with the app's own brand
 

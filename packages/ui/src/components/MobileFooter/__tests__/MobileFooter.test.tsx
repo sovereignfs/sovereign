@@ -96,6 +96,23 @@ describe('MobileFooter', () => {
     expect(onOpenApps).toHaveBeenCalledTimes(1);
   });
 
+  it('names the centered button as the app says, keeping what it opens', () => {
+    const onOpenApps = vi.fn();
+    render(
+      <MobileFooter
+        onOpenApps={onOpenApps}
+        launcherLabel="Lists"
+        launcherIcon={<span data-testid="lists-icon" />}
+        leftIcons={oneIcon}
+        rightIcons={oneIcon}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: 'Apps' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Lists' }));
+    expect(onOpenApps).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('lists-icon')).toBeDefined();
+  });
+
   it('renders 1+1 and 2+2 icon layouts', () => {
     const { rerender } = render(
       <MobileFooter onOpenApps={() => {}} leftIcons={oneIcon} rightIcons={oneIcon} />,

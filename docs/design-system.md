@@ -1400,10 +1400,10 @@ presentational, prop-driven components — `MobileHeader` and `MobileFooter`.
 Both draw a deliberate line between what's **immutable** (rendered
 unconditionally, no prop controls it) and what's **overridable**:
 
-| Component      | Immutable                               | Overridable                                                                                                              |
-| -------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `MobileHeader` | Bell, avatar menu                       | `logo` — defaults to an "S" badge (matches the shell's own logo-less fallback) when omitted; `title` — absent by default |
-| `MobileFooter` | Centered "Apps" launcher (`onOpenApps`) | `leftIcons` / `rightIcons` — 1 or 2 items each, symmetric                                                                |
+| Component      | Immutable                        | Overridable                                                                                                                             |
+| -------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `MobileHeader` | Bell, avatar menu                | `logo` — defaults to an "S" badge (matches the shell's own logo-less fallback) when omitted; `title` — absent by default                |
+| `MobileFooter` | A centered button (`onOpenApps`) | `leftIcons` / `rightIcons` — 1 or 2 items each, symmetric; the centered button's `launcherLabel` ("Apps" by default) and `launcherIcon` |
 
 ```tsx
 import { MobileHeader, MobileFooter } from '@sovereignfs/ui';
@@ -1430,6 +1430,10 @@ framework-agnostic. `MobileFooter` logs a dev-mode-only `console.error`
 (never thrown) if `leftIcons.length !== rightIcons.length`, since a mismatch
 would visually uncenter the launcher — the same non-fatal guard pattern used
 by `SwipableMobileCarousel`'s non-`Slide`-children check.
+
+The centered button opens the apps by default. An app whose middle button opens something of its own
+(Shopper's opens its lists) names it with `launcherLabel`, its accessible name, and draws it with
+`launcherIcon`; `onOpenApps` is still what it calls.
 
 Both components own their own chrome — background, border, safe-area-aware
 padding, sticky positioning, and a 768px max-width (so neither stretches

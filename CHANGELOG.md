@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.140.0] - 2026-11-23
+
+### Added
+
+- An app's _Create an account_ opens core's sign-up (`prompt=create`, OpenID Connect Prompt Create 1.0), and the new account ends in
+  the app's sign-in; an invitation-only instance still asks for an invitation. The SDK and `@sovereignfs/auth` ask for it.
+
 ## [0.139.0] - 2026-11-23
 
 ### Added

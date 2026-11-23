@@ -72,6 +72,9 @@ export function oidcPlugins(database: Database, settings: AuthSettings) {
     oauthProvider({
       loginPage: '/sign-in',
       consentPage: '/consent',
+      // An app's `prompt=create` (OpenID Connect Prompt Create 1.0) opens core's sign-up with the app's request signed into its
+      // address, as the sign-in page is; the page carries it on (`signInReturnTo`), so the sign-up ends in the app.
+      signup: { page: '/sign-up' },
       // People's scopes and apps' own: which a client may hold is the registry's rule, not the provider's.
       scopes: [...PROVIDER_SCOPES],
       // `client_credentials` is for an app acting for itself, and a client has it only when an operator gave it an app scope.

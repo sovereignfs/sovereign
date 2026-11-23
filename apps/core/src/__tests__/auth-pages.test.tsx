@@ -206,6 +206,27 @@ describe('the sign-up page', () => {
     expect(html).not.toMatch(/invitation|owner/i);
   });
 
+  it('keeps an app’s request when the app asked for its sign-up (prompt=create)', async () => {
+    const { signUp } = await pages();
+    const html = await renderServer(
+      await signUp({
+        searchParams: Promise.resolve({
+          client_id: 'app',
+          redirect_uri: 'https://app.sovereign.local/auth/callback',
+          state: 's1',
+          prompt: 'create',
+          exp: '1',
+          ba_param: ['ba_param', 'client_id', 'exp', 'prompt', 'redirect_uri', 'state'],
+          sig: 'signature',
+        }),
+      }),
+    );
+    const resume = encodeURIComponent(
+      '/api/auth/oauth2/authorize?client_id=app&redirect_uri=https%3A%2F%2Fapp.sovereign.local%2Fauth%2Fcallback&state=s1',
+    );
+    expect(html).toContain(`href="/sign-in?returnTo=${resume}"`);
+  });
+
   it('says sign-up is by invitation when it is, and for which address', async () => {
     getRegistrationMode.mockResolvedValue('invite-only');
     const { signUp } = await pages();

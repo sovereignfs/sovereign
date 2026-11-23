@@ -58,8 +58,11 @@ export type AuthOptions = {
 export type SignInOptions = {
   /** A path on the app to come back to. */
   returnTo?: string;
-  /** `login`: sign in again at core even with a session there. `none`: show nothing, and fail if that is not possible. */
-  prompt?: 'login' | 'none';
+  /**
+   * `login`: sign in again at core even with a session there. `none`: show nothing, and fail if that is not possible. `create`: open
+   * core's sign-up rather than its sign-in (OpenID Connect Prompt Create 1.0), for an app's _Create an account_.
+   */
+  prompt?: 'login' | 'none' | 'create';
   /** The oldest sign-in at core the app accepts, in seconds; checked against the ID token's `auth_time`. */
   maxAgeSeconds?: number;
 };

@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 2.1.0; earlier versions are in the repository's
 history and tags.
 
+## [2.12.0] - 2026-11-23
+
+### Added
+
+- `beginSignIn({ prompt: 'create' })` asks core to open its sign-up rather than its sign-in (OpenID Connect Prompt Create 1.0), for an
+  app's _Create an account_; `@sovereignfs/sdk/next`'s `/auth/login` passes it on.
+
 ## [2.11.1] - 2026-11-23
 
 ### Fixed

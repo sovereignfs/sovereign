@@ -228,7 +228,7 @@ no switching inside a value. Black and white are `--sv-black` and `--sv-white`, 
 
 - The guard runs first; the answer holds tile fields only; a person who may not use the launcher gets nothing
 
-#### 📋 21.9 — `prompt=create`: an app asks core to open on its sign-up
+#### ✅ 21.9 — `prompt=create`: an app asks core to open on its sign-up
 
 **Goal:** An app's _Create an account_ lands on core's sign-up, not its sign-in.
 
@@ -245,6 +245,12 @@ no switching inside a value. Black and white are `--sv-black` and `--sv-white`, 
 **Review checklist:**
 
 - An invitation-only instance still asks for an invitation; the resume address is a path on core
+
+**Notes:** better-auth's provider already accepts `prompt=create` and sends the person to its `signup.page`; core sets it to
+`/sign-up`, which now takes its return address from the signed request as the sign-in page does (`signInReturnTo`). `resumeAddress`
+takes `create` out of `prompt` with `login`, or the finished sign-up would open the sign-up again. A person already signed in who is
+sent to sign up is sent on to the app at once (`sendOnIfSignedIn`). Registration's rules are the sign-up's, unchanged. The three new
+core tests fail without the change. SDK 2.12.0, auth 0.7.0, core 0.86.0, platform 0.140.0.
 
 #### ✅ 21.10 — Writing an export in the browser
 

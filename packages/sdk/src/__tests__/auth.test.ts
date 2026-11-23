@@ -320,7 +320,7 @@ describe('asking core for a fresh sign-in (sdk §9.6)', () => {
   /** A round trip that asks with `options`, the person having signed in at core at `authTime`. */
   async function signInAsking(
     world: World,
-    options: { prompt?: 'login' | 'none'; maxAgeSeconds?: number },
+    options: { prompt?: 'login' | 'none' | 'create'; maxAgeSeconds?: number },
     authTime?: number,
   ) {
     const begin = await world.sv.auth.beginSignIn(options);
@@ -335,6 +335,8 @@ describe('asking core for a fresh sign-in (sdk §9.6)', () => {
     const asked = new URL((await sv.auth.beginSignIn({ prompt: 'login', maxAgeSeconds: 300 })).url);
     expect(asked.searchParams.get('prompt')).toBe('login');
     expect(asked.searchParams.get('max_age')).toBe('300');
+    const create = new URL((await sv.auth.beginSignIn({ prompt: 'create' })).url);
+    expect(create.searchParams.get('prompt')).toBe('create');
     const plain = new URL((await sv.auth.beginSignIn()).url);
     expect(plain.searchParams.has('prompt')).toBe(false);
     expect(plain.searchParams.has('max_age')).toBe(false);

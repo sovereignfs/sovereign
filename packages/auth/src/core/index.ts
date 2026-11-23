@@ -40,7 +40,7 @@ export type SovereignSteps = {
   auth: {
     beginSignIn(options?: {
       returnTo?: string;
-      prompt?: 'login' | 'none';
+      prompt?: 'login' | 'none' | 'create';
     }): Promise<{ url: string; setCookies: string[] }>;
     finishSignIn(request: Request): Promise<SignedIn>;
     endSessionUrl(idToken: string | undefined): Promise<string>;
@@ -114,7 +114,9 @@ export function sovereignSignIn({
         async (ctx) => {
           const query = (ctx.query ?? {}) as Record<string, unknown>;
           const prompt =
-            query.prompt === 'none' || query.prompt === 'login' ? query.prompt : undefined;
+            query.prompt === 'none' || query.prompt === 'login' || query.prompt === 'create'
+              ? query.prompt
+              : undefined;
           const step = await sovereign.auth.beginSignIn({
             returnTo: safeReturnTo(text(query.returnTo)),
             ...(prompt ? { prompt } : {}),

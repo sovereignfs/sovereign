@@ -666,7 +666,12 @@ the device's PIN) or their password (RFC 0006 part B). Signing in does not chang
 - When an app sends someone to sign in, core's sign-in page carries the app's
   request through the password, the second step and a passkey, and sends the
   browser back to the app with its code. Someone already signed in who is sent
-  back with `prompt=login` is shown the form.
+  back with `prompt=login` is shown the form. An app that asks with `prompt=create`
+  (OpenID Connect Prompt Create 1.0) sends the person to core's sign-up instead,
+  with its request signed into the address as the sign-in page has it; the
+  sign-up page carries it on as its return address, so the new account ends in
+  the app's sign-in. Registration's rules (an invitation, the first account) are
+  the sign-up's, unchanged.
 - A sign-in page left open longer than the ten minutes the provider signs the
   app's request for is refused with `invalid_signature` before anything else
   is looked at. The page then says the sign-in waited too long and offers to
@@ -677,7 +682,7 @@ the device's PIN) or their password (RFC 0006 part B). Signing in does not chang
   creating an account, verifying the address by email, and forgetting the
   password and setting a new one. The sign-in page turns the signed request
   back into the app's own request to the authorization endpoint, without the
-  signature and with `login` taken out of `prompt`, and carries that as the
+  signature and with `login` and `create` taken out of `prompt`, and carries that as the
   page to return to through each of those pages and their emails. Once the
   person has a session it is opened, and the provider checks the whole request
   again, so it can send the browser nowhere the app's own request could not.

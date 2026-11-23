@@ -175,6 +175,18 @@ describe('signing in through core (auth.md §8)', () => {
     );
   });
 
+  it('asks core for its sign-up when the app does (prompt=create), and for nothing it does not know', async () => {
+    const { get } = await world();
+    const create = new URL(
+      (await get('/api/auth/sign-in/sovereign?prompt=create')).headers.get('location') as string,
+    );
+    expect(create.searchParams.get('prompt')).toBe('create');
+    const junk = new URL(
+      (await get('/api/auth/sign-in/sovereign?prompt=consent')).headers.get('location') as string,
+    );
+    expect(junk.searchParams.has('prompt')).toBe(false);
+  });
+
   it('signs in through core though the app’s own sign-up is closed, and signs the same person in to the same account again', async () => {
     const { signIn, sessionOf, db } = await world();
     const first = await signIn();

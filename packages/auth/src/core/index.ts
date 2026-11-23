@@ -8,7 +8,8 @@
  * - `coreNotices(options)` answers core's two notices as plain routes (`POST /api/sovereign/backchannel-logout` and
  *   `POST /api/sovereign/account-deleted`), which no browser makes.
  * - `POST /sv/link-sovereign` links the signed-in person's own account to core, after their password (auth.md §8.2).
- * - `coreSignOutUrl` is core's sign-out for the session, and `needsCoreCheck` says when to ask core again (sdk §9.7).
+ * - `coreSignOutUrl` is core's sign-out for the session, `needsCoreCheck` says when to ask core again (sdk §9.7), and
+ *   `coreSignedInAt` says when the person last signed in there, for what wants a recent sign-in (an export, a deletion).
  */
 import type { Database, Migration } from '@sovereignfs/database';
 import {
@@ -365,6 +366,23 @@ export async function needsCoreCheck(
 ): Promise<boolean> {
   const signIn = await readSignIn(database, sessionId);
   return signIn !== undefined && now - signIn.checkedAt >= CHECK_EVERY_MS;
+}
+
+/**
+ * When the person last signed in at core on this session, in milliseconds, from the ID token's `auth_time`, or `undefined` for a session that did
+ * not come from core, or whose token does not say. For an app that asks for a recent sign-in before something that wants one (an export, a
+ * deletion): send the person through `/sign-in/sovereign?prompt=login`, and on their return check that this is within the last few minutes. It is
+ * core's claim for the session, never the app's own clock or anything the request says.
+ */
+export async function coreSignedInAt(
+  database: Database,
+  sessionId: string,
+): Promise<number | undefined> {
+  const signIn = await readSignIn(database, sessionId);
+  const seconds = signIn ? keptClaims(signIn.idToken).auth_time : undefined;
+  return typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0
+    ? Math.floor(seconds) * 1000
+    : undefined;
 }
 
 /**

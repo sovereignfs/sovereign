@@ -8,6 +8,8 @@ written in the change that sets the version, dated that day, and becomes the rel
 
 ### Added
 
+- `coreSignedInAt(database, sessionId)`: when the person last signed in at core on a session, from the ID token's `auth_time`, for an app that
+  asks for a recent sign-in before an export or a deletion.
 - `/api/auth/sign-in/sovereign?prompt=create` opens core's sign-up rather than its sign-in, for an app's _Create an account_; the new
   account ends in the app's sign-in.
 

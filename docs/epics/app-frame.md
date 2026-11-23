@@ -282,3 +282,7 @@ goes with `node:crypto` and spools a stream of unknown size to disk, none of whi
 checks and `contents.json`'s shape, takes SHA-256 from `crypto.subtle` and computes zip's CRC-32 itself. Tests: it writes the same
 archive as `ExportWriter`, byte for byte, as a tar and as a zip; `readExport` reads it back; its CRC-32 is `node:zlib`'s; and every
 module its entry reaches imports nothing outside the package. `@sovereignfs/export` 0.4.0, platform 0.139.0.
+
+**Added after the leg (2026-11-23), for Shopper's 22.8:** `@sovereignfs/auth`'s `coreSignedInAt(database, sessionId)`, which reads the ID token's
+`auth_time` that the package already keeps for a session, so that an app can ask for a fresh sign-in at core (`prompt=login`) before an export and
+check it was recent. Folded into the unreleased auth 0.7.0; platform 0.142.0.

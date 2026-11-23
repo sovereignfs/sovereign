@@ -199,6 +199,10 @@ keeps (sdk §9.8), so the app's session is the package's and the SDK keeps only 
   `genericOAuth` is not used.
 - **What a session from core keeps** is in the plugin's table, `sv_core_sign_ins` (`coreSignInMigrations`), ended with its session:
   core's `sid`, the ID token for signing out, and when it was last checked.
+- **When the person last signed in at core** is `coreSignedInAt(database, sessionId)`: the ID token's `auth_time` for the session, in
+  milliseconds, or nothing for a local session or a token that does not say. An app that wants a recent sign-in before something (an export, a
+  deletion) sends the person to `/api/auth/sign-in/sovereign?prompt=login` and, on their return, checks that this is within the last few minutes:
+  core's claim, never the app's clock or anything a request says.
 - **The session follows core's** (sdk §9.7): `needsCoreCheck` says when an hour has passed; the app's guard then sends the person to
   `/api/auth/sign-in/sovereign?prompt=none`, which renews the session in place and its name from the new claims, or, on
   `login_required`, ends it.

@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.142.0] - 2026-11-23
+
+### Added
+
+- An app signed in through core can tell when the person last signed in there (`@sovereignfs/auth`'s `coreSignedInAt`), which an export or a
+  deletion asks for after a fresh sign-in at core.
+
 ## [0.141.0] - 2026-11-23
 
 ### Added

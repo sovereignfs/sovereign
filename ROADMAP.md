@@ -404,3 +404,22 @@ Tasks 20.8 to 20.15 are built in each app's own repository and committed directl
 | —       | 14       | Shopper on `@sovereignfs/auth`                                     | ✅     | [20.14](docs/epics/suite-alignment.md) |
 | —       | 15       | The six apps on `@sovereignfs/auth`                                | 📋     | [20.15](docs/epics/suite-alignment.md) |
 | —       | 16       | The planned apps' designs name the packages `[parallel]`           | 📋     | [20.16](docs/epics/suite-alignment.md) |
+
+### M21 — Every app's frame is the design system's
+
+Epic [21](docs/epics/app-frame.md) · workstream [0012](docs/workstreams/0012-app-frame.md)
+
+Asked for by Shopper (its epic 16, 16.17 to 16.26), its first consumer.
+
+| Version | Priority | Task                                                 | Status | Epic task                        |
+| ------- | -------- | ---------------------------------------------------- | ------ | -------------------------------- |
+| —       | 1        | `SettingsDialog`                                     | 📋     | [21.1](docs/epics/app-frame.md)  |
+| —       | 2        | More icons, and `square-pen` `[parallel]`            | 📋     | [21.2](docs/epics/app-frame.md)  |
+| —       | 3        | `MobileFooter`'s middle button, named by the app     | 📋     | [21.3](docs/epics/app-frame.md)  |
+| —       | 4        | `Header` with the app's own brand                    | 📋     | [21.4](docs/epics/app-frame.md)  |
+| —       | 5        | `AppSidebar`                                         | 📋     | [21.5](docs/epics/app-frame.md)  |
+| —       | 6        | `AppFrame`                                           | 📋     | [21.6](docs/epics/app-frame.md)  |
+| —       | 7        | `Barcode` `[parallel]`                               | 📋     | [21.7](docs/epics/app-frame.md)  |
+| —       | 8        | The apps a person can open                           | 📋     | [21.8](docs/epics/app-frame.md)  |
+| —       | 9        | `prompt=create`: an app asks core to open on sign-up | 📋     | [21.9](docs/epics/app-frame.md)  |
+| —       | 10       | Writing an export in the browser `[parallel]`        | 📋     | [21.10](docs/epics/app-frame.md) |

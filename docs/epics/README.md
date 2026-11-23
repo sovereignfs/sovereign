@@ -51,6 +51,7 @@ the task is corrected.
 | 18  | [Exports](exports.md)                         | 📋 Planned     | An owner and every person download their data, from core and every app ([RFC 0008](../rfcs/0008-exports-and-backups.md))                                                 |
 | 19  | [Web Push](push.md)                           | 📋 Planned     | `@sovereignfs/push`, the worker and `PushControl`: every app notifies a closed device the same way ([RFC 0009](../rfcs/0009-web-push.md))                                |
 | 20  | [Suite alignment](suite-alignment.md)         | 📋 Planned     | The apps in development on the template's design, and what core's packages lack for them ([research 0014](../research/0014-suite-alignment.md))                          |
+| 21  | [The app frame](app-frame.md)                 | 📋 Planned     | `SettingsDialog`, `Header`'s brand, `AppSidebar`, `AppFrame`, `Barcode`, the launcher's apps for an app: every app's frame, once                                         |
 
 _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · 🚧 Parked · ❌ Rejected_
 

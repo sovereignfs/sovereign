@@ -56,5 +56,6 @@ Copy [TEMPLATE.md](TEMPLATE.md) to `NNNN-short-slug.md` and add a row below.
 | [0009](0009-exports.md)                 | An owner and every person download their data, from core and every app, on demand                                                           | ⏳ In Progress | RFC 0008, epic 18                       |
 | [0010](0010-web-push.md)                | Every app notifies a person on a device where it is not open, from one published implementation                                             | ⏳ In Progress | Research 0013, RFC 0009, epic 19        |
 | [0011](0011-suite-alignment.md)         | Every app in development on the template's design: current packages, manifest 5, core's export, the shared worker, then `@sovereignfs/auth` | 📋 Planned     | Research 0014, epic 20                  |
+| [0012](0012-app-frame.md)               | Every app's frame, settings and barcode from the design system; an app shows the launcher's apps and opens core's sign-up                   | ⏳ In Progress | Epic 21                                 |
 
 _Status key: ✅ Complete · ⏳ In Progress · 📋 Planned · ⏸️ Paused · ❌ Stopped_

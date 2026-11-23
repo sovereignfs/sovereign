@@ -11,6 +11,7 @@ history and tags.
 
 - An app made by `npm create @sovereignfs app` depends on `@sovereignfs/sdk` 2.11.1 at least, which checks the signature of the ID token
   core's token endpoint returns.
+- It depends on `@sovereignfs/ui` 0.107 at least, which has the app frame, the settings dialog and `Barcode`.
 
 ## [0.28.0] - 2026-11-22
 

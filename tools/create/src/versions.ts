@@ -23,8 +23,8 @@ export const APP_DEPENDENCIES = {
   '@sovereignfs/sdk': '^2.11.1',
   '@sovereignfs/storage': '^0.1.0',
   // 0.104 has `PushControl`; 0.105 writes `SessionsPanel`'s times the same on the server and in the browser; 0.106 has
-  // `LinkSovereignPanel`, on the security page.
-  '@sovereignfs/ui': '^0.106.0',
+  // `LinkSovereignPanel`, on the security page; 0.107 has the app frame (`AppFrame`, `AppSidebar`, `SettingsDialog`).
+  '@sovereignfs/ui': '^0.107.0',
   'better-auth': '1.7.27',
   next: '^16.4.6',
   pg: '^8.23.1',

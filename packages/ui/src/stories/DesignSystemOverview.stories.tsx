@@ -65,6 +65,7 @@ import { SystemBanner } from '../components/SystemBanner/SystemBanner';
 import { InstallHint } from '../components/InstallPrompt/InstallPrompt';
 import { UpdateNotice } from '../components/UpdateNotice/UpdateNotice';
 import { PushControl } from '../components/PushControl/PushControl';
+import { SettingsDialog } from '../components/SettingsDialog/SettingsDialog';
 import { Tabs } from '../components/Tabs/Tabs';
 import { ToastProvider, useToast } from '../components/Toast/Toast';
 import { Toggle } from '../components/Toggle/Toggle';
@@ -2365,6 +2366,15 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
               </div>
             </ComponentCard>
 
+            {/* SettingsDialog */}
+            <ComponentCard
+              name="SettingsDialog"
+              importLine="import { SettingsDialog } from '@sovereignfs/ui';"
+              usage="Settings as one dialog with a side navigation, controlled (active, onSelect) so that each section has an address. Sections in groups, an optional search; on a phone, the sections then one with a back arrow."
+            >
+              <SettingsDialogExample />
+            </ComponentCard>
+
             {/* Toast */}
             <ComponentCard
               name="Toast"
@@ -4199,3 +4209,32 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const DesignSystem: Story = {};
+
+function SettingsDialogExample() {
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState<string | null>('profile');
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Open settings</Button>
+      <SettingsDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        active={active}
+        onSelect={setActive}
+        groups={[
+          {
+            id: 'you',
+            sections: [
+              { id: 'profile', label: 'Profile', icon: 'user', content: 'Your name and email.' },
+              { id: 'security', label: 'Security', icon: 'shield', content: 'Your password.' },
+            ],
+          },
+          {
+            id: 'app',
+            sections: [{ id: 'data', label: 'Data', icon: 'download', content: 'Your export.' }],
+          },
+        ]}
+      />
+    </>
+  );
+}

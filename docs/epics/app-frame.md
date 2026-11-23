@@ -4,7 +4,7 @@
 
 ## Status
 
-📋 Planned
+⏳ In Progress
 
 ## Overview
 
@@ -30,7 +30,7 @@ Nothing in a component of this epic knows an app's data or words: every label, i
 
 ## Tasks
 
-#### 📋 21.1 — `SettingsDialog`
+#### ✅ 21.1 — `SettingsDialog`
 
 **Goal:** Settings are one dialog with a side navigation, the same in core and every app.
 
@@ -53,6 +53,11 @@ Nothing in a component of this epic knows an app's data or words: every label, i
 - The frame keeps its size whichever section is shown; only the content scrolls
 - Keyboard: Tab reaches the sections and the content; Escape closes; focus returns to the opener
 - No `next/*` import; nothing an app's own
+
+**Notes:** `Dialog` gained `flush` (a body with no padding and no scrolling of its own) rather than `SettingsDialog` undoing its
+padding. `active: null` is the sections alone on a phone and the first section on a wider screen, so one value is right on both and
+the phone's two steps are drawn by CSS, not decided by the viewport. A section with an `href` is a link, through `renderLink` when
+given. The title, search and back labels are the app's, English by default. Seen in Storybook on a desktop and at phone width.
 
 #### 📋 21.2 — More icons, and `square-pen`
 

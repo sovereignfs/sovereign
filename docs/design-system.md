@@ -1564,6 +1564,55 @@ technique `OverlayHeader` itself already uses, not `position: sticky` — so
 layout-agnostic (no built-in button alignment); arrange its content same as
 `children`.
 
+`flush` makes the body a frame for content that lays out and scrolls its own regions: no padding, no
+scrolling of its own. `SettingsDialog` uses it.
+
+### `SettingsDialog`
+
+Settings as one dialog with a side navigation, the same in core and every app. A title row and close
+across the width; sections in groups, with a divider between groups, each with an icon; an optional
+search over the sections' labels; the section's content, with no heading of its own, scrolling inside a
+frame that never changes size. On a phone it is the whole screen: the sections, then one section with a
+back arrow.
+
+```tsx
+import { SettingsDialog } from '@sovereignfs/ui';
+
+<SettingsDialog
+  open={open}
+  onClose={close}
+  active={section} // null: the sections alone on a phone, the first section on a wider screen
+  onSelect={(id) => router.push(id ? `/settings/${id}` : '/settings')}
+  groups={[
+    {
+      id: 'you',
+      sections: [
+        {
+          id: 'profile',
+          label: 'Profile',
+          icon: 'user',
+          content: <Profile />,
+          href: '/settings/profile',
+        },
+      ],
+    },
+    {
+      id: 'app',
+      sections: [
+        { id: 'data', label: 'Data', icon: 'download', content: <Data />, href: '/settings/data' },
+      ],
+    },
+  ]}
+  renderLink={(section, props) => <Link {...props} />}
+/>;
+```
+
+It is controlled, so that an app can give each section an address (Next's intercepting routes, for one).
+`null` is right on every screen, so nothing about the route depends on the viewport. A section with an
+`href` is a link (through `renderLink` when given), one without is a button; either calls `onSelect`.
+`size` is `lg` (the screen, with a margin) or `fixed` (capped); `title`, `searchLabel` and `backLabel`
+are the app's words, in English by default.
+
 ### `useOverlaySecondRow` — the double-header problem
 
 An overlay page (the Console, the identity pages) is rendered by `Dialog` on

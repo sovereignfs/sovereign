@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.137.0 · **Last updated:** 2026-11-22
+**Version:** 0.138.0 · **Last updated:** 2026-11-23
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -413,7 +413,7 @@ Asked for by Shopper (its epic 16, 16.17 to 16.26), its first consumer.
 
 | Version | Priority | Task                                                 | Status | Epic task                        |
 | ------- | -------- | ---------------------------------------------------- | ------ | -------------------------------- |
-| —       | 1        | `SettingsDialog`                                     | 📋     | [21.1](docs/epics/app-frame.md)  |
+| 0.138.0 | 1        | `SettingsDialog`                                     | ✅     | [21.1](docs/epics/app-frame.md)  |
 | —       | 2        | More icons, and `square-pen` `[parallel]`            | 📋     | [21.2](docs/epics/app-frame.md)  |
 | —       | 3        | `MobileFooter`'s middle button, named by the app     | 📋     | [21.3](docs/epics/app-frame.md)  |
 | —       | 4        | `Header` with the app's own brand                    | 📋     | [21.4](docs/epics/app-frame.md)  |

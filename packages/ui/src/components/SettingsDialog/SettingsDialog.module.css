@@ -1,0 +1,185 @@
+/* SettingsDialog — a side navigation and a section, inside a flush `Dialog`. The frame never changes size: the
+ * navigation and the section each scroll on their own. Tokens only. */
+
+.frame {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 15rem;
+  min-height: 0;
+  border-right: var(--sv-border-width-hairline) solid var(--sv-color-border);
+}
+
+.search {
+  padding: var(--sv-space-4) var(--sv-space-4) 0;
+}
+
+.nav {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--sv-space-3);
+  scrollbar-width: thin;
+  scrollbar-color: var(--sv-color-border-strong) transparent;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.group + .group {
+  margin-top: var(--sv-space-3);
+  padding-top: var(--sv-space-3);
+  border-top: var(--sv-border-width-hairline) solid var(--sv-color-border);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+  width: 100%;
+  min-height: var(--sv-touch-target-min);
+  padding: var(--sv-space-2) var(--sv-space-3);
+  border: none;
+  border-radius: var(--sv-radius-md);
+  background: transparent;
+  color: var(--sv-color-text-muted);
+  font: inherit;
+  font-size: var(--sv-font-size-sm);
+  font-weight: var(--sv-font-weight-medium);
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .row:hover {
+    background-color: color-mix(in srgb, var(--sv-color-accent) 6%, transparent);
+    color: var(--sv-color-text-primary);
+  }
+}
+
+.row:focus-visible {
+  outline: 2px solid var(--sv-color-focus-ring);
+  outline-offset: -2px;
+}
+
+.rowActive {
+  background-color: var(--sv-color-accent-subtle);
+  color: var(--sv-color-text-primary);
+  font-weight: var(--sv-font-weight-semibold);
+}
+
+.icon {
+  flex-shrink: 0;
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The chevron says "opens a section", which only a phone's list of sections needs. */
+.chevron {
+  display: none;
+  flex-shrink: 0;
+  color: var(--sv-color-text-muted);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: none;
+  padding: var(--sv-space-6);
+  scrollbar-width: thin;
+  scrollbar-color: var(--sv-color-border-strong) transparent;
+  --sv-page-gutter: 0px;
+}
+
+/* The back row is a phone's alone. */
+.back {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    flex: 1 1 auto;
+    border-right: none;
+  }
+
+  .row {
+    color: var(--sv-color-text-primary);
+  }
+
+  .rowActive {
+    background-color: transparent;
+    font-weight: var(--sv-font-weight-medium);
+  }
+
+  .chevron {
+    display: inline-flex;
+  }
+
+  .frame[data-view='sections'] .section {
+    display: none;
+  }
+
+  .frame[data-view='section'] .sidebar {
+    display: none;
+  }
+
+  .back {
+    display: flex;
+    align-items: center;
+    gap: var(--sv-space-2);
+    flex-shrink: 0;
+    padding: var(--sv-space-2) var(--sv-space-3);
+    border-bottom: var(--sv-border-width-hairline) solid var(--sv-color-border);
+  }
+
+  .backButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sv-touch-target-min);
+    height: var(--sv-touch-target-min);
+    border: none;
+    border-radius: var(--sv-radius-md);
+    background: transparent;
+    color: var(--sv-color-text-primary);
+    cursor: pointer;
+  }
+
+  .backButton:focus-visible {
+    outline: 2px solid var(--sv-color-focus-ring);
+    outline-offset: -2px;
+  }
+
+  .backTitle {
+    font-weight: var(--sv-font-weight-semibold);
+  }
+
+  .body {
+    padding: var(--sv-space-4);
+  }
+}

@@ -172,6 +172,13 @@ export { UpdateNotice } from './components/UpdateNotice/UpdateNotice';
 export type { UpdateNoticeProps } from './components/UpdateNotice/UpdateNotice';
 export { PushControl } from './components/PushControl/PushControl';
 export type { PushControlProps, PushControlState } from './components/PushControl/PushControl';
+export { SettingsDialog } from './components/SettingsDialog/SettingsDialog';
+export type {
+  SettingsDialogProps,
+  SettingsGroup,
+  SettingsLinkProps,
+  SettingsSection,
+} from './components/SettingsDialog/SettingsDialog';
 export type { OfflineGateProps } from './components/OfflineGate/OfflineGate';
 export { DeviceOnlyGate } from './components/DeviceOnlyGate/DeviceOnlyGate';
 export type { DeviceOnlyGateProps } from './components/DeviceOnlyGate/DeviceOnlyGate';

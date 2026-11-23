@@ -5,6 +5,12 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.138.0] - 2026-11-23
+
+### Added
+
+- The app frame in `@sovereignfs/ui` (epic 21): a settings dialog with a side navigation, the same in core and every app.
+
 ## [0.137.0] - 2026-11-22
 
 ### Added

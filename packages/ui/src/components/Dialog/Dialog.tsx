@@ -121,6 +121,9 @@ export interface DialogProps {
    *  — restyle the title text (e.g. a smaller font size to match a
    *  consumer's own compact header elsewhere). */
   titleClassName?: string;
+  /** The body fills the panel edge to edge, with no padding and no scrolling of its own: for content that lays out and
+   *  scrolls its own regions (`SettingsDialog`'s navigation and section). Off by default. */
+  flush?: boolean;
   children: ReactNode;
 }
 
@@ -165,6 +168,7 @@ export function Dialog({
   footer,
   rowClassName,
   titleClassName,
+  flush = false,
   children,
 }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -260,7 +264,7 @@ export function Dialog({
         {/* The panel is a fixed-size box; only this region scrolls, so the
             panel never resizes with its content and the header/close button
             and footer (if present) stay pinned. */}
-        <div className={styles.content}>
+        <div className={[styles.content, flush ? styles.flush : ''].filter(Boolean).join(' ')}>
           <OverlaySecondRowContext.Provider value={setSecondRow}>
             {children}
           </OverlaySecondRowContext.Provider>

@@ -5,6 +5,15 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.96.0; earlier versions are in the repository's
 history and tags.
 
+## [0.107.0] - 2026-11-23
+
+### Added
+
+- `SettingsDialog`: settings as one dialog with a side navigation, the same in core and every app. Sections in groups with a divider
+  between them, each with an icon; an optional search; the section scrolling in a frame that never changes size; on a phone, the
+  sections, then one with a back arrow. Controlled (`active`, `onSelect`), so that an app gives each section an address.
+- `Dialog`'s `flush`: a body with no padding and no scrolling of its own, for content that scrolls its own regions.
+
 ## [0.106.0] - 2026-11-22
 
 ### Added

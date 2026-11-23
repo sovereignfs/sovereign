@@ -18,6 +18,7 @@ history and tags.
   `wallet-cards` and `scan-barcode`.
 - `MobileFooter`'s `launcherLabel`: the centered button's name, "Apps" by default, for an app whose middle button opens its own
   drawer.
+- `Header`'s `brand`: an app's own wordmark in place of the badge, which stays core's default.
 
 ## [0.106.0] - 2026-11-22
 

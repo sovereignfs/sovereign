@@ -103,13 +103,13 @@ nappy); `wallet-cards` and `scan-barcode` (a card, and scanning one). `IconPicke
 **Notes:** named `launcherLabel` to sit beside the `launcherIcon` the footer already took, rather than a new `middle…` pair. The
 footer's existing tests pass unchanged; one more names the button "Lists" and checks it still calls `onOpenApps`.
 
-#### 📋 21.4 — `Header` with the app's own brand
+#### ✅ 21.4 — `Header` with the app's own brand
 
 **Goal:** An app's header is the design system's, with its own wordmark.
 
 **Deliverables:**
 
-- A `brand` slot drawn in place of the initial badge, which stays the default (core's); a `leading` slot before it for the sidebar's
+- A `brand` slot drawn in place of the initial badge, which stays the default (core's); the `leading` slot before it for the sidebar's
   button
 - On the right, in this order, the launcher, the bell and the avatar, each drawn only when given
 - The story shows core's header and an app's
@@ -121,6 +121,10 @@ footer's existing tests pass unchanged; one more names the button "Lists" and ch
 **Review checklist:**
 
 - Core's `AccountHeader` renders as it does today (its tests pass unchanged)
+
+**Notes:** `leading` and the optional right-hand slots, in that order, were already there (for Tusk and Fjord Web), so only `brand`
+was added: an app's wordmark, built by the app with its own link home, drawn in place of the badge. Core's `AccountHeader` and
+launcher page tests pass unchanged. The header was not in the guide; it is now.
 
 #### 📋 21.5 — `AppSidebar`
 

@@ -1393,6 +1393,24 @@ content region is already padded. Wrap the page in `PageContainer` as usual; a
 its own, so the same tree is correctly padded exactly once in both hosts. This
 is automatic — no prop, no per-context branching in page code.
 
+### `Header`
+
+The web top bar: on the left, an optional `leading` control (an app's sidebar button), then the brand,
+then an optional active plugin; on the right, in this order, `launcher`, `notifications` and
+`avatarMenu`, each drawn only when given. The brand is core's badge (an instance's logo or its initial,
+linking to `homeHref`) unless an app gives its own wordmark as `brand`, already built and with its own
+link home:
+
+```tsx
+<Header
+  instanceName="Shopper"
+  homeHref="/"
+  leading={<SidebarButton />}
+  brand={<Link href="/">Shopper</Link>}
+  avatarMenu={<AccountMenu placement="header" {...userProps} />}
+/>
+```
+
 ### `MobileHeader` and `MobileFooter` components
 
 The shell's mobile header and footer are built from two

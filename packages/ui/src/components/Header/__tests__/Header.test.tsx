@@ -120,4 +120,29 @@ describe('Header', () => {
     expect(left?.firstElementChild?.textContent).toBe('Sidebar');
     expect(screen.getByRole('link', { name: 'Tusk home' })).toBeDefined();
   });
+
+  it("draws an app's own wordmark in place of the badge, with the leading control before it", () => {
+    const { container } = render(
+      <Header
+        instanceName="Shopper"
+        homeHref="/"
+        leading={<button type="button">Sidebar</button>}
+        brand={<a href="/">Shopper</a>}
+        launcher={<span data-testid="launcher">launcher</span>}
+        avatarMenu={<span data-testid="avatar">avatar</span>}
+      />,
+    );
+
+    expect(screen.queryByRole('link', { name: 'Shopper home' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Shopper' }).getAttribute('href')).toBe('/');
+    const left = container.querySelector('header > div');
+    expect(left?.children[0]?.textContent).toBe('Sidebar');
+    expect(left?.children[1]?.textContent).toBe('Shopper');
+    // On the right, the launcher then the avatar, with no bell when none is given.
+    const right = container.querySelector('header > div:last-child');
+    expect([...(right?.children ?? [])].map((child) => child.getAttribute('data-testid'))).toEqual([
+      'launcher',
+      'avatar',
+    ]);
+  });
 });

@@ -1,6 +1,7 @@
 import { jsonResponse } from '../../../../src/api/errors';
 import { getLauncherApps } from '../../../../src/clients';
 import { appsGuard, myApps } from '../../../../src/clients/apps-api';
+import { getConfig } from '../../../../src/config';
 import { getDatabase } from '../../../../src/database';
 import { answer } from '../../../../src/directory/service';
 import { getCapabilityMatrix } from '../../../../src/roles/matrix';
@@ -21,6 +22,7 @@ export async function GET(request: Request): Promise<Response> {
         principal.userId,
         await getCapabilityMatrix(),
         getLauncherApps,
+        new URL(getConfig().url).origin,
       ),
     );
   });

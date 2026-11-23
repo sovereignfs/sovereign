@@ -596,8 +596,8 @@ paths:
         The apps core's own launcher lists for the signed-in person (core-app §3.8): enabled, shown in the launcher and with an
         address to open, in name order, with only what a tile needs. Any of the person's access tokens will do (`openid`, which
         every one carries); no scope of its own is asked for, since the launcher shows every signed-in person every listed app and
-        is not access control. Empty for a person whose role may not use the launcher. An icon is the address the app's launcher
-        entry names, usually on the app's own host.
+        is not access control. Empty for a person whose role may not use the launcher. An icon is Core's own address for the
+        app's icon (`/api/branding/apps/{id}`, public, an image), never the app's, so an app's page shows images from Core alone.
       security:
         - bearer: [openid]
       responses:
@@ -795,7 +795,8 @@ components:
         icon:
           type: [string, 'null']
           format: uri
-          description: The address of the app's launcher icon, or null when it has none (draw a default from the name).
+          description: |
+            Core's own address for the app's launcher icon, or null when it has none (draw a default from the name).
         launchUrl:
           type: string
           format: uri

@@ -83,7 +83,7 @@ export type LauncherApp = {
   name: string;
   description: string | null;
   /**
-   * The address of the app's launcher icon, or null when it has none (draw a default from the name).
+   * Core's own address for the app's launcher icon, or null when it has none (draw a default from the name).
    */
   icon: string | null;
   /**

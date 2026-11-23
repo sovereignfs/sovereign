@@ -1050,10 +1050,16 @@ message`), 2 when the command line is wrong or core is not configured, and 3 whe
   through `listLauncherApps`. Any of the person's access tokens will do: it
   asks for `openid`, which every one carries, and no scope of its own, since the
   list is what every signed-in person sees. It is empty for a person whose role
-  lacks `launcher:access` in the matrix in force, read from the account. An
-  icon is the address the launcher entry names, usually on the app's own host;
-  core does not serve it from its own address. The instance document lists the
-  `apps` capability.
+  lacks `launcher:access` in the matrix in force, read from the account. **An
+  icon is core's own address for it,** `/api/branding/apps/<id>`, so that an
+  app's page shows images from core alone: core fetches the address the launcher
+  entry names (five seconds at most, no redirect followed, 1 MB at most), keeps
+  what the bytes prove to be a PNG, JPEG or WebP picture, or an SVG rebuilt by
+  `sanitiseSvg`, for an hour (a failure for five minutes), and serves it public,
+  as the instance's logo is, with `nosniff` under a policy that forbids
+  everything. Only an app the launcher lists has an icon there; any other id is
+  not there, and nothing a request names is fetched. The instance document
+  lists the `apps` capability.
 - The page has the instance's name and logo, a way to each of the person's
   own account pages, and one tile for each
   app: a link, so it works with the keyboard and opens in a new tab on request.

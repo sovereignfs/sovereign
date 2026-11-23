@@ -10,7 +10,8 @@ history and tags.
 ### Added
 
 - An app can show the apps a person may open in its own header: the Core API's `GET /api/v1/apps` (`listMyApps`) answers the launcher's
-  tiles for the person a token is for, with any of their tokens and no new scope; the instance document lists `apps`.
+  tiles for the person a token is for, with any of their tokens and no new scope; the instance document lists `apps`. Each app's icon
+  is served from core's own address (`/api/branding/apps/<id>`), fetched once from the app's launcher entry and checked as a picture.
 
 ## [0.140.0] - 2026-11-23
 

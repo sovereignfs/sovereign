@@ -231,9 +231,10 @@ no switching inside a value. Black and white are `--sv-black` and `--sv-white`, 
 **Notes:** the owner chose (2026-11-23) a person's token and no new scope: the call asks for `openid`, which every person's token
 carries, through `appsGuard` (counted per app and per person, as the key calls are). It answers `listLauncherApps`'s tiles, `null` for
 what an app has not set, and nothing for a role without `launcher:access` in the matrix in force, read from the account. The instance
-document lists `apps`. **Icons are the addresses the launcher entries name**, usually on each app's own host: serving them from core's
-own address, as Shopper's RFC 0005 hoped, would mean core fetching other hosts' pictures, a design of its own that is not done here.
-`appsLauncherItems` in `@sovereignfs/ui` maps the answer to `AppsLauncher`. Folded into the unreleased SDK 2.12.0, ui 0.107.0 and core
+document lists `apps`. **Icons come from core, as the owner decided (2026-11-23):** `/api/branding/apps/<id>` serves a listed app's icon, fetched once from
+the address its launcher entry names (no redirect, five seconds, 1 MB), kept when its bytes prove a PNG, JPEG or WebP picture or an
+SVG rebuilt by `sanitiseSvg`, for an hour; public, as the instance's logo is, and listed among the routes public on purpose.
+`listMyApps` gives that address. `appsLauncherItems` in `@sovereignfs/ui` maps the answer to `AppsLauncher`. Folded into the unreleased SDK 2.12.0, ui 0.107.0 and core
 0.86.0; platform 0.141.0.
 
 #### ✅ 21.9 — `prompt=create`: an app asks core to open on its sign-up

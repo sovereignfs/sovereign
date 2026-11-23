@@ -104,7 +104,8 @@ describe('the apps a person can open (core-app §3.8)', () => {
     const body = (await reply.json()) as { apps: Record<string, unknown>[] };
     expectMatchesContract('listMyApps', 200, body);
     expect(body.apps).toEqual([
-      APPS[0],
+      // The icon is core's own address for it, never the app's.
+      { ...APPS[0], icon: `${ORIGIN}/api/branding/apps/notes` },
       {
         id: 'shopper',
         name: 'Shopper',

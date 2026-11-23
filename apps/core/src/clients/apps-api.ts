@@ -5,6 +5,7 @@ import { authenticate, type Principal } from '../api/token';
 import { getDatabase } from '../database';
 import { getTokenDeps } from '../directory/service';
 import { can, type Matrix } from '../roles/capabilities';
+import { appIconPath } from './app-icons';
 import type { LauncherApp } from './launcher';
 
 /**
@@ -46,13 +47,15 @@ export type ApiLauncherApp = {
 
 /**
  * The apps for the person the token is for: the launcher's list when their role may use the launcher in the matrix in force,
- * and nothing otherwise. The role is read from the account, never from the request.
+ * and nothing otherwise. The role is read from the account, never from the request. An icon is core's own address for it
+ * (`/api/branding/apps/<id>`, on `origin`), never the app's: an app's page shows images from core alone.
  */
 export async function myApps(
   database: Pick<Database, 'run'>,
   userId: string,
   matrix: Matrix,
   list: () => Promise<LauncherApp[]>,
+  origin: string,
 ): Promise<{ apps: ApiLauncherApp[] }> {
   const role = (await database.run('select role from users where id = ?', [userId])).rows[0]?.role;
   if (!can(role, 'launcher:access', matrix)) return { apps: [] };
@@ -61,7 +64,7 @@ export async function myApps(
       id: app.id,
       name: app.name,
       description: app.description ?? null,
-      icon: app.icon ?? null,
+      icon: app.icon ? new URL(appIconPath(app.id), origin).toString() : null,
       launchUrl: app.launchUrl,
     })),
   };

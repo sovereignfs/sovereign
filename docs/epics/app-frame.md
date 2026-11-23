@@ -59,15 +59,15 @@ padding. `active: null` is the sections alone on a phone and the first section o
 the phone's two steps are drawn by CSS, not decided by the viewport. A section with an `href` is a link, through `renderLink` when
 given. The title, search and back labels are the app's, English by default. Seen in Storybook on a desktop and at phone width.
 
-#### 📋 21.2 — More icons, and `square-pen`
+#### ✅ 21.2 — More icons, and `square-pen`
 
 **Goal:** The icons Shopper's lists, Inventory and cards use are in the set, chosen with `IconPicker`, never uploaded.
 
 **Deliverables:**
 
-- `square-pen` (Lucide's), and icons beyond groceries: hardware, electronics, clothing, gifts, garden, office, a card, drawn as the
-  set's icons are (24-pixel grid, `currentColor` stroke), each with its name and keywords for `IconPicker`'s search
-- The icon gallery shows them
+- `square-pen` (Lucide's), and icons beyond groceries: hardware, electronics, clothing, gifts, garden, office, a card, from the pinned
+  Lucide through `scripts/icon-list.ts` and `pnpm generate:icons`, as every icon in the set is
+- `IconPicker`'s story shows them
 
 **Dependencies:** none
 
@@ -75,7 +75,12 @@ given. The title, search and back labels are the app's, English by default. Seen
 
 **Review checklist:**
 
-- Every new icon draws in both themes and at the small size; `IconPicker` finds each by a keyword
+- Every new icon draws in both themes and at the small size; no icon already in the set changes
+
+**Notes:** twenty icons: `square-pen`; `shopping-cart` (a new list's) and `store`; `hammer`, `wrench`; `plug`, `laptop`, `headphones`;
+`shirt`; `gift`; `sprout`, `flower-2`; `briefcase`, `paperclip`; `pill`, `baby`, `dog`, `sofa` (the lists RFC 0005 names: a pill, a
+nappy); `wallet-cards` and `scan-barcode` (a card, and scanning one). `IconPicker` has no search, so the epic's first wording
+(keywords for its search) was dropped; the app gives the options. Regenerating changed no existing icon.
 
 #### 📋 21.3 — `MobileFooter`'s middle button, named by the app
 

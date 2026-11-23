@@ -13,6 +13,9 @@ history and tags.
   between them, each with an icon; an optional search; the section scrolling in a frame that never changes size; on a phone, the
   sections, then one with a back arrow. Controlled (`active`, `onSelect`), so that an app gives each section an address.
 - `Dialog`'s `flush`: a body with no padding and no scrolling of its own, for content that scrolls its own regions.
+- Twenty icons for lists, categories and cards beyond groceries: `square-pen`, `shopping-cart`, `store`, `hammer`, `wrench`, `plug`,
+  `laptop`, `headphones`, `shirt`, `gift`, `sprout`, `flower-2`, `briefcase`, `paperclip`, `pill`, `baby`, `dog`, `sofa`,
+  `wallet-cards` and `scan-barcode`.
 
 ## [0.106.0] - 2026-11-22
 

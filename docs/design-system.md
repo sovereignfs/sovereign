@@ -1411,6 +1411,46 @@ link home:
 />
 ```
 
+### `AppSidebar` and `useAppSidebar`
+
+The sidebar every app has, drawn once: full, a rail of icons or hidden. How it is shown is a choice
+about a screen, so it is kept on the device, per app and per kind of page (the app names its kinds),
+by pure rules (`sidebarStateFor`, `toggleSidebarHidden`, `toggleSidebarRail`, `parseSidebarStored`)
+that `useAppSidebar` reads in an effect, after the first paint, and writes. It is never shown on a
+phone, whose navigation is a drawer.
+
+```tsx
+const sidebar = useAppSidebar('shopper', pathname === '/' ? 'home' : 'page');
+
+<AppSidebar
+  aria-label="Shopper"
+  state={sidebar.state}
+  onToggleRail={sidebar.toggleRail}
+  blocks={[
+    { id: 'places', items: [{ id: 'home', label: 'Home', icon: 'house', href: '/', active }] },
+    {
+      id: 'mine',
+      heading: 'My lists',
+      items: lists.map((l) => ({
+        id: l.id,
+        label: l.name,
+        icon: l.icon,
+        iconColor: l.colour,
+        count: l.open,
+        href: `/l/${l.id}`,
+      })),
+      action: { label: 'New list', onClick: newList },
+    },
+  ]}
+  renderLink={(item, props) => <Link {...props} />}
+/>;
+```
+
+Blocks have an optional heading and an optional trailing _+ New …_ row; a row has an optional icon
+(on a rail a row with none shows its first letter), drawn in `iconColor` when given (the icon only,
+never a background or the text), a `count` and a `description` under its label. On a rail each row is
+named by its label, which the pointer shows as the browser's own tooltip. Every word is the app's.
+
 ### `MobileHeader` and `MobileFooter` components
 
 The shell's mobile header and footer are built from two

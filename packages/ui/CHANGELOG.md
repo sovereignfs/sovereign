@@ -19,6 +19,9 @@ history and tags.
 - `MobileFooter`'s `launcherLabel`: the centered button's name, "Apps" by default, for an app whose middle button opens its own
   drawer.
 - `Header`'s `brand`: an app's own wordmark in place of the badge, which stays core's default.
+- `AppSidebar` and `useAppSidebar`: the sidebar every app has, full, a rail of icons or hidden, kept on the device per app and per
+  kind of page; blocks of rows with an optional heading, an icon in a colour, a count and a trailing _+ New …_ row. The rules are
+  exported (`sidebarStateFor`, `toggleSidebarHidden`, `toggleSidebarRail`, `parseSidebarStored`).
 
 ## [0.106.0] - 2026-11-22
 

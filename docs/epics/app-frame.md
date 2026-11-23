@@ -126,7 +126,7 @@ footer's existing tests pass unchanged; one more names the button "Lists" and ch
 was added: an app's wordmark, built by the app with its own link home, drawn in place of the badge. Core's `AccountHeader` and
 launcher page tests pass unchanged. The header was not in the guide; it is now.
 
-#### 📋 21.5 — `AppSidebar`
+#### ✅ 21.5 — `AppSidebar`
 
 **Goal:** The sidebar every app copies, once.
 
@@ -147,6 +147,13 @@ launcher page tests pass unchanged. The header was not in the guide; it is now.
 
 - The rules are tested with no browser; a stored value that is not what was written is ignored
 - An item's colour is the icon's only, never a background or the text's
+
+**Notes:** the rules are Shopper's `src/ui/sidebar.ts` with its two kinds of page (`home`, `page`) left to the app, kept under
+`sv.sidebar.<app>` and read without a kind from the prototype; its tests are ported. `useAppSidebar` reads in an effect where
+Shopper's used `useSyncExternalStore`, so the first paint is always the default. The rows are the sidebar's own, not `NavList`'s:
+`NavList` needs a link and a design-system icon on every row and has no colour or second line. On a rail the label is the row's
+accessible name and its `title`: the design system's `Tooltip` is drawn inside the sidebar, whose scrolling cut it off. Seen in
+Storybook, full and as a rail.
 
 #### 📋 21.6 — `AppFrame`
 

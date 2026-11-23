@@ -66,6 +66,7 @@ import { InstallHint } from '../components/InstallPrompt/InstallPrompt';
 import { UpdateNotice } from '../components/UpdateNotice/UpdateNotice';
 import { PushControl } from '../components/PushControl/PushControl';
 import { SettingsDialog } from '../components/SettingsDialog/SettingsDialog';
+import { AppSidebar } from '../components/AppSidebar/AppSidebar';
 import { Tabs } from '../components/Tabs/Tabs';
 import { ToastProvider, useToast } from '../components/Toast/Toast';
 import { Toggle } from '../components/Toggle/Toggle';
@@ -2362,6 +2363,37 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                   state="install-first"
                   onTurnOn={() => undefined}
                   onTurnOff={() => undefined}
+                />
+              </div>
+            </ComponentCard>
+
+            {/* AppSidebar */}
+            <ComponentCard
+              name="AppSidebar"
+              importLine="import { AppSidebar, useAppSidebar } from '@sovereignfs/ui';"
+              usage="The sidebar every app has: full, a rail of icons or hidden, kept on the device per app and per kind of page. Blocks of rows with an optional heading, an icon in a colour, a count and a trailing + New row."
+            >
+              <div style={{ display: 'flex', height: 280 }}>
+                <AppSidebar
+                  aria-label="Example app"
+                  state="full"
+                  blocks={[
+                    {
+                      id: 'places',
+                      items: [
+                        { id: 'home', label: 'Home', icon: 'house', href: '#', active: true },
+                      ],
+                    },
+                    {
+                      id: 'lists',
+                      heading: 'My lists',
+                      items: [
+                        { id: 'a', label: 'Groceries', icon: 'shopping-cart', count: 4, href: '#' },
+                        { id: 'b', label: 'Hardware', icon: 'hammer', href: '#' },
+                      ],
+                      action: { label: 'New list', onClick: () => undefined },
+                    },
+                  ]}
                 />
               </div>
             </ComponentCard>

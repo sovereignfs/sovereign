@@ -6,6 +6,7 @@ export type {
   ActivityApi,
   AppClient,
   DirectoryApi,
+  AppsApi,
   KeysApi,
   InstanceApi,
   Links,

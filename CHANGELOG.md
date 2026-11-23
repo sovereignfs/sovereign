@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.141.0] - 2026-11-23
+
+### Added
+
+- An app can show the apps a person may open in its own header: the Core API's `GET /api/v1/apps` (`listMyApps`) answers the launcher's
+  tiles for the person a token is for, with any of their tokens and no new scope; the instance document lists `apps`.
+
 ## [0.140.0] - 2026-11-23
 
 ### Added

@@ -101,6 +101,15 @@ export type FakeActivity = {
 /** One request the fake received, with nothing secret in it. `status` is 0 when it was never answered. */
 export type Received = { method: string; path: string; status: number };
 
+/** One of the apps the launcher lists, as the Core API's `listMyApps` answers it. */
+export type FakeApp = {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  launchUrl: string;
+};
+
 /** A person's keys for the app, as the Core API's `getMyKeys` answers. */
 export type FakeKeys = {
   receivingKey: string;
@@ -133,6 +142,8 @@ export type FakeCore = {
    * then the key calls answer `404` for them, as core does.
    */
   setKeys(sub: string, keys: FakeKeys): void;
+  /** Sets the apps the launcher lists, which the Core API's `listMyApps` answers to every person (none until set). */
+  setApps(apps: readonly FakeApp[]): void;
   /** Signs a person in, and returns the refresh token an app would have stored for them. */
   signIn(sub: string): string;
   /** Makes the next requests fail. `times` limits how many (default: until `heal`). */
@@ -241,12 +252,13 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
       ? options.api
       : {
           versions: ['v1'],
-          capabilities: ['directory', 'notifications', 'email', 'activity', 'keys'],
+          capabilities: ['directory', 'notifications', 'email', 'activity', 'keys', 'apps'],
         };
   const appTokens = options.appTokens ?? true;
 
   const people = new Map<string, Person>();
   const keysOf = new Map<string, FakeKeys>();
+  let launcherApps: readonly FakeApp[] = [];
   /** Codes core has given for a sign-in, and the core sessions those made. */
   const codes = new Map<
     string,
@@ -773,6 +785,16 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
       const answer = await notificationsApi(request, path);
       return failure?.kind === 'lost-answer' ? hang(signal) : answer;
     }
+    if (path.pathname === '/api/v1/apps') {
+      const who = bearer(request);
+      if (who instanceof Response) return who;
+      if (who.kind !== 'person') {
+        return problem(401, 'invalid_token', 'The access token is not valid.');
+      }
+      if (request.method !== 'GET') return problem(404, 'not_found', 'There is no such route.');
+      const answer = json({ apps: launcherApps.map((app) => ({ ...app })) });
+      return failure?.kind === 'lost-answer' ? hang(signal) : answer;
+    }
     if (path.pathname.startsWith('/api/v1/keys/')) {
       const answer = keysApi(request, path);
       return failure?.kind === 'lost-answer' ? hang(signal) : answer;
@@ -840,6 +862,9 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
         active: person.active ?? true,
         ...(person.email ? { email: person.email } : {}),
       });
+    },
+    setApps(apps) {
+      launcherApps = apps.map((app) => ({ ...app }));
     },
     setKeys(sub, keys) {
       if (!people.has(sub)) people.set(sub, { sub, name: sub, picture: null, active: true });

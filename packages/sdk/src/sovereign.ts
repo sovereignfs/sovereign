@@ -55,11 +55,20 @@ export interface KeysApi {
   person(sub: string): Promise<Answer<'getPersonKeys'>>;
 }
 
+/**
+ * The apps the person may open on the instance (sdk §8, core-app §3.8), for the app's own launcher: the launcher's list, with only a
+ * tile's fields. Any of the person's tokens will do; no scope of its own is asked for.
+ */
+export interface AppsApi {
+  list(): Promise<Answer<'listMyApps'>>;
+}
+
 /** What an app can do as a person. */
 export interface PersonClient {
   readonly directory: DirectoryApi;
   readonly notifications: NotificationsApi;
   readonly keys: KeysApi;
+  readonly apps: AppsApi;
 }
 
 /** What an app can do as itself, with no person (sdk §4): tell a person something. */
@@ -156,6 +165,7 @@ const CAPABILITY: Partial<Record<Name, string>> = {
   findDirectoryUserByEmail: 'directory',
   getMyKeys: 'keys',
   getPersonKeys: 'keys',
+  listMyApps: 'apps',
   sendNotification: 'notifications',
   sendEmail: 'email',
   logActivity: 'activity',
@@ -266,6 +276,10 @@ export function createSovereign(options: SovereignOptions): Sovereign {
     person: (sub) => execute(actor, 'getPersonKeys', { params: { sub } }),
   });
 
+  const apps = (actor: ActorKey): AppsApi => ({
+    list: () => execute(actor, 'listMyApps', undefined),
+  });
+
   const notifications = (actor: ActorKey): NotificationsApi => ({
     list: (query) => execute(actor, 'listNotifications', query === undefined ? {} : { query }),
     markRead: (id) => execute(actor, 'markNotificationRead', { params: { id } }),
@@ -289,6 +303,7 @@ export function createSovereign(options: SovereignOptions): Sovereign {
         directory: directory(actor),
         notifications: notifications(actor),
         keys: keys(actor),
+        apps: apps(actor),
       };
     },
     app: {

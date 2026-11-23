@@ -33,6 +33,36 @@ export interface AppsLauncherProps {
   align?: 'left' | 'right';
 }
 
+/** One of the apps a person can open, as the Core API's `listMyApps` answers it (the SDK's `apps.list()`). */
+export interface LauncherAppTile {
+  id: string;
+  name: string;
+  icon: string | null;
+  launchUrl: string;
+}
+
+/**
+ * The launcher's items for the apps a person can open: each app's icon, or its name's first letter when it has none, opening its
+ * launch address. The app the launcher is in, when named, is left out, since a person is already in it.
+ */
+export function appsLauncherItems(
+  apps: readonly LauncherAppTile[],
+  options: { current?: string } = {},
+): AppsLauncherItem[] {
+  return apps
+    .filter((app) => app.id !== options.current)
+    .map((app) => ({
+      key: app.id,
+      label: app.name,
+      href: app.launchUrl,
+      icon: app.icon ? (
+        <img src={app.icon} alt="" width={32} height={32} />
+      ) : (
+        (app.name.trim().charAt(0) || '·').toLocaleUpperCase()
+      ),
+    }));
+}
+
 function AppsLauncherTile({ icon, label, href, onClick }: Omit<AppsLauncherItem, 'key'>) {
   const content = (
     <>

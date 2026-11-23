@@ -1,6 +1,6 @@
 # Workstream 0012 — The app frame
 
-**Status:** ⏳ In Progress\
+**Status:** ⏳ In Progress (built; waiting for its releases)\
 **Date:** November 2026\
 **Author:** Claude Code\
 **Goal owner:** kasunben\
@@ -71,7 +71,7 @@ before 21.5 and 21.6. One `ui` minor and one root minor for the leg.
 **Why here:** it is the one task that changes core and the Core API.
 
 **Technical notes:** contract first (`openapi.yaml`, `pnpm generate:api-client`, `expectMatchesContract`); `listLauncherApps` is the
-launcher's one read. Which token calls it (a person's, with which scope) is the owner's decision before it starts.
+launcher's one read. The owner chose a person's token and no new scope (2026-11-23).
 
 **Do not proceed if:** the token and scope are not decided.
 

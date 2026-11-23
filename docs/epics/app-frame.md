@@ -4,7 +4,7 @@
 
 ## Status
 
-⏳ In Progress
+✅ Complete
 
 ## Overview
 
@@ -208,7 +208,7 @@ number of Code 128 digits (set C, then set B for the last) among them; UPC-A rea
 definition. Six of those patterns are the tests' vectors. Code 128 uses set C for a value of digits alone and set B otherwise, with
 no switching inside a value. Black and white are `--sv-black` and `--sv-white`, as `QrCode`'s are. Seen in Storybook.
 
-#### 📋 21.8 — The apps a person can open
+#### ✅ 21.8 — The apps a person can open
 
 **Goal:** An app's header can show the suite's launcher.
 
@@ -227,6 +227,14 @@ no switching inside a value. Black and white are `--sv-black` and `--sv-white`, 
 **Review checklist:**
 
 - The guard runs first; the answer holds tile fields only; a person who may not use the launcher gets nothing
+
+**Notes:** the owner chose (2026-11-23) a person's token and no new scope: the call asks for `openid`, which every person's token
+carries, through `appsGuard` (counted per app and per person, as the key calls are). It answers `listLauncherApps`'s tiles, `null` for
+what an app has not set, and nothing for a role without `launcher:access` in the matrix in force, read from the account. The instance
+document lists `apps`. **Icons are the addresses the launcher entries name**, usually on each app's own host: serving them from core's
+own address, as Shopper's RFC 0005 hoped, would mean core fetching other hosts' pictures, a design of its own that is not done here.
+`appsLauncherItems` in `@sovereignfs/ui` maps the answer to `AppsLauncher`. Folded into the unreleased SDK 2.12.0, ui 0.107.0 and core
+0.86.0; platform 0.141.0.
 
 #### ✅ 21.9 — `prompt=create`: an app asks core to open on its sign-up
 

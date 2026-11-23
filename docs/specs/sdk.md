@@ -206,6 +206,11 @@ not list `activity` raises `NotSupportedError` without sending.
 | ------------- | ------ | ------ | --------------- |
 | `keys.me`     | person | `keys` | `getMyKeys`     |
 | `keys.person` | person | `keys` | `getPersonKeys` |
+| `apps.list`   | person | (none) | `listMyApps`    |
+
+`apps.list` ([core-app §3.8](core-app.md)) gives the apps core's launcher lists for the person, with a tile's fields, for an app's own
+launcher; any of the person's tokens will do. `appsLauncherItems` in `@sovereignfs/ui` turns them into `AppsLauncher`'s items. A core that
+does not list `apps` raises `NotSupportedError` without sending.
 
 The key calls ([core-app §5.7](core-app.md)) give public keys and the person's own wrapped keys for the token's app, and nothing a server
 could read a document with. A person who has not opened the app is a `CoreApiError` with status `404`; the app says so, and may hold a

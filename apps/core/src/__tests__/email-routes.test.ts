@@ -181,6 +181,7 @@ describe('the instance document', () => {
       'notifications',
       'activity',
       'keys',
+      'apps',
       'email',
     ]);
     expectMatchesContract('getInstanceBranding', 200, body);

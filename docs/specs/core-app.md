@@ -1044,6 +1044,16 @@ message`), 2 when the command line is wrong or core is not configured, and 3 whe
 - In Phase 1 every signed-in person sees every listed app. **The launcher is
   not access control:** an app that should be restricted decides that itself,
   for example from the `roles` claim.
+- **An app can show the same list in its own header** (`listMyApps`,
+  `GET /api/v1/apps` in the Core API): the launcher's tiles (id, name,
+  description, icon, launch address) for the person a token is for, read
+  through `listLauncherApps`. Any of the person's access tokens will do: it
+  asks for `openid`, which every one carries, and no scope of its own, since the
+  list is what every signed-in person sees. It is empty for a person whose role
+  lacks `launcher:access` in the matrix in force, read from the account. An
+  icon is the address the launcher entry names, usually on the app's own host;
+  core does not serve it from its own address. The instance document lists the
+  `apps` capability.
 - The page has the instance's name and logo, a way to each of the person's
   own account pages, and one tile for each
   app: a link, so it works with the keyboard and opens in a new tab on request.

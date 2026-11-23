@@ -97,6 +97,18 @@ describe('every method of the capabilities (sdk §8) is checked against the cont
     await expect(keys.person('u2')).rejects.toMatchObject({ status: 404, code: 'not_found' });
   });
 
+  it('apps.list is listMyApps: the launcher’s tiles, as core answers them', async () => {
+    const tile = {
+      id: 'notes',
+      name: 'Notes',
+      description: null,
+      icon: 'https://notes.sovereign.local/icon.png',
+      launchUrl: 'https://notes.sovereign.local/',
+    };
+    core.setApps([tile]);
+    expect(await sv.as({ sub: 'u1' }).apps.list()).toEqual({ apps: [tile] });
+  });
+
   it('instance.getBranding is getInstanceBranding', async () => {
     expect((await sv.instance.getBranding()).url).toBe(core.url);
   });
@@ -108,6 +120,7 @@ describe('every method of the capabilities (sdk §8) is checked against the cont
       'findDirectoryUserByEmail',
       'getMyKeys',
       'getPersonKeys',
+      'listMyApps',
       'getInstanceBranding',
       'sendNotification',
       'listNotifications',

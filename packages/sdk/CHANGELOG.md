@@ -9,6 +9,8 @@ history and tags.
 
 ### Added
 
+- `sv.as(person).apps.list()` (`listMyApps`): the apps core's launcher lists for the person, for an app's own launcher. Any of the
+  person's tokens will do. The fake core answers it from `setApps`.
 - `beginSignIn({ prompt: 'create' })` asks core to open its sign-up rather than its sign-in (OpenID Connect Prompt Create 1.0), for an
   app's _Create an account_; `@sovereignfs/sdk/next`'s `/auth/login` passes it on.
 

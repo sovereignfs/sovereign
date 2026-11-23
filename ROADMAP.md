@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.140.0 · **Last updated:** 2026-11-23
+**Version:** 0.141.0 · **Last updated:** 2026-11-23
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -420,6 +420,6 @@ Asked for by Shopper (its epic 16, 16.17 to 16.26), its first consumer.
 | 0.138.0 | 5        | `AppSidebar`                                         | ✅     | [21.5](docs/epics/app-frame.md)  |
 | 0.138.0 | 6        | `AppFrame`                                           | ✅     | [21.6](docs/epics/app-frame.md)  |
 | 0.138.0 | 7        | `Barcode` `[parallel]`                               | ✅     | [21.7](docs/epics/app-frame.md)  |
-| —       | 8        | The apps a person can open                           | 📋     | [21.8](docs/epics/app-frame.md)  |
+| 0.141.0 | 8        | The apps a person can open                           | ✅     | [21.8](docs/epics/app-frame.md)  |
 | 0.140.0 | 9        | `prompt=create`: an app asks core to open on sign-up | ✅     | [21.9](docs/epics/app-frame.md)  |
 | 0.139.0 | 10       | Writing an export in the browser `[parallel]`        | ✅     | [21.10](docs/epics/app-frame.md) |

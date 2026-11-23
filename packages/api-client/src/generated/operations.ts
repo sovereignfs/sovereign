@@ -4,6 +4,7 @@ import type {
   DirectoryUser,
   DirectoryUserStatus,
   InstanceBranding,
+  LauncherApp,
   MyKeys,
   Notification,
   NotificationCategory,
@@ -54,6 +55,15 @@ export interface Operations {
   getPersonKeys: {
     request: { params: { sub: string } };
     response: PersonKeys;
+  };
+  /**
+   * The apps the caller may open
+   */
+  listMyApps: {
+    request: undefined;
+    response: {
+      apps: LauncherApp[];
+    };
   };
   /**
    * The notifications this app sent a person
@@ -221,6 +231,12 @@ export const operations = {
     method: 'GET',
     path: '/api/v1/keys/people/{sub}',
     scopes: ['keys'],
+    safeToRepeat: true,
+  },
+  listMyApps: {
+    method: 'GET',
+    path: '/api/v1/apps',
+    scopes: ['openid'],
     safeToRepeat: true,
   },
   listNotifications: {

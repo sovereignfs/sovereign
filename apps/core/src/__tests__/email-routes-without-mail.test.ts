@@ -44,7 +44,13 @@ describe('an instance with no mail server', () => {
   it('does not list email, so an app can tell no mail from a failure', async () => {
     const reply = await instance.GET(new Request(`${ORIGIN}/.well-known/sovereign-instance`));
     const body = (await reply.json()) as { api: { capabilities: string[] } };
-    expect(body.api.capabilities).toEqual(['directory', 'notifications', 'activity', 'keys']);
+    expect(body.api.capabilities).toEqual([
+      'directory',
+      'notifications',
+      'activity',
+      'keys',
+      'apps',
+    ]);
     expectMatchesContract('getInstanceBranding', 200, body);
   });
 

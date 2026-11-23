@@ -107,8 +107,12 @@ export type {
 } from './components/Menu/Menu';
 export { UserMenu } from './components/UserMenu/UserMenu';
 export type { UserMenuProps, UserMenuItem } from './components/UserMenu/UserMenu';
-export { AppsLauncher } from './components/AppsLauncher/AppsLauncher';
-export type { AppsLauncherProps, AppsLauncherItem } from './components/AppsLauncher/AppsLauncher';
+export { AppsLauncher, appsLauncherItems } from './components/AppsLauncher/AppsLauncher';
+export type {
+  AppsLauncherProps,
+  AppsLauncherItem,
+  LauncherAppTile,
+} from './components/AppsLauncher/AppsLauncher';
 export { NotificationsPanel } from './components/NotificationsPanel/NotificationsPanel';
 export type {
   NotificationsPanelProps,

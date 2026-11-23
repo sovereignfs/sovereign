@@ -41,6 +41,8 @@ tags:
     description: A person's own record of what apps did for them. Planned.
   - name: Keys
     description: The public keys a person's browser needs to share something with another person in an app (core-app §5.7).
+  - name: Apps
+    description: The apps a person can open on the instance, for an app's own launcher.
   - name: Instance
     description: What the instance looks like.
 paths:
@@ -585,6 +587,39 @@ paths:
           $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/TooManyRequests'
+  /api/v1/apps:
+    get:
+      operationId: listMyApps
+      tags: [Apps]
+      summary: The apps the caller may open
+      description: |
+        The apps core's own launcher lists for the signed-in person (core-app §3.8): enabled, shown in the launcher and with an
+        address to open, in name order, with only what a tile needs. Any of the person's access tokens will do (`openid`, which
+        every one carries); no scope of its own is asked for, since the launcher shows every signed-in person every listed app and
+        is not access control. Empty for a person whose role may not use the launcher. An icon is the address the app's launcher
+        entry names, usually on the app's own host.
+      security:
+        - bearer: [openid]
+      responses:
+        '200':
+          description: The apps the caller may open.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [apps]
+                properties:
+                  apps:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LauncherApp'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
   /.well-known/sovereign-instance:
     get:
       operationId: getInstanceBranding
@@ -745,6 +780,26 @@ components:
         message:
           type: string
           description: What happened, for a person to read.
+    LauncherApp:
+      type: object
+      additionalProperties: false
+      required: [id, name, description, icon, launchUrl]
+      properties:
+        id:
+          type: string
+          description: The app's client id.
+        name:
+          type: string
+        description:
+          type: [string, 'null']
+        icon:
+          type: [string, 'null']
+          format: uri
+          description: The address of the app's launcher icon, or null when it has none (draw a default from the name).
+        launchUrl:
+          type: string
+          format: uri
+          description: Where opening the app sends the person.
     DirectoryUser:
       type: object
       additionalProperties: false
@@ -827,7 +882,7 @@ components:
               type: array
               items:
                 type: string
-                enum: [directory, notifications, email, activity, keys]
+                enum: [directory, notifications, email, activity, keys, apps]
               description: |
                 The groups of calls served, such as `directory`. A capability is listed when every call of it is
                 served.

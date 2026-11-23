@@ -183,7 +183,7 @@ it. On a phone the right column covers the content, which stays mounted. `AppSid
 The header's sidebar button and the phone's menu button are the frame's, named by `labels`. Seen in Storybook on a wide screen with
 a right column and at phone width with the drawer open.
 
-#### 📋 21.7 — `Barcode`
+#### ✅ 21.7 — `Barcode`
 
 **Goal:** A linear barcode drawn as `QrCode` draws a QR code.
 
@@ -201,6 +201,12 @@ a right column and at phone width with the drawer open.
 **Review checklist:**
 
 - Each kind's check digit and bars match known examples
+
+**Notes:** the encoders are pure (`encodeBarcode`, exported, with `gs1CheckDigit`). Every kind was checked outside the repository,
+since no encoder is a dependency here: seventeen values bar for bar against bwip-js (BWIPP), and eight read back by ZXing, an odd
+number of Code 128 digits (set C, then set B for the last) among them; UPC-A reads back as the EAN-13 with a leading 0 it is by
+definition. Six of those patterns are the tests' vectors. Code 128 uses set C for a value of digits alone and set B otherwise, with
+no switching inside a value. Black and white are `--sv-black` and `--sv-white`, as `QrCode`'s are. Seen in Storybook.
 
 #### 📋 21.8 — The apps a person can open
 

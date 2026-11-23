@@ -67,6 +67,7 @@ import { UpdateNotice } from '../components/UpdateNotice/UpdateNotice';
 import { PushControl } from '../components/PushControl/PushControl';
 import { SettingsDialog } from '../components/SettingsDialog/SettingsDialog';
 import { AppSidebar } from '../components/AppSidebar/AppSidebar';
+import { Barcode } from '../components/Barcode/Barcode';
 import { Tabs } from '../components/Tabs/Tabs';
 import { ToastProvider, useToast } from '../components/Toast/Toast';
 import { Toggle } from '../components/Toggle/Toggle';
@@ -2364,6 +2365,17 @@ font-weight: var(--sv-font-weight-bold);      /* 700 */`}</Code>
                   onTurnOn={() => undefined}
                   onTurnOff={() => undefined}
                 />
+              </div>
+            </ComponentCard>
+
+            {/* Barcode */}
+            <ComponentCard
+              name="Barcode"
+              importLine="import { Barcode } from '@sovereignfs/ui';"
+              usage="A linear barcode (EAN-13, EAN-8, UPC-A, Code 128, Code 39) as an SVG, black on white in every theme, scaled to its width. No dependency, no request."
+            >
+              <div style={{ width: 260 }}>
+                <Barcode format="ean13" value="4006381333931" label="Example barcode" />
               </div>
             </ComponentCard>
 

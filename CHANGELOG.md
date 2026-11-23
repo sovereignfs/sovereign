@@ -10,7 +10,8 @@ history and tags.
 ### Added
 
 - The app frame in `@sovereignfs/ui` (epic 21): a settings dialog with a side navigation, the same in core and every app; a
-  header with an app's own wordmark, a sidebar and the frame they make; and icons for lists, categories and cards beyond groceries.
+  header with an app's own wordmark, a sidebar and the frame they make; icons for lists,
+  categories and cards beyond groceries; and a linear barcode for loyalty cards.
 
 ## [0.137.0] - 2026-11-22
 

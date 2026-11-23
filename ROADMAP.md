@@ -419,7 +419,7 @@ Asked for by Shopper (its epic 16, 16.17 to 16.26), its first consumer.
 | 0.138.0 | 4        | `Header` with the app's own brand                    | ✅     | [21.4](docs/epics/app-frame.md)  |
 | 0.138.0 | 5        | `AppSidebar`                                         | ✅     | [21.5](docs/epics/app-frame.md)  |
 | 0.138.0 | 6        | `AppFrame`                                           | ✅     | [21.6](docs/epics/app-frame.md)  |
-| —       | 7        | `Barcode` `[parallel]`                               | 📋     | [21.7](docs/epics/app-frame.md)  |
+| 0.138.0 | 7        | `Barcode` `[parallel]`                               | ✅     | [21.7](docs/epics/app-frame.md)  |
 | —       | 8        | The apps a person can open                           | 📋     | [21.8](docs/epics/app-frame.md)  |
 | —       | 9        | `prompt=create`: an app asks core to open on sign-up | 📋     | [21.9](docs/epics/app-frame.md)  |
 | —       | 10       | Writing an export in the browser `[parallel]`        | 📋     | [21.10](docs/epics/app-frame.md) |

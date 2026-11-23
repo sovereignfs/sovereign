@@ -25,6 +25,8 @@ history and tags.
 - `AppFrame`: the frame of an app's signed-in page, wired once. `Header`, `AppSidebar`, the content and a right column on a wide
   screen; `MobileHeader`, `MobileFooter` and a `Drawer` with the same blocks on a phone; the shell root, publishing the header's and
   the footer's heights for overlays. `AppSidebar`'s `placement="drawer"` fills a phone's drawer.
+- `Barcode` and `encodeBarcode`: EAN-13, EAN-8, UPC-A, Code 128 and Code 39 as an SVG, black on white in every theme, with no
+  dependency; check digits added or checked.
 
 ## [0.106.0] - 2026-11-22
 

@@ -1,0 +1,31 @@
+/* A barcode is black on white in every theme: a scanner reads contrast, not a theme (as QrCode). The white is the quiet zone too. */
+.barcode {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: var(--sv-space-2) 0;
+  background: var(--sv-white);
+  border-radius: var(--sv-radius-sm);
+}
+
+.barcode svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  fill: var(--sv-black);
+}
+
+.text {
+  margin-top: var(--sv-space-1);
+  color: var(--sv-black);
+  font-family: var(--sv-font-family-mono);
+  font-size: var(--sv-font-size-sm);
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.invalid {
+  margin: 0;
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-sm);
+}

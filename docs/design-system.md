@@ -1451,6 +1451,19 @@ Blocks have an optional heading and an optional trailing _+ New …_ row; a row 
 never a background or the text), a `count` and a `description` under its label. On a rail each row is
 named by its label, which the pointer shows as the browser's own tooltip. Every word is the app's.
 
+### `Barcode`
+
+A linear barcode drawn as `QrCode` draws a QR code: an inline SVG, black on white in every theme, with
+its quiet zone, scaled to its width, the value written under it unless `showText` is off. EAN-13,
+EAN-8 and UPC-A take a value with or without its check digit and refuse a wrong one; Code 128 writes
+printable ASCII (digits two to a symbol); Code 39 its own 43 characters. A value its kind cannot hold
+draws no bars and says so (`invalidText`). `encodeBarcode(format, value)` answers whether a value can
+be drawn before it is kept, and gives the bars.
+
+```tsx
+<Barcode format="ean13" value={card.number} label={`${card.name}'s barcode`} />
+```
+
 ### `AppFrame`
 
 The frame of an app's signed-in page, wired once. On a wide screen: `Header` (the sidebar's button and
@@ -2072,6 +2085,10 @@ Stories live under two roots inside `packages/ui/src/`:
 | `CopyButton.stories.tsx`           | Default; custom labels; ghost. Copies on press; says so when the browser refuses                                                                                                                                                    |
 | `DesignSystemOverview.stories.tsx` | Full component gallery with live demos and import lines; colour palette; type scale; shadow scale; design rules                                                                                                                     |
 | `QrCode.stories.tsx`               | A module matrix drawn black on white in both themes; labelled for a screen reader                                                                                                                                                   |
+| `SettingsDialog.stories.tsx`       | Sections in groups; with search; capped (`fixed`); at phone width, the sections then one with a back arrow                                                                                                                          |
+| `AppSidebar.stories.tsx`           | Full; a rail; remembered on the device, hidden and shown again                                                                                                                                                                      |
+| `AppFrame.stories.tsx`             | A wide screen; with a right column; at phone width, the drawer from the footer                                                                                                                                                      |
+| `Barcode.stories.tsx`              | Each of EAN-13, EAN-8, UPC-A, Code 128 and Code 39; a value that cannot be drawn                                                                                                                                                    |
 | `TokenGallery.stories.tsx`         | Live gallery of every `--sv-*` token tier — colours, space, typography, radius, icon sizes, shadows — read from computed styles                                                                                                     |
 | `MobilePatterns.stories.tsx`       | Mobile layout reference: breakpoints (640/768 px), constrained column, auto-adapting components, shell chrome anatomy (header/footer/drawer/search overlay), touch targets, safe-area insets, typography scale, readiness checklist |
 

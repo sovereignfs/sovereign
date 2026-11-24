@@ -50,12 +50,12 @@ catalog:
   jiti: ^2.7.0
   eslint: ^10.15.0
   '@eslint/js': ^10.0.1
-  typescript-eslint: ^8.72.2
+  typescript-eslint: ^8.73.0
   eslint-config-prettier: ^10.1.8
   eslint-plugin-jsx-a11y: ^6.10.2
   globals: ^17.14.0
   prettier: ^3.10.1
-  lint-staged: ^17.6.0
+  lint-staged: ^17.6.1
   simple-git-hooks: ^2.14.0
   pg: ^8.23.1
   '@types/pg': ^8.23.1
@@ -70,10 +70,10 @@ catalog:
   '@dnd-kit/core': ^6.3.1
   '@dnd-kit/sortable': ^10.0.0
   maplibre-gl: ^6.18.0
-  nodemailer: ^10.5.0
+  nodemailer: ^10.6.0
   '@types/nodemailer': ^8.0.2
   '@react-email/render': ^2.3.1
-  react-email: ^6.11.13
+  react-email: ^6.11.14
   libsodium-wrappers-sumo: ^0.8.4
   '@noble/hashes': ^2.4.0
   '@hpke/core': ^1.10.0

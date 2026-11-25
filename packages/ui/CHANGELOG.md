@@ -5,6 +5,16 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.96.0; earlier versions are in the repository's
 history and tags.
 
+## [0.107.2] - 2026-11-25
+
+### Fixed
+
+- `IconPicker`'s panel is no longer cut off when the picker is at the left of a page. It opened leftwards from its trigger always, which
+  a scrolling page beside a sidebar clips; it now opens on the side with room, rightwards from a trigger at the left. `Popover`'s `align`
+  takes `auto` for this (`right`, its default side, where the panel fits, else `left`, counting as room only what is visible: the
+  viewport less what a scrolling ancestor would clip), and `IconPicker` has an `align` that defaults to `auto`. An explicit `left` or
+  `right` is unchanged, and so is every `Popover` that has one.
+
 ## [0.107.1] - 2026-11-25
 
 ### Changed

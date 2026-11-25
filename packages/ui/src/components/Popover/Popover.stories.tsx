@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Floating panel anchored to a trigger, below it by default. Non-modal: closes on outside click or Escape. `align` controls which trigger edge the panel aligns to; `width` accepts a fixed px number or `"trigger"` to match the trigger\'s own rendered width. Automatically flips to open upward instead of downward if the panel wouldn\'t fit below the trigger within the viewport.',
+          'Floating panel anchored to a trigger, below it by default. Non-modal: closes on outside click or Escape. `align` controls which trigger edge the panel aligns to (`auto` takes the side with room, counting what a scrolling ancestor would clip); `width` accepts a fixed px number or `"trigger"` to match the trigger\'s own rendered width. Automatically flips to open upward instead of downward if the panel wouldn\'t fit below the trigger within the viewport.',
       },
     },
   },

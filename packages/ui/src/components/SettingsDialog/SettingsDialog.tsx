@@ -93,7 +93,16 @@ export function SettingsDialog({
     .filter((group) => group.sections.length > 0);
 
   return (
-    <Dialog open={open} onClose={onClose} size={size} header={title} aria-label={title} flush>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      size={size}
+      header={title}
+      aria-label={title}
+      rowClassName={styles.headerRow}
+      titleClassName={styles.headerTitle}
+      flush
+    >
       <div className={styles.frame} data-view={active === null ? 'sections' : 'section'}>
         <div className={styles.sidebar}>
           {search && (

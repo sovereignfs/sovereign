@@ -106,7 +106,7 @@ export function AppFrame({
       aria-expanded={!hidden}
       onClick={sidebar.toggleHidden}
     >
-      <Icon name="menu" aria-hidden />
+      <Icon name="menu" size="lg" aria-hidden />
     </button>
   );
   const menuButton = (
@@ -118,7 +118,7 @@ export function AppFrame({
       aria-expanded={navOpen}
       onClick={() => setNavOpen(true)}
     >
-      <Icon name="menu" aria-hidden />
+      <Icon name="menu" size="lg" aria-hidden />
     </button>
   );
 

@@ -172,4 +172,21 @@ describe('SettingsDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('draws its title row compact, through the dialog’s own row and title classes', () => {
+    // The height is CSS, which jsdom does not lay out: what is held here is that the classes that make it reach the row and the title, and
+    // so only this dialog's header, not the shared one every other dialog, drawer and sheet has.
+    render(
+      <SettingsDialog
+        open
+        onClose={() => {}}
+        groups={groups}
+        active="profile"
+        onSelect={() => {}}
+      />,
+    );
+    const close = screen.getByRole('button', { name: 'Close' });
+    expect(close.parentElement?.className).toContain('headerRow');
+    expect(close.parentElement?.querySelector('span')?.className).toContain('headerTitle');
+  });
 });

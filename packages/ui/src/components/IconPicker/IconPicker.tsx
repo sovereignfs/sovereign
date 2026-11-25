@@ -15,6 +15,12 @@ export interface IconPickerProps {
   triggerLabel?: string;
   disabled?: boolean;
   className?: string;
+  /**
+   * Which edge of the trigger the panel aligns to (`Popover`'s `align`). Default `'auto'`: opens leftwards from the
+   * trigger where there is room for it, and rightwards where there is not, so a picker at the left of a page, or of a
+   * row, is never cut off.
+   */
+  align?: 'left' | 'right' | 'auto';
 }
 
 /**
@@ -22,6 +28,9 @@ export interface IconPickerProps {
  * `Popover` grid of selectable icons. Built for cases with a curated,
  * bounded icon set (e.g. Sovereign Shopper's grocery category icons,
  * SHP-05) rather than the full design-system icon library.
+ *
+ * The panel opens on the side of the trigger that has room (`align`), so the picker can sit
+ * at either end of a row.
  *
  * Selecting an icon both closes the picker and calls `onChange` — a
  * consumer's `onChange` never needs to close the picker itself.
@@ -34,6 +43,7 @@ export function IconPicker({
   triggerLabel,
   disabled = false,
   className,
+  align = 'auto',
 }: IconPickerProps) {
   const [open, setOpen] = useState(false);
 
@@ -63,6 +73,7 @@ export function IconPicker({
       trigger={trigger}
       open={open}
       onClose={() => setOpen(false)}
+      align={align}
       width={240}
       aria-label={`${ariaLabel} options`}
     >

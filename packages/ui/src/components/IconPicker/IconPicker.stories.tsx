@@ -103,6 +103,36 @@ export const ListIcons: Story = {
   render: () => <ControlledIconPicker initial="shopping-cart" options={LIST_ICONS} />,
 };
 
+/**
+ * A picker at the left of a page that scrolls beside a sidebar (Shopper's categories, with the icon before the name): there is
+ * room to its left in the viewport but none in the scroller, which would cut a panel opened that way off. The panel opens
+ * rightwards from the trigger, where it fits (`align`, `auto` by default).
+ */
+export const BesideASidebar: Story = {
+  parameters: { layout: 'fullscreen' },
+  render: () => (
+    <div
+      style={{
+        display: 'flex',
+        height: 320,
+        fontFamily: 'var(--sv-font-family)',
+        fontSize: 'var(--sv-font-size-sm)',
+        color: 'var(--sv-color-text-muted)',
+      }}
+    >
+      <nav
+        aria-label="Sidebar"
+        style={{ width: 240, padding: 16, borderRight: '1px solid var(--sv-color-border)' }}
+      >
+        Sidebar
+      </nav>
+      <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: 16 }}>
+        <ControlledIconPicker initial="apple" />
+      </div>
+    </div>
+  ),
+};
+
 export const Disabled: Story = {
   render: () => (
     <IconPicker

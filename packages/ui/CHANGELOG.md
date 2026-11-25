@@ -5,6 +5,25 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.96.0; earlier versions are in the repository's
 history and tags.
 
+## [0.107.3] - 2026-11-25
+
+This version carries 0.107.1 and 0.107.2, which were set on `develop` and never published.
+
+### Fixed
+
+- `IconPicker`'s panel is no longer cut off when the picker is at the left of a page. It opened leftwards from its trigger always, which
+  a scrolling page beside a sidebar clips; it now opens on the side with room, rightwards from a trigger at the left. `Popover`'s `align`
+  takes `auto` for this (`right`, its default side, where the panel fits, else `left`, counting as room only what is visible: the
+  viewport less what a scrolling ancestor would clip), and `IconPicker` has an `align` that defaults to `auto`. An explicit `left` or
+  `right` is unchanged, and so is every `Popover` that has one.
+
+### Changed
+
+- `AppFrame`: the header's menu button draws its icon at 24px with a heavier stroke, in place of the 20px icon at the default weight, so it
+  stands beside an app's wordmark and reads as a button. Nothing else changes.
+- `SettingsDialog`'s title row is compact: 49px on a desktop in place of 69, with the title at 18px in place of 20 and a 2rem close button (the × is where it was). A phone keeps the 44px
+  touch target and is 61px in place of 69. Only this dialog's header changes: `Dialog`, `Drawer` and `Sheet` have the shared one as before.
+
 ## [0.107.0] - 2026-11-23
 
 ### Added

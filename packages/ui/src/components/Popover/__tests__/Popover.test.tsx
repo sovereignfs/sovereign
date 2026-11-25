@@ -260,4 +260,138 @@ describe('Popover', () => {
       expect(panel.style.right).toBe('auto');
     });
   });
+
+  describe('align="auto"', () => {
+    const rect = (partial: Partial<DOMRect>): DOMRect =>
+      ({
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: 0,
+        height: 0,
+        x: 0,
+        y: 0,
+        toJSON() {},
+        ...partial,
+      }) as DOMRect;
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    /** A 44px trigger and a panel of `width`, in a viewport of `viewport`, with a scrolling ancestor from `scroller` when given. */
+    function open({
+      align = 'auto' as 'left' | 'right' | 'auto',
+      viewport = 1280,
+      at: [left, right] = [900, 944],
+      width = 240,
+      scroller,
+      strict = false,
+    }: {
+      align?: 'left' | 'right' | 'auto';
+      viewport?: number;
+      at?: [number, number];
+      width?: number;
+      scroller?: [number, number];
+      strict?: boolean;
+    }) {
+      Object.defineProperty(window, 'innerWidth', { value: viewport, configurable: true });
+      Object.defineProperty(window, 'innerHeight', { value: 800, configurable: true });
+      const containerRect = rect({ left, right, top: 12, bottom: 56, width: right - left });
+      const panelRect = rect({ width, height: 136, top: 64, bottom: 200 });
+      const scrollerRect = scroller
+        ? rect({ left: scroller[0], right: scroller[1], top: 0, bottom: 800 })
+        : containerRect;
+      vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+        this: Element,
+      ) {
+        if (this.getAttribute('role') === 'dialog') return panelRect;
+        return this.hasAttribute('data-scroller') ? scrollerRect : containerRect;
+      });
+      const popover = (
+        <Popover
+          open={true}
+          onClose={() => {}}
+          align={align}
+          aria-label="Menu"
+          width={width}
+          trigger={trigger}
+        >
+          Content
+        </Popover>
+      );
+      const inScroller = scroller ? (
+        <div data-scroller style={{ overflowX: 'auto' }}>
+          {popover}
+        </div>
+      ) : (
+        popover
+      );
+      render(strict ? <StrictMode>{inScroller}</StrictMode> : inScroller);
+      return screen.getByRole('dialog') as HTMLElement;
+    }
+
+    it('is right-aligned where the panel fits on that side', () => {
+      const panel = open({});
+      expect(panel.className).toContain('right');
+      expect(panel.className).not.toContain('left');
+      expect(panel.style.left).toBe('');
+    });
+
+    it('is left-aligned where the viewport has no room to the left of the trigger', () => {
+      const panel = open({ at: [20, 64] });
+      expect(panel.className).toContain('left');
+      expect(panel.className).not.toContain('right');
+      expect(panel.style.left).toBe('');
+    });
+
+    it('counts a scrolling ancestor as the edge: a trigger beside a sidebar opens rightwards', () => {
+      // The viewport has 504px to the left of the trigger's right edge, but the page's scroller starts at 387, where the panel
+      // would be cut off (240px right-aligned under a trigger ending at 504 begins at 264).
+      const panel = open({ at: [460, 504], scroller: [387, 1280] });
+      expect(panel.className).toContain('left');
+      expect(panel.className).not.toContain('right');
+    });
+
+    it('stays right-aligned for the same trigger when nothing clips the left', () => {
+      const panel = open({ at: [460, 504] });
+      expect(panel.className).toContain('right');
+    });
+
+    it('is right-aligned where a scrolling ancestor leaves room', () => {
+      const panel = open({ at: [760, 804], scroller: [387, 1280] });
+      expect(panel.className).toContain('right');
+    });
+
+    it('does not move an explicit align for a clipping ancestor', () => {
+      const panel = open({ align: 'right', at: [460, 504], scroller: [387, 1280] });
+      expect(panel.className).toContain('right');
+      expect(panel.className).not.toContain('left');
+    });
+
+    it('takes the side with more room when neither fits, and keeps the panel on-screen', () => {
+      // 340px in a 375px viewport, under a trigger at 150 to 194: 194px to its left, 225px to its right.
+      const panel = open({ viewport: 375, at: [150, 194], width: 340 });
+      expect(panel.className).toContain('left');
+      // The clamp puts the panel's left edge at 375 - 4 - 340 = 31, which is -119px from the trigger's.
+      expect(panel.style.left).toBe('-119px');
+    });
+
+    it('chooses the same side under StrictMode double-invoked layout effects', () => {
+      const panel = open({ at: [460, 504], scroller: [387, 1280], strict: true });
+      expect(panel.className).toContain('left');
+      expect(panel.className).not.toContain('right');
+    });
+
+    it('keeps the default side for a panel that has no width yet', () => {
+      Object.defineProperty(window, 'innerWidth', { value: 1280, configurable: true });
+      render(
+        <Popover open={true} onClose={() => {}} align="auto" aria-label="Menu" trigger={trigger}>
+          Content
+        </Popover>,
+      );
+      expect(screen.getByRole('dialog').className).toContain('right');
+    });
+  });
 });

@@ -88,4 +88,33 @@ describe('IconPicker', () => {
     fireEvent.click(trigger);
     expect(screen.queryByRole('listbox')).toBeNull();
   });
+
+  it('gives its panel the side asked for, and chooses one by default', () => {
+    // An explicit side is the panel's own class; with none, the picker asks the Popover to choose (`auto`), which keeps the
+    // default side where nothing has been laid out, as in this document (the Popover's own tests measure the choice).
+    const { rerender } = render(
+      <IconPicker
+        value="house"
+        options={OPTIONS}
+        aria-label="Icon"
+        align="left"
+        onChange={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Icon' }));
+    expect(screen.getByRole('dialog').className).toContain('left');
+    rerender(
+      <IconPicker
+        value="house"
+        options={OPTIONS}
+        aria-label="Icon"
+        align="right"
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.getByRole('dialog').className).toContain('right');
+    rerender(<IconPicker value="house" options={OPTIONS} aria-label="Icon" onChange={() => {}} />);
+    expect(screen.getByRole('dialog').className).toContain('right');
+    expect(screen.getByRole('dialog').className).not.toContain('left');
+  });
 });

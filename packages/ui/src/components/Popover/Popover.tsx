@@ -21,8 +21,13 @@ export interface PopoverProps {
   trigger: ReactElement;
   open: boolean;
   onClose: () => void;
-  /** Which edge of the trigger the panel aligns to. Default: 'right'. */
-  align?: 'left' | 'right';
+  /**
+   * Which edge of the trigger the panel aligns to: `'right'` opens it leftwards from the trigger, `'left'` rightwards.
+   * `'auto'` is `'right'` where the panel fits on that side and the other side where it does not, counting as room only
+   * what is visible: the viewport, less whatever a scrolling ancestor would clip (a trigger at the left of a page beside
+   * a sidebar has none to its left, though the viewport has). Default: 'right'.
+   */
+  align?: 'left' | 'right' | 'auto';
   /** Panel width in px, or `'trigger'` to match the trigger element's own
    *  rendered width exactly (e.g. a dropdown under a full-width form field,
    *  where a fixed pixel width would either overflow or leave a gap
@@ -63,6 +68,29 @@ const TRIGGER_GAP = 8;
 // would otherwise fit exactly get an unwanted scrollbar instead" — a bad
 // trade for a purely cosmetic gap.
 const VIEWPORT_MARGIN = 4;
+
+/**
+ * The horizontal span in which a panel opened from `element` can be seen: the viewport, narrowed by every ancestor that
+ * clips what overflows it (an `overflow` other than `visible`, which includes `auto` and `scroll`: setting one axis makes
+ * the other one clip too). An absolutely positioned panel is cut off at the edge of such an ancestor, so the viewport's
+ * edge is not the room it has.
+ */
+function visibleSpan(element: HTMLElement): { left: number; right: number } {
+  let left = 0;
+  let right = window.innerWidth;
+  for (
+    let ancestor = element.parentElement;
+    ancestor && ancestor !== document.documentElement;
+    ancestor = ancestor.parentElement
+  ) {
+    const overflow = window.getComputedStyle(ancestor).overflowX;
+    if (overflow === 'visible' || overflow === '') continue;
+    const rect = ancestor.getBoundingClientRect();
+    left = Math.max(left, rect.left);
+    right = Math.min(right, rect.right);
+  }
+  return { left, right };
+}
 
 /**
  * Popover — floating panel anchored to a trigger element, below it by
@@ -119,6 +147,10 @@ export function Popover({
   // existing vertical flip only ever solves the above/below axis, never
   // this one.
   const [horizontalOffset, setHorizontalOffset] = useState<number | null>(null);
+  // The side `align="auto"` chose, measured with the panel open; 'right', the default's own side, until then. An explicit
+  // `align` never reads it.
+  const [autoSide, setAutoSide] = useState<'left' | 'right'>('right');
+  const side = align === 'auto' ? autoSide : align;
   const overlayIdRef = useRef<string | null>(null);
 
   // Registers into the same open-overlay stack Dialog/Drawer/Sheet/
@@ -175,6 +207,8 @@ export function Popover({
       setOpenUpward(false);
       setMaxHeight(null);
       setHorizontalOffset(null);
+      // Chosen only while open: the next opening starts from the default's own side again.
+      setAutoSide('right');
       return;
     }
     const container = containerRef.current;
@@ -223,7 +257,22 @@ export function Popover({
     // runs.
     const containerRect = container.getBoundingClientRect();
     const panelWidth = panel.getBoundingClientRect().width;
-    const naturalLeft = align === 'right' ? containerRect.right - panelWidth : containerRect.left;
+    // `align="auto"`: the default side, right, where the panel fits between the trigger's right edge and the left edge of
+    // what can be seen; else the other, where that fits; else whichever has more room (the clamp below then keeps it
+    // on-screen). Derived from the trigger's rect and the panel's width only, as the clamp is, so a second run (StrictMode's)
+    // chooses the same side.
+    let chosen: 'left' | 'right' = align === 'left' ? 'left' : 'right';
+    // A panel with no width has not been laid out (a test's document, a hidden one): there is nothing to fit, and the default stands.
+    if (align === 'auto' && panelWidth > 0) {
+      const visible = visibleSpan(container);
+      const fitsRight = containerRect.right - panelWidth >= visible.left + VIEWPORT_MARGIN;
+      const fitsLeft = containerRect.left + panelWidth <= visible.right - VIEWPORT_MARGIN;
+      const roomRight = containerRect.right - visible.left;
+      const roomLeft = visible.right - containerRect.left;
+      chosen = !fitsRight && (fitsLeft || roomLeft > roomRight) ? 'left' : 'right';
+      setAutoSide(chosen);
+    }
+    const naturalLeft = chosen === 'right' ? containerRect.right - panelWidth : containerRect.left;
     const clampedLeft = Math.min(
       Math.max(naturalLeft, VIEWPORT_MARGIN),
       window.innerWidth - VIEWPORT_MARGIN - panelWidth,
@@ -272,7 +321,7 @@ export function Popover({
           role="dialog"
           aria-label={ariaLabel}
           aria-modal={false}
-          className={[styles.panel, styles[align], openUpward ? styles.upward : '']
+          className={[styles.panel, styles[side], openUpward ? styles.upward : '']
             .filter(Boolean)
             .join(' ')}
           style={{

@@ -7,12 +7,7 @@ history and tags.
 
 ## [0.107.3] - 2026-11-25
 
-### Changed
-
-- `SettingsDialog`'s title row is compact: 49px on a desktop in place of 69, with the title at 18px in place of 20 and a 2rem close button (the × is where it was). A phone keeps the 44px
-  touch target and is 61px in place of 69. Only this dialog's header changes: `Dialog`, `Drawer` and `Sheet` have the shared one as before.
-
-## [0.107.2] - 2026-11-25
+This version carries 0.107.1 and 0.107.2, which were set on `develop` and never published.
 
 ### Fixed
 
@@ -22,12 +17,12 @@ history and tags.
   viewport less what a scrolling ancestor would clip), and `IconPicker` has an `align` that defaults to `auto`. An explicit `left` or
   `right` is unchanged, and so is every `Popover` that has one.
 
-## [0.107.1] - 2026-11-25
-
 ### Changed
 
 - `AppFrame`: the header's menu button draws its icon at 24px with a heavier stroke, in place of the 20px icon at the default weight, so it
   stands beside an app's wordmark and reads as a button. Nothing else changes.
+- `SettingsDialog`'s title row is compact: 49px on a desktop in place of 69, with the title at 18px in place of 20 and a 2rem close button (the × is where it was). A phone keeps the 44px
+  touch target and is 61px in place of 69. Only this dialog's header changes: `Dialog`, `Drawer` and `Sheet` have the shared one as before.
 
 ## [0.107.0] - 2026-11-23
 

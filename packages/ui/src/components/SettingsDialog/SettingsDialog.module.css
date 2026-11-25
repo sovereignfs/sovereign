@@ -1,6 +1,26 @@
 /* SettingsDialog — a side navigation and a section, inside a flush `Dialog`. The frame never changes size: the
  * navigation and the section each scroll on their own. Tokens only. */
 
+/* The title row, compact. In a dialog that is all navigation and content the title only names it, so the row is as tall as its close button and no
+ * more: the shared header's own is a 44px touch target with a row's padding round it, and the title a size larger. Through `Dialog`'s `rowClassName` and
+ * `titleClassName`, so that no other dialog, drawer or sheet changes. Where the pointer is a mouse the button is 2rem, its × as far from the edge as it
+ * was; where it is a finger it keeps the touch target. */
+.headerRow {
+  padding-block: var(--sv-space-2);
+}
+
+.headerTitle {
+  font-size: var(--sv-font-size-lg);
+}
+
+@media (pointer: fine) {
+  .headerRow button {
+    width: 2rem;
+    height: 2rem;
+    margin-right: calc(-1 * (2rem - var(--sv-icon-size-sm)) / 2);
+  }
+}
+
 .frame {
   display: flex;
   flex: 1 1 auto;

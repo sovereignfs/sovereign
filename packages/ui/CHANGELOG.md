@@ -5,6 +5,13 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.96.0; earlier versions are in the repository's
 history and tags.
 
+## [0.107.3] - 2026-11-25
+
+### Changed
+
+- `SettingsDialog`'s title row is compact: 49px on a desktop in place of 69, with the title at 18px in place of 20 and a 2rem close button (the × is where it was). A phone keeps the 44px
+  touch target and is 61px in place of 69. Only this dialog's header changes: `Dialog`, `Drawer` and `Sheet` have the shared one as before.
+
 ## [0.107.2] - 2026-11-25
 
 ### Fixed

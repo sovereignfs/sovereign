@@ -41,6 +41,12 @@
   cursor: pointer;
 }
 
+/* The menu icon is the heaviest control in the header's corner, so it is drawn bolder than the icons around it (the Icon's stroke is 2),
+ * to stand beside the wordmark and to read as a button. Its size is the Icon's `lg`, set in the component. */
+.toggle svg {
+  stroke-width: 2.5;
+}
+
 @media (hover: hover) {
   .toggle:hover {
     background: var(--sv-color-surface-sunken);

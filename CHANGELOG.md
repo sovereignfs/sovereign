@@ -5,6 +5,19 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.143.0] - 2026-11-26
+
+### Changed
+
+- Core asks for the recovery kit as soon as a person signs up, and after each sign-in until they have kept it, instead of waiting until
+  they first open an app that uses encryption. There is no way to put it off on that screen; the person then goes on to where they were
+  headed, an app included. People with an account already see it at their next sign-in. A sign-in that leaves the browser locked, such
+  as a passkey that does not open encrypted data, is not held up.
+
+### Added
+
+- The Security page offers the recovery kit to anyone who has not kept it.
+
 ## [0.142.1] - 2026-11-26
 
 ### Fixed

@@ -1,6 +1,6 @@
 # Sovereign — Roadmap
 
-**Version:** 0.142.1 · **Last updated:** 2026-11-26
+**Version:** 0.143.0 · **Last updated:** 2026-11-26
 
 _(This header tracks the root `package.json` version as of the date above.
 `/sv-update-task-docs` syncs it whenever a branch bumps the root version, and
@@ -290,7 +290,7 @@ the feature is not yet audited.
 | —       | 17       | Encrypted files in the template                                        | 📋     | [16.17](docs/epics/encryption.md) |
 | —       | 18       | An app with no core, in a browser                                      | 📋     | [16.18](docs/epics/encryption.md) |
 | —       | 19       | The Files page says what it protects `[parallel]`                      | 📋     | [16.19](docs/epics/encryption.md) |
-| —       | 20       | A recovery kit for everyone, from the Security page                    | 📋     | [16.20](docs/epics/encryption.md) |
+| 0.143.0 | 20       | The recovery kit at sign-up and sign-in, and from the Security page    | ✅     | [16.20](docs/epics/encryption.md) |
 | —       | 21       | Core's own files, designed                                             | 📋     | [16.21](docs/epics/encryption.md) |
 | —       | 22       | Core's files encrypted in the browser                                  | 📋     | [16.22](docs/epics/encryption.md) |
 | —       | 23       | Existing files moved, and the acceptance items                         | 📋     | [16.23](docs/epics/encryption.md) |

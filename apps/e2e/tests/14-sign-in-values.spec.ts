@@ -1,6 +1,6 @@
 import { expect, test, type BrowserContext } from '@playwright/test';
 import { CORE_URL, freshAddress, person, signInValueFor } from '../support/env';
-import { heading, newPerson, signIn, signUp } from '../support/ui';
+import { heading, keepKit, newPerson, signIn, signUp } from '../support/ui';
 
 const owner = person('Olive');
 const reader = person('Sigrid');
@@ -38,6 +38,7 @@ test('§5.10.1: no request of any password flow carries a password', async ({ br
   const atSignUp = record(joining.context);
   await joining.page.goto(link);
   await signUp(joining.page, reader, joining.page.url());
+  await keepKit(joining.page);
   await expect(heading(joining.page)).toHaveText('Apps');
   await joining.context.close();
 

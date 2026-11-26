@@ -67,16 +67,6 @@ async function openApp(page: Page, clientId: string, returnTo: string) {
 const backAt = (page: Page, returnTo: string) =>
   page.waitForURL((url) => url.href.startsWith(`${returnTo}#`), { timeout: 15_000 });
 
-/** Keeps the kit shown at the first encrypted app, and gives its text. */
-async function keepKit(page: Page): Promise<string> {
-  const groups = page.getByRole('list', { name: /Your recovery kit/ });
-  await expect(groups).toBeVisible();
-  const text = (await groups.innerText()).replace(/\s+/g, '');
-  await page.getByRole('checkbox', { name: /kept my recovery kit/ }).check();
-  await page.getByRole('button', { name: 'Continue' }).click();
-  return text;
-}
-
 async function registerEncryptedApp(page: Page, name: string) {
   const returnTo = `${MINIMAL_URL}/keys/${name.toLowerCase()}`;
   const app = await registerApp(page, {
@@ -103,12 +93,11 @@ test('§5.10.3: a reset by email gives back the account and not the data; the ki
   const writer = person('Wren');
   const joined = await join(browser, operator.page, writer);
   await operator.context.close();
-  const page = joined.page;
+  const { page, kit } = joined;
 
+  // The kit was kept at sign-up, so the first encrypted app shows none.
   await openApp(page, app.id, app.returnTo);
-  const back = backAt(page, app.returnTo);
-  const kit = await keepKit(page);
-  await back;
+  await backAt(page, app.returnTo);
 
   // A reset: a new password, and the browser forgets what it held.
   await page.goto('/');
@@ -172,7 +161,6 @@ test('§5.10.7: with escrow on, the owner recovers a person’s data offline; wi
   const sub = await subOf(keeper.email);
   await openApp(page, app.id, app.returnTo);
   const back = backAt(page, app.returnTo);
-  await keepKit(page);
   // Told before covered: nothing is added until the person continues.
   await expect(page.getByText(/has turned on recovery/)).toBeVisible();
   expect(

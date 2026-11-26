@@ -550,29 +550,42 @@ nobody who reads the server.
 - No screen or guide says or implies that core's files are encrypted
 - The words follow `sv-ui-design` and say "private", never "zero-knowledge" or "encrypted"
 
-#### 📋 16.20 — A recovery kit for everyone, from the Security page
+#### ✅ 16.20 — The recovery kit at sign-up and sign-in, and from the Security page
 
-**Goal:** Anyone can keep their recovery kit at any time, not only when an encrypted app first asks for its key.
+**Goal:** Everyone is asked to keep their recovery kit when they sign up, or at their next sign-in, and not only when an encrypted app
+first asks for its key.
 
 **Priority:** 20.
 
+**Re-scoped** by the goal owner on 2026-11-26. It was "A recovery kit for everyone, from the Security page", with no sign-in blocked.
+
 **Deliverables:**
 
-- the Security page offers the kit to a person who has not kept one, with `RecoveryKit` (and `ownerCanRecover` when escrow is on), and says
-  when they have
+- core's page `/keys/kit` shows the kit, with no way to put it off, after sign-up, after a password sign-in and its second step, and
+  after a passkey sign-in that unlocks, while the kit is not kept; an app's sign-in carries on afterwards
+- a sign-in that cannot show it carries on (core-app §5.3)
+- the Security page offers the kit to a person who has not kept one, with `RecoveryKit` (and `ownerCanRecover` when escrow is on), and
+  says when they have
 - key release still shows the kit to a person who has not kept one by the time an encrypted app asks (core-app §5.3), and never twice
-- one kit per account, as now: keeping it from either place gives the account its kit way in and marks it kept
-- core-app §5.3 says where the kit is offered; the change replaces the 2026-11-16 decision to show it only at key release
+- one kit per account, as before: keeping it on either page gives the account its kit way in and marks it kept
+- core-app §5.3 says where the kit is asked for; the change replaces the 2026-11-16 decision to show it only at key release
 
 **Dependencies:** 16.15
 
-**Spec reference:** core-app §5.3, §5.8; RFC 0005 §6
+**Spec reference:** core-app §5.3, §5.7, §5.8; RFC 0005 §6
 
 **Review checklist:**
 
-- Keeping the kit on the Security page, then opening an encrypted app, shows no kit
-- A kit kept on the Security page unlocks after a reset by email, as one kept at key release does
-- No sign-in or other page is blocked by the kit
+- A new account sees the kit before anything else, and one that left without keeping it sees it at its next sign-in
+- A sign-in an app asked for, passing through the kit, ends in the app with a code that works
+- A passkey that does not unlock signs in without being held up
+- Keeping the kit at sign-up or on the Security page, then opening an encrypted app, shows no kit
+- A kit kept that way unlocks after a reset by email
+
+**Done as:** `/keys/kit` (`apps/core/app/keys/kit/`), reached through `afterSigningIn` (`apps/core/src/keys/kit-step.ts`) from the
+sign-up, sign-in and second-step forms; the unlock and kit screens moved to `apps/core/app/keys/kit-screens.tsx`, shared with key
+release; the link on the Security page. The vault, its records and `RecoveryKit` are unchanged. Left out: nothing withholds core's
+other pages or interrupts a session already open, and the lock page, which is not a sign-in, asks for nothing.
 
 #### 📋 16.21 — Core's own files, designed
 

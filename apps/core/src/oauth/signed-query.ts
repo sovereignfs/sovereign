@@ -35,6 +35,9 @@ const SIGNING_PARAMETERS = new Set(['sig', 'exp', 'ba_iat', 'ba_pl', 'ba_param']
 /** The provider's authorization endpoint, as a path on core. */
 const AUTHORIZE_PATH = '/api/auth/oauth2/authorize';
 
+/** Whether a path is an app's request to the authorization endpoint, made again (`resumeAddress`). */
+export const isResumeAddress = (path: string): boolean => path.startsWith(`${AUTHORIZE_PATH}?`);
+
 /**
  * Where to send someone so an app's sign-in carries on once they have a session: the app's own request to
  * the authorization endpoint, rebuilt from what the provider signed into the page's address.

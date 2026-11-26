@@ -12,7 +12,7 @@ import { keptAccountKey } from './unlock';
 /**
  * Core's side of key release (core-app §5.7, RFC 0005 §4 steps 3 and 4), in the browser: with the account key this browser holds open,
  * the app key is opened (made, with the app's key pairs, the person's first time in the app), sealed to the asking page and signed.
- * And the recovery kit, shown at the first encrypted app (core-app §5.3).
+ * And the recovery kit, shown there to someone who did not keep it when signing in (core-app §5.3).
  */
 
 /** The vault actions release needs besides unlocking's. */
@@ -70,5 +70,5 @@ export async function releaseToApp(
   }
 }
 
-/** The kit, shown at the first encrypted app (core-app §5.3): the shared routine's. */
+/** The recovery kit (core-app §5.3): the shared routine's. */
 export { keepKit, kitPending } from '@sovereignfs/crypto/web';

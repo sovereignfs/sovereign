@@ -63,7 +63,7 @@ test('§5.10.5: an app receives its own key and never another’s; a release rep
   await page.waitForTimeout(500);
   expect(page.url()).toContain('/keys/release');
 
-  // The first release makes the app's keys; the kit is kept on the way.
+  // The first release makes the app's keys.
   a.bar.hash = await release(page, a, returnA);
   expect(await a.keys.receive()).toEqual({ ok: true, returnPath: '/' });
   const opened = await a.keys.open();

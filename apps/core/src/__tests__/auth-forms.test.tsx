@@ -10,7 +10,9 @@ vi.mock('../auth/derive', () => ({
   }),
 }));
 // The keys are set up and opened by the vault's own tests (keys-unlock, key-vault); here they stand aside.
+const isKitDue = vi.fn();
 vi.mock('../keys/session', () => ({
+  isKitDue: async () => isKitDue() as unknown,
   afterPasswordAccepted: async () => undefined,
   handOverSecret: async () => undefined,
   afterSecondStep: async () => undefined,
@@ -58,6 +60,7 @@ beforeEach(() => {
   requestPasswordReset.mockReset();
   resetPassword.mockReset();
   assign.mockReset();
+  isKitDue.mockReset();
   vi.stubGlobal('location', { ...window.location, assign });
 });
 afterEach(() => {
@@ -81,6 +84,17 @@ describe('the sign-in form', () => {
       // What is sent is made from the password and the address, never the password (core-app §5.2).
       password: 'derived:correct horse battery:ada@sovereign.local',
     });
+  });
+
+  it('goes to the recovery kit first while it is to be kept, which goes on from there (core-app §5.3)', async () => {
+    signIn.mockResolvedValue({ data: {}, error: null });
+    isKitDue.mockReturnValue(true);
+    render(<SignInForm instanceName="Acme" returnTo="/settings" />);
+    type('Email', 'ada@sovereign.local');
+    type('Password', 'correct horse battery');
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('/keys/kit?returnTo=%2Fsettings'));
+    expect(assign).toHaveBeenCalledTimes(1);
   });
 
   it('says only that the email or password is incorrect, whatever the reason', async () => {
@@ -187,6 +201,14 @@ describe('the sign-up form', () => {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       callbackURL: '/sign-in?returnTo=%2Fsettings',
     });
+  });
+
+  it('shows a new account its recovery kit before anything else', async () => {
+    signUp.mockResolvedValue({ data: { token: 'abc' }, error: null });
+    isKitDue.mockReturnValue(true);
+    render(<SignUpForm instanceName="Acme" returnTo="/settings" passwordHint="" policy={POLICY} />);
+    fill();
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('/keys/kit?returnTo=%2Fsettings'));
   });
 
   it('shows the server’s own words when the password breaks the rules', async () => {
@@ -350,6 +372,35 @@ describe('the sign-in form, when an app sent the person here', () => {
     expect(screen.getByRole('link', { name: 'Start again' }).getAttribute('href')).toBe(resume);
     expect(screen.queryByText('The email or password is incorrect.')).toBeNull();
     expect(assign).not.toHaveBeenCalled();
+  });
+
+  it('keeps the kit first, then makes the app’s request again: the answer’s code would not last', async () => {
+    signIn.mockResolvedValue({ data: { redirect: true, url: APP }, error: null });
+    isKitDue.mockReturnValue(true);
+    const resume = '/api/auth/oauth2/authorize?client_id=abc&state=s1';
+    render(<SignInForm instanceName="Acme" returnTo={resume} />);
+    submit();
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith(`/keys/kit?returnTo=${encodeURIComponent(resume)}`),
+    );
+    expect(assign).not.toHaveBeenCalledWith(APP);
+  });
+
+  it('goes straight back to the app when its request could not be made again, the kit waiting', async () => {
+    signIn.mockResolvedValue({ data: { redirect: true, url: APP }, error: null });
+    isKitDue.mockReturnValue(true);
+    render(<SignInForm instanceName="Acme" returnTo="/" />);
+    submit();
+    await waitFor(() => expect(assign).toHaveBeenCalledWith(APP));
+  });
+
+  it('lets the kit wait when the app asks how recent the sign-in is: asking again could mean signing in twice', async () => {
+    signIn.mockResolvedValue({ data: { redirect: true, url: APP }, error: null });
+    isKitDue.mockReturnValue(true);
+    const resume = '/api/auth/oauth2/authorize?client_id=abc&max_age=0&state=s1';
+    render(<SignInForm instanceName="Acme" returnTo={resume} />);
+    submit();
+    await waitFor(() => expect(assign).toHaveBeenCalledWith(APP));
   });
 
   it('goes back to the app, with its code, rather than to where the person was headed', async () => {

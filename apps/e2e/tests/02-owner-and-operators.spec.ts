@@ -1,6 +1,15 @@
 import { expect, test } from '@playwright/test';
 import { CORE_URL, person, signInValueFor } from '../support/env';
-import { alert, freshAddress, heading, newPerson, signIn, signOut, signUp } from '../support/ui';
+import {
+  alert,
+  freshAddress,
+  heading,
+  keepKit,
+  newPerson,
+  signIn,
+  signOut,
+  signUp,
+} from '../support/ui';
 import { world } from '../support/world';
 
 const owner = person('Olive');
@@ -11,6 +20,8 @@ test.describe.configure({ mode: 'serial' });
 
 test('§3.17.2: the first account signs up and becomes the owner', async ({ page }) => {
   await signUp(page, owner);
+  // A new account is shown its recovery kit before anything else (core-app §5.3).
+  await keepKit(page);
   // Signed in: the launcher is the home page.
   await expect(heading(page)).toHaveText('Apps');
   // The header has the instance's name on the left and the person's avatar on the right, and the avatar's menu
@@ -55,6 +66,7 @@ test('§3.17.3: the owner turns invite-only on, invites a person, and makes them
   await expect(invited.page).toHaveURL(/\/sign-up/);
   await expect(invited.page.getByLabel('Email')).toHaveValue(admin.email);
   await signUp(invited.page, admin, invited.page.url());
+  await keepKit(invited.page);
   await expect(heading(invited.page)).toHaveText('Apps');
   await invited.context.close();
 

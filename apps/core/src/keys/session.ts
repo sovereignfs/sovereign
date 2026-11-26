@@ -161,6 +161,9 @@ export const releaseKey = async (target: ReleaseRequest) =>
 /** Whether the person has still to keep their recovery kit. */
 export const isKitPending = async () => (await quietly(() => kitPending(actions))) ?? false;
 
+/** Whether the kit is to be kept now: still to be kept, with this browser holding the keys open, as keeping it needs. */
+export const isKitDue = async () => (await isKitPending()) && (await isUnlocked());
+
 /** The kit was kept: give it its way in. */
 export const kitKept = async (kit: Uint8Array) =>
   (await quietly(() => keepKit(kit, actions, keyStore()))) ?? false;

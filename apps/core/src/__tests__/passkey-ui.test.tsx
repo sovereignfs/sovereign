@@ -34,6 +34,7 @@ const session = {
   unlockWithPasswordAgain: vi.fn(),
   afterSecondStep: vi.fn(),
   dropHandOver: vi.fn(),
+  isKitDue: vi.fn(),
 };
 vi.mock('../keys/session', () => ({
   ...session,
@@ -326,6 +327,21 @@ describe('passkeys that unlock (core-app §5.5)', () => {
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/'));
     expect(signInPasskey).toHaveBeenCalledWith({ extensions: PRF, returnWebAuthnResponse: true });
     expect(session.afterPasskeyAccepted).toHaveBeenCalledWith('c1', new Uint8Array(out));
+  });
+
+  it('goes to the recovery kit when the passkey opened the keys and it is still to be kept', async () => {
+    signInPasskey.mockResolvedValue({
+      data: { session: {} },
+      error: null,
+      webauthn: {
+        response: { id: 'c1' },
+        clientExtensionResults: { prf: { results: { first: out } } },
+      },
+    });
+    session.isKitDue.mockResolvedValue(true);
+    render(<TwoFactorForm returnTo="/files" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Use a passkey instead' }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('/keys/kit?returnTo=%2Ffiles'));
   });
 
   it('signs in with a passkey that gives no output, and opens nothing', async () => {

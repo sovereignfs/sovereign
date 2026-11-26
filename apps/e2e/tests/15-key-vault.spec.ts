@@ -1,7 +1,9 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Browser, type Page } from '@playwright/test';
 import { openDatabase } from '../support/database';
-import { person } from '../support/env';
-import { join, newPerson, signIn, signOut } from '../support/ui';
+import { MINIMAL_URL, person } from '../support/env';
+import { registerApp } from '../support/console';
+import { signInMinimal } from '../support/minimal';
+import { heading, invite, join, keepKit, newPerson, signIn, signOut, signUp } from '../support/ui';
 
 const owner = person('Olive');
 const keeper = person('Kristin');
@@ -37,39 +39,99 @@ async function vaultOf(email: string) {
   }
 }
 
-/**
- * Keys are set up silently at the first sign-in and opened by the password on any browser (core-app §5.3, §5.4). The server keeps
- * one account and one way in by the password, with the kit not yet confirmed; each browser keeps the key it opened, for its session.
- */
-test('§5.10.2: a person’s keys are set up silently, and a second browser is unlocked by the password alone', async ({
-  browser,
-}) => {
+/** Someone invited who signs up and leaves on the recovery kit, without keeping it. Signed in, their kit still to keep. */
+async function signUpWithoutKit(browser: Browser, who: ReturnType<typeof person>) {
   const operator = await newPerson(browser);
   await signIn(operator.page, owner, '/console/invites');
-  const joined = await join(browser, operator.page, keeper);
+  const link = await invite(operator.page, who.email);
   await operator.context.close();
+  const joining = await newPerson(browser);
+  await joining.page.goto(link);
+  await signUp(joining.page, who, joining.page.url());
+  await expect(joining.page.getByRole('checkbox', { name: /kept my recovery kit/ })).toBeVisible();
+  return joining;
+}
 
-  // Signing up opened a session at once: the keys are made then, and this browser keeps them.
-  await expect.poll(async () => (await vaultOf(keeper.email)).accounts.length).toBe(1);
+const kitConfirmed = async (email: string) =>
+  Number((await vaultOf(email)).accounts[0]?.kit_confirmed);
+
+/**
+ * Keys are set up at sign-up and opened by the password on any browser (core-app §5.3, §5.4). A new account is shown its recovery
+ * kit, and so is every sign-in with the password until it is kept; only then does the server keep the kit's way in.
+ */
+test('§5.10.2: the recovery kit is asked for at sign-up and again at sign-in until it is kept, and the password alone unlocks a second browser', async ({
+  browser,
+}) => {
+  const joined = await signUpWithoutKit(browser, keeper);
+  await expect(joined.page).toHaveURL(/\/keys\/kit/);
+  // The keys were made, and this browser keeps them; nothing is a kit's way in until the person says they kept it.
   expect(await vaultOf(keeper.email)).toEqual({
     accounts: [expect.objectContaining({ kit_confirmed: expect.anything() })],
     ways: ['password'],
   });
-  expect(Number((await vaultOf(keeper.email)).accounts[0]?.kit_confirmed)).toBe(0);
+  expect(await kitConfirmed(keeper.email)).toBe(0);
   expect(await keepsKey(joined.page)).toBe(true);
   await joined.context.close();
 
-  // Another browser, the password alone: unlocked, and nothing new is made.
+  // Another browser, the password alone: unlocked, shown the kit again, and sent on once it is kept.
   const second = await newPerson(browser);
   await signIn(second.page, keeper);
-  await expect.poll(() => keepsKey(second.page)).toBe(true);
-  expect((await vaultOf(keeper.email)).ways).toEqual(['password']);
+  await keepKit(second.page);
+  await expect(heading(second.page)).toHaveText('Apps');
+  expect(await keepsKey(second.page)).toBe(true);
+  expect((await vaultOf(keeper.email)).ways.sort()).toEqual(['kit', 'password']);
+  expect(await kitConfirmed(keeper.email)).toBe(1);
 
-  // Signing out forgets it.
+  // Signing out forgets the key. Signing in again asks nothing more.
   await signOut(second.page);
   await expect(second.page).toHaveURL(/\/sign-in/);
   expect(await keepsKey(second.page)).toBe(false);
+  await signIn(second.page, keeper);
+  await expect(heading(second.page)).toHaveText('Apps');
   await second.context.close();
+});
+
+/** The Security page offers the kit to someone who has not kept it, and says once they have (core-app §5.3). */
+test('§5.10.2: the Security page offers the recovery kit to someone who has not kept it', async ({
+  browser,
+}) => {
+  const joined = await signUpWithoutKit(browser, person('Sefa'));
+  await joined.page.goto('/security');
+  await joined.page.getByRole('link', { name: 'Keep your recovery kit' }).click();
+  await keepKit(joined.page);
+  await expect(joined.page).toHaveURL(/\/security$/);
+  await expect(joined.page.getByText('You’ve kept your recovery kit.')).toBeVisible();
+  await expect(joined.page.getByRole('link', { name: 'Keep your recovery kit' })).toHaveCount(0);
+  await joined.context.close();
+});
+
+/** An app's sign-in passes through the kit and still ends in the app, with a code that works (core-app §5.3). */
+test('§5.10.2: a sign-in an app asked for shows the recovery kit, then goes back to the app', async ({
+  browser,
+}) => {
+  const operator = await newPerson(browser);
+  await signIn(operator.page, owner, '/console/apps');
+  const app = await registerApp(operator.page, {
+    name: 'Pantry',
+    launchUrl: `${MINIMAL_URL}/pantry`,
+    redirectUri: `${MINIMAL_URL}/callback`,
+    kind: 'public',
+    scopes: ['email'],
+  });
+  await operator.context.close();
+  const visitor = person('Vera');
+  await (await signUpWithoutKit(browser, visitor)).context.close();
+
+  const { context, page } = await newPerson(browser);
+  const signedIn = await signInMinimal(page, app.id, 'openid email', async () => {
+    await page.getByLabel('Email').fill(visitor.email);
+    await page.getByLabel('Password').fill(visitor.password);
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await keepKit(page);
+  });
+  expect(signedIn.claims.email).toBe(visitor.email);
+  expect(await kitConfirmed(visitor.email)).toBe(1);
+  await context.close();
 });
 
 /** A device the browser makes up, which answers the PRF extension or does not. */
@@ -118,7 +180,7 @@ test('§5.10.2: a passkey that unlocks opens the keys with the same touch, and o
   await page.getByLabel('Name').fill('Phone');
   await page.getByRole('button', { name: 'Add a passkey' }).click();
   await expect(page.getByText(/Also unlocks your encrypted data/)).toBeVisible();
-  expect((await vaultOf(lender.email)).ways.sort()).toEqual(['passkey', 'password']);
+  expect((await vaultOf(lender.email)).ways.sort()).toEqual(['kit', 'passkey', 'password']);
 
   // Signing out forgets the key; the passkey alone opens it again.
   await signOut(page);
@@ -145,5 +207,25 @@ test('§5.10.2: a passkey that unlocks opens the keys with the same touch, and o
     expect(body).not.toContain('clientExtensionResults');
     expect(body).not.toMatch(/"results"\s*:/);
   }
+  await joined.context.close();
+});
+
+/** A passkey that cannot unlock signs in without being held up by a kit it could not keep (core-app §5.3, §5.5). */
+test('§5.10.2: a sign-in that leaves the browser locked is not held up by the recovery kit', async ({
+  browser,
+}) => {
+  const who = person('Pia');
+  const joined = await signUpWithoutKit(browser, who);
+  const page = joined.page;
+  await addDevice(page, false);
+  await page.goto('/security/passkeys');
+  await page.getByLabel('Name').fill('Key');
+  await page.getByRole('button', { name: 'Add a passkey' }).click();
+  await expect(page.getByText(/Doesn’t unlock your encrypted data/)).toBeVisible();
+  await signOut(page);
+  await page.getByRole('button', { name: 'Sign in with a passkey' }).click();
+  await expect(heading(page)).toHaveText('Apps');
+  expect(await keepsKey(page)).toBe(false);
+  expect(await kitConfirmed(who.email)).toBe(0);
   await joined.context.close();
 });

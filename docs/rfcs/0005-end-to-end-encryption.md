@@ -245,8 +245,9 @@ An app's page needs its app key, which only core's page can unwrap. Core's OpenI
 has a session, core answers an authorization request with a redirect and no page of its own runs. So release is a step of its own,
 taken when an app's page finds it has no key: once for each browser session, not at each sign-in.
 
-1. **The app's page** makes an X25519 key pair that cannot be exported and 16 random bytes of `state`, keeps both in IndexedDB, and
-   sends the browser to core:
+1. **The app's page** makes an X25519 key pair and 16 random bytes of `state`, keeps both in IndexedDB, and sends the browser to
+   core. The private half is kept wrapped (as PKCS#8, under an AES-256-GCM key of the browser's that cannot be exported) and is opened
+   again, not exportable, when core answers (amended 2026-11-26: WebKit's IndexedDB does not keep an X25519 key):
 
    `https://<core>/keys/release?client_id=…&return_to=…&request=<the public key>&state=…`
 

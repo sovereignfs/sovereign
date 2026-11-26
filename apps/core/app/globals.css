@@ -36,6 +36,14 @@ body::before {
   pointer-events: none;
 }
 
+/* The strip is for the screen. Printed, it would lie over the top of the paper: in an installed app it covered the
+   recovery kit's title and first groups. */
+@media print {
+  body::before {
+    display: none;
+  }
+}
+
 /* The height of the screen less those margins, for a page that fills it. */
 :root {
   --page-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));

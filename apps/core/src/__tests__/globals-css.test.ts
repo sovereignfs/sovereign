@@ -23,4 +23,11 @@ describe('the page where an installed app’s status bar lies over it', () => {
     expect(zIndex).toBeGreaterThan(0);
     expect(zIndex).toBeLessThan(101);
   });
+
+  it('is left off paper, where it would lie over the top of the page', () => {
+    // The recovery kit prints itself at the top of the page, and the rule that hides everything else (`body *`) does not
+    // reach a pseudo-element: in an installed app the strip covered the kit's title and first groups.
+    const printed = /@media print\s*\{\s*body::before\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+    expect(printed).toMatch(/display:\s*none/);
+  });
 });

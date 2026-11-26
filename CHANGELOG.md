@@ -5,6 +5,14 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.143.1] - 2026-11-26
+
+### Fixed
+
+- Printing the recovery kit from core installed on a phone's home screen gave a page with the kit's title and first groups cut off.
+  The whole kit is printed now. A kit printed that way before is only good if it shows all fourteen groups; saved as a file, or
+  printed from the browser, it was whole.
+
 ## [0.143.0] - 2026-11-26
 
 ### Changed

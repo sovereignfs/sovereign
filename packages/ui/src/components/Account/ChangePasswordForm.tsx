@@ -1,4 +1,5 @@
 import { useEffect, useRef, type FormEvent } from 'react';
+import { useHydrated } from '../../hooks/useHydrated';
 import { Alert } from '../Alert/Alert';
 import { Button } from '../Button/Button';
 import { FormField } from '../FormField/FormField';
@@ -16,7 +17,8 @@ export interface ChangePasswordFormProps {
 
 /**
  * Changing the password (auth.md §7): it asks for the current one, and ends every other session. The boxes are read when the form is
- * sent, as in `SignInForm`: a password manager can fill them without telling the page.
+ * sent, as in `SignInForm`: a password manager can fill them without telling the page. The button is off until the page is running,
+ * as `AuthButton`'s is, so a browser never sends the passwords itself.
  */
 export function ChangePasswordForm({
   error,
@@ -25,6 +27,7 @@ export function ChangePasswordForm({
   onSubmit,
 }: ChangePasswordFormProps) {
   const form = useRef<HTMLFormElement>(null);
+  const hydrated = useHydrated();
   // Once a change is done the boxes are emptied, once.
   useEffect(() => {
     if (done) form.current?.reset();
@@ -63,7 +66,7 @@ export function ChangePasswordForm({
         )}
       </FormField>
       <div className={styles.row}>
-        <Button type="submit" loading={pending}>
+        <Button type="submit" loading={pending} disabled={!hydrated}>
           {pending ? 'Saving…' : 'Change password'}
         </Button>
       </div>

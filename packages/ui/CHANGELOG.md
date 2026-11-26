@@ -7,6 +7,14 @@ history and tags.
 
 ## [0.107.4] - 2026-11-26
 
+### Security
+
+- A password could end up in the address. A form pressed before its script had run, on a slow connection for example,
+  was sent by the browser itself: a GET with every named box in the address, which the history and a reverse proxy’s
+  access log can keep. The submit button of `AuthButton`, and the buttons of `ChangePasswordForm` and
+  `LinkSovereignPanel`, are now off until the page is running, which also stops the Enter key. An app’s own forms that
+  use `AuthButton` are covered with it. A form meant to work without a script (`action={serverAction}`) uses `Button`.
+
 ### Fixed
 
 - `SignInForm` sends what is in its boxes. A password manager can fill them without telling the page (AutoFill on iOS, until a box

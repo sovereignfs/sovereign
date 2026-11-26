@@ -1,4 +1,5 @@
 import type { FormEvent } from 'react';
+import { useHydrated } from '../../hooks/useHydrated';
 import { Alert } from '../Alert/Alert';
 import { Button } from '../Button/Button';
 import { FormField } from '../FormField/FormField';
@@ -53,6 +54,9 @@ export function LinkSovereignPanel({
   pending = false,
   onSubmit,
 }: LinkSovereignPanelProps) {
+  // The button is off until the page is running, as `AuthButton`'s is, so a browser never sends the password itself.
+  const hydrated = useHydrated();
+
   // The box is read when the form is sent, as in `SignInForm`: a password manager can fill it without telling the page.
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -83,7 +87,7 @@ export function LinkSovereignPanel({
         )}
       </FormField>
       <div className={styles.row}>
-        <Button type="submit" loading={pending}>
+        <Button type="submit" loading={pending} disabled={!hydrated}>
           {pending ? 'Opening…' : `Link to ${instanceName}`}
         </Button>
       </div>

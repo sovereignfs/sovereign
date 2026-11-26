@@ -5,6 +5,7 @@ import type {
   HTMLAttributes,
   ReactNode,
 } from 'react';
+import { useHydrated } from '../../hooks/useHydrated';
 import { Button, type ButtonProps } from '../Button/Button';
 import styles from './Auth.module.css';
 
@@ -15,12 +16,18 @@ export function AuthForm({ className, ...rest }: FormHTMLAttributes<HTMLFormElem
   return <form className={join(styles.form, className)} {...rest} />;
 }
 
-/** A button as wide as the card. A submit button sits a little apart from the box above it. */
-export function AuthButton({ className, type = 'button', ...rest }: ButtonProps) {
+/**
+ * A button as wide as the card. A submit button sits a little apart from the box above it, and is off until the page is running: these
+ * forms are sent by their script, and a browser that sends one itself before that puts what is in it, the password included, in the
+ * address. For a form that is meant to work without a script (`action={serverAction}`), use `Button`.
+ */
+export function AuthButton({ className, type = 'button', disabled, ...rest }: ButtonProps) {
+  const hydrated = useHydrated();
   return (
     <Button
       type={type}
       className={join(type === 'submit' ? styles.submit : styles.wide, className)}
+      disabled={disabled || (type === 'submit' && !hydrated)}
       {...rest}
     />
   );

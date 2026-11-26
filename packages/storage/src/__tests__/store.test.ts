@@ -1,4 +1,4 @@
-import {
+import fs, {
   existsSync,
   mkdtempSync,
   readFileSync,
@@ -10,7 +10,7 @@ import {
 } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Secret } from '@sovereignfs/config';
 import { StorageError } from '../errors.js';
 import { fileResponse, parseRange } from '../response.js';
@@ -21,6 +21,7 @@ import { RECOUNT_AFTER_MS } from '../usage.js';
 
 const roots: string[] = [];
 afterEach(() => {
+  vi.restoreAllMocks();
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
@@ -142,6 +143,42 @@ describe('a file store', () => {
     // And one shorter than it said, which arrived cut short.
     expect(await refusal(files.put(SUB, new Uint8Array(10), { size: 100 }))).toBe('invalid');
     expect(await files.usage(SUB)).toMatchObject({ bytes: 0, files: 0 });
+    expect(readdirSync(path.join(root, SUB))).toEqual(['.usage.json']);
+  });
+
+  it('leaves no part of an upload that fails before its file has been opened', async () => {
+    const { files, root } = store({ mb: 1 });
+    // A busy disk: each file is opened, and so made, well after its upload has already gone wrong.
+    const open = fs.open;
+    const opened: Promise<void>[] = [];
+    vi.spyOn(fs, 'open').mockImplementation(((
+      file: string,
+      flags: string,
+      mode: number,
+      done: (error: NodeJS.ErrnoException | null, fd: number) => void,
+    ) => {
+      opened.push(
+        new Promise((resolve) => {
+          setTimeout(() => {
+            open(file, flags, mode, (error, fd) => {
+              done(error, fd);
+              resolve();
+            });
+          }, 50);
+        }),
+      );
+    }) as typeof fs.open);
+    const dropped = (after: Uint8Array[]): AsyncIterable<Uint8Array> =>
+      (async function* () {
+        yield* after;
+        throw new Error('the connection dropped');
+      })();
+    await expect(files.put(SUB, dropped([]), { size: 500 })).rejects.toThrow('dropped');
+    await expect(files.put(SUB, dropped([PNG]), { size: 500 })).rejects.toThrow('dropped');
+    expect(await refusal(files.put(SUB, new Uint8Array(100), { size: 10 }))).toBe('invalid');
+    // All three went through the slow open, and it has happened by now or is about to.
+    expect(opened).toHaveLength(3);
+    await Promise.all(opened);
     expect(readdirSync(path.join(root, SUB))).toEqual(['.usage.json']);
   });
 

@@ -27,6 +27,8 @@ history and tags.
 - Printing the recovery kit from core installed on a phone's home screen gave a page with the kit's title and first groups cut off.
   The whole kit is printed now. A kit printed that way before is only good if it shows all fourteen groups; saved as a file, or
   printed from the browser, it was whole.
+- A file upload that broke off at once, or turned out longer than it said, could leave an unfinished file in the person’s folder
+  for a day or more. It is removed straight away now (`@sovereignfs/storage` 0.1.1).
 
 ## [0.143.0] - 2026-11-26
 

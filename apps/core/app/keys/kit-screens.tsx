@@ -73,7 +73,8 @@ export function Unlock({
   }
 
   return (
-    <form className={styles.form} onSubmit={(event) => void withPassword(event)}>
+    // POST, should a script of someone else's send it: nothing of it goes in the address (core-app §5.2).
+    <form className={styles.form} method="post" onSubmit={(event) => void withPassword(event)}>
       <p className={styles.lead}>{lead}</p>
       {error ? <Alert variant="error">{error}</Alert> : null}
       <AuthField label="Password">
@@ -157,7 +158,8 @@ function KitUnlock({
   }
 
   return (
-    <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
+    // POST, should a script of someone else's send it: nothing of it goes in the address (core-app §5.2).
+    <form className={styles.form} method="post" onSubmit={(event) => void onSubmit(event)}>
       <p className={styles.lead}>
         Type your recovery kit, and the password you sign in with now. From then on, your password
         unlocks your encrypted data again.

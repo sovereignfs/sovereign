@@ -56,4 +56,17 @@ describe('unlocking encrypted data (core-app §5.5)', () => {
     expect(derive).toHaveBeenCalledWith('correct horse', 'ada@sovereign.local');
     expect(keys.unlockWithKitTyped).toHaveBeenCalledWith('ABCD-EFGH', 'secret:correct horse');
   });
+
+  // `form.submit()`, as a script of someone else's may call it, goes past the page's handler.
+  it('sends the password and the kit by POST if a script sends either form itself', () => {
+    show();
+    expect(box('Password').closest('form')?.getAttribute('method')).toBe('post');
+    fireEvent.click(screen.getByRole('button', { name: 'Use your recovery kit' }));
+    expect(
+      screen
+        .getByLabelText(/^Recovery kit/)
+        .closest('form')
+        ?.getAttribute('method'),
+    ).toBe('post');
+  });
 });

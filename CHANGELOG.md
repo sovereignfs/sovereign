@@ -13,7 +13,9 @@ history and tags.
   on a slow connection for example, made the browser send the form itself, with the password in the address: core
   received the password, which it otherwise never does, and the browser’s history and a reverse proxy’s access log could
   keep it. This held for sign-in, sign-up, password reset, the lock page, changing a password and the email settings.
-  Those buttons now work only once the page is running.
+  Those buttons now work only once the page is running. Should a script send such a form all the same, as a browser
+  extension may, it now goes by POST: core receives what was typed, and nothing goes into the address. The same holds
+  where core asks for the recovery kit or the password to unlock encrypted data.
 - If a proxy in front of core keeps access logs, search them for `password=`, ignoring case. Have any password you find
   there changed, the mail server’s included.
 

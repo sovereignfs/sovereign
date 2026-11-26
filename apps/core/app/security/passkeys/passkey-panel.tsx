@@ -306,7 +306,8 @@ function UnlockFirst({
   }
 
   return (
-    <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
+    // POST, should a script of someone else's send it: nothing of it goes in the address (core-app §5.2).
+    <form className={styles.form} method="post" onSubmit={(event) => void onSubmit(event)}>
       {error ? <Alert variant="error">{error}</Alert> : null}
       <FormField label="Your password" hint="To unlock this device first.">
         {(field) => (

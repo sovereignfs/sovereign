@@ -45,6 +45,8 @@ describe('the lock page’s password (RFC 0006 B4)', () => {
     const page = document.createElement('div');
     page.innerHTML = renderToString(<LockForm returnTo="/files" email="ada@sovereign.local" />);
     expect(page.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
+    // And if a script sends it all the same, nothing of it goes in the address.
+    expect(page.querySelector('form')?.getAttribute('method')).toBe('post');
   });
 
   it('unlocks with what was typed, and goes on to where the person was', async () => {

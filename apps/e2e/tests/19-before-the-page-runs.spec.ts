@@ -1,4 +1,10 @@
-import { expect, test, type Browser, type BrowserContextOptions } from '@playwright/test';
+import {
+  expect,
+  test,
+  type Browser,
+  type BrowserContextOptions,
+  type Locator,
+} from '@playwright/test';
 import { lockNewestSession, resetLinkFor } from '../support/database';
 import { CORE_URL, freshAddress, person } from '../support/env';
 import { invite, newPerson, signIn } from '../support/ui';
@@ -13,7 +19,8 @@ type Cookies = BrowserContextOptions['storageState'];
 /**
  * A page of core with a form its script sends, as someone quicker than that script finds it. A browser sends a form itself while
  * nothing has taken it over: a GET, with every named box in the address, the password too, and core is never to receive one
- * (core-app §5.2). So the form's button is off until the page runs, which stops the Enter key as well.
+ * (core-app §5.2). So the form's button is off until the page runs, which stops the Enter key as well, and a script that sends the
+ * form all the same, as a browser extension may, sends it by POST.
  */
 async function holdsUntilThePageRuns(
   browser: Browser,
@@ -21,7 +28,7 @@ async function holdsUntilThePageRuns(
   options: { box?: string; cookies?: Cookies; lands?: string } = {},
 ): Promise<void> {
   const { box = 'input[type=password]', cookies, lands } = options;
-  const open = async (javaScriptEnabled: boolean) => {
+  const open = async (javaScriptEnabled: boolean, { without }: { without?: RegExp } = {}) => {
     const context = await browser.newContext({
       baseURL: CORE_URL,
       javaScriptEnabled,
@@ -29,6 +36,7 @@ async function holdsUntilThePageRuns(
       extraHTTPHeaders: { 'x-forwarded-for': freshAddress() },
     });
     const page = await context.newPage();
+    if (without) await page.route(without, (route) => route.abort());
     await page.goto(path);
     // The page asked for, not one core sent the browser on to instead.
     expect(new URL(page.url()).pathname).toBe(lands ?? new URL(path, CORE_URL).pathname);
@@ -38,14 +46,7 @@ async function holdsUntilThePageRuns(
   };
 
   const early = await open(false);
-  // Every box a browser would want filled before it sends the form, so that only the button stands in the way.
-  for (const field of await early.form.locator('input:not([readonly])').all()) {
-    const type = (await field.getAttribute('type')) ?? 'text';
-    if (type === 'password') await field.fill(TYPED);
-    else if (type === 'email') await field.fill('early@sovereign.local');
-    else if (type === 'checkbox') await field.check();
-    else if ((await field.getAttribute('name')) === 'name') await field.fill('Early');
-  }
+  await fillIn(early.form);
   const sent: string[] = [];
   early.page.on('request', (request) => {
     if (request.isNavigationRequest()) sent.push(request.url());
@@ -57,9 +58,36 @@ async function holdsUntilThePageRuns(
   await expect(early.button).toBeDisabled();
   await early.context.close();
 
+  // The scripts never arrive, and something else sends the form: past the button, and past anything the page would do with it.
+  const scripted = await open(true, { without: /\/_next\/static\/.*\.js/ });
+  await fillIn(scripted.form);
+  const at = scripted.page.url();
+  const answered = scripted.page.waitForResponse((response) =>
+    response.request().isNavigationRequest(),
+  );
+  await scripted.form.evaluate((form: HTMLFormElement) => form.submit());
+  const answer = await answered;
+  expect(answer.request().method()).toBe('POST');
+  // The address is the page's own, with nothing added to it, and core answers with the page, which says nothing of what was typed.
+  expect(answer.url()).toBe(at);
+  expect(answer.status()).toBe(200);
+  expect(await answer.text()).not.toContain(TYPED);
+  await scripted.context.close();
+
   const running = await open(true);
   await expect(running.button).toBeEnabled();
   await running.context.close();
+}
+
+/** Every box a browser would want filled before it sends the form, so that only the button stands in the way. */
+async function fillIn(form: Locator): Promise<void> {
+  for (const field of await form.locator('input:not([readonly])').all()) {
+    const type = (await field.getAttribute('type')) ?? 'text';
+    if (type === 'password') await field.fill(TYPED);
+    else if (type === 'email') await field.fill('early@sovereign.local');
+    else if (type === 'checkbox') await field.check();
+    else if ((await field.getAttribute('name')) === 'name') await field.fill('Early');
+  }
 }
 
 test('§5.2: sign-in sends nothing before the page runs', async ({ browser }) => {

@@ -317,6 +317,8 @@ describe('passkeys that unlock (core-app §5.5)', () => {
     render(<PasskeyPanel passkeys={rows} keys={KEYS} />);
     click('Let it unlock');
     const box = await screen.findByLabelText(/^Your password/);
+    // `form.submit()`, as a script of someone else's may call it, goes past the page's handler: nothing of it goes in the address.
+    expect(box.closest('form')?.getAttribute('method')).toBe('post');
     // Empty, it asks for nothing.
     click('Unlock');
     expect(derive).not.toHaveBeenCalled();

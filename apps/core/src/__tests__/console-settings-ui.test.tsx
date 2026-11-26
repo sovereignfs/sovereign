@@ -236,6 +236,8 @@ describe('the mail form', () => {
     const page = document.createElement('div');
     page.innerHTML = renderToString(<SmtpForm smtp={smtp()} encryptionReady />);
     expect(page.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
+    // And if a script sends it all the same, nothing of it goes in the address.
+    expect(page.querySelector('form')?.getAttribute('method')).toBe('post');
   });
 
   it('never shows the saved password, and says one is kept', () => {

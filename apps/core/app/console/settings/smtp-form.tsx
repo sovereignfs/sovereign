@@ -60,8 +60,10 @@ export function SmtpForm({ smtp, encryptionReady }: { smtp: ShownSmtp; encryptio
     smtp.password.source === 'saved';
 
   return (
+    // POST, should a script of someone else's send it: nothing of it goes in the address (core-app §5.2).
     <form
       className={styles.form}
+      method="post"
       onSubmit={(event) => {
         // A form action would reset the checkbox when it finished, undoing what a refusal should leave.
         event.preventDefault();

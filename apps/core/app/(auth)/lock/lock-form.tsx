@@ -113,7 +113,12 @@ export function LockForm({ returnTo, email }: { returnTo: string; email: string 
           {pending === 'passkey' ? 'Waiting for your device…' : 'Unlock'}
         </Button>
       ) : null}
-      <form className={styles.form} onSubmit={(event) => void unlockWithPasswordInstead(event)}>
+      {/* POST, should a script of someone else's send it: nothing of it goes in the address (core-app §5.2). */}
+      <form
+        className={styles.form}
+        method="post"
+        onSubmit={(event) => void unlockWithPasswordInstead(event)}
+      >
         <AuthField label="Password">
           {(control) => (
             <Input

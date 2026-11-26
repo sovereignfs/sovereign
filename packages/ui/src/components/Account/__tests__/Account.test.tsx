@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fillUnannounced } from '../../../__tests__/fill-unannounced';
 import { ChangePasswordForm } from '../ChangePasswordForm';
 import { SessionsPanel } from '../SessionsPanel';
 
@@ -105,5 +106,23 @@ describe('ChangePasswordForm', () => {
     rerender(<ChangePasswordForm done onSubmit={onSubmit} />);
     expect(screen.getByText(/Your password is changed/)).toBeTruthy();
     expect((screen.getByLabelText(/Current password/) as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText(/New password/) as HTMLInputElement).value).toBe('');
+  });
+
+  it('hands over and later empties boxes that were filled without a word to the page', () => {
+    const onSubmit = vi.fn();
+    const { rerender } = render(<ChangePasswordForm onSubmit={onSubmit} />);
+    const box = (label: RegExp) => screen.getByLabelText(label) as HTMLInputElement;
+    fillUnannounced(box(/Current password/), 'old');
+    fillUnannounced(box(/New password/), 'new');
+    fireEvent.submit(screen.getByRole('button', { name: 'Change password' }));
+    expect(onSubmit).toHaveBeenCalledWith({ current: 'old', next: 'new' });
+    rerender(<ChangePasswordForm pending onSubmit={onSubmit} />);
+    rerender(<ChangePasswordForm error="Try again." onSubmit={onSubmit} />);
+    expect(box(/Current password/).value).toBe('old');
+    expect(box(/New password/).value).toBe('new');
+    rerender(<ChangePasswordForm done onSubmit={onSubmit} />);
+    expect(box(/Current password/).value).toBe('');
+    expect(box(/New password/).value).toBe('');
   });
 });

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fillUnannounced } from '../../../__tests__/fill-unannounced';
 import { LinkSovereignPanel } from '../LinkSovereignPanel';
 
 afterEach(cleanup);
@@ -12,6 +13,17 @@ describe('LinkSovereignPanel', () => {
     fireEvent.change(screen.getByLabelText(/Password/), { target: { value: 'pw' } });
     fireEvent.submit(screen.getByRole('button', { name: 'Link to Sovereign' }));
     expect(onSubmit).toHaveBeenCalledWith({ password: 'pw' });
+  });
+
+  it('hands over what is in the box when it was filled without a word to the page, and leaves it there', () => {
+    const onSubmit = vi.fn();
+    const { rerender } = render(<LinkSovereignPanel linked={false} onSubmit={onSubmit} />);
+    const box = () => screen.getByLabelText(/Password/) as HTMLInputElement;
+    fillUnannounced(box(), 'pw');
+    fireEvent.submit(screen.getByRole('button', { name: 'Link to Sovereign' }));
+    expect(onSubmit).toHaveBeenCalledWith({ password: 'pw' });
+    rerender(<LinkSovereignPanel linked={false} pending onSubmit={onSubmit} />);
+    expect(box().value).toBe('pw');
   });
 
   it('says why nothing was linked, in the instance’s name', () => {

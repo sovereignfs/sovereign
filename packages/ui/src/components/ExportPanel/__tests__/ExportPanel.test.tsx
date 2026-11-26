@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fillUnannounced } from '../../../__tests__/fill-unannounced';
 import { ExportPanel } from '../ExportPanel';
 
 afterEach(cleanup);
@@ -33,13 +34,43 @@ describe('ExportPanel', () => {
       <ExportPanel {...props} status={{ state: 'none' }} onStart={onStart} onRefresh={onRefresh} />,
     );
     const button = screen.getByRole('button', { name: 'Get my data' });
-    expect(button.hasAttribute('disabled')).toBe(true);
     fireEvent.change(screen.getByLabelText(/Your password/), { target: { value: 'secret words' } });
     fireEvent.click(button);
     expect(screen.getByText('Download your data?')).toBeDefined();
     fireEvent.click(screen.getAllByRole('button', { name: 'Get my data' }).at(-1) as HTMLElement);
     await waitFor(() => expect(onStart).toHaveBeenCalledWith('secret words'));
     await waitFor(() => expect(onRefresh).toHaveBeenCalled());
+  });
+
+  it('asks nothing while the password box is empty', () => {
+    const onStart = vi.fn();
+    const { container } = render(
+      <ExportPanel {...props} status={{ state: 'none' }} onStart={onStart} />,
+    );
+    const box = screen.getByLabelText(/Your password/) as HTMLInputElement;
+    expect(box.required).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Get my data' }));
+    // Also past the browser's own check of a required box.
+    fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+    expect(document.querySelector('dialog[open]')).toBeNull();
+    expect(onStart).not.toHaveBeenCalled();
+  });
+
+  it('starts with what is in the box when it was filled without a word to the page, and then empties it', async () => {
+    const onStart = vi.fn(async () => ({ ok: true }) as const);
+    render(<ExportPanel {...props} status={{ state: 'none' }} onStart={onStart} />);
+    const box = () => screen.getByLabelText(/Your password/) as HTMLInputElement;
+    fillUnannounced(box(), 'secret words');
+    fireEvent.click(screen.getByRole('button', { name: 'Get my data' }));
+    expect(document.querySelector('dialog[open]')).not.toBeNull();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Get my data' }).at(-1) as HTMLElement);
+    await waitFor(() => expect(onStart).toHaveBeenCalledWith('secret words'));
+    await waitFor(() => expect(box().value).toBe(''));
+  });
+
+  it('gives its password box no name, so a form sent before the page is ready cannot put it in the address', () => {
+    render(<ExportPanel {...props} status={{ state: 'none' }} onStart={vi.fn()} />);
+    expect(screen.getByLabelText(/Your password/).hasAttribute('name')).toBe(false);
   });
 
   it('shows what was refused, and keeps the password', async () => {

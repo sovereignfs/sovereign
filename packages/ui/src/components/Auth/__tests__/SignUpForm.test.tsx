@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fillUnannounced } from '../../../__tests__/fill-unannounced';
 import { SignUpForm } from '../SignUpForm';
 
 afterEach(cleanup);
@@ -36,6 +37,38 @@ describe('SignUpForm', () => {
     expect(screen.getByRole('link', { name: 'Privacy Policy' }).getAttribute('target')).toBe(
       '_blank',
     );
+  });
+
+  it('hands over what is in the boxes when they were filled without a word to the page, and leaves it there', () => {
+    const onSubmit = vi.fn();
+    const form = (pending: boolean) => (
+      <SignUpForm
+        appName="Acme"
+        passwordHint=""
+        pending={pending}
+        onSubmit={onSubmit}
+        signInHref="/sign-in"
+      />
+    );
+    const { rerender } = render(form(false));
+    const box = (label: string) => screen.getByLabelText(label) as HTMLInputElement;
+    fillUnannounced(box('Name'), 'Ada');
+    fillUnannounced(box('Email'), 'ada@acme.test');
+    fillUnannounced(box('Password'), 'one');
+    fillUnannounced(box('Confirm password'), 'one');
+    fireEvent.submit(screen.getByRole('button', { name: 'Create account' }));
+    expect(onSubmit).toHaveBeenCalledWith({
+      name: 'Ada',
+      email: 'ada@acme.test',
+      password: 'one',
+      confirm: 'one',
+      agreed: true,
+    });
+    rerender(form(true));
+    rerender(form(false));
+    expect(
+      [box('Name'), box('Email'), box('Password'), box('Confirm password')].map((b) => b.value),
+    ).toEqual(['Ada', 'ada@acme.test', 'one', 'one']);
   });
 
   it('keeps an invitation’s address, asks no terms of an app with none, and waits for the link once sent', () => {

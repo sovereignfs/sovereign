@@ -157,13 +157,14 @@ function PasswordStep({
   onCodes: (codes: string[]) => void;
   onOff: () => void;
 }) {
-  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [pending, setPending] = useState(false);
   const text = TITLES[action];
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // Read from the box, as in `SignInForm`: a password manager can fill it without telling the page.
+    const password = String(new FormData(event.currentTarget).get('password') ?? '');
     setPending(true);
     setError(undefined);
     const result = await start(action, password);
@@ -180,14 +181,7 @@ function PasswordStep({
       {error ? <Alert variant="error">{error}</Alert> : null}
       <FormField label="Password" hint={text.hint} required>
         {(field) => (
-          <Input
-            {...field}
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
+          <Input {...field} type="password" name="password" autoComplete="current-password" />
         )}
       </FormField>
       <div className={styles.row}>

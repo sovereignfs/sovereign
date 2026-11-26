@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import type { FormEvent } from 'react';
 import { Alert } from '../Alert/Alert';
 import { Button } from '../Button/Button';
 import { FormField } from '../FormField/FormField';
@@ -53,11 +53,10 @@ export function LinkSovereignPanel({
   pending = false,
   onSubmit,
 }: LinkSovereignPanelProps) {
-  const [password, setPassword] = useState('');
-
+  // The box is read when the form is sent, as in `SignInForm`: a password manager can fill it without telling the page.
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onSubmit({ password });
+    onSubmit({ password: String(new FormData(event.currentTarget).get('password') ?? '') });
   }
 
   const said = outcome ? OUTCOMES[outcome] : undefined;
@@ -80,14 +79,7 @@ export function LinkSovereignPanel({
       </p>
       <FormField label="Password" required>
         {(field) => (
-          <Input
-            {...field}
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
+          <Input {...field} type="password" name="password" autoComplete="current-password" />
         )}
       </FormField>
       <div className={styles.row}>

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, type FormEvent } from 'react';
 import { Alert } from '../Alert/Alert';
 import { Button } from '../Button/Button';
 import { FormField } from '../FormField/FormField';
@@ -14,31 +14,33 @@ export interface ChangePasswordFormProps {
   onSubmit: (values: { current: string; next: string }) => void;
 }
 
-/** Changing the password (auth.md §7): it asks for the current one, and ends every other session. */
+/**
+ * Changing the password (auth.md §7): it asks for the current one, and ends every other session. The boxes are read when the form is
+ * sent, as in `SignInForm`: a password manager can fill them without telling the page.
+ */
 export function ChangePasswordForm({
   error,
   done = false,
   pending = false,
   onSubmit,
 }: ChangePasswordFormProps) {
-  const [current, setCurrent] = useState('');
-  const [next, setNext] = useState('');
-  const [cleared, setCleared] = useState(done);
+  const form = useRef<HTMLFormElement>(null);
   // Once a change is done the boxes are emptied, once.
-  if (done && !cleared) {
-    setCleared(true);
-    setCurrent('');
-    setNext('');
-  }
-  if (!done && cleared) setCleared(false);
+  useEffect(() => {
+    if (done) form.current?.reset();
+  }, [done]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onSubmit({ current, next });
+    const boxes = new FormData(event.currentTarget);
+    onSubmit({
+      current: String(boxes.get('currentPassword') ?? ''),
+      next: String(boxes.get('newPassword') ?? ''),
+    });
   }
 
   return (
-    <form className={styles.form} onSubmit={submit}>
+    <form ref={form} className={styles.form} onSubmit={submit}>
       {error ? <Alert variant="error">{error}</Alert> : null}
       {done ? (
         <Alert variant="success">
@@ -52,21 +54,12 @@ export function ChangePasswordForm({
             type="password"
             name="currentPassword"
             autoComplete="current-password"
-            value={current}
-            onChange={(event) => setCurrent(event.target.value)}
           />
         )}
       </FormField>
       <FormField label="New password" required>
         {(field) => (
-          <Input
-            {...field}
-            type="password"
-            name="newPassword"
-            autoComplete="new-password"
-            value={next}
-            onChange={(event) => setNext(event.target.value)}
-          />
+          <Input {...field} type="password" name="newPassword" autoComplete="new-password" />
         )}
       </FormField>
       <div className={styles.row}>

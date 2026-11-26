@@ -12,6 +12,10 @@ history and tags.
 - `SignInForm` sends what is in its boxes. A password manager can fill them without telling the page (AutoFill on iOS, until a box
   is focused), and the form then sent what it had last heard, usually nothing: "The email or password is incorrect" for a password
   that was right. Its boxes are no longer held in React state, so drawing the form again cannot empty what was filled either.
+- `SignUpForm`, `ResetPasswordForm`, `ChangePasswordForm`, `LinkSovereignPanel` and the password step of `TwoFactorPanel` had the
+  same fault and are fixed the same way: what is in their boxes is what is sent. What each hands to `onSubmit` is unchanged.
+- `ExportPanel` reads its password box when it needs it. Its button is no longer greyed out while the box is empty, since a box filled
+  without a word to the page looked empty to it and left the button dead. Pressed with an empty box, the browser asks for it.
 
 ## [0.107.3] - 2026-11-25
 

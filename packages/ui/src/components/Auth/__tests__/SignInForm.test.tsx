@@ -1,22 +1,12 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fillUnannounced } from '../../../__tests__/fill-unannounced';
 import { SignInForm } from '../SignInForm';
 
 afterEach(cleanup);
 
 const box = (label: string) => screen.getByLabelText(label) as HTMLInputElement;
-
-/**
- * Fills a box as a password manager can (AutoFill on iOS): the value is there to see, and the page is told nothing. The
- * prototype's setter is used because React watches the element's own.
- */
-function fillUnannounced(label: string, value: string) {
-  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(
-    box(label),
-    value,
-  );
-}
 
 describe('SignInForm', () => {
   it('collects the email and password and hands them over, sending nothing itself', () => {
@@ -42,8 +32,8 @@ describe('SignInForm', () => {
   it('hands over what is in the boxes when they were filled without a word to the page', () => {
     const onSubmit = vi.fn();
     render(<SignInForm appName="Acme" onSubmit={onSubmit} />);
-    fillUnannounced('Email', 'ada@acme.test');
-    fillUnannounced('Password', 'secret');
+    fillUnannounced(box('Email'), 'ada@acme.test');
+    fillUnannounced(box('Password'), 'secret');
     fireEvent.submit(screen.getByRole('button', { name: 'Sign in' }));
     expect(onSubmit).toHaveBeenCalledWith({ email: 'ada@acme.test', password: 'secret' });
   });
@@ -51,8 +41,8 @@ describe('SignInForm', () => {
   it('leaves in the boxes what was filled into them, however often it is drawn again', () => {
     const onSubmit = vi.fn();
     const { rerender } = render(<SignInForm appName="Acme" onSubmit={onSubmit} />);
-    fillUnannounced('Email', 'ada@acme.test');
-    fillUnannounced('Password', 'secret');
+    fillUnannounced(box('Email'), 'ada@acme.test');
+    fillUnannounced(box('Password'), 'secret');
     rerender(<SignInForm appName="Acme" onSubmit={onSubmit} pending />);
     rerender(<SignInForm appName="Acme" onSubmit={onSubmit} error="Try again." />);
     expect(box('Email').value).toBe('ada@acme.test');
@@ -69,8 +59,8 @@ describe('SignInForm', () => {
       />
     );
     const { rerender } = render(form(false));
-    fillUnannounced('Email', 'ada@acme.test');
-    fillUnannounced('Password', 'secret');
+    fillUnannounced(box('Email'), 'ada@acme.test');
+    fillUnannounced(box('Password'), 'secret');
     fireEvent.submit(screen.getByRole('button', { name: 'Sign in' }));
     rerender(form(true));
     expect(screen.getByText('Send again to ada@acme.test')).toBeTruthy();

@@ -1,6 +1,6 @@
 'use client';
 
-import { startTransition, useActionState, useEffect, useState } from 'react';
+import { startTransition, useActionState, useEffect, useRef, useState } from 'react';
 import { Alert } from '../Alert/Alert';
 import { Button } from '../Button/Button';
 import { ConfirmDialog } from '../ConfirmDialog/ConfirmDialog';
@@ -71,7 +71,9 @@ export function ExportPanel({
   passwordHint = 'We ask again because the export holds everything listed above.',
   timeZone = 'UTC',
 }: ExportPanelProps) {
-  const [password, setPassword] = useState('');
+  // The box is read when it is needed, never copied into state: a password manager can fill it without telling the page. It has no
+  // name, so a form sent before the page is ready cannot put the password in the address.
+  const box = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [state, start, pending] = useActionState<ExportStartResult | null, string>(
     async (_previous, typed) => {
@@ -86,7 +88,7 @@ export function ExportPanel({
       }
       if (result.ok) {
         setOpen(false);
-        setPassword('');
+        if (box.current) box.current.value = '';
         onRefresh?.();
       }
       return result;
@@ -145,7 +147,7 @@ export function ExportPanel({
           className={styles.form}
           onSubmit={(event) => {
             event.preventDefault();
-            if (password !== '' && !disabled) setOpen(true);
+            if (box.current?.value && !disabled) setOpen(true);
           }}
         >
           {disabledReason ? <p className={styles.hint}>{disabledReason}</p> : null}
@@ -156,13 +158,12 @@ export function ExportPanel({
                 type="password"
                 autoComplete="current-password"
                 disabled={disabled}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                ref={box}
               />
             )}
           </FormField>
           <div>
-            <Button type="submit" disabled={password === '' || disabled}>
+            <Button type="submit" disabled={disabled}>
               {startLabel}
             </Button>
           </div>
@@ -175,7 +176,10 @@ export function ExportPanel({
             confirmLabel={pending ? 'Starting…' : startLabel}
             pending={pending}
             error={state && !state.ok ? state.error : undefined}
-            onConfirm={() => startTransition(() => start(password))}
+            onConfirm={() => {
+              const typed = box.current?.value ?? '';
+              startTransition(() => start(typed));
+            }}
           />
         </form>
       )}

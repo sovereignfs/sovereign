@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import type { FormEvent } from 'react';
 import { Input } from '../Input/Input';
 import { AuthField } from './AuthField';
 import { AuthButton, AuthFooter, AuthForm } from './AuthForm';
@@ -20,7 +20,10 @@ export interface ResetPasswordFormProps {
   renderLink?: AuthLinkRenderer;
 }
 
-/** Setting a new password from an emailed link (auth.md §7), for core and every app. */
+/**
+ * Setting a new password from an emailed link (auth.md §7), for core and every app. The boxes are read when the form is sent, as in
+ * `SignInForm`: a password manager can fill them without telling the page.
+ */
 export function ResetPasswordForm({
   passwordHint,
   error,
@@ -31,9 +34,6 @@ export function ResetPasswordForm({
   newLinkHref,
   renderLink = plainLink,
 }: ResetPasswordFormProps) {
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
-
   if (expired) {
     return (
       <>
@@ -53,7 +53,11 @@ export function ResetPasswordForm({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onSubmit({ password, confirm });
+    const boxes = new FormData(event.currentTarget);
+    onSubmit({
+      password: String(boxes.get('password') ?? ''),
+      confirm: String(boxes.get('confirm') ?? ''),
+    });
   }
 
   return (
@@ -68,8 +72,6 @@ export function ResetPasswordForm({
               autoComplete="new-password"
               required
               disabled={pending}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
             />
           )}
         </AuthField>
@@ -82,8 +84,6 @@ export function ResetPasswordForm({
               autoComplete="new-password"
               required
               disabled={pending}
-              value={confirm}
-              onChange={(event) => setConfirm(event.target.value)}
             />
           )}
         </AuthField>

@@ -54,7 +54,8 @@ export function LinkSovereignPanel({
   pending = false,
   onSubmit,
 }: LinkSovereignPanelProps) {
-  // The button is off until the page is running, as `AuthButton`'s is, so a browser never sends the password itself.
+  // The button is off until the page is running, as `AuthButton`'s is, so a browser never sends the password itself; and should a script
+  // of someone else's send the form, it goes by POST, with nothing in the address.
   const hydrated = useHydrated();
 
   // The box is read when the form is sent, as in `SignInForm`: a password manager can fill it without telling the page.
@@ -74,7 +75,7 @@ export function LinkSovereignPanel({
       </div>
     );
   return (
-    <form className={styles.form} onSubmit={submit}>
+    <form className={styles.form} method="post" onSubmit={submit}>
       {said ? <Alert variant={said.variant}>{said.text(instanceName)}</Alert> : null}
       {error ? <Alert variant="error">{error}</Alert> : null}
       <p>

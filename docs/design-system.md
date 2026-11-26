@@ -557,10 +557,12 @@ the email and password to `onSubmit`; the consumer signs in with `@sovereignfs/a
 itself. `SignUpForm`, `ForgotPasswordForm`, `ResetPasswordForm` and `TwoFactorForm` work the same way. Nor may the
 browser send one before the page is running, which would put the password in the address: until then a submit
 `AuthButton`, and the buttons of `ChangePasswordForm` and `LinkSovereignPanel`, are off. A form meant to work without a
-script uses `Button`. On the account pages, `SessionsPanel` takes the app's server actions (each answers an
-`ActionResult`) and the person's `timeZone` (UTC without one; its times are written the same on the server and in the
-browser), `ChangePasswordForm` hands the two passwords to the app, and `TwoFactorPanel` and `ProfilePanel` take their
-steps as functions.
+script uses `Button`. A script of someone else’s can send a form past its button, so `AuthForm` (unless given a `method`
+or an `action`), `ChangePasswordForm`, `LinkSovereignPanel` and the password step of `TwoFactorPanel` are
+`method="post"`, which keeps what is typed out of the address. On the account pages, `SessionsPanel` takes the app's
+server actions (each answers an `ActionResult`) and the person's `timeZone` (UTC without one; its times are written the
+same on the server and in the browser), `ChangePasswordForm` hands the two passwords to the app, and `TwoFactorPanel`
+and `ProfilePanel` take their steps as functions.
 
 ```tsx
 <AuthCard brand={<BrandBadge name="Fjord" mark="Fj" />} title="Sign in to Fjord" legal={false}>

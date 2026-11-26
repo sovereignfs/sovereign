@@ -176,7 +176,8 @@ function PasswordStep({
   }
 
   return (
-    <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
+    // POST, should a script of someone else's send it: nothing of it goes in the address.
+    <form className={styles.form} method="post" onSubmit={(event) => void onSubmit(event)}>
       <h2 className={styles.heading}>{text.heading}</h2>
       {error ? <Alert variant="error">{error}</Alert> : null}
       <FormField label="Password" hint={text.hint} required>

@@ -14,6 +14,10 @@ history and tags.
   access log can keep. The submit button of `AuthButton`, and the buttons of `ChangePasswordForm` and
   `LinkSovereignPanel`, are now off until the page is running, which also stops the Enter key. An app’s own forms that
   use `AuthButton` are covered with it. A form meant to work without a script (`action={serverAction}`) uses `Button`.
+- A script that sends a form itself, past its button, now sends it by POST, with nothing in the address: `AuthForm`,
+  `ChangePasswordForm`, `LinkSovereignPanel` and the password step of `TwoFactorPanel`. `AuthForm` is `method="post"`
+  only when it is given neither a `method` nor an `action`; an app that counted on the browser’s GET gives it
+  `method="get"`.
 
 ### Fixed
 

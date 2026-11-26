@@ -11,9 +11,25 @@ import styles from './Auth.module.css';
 
 const join = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(' ');
 
-/** The form of a page before sign-in: its boxes one under another. */
-export function AuthForm({ className, ...rest }: FormHTMLAttributes<HTMLFormElement>) {
-  return <form className={join(styles.form, className)} {...rest} />;
+/**
+ * The form of a page before sign-in: its boxes one under another. Its script sends it. Should the browser send it all the same, because
+ * someone else's script called `submit()` on it, it goes by POST, so nothing in its boxes is put in the address. A form with a `method`
+ * or an `action` of the app's own is left as the app has it.
+ */
+export function AuthForm({
+  className,
+  action,
+  method,
+  ...rest
+}: FormHTMLAttributes<HTMLFormElement>) {
+  return (
+    <form
+      className={join(styles.form, className)}
+      action={action}
+      method={method ?? (action === undefined ? 'post' : undefined)}
+      {...rest}
+    />
+  );
 }
 
 /**

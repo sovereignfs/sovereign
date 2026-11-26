@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ChangePasswordForm } from '../components/Account/ChangePasswordForm';
 import { LinkSovereignPanel } from '../components/Account/LinkSovereignPanel';
-import { AuthButton } from '../components/Auth/AuthForm';
+import { TwoFactorPanel } from '../components/Account/TwoFactorPanel';
+import { AuthButton, AuthForm } from '../components/Auth/AuthForm';
 import { ForgotPasswordForm } from '../components/Auth/ForgotPasswordForm';
 import { ResetPasswordForm } from '../components/Auth/ResetPasswordForm';
 import { SignInForm } from '../components/Auth/SignInForm';
@@ -66,6 +67,48 @@ describe('a form its script sends', () => {
     expect(submitButtons(page)[0]?.disabled).toBe(false);
     act(() => root.unmount());
     page.remove();
+  });
+
+  // What a script of someone else's does, `form.submit()`, goes past a button that is off.
+  it.each(FORMS)('%s goes by POST if a script sends it all the same', (_name, element) => {
+    expect(served(element).querySelector('form')?.getAttribute('method')).toBe('post');
+  });
+
+  it('TwoFactorPanel’s password step goes by POST too', () => {
+    render(
+      <TwoFactorPanel
+        enabled={false}
+        verified
+        start={vi.fn()}
+        confirm={vi.fn()}
+        renderQr={() => null}
+        onDone={nothing}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Turn on' }));
+    expect(
+      screen
+        .getByLabelText(/Password/)
+        .closest('form')
+        ?.getAttribute('method'),
+    ).toBe('post');
+  });
+});
+
+describe('AuthForm', () => {
+  const method = (element: ReactElement) =>
+    served(element).querySelector('form')?.getAttribute('method');
+
+  it('goes by the method the app names', () => {
+    expect(method(<AuthForm method="get" />)).toBe('get');
+  });
+
+  it('leaves a form with an action of its own as the browser and React have it', () => {
+    expect(method(<AuthForm action="/search" />)).toBeNull();
+    const said = vi.spyOn(console, 'error');
+    render(<AuthForm action={nothing} />);
+    expect(said).not.toHaveBeenCalled();
+    said.mockRestore();
   });
 });
 

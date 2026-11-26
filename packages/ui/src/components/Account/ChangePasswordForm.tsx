@@ -43,7 +43,8 @@ export function ChangePasswordForm({
   }
 
   return (
-    <form ref={form} className={styles.form} onSubmit={submit}>
+    // POST, should a script of someone else's send it: nothing of it goes in the address.
+    <form ref={form} className={styles.form} method="post" onSubmit={submit}>
       {error ? <Alert variant="error">{error}</Alert> : null}
       {done ? (
         <Alert variant="success">

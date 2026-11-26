@@ -5,6 +5,17 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 2.1.0; earlier versions are in the repository's
 history and tags.
 
+## [2.12.1] - 2026-11-26
+
+### Fixed
+
+- `appKeys().unlock()` and `receive()` work on iOS (Safari, an installed app, and every other browser there): the request waiting for
+  core's answer kept its private key as an X25519 WebCrypto key, which WebKit's IndexedDB accepts without an error and does not keep,
+  so every unlock came back refused as `no-request`. It is now kept wrapped by a key of the browser's that cannot be exported. A
+  request made by 2.12.0 and answered after the update is refused once, and the next Unlock works. An app takes the fix by updating;
+  nothing in its code changes.
+- What the SDK keeps in IndexedDB is written before `unlock()` leaves the page: a write now waits for its transaction to commit.
+
 ## [2.12.0] - 2026-11-23
 
 ### Added

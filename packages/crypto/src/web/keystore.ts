@@ -48,9 +48,15 @@ export function indexedDbBackend(name: string): KeyStoreBackend {
   ) => {
     const db = await database();
     return new Promise<T>((resolve, reject) => {
-      const request = act(db.transaction('keys', mode).objectStore('keys'));
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error ?? new Error('IndexedDB refused.'));
+      const transaction = db.transaction('keys', mode);
+      const request = act(transaction.objectStore('keys'));
+      const refused = () =>
+        reject(request.error ?? transaction.error ?? new Error('IndexedDB refused.'));
+      // Settled when the transaction has committed, not when its request succeeded: a page that navigates away right after a write
+      // (an app's `unlock()`) would otherwise leave before it is kept.
+      transaction.oncomplete = () => resolve(request.result);
+      transaction.onerror = refused;
+      transaction.onabort = refused;
     });
   };
   return {

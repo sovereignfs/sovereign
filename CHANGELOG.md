@@ -5,6 +5,14 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.142.1] - 2026-11-26
+
+### Fixed
+
+- What core's pages keep in the browser for encryption (the unlocked account key, the hand-over across sign-in's second step) is
+  written before the page moves on: a write now waits until the browser has committed it. The fix for unlocking an app's data on iOS
+  is in `@sovereignfs/sdk` 2.12.1, which apps take by updating.
+
 ## [0.142.0] - 2026-11-23
 
 ### Added

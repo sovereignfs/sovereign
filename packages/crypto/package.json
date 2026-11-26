@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/crypto",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "type": "module",
   "description": "Encryption for Sovereign: field encryption on the server, the keys of RFC 0005 in a browser (`/web`), and the vault of an app with no core (`/vault`).",

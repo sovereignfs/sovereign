@@ -8,6 +8,7 @@ import { deriveForSignIn } from '../../../src/auth/derive';
 import { PAGE_NOT_READY } from '../../../src/auth/password-policy';
 import { afterPasskeyAccepted, afterPasswordAccepted, forgetKeys } from '../../../src/keys/session';
 import { askForPasskey } from '../../../src/lock/ceremony';
+import { useHydrated } from '../../../src/use-hydrated';
 import { AuthError } from '../auth-notice';
 import { AuthField } from '../auth-field';
 import styles from '../auth.module.css';
@@ -21,6 +22,7 @@ export function LockForm({ returnTo, email }: { returnTo: string; email: string 
   const [passkeysSupported, setPasskeysSupported] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const [pending, setPending] = useState<'passkey' | 'password' | 'sign-out' | undefined>();
+  const hydrated = useHydrated();
 
   // Known only in the browser, so it is read after the first render.
   useEffect(() => setPasskeysSupported(typeof window.PublicKeyCredential === 'function'), []);
@@ -129,7 +131,8 @@ export function LockForm({ returnTo, email }: { returnTo: string; email: string 
           variant={passkeysSupported ? 'secondary' : 'primary'}
           className={styles.submit}
           loading={pending === 'password'}
-          disabled={pending !== undefined}
+          // Off until the page is running: the browser would send the password itself, in the address.
+          disabled={!hydrated || pending !== undefined}
         >
           {pending === 'password' ? 'Unlocking…' : 'Use your password'}
         </Button>

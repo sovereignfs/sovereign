@@ -7,6 +7,16 @@ history and tags.
 
 ## [0.143.1] - 2026-11-26
 
+### Security
+
+- A password could end up in the address. Pressing a password form’s button, or Enter in it, before the page had loaded,
+  on a slow connection for example, made the browser send the form itself, with the password in the address: core
+  received the password, which it otherwise never does, and the browser’s history and a reverse proxy’s access log could
+  keep it. This held for sign-in, sign-up, password reset, the lock page, changing a password and the email settings.
+  Those buttons now work only once the page is running.
+- If a proxy in front of core keeps access logs, search them for `password=`, ignoring case. Have any password you find
+  there changed, the mail server’s included.
+
 ### Fixed
 
 - Signing in with a password manager on an iPhone no longer says the email or password is incorrect when both are right. Core's

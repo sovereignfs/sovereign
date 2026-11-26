@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fillUnannounced } from './fill-unannounced';
 
@@ -40,6 +41,12 @@ const box = () => screen.getByLabelText('Password') as HTMLInputElement;
 const send = () => fireEvent.click(screen.getByRole('button', { name: 'Use your password' }));
 
 describe('the lock page’s password (RFC 0006 B4)', () => {
+  it('cannot be sent from the page as the server sends it: the browser would put it in the address', () => {
+    const page = document.createElement('div');
+    page.innerHTML = renderToString(<LockForm returnTo="/files" email="ada@sovereign.local" />);
+    expect(page.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
+  });
+
   it('unlocks with what was typed, and goes on to where the person was', async () => {
     unlock.mockResolvedValue({ ok: true });
     render(<LockForm returnTo="/files" email="ada@sovereign.local" />);

@@ -10,7 +10,7 @@ import {
   unwrapSecret,
 } from '@sovereignfs/crypto/web';
 import { registerApp } from '../support/console';
-import { openDatabase } from '../support/database';
+import { openDatabase, resetLinkFor } from '../support/database';
 import { MINIMAL_URL, person } from '../support/env';
 import { join, newPerson, signIn, signOut } from '../support/ui';
 
@@ -27,30 +27,6 @@ async function query(sql: string, args: unknown[] = []) {
 
 const subOf = async (email: string) =>
   String((await query('select id from users where email = ?', [email]))[0]?.id);
-
-/** A reset link, made as `sovereign-admin accounts reset-link` makes one. */
-async function resetLinkFor(email: string): Promise<string> {
-  const token = randomBytes(18).toString('base64url');
-  const database = await openDatabase();
-  try {
-    const now = Date.now();
-    const at = (ms: number) => (database.family === 'postgres' ? new Date(ms) : ms);
-    await database.run(
-      'insert into verifications (id, identifier, value, expires_at, created_at, updated_at) values (?, ?, ?, ?, ?, ?)',
-      [
-        `v-${token}`,
-        `reset-password:${token}`,
-        await subOf(email),
-        at(now + 3_600_000),
-        at(now),
-        at(now),
-      ],
-    );
-  } finally {
-    await database.close();
-  }
-  return `/reset-password?token=${encodeURIComponent(token)}`;
-}
 
 /** Sends the browser to core's release for an app, as an app's page would, with a request of its own. */
 async function openApp(page: Page, clientId: string, returnTo: string) {

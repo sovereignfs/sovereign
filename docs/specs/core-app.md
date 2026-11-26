@@ -2092,6 +2092,9 @@ Built (task 16.3), on every instance, in §3.3.2, §3.3.4, §3.5 and §3.15.1.
   reset, the change, and every place the password is asked again.
 - **Core never receives a password.** better-auth hashes the sign-in value as it hashed the password. The server refuses, wherever a
   password is set, any value that is not the derivation's shape (`PASSWORD_NOT_DERIVED`).
+- **A password form sends nothing before its page runs.** A browser sends a form itself while no script has taken it
+  over, a GET with every named box in the address. So a password box the server draws either has no name, or sits in a
+  form whose submit button is off in the page as served, which stops the Enter key too.
 - **The policy is the browser's.** The page checks the policy of §3.3.2 before deriving, with the same words, and does not send a
   password that breaks it. The server cannot check what it never receives; a person who goes round the page weakens their own account
   only.

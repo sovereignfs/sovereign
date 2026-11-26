@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ShownSmtp } from '../instance/describe';
 
@@ -229,6 +230,12 @@ describe('the mail form', () => {
     const port = screen.getByLabelText('Port') as HTMLInputElement;
     expect(port.value).toBe('');
     expect(port.placeholder).toBe('25');
+  });
+
+  it('cannot be sent from the page as the server sends it: the browser would put the password in the address', () => {
+    const page = document.createElement('div');
+    page.innerHTML = renderToString(<SmtpForm smtp={smtp()} encryptionReady />);
+    expect(page.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
   });
 
   it('never shows the saved password, and says one is kept', () => {

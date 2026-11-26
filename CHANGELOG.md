@@ -11,6 +11,9 @@ history and tags.
 
 - Signing in with a password manager on an iPhone no longer says the email or password is incorrect when both are right. Core's
   sign-in sends what is in the boxes, also when the password manager filled them without telling the page.
+- The same holds wherever else core asks for a password: creating an account, setting or changing a password, unlocking, turning
+  two-step sign-in on or off, letting a passkey unlock, exporting, deleting an account and handing over ownership. The buttons that
+  were greyed out until a password was typed can now be pressed; with an empty box, the browser asks you to fill it in.
 - Printing the recovery kit from core installed on a phone's home screen gave a page with the kit's title and first groups cut off.
   The whole kit is printed now. A kit printed that way before is only good if it shows all fourteen groups; saved as a file, or
   printed from the browser, it was whole.

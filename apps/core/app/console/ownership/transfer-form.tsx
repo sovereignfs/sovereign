@@ -1,6 +1,6 @@
 'use client';
 
-import { startTransition, useActionState, useState } from 'react';
+import { startTransition, useActionState, useRef, useState } from 'react';
 import { Alert, Button, ConfirmDialog, FormField, Input, Select } from '@sovereignfs/ui';
 import { signInValue } from '../../../src/auth/derive';
 import type { TransferTarget } from '../../../src/roles/ownership';
@@ -21,7 +21,9 @@ export function TransferForm({
 }) {
   const [target, setTarget] = useState('');
   const [newRole, setNewRole] = useState('platform:admin');
-  const [password, setPassword] = useState('');
+  // The box is read when it is needed, never copied into state: a password manager can fill it without telling the page. It has no
+  // name, so a form sent before the page is ready cannot put the password in the address.
+  const box = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [state, act, pending] = useActionState<TransferResult | null, FormData>(
     transferOwnershipAction,
@@ -36,7 +38,7 @@ export function TransferForm({
     form.set('target', target);
     form.set('newRole', newRole);
     // What is sent is made from the password, which never leaves the browser (core-app §5.2).
-    void signInValue(password, address).then(
+    void signInValue(box.current?.value ?? '', address).then(
       (value) => {
         form.set('password', value);
         startTransition(() => act(form));
@@ -50,7 +52,7 @@ export function TransferForm({
       className={styles.form}
       onSubmit={(event) => {
         event.preventDefault();
-        if (chosen && password !== '') setOpen(true);
+        if (chosen && box.current?.value) setOpen(true);
       }}
     >
       <FormField label="New owner" required>
@@ -81,18 +83,10 @@ export function TransferForm({
         required
         hint="We ask again because this cannot be undone by you."
       >
-        {(field) => (
-          <Input
-            {...field}
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-        )}
+        {(field) => <Input {...field} type="password" autoComplete="current-password" ref={box} />}
       </FormField>
       <div>
-        <Button type="submit" variant="destructive" disabled={!chosen || password === ''}>
+        <Button type="submit" variant="destructive" disabled={!chosen}>
           Hand over ownership…
         </Button>
       </div>

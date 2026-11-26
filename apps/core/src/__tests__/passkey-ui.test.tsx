@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fillUnannounced } from './fill-unannounced';
 
 const addPasskey = vi.fn();
 const updatePasskey = vi.fn();
@@ -42,8 +43,12 @@ vi.mock('../keys/session', () => ({
   startAfresh: vi.fn(),
   handOverSecret: vi.fn(),
 }));
+const derive = vi.fn();
 vi.mock('../auth/derive', () => ({
-  deriveForSignIn: () => Promise.resolve({ signIn: 'svp1.x', secret: 'secret' }),
+  deriveForSignIn: (password: string, email: string) => {
+    derive(password, email);
+    return Promise.resolve({ signIn: 'svp1.x', secret: 'secret' });
+  },
 }));
 
 const { PasskeyPanel } = await import('../../app/security/passkeys/passkey-panel');
@@ -71,6 +76,7 @@ beforeEach(() => {
     deletePasskey,
     signInPasskey,
     signInEmail,
+    derive,
     ...Object.values(session),
   ]) {
     mock.mockReset();
@@ -302,6 +308,22 @@ describe('passkeys that unlock (core-app §5.5)', () => {
     await waitFor(() => expect(reload).toHaveBeenCalled());
     expect(session.unlockWithPasswordAgain).toHaveBeenCalledWith('secret');
     expect(session.letPasskeyUnlock).toHaveBeenCalledWith('sovereign.local', 'c2');
+  });
+
+  it('unlocks with what is in the box when it was filled without a word to the page', async () => {
+    session.isUnlocked.mockResolvedValueOnce(false).mockResolvedValue(true);
+    session.unlockWithPasswordAgain.mockResolvedValue(true);
+    session.letPasskeyUnlock.mockResolvedValue(true);
+    render(<PasskeyPanel passkeys={rows} keys={KEYS} />);
+    click('Let it unlock');
+    const box = await screen.findByLabelText(/^Your password/);
+    // Empty, it asks for nothing.
+    click('Unlock');
+    expect(derive).not.toHaveBeenCalled();
+    fillUnannounced(box, 'correct horse');
+    click('Unlock');
+    await waitFor(() => expect(reload).toHaveBeenCalled());
+    expect(derive).toHaveBeenCalledWith('correct horse', KEYS.email);
   });
 
   it('says so when the passkey cannot unlock, and that it still signs in', async () => {

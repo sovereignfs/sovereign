@@ -19,7 +19,6 @@ import { unlockChallenge, unlockWithPasskey, unlockWithPassword } from './action
  */
 export function LockForm({ returnTo, email }: { returnTo: string; email: string }) {
   const [passkeysSupported, setPasskeysSupported] = useState(false);
-  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [pending, setPending] = useState<'passkey' | 'password' | 'sign-out' | undefined>();
 
@@ -56,6 +55,8 @@ export function LockForm({ returnTo, email }: { returnTo: string; email: string 
 
   async function unlockWithPasswordInstead(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // Read from the box, first: a password manager can fill it without telling the page, and a box turned off holds nothing to read.
+    const password = String(new FormData(event.currentTarget).get('password') ?? '');
     setPending('password');
     setError(undefined);
     let value: string;
@@ -120,8 +121,6 @@ export function LockForm({ returnTo, email }: { returnTo: string; email: string 
               autoComplete="current-password"
               required
               disabled={pending !== undefined}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
             />
           )}
         </AuthField>

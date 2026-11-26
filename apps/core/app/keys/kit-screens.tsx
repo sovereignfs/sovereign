@@ -11,6 +11,12 @@ import {
 import { AuthField } from '../(auth)/auth-field';
 import styles from '../(auth)/auth.module.css';
 
+/**
+ * The password in a form's box, read when the form is sent: a password manager can fill it without telling the page. Read before
+ * anything turns the box off, which leaves it out of the form's data.
+ */
+const passwordIn = (form: HTMLFormElement) => String(new FormData(form).get('password') ?? '');
+
 /** Opening the person's keys on this browser: the password or a passkey, both checked here alone (core-app §5.5). */
 export function Unlock({
   lead,
@@ -26,7 +32,6 @@ export function Unlock({
   offerKit?: boolean;
   onUnlocked: () => void;
 }) {
-  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [pending, setPending] = useState<'password' | 'passkey' | undefined>();
   const [passkeys, setPasskeys] = useState(false);
@@ -40,6 +45,7 @@ export function Unlock({
 
   async function withPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const password = passwordIn(event.currentTarget);
     setPending('password');
     setError(undefined);
     try {
@@ -79,8 +85,6 @@ export function Unlock({
             autoComplete="current-password"
             required
             disabled={pending !== undefined}
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
           />
         )}
       </AuthField>
@@ -126,12 +130,12 @@ function KitUnlock({
   onCancel: () => void;
 }) {
   const [kit, setKit] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [pending, setPending] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const password = passwordIn(event.currentTarget);
     setPending(true);
     setError(undefined);
     try {
@@ -182,8 +186,6 @@ function KitUnlock({
             autoComplete="current-password"
             required
             disabled={pending}
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
           />
         )}
       </AuthField>

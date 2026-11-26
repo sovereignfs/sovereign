@@ -7,6 +7,7 @@ vi.mock('../auth/derive', () => ({
 }));
 import { DEFAULT_MATRIX } from '../roles/capabilities';
 import { describeMatrix } from '../roles/describe';
+import { fillUnannounced } from './fill-unannounced';
 
 const saveMatrix = vi.fn();
 const resetMatrix = vi.fn();
@@ -127,15 +128,39 @@ describe('the ownership form', () => {
   };
 
   it('cannot be sent until someone is chosen and the password is typed', () => {
-    render(<TransferForm targets={targets} address="owner@sovereign.local" />);
+    const { container } = render(
+      <TransferForm targets={targets} address="owner@sovereign.local" />,
+    );
     const button = screen.getByRole('button', {
       name: 'Hand over ownership…',
     }) as HTMLButtonElement;
+    const box = screen.getByLabelText(/Your password/) as HTMLInputElement;
     expect(button.disabled).toBe(true);
     fireEvent.change(screen.getByLabelText(/New owner/), { target: { value: 'a1' } });
-    expect(button.disabled).toBe(true);
-    fireEvent.change(screen.getByLabelText(/Your password/), { target: { value: 'x' } });
     expect(button.disabled).toBe(false);
+    expect(box.required).toBe(true);
+    // No name: a form sent before the page is ready cannot put the password in the address.
+    expect(box.hasAttribute('name')).toBe(false);
+    fireEvent.click(button);
+    // Also past the browser's own check of a required box.
+    fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+    expect(document.querySelector('dialog[open]')).toBeNull();
+  });
+
+  it('sends what is in the box when it was filled without a word to the page, also after another choice', async () => {
+    transfer.mockResolvedValue({ ok: true });
+    render(<TransferForm targets={targets} address="owner@sovereign.local" />);
+    fireEvent.change(screen.getByLabelText(/New owner/), { target: { value: 'a1' } });
+    fillUnannounced(screen.getByLabelText(/Your password/), 'filled');
+    // Drawing the form again leaves the box as it was filled.
+    fireEvent.change(screen.getByLabelText(/You will become/), {
+      target: { value: 'platform:user' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Hand over ownership…' }));
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Hand over ownership' }));
+    await waitFor(() => expect(transfer).toHaveBeenCalledTimes(1));
+    const sent = transfer.mock.calls[0]?.[1] as FormData;
+    expect(sent.get('password')).toBe('derived:filled:owner@sovereign.local');
   });
 
   it('asks first, naming who will own it, and sends nothing until confirmed', () => {

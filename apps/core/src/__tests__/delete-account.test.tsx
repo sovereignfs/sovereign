@@ -9,6 +9,7 @@ vi.mock('../auth/derive', () => ({
 import { ROLE_ADMIN, ROLE_OWNER, ROLE_USER } from '../auth/roles';
 import { AccountActionError } from '../accounts/manage';
 import { DEFAULT_MATRIX } from '../roles/capabilities';
+import { fillUnannounced } from './fill-unannounced';
 
 const getSession = vi.fn();
 vi.mock('../auth/session', () => ({ getSession: () => getSession() as unknown }));
@@ -196,16 +197,34 @@ describe('the form', () => {
   };
 
   it('cannot be sent without a password, and asks before sending anything', () => {
-    render(<DeleteForm address="ada@sovereign.local" />);
+    const { container } = render(<DeleteForm address="ada@sovereign.local" />);
     const button = screen.getByRole('button', { name: 'Delete my account…' }) as HTMLButtonElement;
-    expect(button.disabled).toBe(true);
-    fireEvent.change(screen.getByLabelText(/Your password/), { target: { value: 'pw' } });
-    expect(button.disabled).toBe(false);
+    const box = screen.getByLabelText(/Your password/) as HTMLInputElement;
+    expect(box.required).toBe(true);
+    // No name: a form sent before the page is ready cannot put the password in the address.
+    expect(box.hasAttribute('name')).toBe(false);
+    fireEvent.click(button);
+    // Also past the browser's own check of a required box.
+    fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+    expect(document.querySelector('dialog[open]')).toBeNull();
+    fireEvent.change(box, { target: { value: 'pw' } });
     fireEvent.click(button);
     expect(within(dialog()).getByText('Delete your account?')).toBeTruthy();
     expect(deleteSelf).not.toHaveBeenCalled();
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Cancel' }));
     expect(confirm).not.toHaveBeenCalled();
+  });
+
+  it('sends what is in the box when it was filled without a word to the page', async () => {
+    confirm.mockResolvedValue('wrong');
+    signedInAs('me', ROLE_USER);
+    render(<DeleteForm address="ada@sovereign.local" />);
+    fillUnannounced(screen.getByLabelText(/Your password/), 'filled');
+    fireEvent.click(screen.getByRole('button', { name: 'Delete my account…' }));
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Delete my account' }));
+    expect(await within(dialog()).findByText('That password is not right.')).toBeTruthy();
+    expect(confirm.mock.calls[0]?.[3]).toBe('derived:filled:ada@sovereign.local');
+    expect((screen.getByLabelText(/Your password/) as HTMLInputElement).value).toBe('filled');
   });
 
   it('sends the password once confirmed, and keeps the question open for a wrong one', async () => {

@@ -621,6 +621,8 @@ other pages or interrupts a session already open, and the lock page, which is no
 - the Files page encrypts each new upload as a stream in RFC 0005 §1.3's chunks, and its name, type and size as one value, under a
   document key wrapped by the person's files key; the store keeps `application/octet-stream` with a length, so quotas count what is stored
 - downloads are decrypted a chunk at a time; an image is shown from a `blob:` address; a locked browser shows `LockedState` and the unlock
+- no file is encrypted for a person who has not kept their recovery kit: the Files page asks for it first, as key release does (core-app
+  §5.3). 16.20 asks at sign-up and sign-in only, so a session that stays open, or someone who left the kit's page, may not have kept one
 - before the first encrypted upload, the page says that a reset by email gives back the account and not the files unless the kit was kept
   or the owner turned on recovery
 - core-app §4.6 and §5 marked built; `docs/operating.md` says what a reset now does to files
@@ -635,6 +637,7 @@ other pages or interrupts a session already open, and the lock page, which is no
 - The stored file and its record hold no plaintext of a file, its name or its type
 - A file cut short, or returned under another id or version, does not open
 - After a reset by email, files open only with the kit, or through escrow when it is on
+- A person who has not kept the kit is asked for it before a file of theirs is encrypted
 
 #### 📋 16.23 — Existing files moved, and the acceptance items
 

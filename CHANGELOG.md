@@ -9,6 +9,8 @@ history and tags.
 
 ### Fixed
 
+- Signing in with a password manager on an iPhone no longer says the email or password is incorrect when both are right. Core's
+  sign-in sends what is in the boxes, also when the password manager filled them without telling the page.
 - Printing the recovery kit from core installed on a phone's home screen gave a page with the kit's title and first groups cut off.
   The whole kit is printed now. A kit printed that way before is only good if it shows all fourteen groups; saved as a file, or
   printed from the browser, it was whole.

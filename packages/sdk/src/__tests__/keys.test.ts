@@ -207,4 +207,47 @@ describe('the app key in an app’s pages (sdk §9.2)', () => {
     app.session.signedIn = false;
     expect(await app.keys.receive()).toEqual({ ok: false, reason: 'no-session' });
   });
+
+  it('keeps its request where WebKit keeps it: no X25519 or Ed25519 key is stored as a CryptoKey', async () => {
+    // WebKit's IndexedDB (Safari, and every browser on iOS) accepts such a key without an error and does not keep it.
+    const app = page({ backend: webKitBackend() });
+    await app.keys.unlock();
+    app.bar.hash = (await coreAnswers(app.bar.assigned)).hash;
+    expect(await app.keys.receive()).toEqual({ ok: true, returnPath: '/notes/42?tab=1' });
+    expect((await app.keys.open()).state).toBe('open');
+  });
+
+  it('refuses a request kept in the shape before 2.12.1, as one it does not have', async () => {
+    const app = page();
+    await app.keys.unlock();
+    const state = new URL(app.bar.assigned).searchParams.get('state') ?? '';
+    const old = (await crypto.subtle.generateKey({ name: 'X25519' }, false, [
+      'deriveBits',
+    ])) as CryptoKeyPair;
+    await app.backend.set(`pending:${state}`, {
+      privateKey: old.privateKey,
+      publicKey: new Uint8Array(await crypto.subtle.exportKey('raw', old.publicKey)),
+      at: app.clock.now,
+      returnPath: '/',
+    });
+    app.bar.hash = (await coreAnswers(app.bar.assigned)).hash;
+    expect(await app.keys.receive()).toEqual({ ok: false, reason: 'no-request' });
+  });
 });
+
+/** A backend that, like WebKit's IndexedDB, silently keeps nothing of a value holding a key of a curve. */
+function webKitBackend(): KeyStoreBackend {
+  const inner = memoryBackend();
+  const holdsCurveKey = (value: unknown): boolean => {
+    if (value instanceof CryptoKey) return ['X25519', 'Ed25519'].includes(value.algorithm.name);
+    if (typeof value !== 'object' || value === null || ArrayBuffer.isView(value)) return false;
+    return Object.values(value).some(holdsCurveKey);
+  };
+  return {
+    get: (key) => inner.get(key),
+    delete: (key) => inner.delete(key),
+    set: async (key, value) => {
+      if (!holdsCurveKey(value)) await inner.set(key, value);
+    },
+  };
+}

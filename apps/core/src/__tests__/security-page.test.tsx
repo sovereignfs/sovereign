@@ -132,7 +132,13 @@ describe('the security page', () => {
   it('says who can open the person’s encrypted data, only to someone who has some', async () => {
     getSession.mockResolvedValue(user());
     expect(renderToStaticMarkup(await SecurityPage())).not.toContain('Encrypted data');
+    vault.mockResolvedValue({ account: { kitConfirmed: false }, waysIn: [] });
+    const pending = renderToStaticMarkup(await SecurityPage());
+    expect(pending).toContain('href="/keys/kit?returnTo=%2Fsecurity"');
     vault.mockResolvedValue({ account: { kitConfirmed: true }, waysIn: [] });
+    const kept = renderToStaticMarkup(await SecurityPage());
+    expect(kept).toContain('kept your recovery kit');
+    expect(kept).not.toContain('href="/keys/kit');
     expect(renderToStaticMarkup(await SecurityPage())).toContain('Recovery is off');
     escrowLine.mockResolvedValue(`sv-escrow-1.${'A'.repeat(11)}.${'B'.repeat(43)}`);
     expect(renderToStaticMarkup(await SecurityPage())).toContain('the next time you open an app');

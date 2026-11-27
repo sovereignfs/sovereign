@@ -7,6 +7,7 @@ import { signUp, signUpProblem } from '@sovereignfs/auth/client';
 import { authClient } from '../../../src/auth/client';
 import { deriveForSignIn } from '../../../src/auth/derive';
 import { continuationUrl } from '../../../src/auth/oauth-continuation';
+import { afterSigningIn } from '../../../src/keys/kit-step';
 import { afterPasswordAccepted } from '../../../src/keys/session';
 import { PAGE_NOT_READY, type PasswordPolicy } from '../../../src/auth/password-policy';
 import { afterVerification } from '../messages';
@@ -65,9 +66,12 @@ export function SignUpForm({
     }
     // Signed in: the keys are set up now, silently (core-app §5.3).
     await afterPasswordAccepted(result.secret);
-    // A full navigation, so the next page is rendered with the new session cookie; an app's sign-in carries on.
+    // A full navigation, so the next page is rendered with the new session cookie; an app's sign-in carries on, after the recovery kit.
     window.location.assign(
-      (result.data === undefined ? undefined : continuationUrl(result.data)) ?? returnTo,
+      await afterSigningIn(
+        returnTo,
+        result.data === undefined ? undefined : continuationUrl(result.data),
+      ),
     );
   }
 

@@ -48,9 +48,13 @@ export class FsDriver implements Driver {
         yield chunk;
       }
     }
+    const out = createWriteStream(part, { mode: 0o600, flags: 'wx' });
     try {
-      await pipeline(counted(), createWriteStream(part, { mode: 0o600, flags: 'wx' }));
+      await pipeline(counted(), out);
     } catch (error) {
+      // `pipeline` rejects as soon as the chunks fail, which may be while the file is still being opened: removed then, it would be
+      // made afterwards and left behind. A stream that has closed will not make it any more.
+      if (!out.closed) await new Promise<void>((resolve) => out.once('close', resolve));
       await rm(part, { force: true });
       throw error;
     }

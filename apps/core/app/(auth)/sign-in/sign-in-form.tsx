@@ -6,6 +6,7 @@ import { SignInForm as Form } from '@sovereignfs/ui';
 import { signInWithPassword } from '@sovereignfs/auth/client';
 import { authClient } from '../../../src/auth/client';
 import { deriveForSignIn } from '../../../src/auth/derive';
+import { afterSigningIn } from '../../../src/keys/kit-step';
 import { afterPasswordAccepted, startAfresh, handOverSecret } from '../../../src/keys/session';
 import {
   continuationUrl,
@@ -80,7 +81,7 @@ export function SignInForm({
     }
     // A full navigation, so the next page is rendered with the new session cookie. An app's sign-in goes
     // back to the app; anything else goes where the person was headed.
-    window.location.assign(continuationUrl(result.data) ?? returnTo);
+    window.location.assign(await afterSigningIn(returnTo, continuationUrl(result.data)));
   }
 
   async function onSubmit(values: { email: string; password: string }) {
@@ -122,7 +123,7 @@ export function SignInForm({
         // The keys are set up the first time, or opened, silently (core-app §5.3); nothing about them stops signing in.
         await afterPasswordAccepted(result.secret);
         // A full navigation, so the next page is rendered with the new session cookie.
-        window.location.assign(continuationUrl(result.data) ?? returnTo);
+        window.location.assign(await afterSigningIn(returnTo, continuationUrl(result.data)));
     }
   }
 

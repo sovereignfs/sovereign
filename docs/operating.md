@@ -259,7 +259,7 @@ and says so.
 
 Apps that use encryption keep what people store so that the server cannot read it, not even with the database, a backup or
 `sovereign-admin` (core-app §5). Each person's data opens with their password, a passkey that unlocks, or their **recovery kit**, which
-they are shown the first time they open such an app. **Not yet audited:** neither a cryptographer's review nor a code audit has been
+core shows them when they sign up, or at their next sign-in, and asks them to keep before they go on. **Not yet audited:** neither a cryptographer's review nor a code audit has been
 done.
 
 What it protects against is someone who reads the server: a stolen disk, database or backup. It does **not** protect against whoever runs

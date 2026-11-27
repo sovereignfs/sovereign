@@ -10,7 +10,7 @@ import {
   unwrapSecret,
 } from '@sovereignfs/crypto/web';
 import { registerApp } from '../support/console';
-import { openDatabase } from '../support/database';
+import { openDatabase, resetLinkFor } from '../support/database';
 import { MINIMAL_URL, person } from '../support/env';
 import { join, newPerson, signIn, signOut } from '../support/ui';
 
@@ -28,30 +28,6 @@ async function query(sql: string, args: unknown[] = []) {
 const subOf = async (email: string) =>
   String((await query('select id from users where email = ?', [email]))[0]?.id);
 
-/** A reset link, made as `sovereign-admin accounts reset-link` makes one. */
-async function resetLinkFor(email: string): Promise<string> {
-  const token = randomBytes(18).toString('base64url');
-  const database = await openDatabase();
-  try {
-    const now = Date.now();
-    const at = (ms: number) => (database.family === 'postgres' ? new Date(ms) : ms);
-    await database.run(
-      'insert into verifications (id, identifier, value, expires_at, created_at, updated_at) values (?, ?, ?, ?, ?, ?)',
-      [
-        `v-${token}`,
-        `reset-password:${token}`,
-        await subOf(email),
-        at(now + 3_600_000),
-        at(now),
-        at(now),
-      ],
-    );
-  } finally {
-    await database.close();
-  }
-  return `/reset-password?token=${encodeURIComponent(token)}`;
-}
-
 /** Sends the browser to core's release for an app, as an app's page would, with a request of its own. */
 async function openApp(page: Page, clientId: string, returnTo: string) {
   const pair = await generateReceivingKey();
@@ -66,16 +42,6 @@ async function openApp(page: Page, clientId: string, returnTo: string) {
 
 const backAt = (page: Page, returnTo: string) =>
   page.waitForURL((url) => url.href.startsWith(`${returnTo}#`), { timeout: 15_000 });
-
-/** Keeps the kit shown at the first encrypted app, and gives its text. */
-async function keepKit(page: Page): Promise<string> {
-  const groups = page.getByRole('list', { name: /Your recovery kit/ });
-  await expect(groups).toBeVisible();
-  const text = (await groups.innerText()).replace(/\s+/g, '');
-  await page.getByRole('checkbox', { name: /kept my recovery kit/ }).check();
-  await page.getByRole('button', { name: 'Continue' }).click();
-  return text;
-}
 
 async function registerEncryptedApp(page: Page, name: string) {
   const returnTo = `${MINIMAL_URL}/keys/${name.toLowerCase()}`;
@@ -103,12 +69,11 @@ test('§5.10.3: a reset by email gives back the account and not the data; the ki
   const writer = person('Wren');
   const joined = await join(browser, operator.page, writer);
   await operator.context.close();
-  const page = joined.page;
+  const { page, kit } = joined;
 
+  // The kit was kept at sign-up, so the first encrypted app shows none.
   await openApp(page, app.id, app.returnTo);
-  const back = backAt(page, app.returnTo);
-  const kit = await keepKit(page);
-  await back;
+  await backAt(page, app.returnTo);
 
   // A reset: a new password, and the browser forgets what it held.
   await page.goto('/');
@@ -172,7 +137,6 @@ test('§5.10.7: with escrow on, the owner recovers a person’s data offline; wi
   const sub = await subOf(keeper.email);
   await openApp(page, app.id, app.returnTo);
   const back = backAt(page, app.returnTo);
-  await keepKit(page);
   // Told before covered: nothing is added until the person continues.
   await expect(page.getByText(/has turned on recovery/)).toBeVisible();
   expect(

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { TwoFactorForm as Form } from '@sovereignfs/ui';
 import { verifySecondStep } from '@sovereignfs/auth/client';
 import { authClient } from '../../../../src/auth/client';
+import { afterSigningIn } from '../../../../src/keys/kit-step';
 import { afterSecondStep, dropHandOver } from '../../../../src/keys/session';
 import {
   continuationUrl,
@@ -53,7 +54,7 @@ export function TwoFactorForm({ returnTo }: { returnTo: string }) {
     await afterSecondStep();
     // A full navigation, so the next page is rendered with the new session cookie. An app's sign-in goes
     // back to the app.
-    window.location.assign(continuationUrl(result.data) ?? returnTo);
+    window.location.assign(await afterSigningIn(returnTo, continuationUrl(result.data)));
   }
 
   async function signInWithPasskey() {
@@ -70,7 +71,7 @@ export function TwoFactorForm({ returnTo }: { returnTo: string }) {
     // The password's secret is not used: a passkey is a sign-in of its own, and may be another account's,
     // whose keys that secret must never set up or open.
     await dropHandOver();
-    window.location.assign(continuationUrl(result.data) ?? returnTo);
+    window.location.assign(await afterSigningIn(returnTo, continuationUrl(result.data)));
   }
 
   if (expired) return <ExpiredRequest restartAt={returnTo} />;

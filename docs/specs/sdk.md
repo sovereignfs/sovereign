@@ -360,8 +360,9 @@ in each browser session, through `@sovereignfs/sdk/keys`, the entry a page impor
 - **`appKeys({ core, clientId, returnTo })`** gives `open()`, `unlock()`, `receive()` and `forget()`.
 - **`open()`** gives the app key, as a WebCrypto key that cannot be exported, while this browser holds it for the app's session;
   otherwise `{ state: 'locked' }`, and the page shows `LockedState` from `@sovereignfs/ui` with `unlock()` as its action.
-- **`unlock()`** makes a key pair that cannot be exported and a `state`, keeps both in IndexedDB, and sends the person to core's
-  `/keys/release` with the public half. Core releases silently only when the browser names the app's origin as the referrer, so an
+- **`unlock()`** makes a key pair and a `state`, keeps both in IndexedDB, and sends the person to core's `/keys/release` with the
+  public half. The private half is kept wrapped (pkcs8, AES-GCM) by a key of the browser's that cannot be exported, never as a
+  WebCrypto key of a curve, which WebKit's IndexedDB accepts and does not keep; it is opened again, not exportable, by `receive()`. Core releases silently only when the browser names the app's origin as the referrer, so an
   app's pages keep a referrer policy that sends the origin (the browsers' default); with `no-referrer` the person is asked each time.
 - **`receive()`**, at the key return address, reads the answer from the fragment, removes the fragment from the address before
   anything else, and makes every check of core-app §5.7, refusing anything else with its reason. The `state` and its key are used
@@ -606,3 +607,4 @@ of its own; an app catalogue.
 | 2026-11-20 | §9.9: a session's typed `user`, the same shape as `@sovereignfs/auth`'s, and what an app is not told; §9.1: `nextAuth` deprecated.                                                                                                                        |
 | 2026-11-20 | §9.1: `handleExportRequest`, an app's part of a person's export; §9.5: an app with no core offers the owner's and a person's export itself (RFC 0008). Not built.                                                                                         |
 | 2026-11-22 | §9.3: the key secret is also served by `@sovereignfs/auth`'s `keySecrets` (RFC 0007 amendment 1 A4, task 20.6).                                                                                                                                           |
+| 2026-11-26 | §9.3: `unlock()` keeps the request's private key wrapped by a browser key, not as an X25519 WebCrypto key, which Safari and every iOS browser silently do not keep in IndexedDB.                                                                          |

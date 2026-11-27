@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fillUnannounced } from '../../../__tests__/fill-unannounced';
 import { ForgotPasswordForm } from '../ForgotPasswordForm';
 import { ResetPasswordForm } from '../ResetPasswordForm';
 
@@ -39,5 +40,28 @@ describe('ResetPasswordForm', () => {
     expect(screen.getByRole('link', { name: 'Request a new link' }).getAttribute('href')).toBe(
       '/forgot',
     );
+  });
+
+  it('hands over what is in the boxes when they were filled without a word to the page, and leaves it there', () => {
+    const onSubmit = vi.fn();
+    const form = (pending: boolean) => (
+      <ResetPasswordForm
+        passwordHint=""
+        pending={pending}
+        onSubmit={onSubmit}
+        signInHref="/sign-in"
+        newLinkHref="/forgot"
+      />
+    );
+    const { rerender } = render(form(false));
+    const box = (label: string) => screen.getByLabelText(label) as HTMLInputElement;
+    fillUnannounced(box('New password'), 'one');
+    fillUnannounced(box('Confirm new password'), 'one');
+    fireEvent.submit(screen.getByRole('button', { name: 'Set new password' }));
+    expect(onSubmit).toHaveBeenCalledWith({ password: 'one', confirm: 'one' });
+    rerender(form(true));
+    rerender(form(false));
+    expect(box('New password').value).toBe('one');
+    expect(box('Confirm new password').value).toBe('one');
   });
 });

@@ -1,6 +1,6 @@
 {
   "name": "@sovereignfs/storage",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "The files people upload to a Sovereign app or core: a folder per person, a quota per person, served only to them.",
   "license": "MPL-2.0",
   "repository": {

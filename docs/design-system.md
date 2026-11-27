@@ -551,13 +551,18 @@ slot: `BrandBadge` (the first letter of the name, or the letters of `mark`) when
 `legal={false}` leaves out the privacy and terms links for an app that has no such
 pages.
 
-The whole forms are components too, the same in core and every app (RFC 0007): `SignInForm` draws the sign-in and hands the email
-and password to `onSubmit`; the consumer signs in with `@sovereignfs/auth/client` and passes back `pending`, `error` and `unverified`.
-Links come from `renderLink`, so a Next app passes its `Link`. A form never sends anything itself. `SignUpForm`,
-`ForgotPasswordForm`, `ResetPasswordForm` and `TwoFactorForm` work the same way. On the account pages, `SessionsPanel` takes the
-app's server actions (each answers an `ActionResult`) and the person's `timeZone` (UTC without one; its times are
-written the same on the server and in the browser), `ChangePasswordForm` hands the two passwords to the app, and
-`TwoFactorPanel` and `ProfilePanel` take their steps as functions.
+The whole forms are components too, the same in core and every app (RFC 0007): `SignInForm` draws the sign-in and hands
+the email and password to `onSubmit`; the consumer signs in with `@sovereignfs/auth/client` and passes back `pending`,
+`error` and `unverified`. Links come from `renderLink`, so a Next app passes its `Link`. A form never sends anything
+itself. `SignUpForm`, `ForgotPasswordForm`, `ResetPasswordForm` and `TwoFactorForm` work the same way. Nor may the
+browser send one before the page is running, which would put the password in the address: until then a submit
+`AuthButton`, and the buttons of `ChangePasswordForm` and `LinkSovereignPanel`, are off. A form meant to work without a
+script uses `Button`. A script of someone else’s can send a form past its button, so `AuthForm` (unless given a `method`
+or an `action`), `ChangePasswordForm`, `LinkSovereignPanel` and the password step of `TwoFactorPanel` are
+`method="post"`, which keeps what is typed out of the address. On the account pages, `SessionsPanel` takes the app's
+server actions (each answers an `ActionResult`) and the person's `timeZone` (UTC without one; its times are written the
+same on the server and in the browser), `ChangePasswordForm` hands the two passwords to the app, and `TwoFactorPanel`
+and `ProfilePanel` take their steps as functions.
 
 ```tsx
 <AuthCard brand={<BrandBadge name="Fjord" mark="Fj" />} title="Sign in to Fjord" legal={false}>

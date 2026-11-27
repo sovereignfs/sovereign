@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react';
+import type { FormEvent } from 'react';
+import { useHydrated } from '../../hooks/useHydrated';
 import { Alert } from '../Alert/Alert';
 import { Button } from '../Button/Button';
 import { FormField } from '../FormField/FormField';
@@ -53,11 +54,14 @@ export function LinkSovereignPanel({
   pending = false,
   onSubmit,
 }: LinkSovereignPanelProps) {
-  const [password, setPassword] = useState('');
+  // The button is off until the page is running, as `AuthButton`'s is, so a browser never sends the password itself; and should a script
+  // of someone else's send the form, it goes by POST, with nothing in the address.
+  const hydrated = useHydrated();
 
+  // The box is read when the form is sent, as in `SignInForm`: a password manager can fill it without telling the page.
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onSubmit({ password });
+    onSubmit({ password: String(new FormData(event.currentTarget).get('password') ?? '') });
   }
 
   const said = outcome ? OUTCOMES[outcome] : undefined;
@@ -71,7 +75,7 @@ export function LinkSovereignPanel({
       </div>
     );
   return (
-    <form className={styles.form} onSubmit={submit}>
+    <form className={styles.form} method="post" onSubmit={submit}>
       {said ? <Alert variant={said.variant}>{said.text(instanceName)}</Alert> : null}
       {error ? <Alert variant="error">{error}</Alert> : null}
       <p>
@@ -80,18 +84,11 @@ export function LinkSovereignPanel({
       </p>
       <FormField label="Password" required>
         {(field) => (
-          <Input
-            {...field}
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
+          <Input {...field} type="password" name="password" autoComplete="current-password" />
         )}
       </FormField>
       <div className={styles.row}>
-        <Button type="submit" loading={pending}>
+        <Button type="submit" loading={pending} disabled={!hydrated}>
           {pending ? 'Opening…' : `Link to ${instanceName}`}
         </Button>
       </div>

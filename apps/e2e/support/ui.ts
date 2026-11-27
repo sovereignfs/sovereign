@@ -40,23 +40,44 @@ export async function signIn(
 }
 
 /**
- * An invited person joins: the owner (signed in on `ownerPage`) invites the address, and the person follows the link
- * in a browser of their own and signs up. Returns them signed in.
+ * Keeps the recovery kit core shows someone who has not kept one (core-app §5.3), after sign-up or sign-in, and gives its text. Core
+ * then goes on to where the person was headed.
+ */
+export async function keepKit(page: Page): Promise<string> {
+  await expect(page).toHaveURL(/\/keys\/kit/);
+  const groups = page.getByRole('list', { name: /Your recovery kit/ });
+  await expect(groups).toBeVisible();
+  const text = (await groups.innerText()).replace(/\s+/g, '');
+  await page.getByRole('checkbox', { name: /kept my recovery kit/ }).check();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page).not.toHaveURL(/\/keys\/kit/);
+  return text;
+}
+
+/** The owner (signed in on `ownerPage`) invites an address; the link to follow. */
+export async function invite(ownerPage: Page, email: string): Promise<string> {
+  await ownerPage.goto('/console/invites');
+  await ownerPage.getByLabel('Email address').fill(email);
+  await ownerPage.getByRole('button', { name: 'Invite' }).click();
+  return ownerPage.locator('code').filter({ hasText: '/invite/' }).first().innerText();
+}
+
+/**
+ * An invited person joins: the owner invites the address, and the person follows the link in a browser of their own,
+ * signs up and keeps their recovery kit. Returns them signed in, with the kit's text.
  */
 export async function join(
   browser: Browser,
   ownerPage: Page,
   who: Who,
-): Promise<{ context: BrowserContext; page: Page }> {
-  await ownerPage.goto('/console/invites');
-  await ownerPage.getByLabel('Email address').fill(who.email);
-  await ownerPage.getByRole('button', { name: 'Invite' }).click();
-  const link = await ownerPage.locator('code').filter({ hasText: '/invite/' }).first().innerText();
+): Promise<{ context: BrowserContext; page: Page; kit: string }> {
+  const link = await invite(ownerPage, who.email);
   const person = await newPerson(browser);
   await person.page.goto(link);
   await signUp(person.page, who, person.page.url());
+  const kit = await keepKit(person.page);
   await expect(heading(person.page)).toHaveText('Apps');
-  return person;
+  return { ...person, kit };
 }
 
 /** The six boxes of the second step, one digit in each, replacing what a wrong try left there. */

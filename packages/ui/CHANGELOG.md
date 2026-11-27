@@ -5,6 +5,30 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.96.0; earlier versions are in the repository's
 history and tags.
 
+## [0.107.4] - 2026-11-26
+
+### Security
+
+- A password could end up in the address. A form pressed before its script had run, on a slow connection for example,
+  was sent by the browser itself: a GET with every named box in the address, which the history and a reverse proxy’s
+  access log can keep. The submit button of `AuthButton`, and the buttons of `ChangePasswordForm` and
+  `LinkSovereignPanel`, are now off until the page is running, which also stops the Enter key. An app’s own forms that
+  use `AuthButton` are covered with it. A form meant to work without a script (`action={serverAction}`) uses `Button`.
+- A script that sends a form itself, past its button, now sends it by POST, with nothing in the address: `AuthForm`,
+  `ChangePasswordForm`, `LinkSovereignPanel` and the password step of `TwoFactorPanel`. `AuthForm` is `method="post"`
+  only when it is given neither a `method` nor an `action`; an app that counted on the browser’s GET gives it
+  `method="get"`.
+
+### Fixed
+
+- `SignInForm` sends what is in its boxes. A password manager can fill them without telling the page (AutoFill on iOS, until a box
+  is focused), and the form then sent what it had last heard, usually nothing: "The email or password is incorrect" for a password
+  that was right. Its boxes are no longer held in React state, so drawing the form again cannot empty what was filled either.
+- `SignUpForm`, `ResetPasswordForm`, `ChangePasswordForm`, `LinkSovereignPanel` and the password step of `TwoFactorPanel` had the
+  same fault and are fixed the same way: what is in their boxes is what is sent. What each hands to `onSubmit` is unchanged.
+- `ExportPanel` reads its password box when it needs it. Its button is no longer greyed out while the box is empty, since a box filled
+  without a word to the page looked empty to it and left the button dead. Pressed with an empty box, the browser asks for it.
+
 ## [0.107.3] - 2026-11-25
 
 This version carries 0.107.1 and 0.107.2, which were set on `develop` and never published.

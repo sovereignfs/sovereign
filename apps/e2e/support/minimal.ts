@@ -31,6 +31,8 @@ export async function signInMinimal(
   page: Page,
   clientId: string,
   scope: string,
+  /** What core asks of the person before sending them back, when they are not signed in. */
+  onTheWay?: () => Promise<void>,
 ): Promise<MinimalSignIn> {
   const metadata = await discovery();
   const verifier = base64url(randomBytes(32));
@@ -45,6 +47,7 @@ export async function signInMinimal(
     code_challenge_method: 'S256',
   }).toString();
   await page.goto(authorize.href);
+  await onTheWay?.();
 
   let askedConsent = false;
   await page.waitForURL((url) => url.origin === MINIMAL_URL || url.pathname === '/consent');

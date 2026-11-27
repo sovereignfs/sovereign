@@ -8,6 +8,7 @@ import { deriveForSignIn } from '../../../src/auth/derive';
 import { PAGE_NOT_READY } from '../../../src/auth/password-policy';
 import { afterPasskeyAccepted, afterPasswordAccepted, forgetKeys } from '../../../src/keys/session';
 import { askForPasskey } from '../../../src/lock/ceremony';
+import { useHydrated } from '../../../src/use-hydrated';
 import { AuthError } from '../auth-notice';
 import { AuthField } from '../auth-field';
 import styles from '../auth.module.css';
@@ -19,9 +20,9 @@ import { unlockChallenge, unlockWithPasskey, unlockWithPassword } from './action
  */
 export function LockForm({ returnTo, email }: { returnTo: string; email: string }) {
   const [passkeysSupported, setPasskeysSupported] = useState(false);
-  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [pending, setPending] = useState<'passkey' | 'password' | 'sign-out' | undefined>();
+  const hydrated = useHydrated();
 
   // Known only in the browser, so it is read after the first render.
   useEffect(() => setPasskeysSupported(typeof window.PublicKeyCredential === 'function'), []);
@@ -56,6 +57,8 @@ export function LockForm({ returnTo, email }: { returnTo: string; email: string 
 
   async function unlockWithPasswordInstead(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // Read from the box, first: a password manager can fill it without telling the page, and a box turned off holds nothing to read.
+    const password = String(new FormData(event.currentTarget).get('password') ?? '');
     setPending('password');
     setError(undefined);
     let value: string;
@@ -110,7 +113,12 @@ export function LockForm({ returnTo, email }: { returnTo: string; email: string 
           {pending === 'passkey' ? 'Waiting for your device…' : 'Unlock'}
         </Button>
       ) : null}
-      <form className={styles.form} onSubmit={(event) => void unlockWithPasswordInstead(event)}>
+      {/* POST, should a script of someone else's send it: nothing of it goes in the address (core-app §5.2). */}
+      <form
+        className={styles.form}
+        method="post"
+        onSubmit={(event) => void unlockWithPasswordInstead(event)}
+      >
         <AuthField label="Password">
           {(control) => (
             <Input
@@ -120,8 +128,6 @@ export function LockForm({ returnTo, email }: { returnTo: string; email: string 
               autoComplete="current-password"
               required
               disabled={pending !== undefined}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
             />
           )}
         </AuthField>
@@ -130,7 +136,8 @@ export function LockForm({ returnTo, email }: { returnTo: string; email: string 
           variant={passkeysSupported ? 'secondary' : 'primary'}
           className={styles.submit}
           loading={pending === 'password'}
-          disabled={pending !== undefined}
+          // Off until the page is running: the browser would send the password itself, in the address.
+          disabled={!hydrated || pending !== undefined}
         >
           {pending === 'password' ? 'Unlocking…' : 'Use your password'}
         </Button>

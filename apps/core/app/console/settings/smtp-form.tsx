@@ -5,6 +5,7 @@ import { Alert, Button, Checkbox, FormField, Input } from '@sovereignfs/ui';
 import { resetSmtpAction, saveSmtpAction, type SettingsResult } from './actions';
 import type { ShownSmtp } from '../../../src/instance/describe';
 import { sourceNote } from './source-note';
+import { useHydrated } from '../../../src/use-hydrated';
 import styles from './settings.module.css';
 
 /**
@@ -25,6 +26,7 @@ export function SmtpForm({ smtp, encryptionReady }: { smtp: ShownSmtp; encryptio
   const [from, setFrom] = useState(own(smtp.from));
   const [password, setPassword] = useState('');
   const [clear, setClear] = useState(false);
+  const hydrated = useHydrated();
   const [state, save, saving] = useActionState<SettingsResult | null, FormData>(
     async (previous, form) => {
       const result = await saveSmtpAction(previous, form);
@@ -58,8 +60,10 @@ export function SmtpForm({ smtp, encryptionReady }: { smtp: ShownSmtp; encryptio
     smtp.password.source === 'saved';
 
   return (
+    // POST, should a script of someone else's send it: nothing of it goes in the address (core-app §5.2).
     <form
       className={styles.form}
+      method="post"
       onSubmit={(event) => {
         // A form action would reset the checkbox when it finished, undoing what a refusal should leave.
         event.preventDefault();
@@ -161,7 +165,8 @@ export function SmtpForm({ smtp, encryptionReady }: { smtp: ShownSmtp; encryptio
         </Alert>
       ) : null}
       <div className={styles.buttons}>
-        <Button type="submit" loading={saving}>
+        {/* Off until the page is running: the browser would send the password itself, in the address. */}
+        <Button type="submit" loading={saving} disabled={!hydrated}>
           {saving ? 'Saving…' : 'Save email settings'}
         </Button>
         {anySaved ? (

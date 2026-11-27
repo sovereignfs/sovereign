@@ -5,6 +5,54 @@ versions follow [semver](https://semver.org/). A version's section is written in
 and becomes the release notes when the version is published. This file starts at 0.97.0; earlier versions are in the repository's
 history and tags.
 
+## [0.143.1] - 2026-11-26
+
+### Security
+
+- A password could end up in the address. Pressing a password form’s button, or Enter in it, before the page had loaded,
+  on a slow connection for example, made the browser send the form itself, with the password in the address: core
+  received the password, which it otherwise never does, and the browser’s history and a reverse proxy’s access log could
+  keep it. This held for sign-in, sign-up, password reset, the lock page, changing a password and the email settings.
+  Those buttons now work only once the page is running. Should a script send such a form all the same, as a browser
+  extension may, it now goes by POST: core receives what was typed, and nothing goes into the address. The same holds
+  where core asks for the recovery kit or the password to unlock encrypted data.
+- If a proxy in front of core keeps access logs, search them for `password=`, ignoring case. Have any password you find
+  there changed, the mail server’s included.
+
+### Fixed
+
+- Signing in with a password manager on an iPhone no longer says the email or password is incorrect when both are right. Core's
+  sign-in sends what is in the boxes, also when the password manager filled them without telling the page.
+- The same holds wherever else core asks for a password: creating an account, setting or changing a password, unlocking, turning
+  two-step sign-in on or off, letting a passkey unlock, exporting, deleting an account and handing over ownership. The buttons that
+  were greyed out until a password was typed can now be pressed; with an empty box, the browser asks you to fill it in.
+- Printing the recovery kit from core installed on a phone's home screen gave a page with the kit's title and first groups cut off.
+  The whole kit is printed now. A kit printed that way before is only good if it shows all fourteen groups; saved as a file, or
+  printed from the browser, it was whole.
+- A file upload that broke off at once, or turned out longer than it said, could leave an unfinished file in the person’s folder
+  for a day or more. It is removed straight away now (`@sovereignfs/storage` 0.1.1).
+
+## [0.143.0] - 2026-11-26
+
+### Changed
+
+- Core asks for the recovery kit as soon as a person signs up, and after each sign-in until they have kept it, instead of waiting until
+  they first open an app that uses encryption. There is no way to put it off on that screen; the person then goes on to where they were
+  headed, an app included. People with an account already see it at their next sign-in. A sign-in that leaves the browser locked, such
+  as a passkey that does not open encrypted data, is not held up.
+
+### Added
+
+- The Security page offers the recovery kit to anyone who has not kept it.
+
+## [0.142.1] - 2026-11-26
+
+### Fixed
+
+- What core's pages keep in the browser for encryption (the unlocked account key, the hand-over across sign-in's second step) is
+  written before the page moves on: a write now waits until the browser has committed it. The fix for unlocking an app's data on iOS
+  is in `@sovereignfs/sdk` 2.12.1, which apps take by updating.
+
 ## [0.142.0] - 2026-11-23
 
 ### Added

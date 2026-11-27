@@ -97,9 +97,16 @@ export default async function SecurityPage() {
               What apps keep encrypted for you opens with your password, a passkey that unlocks, or
               your recovery kit.
               {vault.account.kitConfirmed
-                ? ''
-                : ' You’ll be shown your recovery kit the first time you open an app that uses encryption.'}
+                ? ' You’ve kept your recovery kit.'
+                : ' You haven’t kept your recovery kit yet.'}
             </p>
+            {vault.account.kitConfirmed ? null : (
+              <p className={styles.footer}>
+                <Link className={styles.link} href="/keys/kit?returnTo=%2Fsecurity">
+                  Keep your recovery kit
+                </Link>
+              </p>
+            )}
             <p className={styles.text}>
               {escrowId
                 ? covered

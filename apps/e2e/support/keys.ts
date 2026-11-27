@@ -59,7 +59,7 @@ export async function release(page: Page, app: ReturnType<typeof appPage>, retur
   await page.goto(app.bar.assigned, { referer: `${new URL(returnTo).origin}/` });
   const kit = page.getByRole('checkbox', { name: /kept my recovery kit/ });
   const back = page.waitForURL((url) => url.href.startsWith(`${returnTo}#`), { timeout: 15_000 });
-  // The first encrypted app shows the kit once (core-app §5.3).
+  // Someone who left sign-up without keeping their kit is shown it here (core-app §5.3).
   await Promise.race([
     back,
     kit.waitFor({ timeout: 15_000 }).then(async () => {

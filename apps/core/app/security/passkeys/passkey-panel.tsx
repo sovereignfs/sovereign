@@ -281,12 +281,14 @@ function UnlockFirst({
   onUnlocked: () => void;
   onCancel: () => void;
 }) {
-  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [pending, setPending] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // Read from the box: a password manager can fill it without telling the page.
+    const password = String(new FormData(event.currentTarget).get('password') ?? '');
+    if (!password) return;
     setPending(true);
     setError(undefined);
     try {
@@ -304,7 +306,8 @@ function UnlockFirst({
   }
 
   return (
-    <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
+    // POST, should a script of someone else's send it: nothing of it goes in the address (core-app §5.2).
+    <form className={styles.form} method="post" onSubmit={(event) => void onSubmit(event)}>
       {error ? <Alert variant="error">{error}</Alert> : null}
       <FormField label="Your password" hint="To unlock this device first.">
         {(field) => (
@@ -313,13 +316,12 @@ function UnlockFirst({
             name="password"
             type="password"
             autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            required
           />
         )}
       </FormField>
       <div className={styles.row}>
-        <Button type="submit" loading={pending} disabled={!password}>
+        <Button type="submit" loading={pending}>
           {pending ? 'Unlocking…' : 'Unlock'}
         </Button>
         <Button type="button" variant="ghost" onClick={onCancel}>

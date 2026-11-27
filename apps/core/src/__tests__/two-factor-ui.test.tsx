@@ -6,6 +6,14 @@ vi.mock('../auth/derive', () => ({
   signInValue: async (password: string, address: string) => `derived:${password}:${address}`,
 }));
 
+// The keys are opened by the vault's own tests (keys-unlock, key-vault); here they stand aside.
+const isKitDue = vi.fn();
+vi.mock('../keys/session', () => ({
+  isKitDue: async () => isKitDue() as unknown,
+  afterSecondStep: async () => undefined,
+  dropHandOver: async () => undefined,
+}));
+
 const enable = vi.fn();
 const disable = vi.fn();
 const generateBackupCodes = vi.fn();
@@ -33,7 +41,14 @@ const URI =
 const CODES = ['aaaaa-11111', 'bbbbb-22222', 'ccccc-33333'];
 
 beforeEach(() => {
-  for (const mock of [enable, disable, generateBackupCodes, verifyTotp, verifyBackupCode]) {
+  for (const mock of [
+    enable,
+    disable,
+    generateBackupCodes,
+    verifyTotp,
+    verifyBackupCode,
+    isKitDue,
+  ]) {
     mock.mockReset();
   }
   assign.mockReset();
@@ -244,6 +259,15 @@ describe('the second sign-in step', () => {
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/settings'));
     expect(verifyTotp).toHaveBeenCalledWith({ code: '123456' });
     expect(verifyBackupCode).not.toHaveBeenCalled();
+  });
+
+  it('goes to the recovery kit first while it is to be kept (core-app §5.3)', async () => {
+    verifyTotp.mockResolvedValue({ data: {}, error: null });
+    isKitDue.mockReturnValue(true);
+    render(<TwoFactorForm returnTo="/settings" />);
+    typeCode('123456');
+    click('Verify');
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('/keys/kit?returnTo=%2Fsettings'));
   });
 
   it('goes back to the app, with its code, when an app asked for the sign-in', async () => {

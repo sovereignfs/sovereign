@@ -2092,6 +2092,12 @@ Built (task 16.3), on every instance, in §3.3.2, §3.3.4, §3.5 and §3.15.1.
   reset, the change, and every place the password is asked again.
 - **Core never receives a password.** better-auth hashes the sign-in value as it hashed the password. The server refuses, wherever a
   password is set, any value that is not the derivation's shape (`PASSWORD_NOT_DERIVED`).
+- **A password form sends nothing before its page runs.** A browser sends a form itself while no script has taken it
+  over, a GET with every named box in the address. So a password box the server draws either has no name, or sits in a
+  form whose submit button is off in the page as served, which stops the Enter key too. And every form with a named
+  password box, or the recovery kit, is `method="post"`: a script that calls `submit()` all the same, as a browser
+  extension may, puts nothing in the address. Core then receives what was typed, answers with the page as it is, and
+  writes none of it down.
 - **The policy is the browser's.** The page checks the policy of §3.3.2 before deriving, with the same words, and does not send a
   password that breaks it. The server cannot check what it never receives; a person who goes round the page weakens their own account
   only.
@@ -2109,7 +2115,7 @@ Built (task 16.3), on every instance, in §3.3.2, §3.3.4, §3.5 and §3.15.1.
 
 ### 5.3 The vault
 
-Built (task 16.6), apart from the kit's page, which comes with §5.7. Core keeps, for each account, what opens its keys, and can open
+Built (task 16.6; the recovery kit at sign-up and sign-in, task 16.20). Core keeps, for each account, what opens its keys, and can open
 none of it.
 
 | Kept            | What                                                                                                                              |
@@ -2120,14 +2126,27 @@ none of it.
 | Session secrets | For each session, 32 random bytes (§5.4), gone with the session                                                                   |
 
 - **Setting up** happens in the browser, silently, the first time a person signs in with their password after this ships, or at
-  sign-up: the account key and the signing key are made there and wrapped by the unlock key. Signing in says nothing about keys.
-- **The recovery kit** is shown the first time the person opens an encrypted app, on core's page that gives the app its key (§5.7),
-  and nothing more happens there until they confirm they kept it; only then is the kit's way in stored. Until they confirm, a new kit
-  is made each time it is shown: core keeps whether the kit was confirmed, never the kit. A person who never opens an encrypted app
-  is never shown one. (Decided with the goal owner on 2026-11-16, over showing it at the first sign-in, which would have put a
-  blocking screen in every sign-in, an app's included.) What the kit says depends on escrow (§5.8): without it, the kit is the only
-  way back and nobody else can get the data back; with it, the kit is the person's own way back and the owner can also recover it.
-  No screen tells a person on an instance with escrow that nobody else can.
+  sign-up: the account key and the signing key are made there and wrapped by the unlock key. Signing in says nothing about keys, apart
+  from asking for the recovery kit.
+- **The recovery kit** is asked for as soon as core can show it: right after a person signs up, and after every sign-in until they have
+  kept it, whenever the browser then holds their keys open (the password, its second step, or a passkey that unlocks, §5.5). Core shows
+  it on a page of its own (`/keys/kit?returnTo=…`), with no way to put it off, and goes on to where the person was headed once they
+  confirm they kept it; only then is the kit's way in stored. For an app's sign-in the app's request is made again afterwards, since
+  what the provider had answered lasts ten minutes at most. Until they confirm, a new kit is made each time it is shown: core keeps
+  whether the kit was confirmed, never the kit. (Decided with the goal owner on 2026-11-26, replacing the decision of 2026-11-16 to
+  show it only when an encrypted app first asked for its key: the kit is core's to ask for, before there is anything to lose, and not
+  in the middle of an app opening.)
+- **A sign-in that cannot show the kit is not held up**: one that leaves the browser locked (a passkey that does not unlock, a password
+  that no longer opens the keys after a reset, a read of the vault that failed), a sign-up that waits for its address to be verified
+  (the first sign-in shows it), and an app's sign-in whose request cannot be made again as it was: too long to keep, or saying how
+  recent the sign-in must be (`max_age`), which could mean signing in twice.
+- **Required means of the sign-in screens.** Someone who leaves the kit's page is signed in, and is asked at their next sign-in; no
+  other page is withheld, and a session already open is not interrupted. The Security page offers the kit to anyone who has not kept
+  it, asking a locked browser to unlock first, and says once it is kept. Key release (§5.7) still shows it to anyone who has not kept
+  it by the time an encrypted app asks, and nothing more happens there until they have.
+- **What the kit says** depends on escrow (§5.8): without it, the kit is the only way back and nobody else can get the data back; with
+  it, the kit is the person's own way back and the owner can also recover it. No screen tells a person on an instance with escrow that
+  nobody else can.
 - **The recovery kit** is 32 random bytes, written as groups of four letters and digits from an alphabet with no `I`, `L`, `O` or `U`
   (Crockford's base32), ending in a check group. A mistyped kit is refused as mistyped. Typing it ignores case, spaces and hyphens,
   and reads `O` as `0` and `I` and `L` as `1`. It is shown once.
@@ -2209,8 +2228,8 @@ Built (tasks 16.10, 16.11). Core's OpenID Connect provider is unchanged.
   to …"): a site that sent the person here with a public key of its own would otherwise get an answer it could open, if anything on
   the app's page read the fragment before the SDK removed it.
 - **What the person sees**: "Opening…" and nothing else when the browser is unlocked, the kit kept and the app asked. A locked browser asks for the
-  password or a passkey, both checked in the browser alone (§5.5). At the first encrypted app the kit is shown and must be kept
-  (§5.3). The answer names the account's signing public key, so an app's page that has never seen it can remember it.
+  password or a passkey, both checked in the browser alone (§5.5). Someone who has not kept their recovery kit is shown it
+  there and must keep it (§5.3). The answer names the account's signing public key, so an app's page that has never seen it can remember it.
 - **The answer** is HPKE (§1 of RFC 0005) of `{ app key, sub, client id, state, time, signing public key }` with the client id, the
   return address and the `state` as `info`, and an Ed25519 signature over the encapsulated key and ciphertext:
   `return_to#sv_key=<enc>.<ciphertext>&sv_sig=<signature>&state=<state>`, all base64url.
@@ -2257,8 +2276,8 @@ Built (task 16.12). Off unless the owner turns it on.
 Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each database.
 
 1. No request of any password flow (sign-up, sign-in, invitation, reset, change, asking again) carries a password.
-2. A person signs up, keeps the kit, and opens an encrypted app in a second browser with the password alone, then with a passkey that
-   unlocks.
+2. A person signs up and is asked for the recovery kit until they keep it (at sign-up, at sign-in, an app's included, and from the
+   Security page), and opens an encrypted app in a second browser with the password alone, then with a passkey that unlocks.
 3. A reset by email gives back the account and not the data; the kit gives back the data.
 4. A session ended from another browser leaves the first browser holding nothing that opens, with no page of it open at the time.
 5. An app receives its own key and never another's; a release replayed, sent to another app, or to a page that did not ask is refused.
@@ -2380,3 +2399,4 @@ Each item has a test in `apps/e2e`, named for it (`§5.10.N:`), run on each data
 | 2026-11-19 | §3.6.5, §3.7.1, §3.7.4: signing out of an app ends core's session only when the app's setting says so: on for a hosted app, off for an external one (`--keep-core-session`) and a new one in the Console. Built. §3.6.2: `claims_supported` lists only the claims core sends; `amr` and `acr` are parked.                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | 2026-11-20 | §4.7: exports (RFC 0008, milestone 1): the owner's export of core's data, encrypted to the export recipients, and a person's export from core and every app they use, run as jobs and downloaded once; §2: export leaves "Later"; §3.2.2, §3.2.3: `instance:export`, owner-only; §3.7.1: an app's export address; §3.11: Your data; §3.12: Export recipients; §4.4: the Console offers an export, not a backup. Not built.                                                                                                                                                                                                                                                                                                    |
 | 2026-11-21 | §3.8: the Console is the first tile after "Add", before the apps operators added; "Add" has a divider and the kind **new** like every other tile.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 2026-11-26 | §5.3, §5.7, §5.10: the recovery kit is asked for at sign-up and after each sign-in until it is kept, on core's page `/keys/kit`, and offered on the Security page; key release still shows it to anyone who has not.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |

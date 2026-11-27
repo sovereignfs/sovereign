@@ -37,6 +37,9 @@ export interface SignInFormProps {
 /**
  * The sign-in form of core and every app (auth.md §7): an email, a password, a passkey if the browser has one, and a way to create an
  * account. It draws and collects; the consumer signs in (`@sovereignfs/auth/client`) and says what happened through its props.
+ *
+ * The boxes keep their own values and are read when the form is sent. A password manager can fill them without telling the page
+ * (AutoFill on iOS, until a box is focused): a copy kept in state would then be sent in their place, and written back over them.
  */
 export function SignInForm({
   appName,
@@ -52,12 +55,18 @@ export function SignInForm({
   signUpHref,
   renderLink = plainLink,
 }: SignInFormProps) {
+  // The address as last typed or sent, for `renderUnverified`.
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onSubmit({ email, password });
+    const boxes = new FormData(event.currentTarget);
+    const values = {
+      email: String(boxes.get('email') ?? ''),
+      password: String(boxes.get('password') ?? ''),
+    };
+    setEmail(values.email);
+    onSubmit(values);
   }
 
   return (
@@ -73,7 +82,6 @@ export function SignInForm({
               autoComplete="username"
               required
               disabled={pending}
-              value={email}
               onChange={(event) => setEmail(event.target.value)}
             />
           )}
@@ -94,8 +102,6 @@ export function SignInForm({
               autoComplete="current-password"
               required
               disabled={pending}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
             />
           )}
         </AuthField>

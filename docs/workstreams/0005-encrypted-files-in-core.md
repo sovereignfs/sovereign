@@ -20,7 +20,7 @@ not, and everyone can keep a recovery kit, so that encrypting files never turns 
 ## Definition of done
 
 - [ ] `16.19` — The Files page says what it protects
-- [ ] `16.20` — A recovery kit for everyone, from the Security page
+- [x] `16.20` — The recovery kit at sign-up and sign-in, and from the Security page
 - [ ] `16.21` — Core's own files, designed
 - [ ] `16.22` — Core's files encrypted in the browser
 - [ ] `16.23` — Existing files moved, and the acceptance items
@@ -72,12 +72,9 @@ follows is only what no single task holds.
 **Why here:** the page's empty state says files are kept "and nobody else can open them", which reads as a promise against the server.
 A kit for everyone is the precondition for everything after it.
 
-**Technical notes:** the words are in `apps/core/app/files/files-panel.tsx` (the `EmptyState` description). The kit is offered at
-key release from `apps/core/app/keys/release/release-flow.tsx` (`isKitPending`, `kitKept`, `isEscrowOn` in `apps/core/src/keys/session.ts`);
-the Security page reuses the same calls and `RecoveryKit`, so one kit is kept per account whichever page keeps it. The Security page needs
-the browser unlocked: a locked one shows the unlock first. Follow `sv-ui-design` for both, and update core-app §5.3's decision row.
-
-**Do not proceed if:** keeping the kit from the Security page would need a second kit record or a change to the vault's records.
+**Technical notes:** the words are in `apps/core/app/files/files-panel.tsx` (the `EmptyState` description). Follow `sv-ui-design`.
+`16.20` is done, ahead of the leg and re-scoped by the goal owner on 2026-11-26 (the kit is asked for at sign-up and sign-in too, on
+`/keys/kit`), so what is left of the leg is `16.19`.
 
 ### Leg 2 — The design
 
@@ -119,6 +116,7 @@ did, and the acceptance items in `apps/e2e` on each database.
 
 ## Changelog
 
-| Version | Date     | Change                             |
-| ------- | -------- | ---------------------------------- |
-| 0.1     | Nov 2026 | Initial draft, from research 0009. |
+| Version | Date     | Change                                                                            |
+| ------- | -------- | --------------------------------------------------------------------------------- |
+| 0.1     | Nov 2026 | Initial draft, from research 0009.                                                |
+| 0.2     | Nov 2026 | 16.20 re-scoped by the goal owner and done ahead of leg 1, directly on `develop`. |

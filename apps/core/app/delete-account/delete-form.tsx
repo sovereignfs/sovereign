@@ -1,17 +1,19 @@
 'use client';
 
-import { startTransition, useActionState, useState } from 'react';
+import { startTransition, useActionState, useRef, useState } from 'react';
 import { Button, ConfirmDialog, FormField, Input } from '@sovereignfs/ui';
 import { signInValue } from '../../src/auth/derive';
 import { deleteAccountAction, type DeleteResult } from './actions';
 import styles from '../security/security.module.css';
 
 /**
- * Deletes the person's own account. The password is held here, so a wrong one leaves it in the box, and nothing is
- * sent until they have read, in a question of its own, what will be lost.
+ * Deletes the person's own account. A wrong password stays in the box, and nothing is sent until they have read, in a question of
+ * its own, what will be lost.
  */
 export function DeleteForm({ address }: { address: string }) {
-  const [password, setPassword] = useState('');
+  // The box is read when it is needed, never copied into state: a password manager can fill it without telling the page. It has no
+  // name, so a form sent before the page is ready cannot put the password in the address.
+  const box = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [state, act, pending] = useActionState<DeleteResult | null, FormData>(
     deleteAccountAction,
@@ -23,7 +25,7 @@ export function DeleteForm({ address }: { address: string }) {
     setPreparing(undefined);
     const form = new FormData();
     // What is sent is made from the password, which never leaves the browser (core-app §5.2).
-    void signInValue(password, address).then(
+    void signInValue(box.current?.value ?? '', address).then(
       (value) => {
         form.set('password', value);
         startTransition(() => act(form));
@@ -37,7 +39,7 @@ export function DeleteForm({ address }: { address: string }) {
       className={styles.form}
       onSubmit={(event) => {
         event.preventDefault();
-        if (password !== '') setOpen(true);
+        if (box.current?.value) setOpen(true);
       }}
     >
       <FormField
@@ -45,18 +47,10 @@ export function DeleteForm({ address }: { address: string }) {
         required
         hint="We ask again because deleting your account cannot be undone."
       >
-        {(field) => (
-          <Input
-            {...field}
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-        )}
+        {(field) => <Input {...field} type="password" autoComplete="current-password" ref={box} />}
       </FormField>
       <div>
-        <Button type="submit" variant="destructive" disabled={password === ''}>
+        <Button type="submit" variant="destructive">
           Delete my account…
         </Button>
       </div>

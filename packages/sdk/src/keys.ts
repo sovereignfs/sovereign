@@ -17,7 +17,6 @@
  */
 import {
   fromBase64Url,
-  generateReceivingKey,
   newKey,
   openAppIdentity,
   openDocumentKey,
@@ -106,13 +105,32 @@ export type Received =
 const PENDING_MS = 10 * 60 * 1000;
 const PENDING = (state: string) => `pending:${state}`;
 const SIGNER = (sub: string) => `signer:${sub}`;
+const REQUEST_WRAP = 'request-wrap';
 
+/**
+ * A request waiting for core's answer. Its private key is kept wrapped (pkcs8, AES-GCM) by a key of this browser's that cannot be
+ * exported, never as a `CryptoKey` of a curve: WebKit's IndexedDB (Safari, and every browser on iOS) accepts an X25519 key without an
+ * error and does not keep it, so the request was gone by the time core answered. An AES key it keeps.
+ */
 interface Pending {
-  readonly privateKey: WebKey;
+  readonly wrapped: Uint8Array<ArrayBuffer>;
+  readonly iv: Uint8Array<ArrayBuffer>;
   readonly publicKey: Uint8Array;
   readonly at: number;
   readonly returnPath: string;
 }
+
+const isPending = (value: unknown): value is Pending => {
+  if (typeof value !== 'object' || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    v.wrapped instanceof Uint8Array &&
+    v.iv instanceof Uint8Array &&
+    v.publicKey instanceof Uint8Array &&
+    typeof v.at === 'number' &&
+    typeof v.returnPath === 'string'
+  );
+};
 
 /** A path on the app and nothing else. */
 const localPath = (value: string | undefined): string =>
@@ -155,6 +173,35 @@ export function appKeys(options: AppKeysOptions) {
     return { ok: true, person: { ...person, checked: true } };
   }
 
+  /** The key a request's private key is wrapped with: AES-GCM, made once for this browser, not exportable. */
+  async function requestWrap(): Promise<WebKey> {
+    const found = await backend.get(REQUEST_WRAP);
+    if (found instanceof CryptoKey) return found;
+    const made = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, [
+      'wrapKey',
+      'unwrapKey',
+    ]);
+    await backend.set(REQUEST_WRAP, made);
+    return made;
+  }
+
+  /** A request's private key, unwrapped and not exportable, or `undefined` when it does not open here. */
+  async function openPending(pending: Pending): Promise<WebKey | undefined> {
+    try {
+      return await crypto.subtle.unwrapKey(
+        'pkcs8',
+        pending.wrapped,
+        await requestWrap(),
+        { name: 'AES-GCM', iv: pending.iv },
+        { name: 'X25519' },
+        false,
+        ['deriveBits'],
+      );
+    } catch {
+      return undefined;
+    }
+  }
+
   return {
     /** The app key, while this browser holds it for this session. With no session, what it kept is forgotten. */
     async open(): Promise<Opened> {
@@ -174,11 +221,22 @@ export function appKeys(options: AppKeysOptions) {
 
     /** Sends the person to core's key release. `returnPath` is where `receive()` says to go back to; the current page unless given. */
     async unlock(returnPath?: string): Promise<void> {
-      const pair = await generateReceivingKey();
+      // Made exportable only to be wrapped at once; the extractable key is kept nowhere.
+      const pair = (await crypto.subtle.generateKey({ name: 'X25519' }, true, [
+        'deriveBits',
+      ])) as CryptoKeyPair;
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const wrapped = new Uint8Array(
+        await crypto.subtle.wrapKey('pkcs8', pair.privateKey, await requestWrap(), {
+          name: 'AES-GCM',
+          iv,
+        }),
+      );
       const state = newReleaseState();
       const here = where();
       const pending: Pending = {
-        privateKey: pair.privateKey,
+        wrapped,
+        iv,
         publicKey: await publicKeyBytes(pair.publicKey),
         at: now(),
         returnPath: localPath(returnPath ?? `${here.pathname}${here.search}`),
@@ -209,9 +267,12 @@ export function appKeys(options: AppKeysOptions) {
       if (!key || !sig || !state) return { ok: false, reason: 'no-answer' };
 
       // One use: the request is taken and deleted whatever comes next. A page that did not ask holds none.
-      const pending = (await backend.get(PENDING(state))) as Pending | undefined;
+      const pending = await backend.get(PENDING(state));
       await backend.delete(PENDING(state));
-      if (!pending || now() - pending.at > PENDING_MS) return { ok: false, reason: 'no-request' };
+      if (!isPending(pending) || now() - pending.at > PENDING_MS)
+        return { ok: false, reason: 'no-request' };
+      const privateKey = await openPending(pending);
+      if (!privateKey) return { ok: false, reason: 'no-request' };
 
       const session = await sessionSecret();
       if (!session) return { ok: false, reason: 'no-session' };
@@ -220,7 +281,7 @@ export function appKeys(options: AppKeysOptions) {
         const opened = await openRelease({
           answer: { key, sig },
           target: { clientId: options.clientId, returnTo: options.returnTo, state },
-          recipient: { privateKey: pending.privateKey, publicKey: pending.publicKey },
+          recipient: { privateKey, publicKey: pending.publicKey },
           sub: session.sub,
           signingPublic: remembered,
           now: now(),

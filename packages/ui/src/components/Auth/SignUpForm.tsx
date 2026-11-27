@@ -39,6 +39,9 @@ export interface SignUpFormProps {
 /**
  * Creating an account (auth.md §7), for core and every app: a name, the address (an invitation's, when there is one), the password
  * typed twice, and the terms when the app has them. Once a verification link is sent, it says so and waits.
+ *
+ * The boxes keep their own values and are read when the form is sent, as in `SignInForm`: a password manager can fill them without
+ * telling the page.
  */
 export function SignUpForm({
   appName,
@@ -53,10 +56,6 @@ export function SignUpForm({
   signInHref,
   renderLink = plainLink,
 }: SignUpFormProps) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState(invitedEmail ?? '');
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
   const [agreed, setAgreed] = useState(false);
   const invited = invitedEmail !== undefined;
   const signIn = renderLink({
@@ -80,7 +79,15 @@ export function SignUpForm({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onSubmit({ name, email, password, confirm, agreed: terms === false || agreed });
+    const boxes = new FormData(event.currentTarget);
+    const typed = (box: string) => String(boxes.get(box) ?? '');
+    onSubmit({
+      name: typed('name'),
+      email: typed('email'),
+      password: typed('password'),
+      confirm: typed('confirm'),
+      agreed: terms === false || agreed,
+    });
   }
 
   return (
@@ -93,15 +100,7 @@ export function SignUpForm({
       <AuthForm onSubmit={submit}>
         <AuthField label="Name">
           {(control) => (
-            <Input
-              {...control}
-              name="name"
-              autoComplete="name"
-              required
-              disabled={pending}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
+            <Input {...control} name="name" autoComplete="name" required disabled={pending} />
           )}
         </AuthField>
         <AuthField
@@ -117,8 +116,7 @@ export function SignUpForm({
               required
               disabled={pending}
               readOnly={invited}
-              value={email}
-              onChange={invited ? undefined : (event) => setEmail(event.target.value)}
+              defaultValue={invitedEmail}
             />
           )}
         </AuthField>
@@ -131,8 +129,6 @@ export function SignUpForm({
               autoComplete="new-password"
               required
               disabled={pending}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
             />
           )}
         </AuthField>
@@ -145,8 +141,6 @@ export function SignUpForm({
               autoComplete="new-password"
               required
               disabled={pending}
-              value={confirm}
-              onChange={(event) => setConfirm(event.target.value)}
             />
           )}
         </AuthField>
